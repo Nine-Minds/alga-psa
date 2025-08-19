@@ -221,22 +221,26 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
 
+      // Log payload with masked clientState for diagnostics
+      const maskedState = subscription.clientState
+        ? `${String(subscription.clientState).slice(0, 4)}...(${String(subscription.clientState).length})`
+        : 'none';
+      this.log('info', 'Creating Microsoft subscription', {
+        notificationUrl: subscription.notificationUrl,
+        resource: subscription.resource,
+        expirationDateTime: subscription.expirationDateTime,
+        clientState: maskedState,
+      });
+
       const response = await this.httpClient.post('/subscriptions', subscription);
       
       // Update config with subscription ID
       this.config.webhook_subscription_id = response.data.id;
       this.config.webhook_expires_at = response.data.expirationDateTime;
 
-      // Persist webhook details
+      // Persist webhook details only in microsoft vendor config
       try {
         const knex = await getAdminConnection();
-        // email_providers: set webhook_id for lookup by route
-        await knex('email_providers')
-          .where('id', this.config.id)
-          .andWhere('tenant', this.config.tenant)
-          .update({ webhook_id: response.data.id, updated_at: new Date().toISOString() });
-
-        // microsoft_email_provider_config: track subscription specific fields
         await knex('microsoft_email_provider_config')
           .where('email_provider_id', this.config.id)
           .andWhere('tenant', this.config.tenant)
@@ -252,7 +256,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.log('info', `Webhook subscription created: ${response.data.id}`);
     } catch (error) {
-      throw this.handleError(error, 'registerWebhookSubscription');
+      // Enrich/log details (status, request-id, body) before throwing
+      const enriched = this.handleError(error, 'registerWebhookSubscription');
+      this.log('error', 'Subscription creation failed', {
+        message: enriched.message,
+        context: 'registerWebhookSubscription',
+      });
+      throw enriched;
     }
   }
 
@@ -452,6 +462,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
 
+      this.log('info', 'Posting Microsoft subscription payload', {
+        notificationUrl: subscription.notificationUrl,
+        resource: subscription.resource,
+        expirationDateTime: subscription.expirationDateTime,
+        clientState: subscription.clientState ? '**masked**' : 'none',
+      });
+
       const response = await this.httpClient.post('/subscriptions', subscription);
       const subscriptionId = response.data.id;
 
@@ -464,7 +481,12 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     } catch (error: any) {
       // Let base adapter enrich the error with axios response details
       const enriched = this.handleError(error, 'initializeWebhook');
-      this.log('error', 'Failed to initialize webhook', enriched);
+      this.log('error', 'Failed to initialize webhook', {
+        message: enriched.message,
+        status: (enriched as any).status,
+        code: (enriched as any).code,
+        requestId: (enriched as any).requestId,
+      });
       return {
         success: false,
         error: enriched.message

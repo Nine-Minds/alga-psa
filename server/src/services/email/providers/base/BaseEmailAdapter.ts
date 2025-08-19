@@ -90,7 +90,15 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
 
     const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
     this.log('error', errorMessage, error);
-    return new Error(errorMessage);
+    const wrapped = new Error(errorMessage);
+    // Propagate metadata for outer catch blocks
+    try {
+      (wrapped as any).status = res?.status;
+      (wrapped as any).code = (res?.data?.error?.code || res?.status) ?? undefined;
+      (wrapped as any).requestId = res?.headers?.['request-id'] || res?.headers?.['client-request-id'];
+      (wrapped as any).responseBody = res?.data;
+    } catch { /* no-op */ }
+    return wrapped;
   }
 
   // Abstract methods that must be implemented by each provider

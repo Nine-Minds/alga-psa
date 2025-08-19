@@ -257,10 +257,11 @@ export async function GET(request: NextRequest) {
                   folder_to_monitor: 'Inbox',
                   active: provider.is_active,
                   webhook_notification_url: webhookUrl,
-                  webhook_subscription_id: provider.webhook_subscription_id || null,
-                  // Use tenant as verification token to enforce tenant-scoped lookup in webhook handler
-                  webhook_verification_token: provider.webhook_verification_token || stateData.tenant,
-                  webhook_expires_at: provider.webhook_expires_at || null,
+                  // Persisted and looked up via microsoft vendor config
+                  webhook_subscription_id: msConfig.webhook_subscription_id || null,
+                  // Use tenant as verification token when none exists yet
+                  webhook_verification_token: msConfig.webhook_verification_token || stateData.tenant,
+                  webhook_expires_at: msConfig.webhook_expires_at || null,
                   connection_status: provider.status || 'connected',
                   last_connection_test: provider.last_sync_at || null,
                   connection_error_message: provider.error_message || null,
@@ -278,9 +279,28 @@ export async function GET(request: NextRequest) {
 
                 const adapter = new MicrosoftGraphAdapter(providerConfig);
                 try {
+                  // Context logging before attempting subscription
+                  const maskedToken = providerConfig.webhook_verification_token
+                    ? `${String(providerConfig.webhook_verification_token).slice(0, 4)}...(${String(providerConfig.webhook_verification_token).length})`
+                    : 'none';
+                  console.log('[MS OAuth Callback] Registering webhook subscription', {
+                    tenant: provider.tenant,
+                    providerId: provider.id,
+                    mailbox: provider.mailbox,
+                    url: webhookUrl,
+                    clientState: maskedToken,
+                  });
+
                   await adapter.registerWebhookSubscription();
+
+                  console.log('[MS OAuth Callback] Webhook subscription registration attempted');
                 } catch (subErr: any) {
-                  console.warn('⚠️ Failed to register Microsoft webhook subscription in callback:', subErr?.message || subErr);
+                  console.warn('⚠️ Failed to register Microsoft webhook subscription in callback:', {
+                    message: subErr?.message || String(subErr),
+                    status: subErr?.status,
+                    code: subErr?.code,
+                    requestId: subErr?.requestId,
+                  });
                 }
               }
             } catch (e) {

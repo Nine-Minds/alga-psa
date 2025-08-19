@@ -49,9 +49,14 @@ export async function POST(request: NextRequest) {
   try {
     // Handle subscription validation
     // Microsoft may send validation either via querystring (GET) or header on POST in some flows/tests
-    const validationToken = request.headers.get('validationtoken') || request.headers.get('ValidationToken');
+    const url = request.nextUrl;
+    const validationToken =
+      request.headers.get('validationtoken') ||
+      request.headers.get('ValidationToken') ||
+      url.searchParams.get('validationtoken') ||
+      url.searchParams.get('validationToken');
     if (validationToken) {
-      console.log('Microsoft webhook validation (POST) received');
+      console.log('Microsoft webhook validation (POST) received (header/query)');
       return new NextResponse(validationToken, {
         status: 200,
         headers: {
@@ -61,7 +66,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse webhook payload
-    const payload: MicrosoftWebhookPayload = await request.json();
+    // Be robust to empty or non-JSON bodies during validation probes
+    let payload: MicrosoftWebhookPayload | undefined;
+    try {
+      const raw = await request.text();
+      if (!raw) {
+        // Empty body — acknowledge to avoid parse crashes during validation probes
+        return new NextResponse('OK', { status: 200 });
+      }
+      payload = JSON.parse(raw);
+    } catch {
+      // Non-JSON — acknowledge to avoid 500s during validation probes
+      return new NextResponse('OK', { status: 200 });
+    }
+    if (!payload) {
+      return new NextResponse('OK', { status: 200 });
+    }
     console.log('Microsoft webhook notification received:', {
       notificationCount: payload.value?.length || 0,
       timestamp: new Date().toISOString()
