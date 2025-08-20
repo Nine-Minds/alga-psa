@@ -66,16 +66,23 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
 
 
   return (
-    <form className="mt-8 space-y-6" {...withDataAutomationId({ id: 'msp-login-form' })}>
+    <form 
+      className="mt-8 space-y-6" 
+      onSubmit={handleSubmit}
+      method="POST"
+      {...withDataAutomationId({ id: 'msp-login-form' })}
+    >
       <div className="space-y-4">
         <Input
           type="email"
           id="msp-email-field"
+          name="email"
           label="Email"
           placeholder="Enter your email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
         />
         <div className="space-y-2 relative"></div>
           <Label htmlFor="client-password-field">Password</Label>
@@ -83,11 +90,13 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           <Input
             type={showPassword ? "text" : "password"}
             id="msp-password-field"
+            name="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             className="w-full"
+            autoComplete="current-password"
           />
           <Button
             type="button"
@@ -115,7 +124,6 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
       <div>
         <Button
           type="submit"
-          onClick={handleSubmit}
           className="w-full"
           id="msp-sign-in-button"
         >

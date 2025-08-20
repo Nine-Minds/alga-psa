@@ -105,7 +105,12 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" {...withDataAutomationId({ id: 'client-login-form' })}>
+    <form 
+      onSubmit={onSubmit} 
+      method="POST"
+      className="space-y-4" 
+      {...withDataAutomationId({ id: 'client-login-form' })}
+    >
       <div className="space-y-2">
         <Label htmlFor="client-email-field">Email</Label>
         <Input
