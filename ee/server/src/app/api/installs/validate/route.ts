@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { Knex } from 'knex';
-import { getKnex } from '@/lib/db';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
 
   let db: Knex | null = null;
   try {
-    db = await getKnex();
+    db = await getAdminConnection();
     const install = await db('tenant_extension_install')
       .where({ tenant_id: tenant, registry_id: extension })
       .first(['version_id']);
@@ -39,9 +39,6 @@ export async function GET(request: Request) {
     console.error('[installs/validate] error', e);
     return NextResponse.json({ valid: false }, { status: 500 });
   } finally {
-    if (db && 'destroy' in db) {
-      await (db as any).destroy().catch(() => {});
-    }
+    // admin connection is pooled/shared; do not destroy here
   }
 }
-

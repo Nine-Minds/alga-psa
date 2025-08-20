@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { Knex } from 'knex';
-import { getKnex } from '@/lib/db';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
 
   let db: Knex | null = null;
   try {
-    db = await getKnex();
+    db = await getAdminConnection();
 
     // Find install by runner_domain
     const install = await db('tenant_extension_install')
@@ -50,10 +50,6 @@ export async function GET(request: Request) {
     console.error('[lookup-by-host] error', e);
     return NextResponse.json({ error: 'internal error' }, { status: 500 });
   } finally {
-    if (db && 'destroy' in db) {
-      // Best-effort close when running in ephemeral function
-      await (db as any).destroy().catch(() => {});
-    }
+    // admin connection is pooled/shared; do not destroy here
   }
 }
-
