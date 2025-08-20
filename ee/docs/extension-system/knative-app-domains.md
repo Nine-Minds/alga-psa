@@ -1,0 +1,83 @@
+# Per-Extension App Domains (Knative) — Ops & RBAC
+
+This document captures the operational pieces needed to support per-install application domains using Knative DomainMapping, provisioned by the Temporal worker.
+
+Scope: We track changes here; the actual Helm/Kubernetes wiring is handled in the infra repo.
+
+## Environment Variables
+
+- `EXT_DOMAIN_ROOT`: Root wildcard domain for extension apps (e.g., `ext.example.com`).
+- `RUNNER_NAMESPACE`: Kubernetes namespace where the Runner KService lives (defaults to `default`).
+- `RUNNER_KSERVICE`: Name of the Knative Service for the Runner (defaults to `runner`).
+- Temporal worker also requires standard Temporal env (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TASK_QUEUE`).
+
+## DNS / Ingress
+
+- Configure wildcard DNS: `*.${EXT_DOMAIN_ROOT}` to Knative Ingress.
+- If not using wildcard, automate DNS records for each provisioned domain.
+
+## RBAC (Temporal Worker ServiceAccount)
+
+Grant the Temporal worker permission to manage DomainMappings in the target namespace:
+
+```
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: temporal-worker-knative
+  namespace: ${RUNNER_NAMESPACE}
+rules:
+  - apiGroups: ["serving.knative.dev"]
+    resources: ["domainmappings"]
+    verbs: ["get", "list", "watch", "create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: temporal-worker-knative
+  namespace: ${RUNNER_NAMESPACE}
+subjects:
+  - kind: ServiceAccount
+    name: temporal-worker
+    namespace: ${TEMPORAL_WORKER_NAMESPACE}
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: temporal-worker-knative
+```
+
+Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-worker` and set environment variables `RUNNER_NAMESPACE`, `RUNNER_KSERVICE`, `EXT_DOMAIN_ROOT`.
+
+## Temporal Activity Behavior
+
+- `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${slug(tenantId)}--${slug(extensionId)}.${EXT_DOMAIN_ROOT}`.
+- `ensureDomainMapping({ domain, namespace, kservice })`:
+  - Creates or patches `DomainMapping`:
+    - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: ${domain}`
+    - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: ${kservice} }`
+- On success, status in DB is updated to `{ state: 'ready' }` and `runner_ref` stores a small reference object.
+
+## Runner
+
+- Exposes `GET /` which reads Host → calls `REGISTRY_BASE_URL/api/installs/lookup-by-host` → redirects to `/ext-ui/{extensionId}/{content_hash}/index.html`.
+- Continues to enforce strict validation in `/ext-ui` route via `/api/installs/validate`.
+
+## Next.js (EE Server)
+
+- `GET /api/installs/lookup-by-host?host=...` resolves `{ tenant_id, extension_id, content_hash }` from DB.
+- `GET /api/installs/validate?tenant=...&extension=...&hash=...` returns `{ valid: boolean }`.
+- Server actions handle UI-side reprovisioning triggers; APIs remain for external automation.
+
+## Helm Values Hints (Infra Repo)
+
+- temporal-worker chart:
+  - `serviceAccount.name: temporal-worker`
+  - env:
+    - `RUNNER_NAMESPACE: <ns>`
+    - `RUNNER_KSERVICE: runner`
+    - `EXT_DOMAIN_ROOT: ext.example.com`
+  - RBAC templates include Role/RoleBinding above when enabled.
+
+---
+Change history: Introduced with per-install app domains (Plan 1.f).
+
