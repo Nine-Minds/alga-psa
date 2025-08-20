@@ -1103,7 +1103,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-xs">{channel.channel_name}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`default-channel-${channel.channel_id}`}
+                              id="channel-default-toggle"
+                              data-channel-id={channel.channel_id}
                               type="button"
                               variant="ghost"
                               size="sm"
@@ -1117,7 +1118,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`remove-channel-${channel.channel_id}`}
+                              id="channel-remove"
+                              data-channel-id={channel.channel_id}
                               type="button"
                               variant="ghost"
                               size="sm"
@@ -1221,6 +1223,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <div>
                     <Label htmlFor="new-category-channel">Target Board *</Label>
                     <CustomSelect
+                      id="new-category-channel-select"
                       value={categoryForm.channelId}
                       onValueChange={(value) => setCategoryForm(prev => ({ ...prev, channelId: value }))}
                       options={importedChannels.map(ch => ({
@@ -1234,6 +1237,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <div>
                     <Label htmlFor="new-category-parent">Parent Category</Label>
                     <CustomSelect
+                      id="new-category-parent-select"
                       value={categoryForm.parentCategory || 'none'}
                       onValueChange={(value) => setCategoryForm(prev => ({ 
                         ...prev, 
@@ -1310,6 +1314,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Target Board *</Label>
                   <CustomSelect
+                    id="import-category-target-select"
                     value={importTargetChannel}
                     onValueChange={setImportTargetChannel}
                     options={[
@@ -1496,7 +1501,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || '-'}</td>
                               <td className="px-2 py-1 text-center">
                                 <Button
-                                  id={`remove-category-${category.category_id}`}
+                                  id="category-remove"
+                                  data-category-id={category.category_id}
                                   type="button"
                                   variant="ghost"
                                   size="sm"
@@ -1607,6 +1613,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <div className="col-span-2">
                     <div className="flex items-center space-x-2">
                       <Switch
+                        id="status-closed-toggle"
                         checked={statusForm.isClosed}
                         onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isClosed: checked }))}
                       />
@@ -1816,7 +1823,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`default-status-${status.status_id}`}
+                              id="status-default-toggle"
+                              data-status-id={status.status_id}
                               type="button"
                               variant="ghost"
                               size="sm"
@@ -1831,7 +1839,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`remove-status-${status.status_id}`}
+                              id="status-remove"
+                              data-status-id={status.status_id}
                               type="button"
                               variant="ghost"
                               size="sm"
@@ -2138,7 +2147,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             <td className="px-2 py-1 text-center">
                               {priorityId ? (
                                 <Button
-                                  id={`remove-priority-${priorityId}`}
+                                  id="priority-remove"
+                                  data-priority-id={priorityId}
                                   type="button"
                                   variant="ghost"
                                   size="sm"

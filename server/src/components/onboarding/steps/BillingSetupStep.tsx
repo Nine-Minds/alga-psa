@@ -185,6 +185,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           </Label>
           <div className="grid grid-cols-2 gap-2">
             <CustomSelect
+              id="service-type-select"
               value={data.serviceTypeId || ''}
               onValueChange={(value) => updateData({ serviceTypeId: value })}
               options={serviceTypeOptions}
@@ -522,7 +523,8 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`remove-service-type-${type.id}`}
+                              id="service-type-remove"
+                              data-type-id={type.id}
                               type="button"
                               variant="ghost"
                               size="sm"
