@@ -212,14 +212,14 @@ References to detailed content in this doc
   - Keep a single Runner KService; provision a DomainMapping per extension install that targets that KService.
 
 - Data model
-  - [ ] Add columns to `tenant_extension_install`:
+  - [x] Add columns to `tenant_extension_install`:
     - `runner_domain` (text, unique, indexed)
     - `runner_status` (jsonb; { state: 'pending'|'provisioned'|'error', message?, last_updated? })
     - `runner_ref` (jsonb; optional: KService/DomainMapping identifiers for troubleshooting)
-  - [ ] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
+  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
 
 - Provisioning (Option B: Temporal worker)
-  - [ ] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):
+  - [x] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):
     - Activity: `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns domain string.
     - Activity: `ensureDomainMapping({ domain, kservice, namespace })` uses Kubernetes API to create DomainMapping:
       - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: <domain>`
@@ -230,16 +230,16 @@ References to detailed content in this doc
 
 - Server (Next.js)
   - [ ] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
-  - [ ] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
+  - [x] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
   - [ ] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
 
 - Runner changes
-  - [ ] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
-  - [ ] Keep ext-ui strict validation as-is (host lookup is just a dispatcher).
+  - [x] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
+  - [x] Keep ext-ui strict validation as-is (host lookup is just a dispatcher).
 
 - UI updates
-  - [ ] Extensions list/details: display `runner_domain`, status (pending/provisioned/error), copy/open links.
-  - [ ] Add action to reprovision if status=error.
+  - [x] Extensions list/details: display `runner_domain`, status (pending/provisioned/error), copy/open links.
+  - [x] Add action to reprovision if status=error.
 
 - Ops
   - [ ] Wildcard DNS `*.${EXT_DOMAIN_ROOT}` → Knative ingress (or automate DNS records per domain).
