@@ -3,6 +3,7 @@ import type { Knex } from 'knex';
 import type { ManifestV2, ManifestEndpoint } from './bundles/manifest';
 import { isValidSemverLike } from './bundles/manifest';
 import type { SignatureVerificationResult } from './bundles/verify';
+import { computeDomain, enqueueProvisioningWorkflow } from './runtime/provision';
 
 export type RegistryId = string;
 export type VersionId = string;
@@ -224,6 +225,13 @@ export class ExtensionRegistryServiceV2 {
     }
 
     const now = this.db.fn.now();
+    // Compute per-install domain
+    let runnerDomain: string | null = null;
+    try {
+      runnerDomain = computeDomain(tenantId, registryId);
+    } catch (_e) {
+      runnerDomain = null;
+    }
     const payload = {
       tenant_id: tenantId,
       registry_id: registryId,
@@ -232,6 +240,8 @@ export class ExtensionRegistryServiceV2 {
       granted_caps: JSON.stringify(opts?.grantedCaps ?? []),
       config: JSON.stringify(opts?.config ?? {}),
       is_enabled: true,
+      runner_domain: runnerDomain,
+      runner_status: JSON.stringify({ state: 'pending', message: 'Provisioning requested' }),
       created_at: now,
       updated_at: now,
     };
@@ -245,8 +255,22 @@ export class ExtensionRegistryServiceV2 {
         granted_caps: payload.granted_caps,
         config: payload.config,
         is_enabled: payload.is_enabled,
+        runner_domain: payload.runner_domain,
+        runner_status: payload.runner_status,
         updated_at: payload.updated_at,
       });
+
+    // Fire-and-forget: enqueue provisioning workflow
+    try {
+      const row = await this.db('tenant_extension_install')
+        .where({ tenant_id: tenantId, registry_id: registryId })
+        .first(['id']);
+      if (row?.id && runnerDomain) {
+        await enqueueProvisioningWorkflow({ tenantId, extensionId: registryId, installId: row.id });
+      }
+    } catch (_e) {
+      // swallow errors; status remains pending and can be retried from UI
+    }
 
     return true;
     }
@@ -539,4 +563,3 @@ export async function upsertVersionFromManifest(
 }
 
 // ===== End M1 additions =====
-

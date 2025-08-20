@@ -14,7 +14,7 @@ export class TenantService {
    * Creates a new tenant with the provided details
    */
   static async createTenant(input: CreateTenantInput): Promise<TenantResponse> {
-    const { knex } = await createTenantKnex();
+    const knex = await getAdminConnection();
 
     try {
       // Start a transaction to ensure data consistency

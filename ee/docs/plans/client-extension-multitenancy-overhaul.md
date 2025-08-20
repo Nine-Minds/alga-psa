@@ -139,7 +139,7 @@ References to detailed content in this doc
 1.c Bundle Storage Integration (UI integrity)
 - Details
   - [x] Hash verification on fetch and before use.
-    - Archive integrity: archive sha256 is verified against the URL content-address (sha256/<hex>/bundle.tar.gz) during download. On mismatch, the request returns 502 (code: archive_hash_mismatch) and nothing is cached.
+    - Archive integrity: archive sha256 is verified against the URL content-address (sha256/<hex>/bundle.tar.zst) during download. On mismatch, the request returns 502 (code: archive_hash_mismatch) and nothing is cached.
     - Per-file integrity: on every GET, a strong ETag is computed from the served file bytes using SHA-256 and returned as a quoted value: "sha256-<hex>". If the client supplies If-None-Match with this exact value, the server returns 304.
     - Operational note: URLs include the contentHash making CDN caching safe and immutable; origin fails closed on integrity mismatches and never serves partially extracted assets.
 
@@ -156,7 +156,7 @@ References to detailed content in this doc
   - [ ] Update [ee/runner/Cargo.toml](ee/runner/Cargo.toml:1) with:
     - `tower-http = "0.5"` features ["fs","compression","set-header","trace"]
     - `mime_guess = "2"`
-    - `tar = "0.4"` and `flate2 = { version = "1", features = ["gzip"] }` or `async-compression`
+    - `tar = "0.4"` and `zstd = "0.13"` (or `async-compression` with zstd feature)
     - optional `aws-sdk-s3 = { version = "1", features = ["rustls"] }`
 - Registry/contentHash validation
   - [ ] Add lightweight registry validation client (HTTP or DB per deployment) to confirm tenant install → version → `content_hash` before serving
@@ -193,6 +193,64 @@ References to detailed content in this doc
   - [ ] Integration: cold fetch → extract → 200; repeat with `If-None-Match` → 304; tenant/contentHash mismatch → 404; large file → 413; traversal attempts → 400/404
 - Docs
   - [ ] Update Client SDK README to reference iframe `src="/ext-ui/{extensionId}/{content_hash}/index.html?path=/..."` and CSP/sandbox guidance
+
+1.e Bundle Format Alignment (zstd)
+- Rationale
+  - Uploader/finalizer and authoring tooling standardize on `bundle.tar.zst` (zstd-compressed tar).
+  - Runner must align on the same artifact name and compression to avoid format mismatches.
+- Tasks
+  - [x] Runner: change bundle URL to `sha256/<hex>/bundle.tar.zst` in `ee/runner/src/engine/loader.rs::bundle_url()` and any hard-coded paths.
+  - [x] Runner: replace gzip decoding with zstd decoding in `ee/runner/src/http/ext_ui.rs` (use `zstd::stream::read::Decoder` or `async-compression` zstd reader) for UI extraction.
+  - [x] Runner: update temporary file naming in `verify_archive_sha256()` to `.tar.zst` for clarity (no functional change required).
+  - [x] Tests: update `ee/runner/tests/ext_ui_integration.rs` to generate `.tar.zst` bundles and serve `/sha256/:hex/bundle.tar.zst` in the in-memory server.
+  - [x] Cargo: add `zstd = "^0.13"` (or enable zstd in `async-compression`) and remove the `flate2` dependency if no longer needed.
+  - [x] Docs: ensure all references in this plan and related docs use `bundle.tar.zst` consistently.
+
+1.f Per-Extension App Domains (Knative)
+- Rationale
+  - Assign a dedicated app domain per tenant’s extension install so Knative can autoscale the Runner on host hits and we have clean, predictable URLs.
+  - Keep a single Runner KService; provision a DomainMapping per extension install that targets that KService.
+
+- Data model
+  - [x] Add columns to `tenant_extension_install`:
+    - `runner_domain` (text, unique, indexed)
+    - `runner_status` (jsonb; { state: 'pending'|'provisioned'|'error', message?, last_updated? })
+    - `runner_ref` (jsonb; optional: KService/DomainMapping identifiers for troubleshooting)
+  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
+
+- Provisioning (Option B: Temporal worker)
+  - [x] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):
+    - Activity: `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns domain string.
+    - Activity: `ensureDomainMapping({ domain, kservice, namespace })` uses Kubernetes API to create DomainMapping:
+      - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: <domain>`
+      - `spec.ref: { apiVersion: serving.knative.dev/v1, kind: Service, name: <runner-kservice> }`
+    - Update DB status: set `runner_status.state` to `provisioned` or `error` with message.
+  - [x] Trigger workflow on install.
+  - [ ] Trigger workflow on enable.
+  - [x] Expose a “reprovision domain” action to retry.
+  - [ ] RBAC/secret: ServiceAccount with permission to manage DomainMappings in the Runner namespace.
+
+- Server (Next.js)
+  - [x] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
+  - [x] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
+  - [x] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
+
+- Runner changes
+  - [x] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
+  - [x] Keep ext-ui strict validation as-is (host lookup is just a dispatcher).
+
+- UI updates
+  - [x] Extensions list/details: display `runner_domain`, status (pending/provisioned/error), copy/open links.
+  - [x] Add action to reprovision if status=error.
+
+- Ops
+  - [ ] Wildcard DNS `*.${EXT_DOMAIN_ROOT}` → Knative ingress (or automate DNS records per domain).
+  - [x] KService env/secrets documented: `BUNDLE_STORE_BASE`, `REGISTRY_BASE_URL`, `EXT_CACHE_MAX_BYTES`, `EXT_STATIC_STRICT_VALIDATION`, `EXT_EGRESS_ALLOWLIST`, S3 creds. See `ee/docs/extension-system/knative-app-domains.md`.
+
+- Failure modes & handling
+  - [ ] On provisioning failure: persist error in `runner_status`, surface in UI, provide retry.
+  - [x] On lookup miss: Runner returns 404.
+  - [ ] Audit install-to-domain mapping (log/metrics on lookup miss).
 
 ## Phase 2 — Dynamic WASM Features
 

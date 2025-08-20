@@ -5,3 +5,4 @@ export * from './email-activities.js';
 export * from './checkout-session-activities.js';
 export * from './onboarding-seeds-activities.js';
 export * from './customer-tracking-activities.js';
+export * from './extension-domain-activities.js';

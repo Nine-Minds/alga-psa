@@ -194,7 +194,7 @@ pub async fn fetch_to_file(url: &str, dest_tmp: &Path) -> anyhow::Result<()> {
 }
 
 /// Build the bundle URL from BUNDLE_STORE_BASE and a content hash "sha256:<hex>" or "<hex>".
-/// Result: <base>/sha256/<hex>/bundle.tar.gz
+/// Result: <base>/sha256/<hex>/bundle.tar.zst
 pub fn bundle_url(bundle_store_base: &Url, content_hash: &str) -> anyhow::Result<Url> {
     let hex = content_hash.strip_prefix("sha256:").unwrap_or(content_hash);
     if hex.is_empty() {
@@ -202,7 +202,7 @@ pub fn bundle_url(bundle_store_base: &Url, content_hash: &str) -> anyhow::Result
     }
     let mut base = bundle_store_base.clone();
     // Ensure trailing slash handling
-    let path = format!("sha256/{}/bundle.tar.gz", hex);
+    let path = format!("sha256/{}/bundle.tar.zst", hex);
     let joined = base.join(&path)?;
     Ok(joined)
 }
@@ -220,7 +220,7 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
     let tmp_dir = cache_root.join("tmp");
     cache_fs::ensure_dir(&tmp_dir).await?;
     let rand_suffix: String = rand::thread_rng().sample_iter(&Alphanumeric).take(6).map(char::from).collect();
-    let tmp_path = tmp_dir.join(format!("{}.{}.tar.gz", expected_lower, rand_suffix));
+    let tmp_path = tmp_dir.join(format!("{}.{}.tar.zst", expected_lower, rand_suffix));
 
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(60))
@@ -254,4 +254,3 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
 
     Ok(tmp_path)
 }
-

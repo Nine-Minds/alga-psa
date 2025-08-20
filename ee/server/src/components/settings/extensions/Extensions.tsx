@@ -14,6 +14,7 @@ import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
 import logger from '@/utils/logger';
 import { fetchExtensions, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
+import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 
 /**
  * Extensions management page
@@ -22,6 +23,7 @@ export default function Extensions() {
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [installInfo, setInstallInfo] = useState<Record<string, { domain: string | null; status: any }>>({});
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -37,6 +39,14 @@ export default function Extensions() {
         const extensionsData = await fetchExtensions();
         setExtensions(extensionsData);
         setLoading(false);
+        // Kick off per-extension install info fetches
+        const entries = await Promise.all(
+          extensionsData.map(async (ext) => {
+            const info = await getInstallInfo(ext.id).catch(() => null);
+            return [ext.id, { domain: info?.runner_domain ?? null, status: info?.runner_status ?? null }];
+          })
+        );
+        setInstallInfo(Object.fromEntries(entries));
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'unknown error';
         logger.error('Failed to fetch extensions', { error: msg });
@@ -98,6 +108,15 @@ export default function Extensions() {
       alert('Failed to remove extension');
     }
   };
+
+  const handleReprovision = async (id: string) => {
+    try {
+      const result = await reprovisionExtension(id);
+      setInstallInfo((prev) => ({ ...prev, [id]: { domain: result.domain || null, status: { state: 'provisioning' } } }));
+    } catch (e) {
+      alert('Failed to reprovision');
+    }
+  };
   
   return (
     <ReflectionContainer id="extensions-page" label="Extensions Management">
@@ -151,6 +170,9 @@ export default function Extensions() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Domain
+                  </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -190,6 +212,14 @@ export default function Extensions() {
                         {extension.is_enabled ? 'Enabled' : 'Disabled'}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {installInfo[extension.id]?.domain || '—'}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
+                      </div>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <Link
@@ -208,6 +238,31 @@ export default function Extensions() {
                           <Settings className="h-3.5 w-3.5 mr-1" />
                           Settings
                         </Link>
+                        {installInfo[extension.id]?.domain ? (
+                          <>
+                            <a
+                              href={`https://${installInfo[extension.id]?.domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
+                            >
+                              Open
+                            </a>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(`https://${installInfo[extension.id]?.domain}`)}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            >
+                              Copy
+                            </button>
+                          </>
+                        ) : (
+                          <button
+                            onClick={() => handleReprovision(extension.id)}
+                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          >
+                            Provision
+                          </button>
+                        )}
                         <button
                           onClick={() => { void handleToggleExtension(extension.id, extension.is_enabled); }}
                           className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
