@@ -27,7 +27,7 @@ rand = "0.8"
 tower-http = { version = "0.5", features = ["fs", "set-header", "trace"] }
 mime_guess = "2"
 tar = "0.4"
-flate2 = "1"
+zstd = "0.13"
 moka = { version = "0.12", features = ["future"] }
 tokio-util = "0.7"
 
@@ -38,4 +38,3 @@ tokio-util = "0.7"
 tempfile = "3"
 serial_test = "3"
 tower = "0.5"
-

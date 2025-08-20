@@ -8,8 +8,7 @@ use axum::{
     Json, Router,
 };
 use bytes::Bytes;
-use flate2::write::GzEncoder;
-use flate2::Compression;
+use zstd::stream::encode_all as zstd_encode_all;
 use serde_json::json;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -57,12 +56,11 @@ impl RegistryClient for DenyingRegistry {
     }
 }
 
-fn make_bundle_targz() -> (Vec<u8>, String) {
-    // Build a tar.gz bundle in-memory with ui/index.html and ui/assets/app.js
-    let mut tar_buf: Vec<u8> = Vec::new();
+fn make_bundle_tarzst() -> (Vec<u8>, String) {
+    // Build a tar bundle in-memory, then zstd-compress to produce bundle.tar.zst
+    let mut raw_tar: Vec<u8> = Vec::new();
     {
-        let enc = GzEncoder::new(&mut tar_buf, Compression::default());
-        let mut tar = Builder::new(enc);
+        let mut tar = Builder::new(&mut raw_tar);
 
         // index.html
         let mut hdr = tar::Header::new_gnu();
@@ -83,25 +81,28 @@ fn make_bundle_targz() -> (Vec<u8>, String) {
         tar.finish().unwrap();
     }
 
-    // Compute hex of resulting tar.gz bytes
+    // zstd-compress the tar bytes
+    let tarzst = zstd_encode_all(&raw_tar[..], 0).unwrap();
+
+    // Compute hex of resulting tar.zst bytes
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
-    hasher.update(&tar_buf);
+    hasher.update(&tarzst);
     let hex = hex::encode(hasher.finalize());
-    (tar_buf, hex)
+    (tarzst, hex)
 }
 
 async fn start_bundle_http_server(bytes: Vec<u8>) -> (Url, JoinHandle<()>) {
-    // Serve at /sha256/:hex/bundle.tar.gz (hex extracted from request path but we ignore and always return same bytes)
+    // Serve at /sha256/:hex/bundle.tar.zst (hex extracted from request path but we ignore and always return same bytes)
     let app = Router::new().route(
-        "/sha256/:hex/bundle.tar.gz",
+        "/sha256/:hex/bundle.tar.zst",
         get({
             let blob = Bytes::from(bytes);
             move || {
                 let b = blob.clone();
                 async move {
                     let mut h = axum::http::HeaderMap::new();
-                    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/gzip"));
+                    h.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/octet-stream"));
                     (StatusCode::OK, h, b).into_response()
                 }
             }
@@ -147,7 +148,7 @@ where
 #[serial]
 async fn cold_fetch_then_304() {
     // Arrange: server serving bundle
-    let (buf, hex) = make_bundle_targz();
+    let (buf, hex) = make_bundle_tarzst();
     let (base, _handle) = start_bundle_http_server(buf).await;
 
     // Temp cache root
@@ -208,7 +209,7 @@ async fn cold_fetch_then_304() {
 #[serial]
 async fn strict_validation_denied_is_404() {
     // Arrange bundle server
-    let (buf, hex) = make_bundle_targz();
+    let (buf, hex) = make_bundle_tarzst();
     let (base, _handle) = start_bundle_http_server(buf).await;
 
     let tmpdir = tempfile::tempdir().unwrap();
@@ -233,7 +234,7 @@ async fn strict_validation_denied_is_404() {
 #[serial]
 async fn traversal_is_rejected() {
     // Arrange server + state
-    let (buf, hex) = make_bundle_targz();
+    let (buf, hex) = make_bundle_tarzst();
     let (base, _handle) = start_bundle_http_server(buf).await;
 
     let tmpdir = tempfile::tempdir().unwrap();
@@ -258,11 +259,9 @@ async fn traversal_is_rejected() {
 async fn oversize_asset_returns_413() {
     // Arrange bundle with large file
     // Create a big asset under ui/assets/big.bin
-    let mut tar_buf: Vec<u8> = Vec::new();
+    let mut raw_tar: Vec<u8> = Vec::new();
     {
-        let enc = GzEncoder::new(&mut tar_buf, Compression::default());
-        let mut tar = Builder::new(enc);
-
+        let mut tar = Builder::new(&mut raw_tar);
         // index.html small
         let mut hdr = tar::Header::new_gnu();
         let content = b"<html>ok</html>";
@@ -270,7 +269,6 @@ async fn oversize_asset_returns_413() {
         hdr.set_mode(0o644);
         hdr.set_cksum();
         tar.append_data(&mut hdr, "ui/index.html", &content[..]).unwrap();
-
         // big file (use allowed extension so we don't fail sanitizer)
         let big = vec![0u8; 128 * 1024]; // 128KiB
         let mut hdr2 = tar::Header::new_gnu();
@@ -278,15 +276,14 @@ async fn oversize_asset_returns_413() {
         hdr2.set_mode(0o644);
         hdr2.set_cksum();
         tar.append_data(&mut hdr2, "ui/assets/big.png", &big[..]).unwrap();
-
         tar.finish().unwrap();
     }
+    let tarzst = zstd_encode_all(&raw_tar[..], 0).unwrap();
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();
-    hasher.update(&tar_buf);
+    hasher.update(&tarzst);
     let hex = hex::encode(hasher.finalize());
-
-    let (base, _handle) = start_bundle_http_server(tar_buf).await;
+    let (base, _handle) = start_bundle_http_server(tarzst).await;
 
     let tmpdir = tempfile::tempdir().unwrap();
     let cache_root = tmpdir.path().to_path_buf();
@@ -333,7 +330,7 @@ async fn oversize_asset_returns_413() {
 #[serial]
 async fn archive_hash_mismatch_returns_502() {
     // Make a good bundle and its correct hex
-    let (good_bytes, good_hex) = make_bundle_targz();
+    let (good_bytes, good_hex) = make_bundle_tarzst();
     // Create bad bytes by flipping one byte
     let mut bad_bytes = good_bytes.clone();
     if let Some(b) = bad_bytes.get_mut(0) {
@@ -411,7 +408,7 @@ async fn loader_verify_archive_sha256_unit() {
     let hex = hex::encode(hasher.finalize());
 
     let (base, _handle) = start_bundle_http_server(bytes.clone()).await;
-    let url = base.join(&format!("sha256/{}/bundle.tar.gz", hex)).unwrap();
+    let url = base.join(&format!("sha256/{}/bundle.tar.zst", hex)).unwrap();
 
     // Success case
     let tmp = verify_archive_sha256(&url, &hex).await.expect("verify should pass");
@@ -420,7 +417,7 @@ async fn loader_verify_archive_sha256_unit() {
     let _ = std::fs::remove_file(&tmp);
 
     // Mismatch case: use different expected hex
-    let bad_url = base.join(&format!("sha256/{}/bundle.tar.gz", "deadbeef")).unwrap();
+    let bad_url = base.join(&format!("sha256/{}/bundle.tar.zst", "deadbeef")).unwrap();
     let err = verify_archive_sha256(&bad_url, "deadbeef").await.unwrap_err();
     let ie = err.downcast_ref::<IntegrityError>().expect("should be IntegrityError");
     match ie {

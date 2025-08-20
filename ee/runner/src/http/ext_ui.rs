@@ -9,7 +9,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use flate2::read::GzDecoder;
+use zstd::stream::read::Decoder as ZstdDecoder;
 use serde::Deserialize;
 use tar::Archive;
 use tokio::fs;
@@ -302,7 +302,7 @@ fn rand_suffix() -> String {
     s
 }
 
-/// Extract only files under "ui/" prefix from the tar.gz into ui_root, preserving directory structure.
+/// Extract only files under "ui/" prefix from the tar.zst into ui_root, preserving directory structure.
 /// Uses write_atomic for files and sets read-only perms.
 /// Important: Do not hold non-Send tar iterators across .await points. Collect ops first, then perform async IO.
 async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Result<()> {
@@ -310,8 +310,8 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
     let mut f = fs::File::open(tgz_path).await?;
     let mut buf = Vec::new();
     f.read_to_end(&mut buf).await?;
-    let gz = GzDecoder::new(&buf[..]);
-    let mut ar = Archive::new(gz);
+    let z = ZstdDecoder::new(&buf[..])?;
+    let mut ar = Archive::new(z);
 
     // Collect operations to perform after iteration (so no non-Send borrows cross .await)
     enum Op {
