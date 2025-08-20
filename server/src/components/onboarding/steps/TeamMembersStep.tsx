@@ -7,7 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getLicenseChecker } from 'server/src/lib/licensing';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { getAvailableRoles } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
@@ -62,11 +62,34 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const checkLicenseStatus = async () => {
     try {
       setIsLoadingLicense(true);
-      const licenseChecker = await getLicenseChecker();
-      const currentUserCount = 1; // Owner user
-      const totalUsers = currentUserCount + data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
-      const status = await licenseChecker.checkUserLimit(totalUsers);
-      setLicenseInfo(status);
+      const result = await getLicenseUsageAction();
+      
+      if (result.success && result.data) {
+        const { limit, used } = result.data;
+        const validTeamMembers = data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
+        const totalAfterInvites = used + validTeamMembers;
+        
+        if (limit === null) {
+          // No limit
+          setLicenseInfo({ 
+            limit: Infinity, 
+            current: totalAfterInvites, 
+            allowed: true 
+          });
+        } else {
+          // Has limit
+          const allowed = totalAfterInvites <= limit;
+          setLicenseInfo({ 
+            limit, 
+            current: totalAfterInvites, 
+            allowed,
+            message: allowed ? undefined : `You've reached your internal user licence limit.`
+          });
+        }
+      } else {
+        // If we can't get license info, assume no limit
+        setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
+      }
     } catch (error) {
       console.error('Error checking license status:', error);
       setLicenseInfo({ limit: Infinity, current: 0, allowed: true });

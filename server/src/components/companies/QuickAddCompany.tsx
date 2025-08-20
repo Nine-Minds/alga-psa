@@ -119,7 +119,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
           const users = await getAllUsers();
           setInternalUsers(users);
         } catch (error: any) {
-          console.error("Error fetching internal users:", error);
+          console.error("Error fetching MSP users:", error);
           toast.error("Failed to load users for Account Manager selection.");
         } finally {
           setIsLoadingUsers(false);

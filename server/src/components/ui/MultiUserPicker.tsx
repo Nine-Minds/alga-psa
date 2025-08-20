@@ -31,7 +31,7 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
   const [avatarUrls, setAvatarUrls] = useState<Record<string, string | null>>({});
   const fetchedUserIdsRef = useRef<Set<string>>(new Set());
   
-  // Filter for internal users only
+  // Filter for MSP (internal) users only
   const internalUsers = users.filter(user => user.user_type === 'internal');
   
   const selectedUsers = internalUsers.filter(user => values.includes(user.user_id));

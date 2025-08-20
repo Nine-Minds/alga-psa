@@ -6,3 +6,5 @@ export * from './checkout-session-activities.js';
 export * from './onboarding-seeds-activities.js';
 export * from './customer-tracking-activities.js';
 export * from './extension-domain-activities.js';
+export * from './license-management-activities.js';
+export * from './nm-store-callback-activities.js';

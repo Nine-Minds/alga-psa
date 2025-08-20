@@ -18,8 +18,10 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
-import { Search, Eye, EyeOff } from 'lucide-react';
+import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -45,11 +47,13 @@ const UserManagement = (): JSX.Element => {
     companyId: ''
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
+  const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
 
   useEffect(() => {
     setLoading(true);
     fetchUsers();
     fetchRoles();
+    fetchLicenseUsage();
     if (portalType === 'client') {
       fetchCompanies();
       fetchContacts();
@@ -80,6 +84,19 @@ const UserManagement = (): JSX.Element => {
       hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
     });
   }, [newUser.password]);
+
+  const fetchLicenseUsage = async (): Promise<void> => {
+    if (portalType === 'msp') {
+      try {
+        const result = await getLicenseUsageAction();
+        if (result.success && result.data) {
+          setLicenseUsage(result.data);
+        }
+      } catch (err) {
+        console.error('Error fetching license usage:', err);
+      }
+    }
+  };
 
   const fetchUsers = async (): Promise<void> => {
     try {
@@ -258,6 +275,8 @@ const fetchContacts = async (): Promise<void> => {
       }
 
       setShowNewUserForm(false);
+      // Refresh license usage after creating a user
+      fetchLicenseUsage();
       // Reset newUser state with the default role
       setNewUser({ 
         firstName: '', 
@@ -284,6 +303,8 @@ const fetchContacts = async (): Promise<void> => {
     try {
       await deleteUser(userId);
       setUsers(users.filter(user => user.user_id !== userId));
+      // Refresh license usage after deleting a user
+      fetchLicenseUsage();
     } catch (error) {
       console.error('Error deleting user:', error);
       setError('Failed to delete user');
@@ -334,6 +355,25 @@ const fetchContacts = async (): Promise<void> => {
         </div>
       </CardHeader>
       <CardContent>
+        {/* License Usage Banner for MSP Portal */}
+        {portalType === 'msp' && licenseUsage && (
+          <div 
+            id="msp-licence-usage-banner"
+            className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Info size={16} className="text-blue-600" />
+              <span className="text-sm text-blue-900">
+                MSP users: {licenseUsage.used} 
+                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licences used` : ' (No limit)'}
+              </span>
+            </div>
+            {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
+              <span className="text-sm text-blue-700">
+                Remove or deactivate a user to free a licence
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex justify-between mb-4">
           <div className="flex gap-6 items-center">
             <div className="relative">
@@ -375,6 +415,12 @@ const fetchContacts = async (): Promise<void> => {
             <Button 
               id={`create-new-${portalType}-user-btn`} 
               onClick={() => setShowNewUserForm(true)}
+              disabled={portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0}
+              title={
+                portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                  ? 'Licence limit reached. Remove or deactivate a user to free a licence.'
+                  : undefined
+              }
             >
               Create New {portalType === 'msp' ? 'User' : 'Client User'}
             </Button>
