@@ -99,7 +99,7 @@ spec:
             - name: DB_TYPE
               value: "{{ .Values.config.db.type }}"
             - name: DB_HOST
-              value: "{{ .Values.config.db.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+              value: "{{ .Values.config.db.host }}"
             - name: DB_PORT
               value: "{{ .Values.config.db.port }}"
             - name: DB_USER

@@ -1,0 +1,27 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
+{{- $fullname := include "sebastian.fullname" . }}
+{{- $serviceName := printf "%s-code-server" $fullname | trunc 63 | trimSuffix "-" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $serviceName }}
+  namespace: {{ .Values.hostedEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+spec:
+  type: {{ .Values.hostedEnv.codeServer.service.type }}
+  ports:
+    - port: {{ .Values.hostedEnv.codeServer.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+    - port: 3000
+      targetPort: alga-http
+      protocol: TCP
+      name: alga-http
+  selector:
+    {{- include "sebastian.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+{{- end }}
+

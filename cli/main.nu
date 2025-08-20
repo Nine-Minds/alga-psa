@@ -8,6 +8,7 @@ use "utils.nu" *
 use "migrate.nu" *
 use "workflows.nu" *
 use "dev-env.nu" *
+use "hosted-env.nu" *
 use "build.nu" *
 use "config.nu" *
 use "tenant.nu" *
@@ -48,6 +49,12 @@ def --wrapped main [
        print "    Force cleanup stuck development environment"
        print "  nu main.nu dev-env-status [<branch>]"
        print "    Get environment status and URLs"
+       print ""
+       print "  nu main.nu hosted-env-create <branch>     # Create hosted code-server env in cluster"
+       print "  nu main.nu hosted-env-list                # List hosted environments"
+       print "  nu main.nu hosted-env-connect <branch>    # Port-forward code-server"
+       print "  nu main.nu hosted-env-destroy <branch> [--force]"
+       print "  nu main.nu hosted-env-status <branch>     # Show k8s objects"
        print ""
        print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
        print "  nu main.nu -- dev-up --edition ee --detached"
@@ -158,6 +165,12 @@ def --wrapped main [
        print "    Force cleanup stuck development environment"
        print "  nu main.nu dev-env-status [<branch>]"
        print "    Get environment status and URLs"
+       print ""
+       print "  nu main.nu hosted-env-create <branch>     # Create hosted code-server env in cluster"
+       print "  nu main.nu hosted-env-list                # List hosted environments"
+       print "  nu main.nu hosted-env-connect <branch>    # Port-forward code-server"
+       print "  nu main.nu hosted-env-destroy <branch> [--force]"
+       print "  nu main.nu hosted-env-status <branch>     # Show k8s objects"
        print ""
        print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
        print "  nu main.nu -- dev-up --edition ee --detached"
@@ -595,6 +608,39 @@ def --wrapped main [
            
            let force = (check-flag $args "--force")
            delete-tenant $tenant_id --force $force
+       }
+       # Hosted environment commands
+       "hosted-env-create" => {
+           let branch = ($args | get 1? | default null)
+           if $branch == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-create requires branch argument($env.ALGA_COLOR_RESET)" }
+           }
+           hosted-env-create $branch
+       }
+       "hosted-env-list" => {
+           hosted-env-list
+       }
+       "hosted-env-connect" => {
+           let branch = ($args | get 1? | default null)
+           if $branch == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect requires branch argument($env.ALGA_COLOR_RESET)" }
+           }
+           hosted-env-connect $branch
+       }
+       "hosted-env-destroy" => {
+           let branch = ($args | get 1? | default null)
+           if $branch == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-destroy requires branch argument($env.ALGA_COLOR_RESET)" }
+           }
+           let force = (check-flag $args "--force")
+           hosted-env-destroy $branch --force $force
+       }
+       "hosted-env-status" => {
+           let branch = ($args | get 1? | default null)
+           if $branch == null {
+               error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-status requires branch argument($env.ALGA_COLOR_RESET)" }
+           }
+           hosted-env-status $branch
        }
        _ => {
            error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', 'config', 'create-tenant', 'list-tenants', or 'delete-tenant'.($env.ALGA_COLOR_RESET)" }

@@ -1,0 +1,181 @@
+# Hosted Environment Values for Alga PSA
+# This file extends the base values.yaml for hosted-on-cluster dev environments
+
+nameOverride: "alga-hosted"
+
+# Hosted Environment Configuration
+hostedEnv:
+  enabled: false
+  # Helm should not manage the Namespace; CLI pre-creates it with Istio labels
+  manageNamespace: false
+  branch: ""
+  sanitizedBranch: ""
+  namespace: ""
+
+  # Repository configuration for initial checkout in code-server
+  repository:
+    url: "https://github.com/Nine-Minds/alga-psa.git"
+    branch: "main"
+
+  # Git configuration for commits within the environment
+  git:
+    authorName: "Hosted Environment"
+    authorEmail: "hosted@alga.local"
+
+  # Code Server Configuration
+  codeServer:
+    enabled: true
+    image:
+      repository: "harbor.nineminds.com/nineminds/alga-code-server"
+      tag: "latest"
+      pullPolicy: "Always"
+      is_private: true
+      credentials: "harbor-credentials"
+    service:
+      type: "ClusterIP"
+      port: 8080
+    password: "alga-dev"
+    resources:
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+      requests:
+        cpu: "500m"
+        memory: "2Gi"
+
+  # Persistence for hosted environments
+  persistence:
+    enabled: true
+    size: "10Gi"
+    storageClass: "local-path"
+    keepOnDelete: false
+
+  # Ingress (optional; typically traffic is routed via Istio to the namespace)
+  ingress:
+    enabled: false
+    className: "nginx"
+    annotations: {}
+    hosts:
+      codeServer:
+        host: "{{ .Values.hostedEnv.sanitizedBranch }}.hosted.alga.nineminds.com"
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      enabled: false
+      secretName: "alga-hosted-tls"
+
+# Disable main server deployment entirely for hosted-env (only code-server runs)
+server:
+  replicaCount: 0
+  persistence:
+    enabled: true
+    size: "5Gi"
+    storageClass: "local-path"
+    accessModes:
+      - ReadWriteOnce
+    annotations: {}
+    existingClaim: ""
+    mountPath: "/data"
+
+# Use production/shared Postgres and Redis (external to this namespace)
+db:
+  enabled: false
+  image:
+    repository: ankane/pgvector
+    tag: "latest"
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "local-path"
+    existingClaim: ""
+
+redis:
+  enabled: false
+  image:
+    repository: redis
+    tag: latest
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClass: "local-path"
+
+# Match the hosted environment variable set (from main deployment)
+env: "development"
+version: "hosted-dev"
+host: "localhost"
+
+# Vault Agent enabled for hosted-env
+vaultAgent:
+  enabled: true
+  role: alga-psa
+  secretPath: secret/data/alga-psa/server
+  sharedSecretPath: secret/data/alga-psa/shared
+
+# Secrets provider defaults favoring Vault availability in hosted clusters
+secrets_provider:
+  readChain: "env,filesystem,vault"
+  writeProvider: "filesystem"
+  envPrefix: ""
+  vault:
+    addr: "http://vault.vault.svc:8200"
+    token: ""
+    appSecretPath: "kv/data/app/secrets"
+  tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+
+# External service configuration (used when db.enabled/redis.enabled are false)
+config:
+  db:
+    host: "db.msp.svc.cluster.local"    # Production Postgres FQDN
+    port: 5432
+    user: "app_user"                    # Match production app user
+    server_database: "server"
+    # Optional: reference external secrets instead of inline values (prefer Vault)
+    server_password_secret:
+      name: "db-credentials"
+      key:  "DB_PASSWORD_SERVER"
+    server_password_admin_secret:
+      name: "db-credentials"
+      key:  "DB_PASSWORD_SUPERUSER"
+    server_admin_password: ""           # Avoid inline in real usage
+
+  redis:
+    # Prefer FQDN for cross-namespace access
+    hostFQDN: "redis.msp.svc.cluster.local"
+    port: 6379
+    # Optional: use secretRef; otherwise rely on Vault-injected REDIS_PASSWORD
+    passwordSecret:
+      name: "redis-credentials"
+      key:  "REDIS_PASSWORD"
+    password: ""
+
+  hocuspocus:
+    hostFQDN: "hocuspocus.msp.svc.cluster.local"
+    port: 1234
+
+# Logging
+logging:
+  level: DEBUG
+  is_format_json: false
+  is_full_details: true
+  file:
+    enabled: true
+
+# Enable provider integrations (credentials should come from Vault or copied secrets)
+gmail_integration:
+  enabled: true
+  client_id: ""
+  client_secret: ""
+  project_id: ""
+  redirect_uri: ""
+
+microsoft_integration:
+  enabled: true
+  client_id: ""
+  client_secret: ""
+  tenant_id: ""
+  redirect_uri: ""
+# Disable setup hooks for hosted envs (avoid touching prod DB)
+setup:
+  runMigrations: false
+  runSeeds: false
