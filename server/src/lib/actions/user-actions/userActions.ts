@@ -16,6 +16,7 @@ import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
+import logger from '@alga-psa/shared/core/logger.js';
 
 interface ActionResult {
   success: boolean;
@@ -49,8 +50,8 @@ export async function checkEmailExistsGlobally(email: string): Promise<boolean> 
       return !!existingUser;
     });
   } catch (error) {
-    console.error('Error checking email existence globally:', error);
-    throw new Error('Failed to check email existence');
+    logger.error('Error checking email existence globally:', error);
+    throw error; // Preserve original error
   }
 }
 
@@ -145,7 +146,7 @@ export async function addUser(userData: {
       return user;
     });
   } catch (error: any) {
-    console.error('Error adding user:', error);
+    logger.error('Error adding user:', error);
     // Pass through the specific error message if it's about duplicate email
     if (error.message === "A user with this email address already exists") {
       throw error;
@@ -198,25 +199,25 @@ export async function deleteUser(userId: string): Promise<void> {
 
     revalidatePath('/settings');
   } catch (error) {
-    console.error('Error deleting user:', error);
+    logger.error('Error deleting user:', error);
     throw new Error('Failed to delete user');
   }
 }
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
-    console.log('Getting current user from session');
+    logger.debug('Getting current user from session');
     const session = await getServerSession(authOptions);
 
     if (!session?.user) {
-      console.log('No user found in session');
+      logger.debug('No user found in session');
       return null;
     }
 
     // Use the user ID from the session if available (more reliable than email lookup)
     const sessionUser = session.user as any;
     if (sessionUser.id && sessionUser.tenant) {
-      console.log(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
+      logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
       const {knex} = await createTenantKnex();
       
       // Use transaction to avoid connection pool exhaustion
@@ -225,34 +226,34 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         const user = await User.get(trx, sessionUser.id);
         
         if (!user) {
-          console.log(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
+          logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
           return null;
         }
         
-        console.log(`Fetching roles for user ID: ${user.user_id}`);
+        logger.debug(`Fetching roles for user ID: ${user.user_id}`);
         const roles = await User.getUserRoles(trx, user.user_id);
         const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
         
-        console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
         return { ...user, roles, avatarUrl };
       });
     }
     
     // Fallback to email lookup if session doesn't have ID (shouldn't happen with properly configured session)
     if (!session.user.email) {
-      console.log('No user email found in session');
+      logger.debug('No user email found in session');
       return null;
     }
 
-    console.log(`WARNING: Falling back to email lookup for: ${session.user.email} - this may return wrong user in multi-tenant setup`);
+    logger.warn(`Falling back to email lookup for: ${session.user.email} - this may return wrong user in multi-tenant setup`);
     
     // If we have user type in session, use it for more accurate lookup
     if (sessionUser.user_type) {
-      console.log(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}`);
+      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}`);
       const user = await User.findUserByEmailAndType(session.user.email, sessionUser.user_type);
       
       if (!user) {
-        console.log(`User not found for email: ${session.user.email} and type: ${sessionUser.user_type}`);
+        logger.debug(`User not found for email: ${session.user.email} and type: ${sessionUser.user_type}`);
         return null;
       }
       
@@ -260,11 +261,11 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       
       // Use transaction for roles and avatar lookup
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        console.log(`Fetching roles for user ID: ${user.user_id}`);
+        logger.debug(`Fetching roles for user ID: ${user.user_id}`);
         const roles = await User.getUserRoles(trx, user.user_id);
         const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
         
-        console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
         return { ...user, roles, avatarUrl };
       });
     }
@@ -273,7 +274,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     const user = await User.findUserByEmail(session.user.email);
 
     if (!user) {
-      console.log(`User not found for email: ${session.user.email}`);
+      logger.debug(`User not found for email: ${session.user.email}`);
       return null;
     }
 
@@ -281,16 +282,17 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     
     // Use transaction for roles and avatar lookup
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      console.log(`Fetching roles for user ID: ${user.user_id}`);
+      logger.debug(`Fetching roles for user ID: ${user.user_id}`);
       const roles = await User.getUserRoles(trx, user.user_id);
       const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
 
-      console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+      logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
       return { ...user, roles, avatarUrl };
     });
   } catch (error) {
-    console.error('Failed to get current user:', error);
-    throw new Error('Failed to get current user');
+    logger.error('Failed to get current user:', error);
+    // Preserve the original error and stack trace
+    throw error;
   }
 }
 
@@ -312,7 +314,7 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
       return user || null;
     });
   } catch (error) {
-    console.error(`Failed to find user with id ${id}:`, error);
+    logger.error(`Failed to find user with id ${id}:`, error);
     throw new Error('Failed to find user');
   }
 }
@@ -350,7 +352,7 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
       );
     });
   } catch (error) {
-    console.error('Failed to fetch users:', error);
+    logger.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');
   }
 }
@@ -373,7 +375,7 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
       return updatedUser || null;
     });
   } catch (error) {
-    console.error(`Failed to update user with id ${userId}:`, error);
+    logger.error(`Failed to update user with id ${userId}:`, error);
     throw new Error('Failed to update user');
   }
 }
@@ -410,7 +412,7 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
 
     revalidatePath('/settings');
   } catch (error) {
-    console.error(`Failed to update roles for user with id ${userId}:`, error);
+    logger.error(`Failed to update roles for user with id ${userId}:`, error);
     throw new Error('Failed to update user roles');
   }
 }
@@ -427,7 +429,7 @@ export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.
     const roles = await User.getUserRoles(knex, userId);
     return roles;
   } catch (error) {
-    console.error(`Failed to fetch roles for user with id ${userId}:`, error);
+    logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles');
   }
 }
@@ -442,7 +444,7 @@ export async function getAllRoles(): Promise<IRole[]> {
       return roles;
     });
   } catch (error) {
-    console.error('Failed to fetch all roles:', error);
+    logger.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
   }
 }
@@ -463,7 +465,7 @@ export async function getMSPRoles(): Promise<IRole[]> {
       return roles;
     });
   } catch (error) {
-    console.error('Failed to fetch MSP roles:', error);
+    logger.error('Failed to fetch MSP roles:', error);
     throw new Error('Failed to fetch MSP roles');
   }
 }
@@ -484,7 +486,7 @@ export async function getClientPortalRoles(): Promise<IRole[]> {
       return roles;
     });
   } catch (error) {
-    console.error('Failed to fetch client portal roles:', error);
+    logger.error('Failed to fetch client portal roles:', error);
     throw new Error('Failed to fetch client portal roles');
   }
 }
@@ -519,7 +521,7 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
       });
     }
   } catch (error) {
-    console.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
+    logger.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles with permissions');
   }
 }
@@ -532,7 +534,7 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      console.log('No current user found, returning empty permissions.');
+      logger.debug('No current user found, returning empty permissions.');
       return [];
     }
 
@@ -549,10 +551,10 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
       return acc;
     }, new Set<string>());
 
-    console.log(`User ${currentUser.user_id} has permissions: ${Array.from(allPermissions).join(', ')}`);
+    logger.debug(`User ${currentUser.user_id} has permissions: ${Array.from(allPermissions).join(', ')}`);
     return Array.from(allPermissions);
   } catch (error) {
-    console.error('Failed to get current user permissions:', error);
+    logger.error('Failed to get current user permissions:', error);
     // Depending on requirements, you might want to return empty array or re-throw
     // Returning empty array for now to avoid breaking flows that might expect an array
     return [];
@@ -577,7 +579,7 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
       return user || null;
     });
   } catch (error) {
-    console.error(`Failed to fetch user with roles for id ${userId}:`, error);
+    logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
     throw new Error('Failed to fetch user with roles');
   }
 }
@@ -600,7 +602,7 @@ export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUse
       return users.filter((user): user is IUserWithRoles => user !== undefined);
     });
   } catch (error) {
-    console.error('Failed to fetch multiple users with roles:', error);
+    logger.error('Failed to fetch multiple users with roles:', error);
     throw new Error('Failed to fetch multiple users with roles');
   }
 }
@@ -624,7 +626,7 @@ export async function getUserPreference(userId: string, settingName: string): Pr
       return preference.setting_value;
     }
   } catch (error) {
-    console.error('Failed to get user preference:', error);
+    logger.error('Failed to get user preference:', error);
     throw new Error('Failed to get user preference');
   }
 }
@@ -646,7 +648,7 @@ export async function setUserPreference(userId: string, settingName: string, set
       updated_at: new Date()
     });
   } catch (error) {
-    console.error('Failed to set user preference:', error);
+    logger.error('Failed to set user preference:', error);
     throw new Error('Failed to set user preference');
   }
 }
@@ -676,7 +678,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
       tenant: contact.tenant
     };
   } catch (error) {
-    console.error('Failed to verify contact email:', error);
+    logger.error('Failed to verify contact email:', error);
     throw new Error('Failed to verify contact email');
   }
 }
@@ -734,9 +736,9 @@ export async function registerClientUser(
       const lastName = nameParts.slice(1).join(' ') || '';
 
       // Create the user with client user type
-      console.log('Creating new user record...');
+      logger.debug('Creating new user record...');
       const hashedPassword = await hashPassword(password);
-      console.log('Password hashed successfully');
+      logger.debug('Password hashed successfully');
 
       const [user] = await trx('users')
         .insert({
@@ -777,7 +779,7 @@ export async function registerClientUser(
       return { success: true };
     });
   } catch (error) {
-    console.error('Error registering client user:', error);
+    logger.error('Error registering client user:', error);
     return { success: false, error: 'Failed to register user' };
   }
 }
@@ -806,7 +808,7 @@ export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: bo
     
     return { hasResetPassword: hasReset };
   } catch (error) {
-    console.error('Error checking password reset status:', error);
+    logger.error('Error checking password reset status:', error);
     return { hasResetPassword: true }; // Default to true on error to avoid showing warning
   }
 }
@@ -843,7 +845,7 @@ export async function changeOwnPassword(
 
     return { success: true };
   } catch (error) {
-    console.error('Error changing password:', error);
+    logger.error('Error changing password:', error);
     return { success: false, error: 'Failed to change password' };
   }
 }
@@ -890,7 +892,7 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
       return null;
     });
   } catch (error) {
-    console.error('Error getting user company ID:', error);
+    logger.error('Error getting user company ID:', error);
     throw new Error('Failed to get user company ID');
   }
 }
@@ -928,7 +930,7 @@ export async function getUserContactId(userId: string): Promise<string | null> {
       return user?.contact_id || null;
     });
   } catch (error) {
-    console.error('Error getting user contact ID:', error);
+    logger.error('Error getting user contact ID:', error);
     throw new Error('Failed to get user contact ID');
   }
 }
@@ -968,7 +970,7 @@ export async function adminChangeUserPassword(
 
     return { success: true };
   } catch (error) {
-    console.error('Error changing user password:', error);
+    logger.error('Error changing user password:', error);
     return { success: false, error: 'Failed to change user password' };
   }
 }
@@ -1047,7 +1049,7 @@ export async function uploadUserAvatar(
 
     // Use the imageUrl returned by the service
     const avatarUrl = uploadResult.imageUrl;
-    console.log(`[uploadUserAvatar] New avatar URL: ${avatarUrl}`);
+    logger.debug(`[uploadUserAvatar] New avatar URL: ${avatarUrl}`);
 
     return {
       success: true,
@@ -1056,7 +1058,7 @@ export async function uploadUserAvatar(
     };
 
   } catch (error: any) {
-    console.error('[UserActions] Failed to upload user avatar:', {
+    logger.error('[UserActions] Failed to upload user avatar:', {
       operation: 'uploadUserAvatar',
       userId,
       errorMessage: error.message || 'Unknown error',
@@ -1126,7 +1128,7 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
     return { success: true, message: deleteResult.message || 'Avatar deleted successfully.' };
 
   } catch (error: any) {
-    console.error(`[UserActions] Failed to delete user avatar:`, {
+    logger.error(`[UserActions] Failed to delete user avatar:`, {
       operation: 'deleteUserAvatar',
       userId,
       errorMessage: error.message || 'Unknown error',
@@ -1170,7 +1172,7 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
       return users;
     });
   } catch (error) {
-    console.error('Error getting client users:', error);
+    logger.error('Error getting client users:', error);
     throw error;
   }
 }
