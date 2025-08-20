@@ -229,9 +229,9 @@ References to detailed content in this doc
   - [ ] RBAC/secret: ServiceAccount with permission to manage DomainMappings in the Runner namespace.
 
 - Server (Next.js)
-  - [ ] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
+  - [x] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
   - [x] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
-  - [ ] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
+  - [x] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
 
 - Runner changes
   - [x] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
@@ -247,7 +247,8 @@ References to detailed content in this doc
 
 - Failure modes & handling
   - [ ] On provisioning failure: persist error in `runner_status`, surface in UI, provide retry.
-  - [ ] On lookup miss: Runner returns 404; audit install-to-domain mapping.
+  - [x] On lookup miss: Runner returns 404.
+  - [ ] Audit install-to-domain mapping (log/metrics on lookup miss).
 
 ## Phase 2 — Dynamic WASM Features
 
