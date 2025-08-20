@@ -12,6 +12,8 @@ use std::time::Instant;
 use tokio::sync::Mutex;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use url::Url;
+use axum::response::IntoResponse;
+use axum::response::Redirect;
 
 use crate::cache::fs as cache_fs;
 use crate::engine::loader::ModuleLoader;
@@ -75,6 +77,7 @@ pub async fn run() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/v1/execute", post(execute))
         .route("/healthz", get(healthz))
+        .route("/", get(root_dispatch))
         .route(
             "/ext-ui/:extensionId/:contentHash/*path",
             get(crate::http::ext_ui::handle_get),
@@ -193,6 +196,63 @@ async fn execute(
     }
 
     Json(resp)
+}
+
+#[derive(serde::Deserialize)]
+struct LookupResp {
+    tenant_id: String,
+    extension_id: String,
+    content_hash: String,
+}
+
+async fn root_dispatch(headers: HeaderMap) -> impl IntoResponse {
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    if host.is_empty() {
+        return StatusCode::BAD_REQUEST;
+    }
+
+    // Build registry URL: {REGISTRY_BASE_URL}/api/installs/lookup-by-host?host=...
+    let base = match std::env::var("REGISTRY_BASE_URL") {
+        Ok(v) => v,
+        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+    };
+
+    let mut url = match Url::parse(&base) {
+        Ok(u) => u,
+        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+    };
+    url.set_path("api/installs/lookup-by-host");
+    url.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
+
+    let http = match reqwest::Client::builder().build() {
+        Ok(c) => c,
+        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+    };
+
+    let resp = match http.get(url).send().await {
+        Ok(r) => r,
+        Err(_) => return StatusCode::BAD_GATEWAY,
+    };
+
+    if !resp.status().is_success() {
+        return StatusCode::NOT_FOUND;
+    }
+
+    let body: LookupResp = match resp.json().await {
+        Ok(b) => b,
+        Err(_) => return StatusCode::BAD_GATEWAY,
+    };
+
+    let target = format!(
+        "/ext-ui/{}/{}/index.html",
+        body.extension_id, body.content_hash
+    );
+    Redirect::temporary(&target)
 }
 
 // Enhanced healthz: verify cache root writability and attempt lightweight HEAD to bundle store.
