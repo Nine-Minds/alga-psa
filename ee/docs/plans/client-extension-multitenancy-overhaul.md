@@ -225,7 +225,9 @@ References to detailed content in this doc
       - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: <domain>`
       - `spec.ref: { apiVersion: serving.knative.dev/v1, kind: Service, name: <runner-kservice> }`
     - Update DB status: set `runner_status.state` to `provisioned` or `error` with message.
-  - [ ] Trigger workflow on install/enable; expose a “reprovision domain” action to retry.
+  - [x] Trigger workflow on install.
+  - [ ] Trigger workflow on enable.
+  - [x] Expose a “reprovision domain” action to retry.
   - [ ] RBAC/secret: ServiceAccount with permission to manage DomainMappings in the Runner namespace.
 
 - Server (Next.js)
@@ -243,7 +245,7 @@ References to detailed content in this doc
 
 - Ops
   - [ ] Wildcard DNS `*.${EXT_DOMAIN_ROOT}` → Knative ingress (or automate DNS records per domain).
-  - [ ] KService env/secrets: `BUNDLE_STORE_BASE`, `REGISTRY_BASE_URL`, `EXT_CACHE_MAX_BYTES`, `EXT_STATIC_STRICT_VALIDATION`, `EXT_EGRESS_ALLOWLIST`, S3 creds.
+  - [x] KService env/secrets documented: `BUNDLE_STORE_BASE`, `REGISTRY_BASE_URL`, `EXT_CACHE_MAX_BYTES`, `EXT_STATIC_STRICT_VALIDATION`, `EXT_EGRESS_ALLOWLIST`, S3 creds. See `ee/docs/extension-system/knative-app-domains.md`.
 
 - Failure modes & handling
   - [ ] On provisioning failure: persist error in `runner_status`, surface in UI, provide retry.

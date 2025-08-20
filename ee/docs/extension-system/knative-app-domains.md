@@ -6,10 +6,19 @@ Scope: We track changes here; the actual Helm/Kubernetes wiring is handled in th
 
 ## Environment Variables
 
-- `EXT_DOMAIN_ROOT`: Root wildcard domain for extension apps (e.g., `ext.example.com`).
-- `RUNNER_NAMESPACE`: Kubernetes namespace where the Runner KService lives (defaults to `default`).
-- `RUNNER_KSERVICE`: Name of the Knative Service for the Runner (defaults to `runner`).
-- Temporal worker also requires standard Temporal env (`TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TASK_QUEUE`).
+- Temporal worker
+  - `EXT_DOMAIN_ROOT`: Root wildcard domain for extension apps (e.g., `ext.example.com`).
+  - `RUNNER_NAMESPACE`: Kubernetes namespace where the Runner KService lives (defaults to `default`).
+  - `RUNNER_KSERVICE`: Name of the Knative Service for the Runner (defaults to `runner`).
+  - Standard Temporal env: `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_TASK_QUEUE`.
+
+- Runner KService
+  - `BUNDLE_STORE_BASE`: Base URL for bundle objects (e.g., `http://minio:9000/alga-ext/`).
+  - `REGISTRY_BASE_URL`: Base URL of the EE server (used for host lookup + validation).
+  - `EXT_CACHE_MAX_BYTES`: Optional cache/file size limit for static assets.
+  - `EXT_STATIC_STRICT_VALIDATION`: `true|false` to enforce strict tenant/contentHash validation.
+  - `EXT_EGRESS_ALLOWLIST`: Optional comma-separated host allowlist for guest HTTP egress.
+  - S3/MinIO creds if needed by origin access (typically not needed if using HTTP gateway with public read): `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`.
 
 ## DNS / Ingress
 
@@ -80,4 +89,3 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
 
 ---
 Change history: Introduced with per-install app domains (Plan 1.f).
-
