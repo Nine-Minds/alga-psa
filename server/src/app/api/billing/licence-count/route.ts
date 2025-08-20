@@ -120,11 +120,12 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/billing/licence-count/[tenantId]
  * Returns the current license usage for a tenant
- * Optional endpoint for nm-store to query current usage
+ * Secured endpoint for nm-store to query current usage
  */
 export async function GET(req: NextRequest) {
   try {
-    // Extract tenant ID from query params
+    // Verify webhook signature for GET requests too
+    const signature = req.headers.get('x-webhook-signature');
     const url = new URL(req.url);
     const tenantId = url.searchParams.get('tenant_id');
     
@@ -134,6 +135,24 @@ export async function GET(req: NextRequest) {
         { status: 400 }
       );
     }
+    
+    // Create a payload for signature verification (using query params)
+    const payload = `GET:${tenantId}`;
+    
+    if (!verifyWebhookSignature(signature, payload)) {
+      console.error('Invalid webhook signature for GET request');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    // Log the request for monitoring
+    console.log('License usage query', {
+      tenantId,
+      requestIp: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+      timestamp: new Date().toISOString()
+    });
     
     const knex = await getAdminConnection();
     

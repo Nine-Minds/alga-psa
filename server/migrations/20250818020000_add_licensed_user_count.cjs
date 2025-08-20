@@ -9,9 +9,9 @@ exports.up = async function(knex) {
     table.string('stripe_event_id', 255).nullable().comment('Last Stripe event ID processed for idempotency');
   });
   
-  // Add index for performance
+  // Add index for performance and Citus shard pruning
   await knex.schema.alterTable('tenants', (table) => {
-    table.index('stripe_event_id', 'idx_tenants_stripe_event');
+    table.index(['tenant', 'stripe_event_id'], 'idx_tenants_tenant_stripe_event');
   });
 };
 
@@ -20,7 +20,7 @@ exports.up = async function(knex) {
  */
 exports.down = async function(knex) {
   await knex.schema.alterTable('tenants', (table) => {
-    table.dropIndex('stripe_event_id', 'idx_tenants_stripe_event');
+    table.dropIndex(['tenant', 'stripe_event_id'], 'idx_tenants_tenant_stripe_event');
   });
   
   await knex.schema.alterTable('tenants', (table) => {

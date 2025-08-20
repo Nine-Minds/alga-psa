@@ -357,7 +357,9 @@ const fetchContacts = async (): Promise<void> => {
       <CardContent>
         {/* License Usage Banner for MSP Portal */}
         {portalType === 'msp' && licenseUsage && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
+          <div 
+            id="msp-licence-usage-banner"
+            className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">

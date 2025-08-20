@@ -135,8 +135,8 @@ spec:
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL
               value: "{{ .Values.applicationUrl }}"
-            - name: NMSTORE_BASE_URL
-              value: "{{ .Values.nmstore.baseUrl }}"
+            - name: NM_STORE_URL
+              value: "{{ .Values.nm_store.baseUrl }}"
             
             # Email Configuration
             - name: RESEND_API_KEY
@@ -177,15 +177,13 @@ spec:
             {{- end }}
             
             # NM Store callback configuration
-            {{- if .Values.nmstore }}
-            {{- if .Values.nmstore.callbackSecret }}
-            - name: NM_STORE_URL
-              value: "{{ .Values.nmstore.baseUrl }}"
+            {{- if .Values.nm_store }}
+            {{- if .Values.nm_store.callbackSecret }}
             - name: TEMPORAL_WEBHOOK_SECRET
               valueFrom:
                 secretKeyRef:
-                  name: {{ .Values.nmstore.callbackSecret.name }}
-                  key: {{ .Values.nmstore.callbackSecret.key }}
+                  name: {{ .Values.nm_store.callbackSecret.name }}
+                  key: {{ .Values.nm_store.callbackSecret.key }}
             {{- end }}
             {{- end }}
             

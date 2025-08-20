@@ -49,12 +49,6 @@ const activities = proxyActivities<{
     workflowId?: string;
     error?: string;
   }): Promise<void>;
-  callbackToNmStore(input: {
-    sessionId: string;
-    algaTenantId?: string;
-    status: 'completed' | 'failed';
-    error?: string;
-  }): Promise<void>;
   // Customer tracking activities
   createCustomerCompanyActivity(input: {
     tenantName: string;
@@ -87,6 +81,26 @@ const activities = proxyActivities<{
     initialInterval: '1s',
     maximumInterval: '30s',
     nonRetryableErrorTypes: ['ValidationError', 'DuplicateError'],
+  },
+});
+
+// Separate proxy for nm-store callback with more aggressive retry policy
+// This ensures the callback is retried with exponential backoff even if nm-store is temporarily down
+const callbackActivities = proxyActivities<{
+  callbackToNmStore(input: {
+    sessionId: string;
+    algaTenantId?: string;
+    status: 'completed' | 'failed';
+    error?: string;
+  }): Promise<void>;
+}>({
+  startToCloseTimeout: '2m',
+  retry: {
+    maximumAttempts: 5,  // More attempts for callback
+    backoffCoefficient: 2.0,
+    initialInterval: '2s',  // Start with 2s
+    maximumInterval: '60s',  // Allow up to 60s between retries
+    nonRetryableErrorTypes: [],  // Retry all errors for callback
   },
 });
 
@@ -396,8 +410,9 @@ export async function tenantCreationWorkflow(
       }
       
       // Callback to nm-store with the tenant ID
+      // Use the separate callback proxy with enhanced retry policy
       try {
-        await activities.callbackToNmStore({
+        await callbackActivities.callbackToNmStore({
           sessionId: input.checkoutSessionId,
           algaTenantId: tenantResult.tenantId,
           status: 'completed',
@@ -407,10 +422,11 @@ export async function tenantCreationWorkflow(
           tenantId: tenantResult.tenantId,
         });
       } catch (callbackError) {
-        // Log but don't fail the workflow if callback fails
-        log.warn('Failed to callback to nm-store', {
+        // Log but don't fail the workflow if callback fails after all retries
+        log.warn('Failed to callback to nm-store after retries', {
           error: callbackError instanceof Error ? callbackError.message : 'Unknown error',
           checkoutSessionId: input.checkoutSessionId,
+          tenantId: tenantResult.tenantId,
         });
       }
     }

@@ -69,7 +69,8 @@ export async function callbackToNmStore(
       error: errorMessage,
       sessionId: input.sessionId 
     });
-    // Don't throw - callback failure shouldn't fail the workflow
-    // nm-store can query for the result if needed
+    // Re-throw the error to trigger Temporal's retry mechanism
+    // The workflow has a try-catch that will handle final failure gracefully
+    throw error;
   }
 }
