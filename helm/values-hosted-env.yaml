@@ -121,7 +121,7 @@ secrets_provider:
     addr: "http://vault.vault.svc:8200"
     token: ""
     appSecretPath: "kv/data/app/secrets"
-  tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
+    tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
 
 # External service configuration (used when db.enabled/redis.enabled are false)
 config:
