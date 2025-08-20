@@ -493,6 +493,35 @@ export async function importReferenceData(
         }
       }
       
+      // Check for existing defaults before inserting
+      if (dataType === 'channels' && mappedData.is_default === true) {
+        // Check if there's already a default channel
+        const existingDefault = await trx('channels')
+          .where({ tenant: currentUser.tenant, is_default: true })
+          .first();
+        
+        if (existingDefault) {
+          // Don't import as default if one already exists
+          mappedData.is_default = false;
+        }
+      }
+      
+      if (dataType === 'statuses' && mappedData.is_default === true) {
+        // Check if there's already a default status of the same type
+        const existingDefault = await trx('statuses')
+          .where({ 
+            tenant: currentUser.tenant, 
+            is_default: true,
+            status_type: mappedData.status_type 
+          })
+          .first();
+        
+        if (existingDefault) {
+          // Don't import as default if one already exists
+          mappedData.is_default = false;
+        }
+      }
+      
       const [savedItem] = await trx(config.targetTable)
         .insert(mappedData)
         .returning('*');

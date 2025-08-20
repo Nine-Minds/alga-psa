@@ -115,12 +115,41 @@ export async function createStatus(statusData: Omit<IStatus, 'status_id' | 'tena
         statusData.order_number = (maxOrder?.max || 0) + 10;
       }
 
+      // Check if we should set as default
+      let isDefault = statusData.is_default || false;
+      if (isDefault && !statusData.is_closed) {
+        // Check if there's already a default status of this type
+        const existingDefault = await trx('statuses')
+          .where({ 
+            tenant, 
+            is_default: true,
+            status_type: statusData.status_type 
+          })
+          .first();
+        
+        if (existingDefault) {
+          // Unset the existing default
+          await trx('statuses')
+            .where({ 
+              tenant, 
+              is_default: true,
+              status_type: statusData.status_type 
+            })
+            .update({ is_default: false });
+        }
+      }
+      
+      // Don't allow closed status to be default
+      if (statusData.is_closed && isDefault) {
+        isDefault = false;
+      }
+      
       const [status] = await trx<IStatus>('statuses')
         .insert({
           ...statusData,
           tenant,
           name: statusData.name.trim(),
-          is_closed: false,
+          is_default: isDefault,
           created_by: user.user_id
         })
         .returning('*');

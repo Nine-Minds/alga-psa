@@ -58,13 +58,29 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
         displayOrder = (maxOrder?.max || 0) + 1;
       }
 
+      // Check if we should set as default
+      let isDefault = channelData.is_default || false;
+      if (isDefault) {
+        // Check if there's already a default channel
+        const existingDefault = await trx('channels')
+          .where({ tenant, is_default: true })
+          .first();
+        
+        if (existingDefault) {
+          // Unset the existing default
+          await trx('channels')
+            .where({ tenant, is_default: true })
+            .update({ is_default: false });
+        }
+      }
+      
       const [newChannel] = await trx('channels')
         .insert({
           channel_name: channelData.channel_name,
           description: channelData.description || null,
           display_order: displayOrder,
-          is_inactive: false,
-          is_default: false,
+          is_inactive: channelData.is_inactive || false,
+          is_default: isDefault,
           tenant
         })
         .returning('*');
@@ -100,6 +116,14 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
   const { knex: db, tenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // If setting as default, unset all other defaults first
+      if (channelData.is_default === true) {
+        await trx('channels')
+          .where({ tenant, is_default: true })
+          .whereNot('channel_id', channelId)
+          .update({ is_default: false });
+      }
+      
       const [updatedChannel] = await trx('channels')
         .where({ channel_id: channelId, tenant })
         .update(channelData)
