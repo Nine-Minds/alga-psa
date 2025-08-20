@@ -332,7 +332,7 @@ export def hosted-env-connect [
     # Display the URLs (password aligns with helm/values-hosted-env.yaml default)
     print $"($env.ALGA_COLOR_CYAN)Port forwarding setup:($env.ALGA_COLOR_RESET)"
     print $"  Code Server:        http://localhost:($code_server_port)"
-    print $"    Password: alga-dev  (default from helm/host.values.yaml)"
+    print $"    Password: alga-dev  (default from helm/values-hosted-env.yaml)"
     print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
 
     # Wait for user to stop
