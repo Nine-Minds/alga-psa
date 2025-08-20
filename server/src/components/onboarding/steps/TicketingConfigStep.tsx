@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2 } from 'lucide-react';
+import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star } from 'lucide-react';
 import { StepProps } from '../types';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
@@ -19,7 +19,7 @@ import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket
 import { IStandardStatus } from 'server/src/interfaces/status.interface';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
-import { createChannel } from 'server/src/lib/actions/channel-actions/channelActions';
+import { createChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
 import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { createPriority } from 'server/src/lib/actions/priorityActions';
@@ -573,6 +573,41 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
+  const setDefaultChannel = async (channelId: string) => {
+    try {
+      const channel = importedChannels.find(ch => ch.channel_id === channelId);
+      if (!channel) return;
+      
+      // Don't allow removing default status - at least one board must be default
+      if (channel.is_default) {
+        toast('At least one board must be set as default', {
+          icon: 'ℹ️',
+          duration: 3000
+        });
+        return;
+      }
+      
+      // Set this channel as default (this will automatically unset others)
+      await updateChannel(channel.channel_id, { is_default: true });
+      
+      // Refresh data from server to get updated default states
+      await loadExistingData();
+      
+      // Update the selected channel in wizard data if no channel is selected
+      if (!data.channelId) {
+        updateData({ 
+          channelId: channel.channel_id,
+          channelName: channel.channel_name 
+        });
+      }
+      
+      toast.success('Default board updated successfully');
+    } catch (error) {
+      console.error('Error setting default board:', error);
+      toast.error('Failed to set default board');
+    }
+  };
+
   const removeCategory = async (categoryId: string) => {
     try {
       const result = await deleteReferenceDataItem('categories', categoryId);
@@ -654,6 +689,40 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     } catch (error) {
       console.error('Error deleting priority:', error);
       toast.error('Failed to delete priority');
+    }
+  };
+
+  const setDefaultStatus = async (statusId: string) => {
+    try {
+      const status = importedStatuses.find(s => s.status_id === statusId);
+      if (!status) return;
+      
+      // Don't allow removing default status - at least one status must be default
+      if (status.is_default) {
+        toast('At least one status must be set as default', {
+          icon: 'ℹ️',
+          duration: 3000
+        });
+        return;
+      }
+      
+      // Don't allow closed statuses to be default
+      if (status.is_closed) {
+        toast.error('Closed statuses cannot be set as default');
+        return;
+      }
+      
+      // Update status to be default (this will automatically unset others)
+      const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+      await updateStatus(statusId, { is_default: true });
+      
+      // Refresh data from server to get updated default states
+      await loadExistingData();
+      
+      toast.success('Default status updated successfully');
+    } catch (error) {
+      console.error('Error setting default status:', error);
+      toast.error('Failed to set default status');
     }
   };
 
@@ -770,6 +839,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               <p className="text-sm text-blue-800">
                 <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
               </p>
+              {importedChannels.length > 1 && (
+                <p className="text-sm text-blue-800 mt-2">
+                  <span className="font-semibold">Tip:</span> Click the star in the Default column to change which board is the default.
+                </p>
+              )}
             </div>
 
             {/* Action Buttons - Moved to top */}
@@ -833,24 +907,6 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       Controls the order in which boards appear in dropdown menus throughout the platform. Lower numbers appear first.
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={channelForm.isActive}
-                          onCheckedChange={(checked) => setChannelForm(prev => ({ ...prev, isActive: checked }))}
-                        />
-                        <Label>Is Active</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={channelForm.isDefault}
-                          onCheckedChange={(checked) => setChannelForm(prev => ({ ...prev, isDefault: checked }))}
-                        />
-                        <Label>Is Default</Label>
-                      </div>
-                    </div>
-                  </div>
                 </div>
 
                 <div className="flex gap-2">
@@ -893,13 +949,16 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           }
                         }
                         
+                        // Set as default if this is the first board
+                        const isDefault = importedChannels.length === 0;
+                        
                         // Create actual channel in database
                         const createdChannel = await createChannel({
                           channel_name: channelForm.name,
                           description: channelForm.description || '',
                           display_order: displayOrder,
-                          is_inactive: !channelForm.isActive,
-                          is_default: channelForm.isDefault
+                          is_inactive: false,
+                          is_default: isDefault
                         });
                         
                         // Add to imported channels list
@@ -987,8 +1046,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               />
                             </td>
                             <td className="px-3 py-2 text-sm">{channel.channel_name}</td>
-                            <td className="px-3 py-2 text-sm text-gray-600">
-                              {channel.is_default ? '✓' : '-'}
+                            <td className="px-3 py-2 text-center">
+                              {channel.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-600">{channel.display_order || 0}</td>
                           </tr>
@@ -1042,10 +1101,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       {importedChannels.map((channel) => (
                         <tr key={channel.channel_id}>
                           <td className="px-2 py-1 text-xs">{channel.channel_name}</td>
-                          <td className="px-2 py-1 text-center text-xs">
-                            {channel.is_default ? (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">Yes</span>
-                            ) : '-'}
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`default-channel-${channel.channel_id}`}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDefaultChannel(channel.channel_id)}
+                              className="p-0.5 h-5 w-5"
+                              title={channel.is_default ? "Default board" : "Set as default board"}
+                            >
+                              <Star className={`h-3.5 w-3.5 ${channel.is_default ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
+                            </Button>
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
@@ -1057,8 +1124,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               onClick={() => removeChannel(channel.channel_id)}
                               className="p-1 h-6 w-6"
                               title="Remove board"
+                              disabled={channel.is_default}
                             >
-                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                              <Trash2 className={`h-3 w-3 ${channel.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
                             </Button>
                           </td>
                         </tr>
@@ -1477,6 +1545,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               <p className="text-sm text-blue-800">
                 <span className="font-semibold">Note:</span> Statuses track the lifecycle of a ticket. Each status is either <span className="font-semibold">Open</span> (ticket needs attention) or <span className="font-semibold">Closed</span> (ticket is resolved). The <span className="font-semibold">Default</span> status is automatically assigned to new tickets. Common statuses include New, In Progress, Waiting for Customer, Resolved, and Closed.
               </p>
+              {importedStatuses.length > 1 && (
+                <p className="text-sm text-blue-800 mt-2">
+                  <span className="font-semibold">Tip:</span> Click the star in the Default column to change which status is the default. Only open statuses can be set as default.
+                </p>
+              )}
             </div>
 
             {/* Action Buttons - Moved to top */}
@@ -1532,21 +1605,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={statusForm.isClosed}
-                          onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isClosed: checked }))}
-                        />
-                        <Label>Closed Status</Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          checked={statusForm.isDefault}
-                          onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isDefault: checked }))}
-                        />
-                        <Label>Default Status</Label>
-                      </div>
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        checked={statusForm.isClosed}
+                        onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isClosed: checked }))}
+                      />
+                      <Label>{statusForm.isClosed ? 'Closed Status' : 'Open Status'}</Label>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
                       {statusForm.isClosed 
@@ -1596,11 +1660,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           }
                         }
                         
+                        // Set as default if this is the first open status
+                        const hasDefaultOpenStatus = importedStatuses.some(s => s.is_default && !s.is_closed);
+                        const isDefault = !statusForm.isClosed && !hasDefaultOpenStatus;
+                        
                         // Create actual status in database
                         const createdStatus = await createStatus({
                           name: statusForm.name,
                           is_closed: statusForm.isClosed,
-                          is_default: statusForm.isDefault,
+                          is_default: isDefault,
                           status_type: 'ticket',
                           order_number: orderNumber
                         });
@@ -1664,6 +1732,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           </th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Type</th>
+                          <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Default</th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
                         </tr>
                       </thead>
@@ -1685,6 +1754,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             <td className="px-3 py-2 text-sm">{status.name}</td>
                             <td className="px-3 py-2 text-sm text-gray-600">
                               {status.is_closed ? 'Closed' : 'Open'}
+                            </td>
+                            <td className="px-3 py-2 text-center">
+                              {status.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-600">{status.display_order || 0}</td>
                           </tr>
@@ -1742,10 +1814,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
                             {status.is_closed ? 'Closed' : 'Open'}
                           </td>
-                          <td className="px-2 py-1 text-center text-xs">
-                            {status.is_default ? (
-                              <span className="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">Yes</span>
-                            ) : '-'}
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`default-status-${status.status_id}`}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDefaultStatus(status.status_id)}
+                              className="p-0.5 h-5 w-5"
+                              title={status.is_default ? "Default status" : "Set as default status"}
+                              disabled={status.is_closed}
+                            >
+                              <Star className={`h-3.5 w-3.5 ${status.is_default ? 'text-yellow-500 fill-yellow-500' : status.is_closed ? 'text-gray-300' : 'text-gray-400 hover:text-yellow-500'}`} />
+                            </Button>
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
                           <td className="px-2 py-1 text-center">
@@ -1757,8 +1838,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               onClick={() => removeStatus(status.status_id)}
                               className="p-1 h-6 w-6"
                               title="Remove status"
+                              disabled={status.is_default}
                             >
-                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                              <Trash2 className={`h-3 w-3 ${status.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
                             </Button>
                           </td>
                         </tr>
