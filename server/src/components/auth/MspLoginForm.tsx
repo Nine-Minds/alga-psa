@@ -66,43 +66,55 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
 
 
   return (
-    <form className="mt-8 space-y-6" {...withDataAutomationId({ id: 'msp-login-form' })}>
+    <form 
+      className="mt-8 space-y-6" 
+      onSubmit={handleSubmit}
+      method="POST"
+      {...withDataAutomationId({ id: 'msp-login-form' })}
+    >
       <div className="space-y-4">
-        <Input
-          type="email"
-          id="msp-email-field"
-          label="Email"
-          placeholder="Enter your email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <div className="space-y-2 relative"></div>
-          <Label htmlFor="client-password-field">Password</Label>
-          <div className="relative">
+        <div className="space-y-2">
+          <Label htmlFor="msp-email-field">Email</Label>
           <Input
-            type={showPassword ? "text" : "password"}
-            id="msp-password-field"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            type="email"
+            id="msp-email-field"
+            name="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full"
+            autoComplete="email"
           />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-transparent"
-            onClick={() => setShowPassword(!showPassword)}
-            id="msp-toggle-password-visibility"
-          >
-            {showPassword ? (
-              <Eye className="h-5 w-5 text-gray-400" />
-            ) : (
-              <EyeOff className="h-5 w-5 text-gray-400" />
-            )}
-          </Button>
+        </div>
+        <div className="space-y-2 relative">
+          <Label htmlFor="msp-password-field">Password</Label>
+          <div className="relative">
+            <Input
+              type={showPassword ? "text" : "password"}
+              id="msp-password-field"
+              name="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="w-full"
+              autoComplete="current-password"
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center hover:bg-transparent"
+              onClick={() => setShowPassword(!showPassword)}
+              id="msp-toggle-password-visibility"
+            >
+              {showPassword ? (
+                <Eye className="h-5 w-5 text-gray-400" />
+              ) : (
+                <EyeOff className="h-5 w-5 text-gray-400" />
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -115,7 +127,6 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
       <div>
         <Button
           type="submit"
-          onClick={handleSubmit}
           className="w-full"
           id="msp-sign-in-button"
         >
