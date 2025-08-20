@@ -197,9 +197,13 @@ vaultAgent:
 
     try {
         print $"($env.ALGA_COLOR_CYAN)Deploying Helm chart...($env.ALGA_COLOR_RESET)"
+        let user_values_path = $"($nu.home-path)/nm-kube-config/hosted-env-dev/values-hosted-env.yaml"
+        if not ($user_values_path | path exists) {
+            print $"($env.ALGA_COLOR_YELLOW)Warning: ($user_values_path) not found. Helm may fail if required values are missing.($env.ALGA_COLOR_RESET)"
+        }
         let helm_result = do {
             cd $project_root
-            helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/values-hosted-env.yaml -f $temp_values_file -n $namespace | complete
+            helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f $user_values_path -f $temp_values_file -n $namespace | complete
         }
 
         if $helm_result.exit_code != 0 {
@@ -210,7 +214,8 @@ vaultAgent:
                 print $"($env.ALGA_COLOR_YELLOW)Helm reported non-fatal issues; retrying with --install...($env.ALGA_COLOR_RESET)"
                 let retry_install = do {
                     cd $project_root
-                    helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/values-hosted-env.yaml -f $temp_values_file -n $namespace | complete
+                    let user_values_path = $"($nu.home-path)/nm-kube-config/hosted-env-dev/values-hosted-env.yaml"
+                    helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f $user_values_path -f $temp_values_file -n $namespace | complete
                 }
                 if $retry_install.exit_code != 0 {
                     print $retry_install.stderr
@@ -332,7 +337,7 @@ export def hosted-env-connect [
     # Display the URLs (password aligns with helm/values-hosted-env.yaml default)
     print $"($env.ALGA_COLOR_CYAN)Port forwarding setup:($env.ALGA_COLOR_RESET)"
     print $"  Code Server:        http://localhost:($code_server_port)"
-    print $"    Password: alga-dev  (default from helm/values-hosted-env.yaml)"
+    print $"    Password: alga-dev  \(default from helm/values-hosted-env.yaml\)"
     print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
 
     # Wait for user to stop
