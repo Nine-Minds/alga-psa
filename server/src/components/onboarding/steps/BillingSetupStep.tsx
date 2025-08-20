@@ -467,7 +467,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {standardTypes.map(type => (
+                  {standardTypes.map((type, idx) => (
                     <tr key={type.id} className="hover:bg-gray-50">
                       <td className="px-4 py-2">
                         <Checkbox
@@ -512,7 +512,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {tenantTypes.map((type) => (
+                      {tenantTypes.map((type, idx) => (
                         <tr key={type.id}>
                           <td className="px-2 py-1 text-xs">{type.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
@@ -523,7 +523,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id="service-type-remove"
+                              id={`service-type-remove-${idx}`}
                               data-type-id={type.id}
                               type="button"
                               variant="ghost"

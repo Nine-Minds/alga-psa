@@ -1031,7 +1031,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableChannels.map(channel => (
+                        {availableChannels.map((channel, idx) => (
                           <tr key={channel.id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
@@ -1098,12 +1098,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {importedChannels.map((channel) => (
+                      {importedChannels.map((channel, idx) => (
                         <tr key={channel.channel_id}>
                           <td className="px-2 py-1 text-xs">{channel.channel_name}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id="channel-default-toggle"
+                              id={`channel-default-toggle-${idx}`}
                               data-channel-id={channel.channel_id}
                               type="button"
                               variant="ghost"
@@ -1118,7 +1118,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id="channel-remove"
+                              id={`channel-remove-${idx}`}
                               data-channel-id={channel.channel_id}
                               type="button"
                               variant="ghost"
@@ -1355,7 +1355,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableCategories.map(category => {
+                        {availableCategories.map((category, idx) => {
                           // Find parent category name if this is a subcategory
                           const parentCategory = category.parent_category_uuid 
                             ? availableCategories.find(c => c.id === category.parent_category_uuid)
@@ -1481,7 +1481,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           hierarchicalCategories.push(...children);
                         });
                         
-                        return hierarchicalCategories.map((category) => {
+                        return hierarchicalCategories.map((category, idx) => {
                           const isSubcategory = category.parent_category ? true : false;
                           // Find parent category name if this is a subcategory
                           const parentCategory = isSubcategory 
@@ -1501,7 +1501,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || '-'}</td>
                               <td className="px-2 py-1 text-center">
                                 <Button
-                                  id="category-remove"
+                                  id={`category-remove-${idx}`}
                                   data-category-id={category.category_id}
                                   type="button"
                                   variant="ghost"
@@ -1744,7 +1744,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableStatuses.map(status => (
+                        {availableStatuses.map((status, idx) => (
                           <tr key={status.standard_status_id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
@@ -1815,7 +1815,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {importedStatuses.map((status) => (
+                      {importedStatuses.map((status, idx) => (
                         <tr key={status.status_id}>
                           <td className="px-2 py-1 text-xs">{status.name}</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">
@@ -1823,7 +1823,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id="status-default-toggle"
+                              id={`status-default-toggle-${idx}`}
                               data-status-id={status.status_id}
                               type="button"
                               variant="ghost"
@@ -1839,7 +1839,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id="status-remove"
+                              id={`status-remove-${idx}`}
                               data-status-id={status.status_id}
                               type="button"
                               variant="ghost"
@@ -2042,7 +2042,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availablePriorities.map(priority => (
+                        {availablePriorities.map((priority, idx) => (
                           <tr key={priority.priority_id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
@@ -2147,7 +2147,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             <td className="px-2 py-1 text-center">
                               {priorityId ? (
                                 <Button
-                                  id="priority-remove"
+                                  id={`priority-remove-${index}`}
                                   data-priority-id={priorityId}
                                   type="button"
                                   variant="ghost"
