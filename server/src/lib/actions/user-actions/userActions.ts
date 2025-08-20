@@ -214,16 +214,29 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       return null;
     }
 
-    // Use the user ID from the session if available (more reliable than email lookup)
+    // Use the user ID from the session if available (most reliable)
     const sessionUser = session.user as any;
     if (sessionUser.id && sessionUser.tenant) {
       logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
-      const {knex} = await createTenantKnex();
+      
+      // Get connection with tenant context already set
+      const {knex, tenant} = await createTenantKnex();
+      
+      // Verify tenant matches session for security
+      if (tenant && tenant !== sessionUser.tenant) {
+        logger.error(`Tenant mismatch: session has ${sessionUser.tenant} but context has ${tenant}`);
+        throw new Error('Tenant context mismatch');
+      }
       
       // Use transaction to avoid connection pool exhaustion
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Get user directly by ID and tenant (avoiding email lookup issues)
-        const user = await User.get(trx, sessionUser.id);
+        // For Citus, we need to explicitly filter by tenant in the query
+        // Even though User.get includes tenant filter, be explicit for safety
+        const user = await trx<IUser>('users')
+          .select('*')
+          .where('user_id', sessionUser.id)
+          .where('tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .first();
         
         if (!user) {
           logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
@@ -231,7 +244,17 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         }
         
         logger.debug(`Fetching roles for user ID: ${user.user_id}`);
-        const roles = await User.getUserRoles(trx, user.user_id);
+        // Get roles with explicit tenant filter for Citus
+        const roles = await trx<IRole>('roles')
+          .join('user_roles', function() {
+            this.on('roles.role_id', '=', 'user_roles.role_id')
+                .andOn('roles.tenant', '=', 'user_roles.tenant');
+          })
+          .where('user_roles.user_id', user.user_id)
+          .where('user_roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .where('roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .select('roles.*');
+        
         const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
         
         logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
@@ -239,30 +262,56 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       });
     }
     
-    // Fallback to email lookup if session doesn't have ID (shouldn't happen with properly configured session)
+    // Fallback paths should fail in production for security
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Session missing user ID or tenant - cannot safely retrieve user in production');
+      return null;
+    }
+    
+    // Development-only fallbacks with warnings
     if (!session.user.email) {
       logger.debug('No user email found in session');
       return null;
     }
 
-    logger.warn(`Falling back to email lookup for: ${session.user.email} - this may return wrong user in multi-tenant setup`);
+    logger.warn(`DEVELOPMENT ONLY: Falling back to email lookup for: ${session.user.email} - this is unsafe in production`);
+    
+    // Get current tenant from context
+    const {knex, tenant} = await createTenantKnex();
+    if (!tenant) {
+      logger.error('No tenant context available for email-based lookup');
+      return null;
+    }
     
     // If we have user type in session, use it for more accurate lookup
     if (sessionUser.user_type) {
-      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}`);
-      const user = await User.findUserByEmailAndType(session.user.email, sessionUser.user_type);
+      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
       
-      if (!user) {
-        logger.debug(`User not found for email: ${session.user.email} and type: ${sessionUser.user_type}`);
-        return null;
-      }
-      
-      const {knex} = await createTenantKnex();
-      
-      // Use transaction for roles and avatar lookup
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        logger.debug(`Fetching roles for user ID: ${user.user_id}`);
-        const roles = await User.getUserRoles(trx, user.user_id);
+        // Explicit query with tenant filter for Citus
+        const user = await trx<IUser>('users')
+          .select('*')
+          .where('email', session.user.email.toLowerCase())
+          .where('user_type', sessionUser.user_type)
+          .where('tenant', tenant) // Explicit tenant filter for Citus
+          .first();
+        
+        if (!user) {
+          logger.debug(`User not found for email: ${session.user.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
+          return null;
+        }
+        
+        // Get roles with explicit tenant filter
+        const roles = await trx<IRole>('roles')
+          .join('user_roles', function() {
+            this.on('roles.role_id', '=', 'user_roles.role_id')
+                .andOn('roles.tenant', '=', 'user_roles.tenant');
+          })
+          .where('user_roles.user_id', user.user_id)
+          .where('user_roles.tenant', tenant) // Explicit tenant filter for Citus
+          .where('roles.tenant', tenant) // Explicit tenant filter for Citus
+          .select('roles.*');
+        
         const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
         
         logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
@@ -270,20 +319,32 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       });
     }
     
-    // Last resort: email-only lookup (least reliable in multi-tenant)
-    const user = await User.findUserByEmail(session.user.email);
-
-    if (!user) {
-      logger.debug(`User not found for email: ${session.user.email}`);
-      return null;
-    }
-
-    const {knex} = await createTenantKnex();
+    // Last resort: email-only lookup (development only)
+    logger.warn(`DEVELOPMENT ONLY: Email-only lookup for: ${session.user.email} in tenant: ${tenant}`);
     
-    // Use transaction for roles and avatar lookup
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-      logger.debug(`Fetching roles for user ID: ${user.user_id}`);
-      const roles = await User.getUserRoles(trx, user.user_id);
+      const user = await trx<IUser>('users')
+        .select('*')
+        .where('email', session.user.email.toLowerCase())
+        .where('tenant', tenant) // Explicit tenant filter for Citus
+        .first();
+
+      if (!user) {
+        logger.debug(`User not found for email: ${session.user.email} in tenant: ${tenant}`);
+        return null;
+      }
+      
+      // Get roles with explicit tenant filter
+      const roles = await trx<IRole>('roles')
+        .join('user_roles', function() {
+          this.on('roles.role_id', '=', 'user_roles.role_id')
+              .andOn('roles.tenant', '=', 'user_roles.tenant');
+        })
+        .where('user_roles.user_id', user.user_id)
+        .where('user_roles.tenant', tenant) // Explicit tenant filter for Citus
+        .where('roles.tenant', tenant) // Explicit tenant filter for Citus
+        .select('roles.*');
+
       const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
 
       logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);

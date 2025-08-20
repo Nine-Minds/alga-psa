@@ -1,6 +1,7 @@
 import Knex, { Knex as KnexType } from 'knex';
 import { getKnexConfig } from './knexfile';
 import { AsyncLocalStorage } from 'async_hooks';
+import logger from '@alga-psa/shared/core/logger';
 
 interface PoolConfig extends KnexType.PoolConfig {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
@@ -30,9 +31,6 @@ let sharedKnexInstance: KnexType | null = null;
  */
 export async function getConnection(tenantId?: string | null): Promise<KnexType> {
   // Tenant ID is kept for compatibility but not used for connection pooling
-  if (tenantId) {
-    console.log(`Using shared connection pool for tenant: ${tenantId} (CitusDB auto-isolation)`);
-  }
 
   // Check if we already have a shared instance
   if (sharedKnexInstance) {
@@ -40,7 +38,6 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
   }
 
   // Create a single shared instance optimized for transaction-level pooling
-  console.log('Creating shared Knex instance optimized for CitusDB transaction-level pooling');
   const environment = process.env.NODE_ENV === 'test' ? 'development' : (process.env.NODE_ENV || 'development');
   const baseConfig = await getKnexConfig(environment);
 
@@ -56,9 +53,8 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
       createTimeoutMillis: 30000,
       destroyTimeoutMillis: 5000,
       afterCreate: (conn: any, done: (err: Error | null, conn: any) => void) => {
-        console.log('Connection created in shared pool for CitusDB');
         conn.on('error', (err: Error) => {
-          console.error('DB Connection Error:', err);
+          logger.error('DB Connection Error:', err);
         });
         done(null, conn);
       }
@@ -66,7 +62,6 @@ export async function getConnection(tenantId?: string | null): Promise<KnexType>
   };
 
   sharedKnexInstance = Knex(sharedConfig);
-  console.log('Shared Knex instance created for CitusDB');
   return sharedKnexInstance;
 }
 
@@ -94,22 +89,18 @@ export async function withTransaction<T>(
 
 // --- Simplified Cleanup for Shared Pool ---
 async function destroySharedPool() {
-  console.log('Destroying shared Knex pool...');
   if (sharedKnexInstance) {
     await sharedKnexInstance.destroy();
     sharedKnexInstance = null;
-    console.log('Shared Knex pool destroyed.');
   }
 }
 
 process.on('SIGTERM', async () => {
-  console.log('SIGTERM signal received.');
   await destroySharedPool();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('SIGINT signal received.');
   await destroySharedPool();
   process.exit(0);
 });
