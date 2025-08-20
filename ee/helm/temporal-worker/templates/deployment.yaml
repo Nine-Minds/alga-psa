@@ -176,6 +176,19 @@ spec:
                   key: ALGA_AUTH_KEY
             {{- end }}
             
+            # NM Store callback configuration
+            {{- if .Values.nmstore }}
+            {{- if .Values.nmstore.callbackSecret }}
+            - name: NM_STORE_URL
+              value: "{{ .Values.nmstore.baseUrl }}"
+            - name: TEMPORAL_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.nmstore.callbackSecret.name }}
+                  key: {{ .Values.nmstore.callbackSecret.key }}
+            {{- end }}
+            {{- end }}
+            
             # Additional environment variables
             {{- range .Values.extraEnv }}
             - name: {{ .name }}
