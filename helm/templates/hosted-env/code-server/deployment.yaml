@@ -196,7 +196,14 @@ spec:
             - name: DB_TYPE
               value: "postgres"
             - name: DB_HOST
+              {{- if and .Values.config.db.hostSecret.name .Values.config.db.hostSecret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.hostSecret.name | quote }}
+                  key: {{ .Values.config.db.hostSecret.key | quote }}
+              {{- else }}
               value: "{{ .Values.config.db.host }}"
+              {{- end }}
             - name: DB_USER_SERVER
               value: "{{ .Values.config.db.user }}"
             - name: DB_USER_ADMIN

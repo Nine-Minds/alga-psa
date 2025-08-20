@@ -126,10 +126,14 @@ secrets_provider:
 # External service configuration (used when db.enabled/redis.enabled are false)
 config:
   db:
-    host: "db.msp.svc.cluster.local"    # Production Postgres FQDN
-    port: 5432
+    host: "pgbouncer.msp.svc.cluster.local"    # Production PgBouncer FQDN (fallback)
+    port: 6432
     user: "app_user"                    # Match production app user
     server_database: "server"
+    # Optional: read DB host from a secret instead of values
+    hostSecret:
+      name: ""        # e.g., "db-credentials"
+      key:  ""        # e.g., "PGBOUNCER_HOST" or "DB_HOST"
     # Optional: reference external secrets instead of inline values (prefer Vault)
     server_password_secret:
       name: "db-credentials"
