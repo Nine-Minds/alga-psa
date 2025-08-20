@@ -197,9 +197,21 @@ vaultAgent:
 
     try {
         print $"($env.ALGA_COLOR_CYAN)Deploying Helm chart...($env.ALGA_COLOR_RESET)"
+        # Ensure a base host values file exists; if not, attempt migration or bootstrap defaults
+        let host_values_path = $"($project_root)/helm/host.values.yaml"
+        if not ($host_values_path | path exists) {
+            let deprecated_path = $"($project_root)/helm/values-hosted-env.yaml"
+            if ($deprecated_path | path exists) {
+                print $"($env.ALGA_COLOR_YELLOW)host.values.yaml missing; migrating from values-hosted-env.yaml...($env.ALGA_COLOR_RESET)"
+                cp $deprecated_path $host_values_path
+            } else {
+                print $"($env.ALGA_COLOR_YELLOW)host.values.yaml missing; creating with safe defaults...($env.ALGA_COLOR_RESET)"
+                bash -c $"cat > ($host_values_path) << 'EOF'\n# Host Environment Values for Alga PSA (local, untracked)\nnameOverride: \"alga-hosted\"\n\nhostedEnv:\n  enabled: false\n  manageNamespace: false\n  repository:\n    url: \"https://github.com/Nine-Minds/alga-psa.git\"\n    branch: \"main\"\n  git:\n    authorName: \"Hosted Environment\"\n    authorEmail: \"hosted@alga.local\"\n  codeServer:\n    enabled: true\n    image:\n      repository: \"harbor.nineminds.com/nineminds/alga-code-server\"\n      tag: \"latest\"\n      pullPolicy: \"Always\"\n      is_private: true\n      credentials: \"harbor-credentials\"\n    service:\n      type: \"ClusterIP\"\n      port: 8080\n    password: \"alga-dev\"\n  persistence:\n    enabled: true\n    size: \"10Gi\"\n    storageClass: \"local-path\"\n\nserver:\n  replicaCount: 0\n\nconfig:\n  db:\n    host: \"pgbouncer.msp.svc.cluster.local\"\n    port: 6432\n    user: \"app_user\"\n    server_database: \"server\"\n    hostSecret:\n      name: \"\"\n      key:  \"\"\n    server_password_secret:\n      name: \"db-credentials\"\n      key:  \"DB_PASSWORD_SERVER\"\n    server_password_admin_secret:\n      name: \"db-credentials\"\n      key:  \"DB_PASSWORD_SUPERUSER\"\n  redis:\n    hostFQDN: \"redis.msp.svc.cluster.local\"\n    port: 6379\n    passwordSecret:\n      name: \"redis-credentials\"\n      key:  \"REDIS_PASSWORD\"\n  hocuspocus:\n    hostFQDN: \"hocuspocus.msp.svc.cluster.local\"\n    port: 1234\n\nvaultAgent:\n  enabled: true\n  role: alga-psa\n  secretPath: secret/data/alga-psa/server\n  sharedSecretPath: secret/data/alga-psa/shared\n\nsecrets_provider:\n  readChain: \"env,filesystem,vault\"\n  writeProvider: \"filesystem\"\n  envPrefix: \"\"\n  vault:\n    addr: \"http://vault.vault.svc:8200\"\n    token: \"\"\n    appSecretPath: \"kv/data/app/secrets\"\n    tenantSecretPathTemplate: \"kv/data/tenants/{tenantId}/secrets\"\n\nlogging:\n  level: DEBUG\n  is_format_json: false\n  is_full_details: true\n  file:\n    enabled: true\n\ngmail_integration:\n  enabled: true\n\nmicrosoft_integration:\n  enabled: true\n\nsetup:\n  runMigrations: false\n  runSeeds: false\nEOF" | complete | ignore
+            }
+        }
         let helm_result = do {
             cd $project_root
-            helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/values-hosted-env.yaml -f $temp_values_file -n $namespace | complete
+            helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/host.values.yaml -f $temp_values_file -n $namespace | complete
         }
 
         if $helm_result.exit_code != 0 {
@@ -210,7 +222,7 @@ vaultAgent:
                 print $"($env.ALGA_COLOR_YELLOW)Helm reported non-fatal issues; retrying with --install...($env.ALGA_COLOR_RESET)"
                 let retry_install = do {
                     cd $project_root
-                    helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/values-hosted-env.yaml -f $temp_values_file -n $namespace | complete
+                    helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f helm/host.values.yaml -f $temp_values_file -n $namespace | complete
                 }
                 if $retry_install.exit_code != 0 {
                     print $retry_install.stderr
@@ -332,7 +344,7 @@ export def hosted-env-connect [
     # Display the URLs (password aligns with helm/values-hosted-env.yaml default)
     print $"($env.ALGA_COLOR_CYAN)Port forwarding setup:($env.ALGA_COLOR_RESET)"
     print $"  Code Server:        http://localhost:($code_server_port)"
-    print $"    Password: alga-dev"
+    print $"    Password: alga-dev  (default from helm/host.values.yaml)"
     print $"  PSA App \(in code\):  http://localhost:($code_app_port)"
 
     # Wait for user to stop
