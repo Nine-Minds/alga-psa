@@ -208,12 +208,68 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     console.log('Getting current user from session');
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
+    if (!session?.user) {
+      console.log('No user found in session');
+      return null;
+    }
+
+    // Use the user ID from the session if available (more reliable than email lookup)
+    const sessionUser = session.user as any;
+    if (sessionUser.id && sessionUser.tenant) {
+      console.log(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
+      const {knex} = await createTenantKnex();
+      
+      // Use transaction to avoid connection pool exhaustion
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Get user directly by ID and tenant (avoiding email lookup issues)
+        const user = await User.get(trx, sessionUser.id);
+        
+        if (!user) {
+          console.log(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
+          return null;
+        }
+        
+        console.log(`Fetching roles for user ID: ${user.user_id}`);
+        const roles = await User.getUserRoles(trx, user.user_id);
+        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+        
+        console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        return { ...user, roles, avatarUrl };
+      });
+    }
+    
+    // Fallback to email lookup if session doesn't have ID (shouldn't happen with properly configured session)
+    if (!session.user.email) {
       console.log('No user email found in session');
       return null;
     }
 
-    console.log(`Looking up user by email: ${session.user.email}`);
+    console.log(`WARNING: Falling back to email lookup for: ${session.user.email} - this may return wrong user in multi-tenant setup`);
+    
+    // If we have user type in session, use it for more accurate lookup
+    if (sessionUser.user_type) {
+      console.log(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}`);
+      const user = await User.findUserByEmailAndType(session.user.email, sessionUser.user_type);
+      
+      if (!user) {
+        console.log(`User not found for email: ${session.user.email} and type: ${sessionUser.user_type}`);
+        return null;
+      }
+      
+      const {knex} = await createTenantKnex();
+      
+      // Use transaction for roles and avatar lookup
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        console.log(`Fetching roles for user ID: ${user.user_id}`);
+        const roles = await User.getUserRoles(trx, user.user_id);
+        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+        
+        console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        return { ...user, roles, avatarUrl };
+      });
+    }
+    
+    // Last resort: email-only lookup (least reliable in multi-tenant)
     const user = await User.findUserByEmail(session.user.email);
 
     if (!user) {
@@ -222,13 +278,16 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     }
 
     const {knex} = await createTenantKnex();
-    console.log(`Fetching roles for user ID: ${user.user_id}`);
-    const roles = await User.getUserRoles(knex, user.user_id);
+    
+    // Use transaction for roles and avatar lookup
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      console.log(`Fetching roles for user ID: ${user.user_id}`);
+      const roles = await User.getUserRoles(trx, user.user_id);
+      const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
 
-    const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
-
-    console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-    return { ...user, roles, avatarUrl };
+      console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+      return { ...user, roles, avatarUrl };
+    });
   } catch (error) {
     console.error('Failed to get current user:', error);
     throw new Error('Failed to get current user');
