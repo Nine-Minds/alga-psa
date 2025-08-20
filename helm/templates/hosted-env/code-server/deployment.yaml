@@ -399,7 +399,7 @@ spec:
 
             # Auth
             - name: NEXTAUTH_URL
-              value: "http://code-server:3000"
+              value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
@@ -471,7 +471,12 @@ spec:
             initialDelaySeconds: 5
             periodSeconds: 10
           resources:
-            {{- toYaml .Values.hostedEnv.codeServer.resources | nindent 12 }}
+            limits:
+              cpu: {{ default "4" (dig "hostedEnv" "codeServer" "resources" "limits" "cpu" .Values) | quote }}
+              memory: {{ default "16Gi" (dig "hostedEnv" "codeServer" "resources" "limits" "memory" .Values) | quote }}
+            requests:
+              cpu: {{ default "500m" (dig "hostedEnv" "codeServer" "resources" "requests" "cpu" .Values) | quote }}
+              memory: {{ default "2Gi" (dig "hostedEnv" "codeServer" "resources" "requests" "memory" .Values) | quote }}
         # Sidecar to surface Vault-injected server secrets into server/.env for developer convenience
         - name: env-writer
           image: busybox:1.36
