@@ -40,11 +40,67 @@ export async function computeDomain(input: ComputeDomainInput): Promise<{ domain
 }
 
 export async function ensureDomainMapping(input: EnsureDomainMappingInput): Promise<{ applied: boolean; ref?: any }> {
-  // Stub: in a future step, call the Kubernetes API to upsert a DomainMapping
-  // For now, return a placeholder reference
   const namespace = input.namespace || process.env.RUNNER_NAMESPACE || 'default';
   const kservice = input.kservice || process.env.RUNNER_KSERVICE || 'runner';
-  return { applied: true, ref: { api: 'knative.dev/v1', kind: 'DomainMapping', namespace, name: input.domain, ref: { kservice } } };
+
+  // Lazy-load Kubernetes client to avoid bundling when not needed
+  let k8s: any;
+  try {
+    k8s = await import('@kubernetes/client-node');
+  } catch (e) {
+    throw new Error('Missing dependency @kubernetes/client-node or not available in environment');
+  }
+
+  const kc = new k8s.KubeConfig();
+  try {
+    kc.loadFromDefault();
+  } catch (e) {
+    throw new Error('Failed to load Kubernetes config');
+  }
+  const co: any = kc.makeApiClient(k8s.CustomObjectsApi);
+
+  const group = 'serving.knative.dev';
+  const version = 'v1';
+  const plural = 'domainmappings';
+  const name = input.domain; // DomainMapping name is the FQDN
+
+  const desired = {
+    apiVersion: `${group}/${version}`,
+    kind: 'DomainMapping',
+    metadata: {
+      name,
+      namespace,
+    },
+    spec: {
+      ref: {
+        apiVersion: 'serving.knative.dev/v1',
+        kind: 'Service',
+        name: kservice,
+      },
+    },
+  };
+
+  // Check if exists
+  let exists = false;
+  try {
+    await co.getNamespacedCustomObject(group, version, namespace, plural, name);
+    exists = true;
+  } catch (e: any) {
+    if (!(e?.response?.status === 404)) {
+      throw e;
+    }
+  }
+
+  if (!exists) {
+    await co.createNamespacedCustomObject(group, version, namespace, plural, desired);
+    return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
+  }
+
+  // Patch spec if exists to ensure correct ref
+  const body = { spec: desired.spec };
+  const options = { headers: { 'Content-Type': k8s.PatchUtils.PATCH_FORMAT_MERGE_PATCH } };
+  await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
+  return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
 }
 
 export async function updateInstallStatus(input: UpdateInstallStatusInput): Promise<{ updated: boolean }> {
@@ -75,4 +131,3 @@ export async function updateInstallStatus(input: UpdateInstallStatusInput): Prom
   const count = await q;
   return { updated: (Array.isArray(count) ? count.length : Number(count)) > 0 };
 }
-

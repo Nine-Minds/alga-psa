@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@alga-psa/shared": "file:../../shared",
+    "@kubernetes/client-node": "^0.21.1",
     "@temporalio/activity": "^1.8.0",
     "@temporalio/client": "^1.8.0",
     "@temporalio/worker": "^1.8.0",
