@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { createTenantKnex } from '@/lib/db';
 import { CreateTenantInput, TenantResponse } from './types/tenant.schema';
 import { Knex } from 'knex';
 
