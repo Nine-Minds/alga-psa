@@ -47,7 +47,8 @@ RUN npm install -g \
     ts-node \
     nodemon \
     prettier \
-    eslint
+    eslint  \
+    zstd
 
 # Install mirrord for remote development
 RUN curl -fsSL https://raw.githubusercontent.com/metalbear-co/mirrord/main/scripts/install.sh | bash

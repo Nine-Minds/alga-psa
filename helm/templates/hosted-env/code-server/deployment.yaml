@@ -307,6 +307,18 @@ spec:
             - name: LOG_EXTERNAL_HTTP_TOKEN
               value: "{{ .Values.logging.external.token }}"
 
+            # Storage backup
+            {{- if .Values.config.storage.backup.enabled }}
+            - name: STORAGE_BACKUP_ENABLED
+              value: "true"
+            - name: STORAGE_BACKUP_SCHEDULE
+              value: "{{ .Values.config.storage.backup.schedule }}"
+            - name: STORAGE_BACKUP_RETENTION_DAYS
+              value: "{{ .Values.config.storage.backup.retention.days }}"
+            - name: STORAGE_BACKUP_RETENTION_COPIES
+              value: "{{ .Values.config.storage.backup.retention.copies }}"
+            {{- end }}
+
             # Hocuspocus
             - name: HOCUSPOCUS_URL
               {{- if .Values.config.hocuspocus.hostFQDN }}
@@ -330,6 +342,24 @@ spec:
               value: "{{ .Values.email.password }}"
 
             # ----------- GMAIL INTEGRATION ----------------
+            {{- if .Values.email.provider }}
+            - name: EMAIL_PROVIDER_TYPE
+              value: "{{ .Values.email.provider }}"
+            {{- end }}
+            {{- if and .Values.email.resendApiKeySecret.name .Values.email.resendApiKeySecret.key }}
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.resendApiKeySecret.name | quote }}
+                  key: {{ .Values.email.resendApiKeySecret.key | quote }}
+            {{- else if .Values.email.resendApiKey }}
+            - name: RESEND_API_KEY
+              value: "{{ .Values.email.resendApiKey }}"
+            {{- end }}
+            {{- if .Values.email.resendBaseUrl }}
+            - name: RESEND_BASE_URL
+              value: "{{ .Values.email.resendBaseUrl }}"
+            {{- end }}
             {{- if .Values.gmail_integration.enabled }}
             - name: GOOGLE_CLIENT_ID
               value: "{{ .Values.gmail_integration.client_id }}"
@@ -341,6 +371,14 @@ spec:
             - name: GOOGLE_REDIRECT_URI
               value: "{{ .Values.gmail_integration.redirect_uri }}"
             {{- end }}
+            {{- end }}
+
+            # ----------- GOOGLE AUTH (OAuth for app sign-in) ----------------
+            {{- if .Values.google_auth.enabled }}
+            - name: GOOGLE_OAUTH_CLIENT_ID
+              value: "{{ .Values.google_auth.client_id }}"
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              value: "{{ .Values.google_auth.client_secret }}"
             {{- end }}
 
             # ----------- MICROSOFT INTEGRATION ----------------
@@ -400,6 +438,9 @@ spec:
             # Auth
             - name: NEXTAUTH_URL
               value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
+            # Public base URL for links in emails and client-side code
+            - name: NEXT_PUBLIC_BASE_URL
+              value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
             - name: NEXTAUTH_SECRET
               valueFrom:
                 secretKeyRef:
@@ -446,6 +487,11 @@ spec:
               value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
             {{- end }}
 
+            # User-provided extra env vars (passthrough)
+            {{- with .Values.hostedEnv.codeServer.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
           ports:
             - name: http
               containerPort: 8080
@@ -472,11 +518,11 @@ spec:
             periodSeconds: 10
           resources:
             limits:
-              cpu: {{ default "4" (dig "hostedEnv" "codeServer" "resources" "limits" "cpu" .Values) | quote }}
-              memory: {{ default "16Gi" (dig "hostedEnv" "codeServer" "resources" "limits" "memory" .Values) | quote }}
+              cpu: {{ index .Values "hostedEnv" "codeServer" "resources" "limits" "cpu" | default "4" | quote }}
+              memory: {{ index .Values "hostedEnv" "codeServer" "resources" "limits" "memory" | default "16Gi" | quote }}
             requests:
-              cpu: {{ default "500m" (dig "hostedEnv" "codeServer" "resources" "requests" "cpu" .Values) | quote }}
-              memory: {{ default "2Gi" (dig "hostedEnv" "codeServer" "resources" "requests" "memory" .Values) | quote }}
+              cpu: {{ index .Values "hostedEnv" "codeServer" "resources" "requests" "cpu" | default "500m" | quote }}
+              memory: {{ index .Values "hostedEnv" "codeServer" "resources" "requests" "memory" | default "8Gi" | quote }}
         # Sidecar to surface Vault-injected server secrets into server/.env for developer convenience
         - name: env-writer
           image: busybox:1.36
