@@ -1004,7 +1004,7 @@ const handleClose = () => {
                     onClose={() => setIsTimeEntryPeriodDialogOpen(false)}
                     onConfirm={() => {
                         setIsTimeEntryPeriodDialogOpen(false);
-                        router.push('/msp/billing?tab=time-periods');
+                        router.push('/msp/settings?tab=time-entry&subtab=time-periods');
                     }}
                     title="No Active Time Period"
                     message="No active time period found. Time periods need to be set up in the billing dashboard before adding time entries."
