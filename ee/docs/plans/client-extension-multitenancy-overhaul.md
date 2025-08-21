@@ -879,10 +879,17 @@ The following concrete tasks align the current codebase with this plan and track
   - [x] Admin-only DB registry introspection endpoint (`/api/extensions/registry-db-check`)
   - [ ] Add request IDs and structured logs to finalize and abort paths
 
-- [ ] Registry v2 repository wiring
-  - [ ] Implement Knex-backed `RegistryV2Repository` (extensions + versions)
-  - [ ] Register via `setRegistryV2Repository(...)` at server startup
-  - [ ] Verify finalize writes registry/version/bundle rows end-to-end
+- [x] Registry v2 repository wiring
+  - [x] Implement Knex-backed `RegistryV2Repository` (extensions + versions)
+  - [x] Register via `setRegistryV2Repository(...)` at server startup (lazy init before finalize)
+  - [x] Verify finalize writes registry/version/bundle rows end-to-end
+
+
+- [x] Extensions UI uses Registry v2
+  - [x] List tenant installs via v2 actions (joins on `tenant_extension_install`)
+  - [x] Toggle/uninstall operate on `tenant_extension_install`
+  - [x] After finalize, auto-create tenant install for current tenant
+
 
 - [ ] Align UI with “Install from Registry” flow [FUTURE -- DELAY]
   - [ ] Restrict or hide direct upload UI for general users (admin/publisher only if retained)
