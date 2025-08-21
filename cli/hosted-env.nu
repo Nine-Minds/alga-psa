@@ -180,6 +180,42 @@ spec:
 
     ensure-vault-role $role_name $namespace
 
+    # Copy required secrets from msp namespace
+    print $"($env.ALGA_COLOR_CYAN)Copying required secrets to ($namespace)...($env.ALGA_COLOR_RESET)"
+    
+    # Copy nm-store-db-secret if it exists in msp namespace
+    let nm_store_secret_exists = (kubectl -n msp get secret nm-store-db-secret | complete)
+    if $nm_store_secret_exists.exit_code == 0 {
+        (kubectl -n msp get secret nm-store-db-secret -o yaml | 
+         sed $"s/namespace: msp/namespace: ($namespace)/" | 
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied nm-store-db-secret($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ nm-store-db-secret not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
+    # Copy resend-credentials if it exists in msp namespace
+    let resend_secret_exists = (kubectl -n msp get secret resend-credentials | complete)
+    if $resend_secret_exists.exit_code == 0 {
+        (kubectl -n msp get secret resend-credentials -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied resend-credentials($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ resend-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
+    # Copy temporal-worker-secret if it exists in msp namespace
+    let temporal_secret_exists = (kubectl -n msp get secret temporal-worker-secret | complete)
+    if $temporal_secret_exists.exit_code == 0 {
+        (kubectl -n msp get secret temporal-worker-secret -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied temporal-worker-secret($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ temporal-worker-secret not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
     let values_content = $"
 # Generated values for hosted environment
 hostedEnv:

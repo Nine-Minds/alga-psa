@@ -441,11 +441,6 @@ spec:
             # Public base URL for links in emails and client-side code
             - name: NEXT_PUBLIC_BASE_URL
               value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
-            - name: NEXTAUTH_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: "{{include "sebastian.fullname" .}}-secrets"
-                  key: NEXTAUTH_SECRET
             - name: NEXTAUTH_SESSION_EXPIRES
               value: "{{ .Values.auth.nextauth_session_expires }}"
 
