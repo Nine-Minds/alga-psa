@@ -892,3 +892,17 @@ The following concrete tasks align the current codebase with this plan and track
 - [ ] Cleanup and tests
   - [ ] Remove unused upload API route and legacy code paths once fully migrated
   - [ ] Add targeted tests for upload server action and finalize happy-path
+
+
+## Retirement of Legacy Paths (Brand New System)
+
+- Legacy tables and services to avoid for EE extensions:
+  - `extensions`, `extension_permissions`, file-based component serving, and dynamic module import mechanisms.
+  - `ExtensionRegistry` (legacy) and actions that operate on the `extensions` table in management UI.
+- Canonical tables for EE extensions (Registry v2):
+  - `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`.
+- UI and actions must exclusively use Registry v2:
+  - Listing, enable/disable, and uninstall operate on `tenant_extension_install`.
+  - Version metadata read from `extension_version`; registry identity from `extension_registry`.
+  - Bundle metadata resolved from object storage keyed by content hash.
+- Operational note: This system is brand new; no data migration is required. Do not write or read from legacy tables as part of EE extensions.
