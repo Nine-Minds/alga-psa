@@ -136,6 +136,11 @@ export function OnboardingWizard({
             if (teamResult.data?.created && teamResult.data.created.length > 0) {
               const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
+              
+              // Show warning if some users were skipped
+              if (teamResult.data.message) {
+                setErrors(prev => ({ ...prev, [stepIndex]: teamResult.data.message }));
+              }
             }
           }
           break;

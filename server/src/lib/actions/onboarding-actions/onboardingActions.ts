@@ -156,16 +156,27 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     const { getLicenseUsage } = await import('../../license/get-license-usage');
     const usage = await getLicenseUsage(tenant);
     
+    // Determine how many users we can actually add
+    let membersToProcess = [...members];
+    let skippedDueToLimit: string[] = [];
+    
     if (usage.limit !== null) {
-      // Count how many new members are being added
-      const newInternalUsers = members.length;
+      const canAdd = Math.max(0, usage.limit - usage.used);
       
-      if (usage.used + newInternalUsers > usage.limit) {
-        const canAdd = Math.max(0, usage.limit - usage.used);
+      if (canAdd === 0) {
         return { 
           success: false, 
-          error: `You've reached your internal user licence limit. You can add ${canAdd} more user${canAdd !== 1 ? 's' : ''}.`
+          error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
         };
+      }
+      
+      if (members.length > canAdd) {
+        // Only process users up to the limit
+        membersToProcess = members.slice(0, canAdd);
+        const skippedMembers = members.slice(canAdd);
+        skippedDueToLimit = skippedMembers.map(m => m.email);
+        
+        console.warn(`License limit allows only ${canAdd} more users. Skipping ${skippedMembers.length} users: ${skippedDueToLimit.join(', ')}`);
       }
     }
 
@@ -174,7 +185,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      for (const member of members) {
+      for (const member of membersToProcess) {
         try {
           // Check if user already exists
           const existingUser = await trx('users')
@@ -254,7 +265,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
       }
 
       // Save progress - store successful team members
-      const successfulMembers = members.filter(m => 
+      const successfulMembers = membersToProcess.filter(m => 
         created.includes(m.email)
       );
       await saveTenantOnboardingProgress({
@@ -264,13 +275,22 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
 
 
     revalidatePath('/msp/onboarding');
+    
+    // Include warning message if some users were skipped
+    let message = undefined;
+    if (skippedDueToLimit.length > 0) {
+      message = `License limit reached. ${created.length} user(s) created, ${skippedDueToLimit.length} skipped: ${skippedDueToLimit.join(', ')}`;
+    }
+    
     return { 
       success: true, 
       data: { 
         created, 
         alreadyExists,
         failed, 
-        licenseStatus: { current: usage.used, limit: usage.limit }
+        skippedDueToLimit,
+        licenseStatus: { current: usage.used + created.length, limit: usage.limit },
+        message
       }
     };
   } catch (error) {
