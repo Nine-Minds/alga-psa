@@ -313,8 +313,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           // Update the channel to be default
           await updateChannel(firstChannel.channel_id, { is_default: true });
           firstChannel.is_default = true;
-          toast('First board automatically set as default', {
-            icon: 'ℹ️',
+          toast.success('First board automatically set as default', {
             duration: 3000
           });
         }
@@ -402,8 +401,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
             await updateStatus(firstOpenStatus.status_id, { is_default: true });
             firstOpenStatus.is_default = true;
-            toast('First open status automatically set as default', {
-              icon: 'ℹ️',
+            toast.success('First open status automatically set as default', {
               duration: 3000
             });
           }
@@ -619,8 +617,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Don't allow removing default status - at least one board must be default
       if (channel.is_default) {
-        toast('At least one board must be set as default', {
-          icon: 'ℹ️',
+        toast.error('At least one board must be set as default', {
           duration: 3000
         });
         return;
@@ -738,8 +735,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Don't allow removing default status - at least one status must be default
       if (status.is_default) {
-        toast('At least one status must be set as default', {
-          icon: 'ℹ️',
+        toast.error('At least one status must be set as default', {
           duration: 3000
         });
         return;
