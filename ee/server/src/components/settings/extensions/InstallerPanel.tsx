@@ -114,6 +114,7 @@ export default function InstallerPanel() {
           size: file.size,
         };
         const fin = (await extFinalizeUpload(finalizeBody)) as FinalizeSuccess;
+        try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
         setSuccess(fin);
         setInstalling(false);
       } catch (finErr: any) {
@@ -159,6 +160,7 @@ export default function InstallerPanel() {
         size: file?.size,
         manifestJson: manifestJson.trim(),
       })) as FinalizeSuccess;
+      try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
 
       setSuccess(fin);
       setNeedsManifest(false);

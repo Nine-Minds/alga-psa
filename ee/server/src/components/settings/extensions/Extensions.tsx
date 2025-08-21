@@ -36,8 +36,8 @@ export default function Extensions() {
   useEffect(() => {
     const fetchExtensionsData = async () => {
       try {
-        const extensionsData = await fetchExtensions();
-        setExtensions(extensionsData);
+        const v2 = await fetchInstalledExtensionsV2();
+        setExtensions((v2 as any).map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, manifest: { name: r.name, version: r.version, author: r.author, main: '' } as any, is_enabled: r.is_enabled })) as any);
         setLoading(false);
         // Kick off per-extension install info fetches
         const entries = await Promise.all(
@@ -62,7 +62,7 @@ export default function Extensions() {
   // Handle enabling/disabling extensions
   const handleToggleExtension = async (id: string, currentStatus: boolean) => {
     try {
-      const result = await toggleExtension(id);
+      const result = await toggleExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
@@ -90,7 +90,7 @@ export default function Extensions() {
     }
   
     try {
-      const result = await uninstallExtension(id);
+      const result = await uninstallExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;

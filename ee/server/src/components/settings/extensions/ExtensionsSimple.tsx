@@ -51,8 +51,8 @@ export default function Extensions() {
   useEffect(() => {
     const loadExtensions = async () => {
       try {
-        const extensionsData = await fetchExtensions();
-        setExtensions(extensionsData.map(convertExtensionToUI));
+        const v2 = await fetchInstalledExtensionsV2();
+        setExtensions(v2.map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, author: r.author || 'Unknown', isEnabled: r.is_enabled, createdAt: new Date(), updatedAt: new Date(), tenantId: r.tenant_id })));
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch extensions', err);
@@ -67,7 +67,7 @@ export default function Extensions() {
   // Handle enabling/disabling extensions
   const handleToggleExtension = async (id: string, currentStatus: boolean) => {
     try {
-      const result = await toggleExtension(id);
+      const result = await toggleExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
@@ -94,7 +94,7 @@ export default function Extensions() {
     }
     
     try {
-      const result = await uninstallExtension(id);
+      const result = await uninstallExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
