@@ -893,7 +893,7 @@ export async function validateOnboardingDefaults(): Promise<OnboardingActionResu
       const defaultStatus = await trx('statuses')
         .where({ 
           is_default: true,
-          item_type: 'ticket',
+          status_type: 'ticket',
           tenant
         })
         .first();
