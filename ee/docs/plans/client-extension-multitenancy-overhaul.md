@@ -862,3 +862,33 @@ Phase 4 – Migration & Deprecation
 - Which sandbox runtime to standardize on first: WASM (Wasmtime/WASI) vs V8 isolates? Preference: WASM for stronger capability discipline; allow a container tier for heavy/legacy cases.
 - Initial capability set scope: finalize MVP host APIs.
 - Pricing/billing alignment with quotas and egress costs.
+
+## Near-term Implementation Tasks (Progress Tracker)
+
+The following concrete tasks align the current codebase with this plan and track progress.
+
+- [x] Replace browser→S3 direct upload with server-proxied streaming
+  - [x] Add server action `extUploadProxy(FormData)` to stream file to S3 staging (write-once)
+  - [x] Convert Web ReadableStream → Node Readable before S3 PutObject
+  - [x] Pass `ContentLength` to S3 to satisfy chunked signing
+  - [x] Update `InstallerPanel.tsx` to use server action, then call `extFinalizeUpload`
+  - [x] Remove presigned initiate flow and delete `initiate-upload` API route
+
+- [x] Logging and diagnostics
+  - [x] Structured logs + request IDs for upload path
+  - [x] Admin-only DB registry introspection endpoint (`/api/extensions/registry-db-check`)
+  - [ ] Add request IDs and structured logs to finalize and abort paths
+
+- [ ] Registry v2 repository wiring
+  - [ ] Implement Knex-backed `RegistryV2Repository` (extensions + versions)
+  - [ ] Register via `setRegistryV2Repository(...)` at server startup
+  - [ ] Verify finalize writes registry/version/bundle rows end-to-end
+
+- [ ] Align UI with “Install from Registry” flow [FUTURE -- DELAY]
+  - [ ] Restrict or hide direct upload UI for general users (admin/publisher only if retained)
+  - [ ] Replace “upload bundle” with “select version” from registry listing
+  - [ ] Update docs to emphasize CI publish + install-from-registry
+
+- [ ] Cleanup and tests
+  - [ ] Remove unused upload API route and legacy code paths once fully migrated
+  - [ ] Add targeted tests for upload server action and finalize happy-path
