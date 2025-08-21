@@ -109,6 +109,16 @@ USER coder
 # Set the default workspace
 WORKDIR /home/coder/alga-psa
 
+# Download and install VS Code CLI in the coder user's home directory
+RUN cd /home/coder && \
+    curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' --output vscode_cli.tar.gz && \
+    tar -xf vscode_cli.tar.gz && \
+    rm vscode_cli.tar.gz && \
+    echo "✅ VS Code CLI installed in /home/coder/code"
+
+# Continue in the alga-psa directory
+WORKDIR /home/coder/alga-psa
+
 # Install dependencies during build
 RUN echo "📦 Pre-installing root dependencies..." && \
     npm ci --prefer-offline --no-audit && \
