@@ -18,9 +18,9 @@ import {
   addClientContact,
   setupBilling,
   configureTicketing,
-  completeOnboarding
+  completeOnboarding,
+  validateOnboardingDefaults
 } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
-import { createTenantKnex } from 'server/src/lib/db';
 
 interface OnboardingWizardProps {
   open?: boolean;
@@ -264,46 +264,9 @@ export function OnboardingWizard({
     try {
       // Validate we have required defaults before finishing
       if (wizardData.channelName || wizardData.channelId) {
-        const { knex: db, tenant } = await createTenantKnex();
+        const validationResult = await validateOnboardingDefaults();
         
-        if (!tenant) {
-          setErrors(prev => ({ ...prev, [5]: 'Unable to identify tenant. Please refresh and try again.' }));
-          setIsLoading(false);
-          return;
-        }
-        
-        // Use withTransaction to check for defaults
-        const { withTransaction } = await import('@shared/db');
-        const validationResult = await withTransaction(db, async (trx) => {
-          // Check for default channel
-          const defaultChannel = await trx('channels')
-            .where({ 
-              is_default: true,
-              tenant 
-            })
-            .first();
-          
-          if (!defaultChannel) {
-            return { valid: false, error: 'No default board is set. Please set one board as default before completing setup.' };
-          }
-          
-          // Check for default status
-          const defaultStatus = await trx('statuses')
-            .where({ 
-              is_default: true,
-              item_type: 'ticket',
-              tenant
-            })
-            .first();
-          
-          if (!defaultStatus) {
-            return { valid: false, error: 'No default status is set. Please set one open status as default before completing setup.' };
-          }
-          
-          return { valid: true };
-        });
-        
-        if (!validationResult.valid) {
+        if (!validationResult.success) {
           setErrors(prev => ({ ...prev, [5]: validationResult.error || 'Validation failed' }));
           setIsLoading(false);
           return;
