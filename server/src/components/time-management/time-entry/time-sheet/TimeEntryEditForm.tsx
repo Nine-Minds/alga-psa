@@ -329,6 +329,41 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
   };
 }, []);
 
+  const handleSave = useCallback(() => {
+    if (!onSave) return;
+    
+    setShowErrors(true);
+    if (!validateTimes()) {
+      return;
+    }
+
+    const isAdHoc = entry?.work_item_type === 'ad_hoc';
+
+    // Ensure we have required fields (skip for ad_hoc)
+    if (!isAdHoc && !entry?.service_id) {
+      setValidationErrors(prev => ({
+        ...prev,
+        service: 'Service is required'
+      }));
+      return;
+    }
+
+    // Validate billing plan selection if multiple plans are available (skip for ad_hoc)
+    if (!isAdHoc && showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
+      setValidationErrors(prev => ({
+        ...prev,
+        billingPlan: 'Billing plan is required when multiple plans are available'
+      }));
+      return;
+    }
+
+    // Clear any existing validation errors
+    setValidationErrors({});
+
+    // Call parent's onSave with the current entry
+    onSave(index);
+  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showBillingPlanSelector, eligibleBillingPlans.length, entry?.billing_plan_id, index, setShowErrors]);
+
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
 
@@ -359,39 +394,6 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
 
 
-  const handleSave = useCallback(() => {
-    setShowErrors(true);
-    if (!validateTimes()) {
-      return;
-    }
-
-    const isAdHoc = entry?.work_item_type === 'ad_hoc';
-
-    // Ensure we have required fields (skip for ad_hoc)
-    if (!isAdHoc && !entry?.service_id) {
-      setValidationErrors(prev => ({
-        ...prev,
-        service: 'Service is required'
-      }));
-      return;
-    }
-
-
-    // Validate billing plan selection if multiple plans are available (skip for ad_hoc)
-    if (!isAdHoc && showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
-      setValidationErrors(prev => ({
-        ...prev,
-        billingPlan: 'Billing plan is required when multiple plans are available'
-      }));
-      return;
-    }
-
-    // Clear any existing validation errors
-    setValidationErrors({});
-
-    // Call parent's onSave with the current entry
-    onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showBillingPlanSelector, eligibleBillingPlans.length, entry?.billing_plan_id, index]);
 
   const handleDurationChange = useCallback((type: 'hours' | 'minutes', value: number) => {
     if (!entry) return;
@@ -433,22 +435,26 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
   return (
     <div className="border p-4 rounded">
-      <div className="flex justify-end items-center mb-4">
-        <div className="flex items-center">
-          {entry?.isDirty && (
-            <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
-          )}
+      {/* Only show delete button and status for existing entries that have been saved */}
+      {(entry?.entry_id && !isNewEntry) && (
+        <div className="flex justify-end items-center mb-4">
+          <div className="flex items-center">
+            {entry?.isDirty && (
+              <span className="text-yellow-500 text-sm mr-2">Unsaved changes</span>
+            )}
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              id={`${id}-delete-entry-${index}-btn`}
+              onClick={() => onDelete(index)}
+              variant="destructive"
+              disabled={!isEditable}
+            >
+              Delete Time Entry
+            </Button>
+          </div>
         </div>
-        <div className="flex space-x-2">
-          <Button
-            id={`${id}-delete-entry-${index}-btn`}
-            onClick={() => onDelete(index)}
-            variant="destructive"
-          >
-            Delete Time Entry
-          </Button>
-        </div>
-      </div>
+      )}
 
       <div className="border p-4 rounded space-y-4">
         <div className="grid grid-cols-2 gap-4">
@@ -681,7 +687,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
       </div>
 
-      <div>
+      <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700">Notes</label>
         <Input
           id='notes'
@@ -699,24 +705,36 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         />
       </div>
 
-      <div className="flex justify-end mt-4">
-        <div className="flex flex-col items-end gap-2">
-          {showErrors && validationErrors.duration && (
-            <span className="text-sm text-red-500">
-              {validationErrors.duration}
-            </span>
-          )}
-          <Button
-            id={`${id}-save-entry-${index}-btn`}
-            onClick={handleSave}
-            variant="default"
-            size="default"
-            className="w-32"
-          >
-            Save
-          </Button>
+      {/* Only show save button for multi-entry editing (when onSave is provided) */}
+      {onSave && (
+        <div className="flex justify-end mt-4">
+          <div className="flex flex-col items-end gap-2">
+            {showErrors && validationErrors.duration && (
+              <span className="text-sm text-red-500">
+                {validationErrors.duration}
+              </span>
+            )}
+            <Button
+              id={`${id}-save-entry-${index}-btn`}
+              onClick={handleSave}
+              variant="default"
+              size="default"
+              className="w-32"
+            >
+              Save
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
+      
+      {/* Show validation errors without button for single entry forms */}
+      {!onSave && showErrors && validationErrors.duration && (
+        <div className="flex justify-end mt-4">
+          <span className="text-sm text-red-500">
+            {validationErrors.duration}
+          </span>
+        </div>
+      )}
     </div>
   );
 });

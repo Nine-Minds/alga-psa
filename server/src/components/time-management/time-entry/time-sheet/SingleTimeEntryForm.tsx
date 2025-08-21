@@ -14,7 +14,7 @@ interface SingleTimeEntryFormProps {
   totalDuration: number;
   isEditable: boolean;
   lastNoteInputRef: React.RefObject<HTMLInputElement>;
-  onSave: (index: number) => Promise<void>;
+  onSave?: (index: number) => Promise<void>;
   onDelete: (index: number) => Promise<void>;
   onUpdateEntry: (index: number, entry: ITimeEntryWithNew) => void;
   onUpdateTimeInputs: (inputs: TimeInputs) => void;
