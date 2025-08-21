@@ -7,12 +7,11 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ReflectionContainer } from '@/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@/lib/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import logger from '@/utils/logger';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 
@@ -37,19 +36,20 @@ export default function Extensions() {
     const fetchExtensionsData = async () => {
       try {
         const v2 = await fetchInstalledExtensionsV2();
-        setExtensions((v2 as any).map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, manifest: { name: r.name, version: r.version, author: r.author, main: '' } as any, is_enabled: r.is_enabled })) as any);
-        setLoading(false);
-        // Kick off per-extension install info fetches
+        const mapped = (v2 as any).map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, manifest: { name: r.name, version: r.version, author: r.author, main: '' } as any, is_enabled: r.is_enabled }));
+        setExtensions(mapped as any);
+        // Kick off per-extension install info fetches (after setting extensions)
         const entries = await Promise.all(
-          extensionsData.map(async (ext) => {
+          mapped.map(async (ext: any) => {
             const info = await getInstallInfo(ext.id).catch(() => null);
             return [ext.id, { domain: info?.runner_domain ?? null, status: info?.runner_status ?? null }];
           })
         );
         setInstallInfo(Object.fromEntries(entries));
+        setLoading(false);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'unknown error';
-        logger.error('Failed to fetch extensions', { error: msg });
+        console.error('Failed to fetch extensions', { error: msg });
         setError('Failed to load extensions');
         setLoading(false);
       }
@@ -75,10 +75,10 @@ export default function Extensions() {
         )
       );
   
-      logger.info(`Extension ${currentStatus ? 'disabled' : 'enabled'}`, { id });
+      console.info(`Extension ${currentStatus ? 'disabled' : 'enabled'}`, { id });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
-      logger.error('Failed to toggle extension', { id, error: msg });
+      console.error('Failed to toggle extension', { id, error: msg });
       alert(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
     }
   };
@@ -101,10 +101,10 @@ export default function Extensions() {
         prevExtensions.filter(ext => ext.id !== id)
       );
   
-      logger.info('Extension removed', { id });
+      console.info('Extension removed', { id });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
-      logger.error('Failed to remove extension', { id, error: msg });
+      console.error('Failed to remove extension', { id, error: msg });
       alert('Failed to remove extension');
     }
   };
@@ -204,13 +204,31 @@ export default function Extensions() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        extension.is_enabled
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {extension.is_enabled ? 'Enabled' : 'Disabled'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          extension.is_enabled
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {extension.is_enabled ? 'Enabled' : 'Disabled'}
+                        </span>
+                        {(() => {
+                          const state = installInfo[extension.id]?.status?.state as string | undefined;
+                          if (!state) return null;
+                          const s = state.toLowerCase();
+                          const cls = s === 'ready'
+                            ? 'bg-green-100 text-green-800'
+                            : s === 'error'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-amber-100 text-amber-800';
+                          const label = s.charAt(0).toUpperCase() + s.slice(1);
+                          return (
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+                              {label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">

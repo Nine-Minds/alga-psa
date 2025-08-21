@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
+import { computeDomain, enqueueProvisioningWorkflow } from '../extensions/runtime/provision';
 
 export type V2ExtensionListItem = {
   id: string; // registry_id
@@ -69,6 +70,7 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
     .first(['id']);
   if (!ev) throw new Error('Version not found');
 
+  const runnerDomain = computeDomain(tenant, params.registryId);
   const payload = {
     tenant_id: tenant,
     registry_id: params.registryId,
@@ -77,14 +79,20 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
     granted_caps: JSON.stringify([]),
     config: JSON.stringify({}),
     is_enabled: true,
+    runner_domain: runnerDomain,
+    runner_status: JSON.stringify({ state: 'provisioning', message: 'Enqueued domain provisioning' }),
     updated_at: knex.fn.now(),
   };
 
-  await knex('tenant_extension_install')
+  const upserted = await knex('tenant_extension_install')
     .insert({ id: knex.raw('gen_random_uuid()'), ...payload, created_at: knex.fn.now() })
     .onConflict(['tenant_id', 'registry_id'])
-    .merge(payload);
+    .merge(payload)
+    .returning(['id']);
+
+  const installId: string | undefined = Array.isArray(upserted) && upserted.length > 0 ? (upserted[0] as any).id : undefined;
+  // Best-effort Temporal provisioning kickoff
+  await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
 
   return { success: true };
 }
-
