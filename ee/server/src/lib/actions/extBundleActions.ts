@@ -328,7 +328,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
 
   const upsertResult = await upsertVersionFromManifest({
     manifest,
-    contentHash: `sha256:${computedHash}`,
+    contentHash: computedHash,
     parsed: {
       uiEntry: parsedUiEntry,
       endpoints: parsedEndpoints,
