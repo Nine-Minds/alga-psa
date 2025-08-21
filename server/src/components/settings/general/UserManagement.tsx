@@ -30,6 +30,8 @@ const UserManagement = (): JSX.Element => {
   const [contacts, setContacts] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
@@ -386,7 +388,7 @@ const fetchContacts = async (): Promise<void> => {
               />
               <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
             </div>
-            <div className="relative z-[500]">
+            <div>
               <CustomSelect
                 value={filterStatus}
                 onValueChange={(value) => setFilterStatus(value as 'all' | 'active' | 'inactive')}
@@ -395,16 +397,16 @@ const fetchContacts = async (): Promise<void> => {
               />
             </div>
             {portalType === 'client' && (
-              <div className="relative z-[500]">
+              <div>
                 <CompanyPicker
                   id="user-management-company-filter"
                   companies={companies}
                   selectedCompanyId={selectedCompanyId}
                   onSelect={(companyId) => setSelectedCompanyId(companyId)}
-                  filterState="active"
-                  onFilterStateChange={() => {}}
-                  clientTypeFilter="all"
-                  onClientTypeFilterChange={() => {}}
+                  filterState={companyFilterState}
+                  onFilterStateChange={(state) => setCompanyFilterState(state)}
+                  clientTypeFilter={companyClientTypeFilter}
+                  onClientTypeFilterChange={(filter) => setCompanyClientTypeFilter(filter)}
                   placeholder="Select client"
                   fitContent={true}
                 />
@@ -461,7 +463,7 @@ const fetchContacts = async (): Promise<void> => {
                     />
                   </div>
                   {portalType === 'client' && (
-                    <div className="relative z-[500]">
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Client 
                         <span className="text-sm text-gray-500"> (optional)</span>
                       </label>
@@ -470,16 +472,16 @@ const fetchContacts = async (): Promise<void> => {
                         companies={companies}
                         selectedCompanyId={newUser.companyId || null}
                         onSelect={(companyId) => setNewUser({ ...newUser, companyId: companyId || '' })}
-                        filterState="active"
-                        onFilterStateChange={() => {}}
-                        clientTypeFilter="all"
-                        onClientTypeFilterChange={() => {}}
+                        filterState={companyFilterState}
+                        onFilterStateChange={(state) => setCompanyFilterState(state)}
+                        clientTypeFilter={companyClientTypeFilter}
+                        onClientTypeFilterChange={(filter) => setCompanyClientTypeFilter(filter)}
                         placeholder="Select Client"
                         fitContent={false}
                       />
                     </div>
                   )}
-                  <div className="relative z-[500]">
+                  <div>
                     <CustomSelect
                       label="Primary Role"
                       value={newUser.role}
@@ -496,7 +498,7 @@ const fetchContacts = async (): Promise<void> => {
                 {/* Right column: existing contact OR set password */}
                 <div className="space-y-4">
                   {portalType === 'client' && (
-                    <div className="relative z-[500]">
+                    <div>
                       <Label className="block text-sm font-medium text-gray-700 mb-1">Existing Contact 
                         <span className="text-sm text-gray-500"> (optional)</span> </Label>
                       <ContactPicker
