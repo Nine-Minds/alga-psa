@@ -12,6 +12,8 @@ import { Card } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import toast from 'react-hot-toast';
 
 interface UserDetailsProps {
   userId: string;
@@ -142,6 +144,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const handleSave = async () => {
     if (user) {
       try {
+        // Check license limit if trying to activate an MSP user
+        if (user.user_type === 'internal' && user.is_inactive && isActive) {
+          const licenseResult = await getLicenseUsageAction();
+          if (licenseResult.success && licenseResult.data) {
+            const { limit, remaining } = licenseResult.data;
+            if (limit !== null && remaining === 0) {
+              toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+              return;
+            }
+          }
+        }
+
         const updatedUserData: Partial<IUser> = {
           first_name: firstName,
           last_name: lastName,
@@ -319,7 +333,20 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             </Text>
             <Switch
               checked={isActive}
-              onCheckedChange={(checked) => setIsActive(checked)}
+              onCheckedChange={async (checked) => {
+                // Check license limit if trying to activate an MSP user
+                if (user && user.user_type === 'internal' && user.is_inactive && checked) {
+                  const licenseResult = await getLicenseUsageAction();
+                  if (licenseResult.success && licenseResult.data) {
+                    const { limit, remaining } = licenseResult.data;
+                    if (limit !== null && remaining === 0) {
+                      toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+                      return;
+                    }
+                  }
+                }
+                setIsActive(checked);
+              }}
               className="data-[state=checked]:bg-green-500"
             />
           </div>
