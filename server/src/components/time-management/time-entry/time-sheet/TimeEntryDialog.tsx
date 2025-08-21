@@ -209,15 +209,16 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       // Calculate actual duration for validation purposes
       const actualDuration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
 
-      // Set billable duration to 0 for ad_hoc items, otherwise use calculated duration
-      const durationToSend = isAdHoc ? 0 : Math.max(1, actualDuration);
+      // For ad_hoc items, always set billable_duration to 0
+      // For other items, respect the user's billable setting - use entry.billable_duration as-is
+      const durationToSend = isAdHoc ? 0 : entry.billable_duration;
 
       console.log('Preparing time entry with billable_duration:', {
         entryBillableDuration: entry.billable_duration,
         actualDuration,
         durationToSend,
         isAdHoc,
-        forcingActualDuration: !isAdHoc && durationToSend === actualDuration
+        respectingUserBillableSetting: !isAdHoc
       });
 
       // Prepare the time entry with all required fields
