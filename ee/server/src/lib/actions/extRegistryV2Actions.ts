@@ -81,7 +81,7 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
   };
 
   await knex('tenant_extension_install')
-    .insert({ ...payload, created_at: knex.fn.now() })
+    .insert({ id: knex.raw('gen_random_uuid()'), ...payload, created_at: knex.fn.now() })
     .onConflict(['tenant_id', 'registry_id'])
     .merge(payload);
 
