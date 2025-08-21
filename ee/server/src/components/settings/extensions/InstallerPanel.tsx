@@ -12,6 +12,7 @@ import Link from 'next/link';
 
 // EE server actions
 import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
+import { installExtensionForCurrentTenantV2 } from '../../../lib/actions/extRegistryV2Actions';
 
 type UploadProxyResponse = {
   filename: string;
@@ -218,7 +219,7 @@ export default function InstallerPanel() {
                     placeholder='Paste the manifest.json content here'
                     rows={10}
                     value={manifestJson}
-                    onChange={(e) => setManifestJson(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManifestJson(e.target.value)}
                     disabled={installing}
                   />
                 </div>

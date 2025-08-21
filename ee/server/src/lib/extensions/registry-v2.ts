@@ -478,10 +478,10 @@ export async function createExtensionVersion(input: CreateExtensionVersionInput)
       }
     : undefined;
 
-  // Enforce uniqueness on (extensionId, version)
+  // Idempotency on (extensionId, version)
   const exists = await repo.versions.findByExtensionAndVersion(extensionId, version);
   if (exists) {
-    throw new Error('version already exists');
+    return exists;
   }
 
   // Allow same contentHash under different versions (no uniqueness by hash)

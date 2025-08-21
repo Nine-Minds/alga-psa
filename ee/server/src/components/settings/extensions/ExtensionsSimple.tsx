@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchExtensions, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
+import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { Extension } from '../../../lib/extensions/types';
 import ExtensionDetailsModal from './ExtensionDetailsModal';
 
