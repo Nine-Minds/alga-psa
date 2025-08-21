@@ -65,6 +65,17 @@ Mapping to detailed sections
 
 We are splitting the extension overhaul into two phases: Phase 1 focuses on safe, static UI delivery via a Rust host proxying MinIO/S3 (no dynamic module loading, no guest code execution), and Phase 2 delivers dynamic WASM execution with a Rust Runner (Wasmtime), a capability-based Host API, and a Next.js API gateway. This preserves security and isolation while enabling a clear migration path.
 
+## Server Actions-First Contract
+
+- Principle: Business logic lives in server actions under `server/src/lib/actions` (EE overlays may live under `ee/server/src/lib/actions`). HTTP API routes exist only as thin wrappers that call these actions to support external/infra consumers (Runner, automation).
+- Actions (conceptual names) and wrappers:
+  - `extensions.publishVersion(bundle)` → verifies, computes `content_hash`, writes to `sha256/<hash>/bundle.tar.zst`, records `extension_bundle`. Wrapper: `POST /api/extensions/:id/versions`.
+  - `installs.createOrEnable(tenant, extension, version)` → persists install, computes `runner_domain`, sets `runner_status='pending'`, enqueues provisioning workflow. Wrapper: `POST /api/installs` or server-initiated only.
+  - `installs.lookupByHost(host)` → returns `{ tenant_id, extension_id, content_hash }`. Wrapper: `GET /api/installs/lookup-by-host` (used by Runner).
+  - `installs.validate(tenant, extension, hash)` → returns `{ valid: boolean }`. Wrapper: `GET /api/installs/validate` (used by Runner `ext-ui` gate).
+  - `installs.reprovision(installId)` → retries provisioning (Temporal). Wrapper: `POST /api/installs/:id/reprovision`.
+- Testing guidance: unit/integration tests target server actions; API tests cover parameter parsing and delegation only.
+
 ## Proposed Document Map
 
 Unified service approach
@@ -214,7 +225,7 @@ References to detailed content in this doc
 - Data model
   - [x] Add columns to `tenant_extension_install`:
     - `runner_domain` (text, unique, indexed)
-    - `runner_status` (jsonb; { state: 'pending'|'provisioned'|'error', message?, last_updated? })
+    - `runner_status` (jsonb; { state: 'pending'|'provisioning'|'ready'|'error', message?, last_updated? })
     - `runner_ref` (jsonb; optional: KService/DomainMapping identifiers for troubleshooting)
   - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
 
@@ -231,9 +242,14 @@ References to detailed content in this doc
   - [ ] RBAC/secret: ServiceAccount with permission to manage DomainMappings in the Runner namespace.
 
 - Server (Next.js)
-  - [x] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
-  - [x] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
-  - [x] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
+  - [x] Server actions-first:
+    - `installs.createOrEnable(...)` computes `runner_domain`, persists `runner_status='pending'`, enqueues Temporal provisioning.
+    - `installs.lookupByHost(host)` → `{ tenant_id, extension_id, content_hash }` (resolves latest bundle by domain).
+    - `installs.validate(tenant, extension, hash)` → `{ valid: boolean }` (strict ext-ui gating).
+  - [x] Expose thin API wrappers that delegate to actions:
+    - `GET /api/installs/lookup-by-host?host=...`
+    - `GET /api/installs/validate?tenant=...&extension=...&hash=...`
+    - `POST /api/installs/:id/reprovision` (calls `installs.reprovision`).
 
 - Runner changes
   - [x] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
@@ -251,6 +267,20 @@ References to detailed content in this doc
   - [ ] On provisioning failure: persist error in `runner_status`, surface in UI, provide retry.
   - [x] On lookup miss: Runner returns 404.
   - [ ] Audit install-to-domain mapping (log/metrics on lookup miss).
+
+### Install Provisioning — State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Install created/enabled
+    Pending --> Provisioning: Enqueue Temporal workflow\nensureDomainMapping
+    Provisioning --> Ready: DomainMapping applied\nupdate runner_status=ready
+    Provisioning --> Error: Provisioning failure\nupdate runner_status=error
+    Error --> Provisioning: Reprovision action\nretry workflow
+    Ready --> Ready: New version published\ncontent_hash updates via lookup
+    Ready --> Provisioning: Reprovision action
+    note right of Ready: Host traffic → Runner\nGET / → lookup-by-host → 302 /ext-ui/.../index.html
+```
 
 ## Phase 2 — Dynamic WASM Features
 

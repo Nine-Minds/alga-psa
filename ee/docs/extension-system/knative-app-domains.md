@@ -68,14 +68,24 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
 
 ## Runner
 
-- Exposes `GET /` which reads Host → calls `REGISTRY_BASE_URL/api/installs/lookup-by-host` → redirects to `/ext-ui/{extensionId}/{content_hash}/index.html`.
+- Exposes `GET /` which reads Host → calls `REGISTRY_BASE_URL/api/installs/lookup-by-host` (API wrapper around the `installs.lookupByHost` server action) → redirects to `/ext-ui/{extensionId}/{content_hash}/index.html`.
 - Continues to enforce strict validation in `/ext-ui` route via `/api/installs/validate`.
 
 ## Next.js (EE Server)
 
-- `GET /api/installs/lookup-by-host?host=...` resolves `{ tenant_id, extension_id, content_hash }` from DB.
-- `GET /api/installs/validate?tenant=...&extension=...&hash=...` returns `{ valid: boolean }`.
-- Server actions handle UI-side reprovisioning triggers; APIs remain for external automation.
+- Server actions-first (business logic):
+  - `installs.lookupByHost(host: string)` → `{ tenant_id, extension_id, content_hash }`.
+  - `installs.validate(tenant: string, extension: string, hash: string)` → `{ valid: boolean }`.
+  - `installs.provisionDomain(installId: string)` / `installs.reprovision(installId: string)` → triggers Temporal workflow.
+- Thin API wrappers for external consumers (delegate to actions only):
+  - `GET /api/installs/lookup-by-host?host=...`
+  - `GET /api/installs/validate?tenant=...&extension=...&hash=...`
+  - `POST /api/installs/:id/reprovision`
+
+### Lookup and Validate Contracts
+
+- LookupByHost response: `{ tenant_id: string, extension_id: string, content_hash: string }`.
+- Validate response: `{ valid: boolean }`.
 
 ## Helm Values Hints (Infra Repo)
 
