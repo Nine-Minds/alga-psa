@@ -10,6 +10,7 @@ import { hashPassword } from 'server/src/utils/encryption/encryption';
 import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';
 import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export interface OnboardingActionResult {
   success: boolean;
@@ -74,6 +75,7 @@ export interface TicketingData {
   ticketPaddingLength?: number;
   ticketStartNumber?: number;
   channelId?: string;
+  isDefaultChannel?: boolean;
   statuses?: any[];
 }
 
@@ -154,16 +156,27 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     const { getLicenseUsage } = await import('../../license/get-license-usage');
     const usage = await getLicenseUsage(tenant);
     
+    // Determine how many users we can actually add
+    let membersToProcess = [...members];
+    let skippedDueToLimit: string[] = [];
+    
     if (usage.limit !== null) {
-      // Count how many new members are being added
-      const newInternalUsers = members.length;
+      const canAdd = Math.max(0, usage.limit - usage.used);
       
-      if (usage.used + newInternalUsers > usage.limit) {
-        const canAdd = Math.max(0, usage.limit - usage.used);
+      if (canAdd === 0) {
         return { 
           success: false, 
-          error: `You've reached your internal user licence limit. You can add ${canAdd} more user${canAdd !== 1 ? 's' : ''}.`
+          error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
         };
+      }
+      
+      if (members.length > canAdd) {
+        // Only process users up to the limit
+        membersToProcess = members.slice(0, canAdd);
+        const skippedMembers = members.slice(canAdd);
+        skippedDueToLimit = skippedMembers.map(m => m.email);
+        
+        console.warn(`License limit allows only ${canAdd} more users. Skipping ${skippedMembers.length} users: ${skippedDueToLimit.join(', ')}`);
       }
     }
 
@@ -172,7 +185,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     const failed: Array<{ member: TeamMember; error: string }> = [];
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      for (const member of members) {
+      for (const member of membersToProcess) {
         try {
           // Check if user already exists
           const existingUser = await trx('users')
@@ -252,7 +265,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
       }
 
       // Save progress - store successful team members
-      const successfulMembers = members.filter(m => 
+      const successfulMembers = membersToProcess.filter(m => 
         created.includes(m.email)
       );
       await saveTenantOnboardingProgress({
@@ -262,13 +275,22 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
 
 
     revalidatePath('/msp/onboarding');
+    
+    // Include warning message if some users were skipped
+    let message = undefined;
+    if (skippedDueToLimit.length > 0) {
+      message = `License limit reached. ${created.length} user(s) created, ${skippedDueToLimit.length} skipped: ${skippedDueToLimit.join(', ')}`;
+    }
+    
     return { 
       success: true, 
       data: { 
         created, 
         alreadyExists,
         failed, 
-        licenseStatus: { current: usage.used, limit: usage.limit }
+        skippedDueToLimit,
+        licenseStatus: { current: usage.used + created.length, limit: usage.limit },
+        message
       }
     };
   } catch (error) {
@@ -608,39 +630,79 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
         }
       }
 
-      // Create channel - use existing channelId if provided (from import)
-      const channelId = data.channelId || require('crypto').randomUUID();
+      // Handle channel creation or import
+      let channelId: string = '';
       
-      // Only create channel if we don't have an existing one
-      if (!data.channelId) {
+      if (data.channelId) {
+        // This is an imported channel
+        channelId = data.channelId;
+        const shouldBeDefault = data.isDefaultChannel || false;
+        
+        // If this imported channel should be default, clear existing defaults first
+        if (shouldBeDefault) {
+          await trx('channels')
+            .where({ 
+              tenant,
+              is_default: true
+            })
+            .update({ is_default: false });
+            
+          // Set the imported channel as default
+          await trx('channels')
+            .where({
+              tenant,
+              channel_id: channelId
+            })
+            .update({ is_default: true });
+        }
+        
+        createdIds.channelId.push(channelId);
+      } else if (data.channelName) {
+        // This is a manually created channel
+        channelId = require('crypto').randomUUID();
+        const shouldBeDefault = data.isDefaultChannel || false;
+        
+        // If setting as default, clear any existing defaults first
+        if (shouldBeDefault) {
+          await trx('channels')
+            .where({ 
+              tenant,
+              is_default: true
+            })
+            .update({ is_default: false });
+        }
+        
         await trx('channels').insert({
           channel_id: channelId,
           tenant,
           channel_name: data.channelName,
           email: data.supportEmail,
-          is_active: true
+          is_active: true,
+          is_default: shouldBeDefault
         });
+        
+        createdIds.channelId.push(channelId);
       }
-      createdIds.channelId.push(channelId);
 
-      // Create categories
-      for (const category of data.categories) {
-        // Skip if already has a real ID (imported category)
-        if (typeof category === 'object' && category.category_id && !category.category_id.startsWith('manual-')) {
-          continue;
-        }
-        
-        const categoryName = typeof category === 'string' ? category : category.category_name;
-        const categoryId = require('crypto').randomUUID();
-        
-        // Check if category already exists
-        const existingCategory = await trx('categories')
-          .where({ 
-            tenant, 
-            category_name: categoryName,
-            channel_id: channelId
-          })
-          .first();
+      // Create categories only if we have a channel
+      if (channelId && data.categories) {
+        for (const category of data.categories) {
+          // Skip if already has a real ID (imported category)
+          if (typeof category === 'object' && category.category_id && !category.category_id.startsWith('manual-')) {
+            continue;
+          }
+          
+          const categoryName = typeof category === 'string' ? category : category.category_name;
+          const categoryId = require('crypto').randomUUID();
+          
+          // Check if category already exists
+          const existingCategory = await trx('categories')
+            .where({ 
+              tenant, 
+              category_name: categoryName,
+              channel_id: channelId
+            })
+            .first();
           
         if (!existingCategory) {
           // Calculate display order to avoid duplicates
@@ -679,12 +741,36 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           createdIds.categoryIds.push(categoryId);
         }
       }
+      }
 
       // Create statuses - only ones that don't exist
       if (data.statuses && data.statuses.length > 0) {
+        // Check if any status (imported or manual) should be the default
+        const defaultStatus = data.statuses.find(s => s.is_default);
+        
+        // If we have a default status, clear existing defaults first
+        if (defaultStatus) {
+          await trx('statuses')
+            .where({ 
+              tenant, 
+              item_type: 'ticket',
+              is_default: true
+            })
+            .update({ is_default: false });
+        }
+        
         for (const status of data.statuses) {
-          // Skip if already has a real ID (not manual-)
+          // Skip imported statuses that already exist (they have real IDs, not manual-)
           if (status.status_id && !status.status_id.startsWith('manual-')) {
+            // For imported statuses, we might need to update their default flag
+            if (status.is_default) {
+              await trx('statuses')
+                .where({
+                  tenant,
+                  status_id: status.status_id
+                })
+                .update({ is_default: true });
+            }
             continue;
           }
           
@@ -766,6 +852,66 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     return { success: true, data: createdIds };
   } catch (error) {
     console.error('Error configuring ticketing:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
+export async function validateOnboardingDefaults(): Promise<OnboardingActionResult> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+
+    // Check permission to configure ticket settings
+    const canConfigureTicketing = await hasPermission(currentUser, 'ticket_settings', 'update');
+    if (!canConfigureTicketing) {
+      return { success: false, error: 'You do not have permission to configure ticket settings' };
+    }
+
+    const { knex: db, tenant } = await createTenantKnex();
+    
+    if (!tenant) {
+      return { success: false, error: 'Unable to identify tenant. Please refresh and try again.' };
+    }
+    
+    // Use withTransaction to check for defaults
+    const validationResult = await withTransaction(db, async (trx) => {
+      // Check for default channel
+      const defaultChannel = await trx('channels')
+        .where({ 
+          is_default: true,
+          tenant 
+        })
+        .first();
+      
+      if (!defaultChannel) {
+        return { valid: false, error: 'No default board is set. Please set one board as default before completing setup.' };
+      }
+      
+      // Check for default status
+      const defaultStatus = await trx('statuses')
+        .where({ 
+          is_default: true,
+          status_type: 'ticket',
+          tenant
+        })
+        .first();
+      
+      if (!defaultStatus) {
+        return { valid: false, error: 'No default status is set. Please set one status as default before completing setup.' };
+      }
+      
+      return { valid: true };
+    });
+    
+    if (!validationResult.valid) {
+      return { success: false, error: validationResult.error };
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error validating onboarding defaults:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }

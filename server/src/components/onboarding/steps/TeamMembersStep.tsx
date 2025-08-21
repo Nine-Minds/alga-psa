@@ -66,24 +66,39 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       
       if (result.success && result.data) {
         const { limit, used } = result.data;
-        const validTeamMembers = data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
-        const totalAfterInvites = used + validTeamMembers;
+        
+        // Only count team members that haven't been created yet
+        const createdEmails = data.createdTeamMemberEmails || [];
+        const pendingTeamMembers = data.teamMembers.filter(m => 
+          m.firstName && m.lastName && m.email && !createdEmails.includes(m.email)
+        ).length;
+        const totalAfterInvites = used + pendingTeamMembers;
         
         if (limit === null) {
           // No limit
           setLicenseInfo({ 
             limit: Infinity, 
-            current: totalAfterInvites, 
+            current: used, 
             allowed: true 
           });
         } else {
-          // Has limit
-          const allowed = totalAfterInvites <= limit;
+          // Has limit - check if we can add more
+          const canAddMore = used < limit;
+          const wouldExceed = totalAfterInvites > limit;
+          
+          let message = undefined;
+          if (!canAddMore) {
+            message = `License limit reached (${used}/${limit}). Contact support to increase your license limit.`;
+          } else if (wouldExceed && pendingTeamMembers > 0) {
+            const canAdd = limit - used;
+            message = `Adding ${pendingTeamMembers} user(s) would exceed the limit. You can add ${canAdd} more.`;
+          }
+          
           setLicenseInfo({ 
             limit, 
-            current: totalAfterInvites, 
-            allowed,
-            message: allowed ? undefined : `You've reached your internal user licence limit.`
+            current: used,
+            allowed: canAddMore,
+            message
           });
         }
       } else {
@@ -122,9 +137,6 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     newMembers[index] = { ...newMembers[index], [field]: value };
     updateData({ teamMembers: newMembers });
   };
-
-  const validTeamMembersCount = data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
-  const totalUsersAfterInvites = 1 + validTeamMembersCount; // 1 for owner + team members
 
   return (
     <div className="space-y-6">
@@ -168,8 +180,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 licenseInfo.allowed ? 'text-blue-800' : 'text-red-800'
               }`}>
                 {licenseInfo.limit === Infinity 
-                  ? `Users: ${totalUsersAfterInvites} (No limit)` 
-                  : `Users: ${totalUsersAfterInvites}/${licenseInfo.limit}`
+                  ? `Users: ${licenseInfo.current} (No limit)` 
+                  : `Users: ${licenseInfo.current}/${licenseInfo.limit}`
                 }
               </div>
               {licenseInfo.message && (

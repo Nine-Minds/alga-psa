@@ -18,7 +18,8 @@ import {
   addClientContact,
   setupBilling,
   configureTicketing,
-  completeOnboarding
+  completeOnboarding,
+  validateOnboardingDefaults
 } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
@@ -135,6 +136,11 @@ export function OnboardingWizard({
             if (teamResult.data?.created && teamResult.data.created.length > 0) {
               const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
+              
+              // Show warning if some users were skipped
+              if (teamResult.data.message) {
+                setErrors(prev => ({ ...prev, [stepIndex]: teamResult.data.message }));
+              }
             }
           }
           break;
@@ -261,6 +267,17 @@ export function OnboardingWizard({
     
     setIsLoading(true);
     try {
+      // Validate we have required defaults before finishing
+      if (wizardData.channelName || wizardData.channelId) {
+        const validationResult = await validateOnboardingDefaults();
+        
+        if (!validationResult.success) {
+          setErrors(prev => ({ ...prev, [5]: validationResult.error || 'Validation failed' }));
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Save final step (ticketing)
       if (wizardData.channelName || wizardData.channelId) {
         const ticketingResult = await configureTicketing({
