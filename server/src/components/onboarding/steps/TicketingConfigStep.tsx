@@ -301,6 +301,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Track imported channels
       if (result.imported?.length > 0) {
+        // Check if any imported channel is marked as default
+        const hasDefaultChannel = result.imported.some((ch: any) => ch.is_default);
+        
+        // Check if there's already a default channel in existing channels
+        const existingHasDefault = importedChannels.some(ch => ch.is_default);
+        
+        // If no default channel exists, mark the first one as default
+        if (!hasDefaultChannel && !existingHasDefault) {
+          const firstChannel = result.imported[0];
+          // Update the channel to be default
+          await updateChannel(firstChannel.channel_id, { is_default: true });
+          firstChannel.is_default = true;
+          toast('First board automatically set as default', {
+            icon: 'ℹ️',
+            duration: 3000
+          });
+        }
+        
         setImportedChannels(prev => [...prev, ...result.imported]);
         
         // If we don't have a channel set yet, use the first imported
@@ -370,6 +388,27 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Track imported statuses
       if (result.imported?.length > 0) {
+        // Check if any imported status is marked as default
+        const hasDefaultStatus = result.imported.some((s: any) => s.is_default);
+        
+        // Check if there's already a default status in existing statuses
+        const existingHasDefault = importedStatuses.some(s => s.is_default);
+        
+        // If no default status exists, mark the first open status as default
+        if (!hasDefaultStatus && !existingHasDefault) {
+          const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
+          if (firstOpenStatus) {
+            // Update the status to be default
+            const { updateStatus } = await import('server/src/lib/actions/status-actions/statusActions');
+            await updateStatus(firstOpenStatus.status_id, { is_default: true });
+            firstOpenStatus.is_default = true;
+            toast('First open status automatically set as default', {
+              icon: 'ℹ️',
+              duration: 3000
+            });
+          }
+        }
+        
         setImportedStatuses(prev => [...prev, ...result.imported]);
         updateData({ 
           statusesImported: true,
