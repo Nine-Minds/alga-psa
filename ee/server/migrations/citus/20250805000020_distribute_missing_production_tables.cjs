@@ -49,7 +49,8 @@ exports.up = async function(knex) {
     'tenant_email_settings',
     'tenant_email_templates',
     'tenant_telemetry_settings',
-    'user_notification_preferences'
+    'user_notification_preferences',
+    'email_templates'  // Has foreign keys to distributed tables, must be distributed
   ];
   
   // Tables that should be reference tables (system-wide, no tenant)
@@ -59,7 +60,7 @@ exports.up = async function(knex) {
     'time_period_settings',
     // Additional reference tables without tenant columns
     'composite_tax_mappings',
-    'email_templates',
+    // 'email_templates', // Moved to distributed - has FKs to distributed tables
     'standard_service_categories',
     // 'system_event_catalog', // Has triggers, cannot be distributed with Citus
     'tax_holidays',
@@ -390,6 +391,7 @@ exports.down = async function(knex) {
     'email_rate_limits',
     'email_processed_messages',
     'email_domains',
+    'email_templates',
     'audit_logs',
     'api_keys',
     'vectors',
@@ -414,7 +416,7 @@ exports.down = async function(knex) {
     'tax_rate_thresholds',
     'tax_holidays',
     'standard_service_categories',
-    'email_templates',
+    // 'email_templates', // Moved to distributed
     'composite_tax_mappings',
     'time_period_settings',
     'tenant_companies',

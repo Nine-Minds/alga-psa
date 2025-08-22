@@ -34,7 +34,18 @@ exports.up = async function(knex) {
     { table: 'asset_service_history', oldPK: 'asset_service_history_pkey', idColumn: 'history_id' },
     { table: 'asset_ticket_associations', oldPK: 'asset_ticket_associations_pkey', idColumn: 'association_id' },
     { table: 'credit_reconciliation_reports', oldPK: 'credit_reconciliation_reports_pkey', idColumn: 'report_id' },
-    { table: 'credit_tracking', oldPK: 'credit_tracking_pkey', idColumn: 'tracking_id' }
+    { table: 'credit_tracking', oldPK: 'credit_tracking_pkey', idColumn: 'tracking_id' },
+    // Additional tables that need primary key fixes
+    { table: 'api_keys', oldPK: 'api_keys_pkey', idColumn: 'api_key_id' },
+    { table: 'audit_logs', oldPK: 'audit_logs_pkey', idColumn: 'audit_id' },
+    { table: 'email_domains', oldPK: 'email_domains_pkey', idColumn: 'id' },
+    { table: 'email_rate_limits', oldPK: 'email_rate_limits_pkey', idColumn: 'id' },
+    { table: 'email_sending_logs', oldPK: 'email_sending_logs_pkey', idColumn: 'id' },
+    { table: 'telemetry_consent_log', oldPK: 'telemetry_consent_log_pkey', idColumn: 'id' },
+    { table: 'tenant_email_settings', oldPK: 'tenant_email_settings_pkey', idColumn: 'id' },
+    { table: 'tenant_email_templates', oldPK: 'tenant_email_templates_pkey', idColumn: 'id' },
+    { table: 'user_notification_preferences', oldPK: 'user_notification_preferences_pkey', idColumn: 'id' },
+    { table: 'email_templates', oldPK: 'email_templates_pkey', idColumn: 'id' }
   ];
   
   // Process each table independently to avoid transaction issues
@@ -47,18 +58,22 @@ exports.up = async function(knex) {
         return;
       }
       
-      // Check if tenant column exists
-      const hasTenant = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name = ? AND column_name = 'tenant'
-        ) as has_tenant
+      // Check if tenant column exists (could be 'tenant' or 'tenant_id')
+      const tenantColumnCheck = await knex.raw(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = ? 
+        AND column_name IN ('tenant', 'tenant_id')
+        LIMIT 1
       `, [table]);
       
-      if (!hasTenant.rows[0].has_tenant) {
-        console.log(`  Table ${table} does not have tenant column, skipping`);
+      if (!tenantColumnCheck.rows.length) {
+        console.log(`  Table ${table} does not have tenant/tenant_id column, skipping`);
         return;
       }
+      
+      const tenantColumn = tenantColumnCheck.rows[0].column_name;
+      console.log(`  Using tenant column: ${tenantColumn}`);
       
       // Check current primary key
       const currentPK = await knex.raw(`
@@ -79,8 +94,8 @@ exports.up = async function(knex) {
       }
       
       const pkColumns = currentPK.rows[0].columns;
-      if (pkColumns.includes('tenant')) {
-        console.log(`  Table ${table} already has tenant in primary key, skipping`);
+      if (pkColumns.includes('tenant') || pkColumns.includes('tenant_id')) {
+        console.log(`  Table ${table} already has tenant/tenant_id in primary key, skipping`);
         return;
       }
       
@@ -117,8 +132,8 @@ exports.up = async function(knex) {
       console.log(`    ✓ Dropped old primary key ${oldPK} with CASCADE`);
       
       // Create new primary key with tenant included
-      await knex.raw(`ALTER TABLE ${table} ADD CONSTRAINT ${oldPK} PRIMARY KEY (tenant, ${idColumn})`);
-      console.log(`    ✓ Created new primary key with columns: tenant, ${idColumn}`);
+      await knex.raw(`ALTER TABLE ${table} ADD CONSTRAINT ${oldPK} PRIMARY KEY (${tenantColumn}, ${idColumn})`);
+      console.log(`    ✓ Created new primary key with columns: ${tenantColumn}, ${idColumn}`);
       
     } catch (error) {
       console.error(`  ✗ Failed to fix primary key for ${table}: ${error.message}`);
@@ -159,7 +174,18 @@ exports.down = async function(knex) {
     { table: 'asset_service_history', pk: 'asset_service_history_pkey', idColumn: 'history_id' },
     { table: 'asset_ticket_associations', pk: 'asset_ticket_associations_pkey', idColumn: 'association_id' },
     { table: 'credit_reconciliation_reports', pk: 'credit_reconciliation_reports_pkey', idColumn: 'report_id' },
-    { table: 'credit_tracking', pk: 'credit_tracking_pkey', idColumn: 'tracking_id' }
+    { table: 'credit_tracking', pk: 'credit_tracking_pkey', idColumn: 'tracking_id' },
+    // Additional tables
+    { table: 'api_keys', pk: 'api_keys_pkey', idColumn: 'api_key_id' },
+    { table: 'audit_logs', pk: 'audit_logs_pkey', idColumn: 'audit_id' },
+    { table: 'email_domains', pk: 'email_domains_pkey', idColumn: 'id' },
+    { table: 'email_rate_limits', pk: 'email_rate_limits_pkey', idColumn: 'id' },
+    { table: 'email_sending_logs', pk: 'email_sending_logs_pkey', idColumn: 'id' },
+    { table: 'telemetry_consent_log', pk: 'telemetry_consent_log_pkey', idColumn: 'id' },
+    { table: 'tenant_email_settings', pk: 'tenant_email_settings_pkey', idColumn: 'id' },
+    { table: 'tenant_email_templates', pk: 'tenant_email_templates_pkey', idColumn: 'id' },
+    { table: 'user_notification_preferences', pk: 'user_notification_preferences_pkey', idColumn: 'id' },
+    { table: 'email_templates', pk: 'email_templates_pkey', idColumn: 'id' }
   ];
   
   for (const { table, pk, idColumn } of tablesToRevert) {
