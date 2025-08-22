@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -25,17 +26,22 @@ interface TicketingDashboardContainerProps {
     nextCursor: string | null;
   };
   currentUser: IUser;
+  initialFilters?: Partial<ITicketListFilters>;
 }
 
 export default function TicketingDashboardContainer({ 
   consolidatedData,
-  currentUser
+  currentUser,
+  initialFilters
 }: TicketingDashboardContainerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
   const [nextCursor, setNextCursor] = useState<string | null>(consolidatedData.nextCursor);
+  const router = useRouter();
+
   const [activeFilters, setActiveFilters] = useState<Partial<ITicketListFilters>>(() => {
-    return {
+    // Use initialFilters if provided, otherwise use defaults
+    return initialFilters || {
       statusId: 'open',
       priorityId: 'all',
       searchQuery: '',
@@ -46,6 +52,26 @@ export default function TicketingDashboardContainer({
       companyId: undefined,
     };
   });
+
+  // Function to sync filter state to URL
+  const updateURLWithFilters = useCallback((filters: Partial<ITicketListFilters>) => {
+    const params = new URLSearchParams();
+    
+    // Only add non-default/non-empty values to URL
+    if (filters.channelId) params.set('channelId', filters.channelId);
+    if (filters.companyId) params.set('companyId', filters.companyId);
+    if (filters.statusId && filters.statusId !== 'open') params.set('statusId', filters.statusId);
+    if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
+    if (filters.categoryId) params.set('categoryId', filters.categoryId);
+    if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
+    if (filters.channelFilterState && filters.channelFilterState !== 'active') {
+      params.set('channelFilterState', filters.channelFilterState);
+    }
+
+    // Update URL without causing a page refresh
+    const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
+    router.replace(newURL, { scroll: false });
+  }, [router]);
 
   const fetchTickets = useCallback(async (filters: Partial<ITicketListFilters>, cursor?: string | null) => {
     if (!currentUser) {
@@ -98,8 +124,11 @@ export default function TicketingDashboardContainer({
   }, [fetchTickets, activeFilters, nextCursor]);
 
   const handleFiltersChanged = useCallback(async (newFilters: Partial<ITicketListFilters>) => {
+    // Update URL to persist filter state
+    updateURLWithFilters(newFilters);
+    // Fetch new tickets with updated filters
     await fetchTickets(newFilters, null); // Fetch page 1
-  }, [fetchTickets]);
+  }, [fetchTickets, updateURLWithFilters]);
 
   const mappedAndFilteredChannels = consolidatedData.options.channelOptions.map(channel => ({
     ...channel,
