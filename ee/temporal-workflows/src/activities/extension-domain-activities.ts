@@ -48,6 +48,35 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
   const namespace = input.namespace || process.env.RUNNER_NAMESPACE || 'default';
   const kservice = input.kservice || process.env.RUNNER_KSERVICE || 'runner';
 
+  // Normalize overly long domain names to comply with K8s name limits (<=63)
+  let domainName = (input.domain || '').trim();
+  if (!domainName) throw new Error('domain is required');
+  if (domainName.length > 63) {
+    const firstDot = domainName.indexOf('.');
+    if (firstDot > 0) {
+      const label = domainName.slice(0, firstDot);
+      const root = domainName.slice(firstDot + 1);
+      if (label.includes('--')) {
+        const [left, right] = label.split('--', 2);
+        const short = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.slice(0, 8) : s.slice(0, 12));
+        const newLabel = `${short(left)}--${short(right)}`;
+        const newDomain = `${newLabel}.${root}`;
+        if (newDomain.length <= 63) {
+          // Attempt DB update so EE server reflects new domain
+          try {
+            const knex: Knex = await getAdminConnection();
+            await knex('tenant_extension_install')
+              .where({ runner_domain: domainName })
+              .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
+          } catch {
+            // best-effort; continue even if DB update fails
+          }
+          domainName = newDomain;
+        }
+      }
+    }
+  }
+
   const kc = new KubeConfig();
   try {
     kc.loadFromDefault();
@@ -59,7 +88,7 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
   const group = 'serving.knative.dev';
   const version = 'v1beta1';
   const plural = 'domainmappings';
-  const name = input.domain; // DomainMapping name is the FQDN
+  const name = domainName; // DomainMapping name is the FQDN
 
   const desired = {
     apiVersion: `${group}/${version}`,
