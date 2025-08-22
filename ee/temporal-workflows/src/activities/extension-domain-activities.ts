@@ -47,6 +47,7 @@ export async function computeDomain(input: ComputeDomainInput): Promise<{ domain
 export async function ensureDomainMapping(input: EnsureDomainMappingInput): Promise<{ applied: boolean; ref?: any }> {
   const namespace = input.namespace || process.env.RUNNER_NAMESPACE || 'default';
   const kservice = input.kservice || process.env.RUNNER_KSERVICE || 'runner';
+  const autoCreateCdc = (process.env.KNATIVE_AUTO_CREATE_CDC || '').toLowerCase() === 'true';
 
   // Normalize overly long domain names to comply with K8s name limits (<=63)
   let domainName = (input.domain || '').trim();
@@ -84,6 +85,51 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     throw new Error('Failed to load Kubernetes config');
   }
   const co = kc.makeApiClient(CustomObjectsApi);
+
+  // Preflight: Ensure target KService exists (serving.knative.dev/v1 services)
+  try {
+    await co.getNamespacedCustomObject('serving.knative.dev', 'v1', namespace, 'services', kservice);
+  } catch (e: any) {
+    const body = e?.response?.body;
+    const msg = typeof body === 'string' ? body : JSON.stringify(body);
+    throw new Error(`runner kservice not found: namespace=${namespace} name=${kservice}; body=${msg}`);
+  }
+
+  // Preflight: Ensure ClusterDomainClaim exists or auto-create if allowed
+  const cdcGroup = 'networking.internal.knative.dev';
+  const cdcVersion = 'v1alpha1';
+  const cdcPlural = 'clusterdomainclaims';
+  try {
+    await co.getClusterCustomObject(cdcGroup, cdcVersion, cdcPlural, domainName);
+  } catch (e: any) {
+    const res = e?.response;
+    const body = res?.body;
+    const status = res?.status ?? body?.code;
+    const reason = body?.reason;
+    const message = typeof body === 'string' ? body : (body?.message ?? '');
+    const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
+    if (isNotFound) {
+      if (!autoCreateCdc) {
+        throw new Error(`ClusterDomainClaim missing for domain \"${domainName}\" and auto-create disabled. Set config-network autocreate-cluster-domain-claims=true, or create CDC:\napiVersion: ${cdcGroup}/${cdcVersion}\nkind: ClusterDomainClaim\nmetadata:\n  name: ${domainName}\nspec:\n  namespace: ${namespace}`);
+      }
+      const cdcBody = {
+        apiVersion: `${cdcGroup}/${cdcVersion}`,
+        kind: 'ClusterDomainClaim',
+        metadata: { name: domainName },
+        spec: { namespace },
+      };
+      try {
+        await co.createClusterCustomObject(cdcGroup, cdcVersion, cdcPlural, cdcBody as any);
+      } catch (e2: any) {
+        const body2 = e2?.response?.body;
+        const msg2 = typeof body2 === 'string' ? body2 : JSON.stringify(body2);
+        throw new Error(`failed to create ClusterDomainClaim for ${domainName}: ${msg2}`);
+      }
+    } else {
+      const msg = typeof body === 'string' ? body : JSON.stringify(body);
+      throw new Error(`clusterdomainclaim.get failed: status=${status} body=${msg}`);
+    }
+  }
 
   const group = 'serving.knative.dev';
   const version = 'v1beta1';

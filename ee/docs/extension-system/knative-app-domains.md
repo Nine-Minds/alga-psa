@@ -64,6 +64,11 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
   - `e8` is calculated similarly for `extensionId`
   - Rationale: keep `metadata.name` within Kubernetes 63-char limit for DomainMapping resources.
 - `ensureDomainMapping({ domain, namespace, kservice })`:
+  - Preflight checks:
+    - Verifies Knative Service exists: `serving.knative.dev/v1`, resource `services`, name `${kservice}` in `${namespace}`
+    - Ensures ClusterDomainClaim exists for `${domain}` (`networking.internal.knative.dev/v1alpha1`).
+      - If env `KNATIVE_AUTO_CREATE_CDC=true`, the worker attempts to create the CDC.
+      - Otherwise, it fails with a clear message including a ready-to-apply CDC manifest.
   - Creates or patches `DomainMapping`:
     - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: ${domain}`
     - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: ${kservice} }`
@@ -98,7 +103,12 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
     - `RUNNER_NAMESPACE: <ns>`
     - `RUNNER_KSERVICE: runner`
     - `EXT_DOMAIN_ROOT: ext.example.com`
+    - `KNATIVE_AUTO_CREATE_CDC: "true"` (optional; requires ClusterRole to manage ClusterDomainClaims)
   - RBAC templates include Role/RoleBinding above when enabled.
+
+## RBAC for ClusterDomainClaim (optional)
+
+To auto-create ClusterDomainClaims, grant the Temporal worker a ClusterRole with read/create/patch on `clusterdomainclaims.networking.internal.knative.dev` and bind it via ClusterRoleBinding to the worker ServiceAccount.
 
 ---
 Change history: Introduced with per-install app domains (Plan 1.f).
