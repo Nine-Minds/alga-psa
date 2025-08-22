@@ -352,7 +352,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           .select('*');
           
         // Step 3: Store resources for recreation, excluding those that would violate constraints
-        const resourcesToRecreate = [];
+        const resourcesToRecreate: any[] = [];
         for (const resource of existingResources) {
           // Skip resources where additional_user_id would equal the new assigned_to
           if (resource.additional_user_id !== updateData.assigned_to) {

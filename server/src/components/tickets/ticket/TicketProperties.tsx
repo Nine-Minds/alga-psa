@@ -72,7 +72,7 @@ interface TicketPropertiesProps {
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
-  const parts = [];
+  const parts: string[] = [];
   
   if (location.location_name) {
     parts.push(location.location_name);

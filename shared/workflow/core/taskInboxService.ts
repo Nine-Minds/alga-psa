@@ -77,7 +77,7 @@ export class TaskInboxService {
       // Create the task - ensure assigned_roles and assigned_users are properly formatted JSON arrays
       console.log('DEBUG createTask - Raw params assignTo:', JSON.stringify(params.assignTo, null, 2));
       
-      let assignedRoles = undefined;
+      let assignedRoles: string[] | undefined = undefined;
       if (params.assignTo?.roles) {
         console.log('DEBUG createTask - Raw roles:', params.assignTo.roles, 'Type:', typeof params.assignTo.roles);
         
@@ -92,7 +92,7 @@ export class TaskInboxService {
         }
       }
       
-      let assignedUsers = undefined;
+      let assignedUsers: string[] | undefined = undefined;
       if (params.assignTo?.users) {
         console.log('DEBUG createTask - Raw users:', params.assignTo.users, 'Type:', typeof params.assignTo.users);
         
@@ -285,8 +285,8 @@ export class TaskInboxService {
         });
 
         // Process the assignTo parameter to ensure proper array format
-        let assignedRoles = undefined;
-        let assignedUsers = undefined;
+      let assignedRoles: string[] | undefined = undefined;
+      let assignedUsers: string[] | undefined = undefined;
 
         if (params.assignTo?.roles) {
           if (typeof params.assignTo.roles === 'string') {
@@ -521,7 +521,7 @@ export class TaskInboxService {
           const knex = await getAdminConnection();
           
           // Validate and normalize inputs
-          let assignTo = undefined;
+          let assignTo: { roles?: string[]; users?: string[] } | undefined = undefined;
           
           console.log('DEBUG create_human_task - Context:', {
             tenant: context.tenant,

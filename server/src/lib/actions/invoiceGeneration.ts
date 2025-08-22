@@ -154,7 +154,7 @@ async function adaptToWasmViewModel(
   tenant: string | null // Added tenant for fetching tenant company info
 ): Promise<WasmInvoiceViewModel> {
   // Fetch Tenant Company Info (similar logic to getFullInvoiceById)
-  let tenantCompanyInfo = null;
+  let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
   if (tenant) {
     const { knex } = await createTenantKnex(); // Get knex instance again if needed
     const tenantCompanyLink = await withTransaction(knex, async (trx: Knex.Transaction) => {

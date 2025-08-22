@@ -255,7 +255,7 @@ const ServiceTypeSettings: React.FC = () => {
       }
       
       if (result.skipped.length > 0) {
-        const skippedMessage = result.skipped.map(s => `${s.name}: ${s.reason}`).join(', ');
+        const skippedMessage = (result.skipped as any[]).map((s: any) => `${s.name}: ${s.reason}`).join(', ');
         toast(skippedMessage, { icon: 'ℹ️' });
       }
       

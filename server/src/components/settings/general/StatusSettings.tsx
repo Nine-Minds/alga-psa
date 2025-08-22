@@ -150,7 +150,7 @@ const StatusSettings = (): JSX.Element => {
         }
         
         if (result.skipped.length > 0) {
-          toast.error(`Skipped ${result.skipped.length} statuses (${result.skipped[0].reason})`);
+          toast.error(`Skipped ${result.skipped.length} statuses (${(result.skipped as any[])[0].reason})`);
         }
         
         setShowStatusImportDialog(false);
@@ -179,7 +179,7 @@ const StatusSettings = (): JSX.Element => {
       }
       
       if (result.skipped.length > 0) {
-        const skippedNames = result.skipped.map(s => s.name).join(', ');
+        const skippedNames = (result.skipped as any[]).map((s: any) => s.name).join(', ');
         toast(`Skipped: ${skippedNames}`, {
           icon: 'ℹ️',
           duration: 4000,

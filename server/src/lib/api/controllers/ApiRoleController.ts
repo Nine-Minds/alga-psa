@@ -423,7 +423,7 @@ export class ApiRoleController extends ApiBaseController {
 
         // Create roles within tenant context
         const createdRoles = await runWithTenant(apiRequest.context.tenant, async () => {
-          const results = [];
+          const results: { success: boolean; data?: any; error?: string }[] = [];
           for (const roleData of body.roles) {
             try {
               const validatedData = createRoleSchema.parse(roleData);

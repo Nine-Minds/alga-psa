@@ -144,7 +144,7 @@ export class WorkflowEventMappingModel extends BaseModel {
     }
 
     const createdMappings = await knexOrTrx.transaction(async (trx) => {
-      const results = [];
+      const results: any[] = [];
       const now = new Date().toISOString();
       
       for (const mapping of mappings) {

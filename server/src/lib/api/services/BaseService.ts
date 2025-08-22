@@ -345,7 +345,7 @@ export abstract class BaseService<T = any> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const results = [];
+      const results: any[] = [];
       
       for (const update of updates) {
         const auditedData = this.addUpdateAuditFields(update.data, context);

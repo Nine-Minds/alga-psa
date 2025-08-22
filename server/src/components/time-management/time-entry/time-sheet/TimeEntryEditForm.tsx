@@ -168,7 +168,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // Always show the plan selector
       setShowBillingPlanSelector(true);
 
-      let companyDetails = null;
+      let companyDetails: any | null = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
 
       // 1. Fetch Company Details (if companyId exists) - Still needed for plan logic

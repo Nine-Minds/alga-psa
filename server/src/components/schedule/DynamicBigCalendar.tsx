@@ -8,6 +8,7 @@ import 'react-big-calendar/lib/css/react-big-calendar.css';
 const DnDCalendar = withDragAndDrop(Calendar);
 
 interface DynamicBigCalendarProps extends CalendarProps<any, any> {
+  [key: string]: any;
   // Add any additional props specific to the drag-and-drop calendar
   draggableAccessor?: (event: any) => boolean;
   resizableAccessor?: (event: any) => boolean;

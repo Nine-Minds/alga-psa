@@ -324,7 +324,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const invoiceNumber = await generateInvoiceNumber(trx);
 
       // Calculate taxes if needed
-      let taxCalculation = null;
+      let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
       if (data.items?.length) {
         taxCalculation = await this.calculateTaxes({
           company_id: data.company_id,

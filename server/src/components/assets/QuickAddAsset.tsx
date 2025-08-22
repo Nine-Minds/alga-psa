@@ -120,7 +120,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   }, [open, companyId]);
 
   const validateForm = () => {
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     const effectiveCompanyId = companyId || selectedCompanyId;
     if (!effectiveCompanyId) validationErrors.push('Company');
     if (!formData.name.trim()) validationErrors.push('Asset Name');

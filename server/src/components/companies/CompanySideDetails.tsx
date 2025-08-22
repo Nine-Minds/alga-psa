@@ -17,11 +17,11 @@ interface CompanySideDetailsProps {
 const CompanySideDetails = ({ company }: CompanySideDetailsProps) => {
     // Format location address
     const formatAddress = () => {
-        const parts = [];
+        const parts: string[] = [];
         if (company.address_line1) parts.push(company.address_line1);
         if (company.address_line2) parts.push(company.address_line2);
         
-        const cityStateZip = [];
+        const cityStateZip: string[] = [];
         if (company.city) cityStateZip.push(company.city);
         if (company.state_province) cityStateZip.push(company.state_province);
         if (company.postal_code) cityStateZip.push(company.postal_code);

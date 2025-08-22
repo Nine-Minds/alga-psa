@@ -82,7 +82,7 @@ export default function RoleManagement() {
       dataIndex: 'role_id',
       width: '150px',
       render: (_, record) => {
-        const portals = [];
+        const portals: string[] = [];
         if (record.msp) portals.push('MSP');
         if (record.client) portals.push('Client');
         return (

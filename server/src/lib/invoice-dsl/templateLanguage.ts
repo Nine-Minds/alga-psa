@@ -168,7 +168,7 @@ export const InvoiceLanguage = P.createLanguage({
   ),
 
   // Calculation definition
-  calculation: r => P.seqMap(
+  calculation: (r: any) => P.seqMap(
     P.alt(P.string('global').skip(r._).result(true), P.succeed(false)),
     P.string('calculate'),
     r._,
@@ -179,7 +179,7 @@ export const InvoiceLanguage = P.createLanguage({
     r.calculationExpression,
     r._,
     P.alt(r.listReference, P.succeed(undefined)),
-    (isGlobal, _, __, name, ___, ____, _____, expression, ______, listRef) => ({ 
+    (isGlobal: boolean, _1: unknown, _2: unknown, name: string, _3: unknown, _4: unknown, _5: unknown, expression: any, _6: unknown, listRef: any) => ({ 
       type: 'calculation', 
       name, 
       expression,
@@ -188,37 +188,37 @@ export const InvoiceLanguage = P.createLanguage({
     })
   ),
 
-  listReference: r => P.seqMap(
+  listReference: (r: any) => P.seqMap(
     P.string('from'),
     r._,
     r.identifier,
-    (_, __, listName) => listName
+    (_a: unknown, _b: unknown, listName: string) => listName
   ),
 
-  calculationExpression: (r) => P.alt(
+  calculationExpression: (r: any) => P.alt(
     P.seqMap(
       P.string('sum'),
       r._,
       r.identifier,
-      (_, __, field) => ({ operation: 'sum', field })
+      (_a: unknown, _b: unknown, field: string) => ({ operation: 'sum', field })
     ),
     P.seqMap(
       P.string('count'),
       r._,
       r.identifier,
-      (_, __, field) => ({ operation: 'count', field })
+      (_a: unknown, _b: unknown, field: string) => ({ operation: 'count', field })
     ),
     P.seqMap(
       P.string('avg'),
       r._,
       r.identifier,
-      (_, __, field) => ({ operation: 'avg', field })
+      (_a: unknown, _b: unknown, field: string) => ({ operation: 'avg', field })
     )
   ),
 
   cssIdentifier: () => P.regexp(/[a-zA-Z_-][a-zA-Z0-9_-]*/).desc('css identifier'),
 
-  style: (r) => P.seqMap(
+  style: (r: any) => P.seqMap(
     P.string('style'),
     r._,
     P.sepBy1(
@@ -239,19 +239,19 @@ export const InvoiceLanguage = P.createLanguage({
     r.styleProp.many(),
     r._,
     P.string('}'),
-    (_, __, elements, ___, ____, _____, props) => ({ 
+    (_a: unknown, _b: unknown, elements: any[], _c: unknown, _d: unknown, _e: unknown, props: any[]) => ({ 
       type: 'style', 
-      elements: elements.map(e => typeof e === 'string' ? e : e.join('')), 
+      elements: elements.map((e: any) => typeof e === 'string' ? e : e.join('')), 
       props: Object.fromEntries(props) 
     })
   ),
 
   cssValue: () => P.alt(
     P.regexp(/[0-9]+(?:\.[0-9]+)?/).map(Number),
-    P.regexp(/'[^']*'|"[^"]*"/).map(s => s.slice(1, -1))
+    P.regexp(/'[^']*'|"[^"]*"/).map((s: string) => s.slice(1, -1))
   ).desc('css value'),
 
-  styleProp: (r) => P.seqMap(
+  styleProp: (r: any) => P.seqMap(
     r.cssIdentifier,
     r._,
     P.string(':'),
@@ -260,11 +260,11 @@ export const InvoiceLanguage = P.createLanguage({
     r._,
     P.string(';'),
     r._,
-    (key, _, __, ___, value) => [key, value]
+    (key: string, _1: unknown, _2: unknown, _3: unknown, value: string | number) => [key, value]
   ),
 
   // Conditional rendering
-  conditional: (r) => P.seq(
+  conditional: (r: any) => P.seq(
     P.string('if'),
     r._,
     r.condition,
@@ -276,7 +276,7 @@ export const InvoiceLanguage = P.createLanguage({
     r.sectionContent.many(),
     r._,
     P.string('}')
-  ).map(([_1, _2, condition, _3, _4, _5, _6, _7, content, _8, _9]) => ({
+  ).map(([_1, _2, condition, _3, _4, _5, _6, _7, content, _8, _9]: any[]) => ({
     type: 'conditional',
     condition,
     content
@@ -289,17 +289,17 @@ export const InvoiceLanguage = P.createLanguage({
     P.alt(P.string('=='), P.string('!='), P.string('>'), P.string('<'), P.string('>='), P.string('<=')),
     r._,
     P.alt(r.string, r.number, r.boolean),
-    (field, _, op, __, value) => ({ field, op, value })
+    (field: string, _1: unknown, op: '==' | '!=' | '>' | '<' | '>=' | '<=', _2: unknown, value: string | number | boolean) => ({ field, op, value })
   ),
 
   // The entire invoice template
-  invoiceTemplate: (r) => P.seq(
+  invoiceTemplate: (r: any) => P.seq(
     r._,
     P.sepBy(r.section, r._),
     r._
-  ).map(([_, sections]) => {
+  ).map(([_, sections]: [unknown, any[]]) => {
     const globals: GlobalCalculation[] = [];
-    const processedSections = sections.map(section => {
+    const processedSections = sections.map((section: any) => {
       const newContent = section.content.filter((item: any) => {
         if (item.type === 'calculation' && item.isGlobal) {
           globals.push(item);

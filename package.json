@@ -155,7 +155,7 @@
     "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.6",
     "@types/knex": "^0.16.1",
-    "@types/lodash": "^4.17.18",
+    "@types/lodash": "^4.17.20",
     "@types/node": "^20",
     "@types/nodemailer": "^6.4.17",
     "@types/parsimmon": "^1.10.9",
