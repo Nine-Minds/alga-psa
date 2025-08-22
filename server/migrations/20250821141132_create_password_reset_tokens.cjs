@@ -29,13 +29,56 @@ exports.up = async function(knex) {
     table.unique(['tenant', 'token'], 'unique_password_reset_tenant_token');
   });
 
-  // Create email template for password reset
-  await knex('email_templates').insert({
-    template_id: knex.raw('gen_random_uuid()'),
-    template_name: 'password-reset',
-    template_type: 'password-reset',
-    subject: 'Password Reset Request',
-    body_html: `
+  // Check if password reset notification subtype exists
+  let passwordResetSubtype = await knex('notification_subtypes')
+    .where({ name: 'password-reset' })
+    .first();
+
+  if (!passwordResetSubtype) {
+    // Get or create User Account category
+    let userAccountCategory = await knex('notification_categories')
+      .where({ name: 'User Account' })
+      .first();
+    
+    if (!userAccountCategory) {
+      [userAccountCategory] = await knex('notification_categories')
+        .insert({
+          name: 'User Account',
+          description: 'User account related notifications',
+          is_enabled: true,
+          is_default_enabled: true,
+          created_at: new Date(),
+          updated_at: new Date()
+        })
+        .returning('*');
+    }
+
+    // Create password reset subtype
+    [passwordResetSubtype] = await knex('notification_subtypes')
+      .insert({
+        category_id: userAccountCategory.id,
+        name: 'password-reset',
+        description: 'Password reset request notifications',
+        is_enabled: true,
+        is_default_enabled: true,
+        created_at: new Date(),
+        updated_at: new Date()
+      })
+      .returning('*');
+  }
+
+  // Check if email template exists
+  const existingTemplate = await knex('system_email_templates')
+    .where({ name: 'password-reset' })
+    .first();
+
+  if (!existingTemplate) {
+    // Create email template for password reset
+    await knex('system_email_templates').insert({
+      name: 'password-reset',
+      notification_subtype_id: passwordResetSubtype.id,
+      subject: 'Password Reset Request',
+      html_content: `
 <!DOCTYPE html>
 <html>
 <head>
@@ -85,7 +128,7 @@ exports.up = async function(knex) {
     </div>
 </body>
 </html>`,
-    body_text: `Hello {{userName}},
+      text_content: `Hello {{userName}},
 
 We received a request to reset your password for your account associated with {{email}}.
 
@@ -99,26 +142,41 @@ For security reasons, this link can only be used once.
 If you're having trouble, please contact support at {{supportEmail}}
 
 © {{currentYear}} {{companyName}}. All rights reserved.`,
-    variables: JSON.stringify([
-      'userName',
-      'email', 
-      'resetLink',
-      'expirationTime',
-      'supportEmail',
-      'companyName',
-      'currentYear'
-    ]),
-    created_at: knex.fn.now(),
-    updated_at: knex.fn.now(),
-    is_system: true
-  }).onConflict('template_name').ignore();
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+  }
 };
 
 exports.down = async function(knex) {
   // Remove the email template
-  await knex('email_templates')
-    .where('template_name', 'password-reset')
+  await knex('system_email_templates')
+    .where({ name: 'password-reset' })
     .del();
+  
+  // Remove the notification subtype
+  await knex('notification_subtypes')
+    .where({ name: 'password-reset' })
+    .del();
+  
+  // Check if User Account category has other subtypes
+  const userAccountCategory = await knex('notification_categories')
+    .where({ name: 'User Account' })
+    .first();
+
+  if (userAccountCategory) {
+    const subtypeCount = await knex('notification_subtypes')
+      .where({ category_id: userAccountCategory.id })
+      .count('id as count')
+      .first();
+
+    // If no other subtypes, delete the category
+    if (subtypeCount && Number(subtypeCount.count) === 0) {
+      await knex('notification_categories')
+        .where({ name: 'User Account' })
+        .del();
+    }
+  }
   
   // Drop the table
   await knex.schema.dropTableIfExists('password_reset_tokens');
