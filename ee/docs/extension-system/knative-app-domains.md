@@ -62,7 +62,7 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
 - `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${slug(tenantId)}--${slug(extensionId)}.${EXT_DOMAIN_ROOT}`.
 - `ensureDomainMapping({ domain, namespace, kservice })`:
   - Creates or patches `DomainMapping`:
-    - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: ${domain}`
+    - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: ${domain}`
     - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: ${kservice} }`
 - On success, status in DB is updated to `{ state: 'ready' }` and `runner_ref` stores a small reference object.
 
