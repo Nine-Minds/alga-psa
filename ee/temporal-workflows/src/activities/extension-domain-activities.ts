@@ -36,10 +36,9 @@ export async function computeDomain(input: ComputeDomainInput): Promise<{ domain
   if (!root) throw new Error('EXT_DOMAIN_ROOT not configured');
   const sTenant = slugify(input.tenantId);
   const sExt = slugify(input.extensionId);
-  // Shorten segments to respect K8s name length constraints (<=63 chars for metadata.name)
-  // Use UUID-friendly shortening: first 8 hex if UUID-like, else first 12 chars
-  const short = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.slice(0, 8) : s.slice(0, 12));
-  const label = `${short(sTenant)}--${short(sExt)}`;
+  // Shorten and normalize segments; strip internal dashes so final label uses a single '-'
+  const norm = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.replace(/-/g, '').slice(0, 8) : s.replace(/-/g, '').slice(0, 12));
+  const label = `${norm(sTenant)}-${norm(sExt)}`;
   const domain = `${label}.${root}`;
   return { domain };
 }
@@ -63,31 +62,32 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     // Normalize overly long domain names to comply with K8s name limits (<=63)
     let domainName = (input.domain || '').trim();
     if (!domainName) throw new Error('domain is required');
-    if (domainName.length > 63) {
-      const firstDot = domainName.indexOf('.');
-      if (firstDot > 0) {
-        const label = domainName.slice(0, firstDot);
-        const root = domainName.slice(firstDot + 1);
-        if (label.includes('--')) {
-          const [left, right] = label.split('--', 2);
-          const short = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.slice(0, 8) : s.slice(0, 12));
-          const newLabel = `${short(left)}--${short(right)}`;
-          const newDomain = `${newLabel}.${root}`;
-          if (newDomain.length <= 63) {
-            // Attempt DB update so EE server reflects new domain
-            try {
-              const knex: Knex = await getAdminConnection();
-              await knex('tenant_extension_install')
-                .where({ runner_domain: domainName })
-                .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
-            } catch {
-              // best-effort; continue even if DB update fails
-            }
-            domainName = newDomain;
+  if (domainName.length > 63) {
+    const firstDot = domainName.indexOf('.');
+    if (firstDot > 0) {
+      const label = domainName.slice(0, firstDot);
+      const root = domainName.slice(firstDot + 1);
+      // Support both legacy "--" and new single '-' separator
+      if (label.includes('--') || label.includes('-')) {
+        const [left, right] = label.includes('--') ? label.split('--', 2) : label.split('-', 2);
+        const short = (s: string) => (/^[0-9a-f]{8}/.test(s) ? s.replace(/-/g, '').slice(0, 8) : s.replace(/-/g, '').slice(0, 12));
+        const newLabel = `${short(left)}-${short(right)}`;
+        const newDomain = `${newLabel}.${root}`;
+        if (newDomain.length <= 63) {
+          // Attempt DB update so EE server reflects new domain
+          try {
+            const knex: Knex = await getAdminConnection();
+            await knex('tenant_extension_install')
+              .where({ runner_domain: domainName })
+              .update({ runner_domain: newDomain, updated_at: knex.fn.now() });
+          } catch {
+            // best-effort; continue even if DB update fails
           }
+          domainName = newDomain;
         }
       }
     }
+  }
 
     const kc = new KubeConfig();
     try {
