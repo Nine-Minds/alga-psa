@@ -233,8 +233,8 @@ References to detailed content in this doc
   - [x] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):
     - Activity: `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns domain string.
     - Activity: `ensureDomainMapping({ domain, kservice, namespace })` uses Kubernetes API to create DomainMapping:
-      - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: <domain>`
-      - `spec.ref: { apiVersion: serving.knative.dev/v1, kind: Service, name: <runner-kservice> }`
+      - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: <domain>`
+      - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: <runner-kservice> }`
     - Update DB status: set `runner_status.state` to `provisioned` or `error` with message.
   - [x] Trigger workflow on install.
   - [ ] Trigger workflow on enable.

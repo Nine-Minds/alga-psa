@@ -53,7 +53,7 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
   const co = kc.makeApiClient(CustomObjectsApi);
 
   const group = 'serving.knative.dev';
-  const version = 'v1';
+  const version = 'v1beta1';
   const plural = 'domainmappings';
   const name = input.domain; // DomainMapping name is the FQDN
 
