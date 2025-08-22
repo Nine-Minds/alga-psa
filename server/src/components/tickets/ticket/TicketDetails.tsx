@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
+import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { ConfirmationDialog } from "server/src/components/ui/ConfirmationDialog";
 import {
     ITicket,
@@ -140,6 +142,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<ICompanyLocation[]>(initialLocations);
+    const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
 
     // Use pre-fetched options directly
     const [userMap, setUserMap] = useState<Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>>(initialUserMap);
@@ -203,6 +206,21 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             }
         };
     }, [isRunning, tick]);
+
+    // Load ticketing display settings
+    useEffect(() => {
+        const loadDisplaySettings = async () => {
+            try {
+                const settings = await getTicketingDisplaySettings();
+                if (settings?.dateTimeFormat) {
+                    setDateTimeFormat(settings.dateTimeFormat);
+                }
+            } catch (error) {
+                console.error('Failed to load ticketing display settings:', error);
+            }
+        };
+        loadDisplaySettings();
+    }, []);
 
     // Fetch tags when component mounts
     useEffect(() => {
@@ -975,12 +993,28 @@ const handleClose = () => {
                     )}
                 </div>
 
-                <div className="flex items-center space-x-5 mb-5">
+                <div className="flex items-center space-x-5 mb-5 text-sm text-gray-600">
                     {ticket.entered_at && (
-                        <p>Created {formatDistanceToNow(new Date(ticket.entered_at))} ago</p>
+                        <p>
+                            Created {(() => {
+                                const tz = getUserTimeZone();
+                                const localDate = utcToLocal(ticket.entered_at, tz);
+                                const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
+                                const distance = formatDistanceToNow(new Date(ticket.entered_at));
+                                return `${formattedDate} (${distance} ago)`;
+                            })()}
+                        </p>
                     )}
                     {ticket.updated_at && (
-                        <p>Updated {formatDistanceToNow(new Date(ticket.updated_at))} ago</p>
+                        <p>
+                            Updated {(() => {
+                                const tz = getUserTimeZone();
+                                const localDate = utcToLocal(ticket.updated_at, tz);
+                                const formattedDate = formatDateTime(localDate, tz, dateTimeFormat);
+                                const distance = formatDistanceToNow(new Date(ticket.updated_at));
+                                return `${formattedDate} (${distance} ago)`;
+                            })()}
+                        </p>
                     )}
                 </div>
                 {/* Confirmation Dialog for Comment Deletion */}

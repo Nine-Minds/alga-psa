@@ -308,6 +308,38 @@ const TicketingSettings = (): JSX.Element => {
     actions: true,
   });
   const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
+  
+  // Track original values to detect changes
+  const [originalDisplaySettings, setOriginalDisplaySettings] = useState<{
+    dateTimeFormat: string;
+    columnVisibility: Record<string, boolean>;
+    tagsInlineUnderTitle: boolean;
+  }>({
+    dateTimeFormat: 'MMM d, yyyy h:mm a',
+    columnVisibility: {
+      ticket_number: true,
+      title: true,
+      status: true,
+      priority: true,
+      board: true,
+      category: true,
+      client: true,
+      created: true,
+      created_by: true,
+      tags: true,
+      actions: true,
+    },
+    tagsInlineUnderTitle: false,
+  });
+  
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = (): boolean => {
+    return (
+      dateTimeFormat !== originalDisplaySettings.dateTimeFormat ||
+      JSON.stringify(columnVisibility) !== JSON.stringify(originalDisplaySettings.columnVisibility) ||
+      tagsInlineUnderTitle !== originalDisplaySettings.tagsInlineUnderTitle
+    );
+  };
 
   useEffect(() => {
     const initUser = async () => {
@@ -324,9 +356,33 @@ const TicketingSettings = (): JSX.Element => {
     const loadDisplay = async () => {
       try {
         const s = await getTicketingDisplaySettings();
-        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
-        if (s?.list?.columnVisibility) setColumnVisibility(s.list.columnVisibility as Record<string, boolean>);
-        if (typeof s?.list?.tagsInlineUnderTitle === 'boolean') setTagsInlineUnderTitle(s.list.tagsInlineUnderTitle);
+        const loadedDateFormat = s?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+        const loadedColumnVisibility = (s?.list?.columnVisibility as Record<string, boolean>) || {
+          ticket_number: true,
+          title: true,
+          status: true,
+          priority: true,
+          board: true,
+          category: true,
+          client: true,
+          created: true,
+          created_by: true,
+          tags: true,
+          actions: true,
+        };
+        const loadedTagsInline = s?.list?.tagsInlineUnderTitle || false;
+        
+        // Set current values
+        setDateTimeFormat(loadedDateFormat);
+        setColumnVisibility(loadedColumnVisibility);
+        setTagsInlineUnderTitle(loadedTagsInline);
+        
+        // Store original values for change detection
+        setOriginalDisplaySettings({
+          dateTimeFormat: loadedDateFormat,
+          columnVisibility: loadedColumnVisibility,
+          tagsInlineUnderTitle: loadedTagsInline,
+        });
       } catch (e) {
         console.error('Failed to load ticketing display settings', e);
       }
@@ -345,9 +401,23 @@ const TicketingSettings = (): JSX.Element => {
         },
       });
       toast.success('Ticket display settings saved');
+      
+      // Update original settings after successful save
+      setOriginalDisplaySettings({
+        dateTimeFormat,
+        columnVisibility: { ...columnVisibility },
+        tagsInlineUnderTitle,
+      });
     } catch (e) {
       console.error('Failed to save ticket display settings', e);
-      toast.error('Failed to save display settings');
+      const errorMessage = e instanceof Error ? e.message : 'Failed to save display settings';
+      
+      // Check if it's a permission error
+      if (errorMessage.includes('Permission denied')) {
+        toast.error('You do not have permission to update ticket settings');
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSavingDisplay(false);
     }
@@ -1115,10 +1185,11 @@ const TicketingSettings = (): JSX.Element => {
       label: "Display",
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Ticket Display Preferences</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Ticket Display Preferences</h3>
+          <p className="text-sm text-gray-600 mb-4">Configure how your Ticketing dashboard displays columns and timestamps for your team.</p>
           <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
             <div className="flex-1 min-w-[260px]">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date/Time Format</label>
+              <label className="block text-md font-semibold text-gray-800 mb-2">Date/Time Format</label>
               <CustomSelect
                 value={dateTimeFormat}
                 onValueChange={(v: string) => setDateTimeFormat(v)}
@@ -1129,17 +1200,16 @@ const TicketingSettings = (): JSX.Element => {
                   { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
                   { value: 'EEE, MMM d, yyyy h:mm a', label: 'Fri, Aug 22, 2025 1:23 PM' },
                 ]}
-                className="w-72"
+                className="!w-fit"
               />
             </div>
           </div>
 
           <div className="mt-6">
             <h4 className="text-md font-semibold text-gray-800 mb-2">Ticket List Columns</h4>
-            <p className="text-sm text-gray-500 mb-3">Select which columns to show in the Ticketing Dashboard. You can also display tags inline under the title.</p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
               {[
-                { key: 'ticket_number', label: 'Ticket Number', required: false },
+                { key: 'ticket_number', label: 'Ticket Number', required: true },
                 { key: 'title', label: 'Title', required: true },
                 { key: 'status', label: 'Status', required: false },
                 { key: 'priority', label: 'Priority', required: false },
@@ -1148,8 +1218,7 @@ const TicketingSettings = (): JSX.Element => {
                 { key: 'client', label: 'Client', required: false },
                 { key: 'created', label: 'Created', required: false },
                 { key: 'created_by', label: 'Created By', required: false },
-                { key: 'tags', label: 'Tags (separate column)', required: false },
-                { key: 'actions', label: 'Actions', required: false },
+                { key: 'actions', label: 'Actions', required: true },
               ].map(({ key, label, required }) => (
                 <label key={key} className="flex items-center gap-2 text-sm">
                   <input
@@ -1162,20 +1231,35 @@ const TicketingSettings = (): JSX.Element => {
                 </label>
               ))}
             </div>
-
-            <div className="mt-3 flex items-center gap-2">
-              <input
-                id="tags-inline-toggle"
-                type="checkbox"
-                checked={tagsInlineUnderTitle}
-                onChange={(e) => setTagsInlineUnderTitle(e.target.checked)}
-              />
-              <label htmlFor="tags-inline-toggle" className="text-sm">Show Tags inline under Title</label>
+            {/* Tags visibility and layout */}
+            <div className="mt-4 space-y-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={!!columnVisibility['tags']}
+                  onChange={(e) => setColumnVisibility(v => ({ ...v, tags: e.target.checked }))}
+                />
+                <span>Show Tags</span>
+              </label>
+              {columnVisibility['tags'] && (
+                <div className="pl-6">
+                  <Switch
+                    id="tags-layout-switch"
+                    checked={tagsInlineUnderTitle}
+                    onCheckedChange={(v) => setTagsInlineUnderTitle(Boolean(v))}
+                    label={tagsInlineUnderTitle ? 'Display under Title' : 'Display in separate column'}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
           <div className="mt-6">
-            <Button id="save-display-settings" onClick={handleSaveDisplaySettings} disabled={isSavingDisplay}>
+            <Button
+              id="save-display-settings"
+              variant="default"
+              onClick={handleSaveDisplaySettings}
+              disabled={isSavingDisplay || !hasUnsavedChanges()}>
               {isSavingDisplay ? 'Saving…' : 'Save'}
             </Button>
           </div>
