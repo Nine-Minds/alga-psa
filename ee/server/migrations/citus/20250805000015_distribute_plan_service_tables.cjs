@@ -27,7 +27,7 @@ exports.up = async function(knex) {
     'plan_service_rate_tiers',
     'plan_discounts',
     'company_billing_plans',
-    'company_billing_cycles',
+    // 'company_billing_cycles', // Removed - has constraint issues, handled in migration 20
     'billing_plan_fixed_config'
   ];
   
@@ -158,7 +158,7 @@ exports.down = async function(knex) {
   
   const tables = [
     'billing_plan_fixed_config',
-    'company_billing_cycles',
+    // 'company_billing_cycles', // Removed - handled in migration 20
     'company_billing_plans',
     'plan_discounts',
     'plan_service_rate_tiers',
