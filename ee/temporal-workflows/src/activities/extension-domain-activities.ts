@@ -235,11 +235,23 @@ export async function updateInstallStatus(input: UpdateInstallStatusInput): Prom
   patch.runner_status.last_updated = new Date().toISOString();
   if (input.runnerRef) patch.runner_ref = input.runnerRef;
 
-  let q = knex('tenant_extension_install').update({
+  // If caller supplied a DomainMapping ref, persist the domain into runner_domain for UI/queries.
+  let runnerDomainToSet: string | undefined;
+  const ref = input.runnerRef as any;
+  if (ref && typeof ref === 'object' && ref.kind === 'DomainMapping' && typeof ref.name === 'string' && ref.name) {
+    runnerDomainToSet = ref.name;
+  }
+
+  const update: any = {
     runner_status: JSON.stringify(patch.runner_status),
     runner_ref: input.runnerRef ? JSON.stringify(input.runnerRef) : null,
     updated_at: now,
-  });
+  };
+  if (runnerDomainToSet) {
+    update.runner_domain = runnerDomainToSet;
+  }
+
+  let q = knex('tenant_extension_install').update(update);
 
   if (input.installId) {
     q = q.where({ id: input.installId });
