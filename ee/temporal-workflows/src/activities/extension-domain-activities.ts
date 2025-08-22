@@ -1,5 +1,6 @@
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 import type { Knex } from 'knex';
+import { KubeConfig, CustomObjectsApi, PatchUtils } from '@kubernetes/client-node';
 
 export interface ComputeDomainInput {
   tenantId: string;
@@ -43,21 +44,13 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
   const namespace = input.namespace || process.env.RUNNER_NAMESPACE || 'default';
   const kservice = input.kservice || process.env.RUNNER_KSERVICE || 'runner';
 
-  // Lazy-load Kubernetes client to avoid bundling when not needed
-  let k8s: any;
-  try {
-    k8s = await import('@kubernetes/client-node');
-  } catch (e) {
-    throw new Error('Missing dependency @kubernetes/client-node or not available in environment');
-  }
-
-  const kc = new k8s.KubeConfig();
+  const kc = new KubeConfig();
   try {
     kc.loadFromDefault();
   } catch (e) {
     throw new Error('Failed to load Kubernetes config');
   }
-  const co: any = kc.makeApiClient(k8s.CustomObjectsApi);
+  const co = kc.makeApiClient(CustomObjectsApi);
 
   const group = 'serving.knative.dev';
   const version = 'v1';
@@ -98,7 +91,7 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
   // Patch spec if exists to ensure correct ref
   const body = { spec: desired.spec };
-  const options = { headers: { 'Content-Type': k8s.PatchUtils.PATCH_FORMAT_MERGE_PATCH } };
+  const options = { headers: { 'Content-Type': PatchUtils.PATCH_FORMAT_MERGE_PATCH } } as const;
   await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
   return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
 }
