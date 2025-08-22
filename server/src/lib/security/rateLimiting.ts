@@ -24,6 +24,13 @@ const portalInvitationLimiter = new RateLimiterMemory({
   blockDuration: 300, // Block for 5 min after limit exceeded
 });
 
+// Password reset limiter
+const passwordResetLimiter = new RateLimiterMemory({
+  points: 3, // 3 reset attempts
+  duration: 900, // per 15 minutes
+  blockDuration: 900, // Block for 15 minutes after limit exceeded
+});
+
 export interface RateLimitResult {
   success: boolean;
   remainingPoints?: number;
@@ -75,6 +82,26 @@ export async function checkAuthVerificationLimit(identifier: string): Promise<Ra
 export async function checkPortalInvitationLimit(userId: string): Promise<RateLimitResult> {
   try {
     const rateLimitInfo = await portalInvitationLimiter.consume(userId);
+    return {
+      success: true,
+      remainingPoints: rateLimitInfo.remainingPoints,
+      msBeforeNext: rateLimitInfo.msBeforeNext,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        success: false,
+        msBeforeNext: error.message ? parseInt(error.message) : undefined,
+      };
+    }
+    return { success: false };
+  }
+}
+
+// Password reset rate limiting (per email)
+export async function checkPasswordResetLimit(email: string): Promise<RateLimitResult> {
+  try {
+    const rateLimitInfo = await passwordResetLimiter.consume(email.toLowerCase());
     return {
       success: true,
       remainingPoints: rateLimitInfo.remainingPoints,
