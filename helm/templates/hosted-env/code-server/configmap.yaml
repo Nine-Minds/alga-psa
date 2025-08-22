@@ -1,0 +1,48 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server-config
+  namespace: {{ .Values.hostedEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+data:
+  config.yaml: |
+    bind-addr: 0.0.0.0:8080
+    auth: password
+    password: {{ .Values.hostedEnv.codeServer.password | default "alga-dev" }}
+    cert: false
+    disable-telemetry: true
+    disable-update-check: true
+  settings.json: |
+    {
+      "workbench.colorTheme": "Default Dark+",
+      "editor.fontSize": 14,
+      "editor.tabSize": 2,
+      "editor.insertSpaces": true,
+      "files.autoSave": "afterDelay",
+      "files.autoSaveDelay": 1000,
+      "terminal.integrated.defaultProfile.linux": "bash",
+      "git.autofetch": true,
+      "git.enableSmartCommit": true,
+      "typescript.preferences.includePackageJsonAutoImports": "auto",
+      "extensions.autoUpdate": false,
+      "workbench.startupEditor": "none"
+    }
+  extensions.json: |
+    {
+      "recommendations": [
+        "ms-vscode.vscode-typescript-next",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-json",
+        "ms-vscode.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "ms-vscode-remote.remote-containers",
+        "github.copilot",
+        "anthropic.claude-dev"
+      ]
+    }
+{{- end }}
+

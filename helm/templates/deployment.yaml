@@ -1,4 +1,4 @@
-{{- if not .Values.devEnv.enabled }}
+{{- if and (not .Values.devEnv.enabled) (not .Values.hostedEnv.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

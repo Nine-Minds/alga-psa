@@ -1,0 +1,561 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server
+  namespace: {{ .Values.hostedEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "sebastian.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: code-server
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.vaultAgent.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vaultAgent.role }}"
+        vault.hashicorp.com/agent-inject-secret-alga_auth_key: "{{ .Values.vaultAgent.sharedSecretPath }}"
+        vault.hashicorp.com/agent-inject-template-alga_auth_key: |
+          {{`{{- with secret "`}}{{ .Values.vaultAgent.sharedSecretPath }}{{`" -}}
+          {{- .Data.data.alga_auth_key -}}
+          {{- end }}`}}
+        vault.hashicorp.com/agent-inject-secret-server-secrets: "{{ .Values.vaultAgent.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-server-secrets: |
+          {{`{{ with secret "`}}{{ .Values.vaultAgent.secretPath }}{{`" }}`}}
+          {{`{{ range $k, $v := .Data.data }}`}}
+          {{`export {{ $k }}="{{ $v }}"`}}
+          {{`{{ end }}`}}
+          {{`{{ end }}`}}
+        # Fix for Vault + Istio compatibility
+        {{- with .Values.istio.sidecar.excludeOutboundPorts }}
+        traffic.sidecar.istio.io/excludeOutboundPorts: "{{ join "," . }}"
+        {{- end }}
+        {{- with .Values.istio.sidecar.excludeOutboundIPRanges }}
+        traffic.sidecar.istio.io/excludeOutboundIPRanges: "{{ . }}"
+        {{- end }}
+        {{- with .Values.istio.sidecar.includeOutboundIPRanges }}
+        traffic.sidecar.istio.io/includeOutboundIPRanges: "{{ . }}"
+        {{- end }}
+        {{- end }}
+      labels:
+        {{- include "sebastian.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: code-server
+        alga.dev/environment: "true"
+    spec:
+      {{- if .Values.hostedEnv.codeServer.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.hostedEnv.codeServer.image.credentials }}"
+      {{- end }}
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      volumes:
+        - name: workspace-storage
+          {{- if .Values.hostedEnv.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "sebastian.fullname" . }}-code-server-workspace
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        - name: project-source
+          emptyDir: {}
+      initContainers:
+        - name: git-clone
+          image: alpine/git:latest
+          command:
+            - sh
+            - -c
+            - |
+              echo "Cloning repository..."
+              git clone {{ .Values.hostedEnv.repository.url }} /tmp/repo
+              cd /tmp/repo
+              echo "Checking out branch: {{ .Values.hostedEnv.repository.branch }}"
+              git checkout {{ .Values.hostedEnv.repository.branch }}
+              mv /tmp/repo/* /tmp/repo/.[^.]* /workspace/ 2>/dev/null || true
+              echo "Repository cloned successfully"
+              ls -la /workspace
+          volumeMounts:
+            - name: project-source
+              mountPath: /workspace
+      containers:
+        - name: code-server
+          image: "{{ .Values.hostedEnv.codeServer.image.repository }}:{{ .Values.hostedEnv.codeServer.image.tag }}"
+          imagePullPolicy: {{ .Values.hostedEnv.codeServer.image.pullPolicy | default .Values.hostedEnv.codeServer.pullPolicy }}
+          # Allow sudo/escalation used by the code-server image startup scripts
+          securityContext:
+            allowPrivilegeEscalation: true
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+          env:
+            # Code-server
+            - name: PASSWORD
+              value: "{{ .Values.hostedEnv.codeServer.password | default "alga-dev" }}"
+            - name: SUDO_PASSWORD
+              value: "{{ .Values.hostedEnv.codeServer.password | default "alga-dev" }}"
+            - name: DEFAULT_WORKSPACE
+              value: "/home/coder/alga-psa"
+            # Git configuration
+            - name: GIT_AUTHOR_NAME
+              value: "{{ .Values.hostedEnv.git.authorName | default "Hosted Environment" }}"
+            - name: GIT_AUTHOR_EMAIL
+              value: "{{ .Values.hostedEnv.git.authorEmail | default "hosted@alga.local" }}"
+            - name: GIT_COMMITTER_NAME
+              value: "{{ .Values.hostedEnv.git.authorName | default "Hosted Environment" }}"
+            - name: GIT_COMMITTER_EMAIL
+              value: "{{ .Values.hostedEnv.git.authorEmail | default "hosted@alga.local" }}"
+
+            # Application envs (align with hosted deployment)
+            - name: NEXT_PUBLIC_EDITION
+              value: "{{ .Values.edition | default "community" }}"
+            - name: EDITION
+              value: "{{ .Values.edition | default "community" }}"
+            - name: VERSION
+              value: "{{ .Values.version }}"
+            - name: APP_NAME
+              value: "{{ .Values.nameOverride }}"
+            - name: APP_ENV
+              value: "{{ .Values.env }}"
+            - name: NODE_ENV
+              value: "{{ .Values.env }}"
+            - name: HOST
+              value: "{{ .Values.host }}"
+            - name: VERIFY_EMAIL_ENABLED
+              value: "{{ .Values.server.verify_email}}"
+
+            # Redis
+            {{- if .Values.redis.enabled }}
+            - name: REDIS_HOST
+              value: "redis.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: REDIS_DB
+              value: "0"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: REDIS_PASSWORD
+            {{- else }}
+            - name: REDIS_HOST
+              {{- if .Values.config.redis.hostFQDN }}
+              value: "{{ .Values.config.redis.hostFQDN }}"
+              {{- else }}
+              value: "{{ .Values.config.redis.host }}.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+              {{- end }}
+            - name: REDIS_PORT
+              value: "{{ .Values.config.redis.port }}"
+            - name: REDIS_DB
+              value: "{{ .Values.config.redis.db }}"
+            - name: REDIS_PASSWORD
+              {{- if and .Values.config.redis.passwordSecret.name .Values.config.redis.passwordSecret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.redis.passwordSecret.name | quote }}
+                  key: {{ .Values.config.redis.passwordSecret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.redis.password | quote }}
+              {{- end }}
+            {{- end }}
+
+            # Postgres
+            {{- if .Values.db.enabled }}
+            - name: DB_TYPE
+              value: "postgres"
+            - name: DB_HOST
+              value: "db.{{ include "sebastian.namespace" . }}.svc.cluster.local"
+            - name: DB_USER_SERVER
+              value: "app_user"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_NAME_SERVER
+              value: "server"
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+            - name: DB_PASSWORD_SUPERUSER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SUPERUSER
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: DB_PASSWORD_SERVER
+            {{- else }}
+            - name: DB_TYPE
+              value: "postgres"
+            - name: DB_HOST
+              {{- if and .Values.config.db.hostSecret.name .Values.config.db.hostSecret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.hostSecret.name | quote }}
+                  key: {{ .Values.config.db.hostSecret.key | quote }}
+              {{- else }}
+              value: "{{ .Values.config.db.host }}"
+              {{- end }}
+            - name: DB_USER_SERVER
+              value: "{{ .Values.config.db.user }}"
+            - name: DB_USER_ADMIN
+              value: "postgres"
+            - name: DB_PORT
+              value: "{{ .Values.config.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.config.db.server_database }}"
+            - name: DB_PASSWORD_ADMIN
+              {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_admin_password | quote }}
+              {{- end }}
+            - name: DB_PASSWORD_SERVER
+              {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.db.server_password_secret.name | quote }}
+                  key: {{ .Values.config.db.server_password_secret.key | quote }}
+              {{- else }}
+              value: {{ .Values.config.db.server_password | quote }}
+              {{- end }}
+            {{- end }}
+
+            # Storage (local by default)
+            {{- if not .Values.config.storage.providers.s3.enabled }}
+            - name: STORAGE_DEFAULT_PROVIDER
+              value: "local"
+            - name: STORAGE_LOCAL_BASE_PATH
+              value: "{{ .Values.config.storage.providers.local.base_path | default "/data/files" }}"
+            - name: STORAGE_LOCAL_MAX_FILE_SIZE
+              value: "{{ .Values.config.storage.providers.local.max_file_size | default 104857600 }}"
+            - name: STORAGE_LOCAL_ALLOWED_MIME_TYPES
+              value: "{{ join "," .Values.config.storage.providers.local.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+            - name: STORAGE_LOCAL_RETENTION_DAYS
+              value: "{{ .Values.config.storage.providers.local.retention_days | default "30" }}"
+            {{- end }}
+
+            {{- if .Values.config.storage.providers.s3.enabled }}
+            - name: STORAGE_DEFAULT_PROVIDER
+              value: "s3"
+            - name: STORAGE_S3_REGION
+              value: "{{ .Values.config.storage.providers.s3.region }}"
+            - name: STORAGE_S3_BUCKET
+              value: "{{ .Values.config.storage.providers.s3.bucket }}"
+            - name: STORAGE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                  key: {{ .Values.config.storage.providers.s3.secretRef.accessKeyKey | default "S3_ACCESS_KEY" | quote }}
+            - name: STORAGE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.storage.providers.s3.secretRef.name | default "storage-credentials" | quote }}
+                  key: {{ .Values.config.storage.providers.s3.secretRef.secretKeyKey | default "S3_SECRET_KEY" | quote }}
+            {{- if .Values.config.storage.providers.s3.endpoint }}
+            - name: STORAGE_S3_ENDPOINT
+              value: "{{ .Values.config.storage.providers.s3.endpoint }}"
+            {{- end }}
+            - name: STORAGE_S3_MAX_FILE_SIZE
+              value: "{{ .Values.config.storage.providers.s3.max_file_size | default "104857600" }}"
+            - name: STORAGE_S3_ALLOWED_MIME_TYPES
+              value: "{{ join "," .Values.config.storage.providers.s3.allowed_mime_types | default "image/*,application/pdf,text/plain" }}"
+            - name: STORAGE_S3_RETENTION_DAYS
+              value: "{{ .Values.config.storage.providers.s3.retention_days | default "30" }}"
+            {{- end }}
+
+            # Uploads
+            - name: STORAGE_UPLOAD_TEMP_DIR
+              value: "{{ .Values.config.storage.upload.temp_dir }}"
+            - name: STORAGE_UPLOAD_MAX_CONCURRENT
+              value: "{{ .Values.config.storage.upload.max_concurrent }}"
+            - name: STORAGE_UPLOAD_CHUNK_SIZE
+              value: "{{ .Values.config.storage.upload.chunk_size }}"
+
+            # Logging
+            - name: LOG_LEVEL
+              value: "{{ .Values.logging.level }}"
+            - name: LOG_IS_FORMAT_JSON
+              value: "{{ .Values.logging.is_format_json }}"
+            - name: LOG_IS_FULL_DETAILS
+              value: "{{ .Values.logging.is_full_details }}"
+            - name: LOG_ENABLED_FILE_LOGGING
+              value: "{{ .Values.logging.file.enabled }}"
+            - name: LOG_DIR_PATH
+              value: "{{ .Values.logging.file.path }}"
+            - name: LOG_ENABLED_EXTERNAL_LOGGING
+              value: "{{ .Values.logging.external.enabled }}"
+            - name: LOG_EXTERNAL_HTTP_HOST
+              value: "{{ .Values.logging.external.host }}"
+            - name: LOG_EXTERNAL_HTTP_PORT
+              value: "{{ .Values.logging.external.port }}"
+            - name: LOG_EXTERNAL_HTTP_PATH
+              value: "{{ .Values.logging.external.path }}"
+            - name: LOG_EXTERNAL_HTTP_LEVEL
+              value: "{{ .Values.logging.external.level }}"
+            - name: LOG_EXTERNAL_HTTP_TOKEN
+              value: "{{ .Values.logging.external.token }}"
+
+            # Storage backup
+            {{- if .Values.config.storage.backup.enabled }}
+            - name: STORAGE_BACKUP_ENABLED
+              value: "true"
+            - name: STORAGE_BACKUP_SCHEDULE
+              value: "{{ .Values.config.storage.backup.schedule }}"
+            - name: STORAGE_BACKUP_RETENTION_DAYS
+              value: "{{ .Values.config.storage.backup.retention.days }}"
+            - name: STORAGE_BACKUP_RETENTION_COPIES
+              value: "{{ .Values.config.storage.backup.retention.copies }}"
+            {{- end }}
+
+            # Hocuspocus
+            - name: HOCUSPOCUS_URL
+              {{- if .Values.config.hocuspocus.hostFQDN }}
+              value: "ws://{{ .Values.config.hocuspocus.hostFQDN }}:{{ .Values.config.hocuspocus.port | default 1234 }}"
+              {{- else }}
+              value: "ws://hocuspocus.{{ include "sebastian.namespace" . }}.svc.cluster.local:{{ .Values.hocuspocus.service.port }}"
+              {{- end }}
+
+            # Email
+            - name: EMAIL_ENABLE
+              value: "{{ .Values.email.enabled }}"
+            - name: EMAIL_FROM
+              value: "{{ .Values.email.from }}"
+            - name: EMAIL_HOST
+              value: "{{ .Values.email.host }}"
+            - name: EMAIL_PORT
+              value: "{{ .Values.email.port }}"
+            - name: EMAIL_USERNAME
+              value: "{{ .Values.email.user }}"
+            - name: EMAIL_PASSWORD
+              value: "{{ .Values.email.password }}"
+
+            # ----------- GMAIL INTEGRATION ----------------
+            {{- if .Values.email.provider }}
+            - name: EMAIL_PROVIDER_TYPE
+              value: "{{ .Values.email.provider }}"
+            {{- end }}
+            {{- if and .Values.email.resendApiKeySecret.name .Values.email.resendApiKeySecret.key }}
+            - name: RESEND_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.email.resendApiKeySecret.name | quote }}
+                  key: {{ .Values.email.resendApiKeySecret.key | quote }}
+            {{- else if .Values.email.resendApiKey }}
+            - name: RESEND_API_KEY
+              value: "{{ .Values.email.resendApiKey }}"
+            {{- end }}
+            {{- if .Values.email.resendBaseUrl }}
+            - name: RESEND_BASE_URL
+              value: "{{ .Values.email.resendBaseUrl }}"
+            {{- end }}
+            {{- if .Values.gmail_integration.enabled }}
+            - name: GOOGLE_CLIENT_ID
+              value: "{{ .Values.gmail_integration.client_id }}"
+            - name: GOOGLE_CLIENT_SECRET
+              value: "{{ .Values.gmail_integration.client_secret }}"
+            - name: GOOGLE_PROJECT_ID
+              value: "{{ .Values.gmail_integration.project_id }}"
+            {{- if .Values.gmail_integration.redirect_uri }}
+            - name: GOOGLE_REDIRECT_URI
+              value: "{{ .Values.gmail_integration.redirect_uri }}"
+            {{- end }}
+            {{- end }}
+
+            # ----------- GOOGLE AUTH (OAuth for app sign-in) ----------------
+            {{- if .Values.google_auth.enabled }}
+            - name: GOOGLE_OAUTH_CLIENT_ID
+              value: "{{ .Values.google_auth.client_id }}"
+            - name: GOOGLE_OAUTH_CLIENT_SECRET
+              value: "{{ .Values.google_auth.client_secret }}"
+            {{- end }}
+
+            # ----------- MICROSOFT INTEGRATION ----------------
+            {{- if .Values.microsoft_integration.enabled }}
+            {{- if .Values.microsoft_integration.client_id }}
+            - name: MICROSOFT_CLIENT_ID
+              value: "{{ .Values.microsoft_integration.client_id }}"
+            {{- end }}
+            {{- if .Values.microsoft_integration.client_secret }}
+            - name: MICROSOFT_CLIENT_SECRET
+              value: "{{ .Values.microsoft_integration.client_secret }}"
+            {{- end }}
+            {{- if .Values.microsoft_integration.tenant_id }}
+            - name: MICROSOFT_TENANT_ID
+              value: "{{ .Values.microsoft_integration.tenant_id }}"
+            {{- end }}
+            {{- if .Values.microsoft_integration.redirect_uri }}
+            - name: MICROSOFT_REDIRECT_URI
+              value: "{{ .Values.microsoft_integration.redirect_uri }}"
+            {{- end }}
+            {{- end }}
+
+            # LLM
+            - name: OPENAI_API_KEY
+              value: "{{ .Values.config.llm.openai }}"
+            - name: ANTHROPIC_API_KEY
+              value: "{{ .Values.config.llm.anthropic }}"
+
+            # Crypto
+            - name: CRYPTO_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{include "sebastian.fullname" .}}-secrets"
+                  key: CRYPTR_KEY
+            - name: SALT_BYTES
+              value: "{{ .Values.crypto.salt_bytes }}"
+            - name: ITERATIONS
+              value: "{{ .Values.crypto.iteration }}"
+            - name: KEY_LENGTH
+              value: "{{ .Values.crypto.key_length }}"
+            - name: ALGORITHM
+              value: "{{ .Values.crypto.algorithm }}"
+            - name: ALGA_AUTH_KEY
+              value: "{{ .Values.crypto.alga_auth_key }}"
+            - name: SECRET_KEY
+              value: "{{ .Values.crypto.secret_key }}"
+
+            # Token
+            - name: TOKEN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: "{{include "sebastian.fullname" .}}-secrets"
+                  key: TOKEN_SECRET_KEY
+            - name: TOKEN_EXPIRE
+              value: "{{ .Values.token.expire }}"
+
+            # Auth
+            - name: NEXTAUTH_URL
+              value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
+            # Public base URL for links in emails and client-side code
+            - name: NEXT_PUBLIC_BASE_URL
+              value: "{{ .Values.auth.nextauth_url | default "http://code-server:3000" }}"
+            - name: NEXTAUTH_SESSION_EXPIRES
+              value: "{{ .Values.auth.nextauth_session_expires }}"
+
+            # Secret provider chain
+            - name: SECRET_READ_CHAIN
+              value: "{{ .Values.secrets_provider.readChain | default "env,filesystem" }}"
+            - name: SECRET_WRITE_PROVIDER
+              value: "{{ .Values.secrets_provider.writeProvider | default "filesystem" }}"
+            {{- if .Values.secrets_provider.envPrefix }}
+            - name: SECRET_ENV_PREFIX
+              value: "{{ .Values.secrets_provider.envPrefix }}"
+            {{- end }}
+            # Vault envs if used
+            {{- if or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault") }}
+            {{- if .Values.secrets_provider.vault.addr }}
+            - name: VAULT_ADDR
+              value: "{{ .Values.secrets_provider.vault.addr }}"
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.addr }}
+            {{- end }}
+            {{- end }}
+            {{- if or .Values.secrets_provider.vault.token (or (contains "vault" .Values.secrets_provider.readChain) (eq .Values.secrets_provider.writeProvider "vault")) }}
+            - name: VAULT_TOKEN
+              {{- if .Values.secrets_provider.vault.token }}
+              value: "{{ .Values.secrets_provider.vault.token }}"
+              {{- else }}
+              valueFrom:
+                secretKeyRef:
+                  name: vault-credentials
+                  key: VAULT_TOKEN
+              {{- end }}
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.appSecretPath }}
+            - name: VAULT_APP_SECRET_PATH
+              value: "{{ .Values.secrets_provider.vault.appSecretPath }}"
+            {{- end }}
+            {{- if .Values.secrets_provider.vault.tenantSecretPathTemplate }}
+            - name: VAULT_TENANT_SECRET_PATH_TEMPLATE
+              value: "{{ .Values.secrets_provider.vault.tenantSecretPathTemplate }}"
+            {{- end }}
+
+            # User-provided extra env vars (passthrough)
+            {{- with .Values.hostedEnv.codeServer.env }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: alga-http
+              containerPort: 3000
+              protocol: TCP
+          volumeMounts:
+            - name: workspace-storage
+              mountPath: /home/coder
+            - name: project-source
+              mountPath: /home/coder/alga-psa
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: {{ index .Values "hostedEnv" "codeServer" "resources" "limits" "cpu" | default "4" | quote }}
+              memory: {{ index .Values "hostedEnv" "codeServer" "resources" "limits" "memory" | default "16Gi" | quote }}
+            requests:
+              cpu: {{ index .Values "hostedEnv" "codeServer" "resources" "requests" "cpu" | default "500m" | quote }}
+              memory: {{ index .Values "hostedEnv" "codeServer" "resources" "requests" "memory" | default "8Gi" | quote }}
+        # Sidecar to surface Vault-injected server secrets into server/.env for developer convenience
+        - name: env-writer
+          image: busybox:1.36
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh","-lc"]
+          args:
+            - |
+              set -euo pipefail
+              echo "[env-writer] Waiting for Vault-injected server-secrets..."
+              i=0; while [ $i -lt 180 ]; do
+                if [ -s /vault/secrets/server-secrets ]; then
+                  break
+                fi
+                i=$((i+1)); sleep 1
+              done
+              if [ ! -s /vault/secrets/server-secrets ]; then
+                echo "[env-writer] Timeout waiting for /vault/secrets/server-secrets; continuing without .env" >&2
+              else
+                echo "[env-writer] Writing server/.env from injected secrets"
+                mkdir -p /home/coder/alga-psa/server
+                # Convert 'export KEY="value"' lines to 'KEY="value"'
+                sed 's/^export \([^=]*\)=/\1=/' /vault/secrets/server-secrets > /home/coder/alga-psa/server/.env.tmp
+                mv /home/coder/alga-psa/server/.env.tmp /home/coder/alga-psa/server/.env
+              fi
+              # Keep container alive to allow kubectl exec/logs if needed
+              tail -f /dev/null
+          volumeMounts:
+            - name: project-source
+              mountPath: /home/coder/alga-psa
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      {{- with .Values.hostedEnv.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.hostedEnv.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
