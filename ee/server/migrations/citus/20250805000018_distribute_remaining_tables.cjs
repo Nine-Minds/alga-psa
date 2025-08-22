@@ -23,24 +23,24 @@ exports.up = async function(knex) {
     'user_preferences',
     'approval_levels',
     'approval_thresholds',
-    'client_billing',
+    // 'client_billing', // Handled in migration 20
     'task_resources',
     'attribute_definitions',
-    'chats',
-    'messages',
+    // 'chats', // Handled in migration 20
+    // 'messages', // Handled in migration 20
     'company_locations',
     'company_tax_settings',
-    'company_tax_rates',
-    'tax_rates',
-    'tax_components',
+    // 'company_tax_rates', // Handled in migration 20
+    // 'tax_rates', // Handled in migration 20
+    // 'tax_components', // Handled in migration 20
     'custom_fields',
     'custom_task_types',
     'conditional_display_rules',
     'discounts',
     'document_block_content',
-    'document_content',
+    // 'document_content', // Handled in migration 20
     'document_versions',
-    'document_associations',
+    // 'document_associations', // Handled in migration 20
     'external_files',
     'invoice_annotations',
     'invoice_time_entries',
@@ -59,16 +59,16 @@ exports.up = async function(knex) {
     'schedule_entry_assignees',
     'storage_configurations',
     'storage_providers',
-    'task_checklist_items',
+    // 'task_checklist_items', // Handled in migration 20
     'template_sections',
     'time_sheet_comments',
     'transactions',
     'user_type_rates',
-    'company_plan_bundles',
-    'plan_bundles',
+    // 'company_plan_bundles', // Handled in migration 20
+    // 'plan_bundles', // Handled in migration 20
     'bundle_billing_plans',
     'tenant_external_entity_mappings',
-    'service_types',
+    // 'service_types', // Handled in migration 20
     'service_rate_tiers',
     'plan_service_configuration',
     'plan_service_hourly_configs',
@@ -226,16 +226,16 @@ exports.down = async function(knex) {
     'plan_service_hourly_configs',
     'plan_service_configuration',
     'service_rate_tiers',
-    'service_types',
+    // 'service_types', // Handled in migration 20
     'tenant_external_entity_mappings',
     'bundle_billing_plans',
-    'plan_bundles',
-    'company_plan_bundles',
+    // 'plan_bundles', // Handled in migration 20
+    // 'company_plan_bundles', // Handled in migration 20
     'user_type_rates',
     'transactions',
     'time_sheet_comments',
     'template_sections',
-    'task_checklist_items',
+    // 'task_checklist_items', // Handled in migration 20
     'storage_providers',
     'storage_configurations',
     'schedule_entry_assignees',
@@ -254,24 +254,24 @@ exports.down = async function(knex) {
     'invoice_time_entries',
     'invoice_annotations',
     'external_files',
-    'document_associations',
+    // 'document_associations', // Handled in migration 20
     'document_versions',
-    'document_content',
+    // 'document_content', // Handled in migration 20
     'document_block_content',
     'discounts',
     'conditional_display_rules',
     'custom_task_types',
     'custom_fields',
-    'tax_components',
-    'tax_rates',
-    'company_tax_rates',
+    // 'tax_components', // Handled in migration 20
+    // 'tax_rates', // Handled in migration 20
+    // 'company_tax_rates', // Handled in migration 20
     'company_tax_settings',
     'company_locations',
-    'messages',
-    'chats',
+    // 'messages', // Handled in migration 20
+    // 'chats', // Handled in migration 20
     'attribute_definitions',
     'task_resources',
-    'client_billing',
+    // 'client_billing', // Handled in migration 20
     'approval_thresholds',
     'approval_levels',
     'user_preferences',

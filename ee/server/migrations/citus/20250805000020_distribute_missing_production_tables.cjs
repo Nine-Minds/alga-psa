@@ -37,14 +37,33 @@ exports.up = async function(knex) {
     // These might exist in production but not in our migrations
     'chats',
     'messages',
-    'vectors'
+    'vectors',
+    // Additional tables found to be local
+    'api_keys',
+    'audit_logs',
+    'email_domains',
+    'email_processed_messages',
+    'email_rate_limits',
+    'email_sending_logs',
+    'telemetry_consent_log',
+    'tenant_email_settings',
+    'tenant_email_templates',
+    'tenant_telemetry_settings',
+    'user_notification_preferences'
   ];
   
   // Tables that should be reference tables (system-wide, no tenant)
   const referenceTables = [
     'standard_statuses',
     'tenant_companies',
-    'time_period_settings'
+    'time_period_settings',
+    // Additional reference tables without tenant columns
+    'composite_tax_mappings',
+    'email_templates',
+    'standard_service_categories',
+    // 'system_event_catalog', // Has triggers, cannot be distributed with Citus
+    'tax_holidays',
+    'tax_rate_thresholds'
   ];
   
   // Process distributed tables
@@ -362,6 +381,17 @@ exports.down = async function(knex) {
   
   // Reverse order for dependencies
   const distributedTables = [
+    'user_notification_preferences',
+    'tenant_telemetry_settings',
+    'tenant_email_templates',
+    'tenant_email_settings',
+    'telemetry_consent_log',
+    'email_sending_logs',
+    'email_rate_limits',
+    'email_processed_messages',
+    'email_domains',
+    'audit_logs',
+    'api_keys',
     'vectors',
     'messages',
     'chats',
@@ -381,6 +411,11 @@ exports.down = async function(knex) {
   ];
   
   const referenceTables = [
+    'tax_rate_thresholds',
+    'tax_holidays',
+    'standard_service_categories',
+    'email_templates',
+    'composite_tax_mappings',
     'time_period_settings',
     'tenant_companies',
     'standard_statuses'
