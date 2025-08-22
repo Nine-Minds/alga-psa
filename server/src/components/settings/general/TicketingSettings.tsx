@@ -31,6 +31,7 @@ import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog'
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import CategoriesSettings from './CategoriesSettings';
 import ChannelsSettings from './ChannelsSettings';
+import { getTicketingDisplaySettings, updateTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
 interface SettingSectionProps<T extends object> {
   title: string;
@@ -290,6 +291,23 @@ const TicketingSettings = (): JSX.Element => {
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
   const [currentImportType, setCurrentImportType] = useState<'priorities' | 'statuses'>('priorities');
+  // Ticket display preferences (tenant-wide)
+  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [isSavingDisplay, setIsSavingDisplay] = useState<boolean>(false);
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    ticket_number: true,
+    title: true,
+    status: true,
+    priority: true,
+    board: true,
+    category: true,
+    client: true,
+    created: true,
+    created_by: true,
+    tags: true,
+    actions: true,
+  });
+  const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
 
   useEffect(() => {
     const initUser = async () => {
@@ -300,6 +318,40 @@ const TicketingSettings = (): JSX.Element => {
     };
     initUser();
   }, []);
+
+  // Load ticketing display settings
+  useEffect(() => {
+    const loadDisplay = async () => {
+      try {
+        const s = await getTicketingDisplaySettings();
+        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
+        if (s?.list?.columnVisibility) setColumnVisibility(s.list.columnVisibility as Record<string, boolean>);
+        if (typeof s?.list?.tagsInlineUnderTitle === 'boolean') setTagsInlineUnderTitle(s.list.tagsInlineUnderTitle);
+      } catch (e) {
+        console.error('Failed to load ticketing display settings', e);
+      }
+    };
+    loadDisplay();
+  }, []);
+
+  const handleSaveDisplaySettings = async (): Promise<void> => {
+    try {
+      setIsSavingDisplay(true);
+      await updateTicketingDisplaySettings({
+        dateTimeFormat,
+        list: {
+          columnVisibility,
+          tagsInlineUnderTitle,
+        },
+      });
+      toast.success('Ticket display settings saved');
+    } catch (e) {
+      console.error('Failed to save ticket display settings', e);
+      toast.error('Failed to save display settings');
+    } finally {
+      setIsSavingDisplay(false);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async (): Promise<void> => {
@@ -1059,6 +1111,77 @@ const TicketingSettings = (): JSX.Element => {
   ];
 
   const tabs = [
+    {
+      label: "Display",
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Ticket Display Preferences</h3>
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:gap-4">
+            <div className="flex-1 min-w-[260px]">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date/Time Format</label>
+              <CustomSelect
+                value={dateTimeFormat}
+                onValueChange={(v: string) => setDateTimeFormat(v)}
+                options={[
+                  { value: 'MMM d, yyyy h:mm a', label: 'Aug 22, 2025 1:23 PM' },
+                  { value: 'yyyy-MM-dd HH:mm', label: '2025-08-22 13:23' },
+                  { value: 'MM/dd/yyyy h:mm a', label: '08/22/2025 1:23 PM' },
+                  { value: 'dd/MM/yyyy HH:mm', label: '22/08/2025 13:23' },
+                  { value: 'EEE, MMM d, yyyy h:mm a', label: 'Fri, Aug 22, 2025 1:23 PM' },
+                ]}
+                className="w-72"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <h4 className="text-md font-semibold text-gray-800 mb-2">Ticket List Columns</h4>
+            <p className="text-sm text-gray-500 mb-3">Select which columns to show in the Ticketing Dashboard. You can also display tags inline under the title.</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+              {[
+                { key: 'ticket_number', label: 'Ticket Number', required: false },
+                { key: 'title', label: 'Title', required: true },
+                { key: 'status', label: 'Status', required: false },
+                { key: 'priority', label: 'Priority', required: false },
+                { key: 'board', label: 'Board', required: false },
+                { key: 'category', label: 'Category', required: false },
+                { key: 'client', label: 'Client', required: false },
+                { key: 'created', label: 'Created', required: false },
+                { key: 'created_by', label: 'Created By', required: false },
+                { key: 'tags', label: 'Tags (separate column)', required: false },
+                { key: 'actions', label: 'Actions', required: false },
+              ].map(({ key, label, required }) => (
+                <label key={key} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={!!columnVisibility[key]}
+                    disabled={required}
+                    onChange={(e) => setColumnVisibility(v => ({ ...v, [key]: e.target.checked }))}
+                  />
+                  <span className={required ? 'text-gray-500' : ''}>{label}{required ? ' (required)' : ''}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2">
+              <input
+                id="tags-inline-toggle"
+                type="checkbox"
+                checked={tagsInlineUnderTitle}
+                onChange={(e) => setTagsInlineUnderTitle(e.target.checked)}
+              />
+              <label htmlFor="tags-inline-toggle" className="text-sm">Show Tags inline under Title</label>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Button id="save-display-settings" onClick={handleSaveDisplaySettings} disabled={isSavingDisplay}>
+              {isSavingDisplay ? 'Saving…' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      )
+    },
     {
       label: "Ticket Numbering",
       content: <NumberingSettings entityType="TICKET" />

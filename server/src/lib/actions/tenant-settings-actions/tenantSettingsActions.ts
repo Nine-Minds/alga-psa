@@ -12,6 +12,7 @@ export interface TenantSettings {
   onboarding_skipped: boolean;
   onboarding_data?: WizardData;
   settings?: Record<string, any>;
+  ticket_display_settings?: Record<string, any>;
   created_at: Date;
   updated_at: Date;
 }
