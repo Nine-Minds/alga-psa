@@ -277,7 +277,7 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
     revalidatePath('/msp/onboarding');
     
     // Include warning message if some users were skipped
-    let message = undefined;
+    let message: string | undefined = undefined;
     if (skippedDueToLimit.length > 0) {
       message = `License limit reached. ${created.length} user(s) created, ${skippedDueToLimit.length} skipped: ${skippedDueToLimit.join(', ')}`;
     }

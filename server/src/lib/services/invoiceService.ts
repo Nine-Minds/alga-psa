@@ -827,7 +827,7 @@ export async function calculateAndDistributeTax(
   }
 
   // 6. Update Detail and Item Tables (Tax Amounts)
-  const updatePromises = [];
+  const updatePromises: Array<Promise<any>> = [];
 
   // Update fixed details tax amounts
   if (detailUpdates.length > 0) {
@@ -856,7 +856,7 @@ export async function calculateAndDistributeTax(
   await Promise.all(updatePromises);
 
   // 7. Update Consolidated Items' Tax Amount by summing updated details
-  const consolidatedUpdatePromises = [];
+  const consolidatedUpdatePromises: Array<Promise<any>> = [];
   if (consolidatedItemIds.length > 0) {
       // Fetch the *updated* tax amounts from details
       const updatedDetailsTaxSum = await tx('invoice_item_fixed_details as iifd')
@@ -882,7 +882,7 @@ export async function calculateAndDistributeTax(
   }
 
   // 8 & 9. Final Pass: Update total_price and apply final tax zeroing if needed
-  const finalItemUpdatePromises = [];
+  const finalItemUpdatePromises: Array<Promise<any>> = [];
   // Fetch all items again to get potentially updated tax amounts (especially the consolidated ones from step 7)
   const allFinalItems = await tx('invoice_items').where({ invoice_id: invoiceId }).select('*');
 

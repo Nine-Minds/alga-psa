@@ -7,7 +7,7 @@ import {
 import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
 import { verifyPassword } from '@/utils/encryption/encryption';
 import { withAdminTransaction } from '@alga-psa/shared/db';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 // Interface definitions
 interface AuthVerifyRequest {

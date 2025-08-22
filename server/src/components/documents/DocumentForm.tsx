@@ -39,7 +39,7 @@ const DocumentForm: React.FC<DocumentFormProps> = ({ onSubmit }) => {
         });
     };
 
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (hasAttemptedSubmit) {
         if (errors.document_name) validationErrors.push('Document name is required');
         if (errors.type_id) validationErrors.push('Document type is required');

@@ -1,4 +1,5 @@
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { computeDomain as sharedComputeDomain } from '@alga-psa/shared/extensions/domain.js';
 import type { Knex } from 'knex';
 import { KubeConfig, CustomObjectsApi, PatchUtils } from '@kubernetes/client-node';
 
@@ -32,14 +33,7 @@ function slugify(input: string): string {
 }
 
 export async function computeDomain(input: ComputeDomainInput): Promise<{ domain: string }> {
-  const root = (input.rootDomain || process.env.EXT_DOMAIN_ROOT || '').trim();
-  if (!root) throw new Error('EXT_DOMAIN_ROOT not configured');
-  const sTenant = slugify(input.tenantId);
-  const sExt = slugify(input.extensionId);
-  // Shorten and normalize segments; strip internal dashes so final label uses a single '-'
-  const norm = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.replace(/-/g, '').slice(0, 8) : s.replace(/-/g, '').slice(0, 12));
-  const label = `${norm(sTenant)}-${norm(sExt)}`;
-  const domain = `${label}.${root}`;
+  const domain = sharedComputeDomain(input.tenantId, input.extensionId, input.rootDomain);
   return { domain };
 }
 

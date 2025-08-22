@@ -518,7 +518,7 @@ export class RedisStreamClient {
             }
             
             // Process messages in batches to improve efficiency
-            const processingPromises = [];
+            const processingPromises: Promise<void>[] = [];
             
             for (const message of messages) {
               processingPromises.push((async () => {
@@ -578,7 +578,7 @@ export class RedisStreamClient {
             }
             
             // Process claimed messages in batches
-            const claimedProcessingPromises = [];
+            const claimedProcessingPromises: Promise<void>[] = [];
             
             for (const message of claimedMessages) {
               claimedProcessingPromises.push((async () => {

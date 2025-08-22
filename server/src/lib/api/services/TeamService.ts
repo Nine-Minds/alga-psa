@@ -2215,7 +2215,7 @@ export class TeamService extends BaseService<ITeam> {
       })
       .first();
 
-    let parent = null;
+    let parent: ITeam | null = null;
     if (parentRelation) {
       parent = await this.getById(parentRelation.parent_team_id, context);
     }

@@ -60,7 +60,7 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       setError(null);
 
       // Prepare any custom data needed for the fix
-      let customData = undefined;
+      let customData: { amount: number } | undefined = undefined;
       if (selectedFix === 'custom_adjustment') {
         const amount = parseFloat(customAmount);
         if (isNaN(amount)) {

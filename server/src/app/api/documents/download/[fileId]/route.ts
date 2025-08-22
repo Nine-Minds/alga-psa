@@ -68,7 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         headers.set('Content-Type', 'application/pdf');
         headers.set('Content-Disposition', `attachment; filename="${document.document_name || 'document'}.pdf"`);
         
-        return new NextResponse(result.buffer, { status: 200, headers });
+        return new Response(result.buffer as any, { status: 200, headers });
       } catch (pdfError) {
         logger.error(`Error generating PDF for document ${documentId}:`, pdfError);
         return NextResponse.json({ error: 'Failed to generate PDF.' }, { status: 500 });

@@ -91,7 +91,7 @@ export class DatabaseTemplateProcessor extends BaseTemplateProcessor {
     const { tenantId, templateData } = options;
 
     // Try to get tenant-specific template first
-    let template = null;
+    let template: any = null;
     
     if (tenantId) {
       template = await this.knex('tenant_email_templates')

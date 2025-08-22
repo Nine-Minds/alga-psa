@@ -311,7 +311,7 @@ export function buildFlowGraph(analysis: WorkflowAnalysis): FlowGraph {
               
               // Look for sequential flows that come after components in the then branch
               // or directly after the conditional itself
-              let nextComponentAfterIf = null;
+              let nextComponentAfterIf: any | null = null;
               
               // Get all components sorted by source location
               // This is a more reliable way to find the next component after the if block
@@ -412,8 +412,8 @@ export function buildFlowGraph(analysis: WorkflowAnalysis): FlowGraph {
       const edgeType = flow.type === 'sequential' ? 'controlFlow' : flow.type;
       
       // Set up edge styling with conditional variations
-      let edgeStyle = {};
-      let markerEnd = undefined;
+      let edgeStyle: any = {};
+      let markerEnd: string | undefined = undefined;
       
       if (flow.type === 'conditional') {
         const isTrue = flow.condition === 'true';
@@ -438,8 +438,8 @@ export function buildFlowGraph(analysis: WorkflowAnalysis): FlowGraph {
       
       // Create edge with enhanced properties and explicit handle connections
       // Determine handle connections based on edge type
-      let sourceHandle = undefined; // Default to automatic connection
-      let targetHandle = undefined; // Default to automatic connection
+      let sourceHandle: string | undefined = undefined; // Default to automatic connection
+      let targetHandle: string | undefined = undefined; // Default to automatic connection
       
       // For conditional edges, we want to explicitly connect to the target's input
       // This ensures proper visualization of true/false paths

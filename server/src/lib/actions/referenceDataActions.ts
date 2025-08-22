@@ -373,8 +373,8 @@ export async function importReferenceData(
       );
     }
     
-    const importedItems = [];
-    const skippedItems = [];
+    const importedItems: any[] = [];
+    const skippedItems: Array<{ name: any; reason: string }> = [];
     
     for (const item of referenceData) {
     const itemId = item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id;
@@ -567,7 +567,7 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
     const referenceData = await getReferenceData(dataType, filters);
     const config = referenceDataConfigs[dataType];
     
-    const availableItems = [];
+    const availableItems: any[] = [];
     
     for (const item of referenceData) {
       const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);

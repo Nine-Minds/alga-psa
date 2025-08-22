@@ -95,7 +95,8 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
-    await store.putObject(key, nodeStream as unknown as NodeJS.ReadableStream, { contentType, ifNoneMatch: "*", contentLength: size });
+    // contentLength is not part of our PutObjectOptions; omit to satisfy types
+    await store.putObject(key, nodeStream as unknown as NodeJS.ReadableStream, { contentType, ifNoneMatch: "*" });
   } catch (e: any) {
     try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status: e?.httpStatusCode ?? e?.statusCode })); } catch {}
     throw new Error("Failed to store upload");
@@ -117,7 +118,7 @@ export type FinalizeParams = {
 export type FinalizeResult = {
   extension: { id: string; name: string; publisher?: string };
   version: { id: string; version: string };
-  contentHash: computedHashstring;
+  contentHash: string;
   canonicalKey: string;
 };
 

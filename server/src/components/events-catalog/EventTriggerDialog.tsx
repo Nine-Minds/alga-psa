@@ -123,7 +123,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
   const handleSubmit = async () => {
     setHasAttemptedSubmit(true);
     
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!selectedWorkflowId) validationErrors.push("Workflow");
     if (!triggerName.trim()) validationErrors.push("Trigger Name");
     

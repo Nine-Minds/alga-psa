@@ -55,7 +55,7 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
           'tickets.ticket_id': workItemId,
           'tickets.tenant': tenant
         })
-        .join('companies', function() {
+        .join('companies', function(this: Knex.JoinClause) {
           this.on('tickets.company_id', '=', 'companies.company_id')
               .andOn('tickets.tenant', '=', 'companies.tenant');
         });
@@ -65,15 +65,15 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
           'project_tasks.task_id': workItemId,
           'project_tasks.tenant': tenant
         })
-        .join('project_phases', function() {
+        .join('project_phases', function(this: Knex.JoinClause) {
           this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
         })
-        .join('projects', function() {
+        .join('projects', function(this: Knex.JoinClause) {
           this.on('project_phases.project_id', '=', 'projects.project_id')
               .andOn('project_phases.tenant', '=', 'projects.tenant');
         })
-        .join('companies', function() {
+        .join('companies', function(this: Knex.JoinClause) {
           this.on('projects.company_id', '=', 'companies.company_id')
               .andOn('projects.tenant', '=', 'companies.tenant');
         });
@@ -83,11 +83,11 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
     }
 
     query = query
-      .join('company_tax_rates', function() {
+      .join('company_tax_rates', function(this: Knex.JoinClause) {
         this.on('companies.company_id', '=', 'company_tax_rates.company_id');
         this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
       })
-      .join('tax_rates', function() {
+      .join('tax_rates', function(this: Knex.JoinClause) {
         this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
             .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
       })
@@ -138,7 +138,7 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
           'tickets.ticket_id': workItemId,
           'tickets.tenant': tenant
         })
-        .join('companies', function() {
+        .join('companies', function(this: Knex.JoinClause) {
           this.on('tickets.company_id', '=', 'companies.company_id')
               .andOn('tickets.tenant', '=', 'companies.tenant');
         });
@@ -148,15 +148,15 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
           'project_tasks.task_id': workItemId,
           'project_tasks.tenant': tenant
         })
-        .join('project_phases', function() {
+        .join('project_phases', function(this: Knex.JoinClause) {
           this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
               .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
         })
-        .join('projects', function() {
+        .join('projects', function(this: Knex.JoinClause) {
           this.on('project_phases.project_id', '=', 'projects.project_id')
               .andOn('project_phases.tenant', '=', 'projects.tenant');
         })
-        .join('companies', function() {
+        .join('companies', function(this: Knex.JoinClause) {
           this.on('projects.company_id', '=', 'companies.company_id')
               .andOn('projects.tenant', '=', 'companies.tenant');
         });
@@ -166,11 +166,11 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
     }
 
     query = query
-      .join('company_tax_rates', function() {
+      .join('company_tax_rates', function(this: Knex.JoinClause) {
         this.on('companies.company_id', '=', 'company_tax_rates.company_id');
         this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
       })
-      .join('tax_rates', function() {
+      .join('tax_rates', function(this: Knex.JoinClause) {
         this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
             .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
       })

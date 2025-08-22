@@ -377,7 +377,7 @@ export class AssetModel extends BaseModel {
             } = asset;
 
             // Get extension data if requested
-            let extensionData = null;
+            let extensionData: WorkstationAsset | NetworkDeviceAsset | ServerAsset | MobileDeviceAsset | PrinterAsset | null = null;
             if (include_extension_data) {
                 extensionData = await getExtensionData(knexOrTrx, tenant, asset.asset_id, asset.asset_type);
             }

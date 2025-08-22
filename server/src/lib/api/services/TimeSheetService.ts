@@ -488,7 +488,7 @@ export class TimeSheetService extends BaseService<any> {
 
 
   async bulkApprove(data: BulkApproveTimeSheetData, context: ServiceContext): Promise<any[]> {
-      const results = [];
+      const results: { success: boolean; error?: string; time_sheet_id: string; data?: any }[] = [];
       
       for (const timeSheetId of data.time_sheet_ids) {
         try {
@@ -724,7 +724,7 @@ export class TimeSheetService extends BaseService<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {
-        const periods = [];
+        const periods: any[] = [];
         const startDate = new Date(data.start_date!);
         const endDate = new Date(data.end_date!);
         let currentDate = new Date(startDate);

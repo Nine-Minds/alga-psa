@@ -50,7 +50,7 @@ const TaxRateCreateForm: React.FC<TaxRateCreateFormProps> = ({ onSuccess, onErro
     }, []);
 
     const validateForm = () => {
-        const validationErrors = [];
+        const validationErrors: string[] = [];
         if (!regionCode) validationErrors.push('Tax region');
         
         const percValue = parseFloat(percentage);
