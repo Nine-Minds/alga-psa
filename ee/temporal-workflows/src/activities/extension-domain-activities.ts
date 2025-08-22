@@ -79,20 +79,39 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     await co.getNamespacedCustomObject(group, version, namespace, plural, name);
     exists = true;
   } catch (e: any) {
-    if (!(e?.response?.status === 404)) {
-      throw e;
+    const status = e?.response?.status;
+    if (status === 404) {
+      exists = false;
+    } else {
+      const body = e?.response?.body;
+      const msg = typeof body === 'string' ? body : JSON.stringify(body);
+      throw new Error(`domainmapping.get failed: status=${status} body=${msg}`);
     }
   }
 
   if (!exists) {
-    await co.createNamespacedCustomObject(group, version, namespace, plural, desired);
+    try {
+      await co.createNamespacedCustomObject(group, version, namespace, plural, desired);
+    } catch (e: any) {
+      const status = e?.response?.status;
+      const body = e?.response?.body;
+      const msg = typeof body === 'string' ? body : JSON.stringify(body);
+      throw new Error(`domainmapping.create failed: status=${status} body=${msg}`);
+    }
     return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
   }
 
   // Patch spec if exists to ensure correct ref
   const body = { spec: desired.spec };
   const options = { headers: { 'Content-Type': PatchUtils.PATCH_FORMAT_JSON_MERGE_PATCH } } as const;
-  await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
+  try {
+    await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const resBody = e?.response?.body;
+    const msg = typeof resBody === 'string' ? resBody : JSON.stringify(resBody);
+    throw new Error(`domainmapping.patch failed: status=${status} body=${msg}`);
+  }
   return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
 }
 
