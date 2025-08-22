@@ -3,6 +3,8 @@
 import { getTenantSettings, updateTenantSettings } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getTenantForCurrentRequest } from 'server/src/lib/tenant';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 
 export type TicketListColumnKey =
   | 'ticket_number'
@@ -84,8 +86,20 @@ export async function getTicketingDisplaySettings(): Promise<TicketingDisplaySet
 }
 
 export async function updateTicketingDisplaySettings(updated: TicketingDisplaySettings): Promise<{ success: boolean }>{
-  // Prefer dedicated column; fallback to legacy nested settings if column write fails
+  // Check permission first
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('User not authenticated');
+  }
+  
   const { knex } = await createTenantKnex();
+  
+  // Check if user has permission to update ticket settings
+  if (!await hasPermission(currentUser, 'ticket_settings', 'update', knex)) {
+    throw new Error('Permission denied: Cannot update ticket settings');
+  }
+  
+  // Prefer dedicated column; fallback to legacy nested settings if column write fails
   const tenant = await getTenantForCurrentRequest();
   if (!tenant) throw new Error('Tenant not found');
 

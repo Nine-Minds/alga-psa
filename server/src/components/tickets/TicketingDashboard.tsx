@@ -317,7 +317,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         render: (value: string, record: ITicketListItem) => (
           <div className="flex flex-col gap-1">
             <span>{value}</span>
-            {tagsInlineUnderTitle && record.ticket_id && (
+            {tagsInlineUnderTitle && columnVisibility['tags'] && record.ticket_id && (
               <div onClick={(e) => e.stopPropagation()}>
                 <TagManager
                   entityId={record.ticket_id}
@@ -465,7 +465,15 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
     // Apply visibility and tagsInline flag
     const visibleCols = cols.filter(({ key }) => {
-      if (key === 'tags' && tagsInlineUnderTitle) return false; // hide separate tags column
+      // Hide separate tags column when tags are inline under title or when tags are disabled
+      if (key === 'tags') {
+        // If tags are disabled, don't show the column
+        if (!columnVisibility['tags']) return false;
+        // If tags are inline under title, don't show separate column
+        if (tagsInlineUnderTitle) return false;
+        // Otherwise show the separate tags column
+        return true;
+      }
       // Title should always be visible to avoid an empty table
       if (key === 'title') return true;
       return columnVisibility[key] !== false;
