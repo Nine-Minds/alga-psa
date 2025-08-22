@@ -3,6 +3,8 @@
  * This migration must run before Citus migrations to ensure tables can be properly distributed
  */
 
+exports.config = { transaction: false };
+
 exports.up = async function(knex) {
   console.log('Fixing primary keys to include tenant column for Citus distribution...');
   
@@ -103,7 +105,7 @@ exports.up = async function(knex) {
       // Drop referencing foreign keys first
       for (const fk of referencingFKs.rows) {
         try {
-          await knex.raw(`ALTER TABLE ${fk.referencing_table} DROP CONSTRAINT ${fk.constraint_name}`);
+          await knex.raw(`ALTER TABLE ${fk.referencing_table} DROP CONSTRAINT IF EXISTS ${fk.constraint_name}`);
           console.log(`    ✓ Dropped referencing FK: ${fk.referencing_table}.${fk.constraint_name}`);
         } catch (e) {
           console.log(`    - Could not drop FK ${fk.constraint_name}: ${e.message}`);
