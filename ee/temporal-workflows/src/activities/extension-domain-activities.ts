@@ -34,9 +34,13 @@ function slugify(input: string): string {
 export async function computeDomain(input: ComputeDomainInput): Promise<{ domain: string }> {
   const root = (input.rootDomain || process.env.EXT_DOMAIN_ROOT || '').trim();
   if (!root) throw new Error('EXT_DOMAIN_ROOT not configured');
-  const t = slugify(input.tenantId);
-  const e = slugify(input.extensionId);
-  const domain = `${t}--${e}.${root}`;
+  const sTenant = slugify(input.tenantId);
+  const sExt = slugify(input.extensionId);
+  // Shorten segments to respect K8s name length constraints (<=63 chars for metadata.name)
+  // Use UUID-friendly shortening: first 8 hex if UUID-like, else first 12 chars
+  const short = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.slice(0, 8) : s.slice(0, 12));
+  const label = `${short(sTenant)}--${short(sExt)}`;
+  const domain = `${label}.${root}`;
   return { domain };
 }
 

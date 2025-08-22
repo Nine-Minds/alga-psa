@@ -227,7 +227,10 @@ References to detailed content in this doc
     - `runner_domain` (text, unique, indexed)
     - `runner_status` (jsonb; { state: 'pending'|'provisioning'|'ready'|'error', message?, last_updated? })
     - `runner_ref` (jsonb; optional: KService/DomainMapping identifiers for troubleshooting)
-  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
+  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<t8>--<e8>.<EXT_DOMAIN_ROOT>` where:
+    - `t8` = first 8 hex chars if `tenantId` is UUID-like, else first 12 slug chars
+    - `e8` = first 8 hex chars if `extensionId` is UUID-like, else first 12 slug chars
+    - Rationale: ensures DomainMapping `metadata.name` stays within 63-char limit.
 
 - Provisioning (Option B: Temporal worker)
   - [x] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):

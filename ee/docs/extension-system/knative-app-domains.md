@@ -59,7 +59,10 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
 
 ## Temporal Activity Behavior
 
-- `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${slug(tenantId)}--${slug(extensionId)}.${EXT_DOMAIN_ROOT}`.
+- `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${t8}--${e8}.${EXT_DOMAIN_ROOT}` where:
+  - `t8` is the first 8 hex chars if `tenantId` looks like a UUID, otherwise first 12 slug chars
+  - `e8` is calculated similarly for `extensionId`
+  - Rationale: keep `metadata.name` within Kubernetes 63-char limit for DomainMapping resources.
 - `ensureDomainMapping({ domain, namespace, kservice })`:
   - Creates or patches `DomainMapping`:
     - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: ${domain}`
