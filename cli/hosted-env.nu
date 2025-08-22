@@ -1,6 +1,27 @@
 use "config.nu" *
 use "utils.nu" *
 
+# Helper to load environment variables from .env.local if it exists
+def load-local-env [] {
+    let project_root = find-project-root
+    let env_file = $"($project_root)/.env.local"
+    
+    if ($env_file | path exists) {
+        # Parse .env.local file and load variables
+        let env_vars = (open $env_file 
+            | lines 
+            | where { |line| 
+                ($line | str trim | str length) > 0 and 
+                not ($line | str starts-with "#") 
+            }
+            | parse "{key}={value}"
+            | transpose -r -d)
+        
+        # Load the environment variables
+        load-env $env_vars
+    }
+}
+
 # Helper to sanitize branch to k8s-safe and release-safe fragment
 def sanitize-branch-name [branch: string] {
     let sanitized_base = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
@@ -37,6 +58,9 @@ def show-job-diagnostics [ns: string, job: string] {
 export def hosted-env-create [
     branch: string   # Branch name to create environment for
 ] {
+    # Load local environment variables if available
+    load-local-env
+    
     let project_root = find-project-root
     let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"alga-hosted-($sanitized_branch)"
@@ -233,9 +257,16 @@ vaultAgent:
 
     try {
         print $"($env.ALGA_COLOR_CYAN)Deploying Helm chart...($env.ALGA_COLOR_RESET)"
-        let user_values_path = $"($nu.home-path)/nm-kube-config/hosted-env-dev/values-hosted-env.yaml"
+        # Use ALGA_KUBE_CONFIG_PATH env var if set, otherwise use default relative to home
+        let kube_config_base = if ($env.ALGA_KUBE_CONFIG_PATH? | is-empty) {
+            $"($nu.home-path)/nm-kube-config"
+        } else {
+            $env.ALGA_KUBE_CONFIG_PATH
+        }
+        let user_values_path = $"($kube_config_base)/hosted-env-dev/values-hosted-env.yaml"
         if not ($user_values_path | path exists) {
             print $"($env.ALGA_COLOR_YELLOW)Warning: ($user_values_path) not found. Helm may fail if required values are missing.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_YELLOW)Tip: Set ALGA_KUBE_CONFIG_PATH environment variable to your nm-kube-config directory path.($env.ALGA_COLOR_RESET)"
         }
         let helm_result = do {
             cd $project_root
@@ -250,7 +281,13 @@ vaultAgent:
                 print $"($env.ALGA_COLOR_YELLOW)Helm reported non-fatal issues; retrying with --install...($env.ALGA_COLOR_RESET)"
                 let retry_install = do {
                     cd $project_root
-                    let user_values_path = $"($nu.home-path)/nm-kube-config/hosted-env-dev/values-hosted-env.yaml"
+                    # Use same path calculation as above
+                    let kube_config_base = if ($env.ALGA_KUBE_CONFIG_PATH? | is-empty) {
+                        $"($nu.home-path)/nm-kube-config"
+                    } else {
+                        $env.ALGA_KUBE_CONFIG_PATH
+                    }
+                    let user_values_path = $"($kube_config_base)/hosted-env-dev/values-hosted-env.yaml"
                     helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f $user_values_path -f $temp_values_file -n $namespace | complete
                 }
                 if $retry_install.exit_code != 0 {
