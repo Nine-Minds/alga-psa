@@ -8,15 +8,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ReflectionContainer } from '@/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '@/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '@/lib/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
-import { logger } from '@/utils/logger';
+// Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
-import React from 'react';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 
 /**
@@ -52,7 +51,7 @@ export default function ExtensionDetails() {
           if (info) setInstallInfo({ domain: info.runner_domain || null, status: info.runner_status });
         }
       } catch (err) {
-        logger.error('Failed to fetch extension details', { extensionId, error: err });
+        console.error('Failed to fetch extension details', { extensionId, error: err });
         setError('Failed to load extension details');
         setLoading(false);
       }
@@ -77,9 +76,9 @@ export default function ExtensionDetails() {
         prevExtension ? { ...prevExtension, isEnabled: !prevExtension.isEnabled } : null
       );
       
-      logger.info(`Extension ${extension.isEnabled ? 'disabled' : 'enabled'}`, { extensionId });
+      console.info(`Extension ${extension.isEnabled ? 'disabled' : 'enabled'}`, { extensionId });
     } catch (err) {
-      logger.error('Failed to toggle extension', { extensionId, error: err });
+      console.error('Failed to toggle extension', { extensionId, error: err });
       alert(`Failed to ${extension.isEnabled ? 'disable' : 'enable'} extension`);
     }
   };
@@ -106,12 +105,12 @@ export default function ExtensionDetails() {
         return;
       }
       
-      logger.info('Extension removed', { extensionId });
+      console.info('Extension removed', { extensionId });
       
       // Navigate back to extensions list
       router.push('/msp/settings/extensions');
     } catch (err) {
-      logger.error('Failed to remove extension', { extensionId, error: err });
+      console.error('Failed to remove extension', { extensionId, error: err });
       alert('Failed to remove extension');
     }
   };

@@ -58,6 +58,7 @@ export type GetObjectResult = {
 export type PutObjectOptions = {
   contentType?: string;
   cacheControl?: string;
+  contentLength?: number;
   /**
    * If-None-Match precondition value (e.g., "*").
    * Note: S3 PutObject does not officially document If-None-Match enforcement.
@@ -286,6 +287,7 @@ export async function putObject(
     Body: body as any,
     ContentType: opts?.contentType,
     CacheControl: opts?.cacheControl,
+    ContentLength: typeof opts?.contentLength === "number" ? opts.contentLength : undefined,
   };
 
   const cmd = new PutObjectCommand(input);

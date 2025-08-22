@@ -78,7 +78,7 @@ pub async fn handle_get(
         .map(|v| v.trim().eq_ignore_ascii_case("true"))
         .unwrap_or(true);
     if strict && tenant_id.is_empty() {
-        tracing::info!(request_id=%req_id, "strict validation on and x-tenant-id missing");
+        tracing::info!(request_id=%req_id, host=?headers.get(axum::http::header::HOST).and_then(|v| v.to_str().ok()), "strict validation on and x-tenant-id missing");
         return StatusCode::NOT_FOUND.into_response();
     }
 
@@ -95,7 +95,7 @@ pub async fn handle_get(
                 return StatusCode::NOT_FOUND.into_response();
             }
             Err(e) => {
-                tracing::warn!(request_id=%req_id, err=%e.to_string(), "registry error (strict)");
+                tracing::warn!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, err=%e.to_string(), "registry error (strict)");
                 return StatusCode::NOT_FOUND.into_response();
             }
         }

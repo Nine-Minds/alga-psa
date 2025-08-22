@@ -65,6 +65,17 @@ Mapping to detailed sections
 
 We are splitting the extension overhaul into two phases: Phase 1 focuses on safe, static UI delivery via a Rust host proxying MinIO/S3 (no dynamic module loading, no guest code execution), and Phase 2 delivers dynamic WASM execution with a Rust Runner (Wasmtime), a capability-based Host API, and a Next.js API gateway. This preserves security and isolation while enabling a clear migration path.
 
+## Server Actions-First Contract
+
+- Principle: Business logic lives in server actions under `server/src/lib/actions` (EE overlays may live under `ee/server/src/lib/actions`). HTTP API routes exist only as thin wrappers that call these actions to support external/infra consumers (Runner, automation).
+- Actions (conceptual names) and wrappers:
+  - `extensions.publishVersion(bundle)` → verifies, computes `content_hash`, writes to `sha256/<hash>/bundle.tar.zst`, records `extension_bundle`. Wrapper: `POST /api/extensions/:id/versions`.
+  - `installs.createOrEnable(tenant, extension, version)` → persists install, computes `runner_domain`, sets `runner_status='pending'`, enqueues provisioning workflow. Wrapper: `POST /api/installs` or server-initiated only.
+  - `installs.lookupByHost(host)` → returns `{ tenant_id, extension_id, content_hash }`. Wrapper: `GET /api/installs/lookup-by-host` (used by Runner).
+  - `installs.validate(tenant, extension, hash)` → returns `{ valid: boolean }`. Wrapper: `GET /api/installs/validate` (used by Runner `ext-ui` gate).
+  - `installs.reprovision(installId)` → retries provisioning (Temporal). Wrapper: `POST /api/installs/:id/reprovision`.
+- Testing guidance: unit/integration tests target server actions; API tests cover parameter parsing and delegation only.
+
 ## Proposed Document Map
 
 Unified service approach
@@ -214,16 +225,19 @@ References to detailed content in this doc
 - Data model
   - [x] Add columns to `tenant_extension_install`:
     - `runner_domain` (text, unique, indexed)
-    - `runner_status` (jsonb; { state: 'pending'|'provisioned'|'error', message?, last_updated? })
+    - `runner_status` (jsonb; { state: 'pending'|'provisioning'|'ready'|'error', message?, last_updated? })
     - `runner_ref` (jsonb; optional: KService/DomainMapping identifiers for troubleshooting)
-  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<tenant>--<extension>.<EXT_DOMAIN_ROOT>` (slug normalization rules defined).
+  - [x] Config: `EXT_DOMAIN_ROOT` (e.g., `ext.example.com`) and domain pattern `<t8>--<e8>.<EXT_DOMAIN_ROOT>` where:
+    - `t8` = first 8 hex chars if `tenantId` is UUID-like, else first 12 slug chars
+    - `e8` = first 8 hex chars if `extensionId` is UUID-like, else first 12 slug chars
+    - Rationale: ensures DomainMapping `metadata.name` stays within 63-char limit.
 
 - Provisioning (Option B: Temporal worker)
   - [x] Create provisioning workflow in Temporal (ee/temporal-workflows/src/worker.ts task queue):
     - Activity: `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns domain string.
     - Activity: `ensureDomainMapping({ domain, kservice, namespace })` uses Kubernetes API to create DomainMapping:
-      - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: <domain>`
-      - `spec.ref: { apiVersion: serving.knative.dev/v1, kind: Service, name: <runner-kservice> }`
+      - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: <domain>`
+      - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: <runner-kservice> }`
     - Update DB status: set `runner_status.state` to `provisioned` or `error` with message.
   - [x] Trigger workflow on install.
   - [ ] Trigger workflow on enable.
@@ -231,9 +245,14 @@ References to detailed content in this doc
   - [ ] RBAC/secret: ServiceAccount with permission to manage DomainMappings in the Runner namespace.
 
 - Server (Next.js)
-  - [x] Extend install flow to compute and persist `runner_domain` (`pending`), and enqueue Temporal provisioning.
-  - [x] Add GET `/api/installs/lookup-by-host?host=...` → `{ tenant_id, extension_id, content_hash }` (resolve latest bundle for the install by domain).
-  - [x] Ensure/keep GET `/api/installs/validate` for strict ext-ui gating.
+  - [x] Server actions-first:
+    - `installs.createOrEnable(...)` computes `runner_domain`, persists `runner_status='pending'`, enqueues Temporal provisioning.
+    - `installs.lookupByHost(host)` → `{ tenant_id, extension_id, content_hash }` (resolves latest bundle by domain).
+    - `installs.validate(tenant, extension, hash)` → `{ valid: boolean }` (strict ext-ui gating).
+  - [x] Expose thin API wrappers that delegate to actions:
+    - `GET /api/installs/lookup-by-host?host=...`
+    - `GET /api/installs/validate?tenant=...&extension=...&hash=...`
+    - `POST /api/installs/:id/reprovision` (calls `installs.reprovision`).
 
 - Runner changes
   - [x] GET `/` host entry: read Host header, call `REGISTRY_BASE_URL/api/installs/lookup-by-host?host=...` (with short TTL cache), 302 → `/ext-ui/{extensionId}/{content_hash}/index.html`.
@@ -251,6 +270,20 @@ References to detailed content in this doc
   - [ ] On provisioning failure: persist error in `runner_status`, surface in UI, provide retry.
   - [x] On lookup miss: Runner returns 404.
   - [ ] Audit install-to-domain mapping (log/metrics on lookup miss).
+
+### Install Provisioning — State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Pending: Install created/enabled
+    Pending --> Provisioning: Enqueue Temporal workflow\nensureDomainMapping
+    Provisioning --> Ready: DomainMapping applied\nupdate runner_status=ready
+    Provisioning --> Error: Provisioning failure\nupdate runner_status=error
+    Error --> Provisioning: Reprovision action\nretry workflow
+    Ready --> Ready: New version published\ncontent_hash updates via lookup
+    Ready --> Provisioning: Reprovision action
+    note right of Ready: Host traffic → Runner\nGET / → lookup-by-host → 302 /ext-ui/.../index.html
+```
 
 ## Phase 2 — Dynamic WASM Features
 
@@ -862,3 +895,54 @@ Phase 4 – Migration & Deprecation
 - Which sandbox runtime to standardize on first: WASM (Wasmtime/WASI) vs V8 isolates? Preference: WASM for stronger capability discipline; allow a container tier for heavy/legacy cases.
 - Initial capability set scope: finalize MVP host APIs.
 - Pricing/billing alignment with quotas and egress costs.
+
+## Near-term Implementation Tasks (Progress Tracker)
+
+The following concrete tasks align the current codebase with this plan and track progress.
+
+- [x] Replace browser→S3 direct upload with server-proxied streaming
+  - [x] Add server action `extUploadProxy(FormData)` to stream file to S3 staging (write-once)
+  - [x] Convert Web ReadableStream → Node Readable before S3 PutObject
+  - [x] Pass `ContentLength` to S3 to satisfy chunked signing
+  - [x] Update `InstallerPanel.tsx` to use server action, then call `extFinalizeUpload`
+  - [x] Remove presigned initiate flow and delete `initiate-upload` API route
+
+- [x] Logging and diagnostics
+  - [x] Structured logs + request IDs for upload path
+  - [x] Admin-only DB registry introspection endpoint (`/api/extensions/registry-db-check`)
+  - [ ] Add request IDs and structured logs to finalize and abort paths
+
+- [x] Registry v2 repository wiring
+  - [x] Implement Knex-backed `RegistryV2Repository` (extensions + versions)
+  - [x] Register via `setRegistryV2Repository(...)` at server startup (lazy init before finalize)
+  - [x] Verify finalize writes registry/version/bundle rows end-to-end
+
+
+- [x] Extensions UI uses Registry v2
+  - [x] List tenant installs via v2 actions (joins on `tenant_extension_install`)
+  - [x] Toggle/uninstall operate on `tenant_extension_install`
+  - [x] After finalize, auto-create tenant install for current tenant
+
+
+- [ ] Align UI with “Install from Registry” flow [FUTURE -- DELAY]
+  - [ ] Restrict or hide direct upload UI for general users (admin/publisher only if retained)
+  - [ ] Replace “upload bundle” with “select version” from registry listing
+  - [ ] Update docs to emphasize CI publish + install-from-registry
+
+- [ ] Cleanup and tests
+  - [ ] Remove unused upload API route and legacy code paths once fully migrated
+  - [ ] Add targeted tests for upload server action and finalize happy-path
+
+
+## Retirement of Legacy Paths (Brand New System)
+
+- Legacy tables and services to avoid for EE extensions:
+  - `extensions`, `extension_permissions`, file-based component serving, and dynamic module import mechanisms.
+  - `ExtensionRegistry` (legacy) and actions that operate on the `extensions` table in management UI.
+- Canonical tables for EE extensions (Registry v2):
+  - `extension_registry`, `extension_version`, `extension_bundle`, `tenant_extension_install`.
+- UI and actions must exclusively use Registry v2:
+  - Listing, enable/disable, and uninstall operate on `tenant_extension_install`.
+  - Version metadata read from `extension_version`; registry identity from `extension_registry`.
+  - Bundle metadata resolved from object storage keyed by content hash.
+- Operational note: This system is brand new; no data migration is required. Do not write or read from legacy tables as part of EE extensions.

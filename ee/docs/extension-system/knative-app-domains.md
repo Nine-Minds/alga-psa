@@ -59,23 +59,41 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
 
 ## Temporal Activity Behavior
 
-- `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${slug(tenantId)}--${slug(extensionId)}.${EXT_DOMAIN_ROOT}`.
+- `computeDomain(tenantId, extensionId, EXT_DOMAIN_ROOT)` returns `${t8}--${e8}.${EXT_DOMAIN_ROOT}` where:
+  - `t8` is the first 8 hex chars if `tenantId` looks like a UUID, otherwise first 12 slug chars
+  - `e8` is calculated similarly for `extensionId`
+  - Rationale: keep `metadata.name` within Kubernetes 63-char limit for DomainMapping resources.
 - `ensureDomainMapping({ domain, namespace, kservice })`:
+  - Preflight checks:
+    - Verifies Knative Service exists: `serving.knative.dev/v1`, resource `services`, name `${kservice}` in `${namespace}`
+    - Ensures ClusterDomainClaim exists for `${domain}` (`networking.internal.knative.dev/v1alpha1`).
+      - If env `KNATIVE_AUTO_CREATE_CDC=true`, the worker attempts to create the CDC.
+      - Otherwise, it fails with a clear message including a ready-to-apply CDC manifest.
   - Creates or patches `DomainMapping`:
-    - `apiVersion: serving.knative.dev/v1`, `kind: DomainMapping`, `metadata.name: ${domain}`
+    - `apiVersion: serving.knative.dev/v1beta1`, `kind: DomainMapping`, `metadata.name: ${domain}`
     - `spec.ref: { apiVersion: 'serving.knative.dev/v1', kind: 'Service', name: ${kservice} }`
 - On success, status in DB is updated to `{ state: 'ready' }` and `runner_ref` stores a small reference object.
 
 ## Runner
 
-- Exposes `GET /` which reads Host → calls `REGISTRY_BASE_URL/api/installs/lookup-by-host` → redirects to `/ext-ui/{extensionId}/{content_hash}/index.html`.
+- Exposes `GET /` which reads Host → calls `REGISTRY_BASE_URL/api/installs/lookup-by-host` (API wrapper around the `installs.lookupByHost` server action) → redirects to `/ext-ui/{extensionId}/{content_hash}/index.html`.
 - Continues to enforce strict validation in `/ext-ui` route via `/api/installs/validate`.
 
 ## Next.js (EE Server)
 
-- `GET /api/installs/lookup-by-host?host=...` resolves `{ tenant_id, extension_id, content_hash }` from DB.
-- `GET /api/installs/validate?tenant=...&extension=...&hash=...` returns `{ valid: boolean }`.
-- Server actions handle UI-side reprovisioning triggers; APIs remain for external automation.
+- Server actions-first (business logic):
+  - `installs.lookupByHost(host: string)` → `{ tenant_id, extension_id, content_hash }`.
+  - `installs.validate(tenant: string, extension: string, hash: string)` → `{ valid: boolean }`.
+  - `installs.provisionDomain(installId: string)` / `installs.reprovision(installId: string)` → triggers Temporal workflow.
+- Thin API wrappers for external consumers (delegate to actions only):
+  - `GET /api/installs/lookup-by-host?host=...`
+  - `GET /api/installs/validate?tenant=...&extension=...&hash=...`
+  - `POST /api/installs/:id/reprovision`
+
+### Lookup and Validate Contracts
+
+- LookupByHost response: `{ tenant_id: string, extension_id: string, content_hash: string }`.
+- Validate response: `{ valid: boolean }`.
 
 ## Helm Values Hints (Infra Repo)
 
@@ -85,7 +103,12 @@ Ensure the Temporal worker Deployment/Pod uses `serviceAccountName: temporal-wor
     - `RUNNER_NAMESPACE: <ns>`
     - `RUNNER_KSERVICE: runner`
     - `EXT_DOMAIN_ROOT: ext.example.com`
+    - `KNATIVE_AUTO_CREATE_CDC: "true"` (optional; requires ClusterRole to manage ClusterDomainClaims)
   - RBAC templates include Role/RoleBinding above when enabled.
+
+## RBAC for ClusterDomainClaim (optional)
+
+To auto-create ClusterDomainClaims, grant the Temporal worker a ClusterRole with read/create/patch on `clusterdomainclaims.networking.internal.knative.dev` and bind it via ClusterRoleBinding to the worker ServiceAccount.
 
 ---
 Change history: Introduced with per-install app domains (Plan 1.f).

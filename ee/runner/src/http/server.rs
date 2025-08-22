@@ -12,8 +12,7 @@ use std::time::Instant;
 use tokio::sync::Mutex;
 use tower_http::{set_header::SetResponseHeaderLayer, trace::TraceLayer};
 use url::Url;
-use axum::response::IntoResponse;
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect, Response};
 
 use crate::cache::fs as cache_fs;
 use crate::engine::loader::ModuleLoader;
@@ -90,7 +89,8 @@ pub async fn run() -> anyhow::Result<()> {
             HeaderValue::from_static("public, max-age=31536000, immutable"),
         ));
 
-    let addr: SocketAddr = ([0, 0, 0, 0], 8080).into();
+    let port: u16 = std::env::var("PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(8080);
+    let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     tracing::info!("listening on {}", addr);
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
     Ok(())
@@ -205,7 +205,7 @@ struct LookupResp {
     content_hash: String,
 }
 
-async fn root_dispatch(headers: HeaderMap) -> impl IntoResponse {
+async fn root_dispatch(headers: HeaderMap) -> Response {
     let host = headers
         .get(axum::http::header::HOST)
         .and_then(|v| v.to_str().ok())
@@ -213,46 +213,66 @@ async fn root_dispatch(headers: HeaderMap) -> impl IntoResponse {
         .to_string();
 
     if host.is_empty() {
-        return StatusCode::BAD_REQUEST;
+        tracing::warn!("host header missing on root request");
+        return StatusCode::BAD_REQUEST.into_response();
     }
 
     // Build registry URL: {REGISTRY_BASE_URL}/api/installs/lookup-by-host?host=...
     let base = match std::env::var("REGISTRY_BASE_URL") {
         Ok(v) => v,
-        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+        Err(e) => {
+            tracing::error!(err=%e.to_string(), host=%host, "REGISTRY_BASE_URL not set");
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
     };
 
     let mut url = match Url::parse(&base) {
         Ok(u) => u,
-        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+        Err(e) => {
+            tracing::error!(base=%base, err=%e.to_string(), "REGISTRY_BASE_URL parse failed");
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
     };
     url.set_path("api/installs/lookup-by-host");
     url.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
 
     let http = match reqwest::Client::builder().build() {
         Ok(c) => c,
-        Err(_) => return StatusCode::SERVICE_UNAVAILABLE,
+        Err(e) => {
+            tracing::error!(err=%e.to_string(), "failed to build reqwest client");
+            return StatusCode::SERVICE_UNAVAILABLE.into_response();
+        }
     };
 
-    let resp = match http.get(url).send().await {
+    let resp = match http.get(url.clone()).send().await {
         Ok(r) => r,
-        Err(_) => return StatusCode::BAD_GATEWAY,
+        Err(e) => {
+            tracing::error!(host=%host, url=%url.to_string(), err=%e.to_string(), "registry request failed");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
     };
 
     if !resp.status().is_success() {
-        return StatusCode::NOT_FOUND;
+        let code = resp.status().as_u16();
+        let path = url.path().to_string();
+        tracing::info!(host=%host, status=%code, url_path=%path, "registry returned non-success for lookup-by-host");
+        return StatusCode::NOT_FOUND.into_response();
     }
 
     let body: LookupResp = match resp.json().await {
         Ok(b) => b,
-        Err(_) => return StatusCode::BAD_GATEWAY,
+        Err(e) => {
+            tracing::error!(host=%host, err=%e.to_string(), "failed to parse registry response json");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
     };
 
     let target = format!(
         "/ext-ui/{}/{}/index.html",
         body.extension_id, body.content_hash
     );
-    Redirect::temporary(&target)
+    tracing::info!(host=%host, target=%target, "redirecting to ext-ui");
+    Redirect::temporary(&target).into_response()
 }
 
 // Enhanced healthz: verify cache root writability and attempt lightweight HEAD to bundle store.
@@ -295,6 +315,14 @@ async fn healthz() -> impl axum::response::IntoResponse {
         }
     }
 
+    if !cache_writable {
+        tracing::warn!(path=%cache_root.to_string_lossy(), "cache root not writable");
+    }
+    if let Some(reason) = degraded_reason.as_deref() {
+        if reason != "ok" {
+            tracing::warn!(bundle_base=%bundle_base, reason=%reason, "bundle store health degraded");
+        }
+    }
     let status_code = if cache_writable { StatusCode::OK } else { StatusCode::SERVICE_UNAVAILABLE };
     let body = json!({
         "cache_writable": cache_writable,

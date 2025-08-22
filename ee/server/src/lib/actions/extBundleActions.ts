@@ -8,11 +8,8 @@
 
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
-import {
-  isValidSha256Hash,
-  objectKeyFor,
-  normalizeBasePrefix,
-} from "../storage/bundles/types";
+import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
+import { Readable } from "node:stream";
 import { getS3Client, getBucket } from "../storage/s3-client";
 import {
   hashSha256Stream,
@@ -28,6 +25,24 @@ import {
   type ManifestV2,
 } from "../extensions/bundles/manifest";
 import { upsertVersionFromManifest } from "../extensions/registry-v2";
+import { ensureRegistryV2KnexRepo } from "../extensions/registry-v2-repo-knex";
+import type { Knex } from "knex";
+// Prefer a global/admin knex since registry tables are global
+async function getAdminKnex(): Promise<Knex> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const db = require('../../../server/src/lib/db/index.ts');
+    if (db?.getAdminConnection) return await db.getAdminConnection();
+  } catch {}
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { createTenantKnex } = require('@/lib/db');
+    const out = await createTenantKnex();
+    return out.knex as Knex;
+  } catch (e) {
+    throw new Error('RegistryV2: failed to resolve a Knex connection for repository registration');
+  }
+}
 
 /** Error with HTTP status and machine code for route mapping */
 class HttpError extends Error {
@@ -43,119 +58,52 @@ class HttpError extends Error {
 }
 
 const MAX_BUNDLE_SIZE_BYTES = 200 * 1024 * 1024; // 200 MiB
-const DEFAULT_CONTENT_TYPE = "application/octet-stream";
-const EXPIRES_SECONDS = 900; // 15 minutes
 const BASE_PREFIX = "sha256/";
 
 // Types
-export type InitiateParams = {
-  filename: string;
-  size: number;
-  declaredHash?: string;
-  contentType?: string;
-  cacheControl?: string;
-};
+// Initiate/presign flow removed; uploads now use server-proxied streaming.
+export async function extUploadProxy(formData: FormData): Promise<{ upload: { key: string; strategy: "staging" }; filename: string; size: number; declaredHash?: string; }> {
+  const filename = String(formData.get("filename") ?? "").trim();
+  const sizeRaw = String(formData.get("size") ?? "").trim();
+  const declaredHashRaw = formData.get("declaredHash");
+  const file = formData.get("file") as unknown as File | null;
 
-export type InitiateResult = {
-  upload: {
-    key: string;
-    url: string;
-    method: "PUT";
-    expiresSeconds: number;
-    requiredHeaders: Record<string, string>;
-    strategy: "canonical" | "staging";
-  };
-  filename: string;
-  size: number;
-  declaredHash?: string;
-};
+  try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.entry", filenamePresent: filename.length > 0, sizeRaw, hasFile: Boolean(file) })); } catch {}
 
-export async function extInitiateUpload(params: InitiateParams): Promise<InitiateResult> {
-  // Validate inputs (mirrors previous route logic)
-  const { filename, size, declaredHash, contentType, cacheControl } = params ?? ({} as any);
+  if (!filename) throw new Error("filename is required");
+  if (!sizeRaw) throw new Error("size is required");
+  const size = Number(sizeRaw);
+  if (!Number.isFinite(size) || size <= 0) throw new Error("size must be a positive number");
+  if (size > MAX_BUNDLE_SIZE_BYTES) throw new Error(`size exceeds maximum of ${MAX_BUNDLE_SIZE_BYTES} bytes`);
 
-  if (typeof filename !== "string" || filename.trim().length === 0) {
-    throw new HttpError(400, "BAD_REQUEST", "filename is required");
+  let declaredHash: string | undefined;
+  if (typeof declaredHashRaw === "string" && declaredHashRaw.length > 0) {
+    if (!isValidSha256Hash(declaredHashRaw)) throw new Error("declaredHash must be 64-char lowercase hex sha256");
+    declaredHash = declaredHashRaw;
   }
 
-  if (typeof size !== "number" || !Number.isFinite(size) || size <= 0) {
-    throw new HttpError(400, "BAD_REQUEST", "size must be a positive number");
-  }
-  if (size > MAX_BUNDLE_SIZE_BYTES) {
-    throw new HttpError(
-      400,
-      "BAD_REQUEST",
-      `size exceeds maximum of ${MAX_BUNDLE_SIZE_BYTES} bytes`
-    );
-  }
+  if (!file || typeof (file as any).stream !== "function") throw new Error("file is required and must be a File");
 
-  let contentTypeEff =
-    typeof contentType === "string" && contentType.trim().length > 0
-      ? contentType
-      : DEFAULT_CONTENT_TYPE;
+  const basePrefix = normalizeBasePrefix(BASE_PREFIX);
+  const id = (globalThis as any).crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const key = `${basePrefix}_staging/${id}/bundle.tar.zst`;
 
-  if (typeof cacheControl !== "undefined" && typeof cacheControl !== "string") {
-    throw new HttpError(400, "BAD_REQUEST", "cacheControl must be a string");
-  }
+  const contentType: string = (file as any).type || "application/octet-stream";
 
-  let hash: string | undefined;
-  if (typeof declaredHash !== "undefined") {
-    if (typeof declaredHash !== "string" || !isValidSha256Hash(declaredHash)) {
-      throw new HttpError(
-        400,
-        "BAD_REQUEST",
-        "declaredHash must be 64-char lowercase hex sha256"
-      );
-    }
-    hash = declaredHash;
-  }
-
-  // Choose object key
-  const basePrefix = normalizeBasePrefix(BASE_PREFIX); // ensures "sha256/"
-  let key: string;
-  let strategy: "canonical" | "staging";
-
-  if (hash) {
-    key = objectKeyFor({ algorithm: "sha256", hash }, "bundle.tar.zst", { basePrefix });
-    strategy = "canonical";
-  } else {
-    const id =
-      globalThis.crypto?.randomUUID?.() ??
-      Math.random().toString(36).slice(2) + Date.now().toString(36);
-    key = `${basePrefix}_staging/${id}/bundle.tar.zst`;
-    strategy = "staging";
-  }
-
-  // Presign PUT
   const store = createS3BundleStore();
-  const url = await store.getPresignedPutUrl(key, {
-    contentType: contentTypeEff,
-    cacheControl: cacheControl as string | undefined,
-    ifNoneMatch: "*",
-    expiresSeconds: EXPIRES_SECONDS,
-  });
-
-  const requiredHeaders: Record<string, string> = {
-    "content-type": contentTypeEff,
-    "if-none-match": "*",
-  };
-  if (typeof cacheControl === "string" && cacheControl.length > 0) {
-    requiredHeaders["cache-control"] = cacheControl;
+  const started = Date.now();
+  try {
+    const webStream = (file as any).stream() as unknown as ReadableStream;
+    const nodeStream = Readable.fromWeb(webStream as any);
+    await store.putObject(key, nodeStream as unknown as NodeJS.ReadableStream, { contentType, ifNoneMatch: "*", contentLength: size });
+  } catch (e: any) {
+    try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status: e?.httpStatusCode ?? e?.statusCode })); } catch {}
+    throw new Error("Failed to store upload");
   }
 
-  return {
-    filename,
-    size,
-    ...(hash ? { declaredHash: hash } : {}),
-    upload: {
-      key,
-      url,
-      method: "PUT",
-      expiresSeconds: EXPIRES_SECONDS,
-      requiredHeaders,
-      strategy,
-    },
-  };
+  try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.success", key, filename, size, durationMs: Date.now() - started })); } catch {}
+
+  return { upload: { key, strategy: "staging" }, filename, size, ...(declaredHash ? { declaredHash } : {}) };
 }
 
 export type FinalizeParams = {
@@ -169,11 +117,13 @@ export type FinalizeParams = {
 export type FinalizeResult = {
   extension: { id: string; name: string; publisher?: string };
   version: { id: string; version: string };
-  contentHash: string;
+  contentHash: computedHashstring;
   canonicalKey: string;
 };
 
 export async function extFinalizeUpload(params: FinalizeParams): Promise<FinalizeResult> {
+  // Ensure Registry v2 repository is wired before any DB writes
+  await ensureRegistryV2KnexRepo(getAdminKnex);
   const { key, size, declaredHash, manifestJson, signature } = params ?? ({} as any);
 
   // Validate key
@@ -340,12 +290,13 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   } catch (e: any) {
     const status = e?.httpStatusCode ?? e?.statusCode;
     if (status === 412 || status === 409) {
-      throw new HttpError(409, "OBJECT_EXISTS", "Canonical manifest already exists", {
-        key: manifestKey,
-        status,
-      });
+      try {
+        // eslint-disable-next-line no-console
+        console.info("ext.finalize.debug.manifest_exists", { key: manifestKey, status });
+      } catch {}
+    } else {
+      throw new HttpError(500, "MANIFEST_STORE_FAILED", "Failed to store manifest duplicate");
     }
-    throw new HttpError(500, "MANIFEST_STORE_FAILED", "Failed to store manifest duplicate");
   }
 
   // Signature policy
@@ -377,7 +328,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
 
   const upsertResult = await upsertVersionFromManifest({
     manifest,
-    contentHash: `sha256:${computedHash}`,
+    contentHash: computedHash,
     parsed: {
       uiEntry: parsedUiEntry,
       endpoints: parsedEndpoints,

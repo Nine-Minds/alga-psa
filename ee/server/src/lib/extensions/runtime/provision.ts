@@ -12,7 +12,9 @@ export function computeDomain(tenantId: string, extensionId: string, root?: stri
   if (!rootDomain) throw new Error('EXT_DOMAIN_ROOT not configured');
   const t = slugifyLocal(tenantId);
   const e = slugifyLocal(extensionId);
-  return `${t}--${e}.${rootDomain}`;
+  const norm = (s: string) => (/^[0-9a-f]{8}-/.test(s) ? s.replace(/-/g, '').slice(0, 8) : s.replace(/-/g, '').slice(0, 12));
+  const label = `${norm(t)}-${norm(e)}`;
+  return `${label}.${rootDomain}`;
 }
 
 export async function enqueueProvisioningWorkflow(params: { tenantId: string; extensionId: string; installId?: string }) {

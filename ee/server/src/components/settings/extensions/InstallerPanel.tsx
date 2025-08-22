@@ -11,20 +11,14 @@ import { TextArea } from '@/components/ui/TextArea';
 import Link from 'next/link';
 
 // EE server actions
-import { extInitiateUpload, extFinalizeUpload, extAbortUpload } from '../../../lib/actions/extBundleActions';
+import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
+import { installExtensionForCurrentTenantV2 } from '../../../lib/actions/extRegistryV2Actions';
 
-type InitiateResponse = {
+type UploadProxyResponse = {
   filename: string;
   size: number;
   declaredHash?: string;
-  upload: {
-    key: string;
-    url: string;
-    method: 'PUT';
-    expiresSeconds: number;
-    requiredHeaders: Record<string, string>;
-    strategy: 'canonical' | 'staging';
-  };
+  upload: { key: string; strategy: 'staging' };
 };
 
 type FinalizeSuccess = {
@@ -48,7 +42,7 @@ export default function InstallerPanel() {
   const [installing, setInstalling] = useState(false);
 
   // Background flow state
-  const initiateInfoRef = useRef<InitiateResponse | null>(null);
+  const uploadKeyRef = useRef<string | null>(null);
 
   // Outcomes
   const [error, setError] = useState<ApiError | null>(null);
@@ -60,14 +54,14 @@ export default function InstallerPanel() {
 
   const reset = useCallback(async () => {
     try {
-      const info = initiateInfoRef.current;
-      if (info) {
-        void extAbortUpload({ key: info.upload.key, reason: 'user_reset' });
+      const key = uploadKeyRef.current;
+      if (key) {
+        void extAbortUpload({ key, reason: 'user_reset' });
       }
     } catch {
       // ignore abort errors
     }
-    initiateInfoRef.current = null;
+    uploadKeyRef.current = null;
     setFile(null);
     setInstalling(false);
     setError(null);
@@ -90,7 +84,7 @@ export default function InstallerPanel() {
     }
   }, []);
 
-  // Primary "one-click" install: initiate -> PUT -> finalize
+  // Primary "one-click" install: proxy upload (server action) -> finalize
   const handleInstall = useCallback(async () => {
     if (!file) return;
 
@@ -100,41 +94,28 @@ export default function InstallerPanel() {
     setNeedsManifest(false);
 
     try {
-      // 1) Initiate
-      const initiateBody = {
-        filename: file.name,
-        size: file.size,
-        contentType: DEFAULT_CONTENT_TYPE,
-      };
-      const initiate = (await extInitiateUpload(initiateBody)) as InitiateResponse;
-      initiateInfoRef.current = initiate;
-
-      // 2) Upload to S3 (PUT)
-      const res = await fetch(initiate.upload.url, {
-        method: 'PUT',
-        headers: initiate.upload.requiredHeaders,
-        body: file,
-      });
-      if (!res.ok) {
-        let details: string | undefined;
-        try {
-          const t = await res.text();
-          details = t || undefined;
-        } catch {
-          // ignore
-        }
-        setError({ error: `Upload failed with status ${res.status}`, details });
+      // 1) Upload via server action proxy (FormData)
+      const fd = new FormData();
+      fd.set('file', file);
+      fd.set('filename', file.name);
+      fd.set('size', String(file.size));
+      const payload = (await extUploadProxy(fd)) as UploadProxyResponse;
+      const key = payload?.upload?.key;
+      if (!key || typeof key !== 'string') {
+        setError({ error: 'Upload succeeded but no key was returned' });
         setInstalling(false);
         return;
       }
+      uploadKeyRef.current = key;
 
-      // 3) Finalize (no manifest or signature by default)
+      // 2) Finalize (no manifest or signature by default)
       try {
         const finalizeBody = {
-          key: initiate.upload.key,
+          key,
           size: file.size,
         };
         const fin = (await extFinalizeUpload(finalizeBody)) as FinalizeSuccess;
+        try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
         setSuccess(fin);
         setInstalling(false);
       } catch (finErr: any) {
@@ -161,8 +142,8 @@ export default function InstallerPanel() {
 
   // Secondary finalize step if manifest is required
   const handleFinalizeWithManifest = useCallback(async () => {
-    const info = initiateInfoRef.current;
-    if (!info) return;
+    const key = uploadKeyRef.current;
+    if (!key) return;
     if (!manifestJson.trim()) {
       setError({ error: 'Please paste the manifest JSON before finalizing.' });
       return;
@@ -176,10 +157,11 @@ export default function InstallerPanel() {
       JSON.parse(manifestJson);
 
       const fin = (await extFinalizeUpload({
-        key: info.upload.key,
+        key,
         size: file?.size,
         manifestJson: manifestJson.trim(),
       })) as FinalizeSuccess;
+      try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
 
       setSuccess(fin);
       setNeedsManifest(false);
@@ -237,7 +219,7 @@ export default function InstallerPanel() {
                     placeholder='Paste the manifest.json content here'
                     rows={10}
                     value={manifestJson}
-                    onChange={(e) => setManifestJson(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setManifestJson(e.target.value)}
                     disabled={installing}
                   />
                 </div>
