@@ -79,11 +79,15 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
     await co.getNamespacedCustomObject(group, version, namespace, plural, name);
     exists = true;
   } catch (e: any) {
-    const status = e?.response?.status;
-    if (status === 404) {
+    const res = e?.response;
+    const body = res?.body;
+    const status = res?.status ?? body?.code;
+    const reason = body?.reason;
+    const message = typeof body === 'string' ? body : (body?.message ?? '');
+    const isNotFound = status === 404 || reason === 'NotFound' || /not\s*found/i.test(message);
+    if (isNotFound) {
       exists = false;
     } else {
-      const body = e?.response?.body;
       const msg = typeof body === 'string' ? body : JSON.stringify(body);
       throw new Error(`domainmapping.get failed: status=${status} body=${msg}`);
     }
