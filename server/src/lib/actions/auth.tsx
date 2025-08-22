@@ -12,6 +12,7 @@ import { AnalyticsEvents } from '../analytics/events';
 
 
 export async function authenticateUser( email: string, password: string, userType?: string): Promise<IUser | null> {
+    logger.warn('authenticate user!');
     if (!email || !password) {
         logger.warn("Missing credentials");
         return null;

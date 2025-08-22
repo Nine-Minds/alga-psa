@@ -125,6 +125,8 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                     }
 
                     console.log('Attempting to authenticate user:', credentials.email);
+                    console.log('user type', credentials.userType);
+                    console.log('next auth secret', process.env.NEXTAUTH_SECRET);
                     const user = await authenticateUser(credentials.email, credentials.password, credentials.userType);
                     if (!user) {
                         console.log('Authentication failed: No user returned');
