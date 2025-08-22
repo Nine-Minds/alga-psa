@@ -90,7 +90,8 @@ pub async fn run() -> anyhow::Result<()> {
             HeaderValue::from_static("public, max-age=31536000, immutable"),
         ));
 
-    let addr: SocketAddr = ([0, 0, 0, 0], 8080).into();
+    let port: u16 = std::env::var("PORT").ok().and_then(|s| s.parse().ok()).unwrap_or(8080);
+    let addr: SocketAddr = ([0, 0, 0, 0], port).into();
     tracing::info!("listening on {}", addr);
     axum::serve(tokio::net::TcpListener::bind(addr).await?, app).await?;
     Ok(())
