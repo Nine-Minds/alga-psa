@@ -91,7 +91,7 @@ export async function ensureDomainMapping(input: EnsureDomainMappingInput): Prom
 
   // Patch spec if exists to ensure correct ref
   const body = { spec: desired.spec };
-  const options = { headers: { 'Content-Type': PatchUtils.PATCH_FORMAT_MERGE_PATCH } } as const;
+  const options = { headers: { 'Content-Type': PatchUtils.PATCH_FORMAT_JSON_MERGE_PATCH } } as const;
   await co.patchNamespacedCustomObject(group, version, namespace, plural, name, body, undefined, undefined, undefined, options);
   return { applied: true, ref: { namespace, name, kind: 'DomainMapping', group, version } };
 }
