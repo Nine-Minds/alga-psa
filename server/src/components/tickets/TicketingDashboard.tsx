@@ -27,6 +27,8 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
 import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
+import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
@@ -106,6 +108,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
+  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+    ticket_number: true,
+    title: true,
+    status: true,
+    priority: true,
+    board: true,
+    category: true,
+    client: true,
+    created: true,
+    created_by: true,
+    tags: true,
+    actions: true,
+  });
+  const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
   
   // Quick View state
   const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
@@ -130,6 +147,21 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
+
+  // Load ticket display settings (date/time format)
+  useEffect(() => {
+    const loadDisplay = async () => {
+      try {
+        const s = await getTicketingDisplaySettings();
+        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
+        if (s?.list?.columnVisibility) setColumnVisibility(s.list.columnVisibility as Record<string, boolean>);
+        if (typeof s?.list?.tagsInlineUnderTitle === 'boolean') setTagsInlineUnderTitle(s.list.tagsInlineUnderTitle);
+      } catch (e) {
+        console.error('Failed to load ticketing display settings', e);
+      }
+    };
+    loadDisplay();
+  }, []);
 
   // Fetch ticket-specific tags when initial tickets change
   useEffect(() => {
@@ -261,143 +293,194 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-  const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
-    {
-      title: 'Ticket Number',
-      dataIndex: 'ticket_number',
-      width: '9%',
-      render: (value: string, record: ITicketListItem) => (
-        <Link
-          href={`/msp/tickets/${record.ticket_id}`}
-          className="text-blue-500 hover:underline"
-        >
-          {value}
-        </Link>
-      ),
-    },
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      width: '20%',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status_name',
-      width: '9%',
-    },
-    {
-      title: 'Priority',
-      dataIndex: 'priority_name',
-      width: '9%',
-      render: (value: string, record: ITicketListItem) => (
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full border border-gray-300" 
-            style={{ backgroundColor: record.priority_color || '#6B7280' }}
-          />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      title: 'Board',
-      dataIndex: 'channel_name',
-      width: '9%',
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category_id',
-      width: '10%',
-      render: (value: string, record: ITicketListItem) => {
-        if (!value && !record.subcategory_id) return 'No Category';
+  const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => {
+    const cols: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
 
-        // If there's a subcategory, use that for display
-        if (record.subcategory_id) {
-          const subcategory = categories.find(c => c.category_id === record.subcategory_id);
-          if (!subcategory) return 'Unknown Category';
+    cols.push({
+      key: 'ticket_number',
+      col: {
+        title: 'Ticket Number',
+        dataIndex: 'ticket_number',
+        width: '9%',
+        render: (value: string, record: ITicketListItem) => (
+          <Link href={`/msp/tickets/${record.ticket_id}`} className="text-blue-500 hover:underline">{value}</Link>
+        ),
+      }
+    });
 
-          const parent = categories.find(c => c.category_id === subcategory.parent_category);
-          return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
-        }
-
-        // Otherwise use the main category
-        const category = categories.find(c => c.category_id === value);
-        if (!category) return 'Unknown Category';
-        return category.category_name;
-      },
-    },
-    {
-      title: 'Client',
-      dataIndex: 'company_name',
-      width: '9%',
-      render: (value: string, record: ITicketListItem) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            if (record.company_id) {
-              onQuickViewCompany(record.company_id);
-            }
-          }}
-          className="text-blue-500 hover:underline text-left whitespace-normal break-words"
-        >
-          {value || 'No Client'}
-        </button>
-      ),
-    },
-    {
-      title: 'Created By',
-      dataIndex: 'entered_by_name',
-      width: '9%',
-    },
-    {
-      title: 'Tags',
-      dataIndex: 'tags',
-      width: '13%',
-      render: (value: string, record: ITicketListItem) => {
-        if (!record.ticket_id) return null;
-        
-        return (
-          <div onClick={(e) => e.stopPropagation()}>
-            <TagManager
-              entityId={record.ticket_id}
-              entityType="ticket"
-              initialTags={ticketTagsRef.current[record.ticket_id] || []}
-              onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
-            />
+    cols.push({
+      key: 'title',
+      col: {
+        title: 'Title',
+        dataIndex: 'title',
+        width: tagsInlineUnderTitle ? '26%' : '20%',
+        render: (value: string, record: ITicketListItem) => (
+          <div className="flex flex-col gap-1">
+            <span>{value}</span>
+            {tagsInlineUnderTitle && columnVisibility['tags'] && record.ticket_id && (
+              <div onClick={(e) => e.stopPropagation()}>
+                <TagManager
+                  entityId={record.ticket_id}
+                  entityType="ticket"
+                  initialTags={ticketTagsRef.current[record.ticket_id] || []}
+                  onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
+                />
+              </div>
+            )}
           </div>
-        );
-      },
-    },
-    {
-      title: 'Actions',
-      dataIndex: 'actions',
-      width: '3%',
-      render: (value: string, record: ITicketListItem) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id={`ticket-actions-${record.ticket_id}`}
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0"
-            >
-              <span className="sr-only">Open menu</span>
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white z-50">
-            <DropdownMenuItem
-              className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-              onSelect={() => handleDeleteTicket(record.ticket_id as string, record.title || record.ticket_number)}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> 
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    }
-  ], [ticketTagsRef, allUniqueTags]);
+        )
+      }
+    });
+
+    cols.push({ key: 'status', col: { title: 'Status', dataIndex: 'status_name', width: '9%' } });
+
+    cols.push({
+      key: 'priority',
+      col: {
+        title: 'Priority',
+        dataIndex: 'priority_name',
+        width: '9%',
+        render: (value: string, record: ITicketListItem) => (
+          <div className="flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: record.priority_color || '#6B7280' }} />
+            <span>{value}</span>
+          </div>
+        ),
+      }
+    });
+
+    cols.push({ key: 'board', col: { title: 'Board', dataIndex: 'channel_name', width: '9%' } });
+
+    cols.push({
+      key: 'category',
+      col: {
+        title: 'Category',
+        dataIndex: 'category_id',
+        width: '10%',
+        render: (value: string, record: ITicketListItem) => {
+          if (!value && !record.subcategory_id) return 'No Category';
+          if (record.subcategory_id) {
+            const subcategory = categories.find(c => c.category_id === record.subcategory_id);
+            if (!subcategory) return 'Unknown Category';
+            const parent = categories.find(c => c.category_id === subcategory.parent_category);
+            return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
+          }
+          const category = categories.find(c => c.category_id === value);
+          if (!category) return 'Unknown Category';
+          return category.category_name;
+        },
+      }
+    });
+
+    cols.push({
+      key: 'client',
+      col: {
+        title: 'Client',
+        dataIndex: 'company_name',
+        width: '9%',
+        render: (value: string, record: ITicketListItem) => (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (record.company_id) onQuickViewCompany(record.company_id);
+            }}
+            className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+          >
+            {value || 'No Client'}
+          </button>
+        ),
+      }
+    });
+
+    cols.push({
+      key: 'created',
+      col: {
+        title: 'Created',
+        dataIndex: 'entered_at',
+        width: '12%',
+        render: (value: string | null) => {
+          if (!value) return '—';
+          try {
+            const tz = getUserTimeZone();
+            const local = utcToLocal(value, tz);
+            return formatDateTime(local, tz, dateTimeFormat);
+          } catch (e) {
+            return value;
+          }
+        },
+      }
+    });
+
+    cols.push({ key: 'created_by', col: { title: 'Created By', dataIndex: 'entered_by_name', width: '9%' } });
+
+    cols.push({
+      key: 'tags',
+      col: {
+        title: 'Tags',
+        dataIndex: 'tags',
+        width: '13%',
+        render: (value: string, record: ITicketListItem) => {
+          if (!record.ticket_id) return null;
+          return (
+            <div onClick={(e) => e.stopPropagation()}>
+              <TagManager
+                entityId={record.ticket_id}
+                entityType="ticket"
+                initialTags={ticketTagsRef.current[record.ticket_id] || []}
+                onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
+              />
+            </div>
+          );
+        },
+      }
+    });
+
+    cols.push({
+      key: 'actions',
+      col: {
+        title: 'Actions',
+        dataIndex: 'actions',
+        width: '3%',
+        render: (value: string, record: ITicketListItem) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white z-50">
+              <DropdownMenuItem
+                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
+                onSelect={() => handleDeleteTicket(record.ticket_id as string, record.title || record.ticket_number)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      }
+    });
+
+    // Apply visibility and tagsInline flag
+    const visibleCols = cols.filter(({ key }) => {
+      // Hide separate tags column when tags are inline under title or when tags are disabled
+      if (key === 'tags') {
+        // If tags are disabled, don't show the column
+        if (!columnVisibility['tags']) return false;
+        // If tags are inline under title, don't show separate column
+        if (tagsInlineUnderTitle) return false;
+        // Otherwise show the separate tags column
+        return true;
+      }
+      // Title should always be visible to avoid an empty table
+      if (key === 'title') return true;
+      return columnVisibility[key] !== false;
+    }).map(x => x.col);
+
+    return visibleCols;
+  }, [ticketTagsRef, allUniqueTags, columnVisibility, tagsInlineUnderTitle, dateTimeFormat]);
 
   // Create columns with categories data
   const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
