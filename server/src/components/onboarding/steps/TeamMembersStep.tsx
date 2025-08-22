@@ -86,7 +86,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
           const canAddMore = used < limit;
           const wouldExceed = totalAfterInvites > limit;
           
-          let message = undefined;
+          let message: string | undefined = undefined;
           if (!canAddMore) {
             message = `License limit reached (${used}/${limit}). Contact support to increase your license limit.`;
           } else if (wouldExceed && pendingTeamMembers > 0) {

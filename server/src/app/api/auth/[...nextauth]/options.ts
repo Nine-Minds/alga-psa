@@ -143,7 +143,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                     });
 
                     // If it's a client user, get the contact and company information
-                    let companyId = null;
+                    let companyId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -162,7 +162,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id;
+                            companyId = contact.company_id || undefined;
                             console.log('Company information found:', { companyId });
                             logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
                         } else {
@@ -205,7 +205,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                         proToken: '',
                         tenant: user.tenant,
                         user_type: user.user_type,
-                        companyId: companyId,
+                        companyId: companyId ?? undefined,
                         contactId: user.contact_id
                     };
                     console.log('Authorization successful. Returning user data:', {
@@ -488,7 +488,7 @@ export const options: NextAuthOptions = {
                     });
 
                     // If it's a client user, get the contact and company information
-                    let companyId = null;
+                    let companyId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -507,7 +507,7 @@ export const options: NextAuthOptions = {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id;
+                            companyId = contact.company_id || undefined;
                             console.log('Company information found:', { companyId });
                             logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
                         } else {

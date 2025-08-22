@@ -793,7 +793,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const results = [];
+      const results: { success: boolean; service_id: string; config?: any; error?: string }[] = [];
       for (const serviceData of validation.data.services) {
         try {
           const serviceConfig = await this.billingPlanService.addServiceToPlan(validation.data.plan_id, serviceData, context);
@@ -822,7 +822,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const results = [];
+      const results: { success: boolean; service_id: string; error?: string }[] = [];
       for (const serviceId of validation.data.service_ids) {
         try {
           await this.billingPlanService.removeServiceFromPlan(validation.data.plan_id, serviceId, context);

@@ -765,7 +765,7 @@ export class CategoryService extends BaseService {
     categories: any[],
     trx: Knex.Transaction
   ): Promise<any[]> {
-    const enriched = [];
+    const enriched: any[] = [];
 
     for (const category of categories) {
       const enrichedCategory = { ...category };

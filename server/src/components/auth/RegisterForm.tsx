@@ -102,7 +102,7 @@ export default function RegisterForm() {
   }, [email, posthog]);
 
   const validateForm = () => {
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!email.trim()) validationErrors.push('Email');
     if (!email.includes('@')) validationErrors.push('Valid email address');
     if (emailStatus !== 'valid') validationErrors.push('Verified contact email');

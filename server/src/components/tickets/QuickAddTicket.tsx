@@ -29,7 +29,7 @@ import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegist
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
-  const parts = [];
+  const parts: string[] = [];
   
   if (location.location_name) {
     parts.push(location.location_name);
@@ -286,7 +286,7 @@ export function QuickAddTicket({
 
 
   const validateForm = () => {
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push('Title');
     if (!description.trim()) validationErrors.push('Description');
     if (!assignedTo) validationErrors.push('Assigned To');
@@ -301,7 +301,7 @@ export function QuickAddTicket({
     e.preventDefault();
     setHasAttemptedSubmit(true);
 
-    const validationErrors = validateForm();
+      const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setError(validationErrors.join('\n'));
       return;

@@ -118,7 +118,7 @@ export class PDFGenerationService {
   }
 
   private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
-    let tenantCompanyInfo = null;
+    let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
     const { knex } = await createTenantKnex();
     const tenantCompanyLink = await knex('tenant_companies')
       .where({ tenant: this.tenant, is_default: true })

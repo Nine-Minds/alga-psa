@@ -947,7 +947,8 @@ export class TicketModel {
       .select('*');
       
     // Step 3: Store resources for recreation, excluding those that would violate constraints
-    const resourcesToRecreate = [];
+    // Explicitly type to avoid never[] inference
+    const resourcesToRecreate: any[] = [];
     for (const resource of existingResources) {
       // Skip resources where additional_user_id would equal the new assigned_to
       if (resource.additional_user_id !== updateData.assigned_to) {

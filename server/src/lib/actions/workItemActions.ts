@@ -607,7 +607,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
       }
     }
 
-    let queriesToUnion = [];
+    let queriesToUnion: any[] = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
         queriesToUnion.push(ticketsQuery);
     }
@@ -623,7 +623,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
 
     let query = db.union(queriesToUnion, true);
 
-    const countPromises = [];
+    const countPromises: Array<Promise<any>> = [];
     if (!options.type || options.type === 'all' || options.type === 'ticket') {
         countPromises.push(ticketsQuery.clone().clearSelect().clearOrder().count('* as count').first());
     }
@@ -638,7 +638,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     }
 
     const countResults = await Promise.all(countPromises);
-    let total = countResults.reduce((sum, result) => sum + parseInt(result?.count as string || '0'), 0);
+    let total = countResults.reduce((sum: number, result: any) => sum + parseInt(result?.count as string || '0'), 0);
 
 
     // Apply sorting to the main query

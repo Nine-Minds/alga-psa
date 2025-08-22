@@ -254,7 +254,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         const categories = await getAvailableReferenceData('categories', { channel_id: channelId });
         
         // Sort categories to ensure parents come before children
-        const sortedCategories = categories.sort((a, b) => {
+        const sortedCategories = (categories as any[]).sort((a: any, b: any) => {
           // Parent categories first
           if (!a.parent_category_uuid && b.parent_category_uuid) return -1;
           if (a.parent_category_uuid && !b.parent_category_uuid) return 1;
@@ -309,7 +309,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         
         // If no default channel exists, mark the first one as default
         if (!hasDefaultChannel && !existingHasDefault) {
-          const firstChannel = result.imported[0];
+          const firstChannel: any = (result.imported as any[])[0];
           // Update the channel to be default
           await updateChannel(firstChannel.channel_id, { is_default: true });
           firstChannel.is_default = true;
@@ -318,13 +318,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           });
         }
         
-        setImportedChannels(prev => [...prev, ...result.imported]);
+        setImportedChannels(prev => [...prev, ...(result.imported as any[])]);
         
         // If we don't have a channel set yet, use the first imported
         if (!data.channelId) {
           updateData({ 
-            channelId: result.imported[0].channel_id,
-            channelName: result.imported[0].channel_name
+            channelId: (result.imported as any[])[0].channel_id,
+            channelName: (result.imported as any[])[0].channel_name
           });
         }
       }
@@ -353,12 +353,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       // Track imported categories
       if (result.imported?.length > 0) {
         // Store full category objects to preserve parent-child relationships
-        const importedCategoryObjects = result.imported;
+        const importedCategoryObjects: any[] = result.imported as any[];
         setImportedCategories(prev => [...new Set([...prev, ...importedCategoryObjects.map(cat => cat.category_name)])]);
         
         // Update data with full category objects, not just names
-        const existingCategoryIds = data.categories.map(cat => cat.category_id);
-        const newCategories = importedCategoryObjects.filter(cat => !existingCategoryIds.includes(cat.category_id));
+        const existingCategoryIds = (data.categories as any[]).map((cat: any) => cat.category_id);
+        const newCategories = importedCategoryObjects.filter((cat: any) => !existingCategoryIds.includes(cat.category_id));
         updateData({ 
           categories: [...data.categories, ...newCategories]
         });

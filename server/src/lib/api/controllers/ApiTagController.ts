@@ -592,7 +592,7 @@ export class ApiTagController extends ApiBaseController {
             throw error;
           }
 
-          const results = [];
+          const results: { entity_id: string; entity_type: string; tags_created: number }[] = [];
           
           for (const entity of validatedData.entities) {
             const tags = await this.tagService.tagEntity(

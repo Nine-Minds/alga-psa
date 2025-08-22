@@ -245,9 +245,9 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
 
 
     // Fetch specific company and contact data if available
-    let company = null;
+    let company: any = null;
     let contacts: IContact[] = [];
-    let contactInfo = null;
+    let contactInfo: any = null;
     let locations: any[] = [];
     
     if (ticket.company_id) {
@@ -688,7 +688,7 @@ export async function getTicketsForListWithCursor(
     const results = hasNextPage ? tickets.slice(0, limit) : tickets;
     
     // Create the next cursor if we have more results
-    let nextCursor = null;
+    let nextCursor: string | null = null;
     if (hasNextPage && results.length > 0) {
       const lastTicket = results[results.length - 1];
       
@@ -969,7 +969,7 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
           .select('*');
           
         // Step 3: Store resources for recreation, excluding those that would violate constraints
-        const resourcesToRecreate = [];
+        const resourcesToRecreate: any[] = [];
         for (const resource of existingResources) {
           // Skip resources where additional_user_id would equal the new assigned_to
           if (resource.additional_user_id !== updateData.assigned_to) {

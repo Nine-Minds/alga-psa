@@ -411,7 +411,7 @@ function extractStyledTextToHTML(content: any[]): string {
         if (item.styles.italic) result = `<em>${result}</em>`;
         if (item.styles.bold) result = `<strong>${result}</strong>`;
 
-        let stylesArray = [];
+        let stylesArray: string[] = [];
         if (item.styles.textColor && item.styles.textColor !== 'default') {
           stylesArray.push(`color:${item.styles.textColor}`);
         }

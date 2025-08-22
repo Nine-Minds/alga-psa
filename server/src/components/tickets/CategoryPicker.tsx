@@ -168,7 +168,7 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   // Update display label to show both selected and excluded categories
   const currentValue = selectedCategories[0] || '';
   const displayLabel = useMemo(() => {
-    const parts = [];
+    const parts: string[] = [];
     
     if (selectedCategories.length > 0) {
       if (selectedCategories.length === 1) {

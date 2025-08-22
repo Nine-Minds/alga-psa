@@ -72,7 +72,7 @@ const BundleUsageReport: React.FC = () => {
     
     try {
       // Get all companies that have this bundle assigned
-      const companyBundles = [];
+      const companyBundles: Array<{ company_id: string; company_name: string; bundle_id: string; bundle_name: string; start_date: string; end_date: string | null; plan_count: number; total_billed: number; is_active: boolean }> = [];
       
       for (const company of companies) {
         const companyBundleAssignments = await getCompanyBundles(company.company_id);

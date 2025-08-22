@@ -90,7 +90,7 @@ export class EmailService {
     const password = await getSecret('email_password', 'EMAIL_PASSWORD') || process.env.SMTP_PASS;
     const from = process.env.EMAIL_FROM || process.env.SMTP_FROM || username;
 
-    const missingConfigs = [];
+    const missingConfigs: string[] = [];
     if (!host) missingConfigs.push('EMAIL_HOST/SMTP_HOST');
     if (!username) missingConfigs.push('EMAIL_USERNAME/SMTP_USER');
     if (!password) missingConfigs.push('EMAIL_PASSWORD/SMTP_PASS');

@@ -275,7 +275,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
 
   // Get service details including service type name for each configuration
-  const result = [];
+  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IPlanServiceConfiguration; typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
   for (const config of configurations) {
     // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')

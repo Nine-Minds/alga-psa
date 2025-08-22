@@ -596,7 +596,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
   };
 
   const formatAddress = (location: ICompanyLocation) => {
-    const addressParts = [];
+    const addressParts: string[] = [];
     
     // Combine address lines (address_line1, address_line2, address_line3)
     const addressLines = [
@@ -615,7 +615,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     }
     
     // Add state/province and postal code together (space-separated, not comma-separated)
-    const statePostalParts = [];
+    const statePostalParts: string[] = [];
     if (location.state_province) {
       statePostalParts.push(location.state_province);
     }

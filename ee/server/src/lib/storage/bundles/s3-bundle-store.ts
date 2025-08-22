@@ -120,7 +120,6 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
       const effective: PutObjectOptions = {
         contentType: opts?.contentType,
         cacheControl: opts?.cacheControl,
-        contentLength: opts?.contentLength,
         ifNoneMatch: opts?.ifNoneMatch ?? "*",
       };
       try {
