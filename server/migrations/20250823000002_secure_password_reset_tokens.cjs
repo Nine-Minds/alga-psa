@@ -3,18 +3,23 @@
  */
 
 exports.up = async function(knex) {
-  // 1. Rename the existing token column to token_hash
+  // 1. Drop the old index on (tenant, token) since we're renaming the column
+  await knex.schema.alterTable('password_reset_tokens', (table) => {
+    table.dropIndex(['tenant', 'token'], 'idx_password_reset_tokens_token');
+  });
+
+  // 2. Rename the existing token column to token_hash
   // Since we're hashing tokens, we need to store the hash instead
   await knex.schema.alterTable('password_reset_tokens', (table) => {
     table.renameColumn('token', 'token_hash');
   });
 
-  // 2. Add index on token_hash WITH tenant for faster lookups (Citus requirement)
+  // 3. Add index on token_hash WITH tenant for faster lookups (Citus requirement)
   await knex.schema.alterTable('password_reset_tokens', (table) => {
     table.index(['tenant', 'token_hash'], 'idx_password_reset_tenant_token_hash');
   });
 
-  // 3. Create a function for batch deletion of expired tokens
+  // 4. Create a function for batch deletion of expired tokens
   // This will be called by pg-boss scheduled job
   await knex.raw(`
     CREATE OR REPLACE FUNCTION cleanup_expired_password_reset_tokens()
@@ -44,18 +49,18 @@ exports.up = async function(knex) {
     $$ LANGUAGE plpgsql;
   `);
 
-  // 4. Add index on tenant and expires_at for efficient cleanup queries
+  // 5. Add index on tenant and expires_at for efficient cleanup queries
   await knex.schema.alterTable('password_reset_tokens', (table) => {
     table.index(['tenant', 'expires_at'], 'idx_password_reset_tenant_expires_at');
   });
 
-  // 5. Add a comment to document the security changes
+  // 6. Add a comment to document the security changes
   await knex.raw(`
     COMMENT ON COLUMN password_reset_tokens.token_hash IS 
     'SHA256 hash of the actual reset token. The plaintext token is never stored for security.';
   `);
 
-  // 6. Note about cleanup strategy
+  // 7. Note about cleanup strategy
   // Instead of relying on pg-boss (which has issues), we implement automatic cleanup:
   // - Expired tokens are cleaned up automatically when new tokens are created
   // - The cleanup_expired_password_reset_tokens() function can be called manually or via external scheduler
@@ -83,5 +88,10 @@ exports.down = async function(knex) {
   // Rename column back to original
   await knex.schema.alterTable('password_reset_tokens', (table) => {
     table.renameColumn('token_hash', 'token');
+  });
+
+  // Recreate the original index on (tenant, token)
+  await knex.schema.alterTable('password_reset_tokens', (table) => {
+    table.index(['tenant', 'token'], 'idx_password_reset_tokens_token');
   });
 };
