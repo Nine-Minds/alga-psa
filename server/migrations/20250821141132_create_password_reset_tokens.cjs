@@ -6,7 +6,7 @@ exports.up = async function(knex) {
     table.uuid('user_id').notNullable();
     table.text('token').notNullable();
     table.text('email').notNullable();
-    table.enu('user_type', ['msp', 'client']).notNullable().defaultTo('msp');
+    table.enu('user_type', ['internal', 'client']).notNullable().defaultTo('internal');
     table.timestamp('expires_at', { useTz: true }).notNullable();
     table.timestamp('created_at', { useTz: true }).defaultTo(knex.fn.now());
     table.timestamp('used_at', { useTz: true });

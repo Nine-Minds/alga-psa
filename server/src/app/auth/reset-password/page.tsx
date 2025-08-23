@@ -20,7 +20,7 @@ interface UserInfo {
   email: string;
   first_name: string;
   last_name?: string;
-  user_type: 'msp' | 'client';
+  user_type: 'internal' | 'client';
 }
 
 export default function ResetPasswordPage() {
@@ -174,12 +174,14 @@ export default function ResetPasswordPage() {
               </AlertDescription>
             </Alert>
             <Button 
+              id="request-new-link-button"
               onClick={() => router.push('/auth/forgot-password')}
               className="w-full"
             >
               Request New Reset Link
             </Button>
-            <Button 
+            <Button
+              id="back-to-sign-in-button"
               onClick={handleBackToLogin}
               variant="outline"
               className="w-full"
@@ -194,10 +196,10 @@ export default function ResetPasswordPage() {
 
   if (resetComplete) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-green-600">
+            <CardTitle className="flex items-center gap-2 text-gray-900 font-bold">
               <CheckCircle className="h-5 w-5" />
               Password Reset Complete
             </CardTitle>
@@ -205,13 +207,30 @@ export default function ResetPasswordPage() {
               Your password has been successfully reset
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <AlertDescription>
-                You can now sign in with your new password.
-              </AlertDescription>
-            </Alert>
+          <CardContent className="space-y-6">
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="flex items-start gap-3">
+                <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="font-medium text-sm text-green-900">Success!</h4>
+                  <p className="text-sm text-green-700">
+                    Your password has been successfully updated. You can now sign in with your new password.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <h4 className="font-medium text-sm mb-2 text-purple-900">What's next?</h4>
+              <ul className="text-sm text-purple-700 space-y-1">
+                <li>• Return to the sign in page</li>
+                <li>• Use your new password to access your account</li>
+                <li>• Contact support if you have any issues</li>
+              </ul>
+            </div>
+
             <Button 
+              id="go-to-sign-in-button"
               onClick={handleBackToLogin}
               className="w-full"
             >
@@ -255,7 +274,7 @@ export default function ResetPasswordPage() {
                 <span className="text-muted-foreground">Username:</span> {userInfo.username}
               </div>
               <div>
-                <span className="text-muted-foreground">Account Type:</span> {userInfo.user_type === 'client' ? 'Client Portal' : 'Staff'}
+                <span className="text-muted-foreground">Account Type:</span> {userInfo.user_type === 'client' ? 'Client Portal' : 'MSP User'}
               </div>
             </div>
           </div>

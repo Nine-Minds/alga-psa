@@ -17,10 +17,10 @@ export default function ForgotPasswordPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState('');
-  const [userType, setUserType] = useState<'msp' | 'client'>('msp');
+  const [userType, setUserType] = useState<'internal' | 'client'>('internal');
 
   const userTypeOptions = [
-    { value: 'msp', label: 'Staff User' },
+    { value: 'internal', label: 'MSP User' },
     { value: 'client', label: 'Client Portal User' }
   ];
 
@@ -81,18 +81,18 @@ export default function ForgotPasswordPage() {
             </Alert>
 
             <div className="space-y-4">
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium text-sm mb-2">What's next?</h4>
-                <ol className="text-sm text-gray-600 space-y-1">
+              <div className="p-4 bg-purple-50 rounded-lg">
+                <h4 className="font-medium text-sm mb-2 text-purple-900">What's next?</h4>
+                <ol className="text-sm text-purple-700 space-y-1">
                   <li>1. Check your email inbox</li>
                   <li>2. Click the reset link in the email</li>
                   <li>3. Set your new password</li>
                 </ol>
               </div>
 
-              <div className="p-4 bg-yellow-50 rounded-lg">
-                <h4 className="font-medium text-sm mb-2">Didn't receive the email?</h4>
-                <ul className="text-sm text-gray-600 space-y-1">
+              <div className="p-4 bg-blue-50 rounded-lg">
+                <h4 className="font-medium text-sm mb-2 text-blue-900">Didn't receive the email?</h4>
+                <ul className="text-sm text-blue-700 space-y-1">
                   <li>• Check your spam or junk folder</li>
                   <li>• Make sure you entered the correct email</li>
                   <li>• The link expires in 1 hour</li>
@@ -102,6 +102,7 @@ export default function ForgotPasswordPage() {
 
             <div className="space-y-3">
               <Button
+                id="request-another-link-button"
                 onClick={() => {
                   setSubmitted(false);
                   setEmail('');
@@ -113,6 +114,7 @@ export default function ForgotPasswordPage() {
               </Button>
               
               <Button
+                id="back-to-signin-button"
                 onClick={handleBackToLogin}
                 className="w-full"
               >
@@ -143,13 +145,14 @@ export default function ForgotPasswordPage() {
             <div className="space-y-2">
               <Label htmlFor="userType">Account Type</Label>
               <CustomSelect
+                id="user-type-select"
                 options={userTypeOptions}
                 value={userType}
-                onValueChange={(value) => setUserType(value as 'msp' | 'client')}
+                onValueChange={(value) => setUserType(value as 'internal' | 'client')}
                 placeholder="Select account type"
               />
               <p className="text-xs text-muted-foreground">
-                Select whether you're a staff member or a client portal user
+                Select whether you're an MSP User or a Client Portal User
               </p>
             </div>
 
@@ -167,6 +170,7 @@ export default function ForgotPasswordPage() {
             </div>
 
             <Button
+              id="send-reset-link-button"
               type="submit"
               className="w-full"
               disabled={isSubmitting}
@@ -185,6 +189,7 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Button
+            id="back-to-signin-button-footer"
             onClick={handleBackToLogin}
             variant="outline"
             className="w-full"
