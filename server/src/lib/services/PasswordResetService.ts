@@ -7,7 +7,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 export interface PasswordResetToken {
   token_id: string;
   user_id: string;
-  token: string;
+  token_hash: string;  // Changed from token to token_hash
   email: string;
   user_type: 'msp' | 'client';
   expires_at: Date;
@@ -40,6 +40,13 @@ export class PasswordResetService {
   }
 
   /**
+   * Hash a token using SHA256
+   */
+  static hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /**
    * Create a new password reset token with transaction support
    */
   static async createResetTokenWithTransaction(
@@ -62,6 +69,13 @@ export class PasswordResetService {
         return { success: false, error: errorMessage };
       }
 
+      // Clean up expired tokens for this tenant before creating a new one
+      // This helps keep the table clean without relying on scheduled jobs
+      await trx('password_reset_tokens')
+        .where('tenant', tenant)
+        .where('expires_at', '<', trx.fn.now())
+        .del();
+
       // Find user by email and type (using transaction)
       const user = await trx('users')
         .where({ 
@@ -79,6 +93,7 @@ export class PasswordResetService {
 
       // Generate secure token
       const token = this.generateSecureToken();
+      const tokenHash = this.hashToken(token);
 
       // Invalidate any existing unused tokens for this user (using transaction)
       await trx('password_reset_tokens')
@@ -101,7 +116,7 @@ export class PasswordResetService {
         .insert({
           tenant,
           user_id: user.user_id,
-          token,
+          token_hash: tokenHash,  // Store the hash, not the plaintext
           email: user.email,
           user_type: userType,
           // Use DB time for expiration: now() + 1 hour
@@ -112,12 +127,12 @@ export class PasswordResetService {
             requested_by: user.user_id
           }
         })
-        .returning(['token_id', 'token', 'user_id']);
+        .returning(['token_id', 'user_id']);  // Don't return the hash
 
       return {
         success: true,
         tokenId: resetToken.token_id,
-        token: resetToken.token,
+        token: token,  // Return the plaintext token (only time it's visible)
         userId: resetToken.user_id
       };
 
@@ -165,6 +180,9 @@ export class PasswordResetService {
     try {
       const { knex } = await createTenantKnex();
 
+      // Hash the provided token to compare with stored hash
+      const tokenHash = this.hashToken(token);
+
       // Use withTransaction helper for proper connection management
       return await withTransaction(knex, async (trx) => {
         // First, find the token to get its tenant
@@ -172,7 +190,7 @@ export class PasswordResetService {
         // to determine which tenant the token belongs to
         const tokenInfo = await trx('password_reset_tokens')
           .where({
-            token,
+            token_hash: tokenHash,  // Compare hashes
             used_at: null
           })
           .where('expires_at', '>', trx.fn.now())
@@ -202,7 +220,7 @@ export class PasswordResetService {
           })
           .where('prt.tenant', tokenTenant)
           .where({
-            'prt.token': token,
+            'prt.token_hash': tokenHash,  // Compare hashes
             'prt.used_at': null
           })
           .where('prt.expires_at', '>', trx.fn.now())
@@ -237,7 +255,7 @@ export class PasswordResetService {
           token: {
             token_id: resetToken.token_id,
             user_id: resetToken.user_id,
-            token: resetToken.token,
+            token_hash: resetToken.token_hash,  // Return the hash, not plaintext
             email: resetToken.email,
             user_type: resetToken.user_type,
             expires_at: resetToken.expires_at,
@@ -261,12 +279,15 @@ export class PasswordResetService {
     try {
       const { knex } = await createTenantKnex();
 
+      // Hash the token for comparison
+      const tokenHash = this.hashToken(token);
+
       // Use withTransaction helper for proper connection management
       return await withTransaction(knex, async (trx) => {
         // First get the token info to find its tenant
         const tokenInfo = await trx('password_reset_tokens')
           .where({
-            token,
+            token_hash: tokenHash,  // Compare hashes
             used_at: null
           })
           .select('tenant')
@@ -279,7 +300,7 @@ export class PasswordResetService {
         const updateCount = await trx('password_reset_tokens')
           .where({
             tenant: tokenInfo.tenant,
-            token,
+            token_hash: tokenHash,  // Compare hashes
             used_at: null
           })
           .update({
