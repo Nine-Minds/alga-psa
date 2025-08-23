@@ -123,7 +123,7 @@ export async function requestPasswordReset(
         console.log('[PasswordReset] Creating reset token...');
         const tokenResult = await PasswordResetService.createResetTokenWithTransaction(
           normalizedEmail,
-          userType,
+          userType === 'internal' ? 'msp' : userType,
           trx,
           tenant
         );
@@ -215,7 +215,7 @@ export async function requestPasswordReset(
 
   } catch (error) {
     console.error('[PasswordReset] Error requesting password reset:', error);
-    console.error('[PasswordReset] Error stack:', error.stack);
+    console.error('[PasswordReset] Error stack:', error instanceof Error ? error.stack : 'No stack trace available');
     // Always return success for security (don't reveal errors)
     return { 
       success: true, 
@@ -242,7 +242,10 @@ export async function verifyPasswordResetToken(token: string): Promise<VerifyRes
 
     return {
       success: true,
-      user: verificationResult.user
+      user: verificationResult.user ? {
+        ...verificationResult.user,
+        user_type: verificationResult.user.user_type === 'msp' ? 'internal' : verificationResult.user.user_type
+      } : undefined
     };
 
   } catch (error) {
