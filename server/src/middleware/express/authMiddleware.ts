@@ -152,7 +152,11 @@ export async function apiKeyAuthMiddleware(
     if (isRunnerLookup) {
       try {
         const secretProvider = await getSecretProviderInstance();
-        const allowKey = (await secretProvider.getAppSecret('ALGA_AUTH_KEY')) || process.env.ALGA_AUTH_KEY;
+        const allowKey =
+          (await secretProvider.getAppSecret('ALGA_AUTH_KEY')) ||
+          (await secretProvider.getAppSecret('alga_auth_key')) ||
+          process.env.ALGA_AUTH_KEY ||
+          (process.env as any).alga_auth_key;
         // Additional diagnostics (masked)
         try {
           console.log(
@@ -172,7 +176,7 @@ export async function apiKeyAuthMiddleware(
         }
       } catch {
         // Fallback to env only if provider not available
-        const allowKey = process.env.ALGA_AUTH_KEY;
+        const allowKey = process.env.ALGA_AUTH_KEY || (process.env as any).alga_auth_key;
         try {
           console.log(
             `[auth] runner allowlist fallback (env)`,
