@@ -361,7 +361,10 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
     for entry in ar.entries().context("tar entries")? {
         let mut entry = entry.context("tar entry")?;
         let path = entry.path().context("entry path")?;
-        let pstr = path.to_string_lossy();
+        let mut pstr = path.to_string_lossy().to_string();
+        if let Some(stripped) = pstr.strip_prefix("./") {
+            pstr = stripped.to_string();
+        }
 
         // Only extract under ui/
         if !pstr.starts_with("ui/") {
