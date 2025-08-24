@@ -179,8 +179,20 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     declared = declaredHash;
   }
 
-  // Stream and hash the bundle
+  // Verify staging object exists before we proceed
   const store = createS3BundleStore();
+  try {
+    const h = await store.headObject(key);
+    try { console.info("ext.finalize.debug.staging_head", { key, exists: h.exists, contentLength: h.contentLength, eTag: h.eTag }); } catch {}
+    if (!h.exists) {
+      throw new HttpError(400, "STAGING_NOT_FOUND", "Uploaded staging object not found in storage");
+    }
+  } catch (e: any) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(500, "S3_HEAD_FAILED", e?.message || "Failed to head staging object");
+  }
+
+  // Stream and hash the bundle
   let got: { stream: NodeJS.ReadableStream | ReadableStream; contentType?: string; contentLength?: number; eTag?: string; lastModified?: Date };
   try {
     got = await store.getObjectStream(key);
@@ -249,6 +261,18 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
       throw new HttpError(500, "COPY_FAILED", "Failed to copy object to canonical location");
     } finally {
       s3.middlewareStack.remove(mwName);
+    }
+
+    // Verify canonical copy exists
+    try {
+      const h2 = await store.headObject(canonicalKey);
+      try { console.info("ext.finalize.debug.canonical_head", { key: canonicalKey, exists: h2.exists, contentLength: h2.contentLength, eTag: h2.eTag }); } catch {}
+      if (!h2.exists) {
+        throw new HttpError(500, "CANONICAL_MISSING", "Canonical object missing after finalize");
+      }
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      throw new HttpError(500, "S3_HEAD_FAILED", e?.message || "Failed to head canonical object");
     }
   }
 
