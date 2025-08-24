@@ -197,7 +197,12 @@ export function getBucket(): string {
  */
 export function getBundleBucket(): string {
   const override = process.env.STORAGE_S3_BUNDLE_BUCKET?.trim();
-  return override && override.length > 0 ? override : getBucket();
+  if (override && override.length > 0) return override;
+  throw new S3ClientError(
+    'Extension bundles bucket not configured. Set STORAGE_S3_BUNDLE_BUCKET',
+    500,
+    'BUNDLE_CONFIG_MISSING'
+  );
 }
 
 /**

@@ -207,10 +207,13 @@ export async function POST(req: Request) {
       const Bucket = getBundleBucket();
       await s3.send(new HeadBucketCommand({ Bucket } as any));
     } catch (e: any) {
-      log("ext_bundles.upload_proxy.bucket_missing", { requestId, actor, message: e?.message });
-      const r = json(500, { error: "Storage bucket not found", code: "BUCKET_NOT_FOUND" });
+      const code = (e?.code || e?.name || '').toString();
+      const message = typeof e?.message === 'string' ? e.message : 'unknown';
+      const cfgMissing = code === 'BUNDLE_CONFIG_MISSING' || /not configured/i.test(message);
+      log("ext_bundles.upload_proxy.bucket_missing", { requestId, actor, message, code });
+      const r = json(500, { error: cfgMissing ? "Extension bundle storage not configured" : "Storage bucket not found", code: cfgMissing ? "BUNDLE_CONFIG_MISSING" : "BUCKET_NOT_FOUND" });
       r.headers.set("x-request-id", requestId);
-      r.headers.set("x-upload-proxy-why", "bucket_missing");
+      r.headers.set("x-upload-proxy-why", cfgMissing ? "bundle_config_missing" : "bucket_missing");
       return r;
     }
 

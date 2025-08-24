@@ -99,6 +99,10 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
     const Bucket = getBundleBucket();
     await s3.send(new HeadBucketCommand({ Bucket } as any));
   } catch (e: any) {
+    const code = (e?.code || e?.name || '').toString();
+    if (code === 'BUNDLE_CONFIG_MISSING') {
+      throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+    }
     throw new HttpError(500, "BUCKET_NOT_FOUND", "Storage bucket not found. Please contact an administrator to configure extension storage.");
   }
   try {
@@ -143,6 +147,13 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   // Ensure Registry v2 repository is wired before any DB writes
   await ensureRegistryV2KnexRepo(getAdminKnex);
   const { key, size, declaredHash, manifestJson, signature } = params ?? ({} as any);
+
+  // Require bundle storage configuration
+  try {
+    void getBundleBucket();
+  } catch (e: any) {
+    throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+  }
 
   // Validate key
   if (typeof key !== "string" || key.trim().length === 0) {
