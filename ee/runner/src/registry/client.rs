@@ -86,10 +86,12 @@ impl RegistryClient for HttpRegistryClient {
         // Minimal stub endpoint path - subject to change when real registry is wired
         let path = "api/installs/validate";
         url.set_path(path);
+        let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
         url.query_pairs_mut()
             .append_pair("tenant", tenant_id)
             .append_pair("extension", extension_id)
-            .append_pair("hash", content_hash);
+            .append_pair("hash", content_hash)
+            .append_pair("ts", &now_ms.to_string());
 
         // Keep fast timeout
         let mut rb = self.http.get(url);

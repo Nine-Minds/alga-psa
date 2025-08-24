@@ -15,18 +15,30 @@ export async function GET(request: Request) {
     console.info('[lookup-by-host] entry', { host, x_canary: canary ?? undefined, api_key_len: keyLen, api_key_prefix: keyPrefix });
   } catch {}
   if (!host) {
-    return NextResponse.json({ error: 'missing host' }, { status: 400 });
+    const r = NextResponse.json({ error: 'missing host' }, { status: 400 });
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   }
   try {
     const result = await lookupByHostAction(host);
     if (!result) {
       try { console.info('[lookup-by-host] not found', { host }); } catch {}
-      return NextResponse.json({ error: 'not found' }, { status: 404 });
+      const r = NextResponse.json({ error: 'not found' }, { status: 404 });
+      r.headers.set('Cache-Control', 'no-store');
+      r.headers.set('Vary', 'x-api-key, x-canary');
+      return r;
     }
     try { console.info('[lookup-by-host] ok', result); } catch {}
-    return NextResponse.json(result);
+    const r = NextResponse.json(result);
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   } catch (e: any) {
     console.error('[lookup-by-host] error', e);
-    return NextResponse.json({ error: 'internal error' }, { status: 500 });
+    const r = NextResponse.json({ error: 'internal error' }, { status: 500 });
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   }
 }

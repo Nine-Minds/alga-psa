@@ -18,14 +18,23 @@ export async function GET(request: Request) {
   } catch {}
 
   if (!tenant || !extension || !hash) {
-    return NextResponse.json({ valid: false, error: 'missing or invalid parameters' }, { status: 400 });
+    const r = NextResponse.json({ valid: false, error: 'missing or invalid parameters' }, { status: 400 });
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   }
   try {
     const out = await validateAction({ tenant, extension, hash });
     try { console.info('[installs/validate] ok', out); } catch {}
-    return NextResponse.json(out);
+    const r = NextResponse.json(out);
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   } catch (e) {
     console.error('[installs/validate] error', e);
-    return NextResponse.json({ valid: false }, { status: 500 });
+    const r = NextResponse.json({ valid: false }, { status: 500 });
+    r.headers.set('Cache-Control', 'no-store');
+    r.headers.set('Vary', 'x-api-key, x-canary');
+    return r;
   }
 }
