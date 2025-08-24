@@ -60,7 +60,14 @@ export class ApiKeyServiceForApi {
         .first();
       
       if (!record) {
-        console.log(`Invalid or expired API key attempt in tenant ${tenantId}`);
+        // Mask key to avoid leaking secrets in logs
+        const maskKey = (k: string) => {
+          const len = k?.length || 0;
+          const prefix = k?.slice(0, 4) || '';
+          const suffix = k?.slice(Math.max(0, len - 2)) || '';
+          return `${prefix}***${suffix} (len=${len})`;
+        };
+        console.log(`Invalid or expired API key attempt in tenant ${tenantId}; key=${maskKey(plaintextKey)}`);
         return null;
       }
       
@@ -106,7 +113,14 @@ export class ApiKeyServiceForApi {
         .first();
       
       if (!record) {
-        console.log('Invalid or expired API key attempt');
+        // Mask key to avoid leaking secrets in logs
+        const maskKey = (k: string) => {
+          const len = k?.length || 0;
+          const prefix = k?.slice(0, 4) || '';
+          const suffix = k?.slice(Math.max(0, len - 2)) || '';
+          return `${prefix}***${suffix} (len=${len})`;
+        };
+        console.log(`Invalid or expired API key attempt; key=${maskKey(plaintextKey)}`);
         return null;
       }
       

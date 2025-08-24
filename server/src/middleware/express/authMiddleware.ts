@@ -109,6 +109,31 @@ export async function apiKeyAuthMiddleware(
   }
 
   const apiKey = req.headers['x-api-key'] as string;
+  const canary = (req.headers['x-canary'] as string) || undefined;
+
+  // Debug logging with safe masking
+  const maskKey = (k?: string) => {
+    if (!k) return 'none';
+    const len = k.length;
+    const prefix = k.slice(0, 4);
+    const suffix = k.slice(Math.max(0, len - 2));
+    return `${prefix}***${suffix} (len=${len})`;
+  };
+  try {
+    const pathForLog = req.path || '';
+    console.log(
+      `[auth] incoming API request`,
+      JSON.stringify({
+        path: pathForLog,
+        hasApiKey: !!apiKey,
+        apiKeyPreview: maskKey(apiKey),
+        canary: canary || 'none',
+        host: req.headers['host'] || 'unknown',
+      })
+    );
+  } catch (_) {
+    // ignore log errors
+  }
   
   if (!apiKey) {
     return res.status(401).json({
@@ -128,15 +153,50 @@ export async function apiKeyAuthMiddleware(
       try {
         const secretProvider = await getSecretProviderInstance();
         const allowKey = (await secretProvider.getAppSecret('ALGA_AUTH_KEY')) || process.env.ALGA_AUTH_KEY;
+        // Additional diagnostics (masked)
+        try {
+          console.log(
+            `[auth] runner allowlist check`,
+            JSON.stringify({
+              path: normalizedPath,
+              providedApiKey: maskKey(apiKey),
+              allowKey: maskKey(allowKey || undefined),
+              allowKeyPresent: !!allowKey,
+              canary: canary || 'none',
+            })
+          );
+        } catch (_) {}
+
         if (allowKey && apiKey === allowKey) {
           return next();
         }
       } catch {
         // Fallback to env only if provider not available
-        if (process.env.ALGA_AUTH_KEY && apiKey === process.env.ALGA_AUTH_KEY) {
+        const allowKey = process.env.ALGA_AUTH_KEY;
+        try {
+          console.log(
+            `[auth] runner allowlist fallback (env)`,
+            JSON.stringify({
+              path: normalizedPath,
+              providedApiKey: maskKey(apiKey),
+              allowKey: maskKey(allowKey || undefined),
+              allowKeyPresent: !!allowKey,
+              canary: canary || 'none',
+            })
+          );
+        } catch (_) {}
+
+        if (allowKey && apiKey === allowKey) {
           return next();
         }
       }
+      // If we got here, allowlist check failed; log reason context
+      try {
+        console.warn(
+          `[auth] runner allowlist did not match; falling back to DB validation`,
+          JSON.stringify({ path: normalizedPath })
+        );
+      } catch (_) {}
     }
   } catch (_) {
     // Continue to standard validation path on any error
