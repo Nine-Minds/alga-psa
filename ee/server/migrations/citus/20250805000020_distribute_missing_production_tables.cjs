@@ -50,7 +50,8 @@ exports.up = async function(knex) {
     'tenant_email_templates',
     'tenant_telemetry_settings',
     'user_notification_preferences',
-    'email_templates'  // Has foreign keys to distributed tables, must be distributed
+    'email_templates',  // Has foreign keys to distributed tables, must be distributed
+    'password_reset_tokens'  // Added from recent migrations
   ];
   
   // Tables that should be reference tables (system-wide, no tenant)
@@ -475,6 +476,7 @@ exports.down = async function(knex) {
     'email_processed_messages',
     'email_domains',
     'email_templates',
+    'password_reset_tokens',
     'audit_logs',
     'api_keys',
     'vectors',
