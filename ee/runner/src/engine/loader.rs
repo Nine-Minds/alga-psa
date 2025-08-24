@@ -13,6 +13,8 @@ use url::Url;
 use tokio_util::io::StreamReader;
 use tokio::io::AsyncReadExt as _;
 use crate::cache::fs as cache_fs;
+use aws_sdk_s3::{Client as S3Client, config as s3config};
+use aws_credential_types::Credentials as AwsCredentials;
 
 pub struct ModuleLoader {
     pub engine: Engine,
@@ -227,9 +229,53 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
         .timeout(std::time::Duration::from_secs(60))
         .build()?;
 
-    let mut resp = client.get(url.clone()).send().await?;
+    // Prefer presigned S3 GET if credentials are available; fallback to direct URL
+    let mut fetch_url = url.clone();
+    if let (Ok(base), Some(access), Some(secret)) = (
+        std::env::var("BUNDLE_STORE_BASE"),
+        std::env::var("S3_ACCESS_KEY").ok().or_else(|| std::env::var("MINIO_ACCESS_KEY").ok()),
+        std::env::var("S3_SECRET_KEY").ok().or_else(|| std::env::var("MINIO_SECRET_KEY").ok()),
+    ) {
+        if let Ok(base_url) = Url::parse(&base) {
+            let bucket = base_url.path().trim_matches('/').split('/').next().unwrap_or("");
+            if !bucket.is_empty() {
+                let endpoint = match (base_url.scheme(), base_url.host_str(), base_url.port()) {
+                    (scheme, Some(host), Some(port)) => format!("{}://{}:{}", scheme, host, port),
+                    (scheme, Some(host), None) => format!("{}://{}", scheme, host),
+                    _ => String::new(),
+                };
+                if !endpoint.is_empty() {
+                    let region = std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string());
+                    let creds = AwsCredentials::from_keys(access.clone(), secret.clone(), None);
+                    let conf = s3config::Builder::new()
+                        .region(s3config::Region::new(region))
+                        .endpoint_url(endpoint)
+                        .credentials_provider(creds)
+                        .force_path_style(true)
+                        .build();
+                    let s3 = S3Client::from_conf(conf);
+                    let key = format!("sha256/{}/bundle.tar.zst", expected_lower);
+                    if let Ok(cfg) = aws_sdk_s3::presigning::PresigningConfig::expires_in(Duration::from_secs(60)) {
+                        match s3.get_object().bucket(bucket).key(&key).presigned(cfg).await {
+                            Ok(ps) => {
+                                if let Ok(u) = Url::parse(&ps.uri().to_string()) {
+                                    tracing::info!(bucket=%bucket, key=%key, "using presigned S3 GET");
+                                    fetch_url = u;
+                                }
+                            }
+                            Err(e) => {
+                                tracing::warn!(err=%e.to_string(), bucket=%bucket, key=%key, "presign failed; falling back to direct URL");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut resp = client.get(fetch_url.clone()).send().await?;
     if !resp.status().is_success() {
-        tracing::error!(status=%resp.status().as_u16(), url=%url.to_string(), "verify archive fetch failed");
+        tracing::error!(status=%resp.status().as_u16(), url=%fetch_url.to_string(), "verify archive fetch failed");
         anyhow::bail!("verify_archive_sha256 fetch failed: {}", resp.status());
     }
 
