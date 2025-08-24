@@ -16,6 +16,7 @@ import {
   initiateMultipartUpload as s3InitiateMultipartUpload,
   completeMultipartUpload as s3CompleteMultipartUpload,
   abortMultipartUpload as s3AbortMultipartUpload,
+  getBundleBucket,
 } from "../s3-client";
 import type {
   IBundleStore,
@@ -61,13 +62,14 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
   // Normalize once for possible future use; currently not used for direct key operations.
   const _basePrefix = normalizeBasePrefix(config?.basePrefix);
 
+  const bundleBucket = getBundleBucket();
   const store: IBundleStore = {
     /**
      * HEAD object metadata.
      */
     async headObject(key: BundleObjectKey): Promise<HeadResult> {
       try {
-        const out = await s3HeadObject(key);
+        const out = await s3HeadObject(key, bundleBucket);
         // Map one-to-one (types are aligned)
         return {
           exists: out.exists,
@@ -94,7 +96,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
       lastModified?: Date;
     }> {
       try {
-        const out = await s3GetObjectStream(key);
+        const out = await s3GetObjectStream(key, bundleBucket);
         return {
           stream: out.stream,
           eTag: out.eTag,
@@ -124,7 +126,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
         contentLength: opts?.contentLength,
       };
       try {
-        return await s3PutObject(key, body as any, effective);
+        return await s3PutObject(key, body as any, effective, bundleBucket);
       } catch (e) {
         rethrowConcise(e, `putObject(${key})`);
       }
@@ -146,7 +148,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
         ifNoneMatch: opts.ifNoneMatch ?? "*",
       };
       try {
-        return await s3GetPresignedPutUrl(key, opts.expiresSeconds, effective);
+        return await s3GetPresignedPutUrl(key, opts.expiresSeconds, effective, bundleBucket);
       } catch (e) {
         rethrowConcise(e, `getPresignedPutUrl(${key})`);
       }
@@ -160,7 +162,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
       opts: PresignGetOptions
     ): Promise<string> {
       try {
-        return await s3GetPresignedGetUrl(key, opts.expiresSeconds);
+        return await s3GetPresignedGetUrl(key, opts.expiresSeconds, bundleBucket);
       } catch (e) {
         rethrowConcise(e, `getPresignedGetUrl(${key})`);
       }
@@ -179,7 +181,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
           contentType: opts?.contentType,
           cacheControl: opts?.cacheControl,
           ifNoneMatch: opts?.ifNoneMatch ?? "*",
-        });
+        }, bundleBucket);
         return { uploadId: out.uploadId };
       } catch (e) {
         rethrowConcise(e, `initiateMultipartUpload(${key})`);
@@ -199,7 +201,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
           etag: p.etag,
           partNumber: p.partNumber,
         }));
-        const out = await s3CompleteMultipartUpload(key, uploadId, mapped);
+        const out = await s3CompleteMultipartUpload(key, uploadId, mapped, bundleBucket);
         return { eTag: out.eTag };
       } catch (e) {
         rethrowConcise(e, `completeMultipartUpload(${key})`);
@@ -211,7 +213,7 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
      */
     async abortMultipartUpload(key: BundleObjectKey, uploadId: string): Promise<void> {
       try {
-        await s3AbortMultipartUpload(key, uploadId);
+        await s3AbortMultipartUpload(key, uploadId, bundleBucket);
       } catch (e) {
         rethrowConcise(e, `abortMultipartUpload(${key})`);
       }

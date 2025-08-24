@@ -192,6 +192,15 @@ export function getBucket(): string {
 }
 
 /**
+ * Returns the bucket to use for extension bundles, falling back to the default bucket.
+ * Set STORAGE_S3_BUNDLE_BUCKET to use a separate bucket for bundles.
+ */
+export function getBundleBucket(): string {
+  const override = process.env.STORAGE_S3_BUNDLE_BUCKET?.trim();
+  return override && override.length > 0 ? override : getBucket();
+}
+
+/**
  * Return a singleton S3Client instance configured for AWS S3 or S3-compatible providers (e.g., MinIO).
  */
 export function getS3Client(): S3Client {
@@ -214,9 +223,9 @@ export function getS3Client(): S3Client {
  * @param key Object key
  * @returns { exists, eTag?, contentLength?, contentType?, lastModified? }
  */
-export async function headObject(key: string): Promise<HeadObjectResult> {
+export async function headObject(key: string, bucketOverride?: string): Promise<HeadObjectResult> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: HeadObjectCommandInput = { Bucket, Key: key };
 
@@ -243,9 +252,9 @@ export async function headObject(key: string): Promise<HeadObjectResult> {
  * GET object as a stream with metadata.
  * @param key Object key
  */
-export async function getObjectStream(key: string): Promise<GetObjectResult> {
+export async function getObjectStream(key: string, bucketOverride?: string): Promise<GetObjectResult> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: GetObjectCommandInput = { Bucket, Key: key };
 
@@ -276,10 +285,11 @@ export async function getObjectStream(key: string): Promise<GetObjectResult> {
 export async function putObject(
   key: string,
   body: Uint8Array | Buffer | NodeJS.ReadableStream | ReadableStream,
-  opts?: PutObjectOptions
+  opts?: PutObjectOptions,
+  bucketOverride?: string
 ): Promise<{ eTag: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: PutObjectCommandInput = {
     Bucket,
@@ -355,10 +365,11 @@ export async function putObject(
 export async function getPresignedPutUrl(
   key: string,
   expiresSeconds: number,
-  opts?: PutObjectOptions
+  opts?: PutObjectOptions,
+  bucketOverride?: string
 ): Promise<string> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: PutObjectCommandInput = {
     Bucket,
@@ -384,9 +395,9 @@ export async function getPresignedPutUrl(
  * @param key Object key
  * @param expiresSeconds Expiration in seconds
  */
-export async function getPresignedGetUrl(key: string, expiresSeconds: number): Promise<string> {
+export async function getPresignedGetUrl(key: string, expiresSeconds: number, bucketOverride?: string): Promise<string> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: GetObjectCommandInput = { Bucket, Key: key };
   const cmd = new GetObjectCommand(input);
@@ -406,10 +417,11 @@ export async function getPresignedGetUrl(key: string, expiresSeconds: number): P
  */
 export async function initiateMultipartUpload(
   key: string,
-  opts?: MultipartInitOptions
+  opts?: MultipartInitOptions,
+  bucketOverride?: string
 ): Promise<{ uploadId: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   if (opts?.ifNoneMatch) {
     // Best-effort: fail fast if object exists and ifNoneMatch is "*".
@@ -455,10 +467,11 @@ export async function initiateMultipartUpload(
 export async function completeMultipartUpload(
   key: string,
   uploadId: string,
-  parts: Array<CompletedUploadPart>
+  parts: Array<CompletedUploadPart>,
+  bucketOverride?: string
 ): Promise<{ eTag: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const CompletedParts: CompletedPart[] = parts
     .map((p) => ({
@@ -491,9 +504,9 @@ export async function completeMultipartUpload(
  * @param key Object key
  * @param uploadId Upload ID to abort
  */
-export async function abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+export async function abortMultipartUpload(key: string, uploadId: string, bucketOverride?: string): Promise<void> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: AbortMultipartUploadCommandInput = {
     Bucket,

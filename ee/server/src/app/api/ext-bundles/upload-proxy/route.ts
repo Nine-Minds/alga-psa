@@ -10,7 +10,7 @@
  */
 
 import { createS3BundleStore } from "../../../../lib/storage/bundles/s3-bundle-store";
-import { getS3Client, getBucket } from "../../../../lib/storage/s3-client";
+import { getS3Client, getBucket, getBundleBucket } from "../../../../lib/storage/s3-client";
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import { isValidSha256Hash, normalizeBasePrefix } from "../../../../lib/storage/bundles/types";
 import { Readable } from "node:stream";
@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     // Preflight: verify bucket exists to avoid silent failures
     try {
       const s3 = getS3Client();
-      const Bucket = getBucket();
+      const Bucket = getBundleBucket();
       await s3.send(new HeadBucketCommand({ Bucket } as any));
     } catch (e: any) {
       log("ext_bundles.upload_proxy.bucket_missing", { requestId, actor, message: e?.message });
