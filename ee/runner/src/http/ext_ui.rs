@@ -38,6 +38,8 @@ pub struct AppState {
 pub struct UiQuery {
     // SPA hydration supports ?path=/client-route; not used for file resolution, only passthrough.
     pub path: Option<String>,
+    // Optional tenant id (provided by root dispatcher redirect)
+    pub tenant: Option<String>,
 }
 
 #[derive(Deserialize, serde::Serialize)]
@@ -50,7 +52,7 @@ pub struct WarmupReq {
 /// Validates tenant/contentHash (when strict), ensures cache/extract, and serves file with ETag and immutable caching.
 pub async fn handle_get(
     AxPath((extension_id, content_hash, path_tail)): AxPath<(String, String, String)>,
-    Query(_query): Query<UiQuery>,
+    Query(query): Query<UiQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -92,7 +94,7 @@ pub async fn handle_get(
     let strict = true;
 
     // Resolve tenant via header or registry host lookup
-    let mut tenant = tenant_id.clone();
+    let mut tenant = query.tenant.clone().unwrap_or_else(|| tenant_id.clone());
     if tenant.is_empty() {
         if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
             if let Ok(mut u) = Url::parse(&base) {
@@ -118,7 +120,7 @@ pub async fn handle_get(
 
     // Validate with registry (cached TTL)
     if strict {
-        tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "registry validation start");
+        tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, content_hash=%content_hash, "registry validation start");
         match state
             .registry
             .validate_install(&tenant, &extension_id, &content_hash)
@@ -126,15 +128,15 @@ pub async fn handle_get(
         {
             Ok(true) => {}
             Ok(false) => {
-                tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "registry denied");
+                tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, content_hash=%content_hash, "registry denied");
                 return StatusCode::NOT_FOUND.into_response();
             }
             Err(e) => {
-                tracing::warn!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, err=%e.to_string(), "registry error (strict)");
+                tracing::warn!(request_id=%req_id, tenant=%tenant, extension=%extension_id, err=%e.to_string(), "registry error (strict)");
                 return StatusCode::NOT_FOUND.into_response();
             }
         }
-        tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, "registry validation ok");
+        tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, "registry validation ok");
     } else {
         tracing::info!(request_id=%req_id, extension=%extension_id, "strict validation disabled; skipping registry check");
     }

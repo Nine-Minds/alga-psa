@@ -285,9 +285,10 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
 
+    // Include tenant id as a query parameter to avoid extra lookup in ext-ui
     let target = format!(
-        "/ext-ui/{}/{}/index.html",
-        body.extension_id, body.content_hash
+        "/ext-ui/{}/{}/index.html?tenant={}",
+        body.extension_id, body.content_hash, body.tenant_id
     );
     tracing::info!(host=%host, target=%target, "redirecting to ext-ui");
     Redirect::temporary(&target).into_response()
