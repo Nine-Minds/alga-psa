@@ -32,7 +32,7 @@ export async function lookupByHost(hostRaw: string): Promise<{ tenant_id: string
 
   const bundle = await db('extension_bundle')
     .where('version_id', (install as any).version_id)
-    .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
+    .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
     .first(['content_hash']);
   if (!bundle) return null;
 
