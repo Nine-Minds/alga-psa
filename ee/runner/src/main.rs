@@ -15,6 +15,11 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    // Build banner for visibility
+    let build_sha = option_env!("ALGA_BUILD_GIT_SHA").unwrap_or("unknown");
+    let build_unix = option_env!("ALGA_BUILD_UNIX_SECS").unwrap_or("0");
+    tracing::info!(git_sha=%build_sha, build_unix_secs=%build_unix, "runner build");
+
     // Log key environment configuration for easier diagnostics
     let reg_base = std::env::var("REGISTRY_BASE_URL").unwrap_or_else(|_| "<unset>".into());
     let bundle_base = std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "<unset>".into());
