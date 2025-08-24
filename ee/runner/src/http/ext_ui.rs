@@ -21,7 +21,7 @@ use std::io::ErrorKind;
 
 use crate::cache::fs as cache_fs;
 use crate::registry::client::RegistryClient;
-use crate::util::{etag::etag_for_file, limits, mime::content_type_for, path_sanitize, errors::IntegrityError};
+use crate::util::{etag::etag_for_file, mime::content_type_for, path_sanitize, errors::IntegrityError};
 use crate::engine::loader::{bundle_url_for_key, verify_archive_sha256};
 use reqwest::Client as HttpClient;
 
@@ -144,7 +144,9 @@ pub async fn handle_get(
     tracing::info!(request_id=%req_id, hash=%hash_hex, cache_index_exists=%exists, "ui cache check");
     if !exists {
         tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure start");
-        if let Err(e) = ensure_ui_cache(&state, &hash_hex).await {
+        // Build tenant-local key for this bundle
+        let obj_key = format!("tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst", tenant, extension_id, hash_hex);
+        if let Err(e) = ensure_ui_cache(&state, &hash_hex, &obj_key).await {
             if let Some(IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex }) = e.downcast_ref::<IntegrityError>() {
                 tracing::error!(
                     request_id=%req_id,
@@ -277,22 +279,11 @@ pub async fn handle_get(
 /// Ensures the UI cache for this bundle is extracted.
 #[axum::debug_handler]
 pub async fn warmup(
-    State(state): State<AppState>,
-    Json(req): Json<WarmupReq>,
+    _state: State<AppState>,
+    Json(_req): Json<WarmupReq>,
 ) -> impl IntoResponse {
-    match normalize_hash(&req.content_hash) {
-        Ok(hex) => {
-            match ensure_ui_cache(&state, &hex).await {
-                Ok(()) => Json(serde_json::json!({ "status": "ok", "hash": hex })).into_response(),
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "status": "error", "error": e.to_string() })),
-                )
-                    .into_response(),
-            }
-        }
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
-    }
+    // Warmup requires tenant + extension context for tenant-scoped bundles.
+    (StatusCode::BAD_REQUEST, "warmup unsupported without tenant + extension context").into_response()
 }
 
 fn normalize_hash(content_hash: &str) -> anyhow::Result<String> {
@@ -314,7 +305,7 @@ fn etag_match(inm_header: &str, etag: &str) -> bool {
 }
 
 /// Ensure the UI subtree is cached locally; performs first-touch download and extraction if missing.
-async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()> {
+async fn ensure_ui_cache(state: &AppState, hash_hex: &str, key: &str) -> anyhow::Result<()> {
     if cache_fs::exists_ui_index(&state.cache_root, hash_hex) {
         return Ok(());
     }
@@ -324,9 +315,8 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
     cache_fs::ensure_dir(&tmp_dir).await?;
     cache_fs::ensure_dir(&ui_root).await?;
  
-    // Build tenant-local key and fetch+verify archive sha256 to temp file
-    let key = format!("tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst", tenant, extension_id, hash_hex);
-    let url = bundle_url_for_key(&state.bundle_store_base, &key)?;
+    // Build tenant-local URL from provided key and fetch+verify archive sha256 to temp file
+    let url = bundle_url_for_key(&state.bundle_store_base, key)?;
     tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
     let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
  
