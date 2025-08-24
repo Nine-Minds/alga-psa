@@ -22,7 +22,8 @@ use std::io::ErrorKind;
 use crate::cache::fs as cache_fs;
 use crate::registry::client::RegistryClient;
 use crate::util::{etag::etag_for_file, limits, mime::content_type_for, path_sanitize, errors::IntegrityError};
-use crate::engine::loader::{bundle_url, verify_archive_sha256};
+use crate::engine::loader::{bundle_url_for_key, verify_archive_sha256};
+use reqwest::Client as HttpClient;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -87,11 +88,31 @@ pub async fn handle_get(
         }
     };
 
-    // Strict validation behavior controlled by registry client internally
-    // If strict enabled and tenant header missing, deny with 404 (as spec)
-    let strict = false;
-    if strict && tenant_id.is_empty() {
-        tracing::info!(request_id=%req_id, host=?headers.get(axum::http::header::HOST).and_then(|v| v.to_str().ok()), "strict validation on and x-tenant-id missing");
+    // Strict validation behavior: enabled by default
+    let strict = true;
+
+    // Resolve tenant via header or registry host lookup
+    let mut tenant = tenant_id.clone();
+    if tenant.is_empty() {
+        if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
+            if let Ok(mut u) = Url::parse(&base) {
+                u.set_path("api/installs/lookup-by-host");
+                u.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
+                if let Ok(http) = HttpClient::builder().build() {
+                    let mut rb = http.get(u.clone());
+                    rb = rb.header("x-canary", "robert");
+                    if let Ok(k) = std::env::var("ALGA_AUTH_KEY") { if !k.is_empty() { rb = rb.header("x-api-key", k); } }
+                    if let Ok(resp) = rb.send().await { if resp.status().is_success() {
+                        if let Ok(json) = resp.json::<serde_json::Value>().await {
+                            if let Some(t) = json.get("tenant_id").and_then(|v| v.as_str()) { tenant = t.to_string(); }
+                        }
+                    }}
+                }
+            }
+        }
+    }
+    if strict && tenant.is_empty() {
+        tracing::info!(request_id=%req_id, host=%host, "strict validation on and tenant resolution failed");
         return StatusCode::NOT_FOUND.into_response();
     }
 
@@ -100,7 +121,7 @@ pub async fn handle_get(
         tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "registry validation start");
         match state
             .registry
-            .validate_install(&tenant_id, &extension_id, &content_hash)
+            .validate_install(&tenant, &extension_id, &content_hash)
             .await
         {
             Ok(true) => {}
@@ -303,8 +324,9 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
     cache_fs::ensure_dir(&tmp_dir).await?;
     cache_fs::ensure_dir(&ui_root).await?;
  
-    // Build bundle URL and fetch+verify archive sha256 to temp file
-    let url = bundle_url(&state.bundle_store_base, &format!("sha256:{}", hash_hex))?;
+    // Build tenant-local key and fetch+verify archive sha256 to temp file
+    let key = format!("tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst", tenant, extension_id, hash_hex);
+    let url = bundle_url_for_key(&state.bundle_store_base, &key)?;
     tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
     let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
  

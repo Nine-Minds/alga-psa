@@ -77,7 +77,7 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
       if (bundle?.content_hash) {
         const ch: string = (bundle as any).content_hash;
         const hex = ch.startsWith('sha256:') ? ch.substring('sha256:'.length) : ch;
-        bundleKey = `sha256/${hex}/bundle.tar.zst`;
+        bundleKey = `tenants/${tenant}/extensions/${registryId}/sha256/${hex}/bundle.tar.zst`;
       }
     }
   } catch (e) {
@@ -88,8 +88,7 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
   // Remove the install row
   await knex('tenant_extension_install').where({ tenant_id: tenant, registry_id: registryId }).del();
 
-  // Best-effort S3 delete of the canonical bundle (and manifest) to stop serving.
-  // Note: This affects all tenants if the bundle is shared.
+  // Best-effort S3 delete of the tenant-local canonical bundle (and manifest) to stop serving.
   if (bundleKey) {
     try {
       const client = getS3Client();
@@ -164,8 +163,6 @@ export async function getBundleInfoForInstall(registryId: string): Promise<Bundl
 
   const ch = (bundle as any).content_hash as string; // expected sha256:<hex>
   const hex = ch.startsWith('sha256:') ? ch.substring('sha256:'.length) : ch;
-  return {
-    content_hash: ch,
-    canonical_key: `sha256/${hex}/bundle.tar.zst`,
-  };
+  const canonical_key = `tenants/${tenant}/extensions/${registryId}/sha256/${hex}/bundle.tar.zst`;
+  return { content_hash: ch, canonical_key };
 }

@@ -11,6 +11,7 @@ import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
 import { Readable } from "node:stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
+import { createTenantKnex } from '@/lib/db';
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import {
   hashSha256Stream,
@@ -85,9 +86,10 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
 
   if (!file || typeof (file as any).stream !== "function") throw new Error("file is required and must be a File");
 
-  const basePrefix = normalizeBasePrefix(BASE_PREFIX);
+  const { tenant } = await createTenantKnex();
+  if (!tenant) throw new Error('Tenant not found');
   const id = (globalThis as any).crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const key = `${basePrefix}_staging/${id}/bundle.tar.zst`;
+  const key = `tenants/${tenant}/_staging/${id}/bundle.tar.zst`;
 
   const contentType: string = (file as any).type || "application/octet-stream";
 
@@ -226,67 +228,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     });
   }
 
-  const canonicalKey = objectKeyFor(
-    { algorithm: "sha256", hash: computedHash },
-    "bundle.tar.zst",
-    { basePrefix: BASE_PREFIX }
-  );
-
-  // If staging → canonical copy needed
-  if (key !== canonicalKey) {
-    const s3 = getS3Client();
-    // Use bundle bucket for all extension bundle operations
-    const bucket = getBundleBucket();
-    const input = {
-      Bucket: bucket,
-      Key: canonicalKey,
-      CopySource: encodeURIComponent(`${bucket}/${key}`),
-    };
-
-    const cmd = new CopyObjectCommand(input as any);
-    const mwName = `copy-if-none-match-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    // inject If-None-Match: "*"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    s3.middlewareStack.addRelativeTo(
-      (next: any) => async (args: any) => {
-        const req = args.request as any;
-        req.headers = { ...(req.headers ?? {}), "if-none-match": "*" };
-        return next(args);
-      },
-      { name: mwName, relation: "after", toMiddleware: "contentLengthMiddleware" }
-    );
-
-    try {
-      await s3.send(cmd);
-    } catch (e: any) {
-      const status = e?.$metadata?.httpStatusCode ?? e?.statusCode ?? e?.httpStatusCode;
-      const code = e?.name ?? e?.Code ?? e?.code;
-      if (status === 412 || status === 409) {
-        throw new HttpError(
-          409,
-          "OBJECT_EXISTS",
-          "Canonical object already exists",
-          { key: canonicalKey, status, s3Code: code }
-        );
-      }
-      throw new HttpError(500, "COPY_FAILED", "Failed to copy object to canonical location");
-    } finally {
-      s3.middlewareStack.remove(mwName);
-    }
-
-    // Verify canonical copy exists
-    try {
-      const h2 = await store.headObject(canonicalKey);
-      try { console.info("ext.finalize.debug.canonical_head", { key: canonicalKey, exists: h2.exists, contentLength: h2.contentLength, eTag: h2.eTag }); } catch {}
-      if (!h2.exists) {
-        throw new HttpError(500, "CANONICAL_MISSING", "Canonical object missing after finalize");
-      }
-    } catch (e: any) {
-      if (e instanceof HttpError) throw e;
-      throw new HttpError(500, "S3_HEAD_FAILED", e?.message || "Failed to head canonical object");
-    }
-  }
+  // canonical copy moved below after registry upsert to know tenant/extension
 
   // Require manifest for this milestone
   if (typeof manifestJson === "undefined") {
@@ -334,34 +276,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   const parsedRuntime = getRuntime(manifest);
   const parsedCapabilities = getCapabilities(manifest);
 
-  // Write manifest duplicate (immutable)
-  const manifestKey = objectKeyFor(
-    { algorithm: "sha256", hash: computedHash },
-    "manifest.json",
-    { basePrefix: BASE_PREFIX }
-  );
-  try {
-    const store2 = createS3BundleStore();
-    await store2.putObject(
-      manifestKey,
-      Buffer.from(manifestJson, "utf-8"),
-      {
-        contentType: "application/json",
-        cacheControl: "public, max-age=31536000, immutable",
-        ifNoneMatch: "*",
-      }
-    );
-  } catch (e: any) {
-    const status = e?.httpStatusCode ?? e?.statusCode;
-    if (status === 412 || status === 409) {
-      try {
-        // eslint-disable-next-line no-console
-        console.info("ext.finalize.debug.manifest_exists", { key: manifestKey, status });
-      } catch {}
-    } else {
-      throw new HttpError(500, "MANIFEST_STORE_FAILED", "Failed to store manifest duplicate");
-    }
-  }
+  // manifest write moved below after canonical copy
 
   // Signature policy
   const trustBundle = loadTrustBundle(process.env as any);
@@ -402,14 +317,34 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     signature: sigResult,
   });
 
+  try { console.info("ext.finalize.debug.upsert_ok", { extensionId: upsertResult.extension.id, versionId: upsertResult.version.id }); } catch {}
+
+  // Compute tenant-local canonical key and copy staging → canonical
+  const { tenant } = await createTenantKnex();
+  if (!tenant) throw new HttpError(500, 'INTERNAL', 'Tenant not found during finalize');
+  const canonicalKey = `tenants/${tenant}/extensions/${upsertResult.extension.id}/sha256/${computedHash}/bundle.tar.zst`;
+  if (key !== canonicalKey) {
+    const s3 = getS3Client();
+    const bucket = getBundleBucket();
+    const cmd = new CopyObjectCommand({ Bucket: bucket, Key: canonicalKey, CopySource: encodeURIComponent(`${bucket}/${key}`) } as any);
+    const mwName = `copy-if-none-match-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    s3.middlewareStack.addRelativeTo((next: any) => async (args: any) => { const req = args.request as any; req.headers = { ...(req.headers ?? {}), 'if-none-match': '*' }; return next(args); }, { name: mwName, relation: 'after', toMiddleware: 'contentLengthMiddleware' });
+    try { await s3.send(cmd); } finally { s3.middlewareStack.remove(mwName); }
+    // Verify
+    try { const h2 = await store.headObject(canonicalKey); try { console.info("ext.finalize.debug.canonical_head", { key: canonicalKey, exists: h2.exists, contentLength: h2.contentLength, eTag: h2.eTag }); } catch {}; if (!h2.exists) throw new Error('canonical missing'); }
+    catch (e: any) { throw new HttpError(500, 'CANONICAL_MISSING', e?.message || 'Canonical object missing'); }
+  }
+
+  // Write manifest duplicate alongside canonical
+  const manifestKey = `tenants/${tenant}/extensions/${upsertResult.extension.id}/sha256/${computedHash}/manifest.json`;
   try {
-    // eslint-disable-next-line no-console
-    console.info("ext.finalize.debug.upsert_ok", {
-      extensionId: upsertResult.extension.id,
-      versionId: upsertResult.version.id,
-    });
-  } catch {
-    // ignore
+    const store2 = createS3BundleStore();
+    await store2.putObject(manifestKey, Buffer.from(manifestJson, 'utf-8'), { contentType: 'application/json', cacheControl: 'public, max-age=31536000, immutable', ifNoneMatch: '*' });
+  } catch (e: any) {
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    if (status === 412 || status === 409) { try { console.info('ext.finalize.debug.manifest_exists', { key: manifestKey, status }); } catch {} }
+    else { throw new HttpError(500, 'MANIFEST_STORE_FAILED', 'Failed to store manifest duplicate'); }
   }
 
   return {
@@ -436,11 +371,7 @@ export async function extAbortUpload(params: AbortParams): Promise<AbortResult> 
   if (!key || typeof key !== "string") {
     throw new HttpError(400, "BAD_REQUEST", "Missing or invalid 'key' (string required)");
   }
-  if (!key.startsWith(BASE_PREFIX)) {
-    throw new HttpError(400, "BAD_REQUEST", `Invalid key: must start with '${BASE_PREFIX}'`);
-  }
-
-  const isStaging = key.startsWith("sha256/_staging/");
+  const isStaging = key.includes("/_staging/");
   if (!isStaging) {
     return { status: "noop", key, area: "canonical" };
   }

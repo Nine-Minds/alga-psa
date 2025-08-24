@@ -209,6 +209,12 @@ pub fn bundle_url(bundle_store_base: &Url, content_hash: &str) -> anyhow::Result
     Ok(joined)
 }
 
+pub fn bundle_url_for_key(bundle_store_base: &Url, key: &str) -> anyhow::Result<Url> {
+    let mut base = bundle_store_base.clone();
+    let joined = base.join(key.trim_start_matches('/'))?;
+    Ok(joined)
+}
+
 /// Stream a bundle archive to a temp file while computing sha256, verifying against expected hex.
 /// On success returns the path to the temp file. On mismatch deletes the temp and returns IntegrityError::ArchiveHashMismatch.
 pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Result<std::path::PathBuf> {
@@ -260,7 +266,11 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
                         .force_path_style(true)
                         .build();
                     let s3 = S3Client::from_conf(conf);
-                    let key = format!("sha256/{}/bundle.tar.zst", expected_lower);
+                    // Derive object key from URL path by stripping the bucket segment
+                    let full_path = url.path().trim_start_matches('/');
+                    let mut parts = full_path.splitn(2, '/');
+                    let _bucket_seg = parts.next();
+                    let key = parts.next().unwrap_or("").to_string();
                     if let Ok(cfg) = aws_sdk_s3::presigning::PresigningConfig::expires_in(Duration::from_secs(60)) {
                         match s3.get_object().bucket(bucket).key(&key).presigned(cfg).await {
                             Ok(ps) => {
