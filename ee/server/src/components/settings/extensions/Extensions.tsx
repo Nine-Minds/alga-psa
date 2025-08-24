@@ -202,7 +202,9 @@ function ExtensionsTable({
     {
       title: 'Extension',
       dataIndex: 'name',
-      width: '40%',
+      width: '320px',
+      headerClassName: 'sticky left-0 bg-white z-20',
+      cellClassName: 'sticky left-0 bg-white z-10',
       render: (_v, extension) => (
         <div className="min-w-0">
           <div className="text-sm font-medium text-gray-900 truncate">
@@ -242,17 +244,17 @@ function ExtensionsTable({
     {
       title: 'Version',
       dataIndex: ['manifest','version'],
-      width: '10%'
+      width: '120px'
     },
     {
       title: 'Author',
       dataIndex: ['manifest','author'],
-      width: '15%'
+      width: '180px'
     },
     {
       title: 'Domain',
       dataIndex: 'id',
-      width: '25%',
+      // No fixed width: allow Domain column to flex and absorb remaining space
       render: (_v, extension) => (
         <div className="flex flex-col gap-1">
           <div className="text-sm text-gray-900 truncate">{installInfo[extension.id]?.domain || '—'}</div>
@@ -279,8 +281,8 @@ function ExtensionsTable({
       title: 'Actions',
       dataIndex: 'id',
       width: '320px',
-      headerClassName: 'text-right',
-      cellClassName: 'sticky right-0 bg-white',
+      headerClassName: 'text-right sticky right-0 bg-white z-20',
+      cellClassName: 'sticky right-0 bg-white z-10',
       render: (_v, extension) => (
         <div className="grid grid-cols-2 gap-2 justify-items-stretch">
           <Link
