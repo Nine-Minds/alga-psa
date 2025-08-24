@@ -10,10 +10,8 @@ def load-local-env [] {
         # Parse .env.local file and load variables
         let env_vars = (open $env_file 
             | lines 
-            | where { |line| 
-                ($line | str trim | str length) > 0 and 
-                not ($line | str starts-with "#") 
-            }
+            | where ($it | str trim | str length) > 0
+            | where not ($it | str starts-with "#")
             | parse "{key}={value}"
             | transpose -r -d)
         
