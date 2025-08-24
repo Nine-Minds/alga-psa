@@ -123,6 +123,8 @@ References:
 - `EXT_GATEWAY_TIMEOUT_MS`: Gateway-side invocation timeout (Runner should also have server-side timeouts).
 - `SIGNING_TRUST_BUNDLE`: Path or value for trusted publisher certificates/keys.
 - `BUNDLE_STORAGE_*`: Object storage configuration for content-addressed bundle retrieval (S3 or equivalent, if used).
+- `REGISTRY_BASE_URL`: Base URL of the EE server for registry lookups (e.g., `https://algapsa.com`).
+- `ALGA_AUTH_KEY`: Service API key used by the Runner when calling the EE registry endpoints. The Runner sends this as `x-api-key` for `/api/installs/lookup-by-host` and `/api/installs/validate`.
 
 ## Gateway → Runner flow (summary)
 
