@@ -116,6 +116,28 @@ export async function apiKeyAuthMiddleware(
     });
   }
 
+  // Allowlist: accept ALGA_AUTH_KEY for specific internal endpoints used by Runner
+  try {
+    const path = req.path || '';
+    const isRunnerLookup = path === '/api/installs/lookup-by-host' || path === '/api/installs/validate';
+    if (isRunnerLookup) {
+      try {
+        const secretProvider = await getSecretProviderInstance();
+        const allowKey = (await secretProvider.getAppSecret('ALGA_AUTH_KEY')) || process.env.ALGA_AUTH_KEY;
+        if (allowKey && apiKey === allowKey) {
+          return next();
+        }
+      } catch {
+        // Fallback to env only if provider not available
+        if (process.env.ALGA_AUTH_KEY && apiKey === process.env.ALGA_AUTH_KEY) {
+          return next();
+        }
+      }
+    }
+  } catch (_) {
+    // Continue to standard validation path on any error
+  }
+
   try {
     // Direct database validation - eliminates HTTP round-trip
     const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
