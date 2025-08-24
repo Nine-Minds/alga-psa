@@ -246,7 +246,13 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
                 };
                 if !endpoint.is_empty() {
                     let region = std::env::var("S3_REGION").unwrap_or_else(|_| "us-east-1".to_string());
-                    let creds = AwsCredentials::from_keys(access.clone(), secret.clone(), None);
+                    let creds = AwsCredentials::new(
+                        access.clone(),
+                        secret.clone(),
+                        None,
+                        None,
+                        "alga-ext-runner",
+                    );
                     let conf = s3config::Builder::new()
                         .region(s3config::Region::new(region))
                         .endpoint_url(endpoint)
