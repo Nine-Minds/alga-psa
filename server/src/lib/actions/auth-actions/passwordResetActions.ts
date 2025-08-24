@@ -123,7 +123,7 @@ export async function requestPasswordReset(
         console.log('[PasswordReset] Creating reset token...');
         const tokenResult = await PasswordResetService.createResetTokenWithTransaction(
           normalizedEmail,
-          userType === 'internal' ? 'msp' : userType,
+          userType,  // No conversion needed - use 'internal' directly
           trx,
           tenant
         );
@@ -242,10 +242,7 @@ export async function verifyPasswordResetToken(token: string): Promise<VerifyRes
 
     return {
       success: true,
-      user: verificationResult.user ? {
-        ...verificationResult.user,
-        user_type: verificationResult.user.user_type === 'msp' ? 'internal' : verificationResult.user.user_type
-      } : undefined
+      user: verificationResult.user
     };
 
   } catch (error) {
