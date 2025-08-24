@@ -17,6 +17,7 @@ use tokio::io::AsyncReadExt;
 use tracing::info;
 use url::Url;
 use std::io::Read;
+use std::io::ErrorKind;
 
 use crate::cache::fs as cache_fs;
 use crate::registry::client::RegistryClient;
@@ -179,10 +180,20 @@ pub async fn handle_get(
         file_path = ui_root.join("index.html");
     }
 
-    // Max size enforcement
-    if let Some(max) = state.max_file_bytes {
-        if let Err(_) = limits::enforce_max_file_size(&file_path, max).await {
-            return (StatusCode::PAYLOAD_TOO_LARGE, "asset too large").into_response();
+    // Existence + max size enforcement
+    match fs::metadata(&file_path).await {
+        Ok(meta) => {
+            if let Some(max) = state.max_file_bytes {
+                if meta.len() > max {
+                    return (StatusCode::PAYLOAD_TOO_LARGE, "asset too large").into_response();
+                }
+            }
+        }
+        Err(e) => {
+            return match e.kind() {
+                ErrorKind::NotFound => StatusCode::NOT_FOUND.into_response(),
+                _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
         }
     }
 

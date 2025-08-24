@@ -24,12 +24,13 @@ async fn main() -> anyhow::Result<()> {
     let reg_base = std::env::var("REGISTRY_BASE_URL").unwrap_or_else(|_| "<unset>".into());
     let bundle_base = std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "<unset>".into());
     let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION").unwrap_or_else(|_| "<unset>".into());
-    let cache_bytes = std::env::var("EXT_CACHE_MAX_BYTES").unwrap_or_else(|_| "<unset>".into());
+    // Note: static file size limit env is EXT_STATIC_MAX_FILE_BYTES
+    let cache_bytes = std::env::var("EXT_STATIC_MAX_FILE_BYTES").unwrap_or_else(|_| "<unset>".into());
     tracing::info!(
         REGISTRY_BASE_URL=%reg_base,
         BUNDLE_STORE_BASE=%bundle_base,
         EXT_STATIC_STRICT_VALIDATION=%strict,
-        EXT_CACHE_MAX_BYTES=%cache_bytes,
+        EXT_STATIC_MAX_FILE_BYTES=%cache_bytes,
         "runner config"
     );
 
