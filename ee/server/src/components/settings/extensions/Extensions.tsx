@@ -5,7 +5,7 @@
  */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
@@ -14,6 +14,8 @@ import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
 import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2, getBundleInfoForInstall } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
+import { DataTable } from 'server/src/components/ui/DataTable';
+import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 /**
  * Extensions management page
@@ -164,181 +166,201 @@ export default function Extensions() {
         
         {!loading && !error && extensions.length > 0 && (
           <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Extension
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Version
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Author
-                  </th>
-                  
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Domain
-                  </th>
-                  
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {extensions.map((extension) => (
-                  <tr key={extension.id} data-automation-id={`extension-row-${extension.id}`}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            <Link href={`/msp/settings/extensions/${extension.id}`} className="hover:text-primary-600">
-                              {extension.name}
-                            </Link>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {extension.description}
-                          </div>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              extension.is_enabled
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {extension.is_enabled ? 'Enabled' : 'Disabled'}
-                            </span>
-                            {(() => {
-                              const state = installInfo[extension.id]?.status?.state as string | undefined;
-                              if (!state) return null;
-                              const s = state.toLowerCase();
-                              const cls = s === 'ready'
-                                ? 'bg-green-100 text-green-800'
-                                : s === 'error'
-                                  ? 'bg-red-100 text-red-800'
-                                  : 'bg-amber-100 text-amber-800';
-                              const label = s.charAt(0).toUpperCase() + s.slice(1);
-                              return (
-                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-                                  {label}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{extension.version}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {(extension.manifest as any)?.publisher || (extension.manifest as any)?.author || 'Unknown'}
-                      </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {installInfo[extension.id]?.domain || '—'}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
-                      </div>
-                      {bundleKeys[extension.id] && (
-                        <div className="mt-1 flex items-center gap-2">
-                          <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
-                            {bundleKeys[extension.id]}
-                          </code>
-                          <button
-                            onClick={() => navigator.clipboard.writeText(bundleKeys[extension.id])}
-                            className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-                          >
-                            Copy
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-2">
-                        <Link
-                          href={`/msp/settings/extensions/${extension.id}`}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                          data-automation-id={`extension-view-${extension.id}`}
-                        >
-                          <EyeIcon className="h-3.5 w-3.5 mr-1" />
-                          View
-                        </Link>
-                        <Link
-                          href={`/msp/settings/extensions/${extension.id}/settings`}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                          data-automation-id={`extension-settings-${extension.id}`}
-                        >
-                          <Settings className="h-3.5 w-3.5 mr-1" />
-                          Settings
-                        </Link>
-                        {installInfo[extension.id]?.domain ? (
-                          <>
-                            <a
-                              href={`https://${installInfo[extension.id]?.domain}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
-                            >
-                              Open
-                            </a>
-                            <button
-                              onClick={() => navigator.clipboard.writeText(`https://${installInfo[extension.id]?.domain}`)}
-                              className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                              Copy
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={() => handleReprovision(extension.id)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
-                          >
-                            Provision
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { void handleToggleExtension(extension.id, extension.is_enabled); }}
-                          className={`inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
-                            extension.is_enabled
-                              ? 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                              : 'bg-green-100 text-green-700 hover:bg-green-200'
-                          } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500`}
-                          data-automation-id={`extension-toggle-${extension.id}`}
-                        >
-                          {extension.is_enabled ? (
-                            <>
-                              <XCircleIcon className="h-3.5 w-3.5 mr-1" />
-                              Disable
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
-                              Enable
-                            </>
-                          )}
-                        </button>
-                        <button
-                          onClick={() => { void handleRemoveExtension(extension.id); }}
-                          className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                          data-automation-id={`extension-remove-${extension.id}`}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ExtensionsTable
+              rows={extensions}
+              installInfo={installInfo}
+              bundleKeys={bundleKeys}
+              onReprovision={handleReprovision}
+              onToggle={handleToggleExtension}
+              onRemove={handleRemoveExtension}
+            />
           </div>
         )}
       </div>
     </ReflectionContainer>
+  );
+}
+
+type ExtRow = Extension & { id: string };
+
+function ExtensionsTable({
+  rows,
+  installInfo,
+  bundleKeys,
+  onReprovision,
+  onToggle,
+  onRemove,
+}: {
+  rows: ExtRow[];
+  installInfo: Record<string, { domain: string | null; status: any }>;
+  bundleKeys: Record<string, string>;
+  onReprovision: (id: string) => void;
+  onToggle: (id: string, current: boolean) => void;
+  onRemove: (id: string) => void;
+}) {
+  const columns = useMemo<ColumnDefinition<ExtRow>[]>(() => [
+    {
+      title: 'Extension',
+      dataIndex: 'name',
+      width: '40%',
+      render: (_v, extension) => (
+        <div className="min-w-0">
+          <div className="text-sm font-medium text-gray-900 truncate">
+            <Link href={`/msp/settings/extensions/${extension.id}`} className="hover:text-primary-600">
+              {extension.name}
+            </Link>
+          </div>
+          {extension.description && (
+            <div className="text-sm text-gray-500 truncate">{extension.description}</div>
+          )}
+          <div className="mt-1 flex items-center gap-2">
+            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              extension.is_enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+            }`}>
+              {extension.is_enabled ? 'Enabled' : 'Disabled'}
+            </span>
+            {(() => {
+              const state = installInfo[extension.id]?.status?.state as string | undefined;
+              if (!state) return null;
+              const s = state.toLowerCase();
+              const cls = s === 'ready'
+                ? 'bg-green-100 text-green-800'
+                : s === 'error'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-amber-100 text-amber-800';
+              const label = s.charAt(0).toUpperCase() + s.slice(1);
+              return (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+                  {label}
+                </span>
+              );
+            })()}
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Version',
+      dataIndex: ['manifest','version'],
+      width: '10%'
+    },
+    {
+      title: 'Author',
+      dataIndex: ['manifest','author'],
+      width: '15%'
+    },
+    {
+      title: 'Domain',
+      dataIndex: 'id',
+      width: '25%',
+      render: (_v, extension) => (
+        <div className="flex flex-col gap-1">
+          <div className="text-sm text-gray-900 truncate">{installInfo[extension.id]?.domain || '—'}</div>
+          <div className="text-xs text-gray-500">
+            {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
+          </div>
+          {bundleKeys[extension.id] && (
+            <div className="mt-1 flex items-center gap-2 min-w-0">
+              <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5 truncate">
+                {bundleKeys[extension.id]}
+              </code>
+              <button
+                onClick={() => navigator.clipboard.writeText(bundleKeys[extension.id])}
+                className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap"
+              >
+                Copy
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      title: 'Actions',
+      dataIndex: 'id',
+      width: '320px',
+      headerClassName: 'text-right',
+      cellClassName: 'sticky right-0 bg-white',
+      render: (_v, extension) => (
+        <div className="grid grid-cols-2 gap-2 justify-items-stretch">
+          <Link
+            href={`/msp/settings/extensions/${extension.id}`}
+            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+            data-automation-id={`extension-view-${extension.id}`}
+          >
+            <EyeIcon className="h-3.5 w-3.5 mr-1" />
+            View
+          </Link>
+          <Link
+            href={`/msp/settings/extensions/${extension.id}/settings`}
+            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200"
+            data-automation-id={`extension-settings-${extension.id}`}
+          >
+            <Settings className="h-3.5 w-3.5 mr-1" />
+            Settings
+          </Link>
+          {installInfo[extension.id]?.domain ? (
+            <>
+              <a
+                href={`https://${installInfo[extension.id]?.domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
+              >
+                Open
+              </a>
+              <button
+                onClick={() => navigator.clipboard.writeText(`https://${installInfo[extension.id]?.domain}`)}
+                className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Copy
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => onReprovision(extension.id)}
+              className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+            >
+              Provision
+            </button>
+          )}
+          <button
+            onClick={() => { void onToggle(extension.id, extension.is_enabled); }}
+            className={`inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md ${
+              extension.is_enabled ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+            data-automation-id={`extension-toggle-${extension.id}`}
+          >
+            {extension.is_enabled ? (
+              <>
+                <XCircleIcon className="h-3.5 w-3.5 mr-1" />
+                Disable
+              </>
+            ) : (
+              <>
+                <CheckCircleIcon className="h-3.5 w-3.5 mr-1" />
+                Enable
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => { void onRemove(extension.id); }}
+            className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-red-100 text-red-700 hover:bg-red-200"
+            data-automation-id={`extension-remove-${extension.id}`}
+          >
+            Remove
+          </button>
+        </div>
+      )
+    }
+  ], [installInfo, bundleKeys, onRemove, onReprovision, onToggle]);
+
+  return (
+    <DataTable<ExtRow>
+      id="extensions-table"
+      data={rows}
+      columns={columns}
+      pagination={false}
+    />
   );
 }
