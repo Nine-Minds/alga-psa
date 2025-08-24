@@ -95,16 +95,19 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
-    // contentLength is not part of our PutObjectOptions; omit to satisfy types
-    // Provide contentLength to avoid undefined x-amz-decoded-content-length in SigV4 chunked uploads
     await store.putObject(
       key,
       nodeStream as unknown as NodeJS.ReadableStream,
       { contentType, ifNoneMatch: "*", contentLength: size }
     );
   } catch (e: any) {
-    try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status: e?.httpStatusCode ?? e?.statusCode })); } catch {}
-    throw new Error("Failed to store upload");
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    const code = (e?.code || e?.name || '').toString();
+    try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status, code })); } catch {}
+    if (code === 'NoSuchBucket' || status === 404) {
+      throw new HttpError(500, 'BUCKET_NOT_FOUND', 'Storage bucket not found. Please contact an administrator to configure extension storage.');
+    }
+    throw new HttpError(500, 'S3_PUT_FAILED', e?.message || 'Failed to store upload');
   }
 
   try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.success", key, filename, size, durationMs: Date.now() - started })); } catch {}
@@ -169,7 +172,17 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
 
   // Stream and hash the bundle
   const store = createS3BundleStore();
-  const got = await store.getObjectStream(key);
+  let got: { stream: NodeJS.ReadableStream | ReadableStream; contentType?: string; contentLength?: number; eTag?: string; lastModified?: Date };
+  try {
+    got = await store.getObjectStream(key);
+  } catch (e: any) {
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    const code = (e?.code || e?.name || '').toString();
+    if (code === 'NoSuchBucket' || status === 404) {
+      throw new HttpError(500, 'OBJECT_NOT_FOUND', 'Uploaded bundle was not found in storage. The bucket may be missing or misconfigured.');
+    }
+    throw new HttpError(500, 'S3_GET_FAILED', e?.message || 'Failed to read uploaded object');
+  }
   const nodeStream = got.stream as NodeJS.ReadableStream;
   const hashResult = await hashSha256Stream(nodeStream, { maxBytes: MAX_BUNDLE_SIZE_BYTES });
   const computedHash = hashResult.hashHex;
