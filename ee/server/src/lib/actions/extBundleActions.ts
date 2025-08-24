@@ -235,7 +235,8 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   // If staging → canonical copy needed
   if (key !== canonicalKey) {
     const s3 = getS3Client();
-    const bucket = getBucket();
+    // Use bundle bucket for all extension bundle operations
+    const bucket = getBundleBucket();
     const input = {
       Bucket: bucket,
       Key: canonicalKey,
@@ -445,7 +446,8 @@ export async function extAbortUpload(params: AbortParams): Promise<AbortResult> 
   }
 
   const client = getS3Client();
-  const Bucket = getBucket();
+  // Ensure deletion targets the bundle bucket (not the docs bucket)
+  const Bucket = getBundleBucket();
   const Key = key;
 
   try {
