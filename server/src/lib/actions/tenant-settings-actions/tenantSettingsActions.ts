@@ -57,14 +57,17 @@ export async function updateTenantOnboardingStatus(
 
     const { knex } = await createTenantKnex();
     
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     const updateData: any = {
       onboarding_completed: completed,
       onboarding_skipped: skipped,
-      updated_at: knex.fn.now(),
+      updated_at: now,
     };
 
     if (completed) {
-      updateData.onboarding_completed_at = knex.fn.now();
+      updateData.onboarding_completed_at = now;
       // Clear onboarding data when completed
       updateData.onboarding_data = null;
     } else if (wizardData) {
@@ -122,6 +125,9 @@ export async function saveTenantOnboardingProgress(
 
     const { knex } = await createTenantKnex();
     
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     // Check if tenant settings already exist
     const existingRecord = await knex('tenant_settings')
       .where({ tenant })
@@ -133,7 +139,7 @@ export async function saveTenantOnboardingProgress(
         .where({ tenant })
         .update({
           onboarding_data: JSON.stringify(mergedData),
-          updated_at: knex.fn.now(),
+          updated_at: now,
         });
     } else {
       // Insert new settings
@@ -141,7 +147,7 @@ export async function saveTenantOnboardingProgress(
         .insert({
           tenant,
           onboarding_data: JSON.stringify(mergedData),
-          updated_at: knex.fn.now(),
+          updated_at: now,
         });
     }
 
@@ -166,11 +172,14 @@ export async function clearTenantOnboardingData(): Promise<void> {
 
     const { knex } = await createTenantKnex();
     
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     await knex('tenant_settings')
       .where({ tenant })
       .update({
         onboarding_data: null,
-        updated_at: knex.fn.now(),
+        updated_at: now,
       });
 
   } catch (error) {
@@ -199,16 +208,19 @@ export async function updateTenantSettings(
 
     const { knex } = await createTenantKnex();
     
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     await knex('tenant_settings')
       .insert({
         tenant,
         settings: JSON.stringify(updatedSettings),
-        updated_at: knex.fn.now(),
+        updated_at: now,
       })
       .onConflict('tenant')
       .merge({
         settings: JSON.stringify(updatedSettings),
-        updated_at: knex.fn.now(),
+        updated_at: now,
       });
 
   } catch (error) {
@@ -253,6 +265,9 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
   try {
     const { knex } = await createTenantKnex();
     
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     // Initialize tenant settings with both onboarding flags set to false
     await knex('tenant_settings')
       .insert({
@@ -261,8 +276,8 @@ export async function initializeTenantSettings(tenantId: string): Promise<void> 
         onboarding_skipped: false,
         onboarding_data: null,
         settings: null,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now(),
+        created_at: now,
+        updated_at: now,
       })
       .onConflict('tenant')
       .ignore(); // Don't overwrite if already exists
