@@ -112,10 +112,13 @@ export async function updateTicketingDisplaySettings(updated: TicketingDisplaySe
       ...updated,
     };
 
+    // Use a literal timestamp for Citus compatibility
+    const now = new Date();
+    
     await knex('tenant_settings')
-      .insert({ tenant, ticket_display_settings: JSON.stringify(merged), updated_at: knex.fn.now() })
+      .insert({ tenant, ticket_display_settings: JSON.stringify(merged), updated_at: now })
       .onConflict('tenant')
-      .merge({ ticket_display_settings: JSON.stringify(merged), updated_at: knex.fn.now() });
+      .merge({ ticket_display_settings: JSON.stringify(merged), updated_at: now });
 
     return { success: true };
   } catch (e) {

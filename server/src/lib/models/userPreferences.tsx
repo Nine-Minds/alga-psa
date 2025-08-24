@@ -230,12 +230,15 @@ const UserPreferences = {
             const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
             
             try {
+                // Use a literal timestamp for Citus compatibility
+                const now = new Date();
+                
                 for (const preference of preferences) {
                     // Ensure tenant cannot be modified and is set to context tenant
                     const preferenceData = {
                         ...preference,
                         tenant,
-                        updated_at: knexOrTrx.fn.now()
+                        updated_at: now
                     };
 
                     await trx<IUserPreference>('user_preferences')
@@ -243,7 +246,7 @@ const UserPreferences = {
                         .onConflict(['tenant', 'user_id', 'setting_name'])
                         .merge({
                             setting_value: preferenceData.setting_value,
-                            updated_at: preferenceData.updated_at
+                            updated_at: now
                         });
                 }
                 
