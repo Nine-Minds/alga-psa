@@ -246,6 +246,8 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
 
     // Attach ALGA_AUTH_KEY if present for registry auth and log masked presence
     let mut rb = http.get(url.clone());
+    // Temporary canary routing header for testing; remove after canary period
+    rb = rb.header("x-canary", "robert");
     match std::env::var("ALGA_AUTH_KEY") {
         Ok(key) if !key.is_empty() => {
             let prefix: String = key.chars().take(4).collect();
