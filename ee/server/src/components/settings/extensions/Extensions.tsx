@@ -12,7 +12,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
+import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2, getBundleInfoForInstall } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 
 /**
@@ -23,6 +23,7 @@ export default function Extensions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [installInfo, setInstallInfo] = useState<Record<string, { domain: string | null; status: any }>>({});
+  const [bundleKeys, setBundleKeys] = useState<Record<string, string>>({});
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -46,6 +47,14 @@ export default function Extensions() {
           })
         );
         setInstallInfo(Object.fromEntries(entries));
+        // Fetch bundle storage key per extension
+        const bundleEntries = await Promise.all(
+          mapped.map(async (ext: any) => {
+            const b = await getBundleInfoForInstall(ext.id).catch(() => null);
+            return [ext.id, b?.canonical_key ?? ''];
+          })
+        );
+        setBundleKeys(Object.fromEntries(bundleEntries));
         setLoading(false);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'unknown error';
@@ -173,6 +182,9 @@ export default function Extensions() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Domain
                   </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Bundle Path
+                  </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -236,6 +248,21 @@ export default function Extensions() {
                       </div>
                       <div className="text-xs text-gray-500">
                         {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
+                          {bundleKeys[extension.id] || '—'}
+                        </code>
+                        {bundleKeys[extension.id] && (
+                          <button
+                            onClick={() => navigator.clipboard.writeText(bundleKeys[extension.id])}
+                            className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          >
+                            Copy
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
