@@ -88,9 +88,7 @@ pub async fn handle_get(
 
     // Strict validation behavior controlled by registry client internally
     // If strict enabled and tenant header missing, deny with 404 (as spec)
-    let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION")
-        .map(|v| v.trim().eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
+    let strict = false;
     if strict && tenant_id.is_empty() {
         tracing::info!(request_id=%req_id, host=?headers.get(axum::http::header::HOST).and_then(|v| v.to_str().ok()), "strict validation on and x-tenant-id missing");
         return StatusCode::NOT_FOUND.into_response();
