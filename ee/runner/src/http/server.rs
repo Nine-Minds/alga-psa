@@ -234,7 +234,10 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
     url.set_path("api/installs/lookup-by-host");
-    url.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
+    let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    url.query_pairs_mut()
+        .append_pair("host", host.split(':').next().unwrap_or(""))
+        .append_pair("ts", &now_ms.to_string());
 
     let http = match reqwest::Client::builder().build() {
         Ok(c) => c,

@@ -99,7 +99,10 @@ pub async fn handle_get(
         if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
             if let Ok(mut u) = Url::parse(&base) {
                 u.set_path("api/installs/lookup-by-host");
-                u.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
+                let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+                u.query_pairs_mut()
+                  .append_pair("host", host.split(':').next().unwrap_or(""))
+                  .append_pair("ts", &now_ms.to_string());
                 if let Ok(http) = HttpClient::builder().build() {
                     let mut rb = http.get(u.clone());
                     rb = rb.header("x-canary", "robert");
