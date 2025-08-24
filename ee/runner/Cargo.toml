@@ -33,7 +33,7 @@ moka = { version = "0.12", features = ["future"] }
 tokio-util = "0.7"
 
 # Optional S3 presign support (feature-gated)
-aws-sdk-s3 = { version = "1", features = ["rustls"] }
+aws-sdk-s3 = { version = "1", features = ["rustls", "behavior-version-latest"] }
 aws-credential-types = "1"
 
 [dev-dependencies]
