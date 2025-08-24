@@ -182,9 +182,7 @@ export default function Extensions() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Domain
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Bundle Path
-                  </th>
+                  
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
@@ -249,22 +247,21 @@ export default function Extensions() {
                       <div className="text-xs text-gray-500">
                         {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
-                          {bundleKeys[extension.id] || '—'}
-                        </code>
-                        {bundleKeys[extension.id] && (
+                      {bundleKeys[extension.id] && (
+                        <div className="mt-1 flex items-center gap-2">
+                          <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5">
+                            {bundleKeys[extension.id]}
+                          </code>
                           <button
                             onClick={() => navigator.clipboard.writeText(bundleKeys[extension.id])}
                             className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
                           >
                             Copy
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                     </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex justify-end space-x-2">
                         <Link
