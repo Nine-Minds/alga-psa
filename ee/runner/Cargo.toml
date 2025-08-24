@@ -40,3 +40,8 @@ aws-credential-types = "1"
 tempfile = "3"
 serial_test = "3"
 tower = "0.5"
+
+# Temporary pin to avoid pulling base64ct 1.8.0 which requires edition2024 and
+# a newer Cargo than our build image provides. Remove once builder toolchain is updated.
+[patch.crates-io]
+base64ct = "=1.7.0"
