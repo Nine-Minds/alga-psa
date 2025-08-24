@@ -107,11 +107,22 @@ pub async fn handle_get(
                     let mut rb = http.get(u.clone());
                     rb = rb.header("x-canary", "robert");
                     if let Ok(k) = std::env::var("ALGA_AUTH_KEY") { if !k.is_empty() { rb = rb.header("x-api-key", k); } }
-                    if let Ok(resp) = rb.send().await { if resp.status().is_success() {
-                        if let Ok(json) = resp.json::<serde_json::Value>().await {
-                            if let Some(t) = json.get("tenant_id").and_then(|v| v.as_str()) { tenant = t.to_string(); }
+                    if let Ok(resp) = rb.send().await {
+                        let code = resp.status().as_u16();
+                        if code >= 200 && code < 300 {
+                            match resp.text().await {
+                                Ok(txt) => {
+                                    tracing::info!(host=%host, status=%code, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "fallback lookup body");
+                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&txt) {
+                                        if let Some(t) = json.get("tenant_id").and_then(|v| v.as_str()) { tenant = t.to_string(); }
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::warn!(err=%e.to_string(), "failed to read fallback lookup body");
+                                }
+                            }
                         }
-                    }}
+                    }
                 }
             }
         }

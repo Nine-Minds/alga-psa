@@ -279,8 +279,16 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    tracing::info!(host=%host, status=%resp.status().as_u16(), "lookup-by-host response ok; parsing json");
-    let body: LookupResp = match resp.json().await {
+    tracing::info!(host=%host, status=%resp.status().as_u16(), "lookup-by-host response ok; reading body");
+    let text = match resp.text().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!(host=%host, err=%e.to_string(), "failed to read registry response body");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    };
+    tracing::info!(host=%host, body_len=%text.len(), body_sample=%text.chars().take(200).collect::<String>(), "lookup-by-host response body");
+    let body: LookupResp = match serde_json::from_str(&text) {
         Ok(b) => b,
         Err(e) => {
             tracing::error!(host=%host, err=%e.to_string(), "failed to parse registry response json");

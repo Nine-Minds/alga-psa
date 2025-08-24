@@ -111,18 +111,16 @@ impl RegistryClient for HttpRegistryClient {
             }
         };
 
-        // Interpret JSON { valid: bool } or truthy status 200 with "true"
+        // Interpret JSON { valid: bool } or truthy status 200
         let valid = if resp.status().is_success() {
-            // Try JSON first
-            let maybe_json = resp.json::<serde_json::Value>().await.ok();
-            if let Some(v) = maybe_json {
-                v.get("valid").and_then(|b| b.as_bool()).unwrap_or(false)
-            } else {
-                false
+            match resp.text().await {
+                Ok(txt) => {
+                    tracing::info!(tenant=%tenant_id, extension=%extension_id, hash=%content_hash, status=200u16, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "validate response body");
+                    serde_json::from_str::<serde_json::Value>(&txt).ok().and_then(|v| v.get("valid").and_then(|b| b.as_bool())).unwrap_or(false)
+                }
+                Err(_) => false,
             }
-        } else {
-            false
-        };
+        } else { false };
 
         self.cache.insert(key, valid).await;
         Ok(valid)
