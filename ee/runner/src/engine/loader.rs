@@ -216,6 +216,7 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
     use rand::{distributions::Alphanumeric, Rng};
 
     let expected_lower = expected_hex.to_ascii_lowercase();
+    tracing::info!(expected_hash=%expected_lower, url=%url.to_string(), "verify archive start");
     let cache_root = cache_fs::ext_cache_root_from_env();
     let tmp_dir = cache_root.join("tmp");
     cache_fs::ensure_dir(&tmp_dir).await?;
@@ -228,6 +229,7 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
 
     let mut resp = client.get(url.clone()).send().await?;
     if !resp.status().is_success() {
+        tracing::error!(status=%resp.status().as_u16(), url=%url.to_string(), "verify archive fetch failed");
         anyhow::bail!("verify_archive_sha256 fetch failed: {}", resp.status());
     }
 
@@ -235,9 +237,11 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
     let mut file = tfs::File::create(&tmp_path).await?;
 
     // Stream using reqwest Response::chunk to avoid extra deps
+    let mut total: u64 = 0;
     while let Some(bytes) = resp.chunk().await? {
         hasher.update(&bytes);
         file.write_all(&bytes).await?;
+        total += bytes.len() as u64;
     }
     file.flush().await?;
     let _ = file.sync_all().await;
@@ -246,11 +250,12 @@ pub async fn verify_archive_sha256(url: &Url, expected_hex: &str) -> anyhow::Res
     if !got.eq_ignore_ascii_case(&expected_lower) {
         // Integrity failure: remove temp file and return structured error
         let _ = tfs::remove_file(&tmp_path).await;
+        tracing::error!(expected=%expected_lower, computed=%got, bytes=total, "verify archive hash mismatch");
         return Err(crate::util::errors::IntegrityError::ArchiveHashMismatch {
             expected_hex: expected_lower,
             computed_hex: got,
         }.into());
     }
-
+    tracing::info!(hash=%expected_lower, bytes=total, path=%tmp_path.to_string_lossy(), "verify archive ok");
     Ok(tmp_path)
 }

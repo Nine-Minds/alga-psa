@@ -260,6 +260,7 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     }
 
+    tracing::info!(host=%host, url=%url.to_string(), "lookup-by-host request start");
     let resp = match rb.send().await {
         Ok(r) => r,
         Err(e) => {
@@ -275,6 +276,7 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         return StatusCode::NOT_FOUND.into_response();
     }
 
+    tracing::info!(host=%host, status=%resp.status().as_u16(), "lookup-by-host response ok; parsing json");
     let body: LookupResp = match resp.json().await {
         Ok(b) => b,
         Err(e) => {

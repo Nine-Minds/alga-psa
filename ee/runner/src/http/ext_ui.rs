@@ -62,6 +62,20 @@ pub async fn handle_get(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("")
         .to_string();
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    tracing::info!(
+        request_id=%req_id,
+        host=%host,
+        extension=%extension_id,
+        content_hash=%content_hash,
+        has_tenant=%(!tenant_id.is_empty()),
+        "ext_ui request start"
+    );
 
     // Normalize content hash: require sha256:<hex> form
     let hash_hex = match normalize_hash(&content_hash) {
@@ -84,6 +98,7 @@ pub async fn handle_get(
 
     // Validate with registry (cached TTL)
     if strict {
+        tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "registry validation start");
         match state
             .registry
             .validate_install(&tenant_id, &extension_id, &content_hash)
@@ -99,10 +114,16 @@ pub async fn handle_get(
                 return StatusCode::NOT_FOUND.into_response();
             }
         }
+        tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, "registry validation ok");
+    } else {
+        tracing::info!(request_id=%req_id, extension=%extension_id, "strict validation disabled; skipping registry check");
     }
 
     // Ensure UI cache is present (first touch may download+extract)
-    if !cache_fs::exists_ui_index(&state.cache_root, &hash_hex) {
+    let exists = cache_fs::exists_ui_index(&state.cache_root, &hash_hex);
+    tracing::info!(request_id=%req_id, hash=%hash_hex, cache_index_exists=%exists, "ui cache check");
+    if !exists {
+        tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure start");
         if let Err(e) = ensure_ui_cache(&state, &hash_hex).await {
             if let Some(IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex }) = e.downcast_ref::<IntegrityError>() {
                 tracing::error!(
@@ -129,6 +150,7 @@ pub async fn handle_get(
             let body = Json(serde_json::json!({ "code": "extract_failed" }));
             return (StatusCode::INTERNAL_SERVER_ERROR, body).into_response();
         }
+        tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure ok");
     }
 
     // Sanitize the requested path; empty means root (index.html)
@@ -204,6 +226,7 @@ pub async fn handle_get(
 
     // Structured trace
     let dur_ms = started.elapsed().as_millis() as u64;
+    let body_len = data.len();
     info!(
         request_id=%req_id,
         tenant=%tenant_id,
@@ -212,6 +235,7 @@ pub async fn handle_get(
         file_path=%file_path.to_string_lossy(),
         status=200,
         duration_ms=%dur_ms,
+        bytes=body_len,
         cache_status=%(if use_index { "spa-fallback" } else { "hit" }),
         "ext_ui serve"
     );
@@ -272,6 +296,7 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
  
     // Build bundle URL and fetch+verify archive sha256 to temp file
     let url = bundle_url(&state.bundle_store_base, &format!("sha256:{}", hash_hex))?;
+    tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
     let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
  
     // Extract ui/ subtree
@@ -282,6 +307,7 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
         let _ = fs::remove_file(&tmp_tgz).await;
         return Err(e);
     }
+    tracing::info!(hash=%hash_hex, ui_root=%ui_root.to_string_lossy(), "bundle extract ok");
  
     // Optional quick sanity check: compute sha256 ETag for index.html
     let index_path = ui_root.join("index.html");
@@ -292,6 +318,7 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
  
     // Cleanup verified temp archive
     let _ = fs::remove_file(&tmp_tgz).await;
+    tracing::info!(hash=%hash_hex, "bundle fetch+extract done");
  
     Ok(())
 }
@@ -320,6 +347,8 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
     }
     let mut ops: Vec<Op> = Vec::new();
 
+    let mut files = 0usize;
+    let mut dirs = 0usize;
     for entry in ar.entries().context("tar entries")? {
         let mut entry = entry.context("tar entry")?;
         let path = entry.path().context("entry path")?;
@@ -345,6 +374,7 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
 
         if entry.header().entry_type().is_dir() {
             ops.push(Op::Mkdir(out_path));
+            dirs += 1;
         } else if entry.header().entry_type().is_file() {
             if let Some(parent) = out_path.parent() {
                 ops.push(Op::Mkdir(parent.to_path_buf()));
@@ -353,6 +383,7 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             let mut contents = Vec::with_capacity(16 * 1024);
             entry.read_to_end(&mut contents).context("read entry")?;
             ops.push(Op::Write { path: out_path, contents });
+            files += 1;
         } else {
             // Skip symlinks or other types for safety
             continue;
@@ -370,6 +401,8 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             }
         }
     }
+
+    tracing::info!(ui_root=%ui_root.to_string_lossy(), files=%files, dirs=%dirs, "ui subtree extracted");
 
     Ok(())
 }
