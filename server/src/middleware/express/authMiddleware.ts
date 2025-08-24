@@ -119,7 +119,11 @@ export async function apiKeyAuthMiddleware(
   // Allowlist: accept ALGA_AUTH_KEY for specific internal endpoints used by Runner
   try {
     const path = req.path || '';
-    const isRunnerLookup = path === '/api/installs/lookup-by-host' || path === '/api/installs/validate';
+    // Normalize to handle optional trailing slash
+    const normalizedPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+    const isRunnerLookup =
+      normalizedPath === '/api/installs/lookup-by-host' ||
+      normalizedPath === '/api/installs/validate';
     if (isRunnerLookup) {
       try {
         const secretProvider = await getSecretProviderInstance();
