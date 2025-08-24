@@ -308,17 +308,37 @@ export async function putObject(
     added = true;
   }
 
+  // Some S3-compatible providers require x-amz-decoded-content-length for chunked streams.
+  // If ContentLength is known, inject the header explicitly to avoid 'undefined' errors.
+  const decodedLen = input.ContentLength;
+  const mwDecodedName = `put-x-amz-decoded-len-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let addedDecoded = false;
+  if (typeof decodedLen === 'number') {
+    client.middlewareStack.addRelativeTo(
+      (next: any) => async (args: any) => {
+        const req = args.request as any;
+        req.headers = { ...(req.headers ?? {}), 'x-amz-decoded-content-length': String(decodedLen) };
+        return next(args);
+      },
+      { name: mwDecodedName, relation: 'after', toMiddleware: 'contentLengthMiddleware' }
+    );
+    addedDecoded = true;
+  }
+
   try {
     const out = await client.send(cmd);
     const eTag = normalizeETag(out.ETag ?? undefined);
     if (!eTag) {
       if (added) client.middlewareStack.remove(mwName);
+      if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
       throw new S3ClientError(`putObject(${key}) did not return an ETag`, out.$metadata?.httpStatusCode);
     }
     if (added) client.middlewareStack.remove(mwName);
+    if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
     return { eTag };
   } catch (e) {
     if (added) client.middlewareStack.remove(mwName);
+    if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
     wrapAwsError(e, `putObject(${key}) failed`);
   }
 }

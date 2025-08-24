@@ -96,7 +96,12 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
     // contentLength is not part of our PutObjectOptions; omit to satisfy types
-    await store.putObject(key, nodeStream as unknown as NodeJS.ReadableStream, { contentType, ifNoneMatch: "*" });
+    // Provide contentLength to avoid undefined x-amz-decoded-content-length in SigV4 chunked uploads
+    await store.putObject(
+      key,
+      nodeStream as unknown as NodeJS.ReadableStream,
+      { contentType, ifNoneMatch: "*", contentLength: size }
+    );
   } catch (e: any) {
     try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status: e?.httpStatusCode ?? e?.statusCode })); } catch {}
     throw new Error("Failed to store upload");
