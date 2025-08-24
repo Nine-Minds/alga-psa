@@ -326,7 +326,8 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   if (key !== canonicalKey) {
     const s3 = getS3Client();
     const bucket = getBundleBucket();
-    const cmd = new CopyObjectCommand({ Bucket: bucket, Key: canonicalKey, CopySource: encodeURIComponent(`${bucket}/${key}`) } as any);
+    // Pass CopySource without encoding slashes to avoid invalid source path
+    const cmd = new CopyObjectCommand({ Bucket: bucket, Key: canonicalKey, CopySource: `${bucket}/${key}` } as any);
     const mwName = `copy-if-none-match-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     s3.middlewareStack.addRelativeTo((next: any) => async (args: any) => { const req = args.request as any; req.headers = { ...(req.headers ?? {}), 'if-none-match': '*' }; return next(args); }, { name: mwName, relation: 'after', toMiddleware: 'contentLengthMiddleware' });
