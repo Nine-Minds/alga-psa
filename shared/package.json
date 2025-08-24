@@ -28,7 +28,10 @@
     "./models/contactModel.js": "./dist/models/contactModel.js",
     "./models/tagModel.js": "./dist/models/tagModel.js",
     "./models/ticketModel.js": "./dist/models/ticketModel.js",
-    "./models/userModel.js": "./dist/models/userModel.js"
+    "./models/userModel.js": "./dist/models/userModel.js",
+    "./extensions/domain.js": "./dist/extensions/domain.js",
+    "./extensions/installs.js": "./dist/extensions/installs.js",
+    "./extensions/types.js": "./dist/extensions/types.js"
   },
   "scripts": {
     "build": "tsc",
