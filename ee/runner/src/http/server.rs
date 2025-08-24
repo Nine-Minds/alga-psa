@@ -244,7 +244,15 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
 
-    let resp = match http.get(url.clone()).send().await {
+    // Attach ALGA_AUTH_KEY if present for registry auth
+    let mut rb = http.get(url.clone());
+    if let Ok(key) = std::env::var("ALGA_AUTH_KEY") {
+        if !key.is_empty() {
+            rb = rb.header("x-api-key", key);
+        }
+    }
+
+    let resp = match rb.send().await {
         Ok(r) => r,
         Err(e) => {
             tracing::error!(host=%host, url=%url.to_string(), err=%e.to_string(), "registry request failed");

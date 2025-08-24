@@ -19,6 +19,7 @@ pub struct HttpRegistryClient {
     base_url: Option<Url>,
     cache: Cache<String, bool>,
     http: reqwest::Client,
+    api_key: Option<String>,
 }
 
 impl HttpRegistryClient {
@@ -36,11 +37,18 @@ impl HttpRegistryClient {
 
         let http = reqwest::Client::builder().build()?;
 
+        // Optional API key auth for registry requests
+        let api_key = std::env::var("ALGA_AUTH_KEY").ok().and_then(|s| {
+            let t = s.trim().to_string();
+            if t.is_empty() { None } else { Some(t) }
+        });
+
         Ok(Self {
             strict,
             base_url,
             cache,
             http,
+            api_key,
         })
     }
 
@@ -78,7 +86,11 @@ impl RegistryClient for HttpRegistryClient {
             .append_pair("hash", content_hash);
 
         // Keep fast timeout
-        let req = self.http.get(url).build()?;
+        let mut rb = self.http.get(url);
+        if let Some(key) = &self.api_key {
+            rb = rb.header("x-api-key", key);
+        }
+        let req = rb.build()?;
         let fut = self.http.execute(req);
 
         // 750ms budget to avoid head-of-line blocking on hot path
