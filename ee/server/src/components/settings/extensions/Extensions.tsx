@@ -244,12 +244,12 @@ function ExtensionsTable({
     {
       title: 'Version',
       dataIndex: ['manifest','version'],
-      width: '120px'
+      width: '75px'
     },
     {
       title: 'Author',
       dataIndex: ['manifest','author'],
-      width: '180px'
+      width: '75px'
     },
     {
       title: 'Domain',
