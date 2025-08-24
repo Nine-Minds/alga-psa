@@ -9,7 +9,7 @@ export interface PasswordResetToken {
   user_id: string;
   token_hash: string;  // Changed from token to token_hash
   email: string;
-  user_type: 'msp' | 'client';
+  user_type: 'internal' | 'client';
   expires_at: Date;
   created_at: Date;
   used_at?: Date;
@@ -25,7 +25,7 @@ export interface TokenVerificationResult {
     email: string;
     first_name: string;
     last_name?: string;
-    user_type: 'msp' | 'client';
+    user_type: 'internal' | 'client';
   };
   token?: PasswordResetToken;
   error?: string;
@@ -51,7 +51,7 @@ export class PasswordResetService {
    */
   static async createResetTokenWithTransaction(
     email: string,
-    userType: 'msp' | 'client',
+    userType: 'internal' | 'client',
     trx: Knex.Transaction,
     tenant: string
   ): Promise<{
@@ -147,7 +147,7 @@ export class PasswordResetService {
    */
   static async createResetToken(
     email: string,
-    userType: 'msp' | 'client' = 'msp'
+    userType: 'internal' | 'client' = 'internal'
   ): Promise<{
     success: boolean;
     tokenId?: string;
