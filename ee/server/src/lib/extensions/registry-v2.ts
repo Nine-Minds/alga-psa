@@ -287,7 +287,7 @@ export class ExtensionRegistryServiceV2 {
 
     const bundle = await this.db('extension_bundle')
       .where({ version_id: ti.version_id })
-      .orderBy('created_at', 'desc')
+      .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
       .first(['content_hash']);
     if (!bundle) return null;
 

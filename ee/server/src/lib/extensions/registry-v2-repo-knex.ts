@@ -69,7 +69,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
       if (!v) return null;
       const b = await knex('extension_bundle')
         .where({ version_id: v.id })
-        .orderBy('created_at', 'desc')
+        .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['content_hash']);
       return {
         id: v.id,
@@ -88,7 +88,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
       const prefixed = withSha256Prefix(contentHash);
       const b = await knex('extension_bundle')
         .where({ content_hash: prefixed })
-        .orderBy('created_at', 'desc')
+        .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['version_id', 'content_hash']);
       if (!b) return null;
       const v = await knex('extension_version')
@@ -116,7 +116,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
       if (!v) return null;
       const b = await knex('extension_bundle')
         .where({ version_id: v.id })
-        .orderBy('created_at', 'desc')
+        .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'content_hash', order: 'desc' }])
         .first(['content_hash']);
       return {
         id: v.id,
