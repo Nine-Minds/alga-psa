@@ -32,7 +32,7 @@ export async function lookupByHost(hostRaw: string): Promise<{ tenant_id: string
 
   const bundle = await db('extension_bundle')
     .where('version_id', (install as any).version_id)
-    .orderBy('created_at', 'desc')
+    .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
     .first(['content_hash']);
   if (!bundle) return null;
 
@@ -61,4 +61,3 @@ export async function validate(params: { tenant: string; extension: string; hash
     .first(['id']);
   return { valid: !!bundle };
 }
-

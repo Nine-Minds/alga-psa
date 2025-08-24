@@ -157,7 +157,7 @@ export async function getBundleInfoForInstall(registryId: string): Promise<Bundl
 
   const bundle = await knex('extension_bundle')
     .where({ version_id: (ti as any).version_id })
-    .orderBy('created_at', 'desc')
+    .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
     .first(['content_hash']);
   if (!bundle) return null;
 
