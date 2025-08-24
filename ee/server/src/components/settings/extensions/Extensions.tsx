@@ -176,9 +176,7 @@ export default function Extensions() {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Author
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
+                  
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Domain
                   </th>
@@ -202,6 +200,31 @@ export default function Extensions() {
                           <div className="text-sm text-gray-500">
                             {extension.description}
                           </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              extension.is_enabled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {extension.is_enabled ? 'Enabled' : 'Disabled'}
+                            </span>
+                            {(() => {
+                              const state = installInfo[extension.id]?.status?.state as string | undefined;
+                              if (!state) return null;
+                              const s = state.toLowerCase();
+                              const cls = s === 'ready'
+                                ? 'bg-green-100 text-green-800'
+                                : s === 'error'
+                                  ? 'bg-red-100 text-red-800'
+                                  : 'bg-amber-100 text-amber-800';
+                              const label = s.charAt(0).toUpperCase() + s.slice(1);
+                              return (
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
+                                  {label}
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -213,33 +236,7 @@ export default function Extensions() {
                         {(extension.manifest as any)?.publisher || (extension.manifest as any)?.author || 'Unknown'}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          extension.is_enabled
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {extension.is_enabled ? 'Enabled' : 'Disabled'}
-                        </span>
-                        {(() => {
-                          const state = installInfo[extension.id]?.status?.state as string | undefined;
-                          if (!state) return null;
-                          const s = state.toLowerCase();
-                          const cls = s === 'ready'
-                            ? 'bg-green-100 text-green-800'
-                            : s === 'error'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-amber-100 text-amber-800';
-                          const label = s.charAt(0).toUpperCase() + s.slice(1);
-                          return (
-                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${cls}`}>
-                              {label}
-                            </span>
-                          );
-                        })()}
-                      </div>
-                    </td>
+                    
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {installInfo[extension.id]?.domain || '—'}
