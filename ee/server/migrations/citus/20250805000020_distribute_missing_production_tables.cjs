@@ -59,7 +59,7 @@ exports.up = async function(knex) {
     'tenant_companies',
     'time_period_settings',
     // Additional reference tables without tenant columns
-    'composite_tax_mappings',
+    // 'composite_tax_mappings', // Can't be reference until tax_components is distributed
     // 'email_templates', // Moved to distributed - has FKs to distributed tables
     'standard_service_categories',
     // 'system_event_catalog', // Has triggers, cannot be distributed with Citus
@@ -182,8 +182,8 @@ exports.up = async function(knex) {
         }
       }
       
-      // Step 4: Special handling for company_billing_cycles
-      if (table === 'company_billing_cycles') {
+      // Step 4: Special handling for tables with persistent constraint issues
+      if (table === 'company_billing_cycles' || table === 'tax_components') {
         // This table has persistent constraint issues - needs special handling
         console.log(`  Special handling for ${table}...`);
         
@@ -361,6 +361,89 @@ exports.up = async function(knex) {
     } catch (error) {
       console.error(`  ✗ Failed to process ${table}: ${error.message}`);
       console.log(`  Continuing with remaining tables...`);
+    }
+  }
+  
+  // Recreate critical foreign keys between distributed tables
+  console.log('\nRecreating foreign keys between distributed tables...');
+  
+  // Foreign keys for tax_components
+  if (await knex.schema.hasTable('tax_components')) {
+    try {
+      // Check if tax_components is distributed
+      const isDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition 
+          WHERE logicalrelid = 'tax_components'::regclass
+        ) as distributed
+      `);
+      
+      if (isDistributed.rows[0].distributed) {
+        // tax_components -> tax_rates
+        await knex.raw(`
+          ALTER TABLE tax_components 
+          ADD CONSTRAINT tax_components_tax_rate_id_foreign 
+          FOREIGN KEY (tenant, tax_rate_id) 
+          REFERENCES tax_rates(tenant, tax_rate_id) 
+          ON DELETE CASCADE
+        `);
+        console.log('  ✓ Recreated FK: tax_components -> tax_rates');
+        
+        // composite_tax_mappings -> tax_components (if composite_tax_mappings is distributed)
+        const compMappingsDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = 'composite_tax_mappings'::regclass
+          ) as distributed
+        `);
+        
+        if (compMappingsDistributed.rows[0].distributed) {
+          await knex.raw(`
+            ALTER TABLE composite_tax_mappings 
+            ADD CONSTRAINT composite_tax_mappings_tax_component_id_foreign 
+            FOREIGN KEY (tax_component_id) 
+            REFERENCES tax_components(tax_component_id) 
+            ON DELETE CASCADE
+          `);
+          console.log('  ✓ Recreated FK: composite_tax_mappings -> tax_components');
+        }
+      }
+    } catch (e) {
+      console.log(`  - Could not recreate tax_components FKs: ${e.message}`);
+    }
+  }
+  
+  // Foreign keys for email tables
+  const emailTableFKs = [
+    { table: 'email_domains', fk: 'email_domains_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'email_rate_limits', fk: 'email_rate_limits_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'email_sending_logs', fk: 'email_sending_logs_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'tenant_email_settings', fk: 'tenant_email_settings_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' }
+  ];
+  
+  for (const { table, fk, column, ref_table, ref_column } of emailTableFKs) {
+    try {
+      if (await knex.schema.hasTable(table)) {
+        const isDistributed = await knex.raw(`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_dist_partition 
+            WHERE logicalrelid = '${table}'::regclass
+          ) as distributed
+        `);
+        
+        if (isDistributed.rows[0].distributed) {
+          await knex.raw(`
+            ALTER TABLE ${table} 
+            ADD CONSTRAINT ${fk} 
+            FOREIGN KEY (${column}) 
+            REFERENCES ${ref_table}(${ref_column}) 
+            ON DELETE CASCADE
+          `);
+          console.log(`  ✓ Recreated FK: ${table} -> ${ref_table}`);
+        }
+      }
+    } catch (e) {
+      console.log(`  - Could not recreate FK ${fk}: ${e.message}`);
     }
   }
   
