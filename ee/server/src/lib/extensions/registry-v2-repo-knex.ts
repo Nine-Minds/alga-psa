@@ -174,7 +174,20 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
     },
   };
 
-  setRegistryV2Repository({ extensions, versions } as any);
+  // Expose attachBundle on the repo object used by upsertVersionFromManifest
+  const attachBundle = async (versionId: string, b: { contentHash: string; signature?: string; precompiled?: any }) => {
+    await knex('extension_bundle').insert({
+      id: uuid() || undefined,
+      version_id: versionId,
+      content_hash: b.contentHash,
+      signature: b.signature ?? null,
+      precompiled: b.precompiled ? JSON.stringify(b.precompiled) : null,
+      storage_url: null,
+      size_bytes: null,
+    });
+  };
+
+  setRegistryV2Repository({ extensions, versions, attachBundle } as any);
 }
 
 let registered = false;
@@ -184,4 +197,3 @@ export async function ensureRegistryV2KnexRepo(getKnex: () => Promise<Knex>) {
   registerRegistryV2KnexRepo(knex);
   registered = true;
 }
-

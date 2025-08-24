@@ -547,11 +547,25 @@ export async function upsertVersionFromManifest(
     reason: signature.reason,
   } as CreateExtensionVersionInput['signature'];
 
-  // Create version; enforce uniqueness on (extensionId, version)
+  // Create version; enforce uniqueness on (extensionId, version). If it exists, attach new bundle if needed.
+  const repo = requireRepo();
+  const existing = await repo.versions.findByExtensionAndVersion(extension.id, manifest.version);
+  if (existing) {
+    const want = validateContentHash(contentHash);
+    if (existing.contentHash !== want) {
+      // Attach new bundle row to this version (idempotent if same content_hash already present)
+      await (repo as any).attachBundle?.(existing.id, { contentHash: `sha256:${want}` });
+      // Re-read latest mapping for this version
+      const newest = await repo.versions.findByExtensionAndVersion(extension.id, manifest.version);
+      return { extension, version: newest || existing };
+    }
+    return { extension, version: existing };
+  }
+
   const versionRecord = await createExtensionVersion({
     extensionId: extension.id,
-    version: manifest.version, // semver-like validated in createExtensionVersion
-    contentHash,               // validated in createExtensionVersion
+    version: manifest.version,
+    contentHash,
     runtime: parsed.runtime,
     uiEntry: parsed.uiEntry,
     endpoints: normalizeEndpoints(parsed.endpoints as Array<{ method: string; path: string; handler: string }>),
