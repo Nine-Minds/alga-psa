@@ -244,11 +244,17 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
 
-    // Attach ALGA_AUTH_KEY if present for registry auth
+    // Attach ALGA_AUTH_KEY if present for registry auth and log masked presence
     let mut rb = http.get(url.clone());
-    if let Ok(key) = std::env::var("ALGA_AUTH_KEY") {
-        if !key.is_empty() {
+    match std::env::var("ALGA_AUTH_KEY") {
+        Ok(key) if !key.is_empty() => {
+            let prefix: String = key.chars().take(4).collect();
+            let len = key.len();
+            tracing::info!(key_len = len, key_prefix = %prefix, "ALGA_AUTH_KEY present; sending x-api-key header");
             rb = rb.header("x-api-key", key);
+        }
+        _ => {
+            tracing::warn!("ALGA_AUTH_KEY not set; registry call may be unauthorized");
         }
     }
 

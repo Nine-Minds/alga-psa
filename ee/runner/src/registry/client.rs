@@ -42,6 +42,12 @@ impl HttpRegistryClient {
             let t = s.trim().to_string();
             if t.is_empty() { None } else { Some(t) }
         });
+        if let Some(ref k) = api_key {
+            let prefix: String = k.chars().take(4).collect();
+            tracing::info!(key_len = k.len(), key_prefix = %prefix, "ALGA_AUTH_KEY present for validation client");
+        } else {
+            tracing::warn!("ALGA_AUTH_KEY not set for validation client; strict validation calls may be unauthorized");
+        }
 
         Ok(Self {
             strict,
