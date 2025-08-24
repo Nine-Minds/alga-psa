@@ -11,6 +11,7 @@ import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
 import { Readable } from "node:stream";
 import { getS3Client, getBucket } from "../storage/s3-client";
+import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import {
   hashSha256Stream,
   loadTrustBundle,
@@ -92,6 +93,14 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
 
   const store = createS3BundleStore();
   const started = Date.now();
+  // Preflight: verify bucket exists; surface clear error if not
+  try {
+    const s3 = getS3Client();
+    const Bucket = getBucket();
+    await s3.send(new HeadBucketCommand({ Bucket } as any));
+  } catch (e: any) {
+    throw new HttpError(500, "BUCKET_NOT_FOUND", "Storage bucket not found. Please contact an administrator to configure extension storage.");
+  }
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
