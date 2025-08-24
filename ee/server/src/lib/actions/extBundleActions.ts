@@ -161,8 +161,8 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   if (typeof key !== "string" || key.trim().length === 0) {
     throw new HttpError(400, "BAD_REQUEST", "key is required");
   }
-  if (!key.startsWith(BASE_PREFIX)) {
-    throw new HttpError(400, "BAD_REQUEST", `key must start with "${BASE_PREFIX}"`);
+  if (!key.includes('/_staging/') || !key.endsWith('/bundle.tar.zst')) {
+    throw new HttpError(400, "BAD_REQUEST", 'invalid staging key (expected tenants/<tenant>/_staging/<id>/bundle.tar.zst)');
   }
 
   // Validate size (optional)
