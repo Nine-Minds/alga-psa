@@ -124,7 +124,6 @@ export function createS3BundleStore(config?: BundleStoreConfig): IBundleStore {
         cacheControl: opts?.cacheControl,
         contentLength: opts?.contentLength,
         ifNoneMatch: opts?.ifNoneMatch ?? "*",
-        contentLength: opts?.contentLength,
       };
       try {
         return await s3PutObject(key, body as any, effective, bundleBucket);
