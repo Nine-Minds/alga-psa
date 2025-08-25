@@ -7,55 +7,46 @@
  * Capture all foreign keys for a table before distribution
  */
 async function captureForeignKeys(knex, tableName) {
+  // Use pg_constraint directly to get accurate foreign key information
   const fks = await knex.raw(`
     SELECT 
-      tc.constraint_name,
-      tc.table_name,
-      kcu.column_name,
-      ccu.table_name AS foreign_table_name,
-      ccu.column_name AS foreign_column_name,
+      c.conname AS constraint_name,
+      c.conrelid::regclass::text AS table_name,
+      rf.relname AS foreign_table_name,
       rc.update_rule,
-      rc.delete_rule
-    FROM information_schema.table_constraints AS tc 
-    JOIN information_schema.key_column_usage AS kcu
-      ON tc.constraint_name = kcu.constraint_name
-      AND tc.table_schema = kcu.table_schema
-    JOIN information_schema.constraint_column_usage AS ccu
-      ON ccu.constraint_name = tc.constraint_name
-      AND ccu.table_schema = tc.table_schema
-    JOIN information_schema.referential_constraints AS rc
-      ON rc.constraint_name = tc.constraint_name
-      AND rc.constraint_schema = tc.table_schema
-    WHERE tc.constraint_type = 'FOREIGN KEY' 
-      AND tc.table_schema = 'public'
-      AND tc.table_name = ?
-    ORDER BY tc.constraint_name, kcu.ordinal_position
+      rc.delete_rule,
+      array_agg(a.attname ORDER BY unnest_ord) AS columns,
+      array_agg(af.attname ORDER BY unnest_ord) AS foreign_columns
+    FROM pg_constraint c
+    JOIN pg_class rf ON rf.oid = c.confrelid
+    JOIN information_schema.referential_constraints rc
+      ON rc.constraint_name = c.conname
+      AND rc.constraint_schema = 'public'
+    CROSS JOIN LATERAL (
+      SELECT unnest(c.conkey) AS attnum, 
+             unnest(c.confkey) AS foreign_attnum,
+             generate_subscripts(c.conkey, 1) AS unnest_ord
+    ) AS cols
+    JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = cols.attnum
+    JOIN pg_attribute af ON af.attrelid = c.confrelid AND af.attnum = cols.foreign_attnum
+    WHERE c.contype = 'f'
+      AND c.conrelid = ?::regclass
+    GROUP BY c.conname, c.conrelid, rf.relname, rc.update_rule, rc.delete_rule
+    ORDER BY c.conname
   `, [tableName]);
   
-  // Group by constraint name to handle composite foreign keys
-  const groupedFks = {};
-  for (const fk of fks.rows) {
-    if (!groupedFks[fk.constraint_name]) {
-      groupedFks[fk.constraint_name] = {
-        constraint_name: fk.constraint_name,
-        table_name: fk.table_name,
-        foreign_table_name: fk.foreign_table_name,
-        columns: [],
-        foreign_columns: [],
-        update_rule: fk.update_rule,
-        delete_rule: fk.delete_rule
-      };
-    }
-    // Avoid duplicates when capturing composite keys
-    if (!groupedFks[fk.constraint_name].columns.includes(fk.column_name)) {
-      groupedFks[fk.constraint_name].columns.push(fk.column_name);
-    }
-    if (!groupedFks[fk.constraint_name].foreign_columns.includes(fk.foreign_column_name)) {
-      groupedFks[fk.constraint_name].foreign_columns.push(fk.foreign_column_name);
-    }
-  }
+  // The query now returns one row per constraint with arrays for columns
+  const formattedFks = fks.rows.map(fk => ({
+    constraint_name: fk.constraint_name,
+    table_name: fk.table_name,
+    foreign_table_name: fk.foreign_table_name,
+    columns: fk.columns,
+    foreign_columns: fk.foreign_columns,
+    update_rule: fk.update_rule,
+    delete_rule: fk.delete_rule
+  }));
   
-  return Object.values(groupedFks);
+  return formattedFks;
 }
 
 /**
