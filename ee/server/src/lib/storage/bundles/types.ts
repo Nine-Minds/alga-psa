@@ -46,6 +46,8 @@ export interface BundleStoreConfig {
 export interface PutObjectOptions {
   contentType?: string;
   cacheControl?: string;
+  /** Known content length in bytes (used by some providers). */
+  contentLength?: number;
   /**
    * Write-once protection. If unspecified, helpers will default to If-None-Match: "*".
    */
