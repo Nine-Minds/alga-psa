@@ -46,8 +46,13 @@ async function captureForeignKeys(knex, tableName) {
         delete_rule: fk.delete_rule
       };
     }
-    groupedFks[fk.constraint_name].columns.push(fk.column_name);
-    groupedFks[fk.constraint_name].foreign_columns.push(fk.foreign_column_name);
+    // Avoid duplicates when capturing composite keys
+    if (!groupedFks[fk.constraint_name].columns.includes(fk.column_name)) {
+      groupedFks[fk.constraint_name].columns.push(fk.column_name);
+    }
+    if (!groupedFks[fk.constraint_name].foreign_columns.includes(fk.foreign_column_name)) {
+      groupedFks[fk.constraint_name].foreign_columns.push(fk.foreign_column_name);
+    }
   }
   
   return Object.values(groupedFks);
@@ -132,19 +137,22 @@ async function recreateForeignKeys(knex, tableName, capturedFks = null) {
         }
         
         if (includesTenant) {
-          // FK already includes tenant, recreate as-is
+          // FK already includes tenant, recreate as-is but ensure no duplicates
+          const uniqueColumns = [...new Set(fk.columns)];
+          const uniqueForeignColumns = [...new Set(fk.foreign_columns)];
+          
           await knex.raw(`
             ALTER TABLE ${fk.table_name}
             ADD CONSTRAINT ${fk.constraint_name}
-            FOREIGN KEY (${fk.columns.join(', ')})
-            REFERENCES ${fk.foreign_table_name}(${fk.foreign_columns.join(', ')})
+            FOREIGN KEY (${uniqueColumns.join(', ')})
+            REFERENCES ${fk.foreign_table_name}(${uniqueForeignColumns.join(', ')})
             ${deleteRule !== 'NO ACTION' ? `ON DELETE ${deleteRule}` : ''}
             ${fk.update_rule !== 'NO ACTION' ? `ON UPDATE ${fk.update_rule}` : ''}
           `);
         } else {
-          // Add tenant to the FK
-          const newColumns = ['tenant', ...fk.columns];
-          const newForeignColumns = ['tenant', ...fk.foreign_columns];
+          // Add tenant to the FK (avoiding duplicates)
+          const newColumns = ['tenant', ...fk.columns.filter(c => c !== 'tenant' && c !== 'tenant_id')];
+          const newForeignColumns = ['tenant', ...fk.foreign_columns.filter(c => c !== 'tenant' && c !== 'tenant_id')];
           
           await knex.raw(`
             ALTER TABLE ${fk.table_name}
