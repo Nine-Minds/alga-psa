@@ -42,6 +42,7 @@ impl HttpRegistryClient {
             let t = s.trim().to_string();
             if t.is_empty() { None } else { Some(t) }
         });
+
         if let Some(ref k) = api_key {
             let prefix: String = k.chars().take(4).collect();
             tracing::info!(key_len = k.len(), key_prefix = %prefix, "ALGA_AUTH_KEY present for validation client");
@@ -95,8 +96,10 @@ impl RegistryClient for HttpRegistryClient {
 
         // Keep fast timeout
         let mut rb = self.http.get(url);
+
         // Temporary canary routing header for testing; remove after canary period
         rb = rb.header("x-canary", "robert");
+
         if let Some(key) = &self.api_key {
             rb = rb.header("x-api-key", key);
         }

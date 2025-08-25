@@ -49,6 +49,11 @@ export interface PutObjectOptions {
   /** Known content length in bytes (used by some providers). */
   contentLength?: number;
   /**
+   * Optional content length hint for streaming uploads. When provided, the
+   * underlying client can avoid chunked uploads and ambiguous headers.
+   */
+  contentLength?: number;
+  /**
    * Write-once protection. If unspecified, helpers will default to If-None-Match: "*".
    */
   ifNoneMatch?: string;

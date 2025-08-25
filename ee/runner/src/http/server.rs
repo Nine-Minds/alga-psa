@@ -264,6 +264,7 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
     }
 
     tracing::info!(host=%host, url=%url.to_string(), "lookup-by-host request start");
+
     let resp = match rb.send().await {
         Ok(r) => r,
         Err(e) => {

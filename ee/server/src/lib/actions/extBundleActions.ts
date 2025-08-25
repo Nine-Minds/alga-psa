@@ -110,6 +110,7 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
+
     await store.putObject(
       key,
       nodeStream as unknown as NodeJS.ReadableStream,
