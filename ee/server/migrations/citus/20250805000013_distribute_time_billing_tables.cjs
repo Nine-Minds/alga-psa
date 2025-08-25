@@ -1,6 +1,10 @@
 /**
  * Distribute time tracking and billing related tables
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -44,23 +48,13 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+
+
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+
+
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -121,31 +115,8 @@ exports.up = async function(knex) {
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
-      
-    } catch (error) {
-      console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
-      throw error;
-    }
-  }
-  
-  // Recreate important FKs between distributed tables
-  console.log('\nRecreating foreign keys between distributed tables...');
-  
-  try {
-    // time_sheets -> users
-    await knex.raw(`
-      ALTER TABLE time_sheets 
-      ADD CONSTRAINT time_sheets_tenant_user_id_foreign 
-      FOREIGN KEY (tenant, user_id) 
-      REFERENCES users(tenant, user_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: time_sheets -> users');
-  } catch (e) {
-    console.log(`  - Could not recreate FK time_sheets -> users: ${e.message}`);
-  }
-  
-  console.log('\n✓ All time tracking and billing tables distributed successfully');
+  console.log('
+✓ All tables distributed successfully');
 };
 
 exports.down = async function(knex) {

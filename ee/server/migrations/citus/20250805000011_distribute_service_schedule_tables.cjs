@@ -2,6 +2,10 @@
  * Distribute service and schedule tables
  * Dependencies: companies, users must be distributed first
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -44,23 +48,13 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+
+
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+
+
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -121,33 +115,8 @@ exports.up = async function(knex) {
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
-      
-    } catch (error) {
-      console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
-      throw error;
-    }
-  }
-  
-  // Recreate important FKs between distributed tables
-  console.log('\nRecreating foreign keys between distributed tables...');
-  
-  // Note: schedule_entries doesn't have FK to schedules (schedules table was removed)
-  
-  try {
-    // service_catalog -> service_categories
-    await knex.raw(`
-      ALTER TABLE service_catalog 
-      ADD CONSTRAINT service_catalog_tenant_category_id_foreign 
-      FOREIGN KEY (tenant, category_id) 
-      REFERENCES service_categories(tenant, category_id) 
-      ON DELETE SET NULL
-    `);
-    console.log('  ✓ Recreated FK: service_catalog -> service_categories');
-  } catch (e) {
-    console.log(`  - Could not recreate FK service_catalog -> service_categories: ${e.message}`);
-  }
-  
-  console.log('\n✓ All service and schedule tables distributed successfully');
+  console.log('
+✓ All tables distributed successfully');
 };
 
 exports.down = async function(knex) {

@@ -2,6 +2,10 @@
  * Distribute project-related tables
  * Dependencies: companies must be distributed first
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -44,23 +48,13 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+
+
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+
+
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -121,64 +115,8 @@ exports.up = async function(knex) {
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
-      
-    } catch (error) {
-      console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
-      throw error;
-    }
-  }
-  
-  // After all tables are distributed, recreate critical FKs between distributed tables
-  console.log('\nRecreating foreign keys between distributed tables...');
-  
-  try {
-    // project_phases -> projects
-    await knex.raw(`
-      ALTER TABLE project_phases 
-      ADD CONSTRAINT project_phases_tenant_project_id_foreign 
-      FOREIGN KEY (tenant, project_id) 
-      REFERENCES projects(tenant, project_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: project_phases -> projects');
-  } catch (e) {
-    console.log(`  - Could not recreate FK project_phases -> projects: ${e.message}`);
-  }
-  
-  try {
-    // project_tasks -> project_phases
-    await knex.raw(`
-      ALTER TABLE project_tasks 
-      ADD CONSTRAINT project_tasks_tenant_phase_id_foreign 
-      FOREIGN KEY (tenant, phase_id) 
-      REFERENCES project_phases(tenant, phase_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: project_tasks -> project_phases');
-  } catch (e) {
-    console.log(`  - Could not recreate FK project_tasks -> project_phases: ${e.message}`);
-  }
-  
-  // Note: time_entries uses work_item_id which can reference various work item types
-  // (tickets, project_tasks, etc) via work_item_type column, so we cannot create
-  // a direct FK to project_tasks
-  console.log('  Note: time_entries -> project_tasks FK skipped (polymorphic reference via work_item_id)');
-  
-  try {
-    // projects -> companies
-    await knex.raw(`
-      ALTER TABLE projects 
-      ADD CONSTRAINT projects_tenant_company_id_foreign 
-      FOREIGN KEY (tenant, company_id) 
-      REFERENCES companies(tenant, company_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: projects -> companies');
-  } catch (e) {
-    console.log(`  - Could not recreate FK projects -> companies: ${e.message}`);
-  }
-  
-  console.log('\n✓ All project tables distributed successfully');
+  console.log('
+✓ All tables distributed successfully');
 };
 
 exports.down = async function(knex) {

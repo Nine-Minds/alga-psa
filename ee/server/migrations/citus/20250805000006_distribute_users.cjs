@@ -2,6 +2,11 @@
  * Distribute users table
  * Companies must be distributed first (users has FK to companies)
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
+
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -33,25 +38,9 @@ exports.up = async function(knex) {
       return;
     }
 
-    // Step 1: Drop foreign key constraints that might cause issues
-    console.log('  Step 1: Dropping foreign key constraints...');
-    const fkConstraints = await knex.raw(`
-      SELECT conname
-      FROM pg_constraint
-      WHERE conrelid = 'users'::regclass
-      AND contype = 'f'
-    `);
-    
-    const droppedFKs = [];
-    for (const fk of fkConstraints.rows) {
-      try {
-        await knex.raw(`ALTER TABLE users DROP CONSTRAINT ${fk.conname}`);
-        droppedFKs.push(fk.conname);
-        console.log(`    ✓ Dropped FK: ${fk.conname}`);
-      } catch (e) {
-        console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-      }
-    }
+    // Step 1: Capture and drop foreign key constraints
+    console.log('  Step 1: Capturing and dropping foreign key constraints...');
+    const capturedFKs = await dropAndCaptureForeignKeys(knex, 'users');
     
     // Step 2: Drop unique constraints that don't include tenant
     console.log('  Step 2: Dropping unique constraints...');
@@ -76,20 +65,9 @@ exports.up = async function(knex) {
     await knex.raw(`SELECT create_distributed_table('users', 'tenant', colocate_with => 'tenants')`);
     console.log('    ✓ Distributed users table');
     
-    // Step 4: Recreate FK to companies (both tables now distributed)
-    console.log('  Step 4: Recreating foreign key to companies...');
-    try {
-      await knex.raw(`
-        ALTER TABLE users 
-        ADD CONSTRAINT users_tenant_company_id_foreign 
-        FOREIGN KEY (tenant, company_id) 
-        REFERENCES companies(tenant, company_id) 
-        ON DELETE CASCADE
-      `);
-      console.log('    ✓ Recreated FK to companies');
-    } catch (e) {
-      console.log(`    - Could not recreate FK to companies: ${e.message}`);
-    }
+    // Step 4: Recreate all valid foreign keys
+    console.log('  Step 4: Recreating foreign keys...');
+    await recreateForeignKeys(knex, 'users', capturedFKs);
     
     // Step 5: Recreate unique constraint on email within tenant
     console.log('  Step 5: Recreating unique constraints...');

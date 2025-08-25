@@ -1,6 +1,10 @@
 /**
  * Distribute remaining core tables
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -46,23 +50,13 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+
+
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+
+
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -123,73 +117,8 @@ exports.up = async function(knex) {
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
-      
-    } catch (error) {
-      console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
-      throw error;
-    }
-  }
-  
-  // Recreate important FKs between distributed tables
-  console.log('\nRecreating foreign keys between distributed tables...');
-  
-  try {
-    // team_members -> teams
-    await knex.raw(`
-      ALTER TABLE team_members 
-      ADD CONSTRAINT team_members_tenant_team_id_foreign 
-      FOREIGN KEY (tenant, team_id) 
-      REFERENCES teams(tenant, team_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: team_members -> teams');
-  } catch (e) {
-    console.log(`  - Could not recreate FK team_members -> teams: ${e.message}`);
-  }
-  
-  try {
-    // team_members -> users
-    await knex.raw(`
-      ALTER TABLE team_members 
-      ADD CONSTRAINT team_members_tenant_user_id_foreign 
-      FOREIGN KEY (tenant, user_id) 
-      REFERENCES users(tenant, user_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: team_members -> users');
-  } catch (e) {
-    console.log(`  - Could not recreate FK team_members -> users: ${e.message}`);
-  }
-  
-  try {
-    // user_roles -> users  
-    await knex.raw(`
-      ALTER TABLE user_roles 
-      ADD CONSTRAINT user_roles_tenant_user_id_foreign 
-      FOREIGN KEY (tenant, user_id) 
-      REFERENCES users(tenant, user_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: user_roles -> users');
-  } catch (e) {
-    console.log(`  - Could not recreate FK user_roles -> users: ${e.message}`);
-  }
-  
-  try {
-    // user_roles -> roles
-    await knex.raw(`
-      ALTER TABLE user_roles 
-      ADD CONSTRAINT user_roles_tenant_role_id_foreign 
-      FOREIGN KEY (tenant, role_id) 
-      REFERENCES roles(tenant, role_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: user_roles -> roles');
-  } catch (e) {
-    console.log(`  - Could not recreate FK user_roles -> roles: ${e.message}`);
-  }
-  
-  console.log('\n✓ All remaining core tables distributed successfully');
+  console.log('
+✓ All tables distributed successfully');
 };
 
 exports.down = async function(knex) {

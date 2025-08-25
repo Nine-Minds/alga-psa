@@ -2,6 +2,11 @@
  * Distribute companies table only - simplified version
  * Handles all constraints properly
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
+
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -57,25 +62,9 @@ exports.up = async function(knex) {
       }
     }
     
-    // Step 3: Get and drop all foreign key constraints
-    console.log('  Step 3: Dropping foreign key constraints...');
-    const fkConstraints = await knex.raw(`
-      SELECT conname
-      FROM pg_constraint
-      WHERE conrelid = 'companies'::regclass
-      AND contype = 'f'  -- foreign key constraints
-    `);
-    
-    const droppedFKs = [];
-    for (const fk of fkConstraints.rows) {
-      try {
-        await knex.raw(`ALTER TABLE companies DROP CONSTRAINT ${fk.conname}`);
-        droppedFKs.push(fk.conname);
-        console.log(`    ✓ Dropped FK: ${fk.conname}`);
-      } catch (e) {
-        console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-      }
-    }
+    // Step 3: Capture and drop all foreign key constraints
+    console.log('  Step 3: Capturing and dropping foreign key constraints...');
+    const capturedFKs = await dropAndCaptureForeignKeys(knex, 'companies');
     
     // Step 4: Try to drop the problematic unique constraint with CASCADE
     console.log('  Step 4: Handling problematic unique constraint...');
@@ -107,8 +96,9 @@ exports.up = async function(knex) {
       console.log(`    - Could not recreate unique constraint: ${e.message}`);
     }
     
-    // Note: We'll recreate FKs in a later migration after all tables are distributed
-    console.log('    Note: Foreign keys will be recreated after all related tables are distributed');
+    // Step 7: Recreate all valid foreign keys
+    console.log('  Step 7: Recreating foreign keys...');
+    await recreateForeignKeys(knex, 'companies', capturedFKs);
     
     console.log('  ✓ Companies table distributed successfully');
     

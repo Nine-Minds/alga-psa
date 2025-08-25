@@ -2,6 +2,10 @@
  * Distribute billing-related tables
  * Dependencies: companies, contacts must be distributed first
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -44,23 +48,9 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -123,43 +113,14 @@ exports.up = async function(knex) {
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
       
+      // Step 5: Recreate foreign keys for this table
+      console.log(`  Recreating foreign keys for ${table}...`);
+      await recreateForeignKeys(knex, table, capturedFKs);
+      
     } catch (error) {
       console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
       throw error;
     }
-  }
-  
-  // After all tables are distributed, recreate critical FKs between distributed tables
-  console.log('\nRecreating foreign keys between distributed tables...');
-  
-  try {
-    // invoice_items -> invoices
-    await knex.raw(`
-      ALTER TABLE invoice_items 
-      ADD CONSTRAINT invoice_items_tenant_invoice_id_foreign 
-      FOREIGN KEY (tenant, invoice_id) 
-      REFERENCES invoices(tenant, invoice_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: invoice_items -> invoices');
-  } catch (e) {
-    console.log(`  - Could not recreate FK invoice_items -> invoices: ${e.message}`);
-  }
-  
-  // Removed payments FK since table doesn't exist yet
-  
-  try {
-    // invoices -> companies
-    await knex.raw(`
-      ALTER TABLE invoices 
-      ADD CONSTRAINT invoices_tenant_company_id_foreign 
-      FOREIGN KEY (tenant, company_id) 
-      REFERENCES companies(tenant, company_id) 
-      ON DELETE CASCADE
-    `);
-    console.log('  ✓ Recreated FK: invoices -> companies');
-  } catch (e) {
-    console.log(`  - Could not recreate FK invoices -> companies: ${e.message}`);
   }
   
   console.log('\n✓ All billing tables distributed successfully');

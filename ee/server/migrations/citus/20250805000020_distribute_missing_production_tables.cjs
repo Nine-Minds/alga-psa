@@ -2,6 +2,10 @@
  * Distribute tables that are missing from testing but present in production
  * This migration addresses inconsistencies between production and testing environments
  */
+const { 
+  dropAndCaptureForeignKeys, 
+  recreateForeignKeys 
+} = require('./utils/foreign_key_manager.cjs');
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
@@ -110,23 +114,13 @@ exports.up = async function(knex) {
         continue;
       }
 
-      // Step 1: Drop foreign key constraints
-      console.log(`  Dropping foreign key constraints for ${table}...`);
-      const fkConstraints = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = '${table}'::regclass
-        AND contype = 'f'
-      `);
-      
-      for (const fk of fkConstraints.rows) {
-        try {
-          await knex.raw(`ALTER TABLE ${table} DROP CONSTRAINT ${fk.conname}`);
-          console.log(`    ✓ Dropped FK: ${fk.conname}`);
-        } catch (e) {
-          console.log(`    - Could not drop FK ${fk.conname}: ${e.message}`);
-        }
-      }
+      // Step 1: Capture and drop foreign key constraints
+
+
+      console.log(`  Capturing and dropping foreign key constraints for ${table}...`);
+
+
+      const capturedFKs = await dropAndCaptureForeignKeys(knex, table);
       
       // Step 2: Drop unique constraints with CASCADE
       console.log(`  Dropping unique constraints for ${table}...`);
@@ -231,6 +225,14 @@ exports.up = async function(knex) {
       const columnToUse = tenantColumn === 'tenant_id' ? 'tenant_id' : 'tenant';
       await knex.raw(`SELECT create_distributed_table('${table}', '${columnToUse}', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
+
+      
+
+      // Recreate foreign keys for this table
+
+      console.log(`  Recreating foreign keys for ${table}...`);
+
+      await recreateForeignKeys(knex, table, capturedFKs);
       
     } catch (error) {
       console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
