@@ -124,6 +124,13 @@ async function recreateForeignKeys(knex, tableName, capturedFks = null) {
         // Check if FK already includes tenant
         const includesTenant = fk.columns.includes('tenant') || fk.columns.includes('tenant_id');
         
+        // Citus doesn't support ON DELETE SET NULL for distributed tables
+        let deleteRule = fk.delete_rule;
+        if (deleteRule === 'SET NULL') {
+          deleteRule = 'RESTRICT';
+          console.log(`    ⚠ Changed ON DELETE SET NULL to RESTRICT for Citus compatibility`);
+        }
+        
         if (includesTenant) {
           // FK already includes tenant, recreate as-is
           await knex.raw(`
@@ -131,7 +138,7 @@ async function recreateForeignKeys(knex, tableName, capturedFks = null) {
             ADD CONSTRAINT ${fk.constraint_name}
             FOREIGN KEY (${fk.columns.join(', ')})
             REFERENCES ${fk.foreign_table_name}(${fk.foreign_columns.join(', ')})
-            ${fk.delete_rule !== 'NO ACTION' ? `ON DELETE ${fk.delete_rule}` : ''}
+            ${deleteRule !== 'NO ACTION' ? `ON DELETE ${deleteRule}` : ''}
             ${fk.update_rule !== 'NO ACTION' ? `ON UPDATE ${fk.update_rule}` : ''}
           `);
         } else {
@@ -144,7 +151,7 @@ async function recreateForeignKeys(knex, tableName, capturedFks = null) {
             ADD CONSTRAINT ${fk.constraint_name}
             FOREIGN KEY (${newColumns.join(', ')})
             REFERENCES ${fk.foreign_table_name}(${newForeignColumns.join(', ')})
-            ${fk.delete_rule !== 'NO ACTION' ? `ON DELETE ${fk.delete_rule}` : ''}
+            ${deleteRule !== 'NO ACTION' ? `ON DELETE ${deleteRule}` : ''}
             ${fk.update_rule !== 'NO ACTION' ? `ON UPDATE ${fk.update_rule}` : ''}
           `);
         }

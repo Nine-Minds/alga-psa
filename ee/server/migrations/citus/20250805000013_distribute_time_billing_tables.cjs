@@ -115,6 +115,17 @@ exports.up = async function(knex) {
       console.log(`  Distributing ${table}...`);
       await knex.raw(`SELECT create_distributed_table('${table}', 'tenant', colocate_with => 'tenants')`);
       console.log(`    ✓ Distributed ${table}`);
+      
+      // Recreate foreign keys for this table
+      console.log(`  Recreating foreign keys for ${table}...`);
+      await recreateForeignKeys(knex, table, capturedFKs);
+      
+    } catch (error) {
+      console.error(`  ✗ Failed to distribute ${table}: ${error.message}`);
+      throw error;
+    }
+  }
+  
   console.log('
 ✓ All tables distributed successfully');
 };
