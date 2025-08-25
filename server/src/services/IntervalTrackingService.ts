@@ -7,7 +7,7 @@ import { TicketInterval, IntervalDBSchema } from '../types/interval-tracking';
 export class IntervalTrackingService {
   private readonly dbSchema: IntervalDBSchema = {
     name: 'TicketTimeTrackingDB',
-    version: 1,
+    version: 2,
     stores: [
       {
         name: 'intervals',
@@ -17,9 +17,21 @@ export class IntervalTrackingService {
           { name: 'userId', keyPath: 'userId' },
           { name: 'startTime', keyPath: 'startTime' }
         ]
-      }
+      },
+      {
+        name: 'locks',
+        keyPath: 'ticketId',
+        indexes: [
+          { name: 'ticketId', keyPath: 'ticketId' },
+          { name: 'userId', keyPath: 'userId' },
+          { name: 'updatedAt', keyPath: 'updatedAt' },
+        ]
+      },
     ]
   };
+
+  // Lock TTL in milliseconds
+  private readonly LOCK_TTL_MS = 15000;
 
   /**
    * Initialize the IndexedDB database for interval tracking
@@ -49,21 +61,128 @@ export class IntervalTrackingService {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        const store = this.dbSchema.stores[0];
-
-        // Create the object store if it doesn't exist
-        if (!db.objectStoreNames.contains(store.name)) {
-          const objectStore = db.createObjectStore(store.name, {
-            keyPath: store.keyPath
-          });
-
-          // Create indexes
-          store.indexes.forEach((index) => {
-            objectStore.createIndex(index.name, index.keyPath, index.options);
-          });
+        for (const store of this.dbSchema.stores) {
+          if (!db.objectStoreNames.contains(store.name)) {
+            const objectStore = db.createObjectStore(store.name, {
+              keyPath: store.keyPath
+            });
+            store.indexes.forEach((index) => {
+              objectStore.createIndex(index.name, index.keyPath, index.options);
+            });
+          }
         }
       };
     });
+  }
+
+  // Internal type for lock records
+  private getLockExpiry(updatedAtIso: string): number {
+    const updated = new Date(updatedAtIso).getTime();
+    return updated + this.LOCK_TTL_MS;
+  }
+
+  private isLockStale(updatedAtIso: string): boolean {
+    return Date.now() > this.getLockExpiry(updatedAtIso);
+  }
+
+  async getLock(ticketId: string): Promise<{ ticketId: string; userId: string; holderId: string; updatedAt: string } | null> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['locks'], 'readonly');
+      const store = tx.objectStore('locks');
+      const req = store.get(ticketId);
+      req.onsuccess = (e) => {
+        const lock = (e.target as IDBRequest).result;
+        db.close();
+        resolve(lock || null);
+      };
+      req.onerror = (e) => {
+        console.error('Error getting lock:', e);
+        db.close();
+        reject(new Error('Failed to get lock'));
+      };
+    });
+  }
+
+  async acquireLock(ticketId: string, userId: string, holderId: string, force = false): Promise<boolean> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['locks'], 'readwrite');
+      const store = tx.objectStore('locks');
+      const getReq = store.get(ticketId);
+      getReq.onsuccess = (e) => {
+        const existing = (e.target as IDBRequest).result as any | undefined;
+        const nowIso = new Date().toISOString();
+        const write = (record: any) => {
+          const putReq = store.put(record);
+          putReq.onsuccess = () => { db.close(); resolve(true); };
+          putReq.onerror = (err) => { console.error('Error acquiring lock:', err); db.close(); reject(new Error('Failed to acquire lock')); };
+        };
+
+        if (!existing || this.isLockStale(existing.updatedAt)) {
+          write({ ticketId, userId, holderId, updatedAt: nowIso });
+          return;
+        }
+
+        if (existing.holderId === holderId || force) {
+          write({ ticketId, userId, holderId, updatedAt: nowIso });
+        } else {
+          db.close();
+          resolve(false);
+        }
+      };
+      getReq.onerror = (err) => { console.error('Error reading lock:', err); db.close(); reject(new Error('Failed to read lock')); };
+    });
+  }
+
+  async releaseLock(ticketId: string, holderId: string): Promise<void> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['locks'], 'readwrite');
+      const store = tx.objectStore('locks');
+      const getReq = store.get(ticketId);
+      getReq.onsuccess = (e) => {
+        const existing = (e.target as IDBRequest).result as any | undefined;
+        if (existing && existing.holderId === holderId) {
+          const delReq = store.delete(ticketId);
+          delReq.onsuccess = () => { db.close(); resolve(); };
+          delReq.onerror = (err) => { console.error('Error releasing lock:', err); db.close(); reject(new Error('Failed to release lock')); };
+        } else {
+          db.close();
+          resolve();
+        }
+      };
+      getReq.onerror = (err) => { console.error('Error reading lock for release:', err); db.close(); reject(new Error('Failed to release lock')); };
+    });
+  }
+
+  async heartbeatLock(ticketId: string, holderId: string): Promise<void> {
+    const db = await this.initDatabase();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(['locks'], 'readwrite');
+      const store = tx.objectStore('locks');
+      const getReq = store.get(ticketId);
+      getReq.onsuccess = (e) => {
+        const existing = (e.target as IDBRequest).result as any | undefined;
+        if (existing && existing.holderId === holderId) {
+          existing.updatedAt = new Date().toISOString();
+          const putReq = store.put(existing);
+          putReq.onsuccess = () => { db.close(); resolve(); };
+          putReq.onerror = (err) => { console.error('Error heartbeating lock:', err); db.close(); reject(new Error('Failed to heartbeat lock')); };
+        } else {
+          db.close();
+          resolve();
+        }
+      };
+      getReq.onerror = (err) => { console.error('Error reading lock for heartbeat:', err); db.close(); reject(new Error('Failed to heartbeat lock')); };
+    });
+  }
+
+  async isLockedByOther(ticketId: string, holderId: string): Promise<boolean> {
+    const lock = await this.getLock(ticketId);
+    if (!lock) return false;
+    if (this.isLockStale(lock.updatedAt)) return false;
+    return lock.holderId !== holderId;
   }
 
   /**
@@ -71,16 +190,6 @@ export class IntervalTrackingService {
    */
   async startInterval(ticketId: string, ticketNumber: string, ticketTitle: string, userId: string): Promise<string> {
     const db = await this.initDatabase();
-    
-    // Check if there's an open interval for this ticket and user
-    const existingInterval = await this.getOpenInterval(ticketId, userId);
-    
-    // If there's an open interval, use it instead of creating a new one
-    if (existingInterval) {
-      console.debug('Using existing open interval instead of creating a new one:', existingInterval.id);
-      db.close(); // Make sure to close the database connection
-      return existingInterval.id;
-    }
     
     // Check if we should create an interval from a previous end time
     let startTime = new Date();
@@ -127,14 +236,8 @@ export class IntervalTrackingService {
       userId
     };
     
-    // Double-check for an existing open interval right before creating a new one
-    // This helps prevent race conditions where multiple calls might create duplicate intervals
-    const doubleCheckInterval = await this.getOpenInterval(ticketId, userId);
-    if (doubleCheckInterval) {
-      console.debug('Found existing interval during double-check, using it instead:', doubleCheckInterval.id);
-      db.close(); // Make sure to close the database connection
-      return doubleCheckInterval.id;
-    }
+    // With pessimistic locking, duplicate intervals for the same ticket/user should not occur.
+    // We intentionally do not continue an existing open interval here.
     
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(['intervals'], 'readwrite');
@@ -612,5 +715,201 @@ export class IntervalTrackingService {
         reject(new Error('Failed to retrieve interval'));
       };
     });
+  }
+}
+
+// State machine for interval tracking per ticket/user/tab
+export type IntervalTrackingState =
+  | 'idle'
+  | 'acquiring_lock'
+  | 'active'
+  | 'locked_by_other'
+  | 'stopping'
+  | 'error';
+
+export interface IntervalStateSnapshot {
+  state: IntervalTrackingState;
+  intervalId: string | null;
+  lastError?: string | null;
+}
+
+type Listener = (snapshot: IntervalStateSnapshot) => void;
+
+export class IntervalTrackingStateMachine {
+  private service: IntervalTrackingService;
+  private ticketId: string;
+  private ticketNumber: string;
+  private ticketTitle: string;
+  private userId: string;
+  private holderId: string;
+  private heartbeatMs: number;
+  private state: IntervalTrackingState = 'idle';
+  private intervalId: string | null = null;
+  private listeners: Set<Listener> = new Set();
+  private heartbeatTimer: number | null = null;
+  private lastError: string | null = null;
+
+  constructor(
+    service: IntervalTrackingService,
+    args: {
+      ticketId: string;
+      ticketNumber: string;
+      ticketTitle: string;
+      userId: string;
+      holderId: string;
+      heartbeatMs?: number;
+    }
+  ) {
+    this.service = service;
+    this.ticketId = args.ticketId;
+    this.ticketNumber = args.ticketNumber;
+    this.ticketTitle = args.ticketTitle;
+    this.userId = args.userId;
+    this.holderId = args.holderId;
+    this.heartbeatMs = args.heartbeatMs ?? 5000;
+  }
+
+  subscribe(listener: Listener) {
+    this.listeners.add(listener);
+    // Emit initial snapshot
+    listener(this.snapshot());
+    return () => this.listeners.delete(listener);
+  }
+
+  getState(): IntervalStateSnapshot {
+    return this.snapshot();
+  }
+
+  private snapshot(): IntervalStateSnapshot {
+    return { state: this.state, intervalId: this.intervalId, lastError: this.lastError };
+  }
+
+  private emit() {
+    const snap = this.snapshot();
+    this.listeners.forEach((l) => l(snap));
+  }
+
+  private setState(state: IntervalTrackingState, err?: string | null) {
+    this.state = state;
+    this.lastError = err ?? null;
+    this.emit();
+  }
+
+  private clearHeartbeat() {
+    if (this.heartbeatTimer) {
+      window.clearInterval(this.heartbeatTimer);
+      this.heartbeatTimer = null;
+    }
+  }
+
+  private startHeartbeat() {
+    this.clearHeartbeat();
+    this.heartbeatTimer = window.setInterval(() => {
+      this.service.heartbeatLock(this.ticketId, this.holderId).catch(() => {});
+    }, this.heartbeatMs);
+  }
+
+  async refreshLockState(): Promise<boolean> {
+    const locked = await this.service.isLockedByOther(this.ticketId, this.holderId);
+    if (this.state === 'idle' || this.state === 'locked_by_other') {
+      this.setState(locked ? 'locked_by_other' : 'idle');
+    }
+    return locked;
+  }
+
+  // Start event: attempts to acquire lock and start a new interval
+  async start(force = false): Promise<boolean> {
+    if (!this.ticketId || !this.userId) return false;
+    this.setState('acquiring_lock');
+    try {
+      const acquired = await this.service.acquireLock(this.ticketId, this.userId, this.holderId, force);
+      if (!acquired) {
+        this.setState('locked_by_other');
+        return false;
+      }
+
+      if (force) {
+        try {
+          const open = await this.service.getOpenInterval(this.ticketId, this.userId);
+          if (open) await this.service.endInterval(open.id);
+        } catch {}
+      }
+
+      const id = await this.service.startInterval(
+        this.ticketId,
+        this.ticketNumber,
+        this.ticketTitle,
+        this.userId
+      );
+      this.intervalId = id;
+      this.startHeartbeat();
+      this.setState('active');
+      return true;
+    } catch (e: any) {
+      this.setState('error', e?.message || 'Failed to start');
+      return false;
+    }
+  }
+
+  // Stop event: ends the interval and releases lock
+  async stop(): Promise<void> {
+    if (this.state === 'idle' || this.state === 'locked_by_other') return;
+    this.setState('stopping');
+    this.clearHeartbeat();
+    try {
+      if (this.intervalId) {
+        await this.service.endInterval(this.intervalId);
+      }
+    } catch (e) {
+      // swallow
+    }
+    try {
+      await this.service.releaseLock(this.ticketId, this.holderId);
+    } catch {}
+    this.intervalId = null;
+    this.setState('idle');
+  }
+
+  // Visibility hidden: stop without prompting
+  async onHidden() {
+    await this.stop();
+  }
+
+  // Best-effort synchronous cleanup on beforeunload
+  onBeforeUnloadSync() {
+    try {
+      const request = window.indexedDB.open('TicketTimeTrackingDB', 2);
+      request.onsuccess = (event) => {
+        const db = (event.target as IDBOpenDBRequest).result;
+        // End interval
+        if (this.intervalId) {
+          const tx = db.transaction(['intervals'], 'readwrite');
+          const store = tx.objectStore('intervals');
+          const getReq = store.get(this.intervalId);
+          getReq.onsuccess = (ev) => {
+            const interval = (ev.target as IDBRequest).result;
+            if (interval) {
+              const endTime = new Date().toISOString();
+              const startDate = new Date(interval.startTime);
+              const endDate = new Date(endTime);
+              const duration = Math.floor((endDate.getTime() - startDate.getTime()) / 1000);
+              interval.endTime = endTime;
+              interval.duration = duration;
+              store.put(interval);
+            }
+          };
+        }
+        // Release lock
+        const ltx = db.transaction(['locks'], 'readwrite');
+        const lstore = ltx.objectStore('locks');
+        const lget = lstore.get(this.ticketId);
+        lget.onsuccess = (ev) => {
+          const existing = (ev.target as IDBRequest).result;
+          if (existing && existing.holderId === this.holderId) {
+            lstore.delete(this.ticketId);
+          }
+        };
+      };
+    } catch {}
   }
 }
