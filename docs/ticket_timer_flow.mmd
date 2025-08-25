@@ -1,0 +1,84 @@
+%% Ticket Timer Flow: Opening a ticket to stopping on leave
+%% This sequence shows current behavior with IntervalTrackingService + State Machine + UI setInterval
+
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant TD as TicketDetails (component)
+    participant HT as useTicketTimeTracking (hook)
+    participant SM as IntervalTrackingStateMachine
+    participant IS as IntervalTrackingService (IndexedDB)
+    participant UIT as UI Timer (setInterval 1s)
+    participant NAV as Router/Unmount
+
+    U->>TD: Open Ticket Details
+    TD->>TD: mount; derive holderId; memo IntervalTrackingService
+    TD->>HT: init hook (ticketId, userId, options)
+    HT->>SM: construct(machine); subscribe(listener)
+    HT->>SM: refreshLockState()
+    SM->>IS: isLockedByOther(ticketId, holderId)
+    IS-->>SM: locked? (true/false)
+    SM-->>HT: snapshot(state: idle|locked_by_other)
+    HT-->>TD: isTracking false
+
+    rect rgb(250,250,210)
+      note right of TD: Component-level auto-start attempt (guarded)
+      TD->>HT: startTracking(false)
+    end
+
+    alt lock acquired
+      SM->>IS: acquireLock(ticketId,userId,holderId,force?)
+      IS-->>SM: acquired = true
+      SM->>IS: startInterval(ticketId, number, title, userId)
+      IS-->>SM: intervalId
+      Note over SM,IS: No lock TTL or heartbeat. Simple tracking marker is set.
+      SM-->>HT: snapshot(state: active, intervalId)
+      HT-->>TD: isTracking true
+      TD->>IS: getOpenInterval(ticketId, userId)
+      IS-->>TD: open interval (startTime)
+      TD->>TD: seed elapsed = now - startTime (sec)
+      TD->>UIT: setInterval(1000) start
+      loop every 1s (visible)
+        UIT->>TD: tick +1s (elapsed++)
+      end
+    else locked by other
+      IS-->>SM: acquired = false
+      SM-->>HT: snapshot(state: locked_by_other)
+      HT-->>TD: isLockedByOther true
+      TD->>TD: show "Replace here" dialog on Start click
+    end
+
+    par UI lock indicator polling
+      TD->>HT: refreshLockState() every ~5s
+      HT->>SM: refreshLockState()
+      SM->>IS: isLockedByOther(ticketId, holderId)
+      IS-->>SM: locked? (true/false)
+      SM-->>HT: snapshot(state)
+      HT-->>TD: update isLockedByOther
+    and Page visibility
+      Note over HT,SM: No visibility handling. Timer is strictly mount/unmount.
+    end
+
+    opt User presses Pause/Stop or navigates away
+      TD->>HT: stopTracking()
+      HT->>SM: stop()
+      SM->>IS: endInterval(intervalId)
+      SM->>IS: releaseLock(ticketId, holderId)
+      SM-->>HT: snapshot(state: idle)
+      HT-->>TD: isTracking false
+      TD->>UIT: clearInterval()
+    end
+
+    opt BeforeUnload (best-effort sync)
+      SM->>IS: update interval end + delete lock (IndexedDB direct)
+    end
+
+    NAV->>TD: unmount
+    TD->>HT: stopTracking() in cleanup
+
+%% Notes on past race conditions / complexity sources
+%% - Dual auto-start paths: hook autoStart + component effect -> multiple start attempts
+%% - visibility handling removed: tracking tied only to mount/unmount
+%% - Heartbeat and lock refresh run concurrently with UI timer, impacting state
+%% - Seeding UI elapsed from open interval vs. resetting locally may cause jumps if repeated
+%% - IndexedDB operations (locks/intervals) add async timing and error paths

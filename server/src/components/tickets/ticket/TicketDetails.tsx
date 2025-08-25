@@ -192,17 +192,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Timer logic
     const tick = useCallback(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-    }, []);
+        setElapsedTime(prevTime => {
+            const next = prevTime + 1;
+            try {
+                console.log('[TicketDetails][tick] +1s ->', next, 'isRunning=', isRunning);
+            } catch {}
+            return next;
+        });
+    }, [isRunning]);
 
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        let intervalId: NodeJS.Timeout | undefined;
         if (isRunning) {
+            console.log('[TicketDetails] starting 1s UI timer');
             intervalId = setInterval(tick, 1000);
+        } else {
+            console.log('[TicketDetails] not running; UI timer not started');
         }
         return () => {
             if (intervalId) {
                 clearInterval(intervalId);
+                console.log('[TicketDetails] cleared 1s UI timer');
             }
         };
     }, [isRunning, tick]);
@@ -266,11 +276,51 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         { autoStart: false, holderId }
     );
 
-    // reflect tracking state into local stopwatch state if desired
+    // Reflect tracking state into local stopwatch state
     useEffect(() => {
-        if (!isTracking) return;
-        setIsRunning(true);
+        console.log('[TicketDetails] isTracking changed ->', isTracking);
+        setIsRunning(!!isTracking);
     }, [isTracking]);
+
+    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
+    const autoStartedRef = React.useRef(false);
+    useEffect(() => {
+        const auto = async () => {
+            if (autoStartedRef.current) return;
+            if (!initialTicket.ticket_id || !userId) return;
+            if (isTracking) return;
+            console.log('[TicketDetails] auto-start attempt');
+            try {
+                const started = await startTracking(false);
+                console.log('[TicketDetails] auto-start result ->', started);
+                if (started) {
+                    setElapsedTime(0);
+                    autoStartedRef.current = true;
+                }
+            } catch (e) {
+                console.log('[TicketDetails] auto-start error', e);
+            }
+        };
+        auto();
+        // only attempt once when ids are ready and not already tracking
+    }, [initialTicket.ticket_id, userId, startTracking, isTracking]);
+
+    // New screens start from zero; no seeding from existing intervals
+
+    // Log holder id creation
+    useEffect(() => {
+        if (holderId) {
+            console.log('[TicketDetails] holderId for this tab:', holderId);
+        }
+    }, [holderId]);
+
+    // Log UI button handlers
+    useEffect(() => {
+        console.log('[TicketDetails] mounted; ticket=', initialTicket.ticket_id, 'user=', userId);
+        return () => {
+            console.log('[TicketDetails] unmounting; will call stopTracking in cleanup below');
+        };
+    }, [initialTicket.ticket_id, userId]);
 
     // Poll lock state periodically to update UI lock indicator
     useEffect(() => {
@@ -345,6 +395,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         try {
             const started = await startTracking(force);
             if (started) {
+                setElapsedTime(0);
                 setIsRunning(true);
             } else if (!force) {
                 // Locked elsewhere
@@ -356,6 +407,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }, [initialTicket.ticket_id, userId, startTracking]);
 
     const handleStartClick = useCallback(() => {
+        console.log('[TicketDetails] Start button clicked');
         doStart(false);
     }, [doStart]);
 
@@ -366,6 +418,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handlePauseClick = useCallback(async () => {
         try {
+            console.log('[TicketDetails] Pause button clicked');
             await stopTracking();
         } catch {}
         setIsRunning(false);
@@ -373,18 +426,24 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     const handleStopClick = useCallback(async () => {
         try {
+            console.log('[TicketDetails] Stop/Reset button clicked');
             await stopTracking();
         } catch {}
         setIsRunning(false);
         setElapsedTime(0);
     }, [stopTracking]);
 
-    // Ensure we stop tracking when component unmounts
+    // Ensure we stop tracking only when component unmounts (not on re-renders)
+    const stopTrackingRef = React.useRef(stopTracking);
+    useEffect(() => {
+        stopTrackingRef.current = stopTracking;
+    }, [stopTracking]);
     useEffect(() => {
         return () => {
-            stopTracking().catch(() => {});
+            console.log('[TicketDetails] unmount cleanup -> stopTracking');
+            stopTrackingRef.current?.().catch(() => {});
         };
-    }, [stopTracking]);
+    }, []);
 
     const handleCompanyClick = async () => {
         if (ticket.company_id) {

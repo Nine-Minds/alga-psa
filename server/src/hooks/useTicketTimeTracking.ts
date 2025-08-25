@@ -22,7 +22,20 @@ export function useTicketTimeTracking(
   // Initialize state machine and optionally auto-start
   useEffect(() => {
     let mounted = true;
-    if (!ticketId || !userId) return;
+    if (!ticketId || !userId) {
+      console.log('[useTicketTimeTracking] skipping init: missing ids', { ticketId, userId });
+      return;
+    }
+    console.log('[useTicketTimeTracking] init machine for ticket', ticketId, 'user', userId);
+    // Best-effort cleanup of orphaned intervals (runs on opening a ticket view)
+    (async () => {
+      try {
+        const removed = await intervalService.cleanupOrphanOpenIntervals();
+        if (removed > 0) console.log('[useTicketTimeTracking] cleaned orphan open intervals:', removed);
+        const trimmed = await intervalService.trimIntervalsForTicket(ticketId, 20);
+        if (trimmed > 0) console.log('[useTicketTimeTracking] trimmed old intervals for ticket', ticketId, 'deleted:', trimmed);
+      } catch {}
+    })();
     const machine = new IntervalTrackingStateMachine(intervalService, {
       ticketId,
       ticketNumber,
@@ -34,62 +47,44 @@ export function useTicketTimeTracking(
     machineRef.current = machine;
     const unsub = machine.subscribe((snap) => {
       if (!mounted) return;
+      console.log('[useTicketTimeTracking][subscribe] state=', snap.state, 'intervalId=', snap.intervalId);
       setIsTracking(snap.state === 'active');
       setCurrentIntervalId(snap.intervalId);
       setIsLockedByOther(snap.state === 'locked_by_other');
     });
     (async () => {
       const locked = await machine.refreshLockState();
+      console.log('[useTicketTimeTracking] refreshLockState -> lockedByOther=', locked);
       if (options?.autoStart && !locked) {
+        console.log('[useTicketTimeTracking] autoStart enabled; starting...');
         await machine.start(false);
       }
     })();
     return () => {
       mounted = false;
+      console.log('[useTicketTimeTracking] cleanup; unsubscribing machine');
       unsub();
     };
   }, [ticketId, ticketNumber, ticketTitle, userId, intervalService, options?.autoStart]);
   // Note: We don't need to include isStartingTrackingRef in the dependency array
   // since it's a ref and we're accessing its .current property
 
-  // Add event listeners for page visibility changes and beforeunload
-  useEffect(() => {
-    // Handle when user leaves the page or switches tabs
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        machineRef.current?.onHidden();
-      } else if (document.visibilityState === 'visible') {
-        // do nothing
-      }
-    };
-    
-    // Handle when user is about to close the page
-    const handleBeforeUnload = () => {
-      if (isTracking) {
-        machineRef.current?.onBeforeUnloadSync();
-      }
-    };
-    
-    // Add event listeners
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Clean up event listeners
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [currentIntervalId, isTracking, ticketId, ticketNumber, ticketTitle, userId, intervalService]);
+  // No visibility/beforeunload handling; tracking is strictly mount/unmount
   
   const refreshLockState = async () => {
+    console.log('[useTicketTimeTracking] refreshLockState() called');
     await machineRef.current?.refreshLockState();
   };
 
   const startTracking = async (force = false): Promise<boolean> => {
-    return machineRef.current?.start(force) ?? false;
+    console.log('[useTicketTimeTracking] startTracking(force=', force, ')');
+    const res = await (machineRef.current?.start(force) ?? Promise.resolve(false));
+    console.log('[useTicketTimeTracking] startTracking result ->', res);
+    return res;
   };
 
   const stopTracking = async () => {
+    console.log('[useTicketTimeTracking] stopTracking()');
     await machineRef.current?.stop();
   };
 
