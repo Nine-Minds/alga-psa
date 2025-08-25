@@ -417,11 +417,12 @@ exports.up = async function(knex) {
   }
   
   // Foreign keys for email tables
+  // Note: These tables have their tenant_id column renamed to tenant by 20250804000000_standardize_email_tenant_columns.cjs
   const emailTableFKs = [
-    { table: 'email_domains', fk: 'email_domains_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
-    { table: 'email_rate_limits', fk: 'email_rate_limits_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
-    { table: 'email_sending_logs', fk: 'email_sending_logs_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' },
-    { table: 'tenant_email_settings', fk: 'tenant_email_settings_tenant_id_foreign', column: 'tenant_id', ref_table: 'tenants', ref_column: 'tenant' }
+    { table: 'email_domains', fk: 'email_domains_tenant_foreign', column: 'tenant', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'email_rate_limits', fk: 'email_rate_limits_tenant_foreign', column: 'tenant', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'email_sending_logs', fk: 'email_sending_logs_tenant_foreign', column: 'tenant', ref_table: 'tenants', ref_column: 'tenant' },
+    { table: 'tenant_email_settings', fk: 'tenant_email_settings_tenant_foreign', column: 'tenant', ref_table: 'tenants', ref_column: 'tenant' }
   ];
   
   for (const { table, fk, column, ref_table, ref_column } of emailTableFKs) {
