@@ -126,8 +126,7 @@ exports.up = async function(knex) {
     }
   }
   
-  console.log('
-✓ All tables distributed successfully');
+  console.log('\n✓ All tables distributed successfully');
 };
 
 exports.down = async function(knex) {
