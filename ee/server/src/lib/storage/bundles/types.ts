@@ -47,6 +47,11 @@ export interface PutObjectOptions {
   contentType?: string;
   cacheControl?: string;
   /**
+   * Optional content length hint for streaming uploads. When provided, the
+   * underlying client can avoid chunked uploads and ambiguous headers.
+   */
+  contentLength?: number;
+  /**
    * Write-once protection. If unspecified, helpers will default to If-None-Match: "*".
    */
   ifNoneMatch?: string;

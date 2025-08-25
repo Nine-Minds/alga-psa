@@ -74,7 +74,7 @@ export default function InstallerPanel() {
     const f = e.target.files?.[0] ?? null;
     if (f) {
       if (!f.name.endsWith('.tar.zst')) {
-        alert('File must end with ".tar.zst"');
+        alert('File must end with ".tar.zst", ' + f.name);
         e.currentTarget.value = '';
         return;
       }

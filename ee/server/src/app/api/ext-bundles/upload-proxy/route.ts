@@ -216,6 +216,7 @@ export async function POST(req: Request) {
         contentType,
         cacheControl: undefined,
         ifNoneMatch: "*",
+        contentLength: size,
       });
       eTag = out?.eTag;
     } catch (e: any) {
