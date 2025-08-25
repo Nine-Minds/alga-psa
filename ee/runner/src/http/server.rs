@@ -234,7 +234,10 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
     url.set_path("api/installs/lookup-by-host");
-    url.query_pairs_mut().append_pair("host", host.split(':').next().unwrap_or(""));
+    let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+    url.query_pairs_mut()
+        .append_pair("host", host.split(':').next().unwrap_or(""))
+        .append_pair("ts", &now_ms.to_string());
 
     let http = match reqwest::Client::builder().build() {
         Ok(c) => c,
@@ -244,13 +247,23 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
 
-    // Attach ALGA_AUTH_KEY if present for registry auth
+    // Attach ALGA_AUTH_KEY if present for registry auth and log masked presence
     let mut rb = http.get(url.clone());
-    if let Ok(key) = std::env::var("ALGA_AUTH_KEY") {
-        if !key.is_empty() {
+    // Temporary canary routing header for testing; remove after canary period
+    rb = rb.header("x-canary", "robert");
+    match std::env::var("ALGA_AUTH_KEY") {
+        Ok(key) if !key.is_empty() => {
+            let prefix: String = key.chars().take(4).collect();
+            let len = key.len();
+            tracing::info!(key_len = len, key_prefix = %prefix, "ALGA_AUTH_KEY present; sending x-api-key header");
             rb = rb.header("x-api-key", key);
         }
+        _ => {
+            tracing::warn!("ALGA_AUTH_KEY not set; registry call may be unauthorized");
+        }
     }
+
+    tracing::info!(host=%host, url=%url.to_string(), "lookup-by-host request start");
 
     let resp = match rb.send().await {
         Ok(r) => r,
@@ -267,7 +280,16 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         return StatusCode::NOT_FOUND.into_response();
     }
 
-    let body: LookupResp = match resp.json().await {
+    tracing::info!(host=%host, status=%resp.status().as_u16(), "lookup-by-host response ok; reading body");
+    let text = match resp.text().await {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!(host=%host, err=%e.to_string(), "failed to read registry response body");
+            return StatusCode::BAD_GATEWAY.into_response();
+        }
+    };
+    tracing::info!(host=%host, body_len=%text.len(), body_sample=%text.chars().take(200).collect::<String>(), "lookup-by-host response body");
+    let body: LookupResp = match serde_json::from_str(&text) {
         Ok(b) => b,
         Err(e) => {
             tracing::error!(host=%host, err=%e.to_string(), "failed to parse registry response json");
@@ -275,9 +297,10 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
         }
     };
 
+    // Include tenant id as a query parameter to avoid extra lookup in ext-ui
     let target = format!(
-        "/ext-ui/{}/{}/index.html",
-        body.extension_id, body.content_hash
+        "/ext-ui/{}/{}/index.html?tenant={}",
+        body.extension_id, body.content_hash, body.tenant_id
     );
     tracing::info!(host=%host, target=%target, "redirecting to ext-ui");
     Redirect::temporary(&target).into_response()

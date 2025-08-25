@@ -10,6 +10,8 @@
  */
 
 import { createS3BundleStore } from "../../../../lib/storage/bundles/s3-bundle-store";
+import { getS3Client, getBucket, getBundleBucket } from "../../../../lib/storage/s3-client";
+import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import { isValidSha256Hash, normalizeBasePrefix } from "../../../../lib/storage/bundles/types";
 import { Readable } from "node:stream";
 
@@ -199,6 +201,22 @@ export async function POST(req: Request) {
       return r;
     }
 
+    // Preflight: verify bucket exists to avoid silent failures
+    try {
+      const s3 = getS3Client();
+      const Bucket = getBundleBucket();
+      await s3.send(new HeadBucketCommand({ Bucket } as any));
+    } catch (e: any) {
+      const code = (e?.code || e?.name || '').toString();
+      const message = typeof e?.message === 'string' ? e.message : 'unknown';
+      const cfgMissing = code === 'BUNDLE_CONFIG_MISSING' || /not configured/i.test(message);
+      log("ext_bundles.upload_proxy.bucket_missing", { requestId, actor, message, code });
+      const r = json(500, { error: cfgMissing ? "Extension bundle storage not configured" : "Storage bucket not found", code: cfgMissing ? "BUNDLE_CONFIG_MISSING" : "BUCKET_NOT_FOUND" });
+      r.headers.set("x-request-id", requestId);
+      r.headers.set("x-upload-proxy-why", cfgMissing ? "bundle_config_missing" : "bucket_missing");
+      return r;
+    }
+
     // Generate staging key
     const id =
       (globalThis as any).crypto?.randomUUID?.() ??
@@ -227,7 +245,10 @@ export async function POST(req: Request) {
         message: typeof e?.message === "string" ? e.message : String(e),
         status: e?.httpStatusCode ?? e?.statusCode,
       });
-      const r = json(500, { error: "Failed to store upload", code: "INTERNAL_ERROR" });
+      let code: string | undefined = undefined;
+      try { code = (e?.code || e?.name || '').toString(); } catch {}
+      const isBucketMissing = code === 'NoSuchBucket' || (e?.httpStatusCode ?? e?.statusCode) === 404;
+      const r = json(500, { error: isBucketMissing ? "Storage bucket not found" : "Failed to store upload", code: isBucketMissing ? "BUCKET_NOT_FOUND" : "S3_PUT_FAILED" });
       r.headers.set("x-request-id", requestId);
       r.headers.set("x-upload-proxy-why", "s3_put_failed");
       return r;

@@ -46,6 +46,8 @@ export interface BundleStoreConfig {
 export interface PutObjectOptions {
   contentType?: string;
   cacheControl?: string;
+  /** Known content length in bytes (used by some providers). */
+  contentLength?: number;
   /**
    * Optional content length hint for streaming uploads. When provided, the
    * underlying client can avoid chunked uploads and ambiguous headers.

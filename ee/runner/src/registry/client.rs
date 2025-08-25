@@ -43,6 +43,13 @@ impl HttpRegistryClient {
             if t.is_empty() { None } else { Some(t) }
         });
 
+        if let Some(ref k) = api_key {
+            let prefix: String = k.chars().take(4).collect();
+            tracing::info!(key_len = k.len(), key_prefix = %prefix, "ALGA_AUTH_KEY present for validation client");
+        } else {
+            tracing::warn!("ALGA_AUTH_KEY not set for validation client; strict validation calls may be unauthorized");
+        }
+
         Ok(Self {
             strict,
             base_url,
@@ -80,13 +87,19 @@ impl RegistryClient for HttpRegistryClient {
         // Minimal stub endpoint path - subject to change when real registry is wired
         let path = "api/installs/validate";
         url.set_path(path);
+        let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
         url.query_pairs_mut()
             .append_pair("tenant", tenant_id)
             .append_pair("extension", extension_id)
-            .append_pair("hash", content_hash);
+            .append_pair("hash", content_hash)
+            .append_pair("ts", &now_ms.to_string());
 
         // Keep fast timeout
         let mut rb = self.http.get(url);
+
+        // Temporary canary routing header for testing; remove after canary period
+        rb = rb.header("x-canary", "robert");
+
         if let Some(key) = &self.api_key {
             rb = rb.header("x-api-key", key);
         }
@@ -103,18 +116,16 @@ impl RegistryClient for HttpRegistryClient {
             }
         };
 
-        // Interpret JSON { valid: bool } or truthy status 200 with "true"
+        // Interpret JSON { valid: bool } or truthy status 200
         let valid = if resp.status().is_success() {
-            // Try JSON first
-            let maybe_json = resp.json::<serde_json::Value>().await.ok();
-            if let Some(v) = maybe_json {
-                v.get("valid").and_then(|b| b.as_bool()).unwrap_or(false)
-            } else {
-                false
+            match resp.text().await {
+                Ok(txt) => {
+                    tracing::info!(tenant=%tenant_id, extension=%extension_id, hash=%content_hash, status=200u16, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "validate response body");
+                    serde_json::from_str::<serde_json::Value>(&txt).ok().and_then(|v| v.get("valid").and_then(|b| b.as_bool())).unwrap_or(false)
+                }
+                Err(_) => false,
             }
-        } else {
-            false
-        };
+        } else { false };
 
         self.cache.insert(key, valid).await;
         Ok(valid)

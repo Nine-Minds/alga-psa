@@ -235,6 +235,10 @@ spec:
             value: "{{ .Values.config.storage.providers.s3.region }}"
           - name: STORAGE_S3_BUCKET
             value: "{{ .Values.config.storage.providers.s3.bucket }}"
+          {{- if .Values.config.storage.providers.s3.bundle_bucket }}
+          - name: STORAGE_S3_BUNDLE_BUCKET
+            value: "{{ .Values.config.storage.providers.s3.bundle_bucket }}"
+          {{- end }}
           - name: STORAGE_S3_ACCESS_KEY
             valueFrom:
               secretKeyRef:

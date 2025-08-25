@@ -2,6 +2,7 @@
 name = "alga-ext-runner"
 version = "0.1.0"
 edition = "2021"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1"
@@ -31,8 +32,9 @@ zstd = "0.13"
 moka = { version = "0.12", features = ["future"] }
 tokio-util = "0.7"
 
-# Optional (reserved; not wired yet)
-# aws-sdk-s3 = { version = "1", features = ["rustls"] }
+# Optional S3 presign support (feature-gated)
+aws-sdk-s3 = { version = "1", features = ["rustls", "behavior-version-latest"] }
+aws-credential-types = "1"
 
 [dev-dependencies]
 tempfile = "3"

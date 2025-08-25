@@ -20,10 +20,10 @@
  *   - System tools: tar, zstd (recommended)
  */
 
-import { statSync, accessSync, constants, createReadStream, writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { statSync, createReadStream, writeFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join, resolve, basename, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 
 function die(msg: string, code = 1): never {
   console.error(`[pack] ${msg}`);
@@ -73,7 +73,7 @@ function which(bin: string): boolean {
   return result.status === 0;
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   if (args.length < 2) {
     die('Usage: node ee/tools/ext-bundle/pack.ts <inputDir> <outputBundlePath(.tar.zst)>');
@@ -107,13 +107,51 @@ function main() {
   }
 
   // Create a tar archive and compress with zstd.
-  // We want the archive to contain the directory contents (not the parent dir name).
-  // Use: tar -C inputDir -cf - . | zstd -19 -T0 -o outputPath
-  const tarCmd = `tar -C "${inputDir}" -cf - . | zstd -19 -T0 -o "${outputPath}"`;
-  const shell = process.env.SHELL || '/bin/sh';
-  const proc = spawnSync(shell, ['-lc', tarCmd], { stdio: 'inherit' });
-  if (proc.status !== 0) {
-    die(`Packing failed with status ${proc.status}`);
+  // We want the archive to contain the directory contents (not the parent dir name),
+  // and avoid leading "./" prefixes that can interfere with downstream extractors.
+  // Implementation: spawn tar and zstd directly and pipe stdout → stdin.
+
+  // Determine top-level entries inside inputDir to include
+  let entries: string[] = [];
+  try {
+    entries = readdirSync(inputDir, { withFileTypes: true })
+      .map(d => d.name)
+      .filter(n => n !== '.' && n !== '..');
+  } catch (e) {
+    die(`Failed to read input directory entries: ${(e as Error).message}`);
+  }
+  if (entries.length === 0) {
+    die('Input directory has no files to pack');
+  }
+
+  // Spawn tar -C <dir> -cf - <entries...>
+  const tarArgs = ['-C', inputDir, '-cf', '-', ...entries];
+  const tarProc = spawn('tar', tarArgs, { stdio: ['ignore', 'pipe', 'inherit'] });
+
+  // Spawn zstd -19 -T0 -o <output>
+  const zstdArgs = ['-19', '-T0', '-o', outputPath];
+  const zstdProc = spawn('zstd', zstdArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
+
+  // Pipe tar stdout to zstd stdin
+  tarProc.stdout!.pipe(zstdProc.stdin!);
+
+  const wait = () => new Promise<void>((resolveWait, rejectWait) => {
+    let tarExit: number | null = null;
+    let zstdExit: number | null = null;
+    const maybeDone = () => {
+      if (tarExit !== null && zstdExit !== null) {
+        if (tarExit === 0 && zstdExit === 0) resolveWait();
+        else rejectWait(new Error(`Packing failed (tar=${tarExit}, zstd=${zstdExit})`));
+      }
+    };
+    tarProc.on('exit', (code) => { tarExit = code; maybeDone(); });
+    zstdProc.on('exit', (code) => { zstdExit = code; maybeDone(); });
+  });
+
+  try {
+    await wait();
+  } catch (e) {
+    die((e as Error).message);
   }
 
   // Compute sha256 of the resulting file
@@ -141,8 +179,4 @@ function main() {
   process.exit(0);
 }
 
-try {
-  main();
-} catch (e) {
-  die((e as Error).message);
-}
+main().catch((e) => die((e as Error).message));

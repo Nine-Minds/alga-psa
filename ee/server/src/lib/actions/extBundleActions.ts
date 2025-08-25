@@ -10,7 +10,9 @@ import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
 import { Readable } from "node:stream";
-import { getS3Client, getBucket } from "../storage/s3-client";
+import { getS3Client, getBundleBucket } from "../storage/s3-client";
+import { createTenantKnex } from '@/lib/db';
+import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import {
   hashSha256Stream,
   loadTrustBundle,
@@ -84,26 +86,44 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
 
   if (!file || typeof (file as any).stream !== "function") throw new Error("file is required and must be a File");
 
-  const basePrefix = normalizeBasePrefix(BASE_PREFIX);
+  const { tenant } = await createTenantKnex();
+  if (!tenant) throw new Error('Tenant not found');
   const id = (globalThis as any).crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const key = `${basePrefix}_staging/${id}/bundle.tar.zst`;
+  const key = `tenants/${tenant}/_staging/${id}/bundle.tar.zst`;
 
   const contentType: string = (file as any).type || "application/octet-stream";
 
   const store = createS3BundleStore();
   const started = Date.now();
+  // Preflight: verify bucket exists; surface clear error if not
+  try {
+    const s3 = getS3Client();
+    const Bucket = getBundleBucket();
+    await s3.send(new HeadBucketCommand({ Bucket } as any));
+  } catch (e: any) {
+    const code = (e?.code || e?.name || '').toString();
+    if (code === 'BUNDLE_CONFIG_MISSING') {
+      throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+    }
+    throw new HttpError(500, "BUCKET_NOT_FOUND", "Storage bucket not found. Please contact an administrator to configure extension storage.");
+  }
   try {
     const webStream = (file as any).stream() as unknown as ReadableStream;
     const nodeStream = Readable.fromWeb(webStream as any);
-    // contentLength is not part of our PutObjectOptions; omit to satisfy types
+
     await store.putObject(
       key,
       nodeStream as unknown as NodeJS.ReadableStream,
       { contentType, ifNoneMatch: "*", contentLength: size }
     );
   } catch (e: any) {
-    try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status: e?.httpStatusCode ?? e?.statusCode })); } catch {}
-    throw new Error("Failed to store upload");
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    const code = (e?.code || e?.name || '').toString();
+    try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.s3_error", message: typeof e?.message === "string" ? e.message : String(e), status, code })); } catch {}
+    if (code === 'NoSuchBucket' || status === 404) {
+      throw new HttpError(500, 'BUCKET_NOT_FOUND', 'Storage bucket not found. Please contact an administrator to configure extension storage.');
+    }
+    throw new HttpError(500, 'S3_PUT_FAILED', e?.message || 'Failed to store upload');
   }
 
   try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.success", key, filename, size, durationMs: Date.now() - started })); } catch {}
@@ -131,12 +151,19 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   await ensureRegistryV2KnexRepo(getAdminKnex);
   const { key, size, declaredHash, manifestJson, signature } = params ?? ({} as any);
 
+  // Require bundle storage configuration
+  try {
+    void getBundleBucket();
+  } catch (e: any) {
+    throw new HttpError(500, 'BUNDLE_CONFIG_MISSING', 'Extension bundle storage not configured (set STORAGE_S3_BUNDLE_BUCKET)');
+  }
+
   // Validate key
   if (typeof key !== "string" || key.trim().length === 0) {
     throw new HttpError(400, "BAD_REQUEST", "key is required");
   }
-  if (!key.startsWith(BASE_PREFIX)) {
-    throw new HttpError(400, "BAD_REQUEST", `key must start with "${BASE_PREFIX}"`);
+  if (!key.includes('/_staging/') || !key.endsWith('/bundle.tar.zst')) {
+    throw new HttpError(400, "BAD_REQUEST", 'invalid staging key (expected tenants/<tenant>/_staging/<id>/bundle.tar.zst)');
   }
 
   // Validate size (optional)
@@ -166,9 +193,31 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     declared = declaredHash;
   }
 
-  // Stream and hash the bundle
+  // Verify staging object exists before we proceed
   const store = createS3BundleStore();
-  const got = await store.getObjectStream(key);
+  try {
+    const h = await store.headObject(key);
+    try { console.info("ext.finalize.debug.staging_head", { key, exists: h.exists, contentLength: h.contentLength, eTag: h.eTag }); } catch {}
+    if (!h.exists) {
+      throw new HttpError(400, "STAGING_NOT_FOUND", "Uploaded staging object not found in storage");
+    }
+  } catch (e: any) {
+    if (e instanceof HttpError) throw e;
+    throw new HttpError(500, "S3_HEAD_FAILED", e?.message || "Failed to head staging object");
+  }
+
+  // Stream and hash the bundle
+  let got: { stream: NodeJS.ReadableStream | ReadableStream; contentType?: string; contentLength?: number; eTag?: string; lastModified?: Date };
+  try {
+    got = await store.getObjectStream(key);
+  } catch (e: any) {
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    const code = (e?.code || e?.name || '').toString();
+    if (code === 'NoSuchBucket' || status === 404) {
+      throw new HttpError(500, 'OBJECT_NOT_FOUND', 'Uploaded bundle was not found in storage. The bucket may be missing or misconfigured.');
+    }
+    throw new HttpError(500, 'S3_GET_FAILED', e?.message || 'Failed to read uploaded object');
+  }
   const nodeStream = got.stream as NodeJS.ReadableStream;
   const hashResult = await hashSha256Stream(nodeStream, { maxBytes: MAX_BUNDLE_SIZE_BYTES });
   const computedHash = hashResult.hashHex;
@@ -180,54 +229,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     });
   }
 
-  const canonicalKey = objectKeyFor(
-    { algorithm: "sha256", hash: computedHash },
-    "bundle.tar.zst",
-    { basePrefix: BASE_PREFIX }
-  );
-
-  // If staging → canonical copy needed
-  if (key !== canonicalKey) {
-    const s3 = getS3Client();
-    const bucket = getBucket();
-    const input = {
-      Bucket: bucket,
-      Key: canonicalKey,
-      CopySource: encodeURIComponent(`${bucket}/${key}`),
-    };
-
-    const cmd = new CopyObjectCommand(input as any);
-    const mwName = `copy-if-none-match-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-    // inject If-None-Match: "*"
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    s3.middlewareStack.addRelativeTo(
-      (next: any) => async (args: any) => {
-        const req = args.request as any;
-        req.headers = { ...(req.headers ?? {}), "if-none-match": "*" };
-        return next(args);
-      },
-      { name: mwName, relation: "after", toMiddleware: "contentLengthMiddleware" }
-    );
-
-    try {
-      await s3.send(cmd);
-    } catch (e: any) {
-      const status = e?.$metadata?.httpStatusCode ?? e?.statusCode ?? e?.httpStatusCode;
-      const code = e?.name ?? e?.Code ?? e?.code;
-      if (status === 412 || status === 409) {
-        throw new HttpError(
-          409,
-          "OBJECT_EXISTS",
-          "Canonical object already exists",
-          { key: canonicalKey, status, s3Code: code }
-        );
-      }
-      throw new HttpError(500, "COPY_FAILED", "Failed to copy object to canonical location");
-    } finally {
-      s3.middlewareStack.remove(mwName);
-    }
-  }
+  // canonical copy moved below after registry upsert to know tenant/extension
 
   // Require manifest for this milestone
   if (typeof manifestJson === "undefined") {
@@ -275,34 +277,7 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
   const parsedRuntime = getRuntime(manifest);
   const parsedCapabilities = getCapabilities(manifest);
 
-  // Write manifest duplicate (immutable)
-  const manifestKey = objectKeyFor(
-    { algorithm: "sha256", hash: computedHash },
-    "manifest.json",
-    { basePrefix: BASE_PREFIX }
-  );
-  try {
-    const store2 = createS3BundleStore();
-    await store2.putObject(
-      manifestKey,
-      Buffer.from(manifestJson, "utf-8"),
-      {
-        contentType: "application/json",
-        cacheControl: "public, max-age=31536000, immutable",
-        ifNoneMatch: "*",
-      }
-    );
-  } catch (e: any) {
-    const status = e?.httpStatusCode ?? e?.statusCode;
-    if (status === 412 || status === 409) {
-      try {
-        // eslint-disable-next-line no-console
-        console.info("ext.finalize.debug.manifest_exists", { key: manifestKey, status });
-      } catch {}
-    } else {
-      throw new HttpError(500, "MANIFEST_STORE_FAILED", "Failed to store manifest duplicate");
-    }
-  }
+  // manifest write moved below after canonical copy
 
   // Signature policy
   const trustBundle = loadTrustBundle(process.env as any);
@@ -343,14 +318,35 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     signature: sigResult,
   });
 
+  try { console.info("ext.finalize.debug.upsert_ok", { extensionId: upsertResult.extension.id, versionId: upsertResult.version.id }); } catch {}
+
+  // Compute tenant-local canonical key and copy staging → canonical
+  const { tenant } = await createTenantKnex();
+  if (!tenant) throw new HttpError(500, 'INTERNAL', 'Tenant not found during finalize');
+  const canonicalKey = `tenants/${tenant}/extensions/${upsertResult.extension.id}/sha256/${computedHash}/bundle.tar.zst`;
+  if (key !== canonicalKey) {
+    const s3 = getS3Client();
+    const bucket = getBundleBucket();
+    // Pass CopySource without encoding slashes to avoid invalid source path
+    const cmd = new CopyObjectCommand({ Bucket: bucket, Key: canonicalKey, CopySource: `${bucket}/${key}` } as any);
+    const mwName = `copy-if-none-match-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    s3.middlewareStack.addRelativeTo((next: any) => async (args: any) => { const req = args.request as any; req.headers = { ...(req.headers ?? {}), 'if-none-match': '*' }; return next(args); }, { name: mwName, relation: 'after', toMiddleware: 'contentLengthMiddleware' });
+    try { await s3.send(cmd); } finally { s3.middlewareStack.remove(mwName); }
+    // Verify
+    try { const h2 = await store.headObject(canonicalKey); try { console.info("ext.finalize.debug.canonical_head", { key: canonicalKey, exists: h2.exists, contentLength: h2.contentLength, eTag: h2.eTag }); } catch {}; if (!h2.exists) throw new Error('canonical missing'); }
+    catch (e: any) { throw new HttpError(500, 'CANONICAL_MISSING', e?.message || 'Canonical object missing'); }
+  }
+
+  // Write manifest duplicate alongside canonical
+  const manifestKey = `tenants/${tenant}/extensions/${upsertResult.extension.id}/sha256/${computedHash}/manifest.json`;
   try {
-    // eslint-disable-next-line no-console
-    console.info("ext.finalize.debug.upsert_ok", {
-      extensionId: upsertResult.extension.id,
-      versionId: upsertResult.version.id,
-    });
-  } catch {
-    // ignore
+    const store2 = createS3BundleStore();
+    await store2.putObject(manifestKey, Buffer.from(manifestJson, 'utf-8'), { contentType: 'application/json', cacheControl: 'public, max-age=31536000, immutable', ifNoneMatch: '*' });
+  } catch (e: any) {
+    const status = e?.httpStatusCode ?? e?.statusCode;
+    if (status === 412 || status === 409) { try { console.info('ext.finalize.debug.manifest_exists', { key: manifestKey, status }); } catch {} }
+    else { throw new HttpError(500, 'MANIFEST_STORE_FAILED', 'Failed to store manifest duplicate'); }
   }
 
   return {
@@ -377,17 +373,14 @@ export async function extAbortUpload(params: AbortParams): Promise<AbortResult> 
   if (!key || typeof key !== "string") {
     throw new HttpError(400, "BAD_REQUEST", "Missing or invalid 'key' (string required)");
   }
-  if (!key.startsWith(BASE_PREFIX)) {
-    throw new HttpError(400, "BAD_REQUEST", `Invalid key: must start with '${BASE_PREFIX}'`);
-  }
-
-  const isStaging = key.startsWith("sha256/_staging/");
+  const isStaging = key.includes("/_staging/");
   if (!isStaging) {
     return { status: "noop", key, area: "canonical" };
   }
 
   const client = getS3Client();
-  const Bucket = getBucket();
+  // Ensure deletion targets the bundle bucket (not the docs bucket)
+  const Bucket = getBundleBucket();
   const Key = key;
 
   try {

@@ -176,13 +176,66 @@ export default function InstallerPanel() {
     }
   }, [manifestJson, file?.size]);
 
+  // Build the dynamic action buttons shown in a sticky 2x grid
+  const renderActionButtons = () => {
+    const buttons: React.ReactNode[] = [];
+    if (!success && !needsManifest) {
+      buttons.push(
+        <Button key="install" id="installer-install-btn" variant="default" disabled={!file || installing} onClick={handleInstall}>
+          {installing ? 'Installing…' : 'Install'}
+        </Button>
+      );
+      buttons.push(
+        <Button key="reset" id="installer-reset-btn" variant="ghost" disabled={installing} onClick={reset}>
+          Reset
+        </Button>
+      );
+    } else if (!success && needsManifest) {
+      buttons.push(
+        <Button key="finalize" id="installer-finalize-btn" variant="default" disabled={installing || !manifestJson.trim()} onClick={handleFinalizeWithManifest}>
+          {installing ? 'Finalizing…' : 'Finalize'}
+        </Button>
+      );
+      buttons.push(
+        <Button key="cancel" id="installer-cancel-btn" variant="ghost" disabled={installing} onClick={reset}>
+          Cancel
+        </Button>
+      );
+    } else if (success) {
+      buttons.push(
+        <Link
+          key="manage"
+          href="/msp/settings?tab=extensions"
+          className="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
+        >
+          Manage Extensions
+        </Link>
+      );
+      buttons.push(
+        <Button key="install-another" id="installer-another-btn" variant="ghost" onClick={reset}>
+          Install Another
+        </Button>
+      );
+    }
+
+    return (
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
+        <div className="grid grid-cols-2 gap-3">
+          {buttons.map((b, idx) => (
+            <div key={idx} className="flex justify-stretch">{b}</div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <Card>
+    <Card className="relative">
       <CardHeader>
         <CardTitle>Install Extension</CardTitle>
         <CardDescription>Choose a signed bundle and install it.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pb-24">
         {!success && (
           <>
             <div className="space-y-2">
@@ -195,17 +248,6 @@ export default function InstallerPanel() {
                 onChange={handleFileChange}
               />
             </div>
-
-            {!needsManifest && (
-              <div className="flex items-center gap-3">
-                <Button id="installer-install-btn" variant="default" disabled={!file || installing} onClick={handleInstall}>
-                  {installing ? 'Installing…' : 'Install'}
-                </Button>
-                <Button id="installer-reset-btn" variant="ghost" disabled={installing} onClick={reset}>
-                  Reset
-                </Button>
-              </div>
-            )}
 
             {needsManifest && (
               <div className="space-y-3">
@@ -223,14 +265,6 @@ export default function InstallerPanel() {
                     disabled={installing}
                   />
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button id="installer-finalize-btn" variant="default" disabled={installing || !manifestJson.trim()} onClick={handleFinalizeWithManifest}>
-                    {installing ? 'Finalizing…' : 'Finalize'}
-                  </Button>
-                  <Button id="installer-cancel-btn" variant="ghost" disabled={installing} onClick={reset}>
-                    Cancel
-                  </Button>
-                </div>
               </div>
             )}
           </>
@@ -244,14 +278,7 @@ export default function InstallerPanel() {
                 {success.extension.name} v{success.version.version}
               </div>
             </div>
-            <div>
-              <Link
-                href="/msp/settings?tab=extensions"
-                className="inline-flex items-center px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
-              >
-                Manage Extensions
-              </Link>
-            </div>
+            <div />
           </div>
         )}
 
@@ -262,6 +289,7 @@ export default function InstallerPanel() {
           </div>
         )}
       </CardContent>
+      {renderActionButtons()}
     </Card>
   );
 }

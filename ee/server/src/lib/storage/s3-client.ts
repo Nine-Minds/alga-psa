@@ -192,6 +192,20 @@ export function getBucket(): string {
 }
 
 /**
+ * Returns the bucket to use for extension bundles, falling back to the default bucket.
+ * Set STORAGE_S3_BUNDLE_BUCKET to use a separate bucket for bundles.
+ */
+export function getBundleBucket(): string {
+  const override = process.env.STORAGE_S3_BUNDLE_BUCKET?.trim();
+  if (override && override.length > 0) return override;
+  throw new S3ClientError(
+    'Extension bundles bucket not configured. Set STORAGE_S3_BUNDLE_BUCKET',
+    500,
+    'BUNDLE_CONFIG_MISSING'
+  );
+}
+
+/**
  * Return a singleton S3Client instance configured for AWS S3 or S3-compatible providers (e.g., MinIO).
  */
 export function getS3Client(): S3Client {
@@ -214,9 +228,9 @@ export function getS3Client(): S3Client {
  * @param key Object key
  * @returns { exists, eTag?, contentLength?, contentType?, lastModified? }
  */
-export async function headObject(key: string): Promise<HeadObjectResult> {
+export async function headObject(key: string, bucketOverride?: string): Promise<HeadObjectResult> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: HeadObjectCommandInput = { Bucket, Key: key };
 
@@ -243,9 +257,9 @@ export async function headObject(key: string): Promise<HeadObjectResult> {
  * GET object as a stream with metadata.
  * @param key Object key
  */
-export async function getObjectStream(key: string): Promise<GetObjectResult> {
+export async function getObjectStream(key: string, bucketOverride?: string): Promise<GetObjectResult> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: GetObjectCommandInput = { Bucket, Key: key };
 
@@ -276,10 +290,11 @@ export async function getObjectStream(key: string): Promise<GetObjectResult> {
 export async function putObject(
   key: string,
   body: Uint8Array | Buffer | NodeJS.ReadableStream | ReadableStream,
-  opts?: PutObjectOptions
+  opts?: PutObjectOptions,
+  bucketOverride?: string
 ): Promise<{ eTag: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: PutObjectCommandInput = {
     Bucket,
@@ -308,17 +323,37 @@ export async function putObject(
     added = true;
   }
 
+  // Some S3-compatible providers require x-amz-decoded-content-length for chunked streams.
+  // If ContentLength is known, inject the header explicitly to avoid 'undefined' errors.
+  const decodedLen = input.ContentLength;
+  const mwDecodedName = `put-x-amz-decoded-len-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  let addedDecoded = false;
+  if (typeof decodedLen === 'number') {
+    client.middlewareStack.addRelativeTo(
+      (next: any) => async (args: any) => {
+        const req = args.request as any;
+        req.headers = { ...(req.headers ?? {}), 'x-amz-decoded-content-length': String(decodedLen) };
+        return next(args);
+      },
+      { name: mwDecodedName, relation: 'after', toMiddleware: 'contentLengthMiddleware' }
+    );
+    addedDecoded = true;
+  }
+
   try {
     const out = await client.send(cmd);
     const eTag = normalizeETag(out.ETag ?? undefined);
     if (!eTag) {
       if (added) client.middlewareStack.remove(mwName);
+      if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
       throw new S3ClientError(`putObject(${key}) did not return an ETag`, out.$metadata?.httpStatusCode);
     }
     if (added) client.middlewareStack.remove(mwName);
+    if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
     return { eTag };
   } catch (e) {
     if (added) client.middlewareStack.remove(mwName);
+    if (addedDecoded) client.middlewareStack.remove(mwDecodedName);
     wrapAwsError(e, `putObject(${key}) failed`);
   }
 }
@@ -335,10 +370,11 @@ export async function putObject(
 export async function getPresignedPutUrl(
   key: string,
   expiresSeconds: number,
-  opts?: PutObjectOptions
+  opts?: PutObjectOptions,
+  bucketOverride?: string
 ): Promise<string> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: PutObjectCommandInput = {
     Bucket,
@@ -364,9 +400,9 @@ export async function getPresignedPutUrl(
  * @param key Object key
  * @param expiresSeconds Expiration in seconds
  */
-export async function getPresignedGetUrl(key: string, expiresSeconds: number): Promise<string> {
+export async function getPresignedGetUrl(key: string, expiresSeconds: number, bucketOverride?: string): Promise<string> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: GetObjectCommandInput = { Bucket, Key: key };
   const cmd = new GetObjectCommand(input);
@@ -386,10 +422,11 @@ export async function getPresignedGetUrl(key: string, expiresSeconds: number): P
  */
 export async function initiateMultipartUpload(
   key: string,
-  opts?: MultipartInitOptions
+  opts?: MultipartInitOptions,
+  bucketOverride?: string
 ): Promise<{ uploadId: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   if (opts?.ifNoneMatch) {
     // Best-effort: fail fast if object exists and ifNoneMatch is "*".
@@ -435,10 +472,11 @@ export async function initiateMultipartUpload(
 export async function completeMultipartUpload(
   key: string,
   uploadId: string,
-  parts: Array<CompletedUploadPart>
+  parts: Array<CompletedUploadPart>,
+  bucketOverride?: string
 ): Promise<{ eTag: string }> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const CompletedParts: CompletedPart[] = parts
     .map((p) => ({
@@ -471,9 +509,9 @@ export async function completeMultipartUpload(
  * @param key Object key
  * @param uploadId Upload ID to abort
  */
-export async function abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+export async function abortMultipartUpload(key: string, uploadId: string, bucketOverride?: string): Promise<void> {
   const client = getS3Client();
-  const Bucket = getBucket();
+  const Bucket = bucketOverride ?? getBucket();
 
   const input: AbortMultipartUploadCommandInput = {
     Bucket,

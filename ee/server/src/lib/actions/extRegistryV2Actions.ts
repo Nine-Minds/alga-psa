@@ -3,6 +3,8 @@
 import { createTenantKnex } from '@/lib/db';
 import type { Knex } from 'knex';
 import { computeDomain, enqueueProvisioningWorkflow } from '../extensions/runtime/provision';
+import { getS3Client, getBundleBucket } from "../storage/s3-client";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 export type V2ExtensionListItem = {
   id: string; // registry_id
@@ -12,6 +14,11 @@ export type V2ExtensionListItem = {
   is_enabled: boolean;
   tenant_id: string;
   description?: string | null;
+};
+
+export type BundleInfo = {
+  content_hash: string;
+  canonical_key: string; // sha256/<hex>/bundle.tar.zst
 };
 
 export async function fetchInstalledExtensionsV2(): Promise<V2ExtensionListItem[]> {
@@ -56,7 +63,46 @@ export async function uninstallExtensionV2(registryId: string): Promise<{ succes
   const { knex, tenant } = await createTenantKnex();
   if (!tenant) throw new Error('Tenant not found');
 
+  // Lookup the installed version and current bundle content hash before deleting DB rows
+  let bundleKey: string | null = null;
+  try {
+    const install = await knex('tenant_extension_install')
+      .where({ tenant_id: tenant, registry_id: registryId })
+      .first(['version_id']);
+    if (install?.version_id) {
+      const bundle = await knex('extension_bundle')
+        .where({ version_id: (install as any).version_id })
+        .orderBy('created_at', 'desc')
+        .first(['content_hash']);
+      if (bundle?.content_hash) {
+        const ch: string = (bundle as any).content_hash;
+        const hex = ch.startsWith('sha256:') ? ch.substring('sha256:'.length) : ch;
+        bundleKey = `tenants/${tenant}/extensions/${registryId}/sha256/${hex}/bundle.tar.zst`;
+      }
+    }
+  } catch (e) {
+    // Ignore bundle lookup errors; proceed with uninstall
+    console.warn('uninstallExtensionV2: bundle lookup failed', { error: (e as any)?.message });
+  }
+
+  // Remove the install row
   await knex('tenant_extension_install').where({ tenant_id: tenant, registry_id: registryId }).del();
+
+  // Best-effort S3 delete of the tenant-local canonical bundle (and manifest) to stop serving.
+  if (bundleKey) {
+    try {
+      const client = getS3Client();
+      const Bucket = getBundleBucket();
+      const manifestKey = bundleKey.replace(/bundle\.tar\.zst$/, 'manifest.json');
+      await client.send(new DeleteObjectCommand({ Bucket, Key: bundleKey } as any));
+      await client.send(new DeleteObjectCommand({ Bucket, Key: manifestKey } as any));
+      console.info('uninstallExtensionV2: deleted bundle objects', { bundleKey, manifestKey });
+    } catch (e) {
+      // Non-fatal
+      console.warn('uninstallExtensionV2: failed to delete bundle from storage', { bundleKey, error: (e as any)?.message });
+    }
+  }
+
   return { success: true, message: 'Uninstalled' };
 }
 
@@ -95,4 +141,28 @@ export async function installExtensionForCurrentTenantV2(params: { registryId: s
   await enqueueProvisioningWorkflow({ tenantId: tenant, extensionId: params.registryId, installId }).catch(() => {});
 
   return { success: true };
+}
+
+/**
+ * Get the current bundle content hash and storage key (canonical) for the tenant's install of a registry entry.
+ */
+export async function getBundleInfoForInstall(registryId: string): Promise<BundleInfo | null> {
+  const { knex, tenant } = await createTenantKnex();
+  if (!tenant) throw new Error('Tenant not found');
+
+  const ti = await knex('tenant_extension_install')
+    .where({ tenant_id: tenant, registry_id: registryId })
+    .first(['version_id']);
+  if (!ti) return null;
+
+  const bundle = await knex('extension_bundle')
+    .where({ version_id: (ti as any).version_id })
+    .orderBy([{ column: 'created_at', order: 'desc' }, { column: 'id', order: 'desc' }])
+    .first(['content_hash']);
+  if (!bundle) return null;
+
+  const ch = (bundle as any).content_hash as string; // expected sha256:<hex>
+  const hex = ch.startsWith('sha256:') ? ch.substring('sha256:'.length) : ch;
+  const canonical_key = `tenants/${tenant}/extensions/${registryId}/sha256/${hex}/bundle.tar.zst`;
+  return { content_hash: ch, canonical_key };
 }

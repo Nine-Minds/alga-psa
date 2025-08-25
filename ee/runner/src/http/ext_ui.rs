@@ -17,11 +17,13 @@ use tokio::io::AsyncReadExt;
 use tracing::info;
 use url::Url;
 use std::io::Read;
+use std::io::ErrorKind;
 
 use crate::cache::fs as cache_fs;
 use crate::registry::client::RegistryClient;
-use crate::util::{etag::etag_for_file, limits, mime::content_type_for, path_sanitize, errors::IntegrityError};
-use crate::engine::loader::{bundle_url, verify_archive_sha256};
+use crate::util::{etag::etag_for_file, mime::content_type_for, path_sanitize, errors::IntegrityError};
+use crate::engine::loader::{bundle_url_for_key, verify_archive_sha256};
+use reqwest::Client as HttpClient;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -36,6 +38,8 @@ pub struct AppState {
 pub struct UiQuery {
     // SPA hydration supports ?path=/client-route; not used for file resolution, only passthrough.
     pub path: Option<String>,
+    // Optional tenant id (provided by root dispatcher redirect)
+    pub tenant: Option<String>,
 }
 
 #[derive(Deserialize, serde::Serialize)]
@@ -48,7 +52,7 @@ pub struct WarmupReq {
 /// Validates tenant/contentHash (when strict), ensures cache/extract, and serves file with ETag and immutable caching.
 pub async fn handle_get(
     AxPath((extension_id, content_hash, path_tail)): AxPath<(String, String, String)>,
-    Query(_query): Query<UiQuery>,
+    Query(query): Query<UiQuery>,
     headers: HeaderMap,
     State(state): State<AppState>,
 ) -> impl IntoResponse {
@@ -62,6 +66,20 @@ pub async fn handle_get(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("")
         .to_string();
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+
+    tracing::info!(
+        request_id=%req_id,
+        host=%host,
+        extension=%extension_id,
+        content_hash=%content_hash,
+        has_tenant=%(!tenant_id.is_empty()),
+        "ext_ui request start"
+    );
 
     // Normalize content hash: require sha256:<hex> form
     let hash_hex = match normalize_hash(&content_hash) {
@@ -72,38 +90,79 @@ pub async fn handle_get(
         }
     };
 
-    // Strict validation behavior controlled by registry client internally
-    // If strict enabled and tenant header missing, deny with 404 (as spec)
-    let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION")
-        .map(|v| v.trim().eq_ignore_ascii_case("true"))
-        .unwrap_or(true);
-    if strict && tenant_id.is_empty() {
-        tracing::info!(request_id=%req_id, host=?headers.get(axum::http::header::HOST).and_then(|v| v.to_str().ok()), "strict validation on and x-tenant-id missing");
+    // Strict validation behavior: enabled by default
+    let strict = true;
+
+    // Resolve tenant via header or registry host lookup
+    let mut tenant = query.tenant.clone().unwrap_or_else(|| tenant_id.clone());
+    if tenant.is_empty() {
+        if let Ok(base) = std::env::var("REGISTRY_BASE_URL") {
+            if let Ok(mut u) = Url::parse(&base) {
+                u.set_path("api/installs/lookup-by-host");
+                let now_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis()).unwrap_or(0);
+                u.query_pairs_mut()
+                  .append_pair("host", host.split(':').next().unwrap_or(""))
+                  .append_pair("ts", &now_ms.to_string());
+                if let Ok(http) = HttpClient::builder().build() {
+                    let mut rb = http.get(u.clone());
+                    rb = rb.header("x-canary", "robert");
+                    if let Ok(k) = std::env::var("ALGA_AUTH_KEY") { if !k.is_empty() { rb = rb.header("x-api-key", k); } }
+                    if let Ok(resp) = rb.send().await {
+                        let code = resp.status().as_u16();
+                        if code >= 200 && code < 300 {
+                            match resp.text().await {
+                                Ok(txt) => {
+                                    tracing::info!(host=%host, status=%code, body_len=%txt.len(), body_sample=%txt.chars().take(200).collect::<String>(), "fallback lookup body");
+                                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&txt) {
+                                        if let Some(t) = json.get("tenant_id").and_then(|v| v.as_str()) { tenant = t.to_string(); }
+                                    }
+                                }
+                                Err(e) => {
+                                    tracing::warn!(err=%e.to_string(), "failed to read fallback lookup body");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if strict && tenant.is_empty() {
+        tracing::info!(request_id=%req_id, host=%host, "strict validation on and tenant resolution failed");
         return StatusCode::NOT_FOUND.into_response();
     }
 
     // Validate with registry (cached TTL)
     if strict {
+        tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, content_hash=%content_hash, "registry validation start");
         match state
             .registry
-            .validate_install(&tenant_id, &extension_id, &content_hash)
+            .validate_install(&tenant, &extension_id, &content_hash)
             .await
         {
             Ok(true) => {}
             Ok(false) => {
-                tracing::info!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, content_hash=%content_hash, "registry denied");
+                tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, content_hash=%content_hash, "registry denied");
                 return StatusCode::NOT_FOUND.into_response();
             }
             Err(e) => {
-                tracing::warn!(request_id=%req_id, tenant=%tenant_id, extension=%extension_id, err=%e.to_string(), "registry error (strict)");
+                tracing::warn!(request_id=%req_id, tenant=%tenant, extension=%extension_id, err=%e.to_string(), "registry error (strict)");
                 return StatusCode::NOT_FOUND.into_response();
             }
         }
+        tracing::info!(request_id=%req_id, tenant=%tenant, extension=%extension_id, "registry validation ok");
+    } else {
+        tracing::info!(request_id=%req_id, extension=%extension_id, "strict validation disabled; skipping registry check");
     }
 
     // Ensure UI cache is present (first touch may download+extract)
-    if !cache_fs::exists_ui_index(&state.cache_root, &hash_hex) {
-        if let Err(e) = ensure_ui_cache(&state, &hash_hex).await {
+    let exists = cache_fs::exists_ui_index(&state.cache_root, &hash_hex);
+    tracing::info!(request_id=%req_id, hash=%hash_hex, cache_index_exists=%exists, "ui cache check");
+    if !exists {
+        tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure start");
+        // Build tenant-local key for this bundle
+        let obj_key = format!("tenants/{}/extensions/{}/sha256/{}/bundle.tar.zst", tenant, extension_id, hash_hex);
+        if let Err(e) = ensure_ui_cache(&state, &hash_hex, &obj_key).await {
             if let Some(IntegrityError::ArchiveHashMismatch { expected_hex, computed_hex }) = e.downcast_ref::<IntegrityError>() {
                 tracing::error!(
                     request_id=%req_id,
@@ -129,6 +188,7 @@ pub async fn handle_get(
             let body = Json(serde_json::json!({ "code": "extract_failed" }));
             return (StatusCode::INTERNAL_SERVER_ERROR, body).into_response();
         }
+        tracing::info!(request_id=%req_id, hash=%hash_hex, "ui cache ensure ok");
     }
 
     // Sanitize the requested path; empty means root (index.html)
@@ -159,10 +219,20 @@ pub async fn handle_get(
         file_path = ui_root.join("index.html");
     }
 
-    // Max size enforcement
-    if let Some(max) = state.max_file_bytes {
-        if let Err(_) = limits::enforce_max_file_size(&file_path, max).await {
-            return (StatusCode::PAYLOAD_TOO_LARGE, "asset too large").into_response();
+    // Existence + max size enforcement
+    match fs::metadata(&file_path).await {
+        Ok(meta) => {
+            if let Some(max) = state.max_file_bytes {
+                if meta.len() > max {
+                    return (StatusCode::PAYLOAD_TOO_LARGE, "asset too large").into_response();
+                }
+            }
+        }
+        Err(e) => {
+            return match e.kind() {
+                ErrorKind::NotFound => StatusCode::NOT_FOUND.into_response(),
+                _ => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+            };
         }
     }
 
@@ -204,6 +274,7 @@ pub async fn handle_get(
 
     // Structured trace
     let dur_ms = started.elapsed().as_millis() as u64;
+    let body_len = data.len();
     info!(
         request_id=%req_id,
         tenant=%tenant_id,
@@ -212,6 +283,7 @@ pub async fn handle_get(
         file_path=%file_path.to_string_lossy(),
         status=200,
         duration_ms=%dur_ms,
+        bytes=body_len,
         cache_status=%(if use_index { "spa-fallback" } else { "hit" }),
         "ext_ui serve"
     );
@@ -223,22 +295,11 @@ pub async fn handle_get(
 /// Ensures the UI cache for this bundle is extracted.
 #[axum::debug_handler]
 pub async fn warmup(
-    State(state): State<AppState>,
-    Json(req): Json<WarmupReq>,
+    _state: State<AppState>,
+    Json(_req): Json<WarmupReq>,
 ) -> impl IntoResponse {
-    match normalize_hash(&req.content_hash) {
-        Ok(hex) => {
-            match ensure_ui_cache(&state, &hex).await {
-                Ok(()) => Json(serde_json::json!({ "status": "ok", "hash": hex })).into_response(),
-                Err(e) => (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(serde_json::json!({ "status": "error", "error": e.to_string() })),
-                )
-                    .into_response(),
-            }
-        }
-        Err(e) => (StatusCode::BAD_REQUEST, e.to_string()).into_response(),
-    }
+    // Warmup requires tenant + extension context for tenant-scoped bundles.
+    (StatusCode::BAD_REQUEST, "warmup unsupported without tenant + extension context").into_response()
 }
 
 fn normalize_hash(content_hash: &str) -> anyhow::Result<String> {
@@ -260,7 +321,7 @@ fn etag_match(inm_header: &str, etag: &str) -> bool {
 }
 
 /// Ensure the UI subtree is cached locally; performs first-touch download and extraction if missing.
-async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()> {
+async fn ensure_ui_cache(state: &AppState, hash_hex: &str, key: &str) -> anyhow::Result<()> {
     if cache_fs::exists_ui_index(&state.cache_root, hash_hex) {
         return Ok(());
     }
@@ -270,8 +331,9 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
     cache_fs::ensure_dir(&tmp_dir).await?;
     cache_fs::ensure_dir(&ui_root).await?;
  
-    // Build bundle URL and fetch+verify archive sha256 to temp file
-    let url = bundle_url(&state.bundle_store_base, &format!("sha256:{}", hash_hex))?;
+    // Build tenant-local URL from provided key and fetch+verify archive sha256 to temp file
+    let url = bundle_url_for_key(&state.bundle_store_base, key)?;
+    tracing::info!(hash=%hash_hex, url=%url.to_string(), "bundle fetch start");
     let tmp_tgz = verify_archive_sha256(&url, hash_hex).await?;
  
     // Extract ui/ subtree
@@ -282,6 +344,7 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
         let _ = fs::remove_file(&tmp_tgz).await;
         return Err(e);
     }
+    tracing::info!(hash=%hash_hex, ui_root=%ui_root.to_string_lossy(), "bundle extract ok");
  
     // Optional quick sanity check: compute sha256 ETag for index.html
     let index_path = ui_root.join("index.html");
@@ -292,6 +355,7 @@ async fn ensure_ui_cache(state: &AppState, hash_hex: &str) -> anyhow::Result<()>
  
     // Cleanup verified temp archive
     let _ = fs::remove_file(&tmp_tgz).await;
+    tracing::info!(hash=%hash_hex, "bundle fetch+extract done");
  
     Ok(())
 }
@@ -320,10 +384,15 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
     }
     let mut ops: Vec<Op> = Vec::new();
 
+    let mut files = 0usize;
+    let mut dirs = 0usize;
     for entry in ar.entries().context("tar entries")? {
         let mut entry = entry.context("tar entry")?;
         let path = entry.path().context("entry path")?;
-        let pstr = path.to_string_lossy();
+        let mut pstr = path.to_string_lossy().to_string();
+        if let Some(stripped) = pstr.strip_prefix("./") {
+            pstr = stripped.to_string();
+        }
 
         // Only extract under ui/
         if !pstr.starts_with("ui/") {
@@ -345,6 +414,7 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
 
         if entry.header().entry_type().is_dir() {
             ops.push(Op::Mkdir(out_path));
+            dirs += 1;
         } else if entry.header().entry_type().is_file() {
             if let Some(parent) = out_path.parent() {
                 ops.push(Op::Mkdir(parent.to_path_buf()));
@@ -353,6 +423,7 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             let mut contents = Vec::with_capacity(16 * 1024);
             entry.read_to_end(&mut contents).context("read entry")?;
             ops.push(Op::Write { path: out_path, contents });
+            files += 1;
         } else {
             // Skip symlinks or other types for safety
             continue;
@@ -370,6 +441,8 @@ async fn extract_ui_from_tar_gz(tgz_path: &Path, ui_root: &Path) -> anyhow::Resu
             }
         }
     }
+
+    tracing::info!(ui_root=%ui_root.to_string_lossy(), files=%files, dirs=%dirs, "ui subtree extracted");
 
     Ok(())
 }

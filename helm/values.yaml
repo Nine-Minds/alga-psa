@@ -136,6 +136,10 @@ config:
         enabled: false  # Set to true to enable S3 in enterprise edition
         region: 'us-west-2'
         bucket: 'company-files'
+        # Separate bucket for extension bundles served by the runner. Required
+        # for EE extensions; when unset, extension bundle uploads will fail
+        # with a configuration error.
+        bundle_bucket: 'alga-ext'
         access_key: ''  # AWS access key
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
