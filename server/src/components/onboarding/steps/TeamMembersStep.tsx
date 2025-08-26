@@ -8,7 +8,7 @@ import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
-import { getAvailableRoles } from '@/lib/actions/onboarding-actions/onboardingActions';
+import { getAvailableRoles, addSingleTeamMember } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const [licenseInfo, setLicenseInfo] = useState<{
@@ -20,10 +20,25 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const [isLoadingLicense, setIsLoadingLicense] = useState(true);
   const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
+  const [savingMemberIndex, setSavingMemberIndex] = useState<number | null>(null);
+  const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
+  const [hasUnsavedForm, setHasUnsavedForm] = useState(false);
 
   useEffect(() => {
     checkLicenseStatus();
-  }, [data.teamMembers]);
+  }, [data.createdTeamMemberEmails]);
+
+  useEffect(() => {
+    // Check if there's an unsaved form
+    const hasEmpty = data.teamMembers.some(m => 
+      !m.firstName || !m.lastName || !m.email
+    );
+    const hasUnsaved = data.teamMembers.some(m => 
+      m.firstName && m.lastName && m.email && 
+      !data.createdTeamMemberEmails?.includes(m.email)
+    );
+    setHasUnsavedForm(hasEmpty || hasUnsaved);
+  }, [data.teamMembers, data.createdTeamMemberEmails]);
 
   useEffect(() => {
     fetchRoles();
@@ -67,36 +82,31 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       if (result.success && result.data) {
         const { limit, used } = result.data;
         
-        // Only count team members that haven't been created yet
-        const createdEmails = data.createdTeamMemberEmails || [];
-        const pendingTeamMembers = data.teamMembers.filter(m => 
-          m.firstName && m.lastName && m.email && !createdEmails.includes(m.email)
-        ).length;
-        const totalAfterInvites = used + pendingTeamMembers;
+        // Count already created team members
+        const actualCurrent = used; // This already includes all created users
         
         if (limit === null) {
           // No limit
           setLicenseInfo({ 
             limit: Infinity, 
-            current: used, 
+            current: actualCurrent, 
             allowed: true 
           });
         } else {
           // Has limit - check if we can add more
-          const canAddMore = used < limit;
-          const wouldExceed = totalAfterInvites > limit;
+          const canAddMore = actualCurrent < limit;
           
           let message: string | undefined = undefined;
           if (!canAddMore) {
-            message = `License limit reached (${used}/${limit}). Contact support to increase your license limit.`;
-          } else if (wouldExceed && pendingTeamMembers > 0) {
-            const canAdd = limit - used;
-            message = `Adding ${pendingTeamMembers} user(s) would exceed the limit. You can add ${canAdd} more.`;
+            message = `License limit reached (${actualCurrent}/${limit}). Contact support to increase your license limit.`;
+          } else {
+            const canAdd = limit - actualCurrent;
+            message = `You can add ${canAdd} more team member${canAdd !== 1 ? 's' : ''}.`;
           }
           
           setLicenseInfo({ 
             limit, 
-            current: used,
+            current: actualCurrent,
             allowed: canAddMore,
             message
           });
@@ -113,7 +123,57 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     }
   };
 
+  const saveMember = async (index: number) => {
+    const member = data.teamMembers[index];
+    
+    // Validate fields
+    if (!member.firstName || !member.lastName || !member.email) {
+      setSaveErrors(prev => ({ ...prev, [index]: 'Please fill in all fields' }));
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(member.email)) {
+      setSaveErrors(prev => ({ ...prev, [index]: 'Please enter a valid email address' }));
+      return;
+    }
+
+    setSavingMemberIndex(index);
+    setSaveErrors(prev => ({ ...prev, [index]: '' }));
+
+    try {
+      const result = await addSingleTeamMember(member);
+      
+      if (result.success) {
+        // Add to created list
+        const currentCreated = data.createdTeamMemberEmails || [];
+        updateData({ 
+          createdTeamMemberEmails: [...currentCreated, member.email]
+        });
+        
+        // Re-check license status
+        await checkLicenseStatus();
+      } else {
+        setSaveErrors(prev => ({ ...prev, [index]: result.error || 'Failed to save team member' }));
+      }
+    } catch (error) {
+      setSaveErrors(prev => ({ 
+        ...prev, 
+        [index]: error instanceof Error ? error.message : 'An error occurred' 
+      }));
+    } finally {
+      setSavingMemberIndex(null);
+    }
+  };
+
   const addTeamMember = () => {
+    // Check if there's an unsaved form
+    if (hasUnsavedForm) {
+      // Don't allow adding new form if there's an unsaved one
+      return;
+    }
+    
     if (licenseInfo && !licenseInfo.allowed) return;
     
     // Use the first available role as default, or 'technician' if no roles loaded
@@ -198,10 +258,13 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
       {data.teamMembers.map((member, index) => {
         const isAlreadyCreated = data.createdTeamMemberEmails?.includes(member.email);
+        const isSaving = savingMemberIndex === index;
+        const hasError = !!saveErrors[index];
+        const isFormFilled = member.firstName && member.lastName && member.email;
         
         return (
         <div key={index} className={`p-4 border rounded-lg space-y-4 ${
-          isAlreadyCreated ? 'bg-gray-50 border-gray-300' : ''
+          isAlreadyCreated ? 'bg-gray-50 border-gray-300' : hasError ? 'border-red-300' : ''
         }`}>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -212,17 +275,32 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 </span>
               )}
             </div>
-            {data.teamMembers.length > 1 && (
-              <Button
-                id={`remove-member-${index}`}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => removeTeamMember(index)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {!isAlreadyCreated && isFormFilled && (
+                <Button
+                  id={`save-member-${index}`}
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  onClick={() => saveMember(index)}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Saving...' : 'Save'}
+                </Button>
+              )}
+              {data.teamMembers.length > 1 && (
+                <Button
+                  id={`remove-member-${index}`}
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeTeamMember(index)}
+                  disabled={isSaving}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
@@ -269,6 +347,15 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               />
             </div>
           </div>
+          
+          {hasError && (
+            <div className="rounded-md bg-red-50 border border-red-200 p-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <p className="text-sm text-red-800">{saveErrors[index]}</p>
+              </div>
+            </div>
+          )}
         </div>
         );
       })}
@@ -278,14 +365,30 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         type="button"
         variant="outline"
         onClick={addTeamMember}
-        disabled={licenseInfo ? !licenseInfo.allowed : false}
+        disabled={hasUnsavedForm || (licenseInfo ? !licenseInfo.allowed : false)}
         className="w-full"
       >
         <Plus className="w-4 h-4 mr-2" />
-        Add Another Team Member
+        {hasUnsavedForm ? 'Save Current Team Member First' : 'Add Another Team Member'}
       </Button>
 
-      {licenseInfo && !licenseInfo.allowed && (
+      {hasUnsavedForm && (
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 p-4">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <div>
+              <p className="text-sm font-medium text-yellow-800">
+                Unsaved team member
+              </p>
+              <p className="text-xs text-yellow-600">
+                Please save the current team member before adding a new one.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {licenseInfo && !licenseInfo.allowed && !hasUnsavedForm && (
         <div className="rounded-md bg-red-50 border border-red-200 p-4">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-red-600" />
