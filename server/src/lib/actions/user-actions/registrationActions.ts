@@ -150,8 +150,8 @@ async function registerContactUser(
       const hashedPassword = await hashPassword(password);
       const [user] = await trx('users')
         .insert({
-          email,
-          username: email,
+          email: email.toLowerCase(),
+          username: email.toLowerCase(),
           first_name: firstName,
           last_name: lastName,
           hashed_password: hashedPassword,

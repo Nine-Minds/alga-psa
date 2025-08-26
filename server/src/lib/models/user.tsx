@@ -38,7 +38,7 @@ const User = {
   findUserByEmail: async (email: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where({ email }).first();
+      const user = await db<IUser>('users').select('*').where({ email: email.toLowerCase() }).first();
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email}:`, error);
@@ -67,7 +67,7 @@ const User = {
     try {
       const user = await knexOrTrx<IUser>('users')
         .select('*')
-        .where('username', username)
+        .where('username', username.toLowerCase())
         .andWhere('tenant', tenant)
         .first();
       return user;
@@ -176,7 +176,7 @@ const User = {
   updatePassword: async (email: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ email }).update({ hashed_password });
+      await db<IUser>('users').where({ email: email.toLowerCase() }).update({ hashed_password });
       logger.system(`Password updated for user with email ${email}`);
     } catch (error) {
       logger.error(`Error updating password for user with email ${email}:`, error);

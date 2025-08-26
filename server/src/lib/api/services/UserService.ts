@@ -213,7 +213,7 @@ export class UserService extends BaseService<IUser> {
       // Validate username uniqueness within tenant + user_type (allow same username across different types)
       const existingUserByUsername = await trx('users')
         .where('tenant', context.tenant)
-        .andWhere('username', data.username)
+        .andWhere('username', data.username.toLowerCase())
         .andWhere('user_type', targetUserType)
         .first();
 
@@ -235,7 +235,7 @@ export class UserService extends BaseService<IUser> {
       // Prepare user data
       const userData = {
         user_id: knex.raw('gen_random_uuid()'),
-        username: data.username,
+        username: data.username.toLowerCase(),
         first_name: data.first_name || null,
         last_name: data.last_name || null,
         email: data.email.toLowerCase(),
@@ -323,6 +323,7 @@ export class UserService extends BaseService<IUser> {
       const updateData = {
         ...data,
         email: data.email ? data.email.toLowerCase() : undefined,
+        username: data.username ? data.username.toLowerCase() : undefined,
         updated_at: knex.raw('now()')
       };
 

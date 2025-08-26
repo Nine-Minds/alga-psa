@@ -723,7 +723,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
           this.on('companies.company_id', '=', 'contacts.company_id')
               .andOn('companies.tenant', '=', 'contacts.tenant');
         })
-        .where({ 'contacts.email': email })
+        .where({ 'contacts.email': email.toLowerCase() })
         .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
         .first();
     });
@@ -767,7 +767,7 @@ export async function registerClientUser(
           this.on('companies.company_id', '=', 'contacts.company_id')
               .andOn('companies.tenant', '=', 'contacts.tenant');
         })
-        .where({ 'contacts.email': email })
+        .where({ 'contacts.email': email.toLowerCase() })
         .select(
           'contacts.contact_name_id',
           'contacts.company_id',
@@ -803,8 +803,8 @@ export async function registerClientUser(
 
       const [user] = await trx('users')
         .insert({
-          email,
-          username: email,
+          email: email.toLowerCase(),
+          username: email.toLowerCase(),
           first_name: firstName,
           last_name: lastName,
           hashed_password: hashedPassword,

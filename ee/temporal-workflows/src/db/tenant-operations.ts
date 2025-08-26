@@ -29,7 +29,7 @@ export async function createTenantInDB(
       // Create tenant first (include admin email since it's required)
       const tenantData: any = {
         company_name: input.tenantName,
-        email: input.email,
+        email: input.email.toLowerCase(),
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
       };
@@ -81,7 +81,7 @@ export async function createTenantInDB(
             company_id: companyId,
             tenant: tenantId,
             location_name: 'Main Office',
-            email: input.email, // default contact email
+            email: input.email.toLowerCase(), // default contact email (lowercased)
             phone: '',
             address_line1: 'N/A', // required, placeholder per migration convention
             city: 'N/A', // required by schema

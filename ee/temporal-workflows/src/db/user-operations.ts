@@ -28,7 +28,7 @@ export async function createAdminUserInDB(
       // Check if user already exists in this tenant
       const existingUser = await trx('users')
         .select('user_id')
-        .where({ email: input.email, tenant: input.tenantId })
+        .where({ email: input.email.toLowerCase(), tenant: input.tenantId })
         .first();
 
       if (existingUser) {
@@ -43,10 +43,10 @@ export async function createAdminUserInDB(
         .insert({
           first_name: input.firstName,
           last_name: input.lastName,
-          email: input.email,
+          email: input.email.toLowerCase(),
           tenant: input.tenantId,
           user_type: 'internal',
-          username: input.email, // use email as username
+          username: input.email.toLowerCase(), // use lowercased email as username
           hashed_password: await hashPassword(temporaryPassword) // hash the temporary password
         })
         .returning('user_id');

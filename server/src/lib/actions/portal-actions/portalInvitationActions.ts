@@ -187,7 +187,7 @@ export async function createClientPortalUser(
         .insert({
           tenant,
           user_id: trx.raw('gen_random_uuid()'),
-          username: contact.email,
+          username: contact.email.toLowerCase(),
           email: contact.email.toLowerCase(),
           first_name: firstName,
           last_name: lastName,
@@ -509,8 +509,8 @@ export async function completePortalSetup(
           const lastName = nameParts.slice(1).join(' ') || undefined;
 
           const user = await userService.create({
-            username: contact.email,
-            email: contact.email,
+            username: contact.email.toLowerCase(),
+            email: contact.email.toLowerCase(),
             password: password,
             first_name: firstName,
             last_name: lastName,
@@ -580,7 +580,7 @@ export async function completePortalSetup(
       // Trigger token cleanup
       await PortalInvitationService.cleanupExpiredTokens();
 
-      return { success: true, userId: newUser.user_id, username: contact.email, message: 'Portal account created successfully' } as CompleteSetupResult;
+      return { success: true, userId: newUser.user_id, username: contact.email.toLowerCase(), message: 'Portal account created successfully' } as CompleteSetupResult;
     });
 
     return result;

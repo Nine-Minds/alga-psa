@@ -34,9 +34,9 @@ export async function createPortalUserInDB(
     // If no password provided, generate a secure temporary password
     const password = input.password || generateSecurePassword();
 
-    // Map to shared model input
+    // Map to shared model input (ensure email is lowercased)
     const sharedModelInput: CreatePortalUserInput = {
-      email: input.email,
+      email: input.email.toLowerCase(),
       password,
       contactId: input.contactId,
       companyId: input.companyId,
