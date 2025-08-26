@@ -56,7 +56,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     console.log(`salt: ${salt}, originalHash: ${originalHash}, hash: ${hash}`);
     
     // Compare the computed hash with the original hash
-    return true; //hash === originalHash;
+    return hash === originalHash;
   } catch (error) {
     console.error('Error during password verification:', error);
     return false;
