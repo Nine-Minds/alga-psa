@@ -36,6 +36,7 @@ import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // 
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from 'server/src/components/admin/EmailSettings';
+import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
@@ -46,20 +47,27 @@ const SettingsPage = (): JSX.Element =>  {
   const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
   const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
   const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
-  const emailConfigFlag = useFeatureFlag('email-configuration');
-  const isEmailConfigEnabled = typeof emailConfigFlag === 'boolean' ? emailConfigFlag : emailConfigFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-  // Dynamically load the Extensions component only if EE is available
-  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() => 
+  // Dynamically load the Extensions (Manage) component only if EE is available
+  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),
     {
       loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
       ssr: false
     }
   ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
+
+  // Dynamically load the new Installer (Server Actions) via EE loader boundary, to avoid direct app imports here
+  const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
+    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicInstallExtensionComponent as any),
+    {
+      loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
+      ssr: false
+    }
+  ) : () => null;
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -101,7 +109,9 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>General Settings</CardTitle>
-            <CardDescription>Manage your organization's settings</CardDescription>
+            <CardDescription>
+              Manage your organization name and default company. The default company is used for configuration purposes and represents your MSP.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <GeneralSettings />
@@ -191,7 +201,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Email",
-      content: isEmailConfigEnabled ? (
+      content: (
         <Card>
           <CardHeader>
             <CardTitle>Email Configuration</CardTitle>
@@ -201,39 +211,84 @@ const SettingsPage = (): JSX.Element =>  {
             <EmailSettings />
           </CardContent>
         </Card>
-      ) : (
-        <FeaturePlaceholder />
       ),
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
-      // Render the QBO settings client component directly
-      content: isAdvancedFeaturesEnabled ? <QboIntegrationSettings /> : <FeaturePlaceholder />,
+      content: isAdvancedFeaturesEnabled ? (
+        <div className="space-y-6">
+          {/* QuickBooks Online Integration */}
+          <QboIntegrationSettings />
+          
+          {/* Inbound Email Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Inbound Email Integration</CardTitle>
+              <CardDescription>
+                Configure email providers to automatically process incoming emails into tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailProviderConfiguration />
+            </CardContent>
+          </Card>
+        </div>
+      ) : <FeaturePlaceholder />,
     }
   ];
 
-  // Add Extensions tab conditionally if EE is available
-  const tabContent: TabContent[] = isEEAvailable 
-    ? [
-        ...baseTabContent,
-        {
-          label: "Extensions",
-          content: (
-            <Card>
-              <CardHeader>
-                <CardTitle>Extension Management</CardTitle>
-                <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <DynamicExtensionsComponent />
-                </div>
-              </CardContent>
-            </Card>
-          ),
-        }
-      ]
-    : baseTabContent;
+  // Always include an "Extensions" tab.
+  // - EE: full Manage + Install sub-tabs
+  // - OSS: enterprise-only stub
+  const tabContent: TabContent[] = [
+    ...baseTabContent,
+    {
+      label: "Extensions",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Extension Management</CardTitle>
+            <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isEEAvailable ? (
+              <div className="space-y-4">
+                <CustomTabs
+                  tabs={[
+                    {
+                      label: "Manage",
+                      content: (
+                        <div className="py-2">
+                          <DynamicExtensionsComponent />
+                        </div>
+                      )
+                    },
+                    {
+                      label: "Install",
+                      content: (
+                        <div className="py-2">
+                          {/* EE server-actions installer, styled with standard UI */}
+                          <DynamicInstallComponent />
+                        </div>
+                      )
+                    }
+                  ] as TabContent[]}
+                  defaultTab="Manage"
+                />
+              </div>
+            ) : (
+              <div className="text-center py-10">
+                <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Extensions are available in the Enterprise edition of Alga PSA.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    }
+  ];
 
 
   return (

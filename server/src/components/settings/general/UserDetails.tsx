@@ -12,6 +12,8 @@ import { Card } from 'server/src/components/ui/Card';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
+import toast from 'react-hot-toast';
 
 interface UserDetailsProps {
   userId: string;
@@ -42,9 +44,15 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
 
   useEffect(() => {
     fetchUserDetails();
-    fetchAvailableRoles();
     fetchCurrentUser();
   }, [userId]);
+
+  // Fetch available roles after user is loaded to get correct role type
+  useEffect(() => {
+    if (user) {
+      fetchAvailableRoles();
+    }
+  }, [user]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -88,9 +96,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const fetchAvailableRoles = async () => {
     try {
       const allRoles = await getRoles();
-      // Filter to only show MSP roles for MSP users
-      const mspRoles = allRoles.filter(role => role.msp);
-      setAvailableRoles(mspRoles);
+      // Filter roles based on user type
+      if (user) {
+        const isClientUser = user.user_type === 'client';
+        const filteredRoles = isClientUser 
+          ? allRoles.filter(role => role.client)
+          : allRoles.filter(role => role.msp);
+        setAvailableRoles(filteredRoles);
+      } else {
+        // Default to MSP roles if user not loaded yet
+        const mspRoles = allRoles.filter(role => role.msp);
+        setAvailableRoles(mspRoles);
+      }
     } catch (err) {
       console.error('Error fetching available roles:', err);
       setError('Failed to load available roles.');
@@ -127,6 +144,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const handleSave = async () => {
     if (user) {
       try {
+        // Check license limit if trying to activate an MSP user
+        if (user.user_type === 'internal' && user.is_inactive && isActive) {
+          const licenseResult = await getLicenseUsageAction();
+          if (licenseResult.success && licenseResult.data) {
+            const { limit, remaining } = licenseResult.data;
+            if (limit !== null && remaining === 0) {
+              toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+              return;
+            }
+          }
+        }
+
         const updatedUserData: Partial<IUser> = {
           first_name: firstName,
           last_name: lastName,
@@ -304,7 +333,20 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             </Text>
             <Switch
               checked={isActive}
-              onCheckedChange={(checked) => setIsActive(checked)}
+              onCheckedChange={async (checked) => {
+                // Check license limit if trying to activate an MSP user
+                if (user && user.user_type === 'internal' && user.is_inactive && checked) {
+                  const licenseResult = await getLicenseUsageAction();
+                  if (licenseResult.success && licenseResult.data) {
+                    const { limit, remaining } = licenseResult.data;
+                    if (limit !== null && remaining === 0) {
+                      toast.error('Cannot activate user: License limit reached. Please deactivate another user or upgrade your license.');
+                      return;
+                    }
+                  }
+                }
+                setIsActive(checked);
+              }}
               className="data-[state=checked]:bg-green-500"
             />
           </div>

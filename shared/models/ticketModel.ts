@@ -77,8 +77,7 @@ export const createCommentSchema = z.object({
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
-  metadata: z.record(z.unknown()).optional()
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional()
 });
 
 // =============================================================================
@@ -163,7 +162,6 @@ export interface CreateCommentValidationInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateTicketOutput {
@@ -186,7 +184,6 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
-  metadata?: any;
 }
 
 export interface CreateCommentOutput {
@@ -950,7 +947,8 @@ export class TicketModel {
       .select('*');
       
     // Step 3: Store resources for recreation, excluding those that would violate constraints
-    const resourcesToRecreate = [];
+    // Explicitly type to avoid never[] inference
+    const resourcesToRecreate: any[] = [];
     for (const resource of existingResources) {
       // Skip resources where additional_user_id would equal the new assigned_to
       if (resource.additional_user_id !== updateData.assigned_to) {
@@ -1045,21 +1043,34 @@ export class TicketModel {
     const commentId = uuidv4();
     const now = new Date();
 
-    const commentData = {
+    // Map legacy/alias author types to current enum: internal | client | unknown
+    // Map to DB enum/text values: prefer 'user' | 'contact' | 'unknown'
+    const dbAuthorType = (() => {
+      switch (validatedData.author_type) {
+        case 'internal':
+        case 'system':
+          return 'user';
+        case 'contact':
+          return 'contact';
+        default:
+          return 'unknown';
+      }
+    })();
+
+    const baseCommentData: any = {
       comment_id: commentId,
       tenant,
       ticket_id: validatedData.ticket_id,
       note: validatedData.content,
       is_internal: validatedData.is_internal || false,
       is_resolution: validatedData.is_resolution || false,
-      author_type: validatedData.author_type || 'system',
+      author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
-      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
 
-    await trx('comments').insert(commentData);
+    await trx('comments').insert(baseCommentData);
 
     // Publish comment event if publisher provided
     if (eventPublisher) {
@@ -1070,7 +1081,7 @@ export class TicketModel {
           commentId: commentId,
           userId: userId,
           metadata: {
-            author_type: validatedData.author_type || 'system',
+            author_type: dbAuthorType,
             is_internal: validatedData.is_internal,
             is_resolution: validatedData.is_resolution
           }
@@ -1087,7 +1098,7 @@ export class TicketModel {
           ticket_id: validatedData.ticket_id,
           is_internal: validatedData.is_internal || false,
           is_resolution: validatedData.is_resolution || false,
-          author_type: validatedData.author_type || 'system',
+          author_type: dbAuthorType,
           created_via: 'manual'
         }, userId);
       } catch (error) {

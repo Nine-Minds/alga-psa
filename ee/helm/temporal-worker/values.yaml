@@ -40,7 +40,7 @@ temporal:
   maxConcurrentWorkflowTaskExecutions: 10
 
 # NM Store configuration
-nmstore:
+nm_store:
   baseUrl: http://nm-store-release.msp.svc.cluster.local:3000
 
 # Logging configuration

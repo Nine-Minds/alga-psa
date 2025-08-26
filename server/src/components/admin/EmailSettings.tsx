@@ -30,6 +30,8 @@ import {
 } from '../../lib/actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '../TenantProvider';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
@@ -51,6 +53,8 @@ interface DomainStatus {
 
 export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const tenantId = useTenant();
+  const outboundFlag = useFeatureFlag('email-configuration');
+  const isOutboundEnabled = typeof outboundFlag === 'boolean' ? outboundFlag : outboundFlag?.enabled;
   const [settings, setSettings] = useState<TenantEmailSettings | null>(null);
   const [domains, setDomains] = useState<DomainStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,7 +64,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const [selectedProvider, setSelectedProvider] = useState<'smtp' | 'resend'>('smtp');
   const [showPassword, setShowPassword] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
-  const [activeTab, setActiveTab] = useState('outbound');
+  const [activeTab, setActiveTab] = useState('inbound');
 
   useEffect(() => {
     loadEmailSettings();
@@ -370,151 +374,155 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
       <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="outbound" className="flex items-center gap-2">
-          <Send className="h-4 w-4" />
-          Outbound Email
-        </TabsTrigger>
         <TabsTrigger value="inbound" className="flex items-center gap-2">
           <Inbox className="h-4 w-4" />
           Inbound Email
         </TabsTrigger>
+        <TabsTrigger value="outbound" className="flex items-center gap-2">
+          <Send className="h-4 w-4" />
+          Outbound Email
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="outbound" className="space-y-6">
-        <div className="text-sm text-muted-foreground mb-4">
-          Configure SMTP or API settings for sending emails from your application
-        </div>
-        
-        {/* Provider Configuration Section */}
-        <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5" />
-            Email Provider Configuration
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Provider Selection */}
-          <div>
-            <Label htmlFor="provider-select">Email Provider</Label>
-            <CustomSelect
-              id="provider-select"
-              value={selectedProvider}
-              onValueChange={(value: string) => handleProviderChange(value as 'smtp' | 'resend')}
-              options={[
-                { value: 'smtp', label: 'SMTP (Traditional Email Server)' },
-                { value: 'resend', label: 'Resend (Modern API Service)' }
-              ]}
-              placeholder="Select email provider"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              {selectedProvider === 'smtp' 
-                ? 'Configure traditional SMTP email server settings'
-                : 'Configure Resend API for modern email delivery'
-              }
-            </p>
-          </div>
-
-          {/* Provider Status */}
-          <div className="flex items-center gap-2">
-            <Badge variant={getCurrentProviderConfig()?.isEnabled ? "default" : "secondary"}>
-              {getCurrentProviderConfig()?.isEnabled ? "Active" : "Inactive"}
-            </Badge>
-            <span className="text-sm text-gray-600">
-              {selectedProvider.toUpperCase()} Provider
-            </span>
-          </div>
-
-          {/* Provider-specific Configuration */}
-          {selectedProvider === 'smtp' && renderSMTPConfig()}
-          {selectedProvider === 'resend' && renderResendConfig()}
-
-          {/* General Settings */}
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-medium mb-4">General Settings</h3>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="tracking-enabled"
-                  checked={settings?.trackingEnabled || false}
-                  onCheckedChange={(checked: boolean) => {
-                    if (settings) {
-                      setSettings({ ...settings, trackingEnabled: checked });
-                    }
-                  }}
-                />
-                <Label htmlFor="tracking-enabled">Enable Email Tracking</Label>
-              </div>
-
-              <div>
-                <Label htmlFor="daily-limit">Daily Email Limit</Label>
-                <Input
-                  id="daily-limit"
-                  type="number"
-                  value={settings?.maxDailyEmails || 1000}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                    if (settings) {
-                      setSettings({ 
-                        ...settings, 
-                        maxDailyEmails: parseInt(e.target.value) || undefined 
-                      });
-                    }
-                  }}
-                />
-              </div>
+        {isOutboundEnabled ? (
+          <>
+            <div className="text-sm text-muted-foreground mb-4">
+              Configure SMTP or API settings for sending emails from your application
             </div>
-          </div>
-        </CardContent>
-      </Card>
+            
+            {/* Provider Configuration Section */}
+            <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Email Provider Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Provider Selection */}
+              <div>
+                <Label htmlFor="provider-select">Email Provider</Label>
+                <CustomSelect
+                  id="provider-select"
+                  value={selectedProvider}
+                  onValueChange={(value: string) => handleProviderChange(value as 'smtp' | 'resend')}
+                  options={[
+                    { value: 'smtp', label: 'SMTP (Traditional Email Server)' },
+                    { value: 'resend', label: 'Resend (Modern API Service)' }
+                  ]}
+                  placeholder="Select email provider"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  {selectedProvider === 'smtp' 
+                    ? 'Configure traditional SMTP email server settings'
+                    : 'Configure Resend API for modern email delivery'
+                  }
+                </p>
+              </div>
 
-      {/* Custom Domains Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5" />
-            Custom Domains
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="example.com"
-              value={newDomain}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
-              onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
-                if (e.key === 'Enter') {
-                  addDomain();
-                }
-              }}
-            />
-            <Button 
-              id="add-domain-button"
-              onClick={addDomain} 
-              disabled={!newDomain.trim()}
-            >
-              Add Domain
-            </Button>
-          </div>
-          
-          {domains.map(renderDomainStatus)}
-        </CardContent>
-      </Card>
+              {/* Provider Status */}
+              <div className="flex items-center gap-2">
+                <Badge variant={getCurrentProviderConfig()?.isEnabled ? "default" : "secondary"}>
+                  {getCurrentProviderConfig()?.isEnabled ? "Active" : "Inactive"}
+                </Badge>
+                <span className="text-sm text-gray-600">
+                  {selectedProvider.toUpperCase()} Provider
+                </span>
+              </div>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Settings'}
-          </Button>
-        </div>
+              {/* Provider-specific Configuration */}
+              {selectedProvider === 'smtp' && renderSMTPConfig()}
+              {selectedProvider === 'resend' && renderResendConfig()}
+
+              {/* General Settings */}
+              <div className="border-t pt-6">
+                <h3 className="text-lg font-medium mb-4">General Settings</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="tracking-enabled"
+                      checked={settings?.trackingEnabled || false}
+                      onCheckedChange={(checked: boolean) => {
+                        if (settings) {
+                          setSettings({ ...settings, trackingEnabled: checked });
+                        }
+                      }}
+                    />
+                    <Label htmlFor="tracking-enabled">Enable Email Tracking</Label>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="daily-limit">Daily Email Limit</Label>
+                    <Input
+                      id="daily-limit"
+                      type="number"
+                      value={settings?.maxDailyEmails || 1000}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        if (settings) {
+                          setSettings({ 
+                            ...settings, 
+                            maxDailyEmails: parseInt(e.target.value) || undefined 
+                          });
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Custom Domains Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-5 w-5" />
+                Custom Domains
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="example.com"
+                  value={newDomain}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewDomain(e.target.value)}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                    if (e.key === 'Enter') {
+                      addDomain();
+                    }
+                  }}
+                />
+                <Button 
+                  id="add-domain-button"
+                  onClick={addDomain} 
+                  disabled={!newDomain.trim()}
+                >
+                  Add Domain
+                </Button>
+              </div>
+              
+              {domains.map(renderDomainStatus)}
+            </CardContent>
+          </Card>
+
+            {/* Save Button */}
+            <div className="flex justify-end">
+              <Button id="save-email-settings" onClick={saveSettings} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Settings'}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <FeaturePlaceholder />
+        )}
       </TabsContent>
 
       <TabsContent value="inbound" className="space-y-6">
         <div className="text-sm text-muted-foreground mb-4">
           Configure email providers to receive and process emails as tickets
         </div>
-        
         <EmailProviderConfiguration 
-          tenant={tenantId || ''}
           onProviderAdded={(provider) => {
             // Optional: Handle provider added event
             console.log('Provider added:', provider);

@@ -184,26 +184,28 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   };
 
   // If we don't have users data but have agentOptions, convert agentOptions to users format
-  const usersList = users.length > 0 ? users : agentOptions.map(agent => ({
-    user_id: agent.value,
-    username: agent.value,
-    first_name: agent.label.split(' ')[0] || '',
-    last_name: agent.label.split(' ').slice(1).join(' ') || '',
-    email: '',
-    hashed_password: '',
-    is_inactive: false,
-    tenant: '',
-    user_type: 'internal',
-    roles: []
-  }));
+  const usersList: IUserWithRoles[] = users.length > 0
+    ? users
+    : agentOptions.map((agent): IUserWithRoles => ({
+        user_id: agent.value,
+        username: agent.value,
+        first_name: agent.label.split(' ')[0] || '',
+        last_name: agent.label.split(' ').slice(1).join(' ') || '',
+        email: '',
+        hashed_password: '',
+        is_inactive: false,
+        tenant: '',
+        user_type: 'internal',
+        roles: []
+      }));
 
   return (
     <ReflectionContainer id={id} label={`Info for ticket ${ticket.ticket_number}`}>
       <div className={`${styles['card']}`}>
         <div className="p-6">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 min-w-0">
             {isEditingTitle ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Input
 
                   type="text"
@@ -212,12 +214,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   onKeyDown={handleTitleKeyDown}
                   autoFocus
                   className="text-2xl font-bold flex-1 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                  containerClassName="mb-2"
+                  containerClassName="mb-2 flex-1"
+                  style={{minWidth: '300px', width: '100%'}}
                 />
                 <button
 
                   onClick={handleTitleSubmit}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
                   title="Save title"
                 >
                   <Check className="w-4 h-4 text-gray-500" />
@@ -227,13 +230,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <>
                 <h1 
 
-                  className="text-2xl font-bold"
+                  className="text-2xl font-bold break-words max-w-full min-w-0 flex-1"
+                  style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}
                 >
                   {ticket.title}
                 </h1>
                 <button
                   onClick={() => setIsEditingTitle(true)}
-                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  className="p-1 hover:bg-gray-100 rounded-full transition-colors duration-200 flex-shrink-0"
                   title="Edit title"
                 >
                   <Pencil className="w-4 h-4 text-gray-500" />
@@ -313,12 +317,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             
             {isEditingDescription ? (
-              <div>
-                <TextEditor
-                  id={`${id}-description-editor`}
-                  initialContent={descriptionContent}
-                  onContentChange={setDescriptionContent}
-                />
+              <div className="min-w-0 w-full">
+                <div className="min-w-0 w-full">
+                  <TextEditor
+                    id={`${id}-description-editor`}
+                    initialContent={descriptionContent}
+                    onContentChange={setDescriptionContent}
+                  />
+                </div>
                 <div className="flex justify-end space-x-2 mt-2">
                   <Button
                     id="save-description-button"
@@ -348,14 +354,14 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="prose max-w-none">
+              <div className="prose max-w-none break-words overflow-hidden min-w-0" style={{overflowWrap: 'break-word', wordBreak: 'break-word'}}>
                 {(() => {
                   // Get description from ticket attributes
                   const descriptionText = ticket.attributes?.description as string;
 
                   if (!descriptionText) return 'No description found.';
 
-                  return <RichTextViewer content={descriptionText} />;
+                  return <RichTextViewer content={descriptionText} className="break-words max-w-full min-w-0" />;
                 })()}
               </div>
             )}

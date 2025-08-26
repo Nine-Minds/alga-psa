@@ -209,15 +209,16 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       // Calculate actual duration for validation purposes
       const actualDuration = calculateDuration(parseISO(entry.start_time), parseISO(entry.end_time));
 
-      // Set billable duration to 0 for ad_hoc items, otherwise use calculated duration
-      const durationToSend = isAdHoc ? 0 : Math.max(1, actualDuration);
+      // For ad_hoc items, always set billable_duration to 0
+      // For other items, respect the user's billable setting - use entry.billable_duration as-is
+      const durationToSend = isAdHoc ? 0 : entry.billable_duration;
 
       console.log('Preparing time entry with billable_duration:', {
         entryBillableDuration: entry.billable_duration,
         actualDuration,
         durationToSend,
         isAdHoc,
-        forcingActualDuration: !isAdHoc && durationToSend === actualDuration
+        respectingUserBillableSetting: !isAdHoc
       });
 
       // Prepare the time entry with all required fields
@@ -330,14 +331,31 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     }
   }, [entries]);
 
-  const handleClose = useCallback(() => {
-    const hasUnsavedChanges = entries.some(entry => entry.isDirty);
-    if (hasUnsavedChanges) {
+  const handleCancel = useCallback(() => {
+    // For new entries that were never saved, don't show confirmation - just close
+    const hasOnlyNewUnsavedEntries = entries.every(entry => entry.isNew && !entry.entry_id);
+    const hasSavedEntriesWithChanges = entries.some(entry => entry.isDirty && entry.entry_id);
+    
+    if (hasOnlyNewUnsavedEntries) {
+      // Just close without saving new entries that were never saved
+      onClose();
+    } else if (hasSavedEntriesWithChanges) {
+      // Show confirmation for existing entries that have changes
       setCloseConfirmation(true);
     } else {
       onClose();
     }
   }, [entries, onClose]);
+
+  const handleSaveAll = useCallback(async () => {
+    // Find the first entry that needs to be saved
+    const entryToSave = entries.findIndex(entry => entry.isDirty || entry.isNew);
+    if (entryToSave !== -1) {
+      await handleSaveEntry(entryToSave);
+    } else {
+      onClose();
+    }
+  }, [entries, handleSaveEntry, onClose]);
 
   const title = existingEntries && existingEntries.length > 0 
     ? `Edit Time Entries for ${workItem.name}`
@@ -367,33 +385,42 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           date={date}
         />
       ) : (
-        <SingleTimeEntryForm
-          id={id}
-          entry={entries[0]}
-          services={services}
-          taxRegions={taxRegions}
-          timeInputs={timeInputs}
-          totalDuration={totalDurations[0] || 0}
-          isEditable={isEditable}
-          lastNoteInputRef={lastNoteInputRef}
-          onSave={handleSaveEntry}
-          onDelete={handleDeleteEntry}
-          onUpdateEntry={updateEntry}
-          onUpdateTimeInputs={updateTimeInputs}
-          date={date}
-          isNewEntry={!existingEntries || existingEntries.length === 0}
-        />
+        <div className="mt-2">
+          <SingleTimeEntryForm
+            id={id}
+            entry={entries[0]}
+            services={services}
+            taxRegions={taxRegions}
+            timeInputs={timeInputs}
+            totalDuration={totalDurations[0] || 0}
+            isEditable={isEditable}
+            lastNoteInputRef={lastNoteInputRef}
+            onSave={handleSaveEntry}
+            onDelete={handleDeleteEntry}
+            onUpdateEntry={updateEntry}
+            onUpdateTimeInputs={updateTimeInputs}
+            date={date}
+            isNewEntry={!existingEntries || existingEntries.length === 0}
+          />
+        </div>
       )}
 
-      {/* Only show the Close button if not in a drawer, since the drawer will have its own close button */}
+      {/* Only show the dialog buttons if not in a drawer, since the drawer will have its own close button */}
       {!inDrawer && (
         <DialogFooter>
           <Button
-            id={`${id}-close-dialog-btn`}
-            onClick={handleClose}
+            id={`${id}-cancel-dialog-btn`}
+            onClick={handleCancel}
             variant="outline"
           >
-            Close
+            Cancel
+          </Button>
+          <Button
+            id={`${id}-save-dialog-btn`}
+            onClick={handleSaveAll}
+            variant="default"
+          >
+            Save
           </Button>
         </DialogFooter>
       )}
@@ -407,7 +434,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       ) : (
         <Dialog 
           isOpen={isOpen} 
-          onClose={handleClose} 
+          onClose={handleCancel} 
           title={title} 
           hideCloseButton={false}
           id={id}
@@ -443,10 +470,10 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
           onClose();
           setCloseConfirmation(false);
         }}
-        title="Unsaved Changes"
-        message="You have unsaved changes. Are you sure you want to close?"
-        confirmLabel="Close"
-        cancelLabel="Cancel"
+        title="Discard Changes"
+        message="You have unsaved changes. Are you sure you want to discard them?"
+        confirmLabel="Discard"
+        cancelLabel="Keep Editing"
       />
     </>
   );

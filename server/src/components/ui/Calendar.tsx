@@ -22,9 +22,9 @@ const MonthYearSelect = ({ value, onChange, fromDate }: MonthYearSelectProps) =>
   const buttonRef = React.useRef<HTMLButtonElement>(null);
   
   // Generate all available month/year combinations
-  const options = React.useMemo(() => {
+  const options = React.useMemo((): Date[] => {
     const start = new Date(fromDate.getFullYear(), fromDate.getMonth(), 1);
-    const options = [];
+    const options: Date[] = [];
     
     // Generate options for the next 10 years
     for (let i = 0; i < 120; i++) {

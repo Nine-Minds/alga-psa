@@ -53,6 +53,7 @@
 
   /* Sidebar scrollbar styles */
   .sidebar-nav {
+    overscroll-behavior: contain;
     scrollbar-width: thin;
     scrollbar-color: rgb(var(--color-border-300)) var(--color-sidebar-bg);
   }
@@ -396,7 +397,7 @@ body,
   }
   
   button[role="switch"][data-state="checked"] {
-    background-color: rgb(var(--color-primary-400));
+    background-color: rgb(var(--color-primary-500));
   }
   
   button[role="switch"]::before {
@@ -443,7 +444,7 @@ body,
 
 /* When on - using your primary color */
 .switch-root[data-state="checked"] {
-  background-color: rgb(var(--color-primary-400));
+  background-color: rgb(var(--color-primary-500));
 }
 
 .switch-root[disabled] {

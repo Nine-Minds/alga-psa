@@ -242,7 +242,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         const users = await getAllUsers();
         setInternalUsers(users);
       } catch (error) {
-        console.error("Error fetching internal users:", error);
+        console.error("Error fetching MSP users:", error);
       } finally {
         setIsLoadingUsers(false);
       }

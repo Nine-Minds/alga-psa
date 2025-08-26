@@ -62,9 +62,9 @@ export async function createComment(comment: Omit<IComment, 'tenant'>): Promise<
       comment.author_type = 'unknown';
     }
 
-    // Only allow internal comments from internal users
+    // Only allow internal comments from MSP (internal) users
     if (comment.is_internal && comment.author_type !== 'internal') {
-      throw new Error('Only internal users can create internal comments');
+      throw new Error('Only MSP users can create internal comments');
     }
 
     // Convert BlockNote JSON to Markdown if note exists
@@ -146,7 +146,7 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
       console.log(`[updateComment] Found existing comment:`, existingComment);
     
       // Verify user permissions - only allow users to edit their own comments
-      // or internal users to edit any comment
+      // or  MSP (internal) users to edit any comment
       if (comment.user_id && comment.user_id !== existingComment.user_id) {
         const user = await trx('users')
           .select('user_type')
@@ -154,7 +154,7 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
           .andWhere('tenant', commentTenant!)
           .first();
       
-      // Only internal users can edit other users' comments
+      // Only MSP (internal) users can edit other users' comments
       if (!user || user.user_type !== 'internal') {
         throw new Error('You can only edit your own comments');
       }
@@ -169,9 +169,9 @@ export async function updateComment(id: string, comment: Partial<IComment>) {
 
     // Validate internal comment permissions
     if (comment.is_internal !== undefined) {
-      // Only allow internal comments from internal users
+      // Only allow internal comments from  MSP (internal) users
       if (comment.is_internal && comment.author_type !== 'internal' && existingComment.author_type !== 'internal') {
-        throw new Error('Only internal users can set comments as internal');
+        throw new Error('Only MSP users can set comments as internal');
       }
       // If a client user is updating a comment, ensure they can't make it internal
       if (existingComment.author_type === 'client') {

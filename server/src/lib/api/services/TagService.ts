@@ -495,7 +495,7 @@ export class TagService extends BaseService {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const sourceTags = [];
+      const sourceTags: any[] = [];
       const { tenant } = await this.getKnex();
       for (const tagId of sourceTagIds) {
         const tag = await trx('tag_mappings as tm')

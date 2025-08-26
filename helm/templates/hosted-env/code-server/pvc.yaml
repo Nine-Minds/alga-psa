@@ -1,0 +1,28 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled .Values.hostedEnv.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sebastian.fullname" . }}-code-server-workspace
+  namespace: {{ .Values.hostedEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server
+  annotations:
+    volume.beta.kubernetes.io/storage-class: {{ .Values.hostedEnv.persistence.storageClass }}
+    hosted-environment: "true"
+    branch: "{{ .Values.hostedEnv.sanitizedBranch }}"
+spec:
+  {{- $existingPVC := lookup "v1" "PersistentVolumeClaim" .Values.hostedEnv.namespace (printf "%s-code-server-workspace" (include "sebastian.fullname" .)) }}
+  {{- if and $existingPVC $existingPVC.spec.volumeName }}
+  volumeName: {{ $existingPVC.spec.volumeName }}
+  {{- end }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.hostedEnv.persistence.size }}
+  {{- if .Values.hostedEnv.persistence.storageClass }}
+  storageClassName: {{ .Values.hostedEnv.persistence.storageClass }}
+  {{- end }}
+{{- end }}
+

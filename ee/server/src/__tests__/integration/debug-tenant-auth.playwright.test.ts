@@ -2,7 +2,7 @@
  * Debug test to check tenant context in authentication
  */
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
@@ -40,7 +40,7 @@ test('debug tenant context in authentication', async ({ page }) => {
     // Check tenant context by looking at tenant table
     const tenantInfo = await db('tenants')
       .where('tenant', tenantData.tenant.tenantId)
-      .first();
+      .first() as { tenant: string; tenant_name: string; created_at: string } | undefined;
       
     console.log('Tenant info:', tenantInfo);
     
@@ -68,7 +68,7 @@ test('debug tenant context in authentication', async ({ page }) => {
     await page.fill('#msp-password-field', tenantData.adminUser.temporaryPassword);
     
     // Listen for network requests to see authentication calls
-    const requests: any[] = [];
+    const requests: { url: string; method: string; postData: string | null }[] = [];
     page.on('request', request => {
       if (request.url().includes('auth') || request.url().includes('signin')) {
         requests.push({

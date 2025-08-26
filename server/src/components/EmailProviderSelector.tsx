@@ -13,11 +13,13 @@ import { Search, Building2 } from 'lucide-react';
 interface EmailProviderSelectorProps {
   onProviderSelected: (providerType: 'google' | 'microsoft') => void;
   onCancel?: () => void;
+  hideHeader?: boolean;
 }
 
 export function EmailProviderSelector({ 
   onProviderSelected, 
-  onCancel 
+  onCancel,
+  hideHeader = false,
 }: EmailProviderSelectorProps) {
   
   const handleProviderClick = (providerType: 'google' | 'microsoft') => {
@@ -27,13 +29,15 @@ export function EmailProviderSelector({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="text-center">
-        <h3 className="text-lg font-semibold">Choose Your Email Provider</h3>
-        <p className="text-muted-foreground mt-2">
-          Select the email service you want to use for inbound email processing. 
-          You can only configure one email provider per account.
-        </p>
-      </div>
+      {!hideHeader && (
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Choose Your Email Provider</h3>
+          <p className="text-muted-foreground mt-2">
+            Select the email service you want to use for inbound email processing. 
+            You can configure multiple email providers per account.
+          </p>
+        </div>
+      )}
 
       {/* Provider Selection Cards */}
       <div id="email-provider-selector" className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
@@ -137,9 +141,7 @@ export function EmailProviderSelector({
       {/* Help Text */}
       <div className="text-center">
         <p className="text-xs text-muted-foreground max-w-2xl mx-auto">
-          Need help deciding? Gmail works well for Google Workspace organizations, 
-          while Microsoft 365 is ideal for organizations using Microsoft services. 
-          You can change this selection later by removing and reconfiguring your email provider.
+          Choose the provider your organization already uses. If you use Google Workspace, pick Gmail; if you use Microsoft 365, pick Microsoft 365. You can change this later by removing and reconfiguring your email provider.
         </p>
       </div>
     </div>

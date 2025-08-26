@@ -76,6 +76,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 } {
   const { tenantName, adminUser, temporaryPassword } = input;
   const defaultLoginUrl = process.env.APPLICATION_URL;
+  const baseUrl = defaultLoginUrl?.replace(/\/$/, '') || '';
+  const clientPortalLoginUrl = `${baseUrl}/auth/signin?callbackUrl=/client-portal/dashboard`;
   const currentYear = new Date().getFullYear();
   
   const subject = `Welcome to Alga PSA - Your Account is Ready`;
@@ -283,6 +285,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       <p><strong>Email:</strong> ${adminUser.email}</p>
       <p><strong>Temporary Password:</strong> <span class="code">${temporaryPassword}</span></p>
       <p><strong>Login URL:</strong> <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></p>
+      <p><strong>Client Portal Login:</strong> <a href="${clientPortalLoginUrl}">${clientPortalLoginUrl}</a></p>
     </div>
     
     <div class="warning">
@@ -296,7 +299,8 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     </div>
     
     <div style="text-align: center;">
-      <a href="${defaultLoginUrl}" class="login-button">Login Now</a>
+      <a href="${defaultLoginUrl}" class="login-button" style="margin-right: 8px;">Login Now</a>
+      <a href="${clientPortalLoginUrl}" class="login-button">Open Client Portal</a>
     </div>
     
     <div class="divider"></div>
@@ -334,6 +338,7 @@ LOGIN CREDENTIALS:
 Email: ${adminUser.email}
 Temporary Password: ${temporaryPassword}
 Login URL: ${defaultLoginUrl}
+Client Portal Login: ${clientPortalLoginUrl}
 
 IMPORTANT SECURITY INFORMATION:
 - This is a temporary password that expires in 24 hours
@@ -343,10 +348,11 @@ IMPORTANT SECURITY INFORMATION:
 
 GETTING STARTED:
 1. Visit: ${defaultLoginUrl}
-2. Enter your email and temporary password
-3. Create a new secure password when prompted
-4. Complete your profile setup
-5. Start configuring your tenant settings
+2. Or visit the client portal: ${clientPortalLoginUrl}
+3. Enter your email and temporary password
+4. Create a new secure password when prompted
+5. Complete your profile setup
+6. Start configuring your tenant settings
 
 Need help? Contact our support team if you have any questions.
 

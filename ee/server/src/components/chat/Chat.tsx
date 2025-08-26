@@ -6,7 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { Message } from "../../components/message/Message";
 import { IChat } from "../../interfaces/chat.interface";
 import { createNewChatAction, addMessageToChatAction } from '../../lib/chat-actions/chatActions';
-import { getCurrentUser } from '../../../../../server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { ChatModelInterface, ChatMessage } from '../../interfaces/ChatModelInterface';
 import { HfInference } from '@huggingface/inference';
 

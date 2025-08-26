@@ -55,7 +55,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
     process.env.MICROSOFT_CLIENT_SECRET = 'test-microsoft-client-secret';
     process.env.GOOGLE_CLIENT_ID = 'test-google-client-id';
     process.env.GOOGLE_CLIENT_SECRET = 'test-google-client-secret';
-    process.env.NEXT_PUBLIC_APP_URL = 'http://localhost:3000';
+    process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000';
     
     console.log('🔧 Configured OAuth providers to use mock service');
     console.log(`   📍 Mock OAuth server: ${this.oauthMockUrl}`);

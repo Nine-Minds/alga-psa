@@ -11,12 +11,15 @@
 import { test, expect } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import { LoginPage } from '../page-objects/LoginPage';
 
 // Ensure environment variables are loaded for tests
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 test.describe('Alga PSA Login Integration Tests', () => {

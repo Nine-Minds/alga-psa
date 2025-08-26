@@ -15,7 +15,7 @@ async function generatePubSubNames(tenantId: string) {
   // Use ngrok URL in development if available
   const secretProvider = await getSecretProviderInstance();
   const baseUrl = await secretProvider.getAppSecret('NGROK_URL') || 
-                  await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL') || 
+                  await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL') || 
                   await secretProvider.getAppSecret('NEXTAUTH_URL') ||
                   'http://localhost:3000';
   
@@ -30,19 +30,13 @@ async function generatePubSubNames(tenantId: string) {
  * Get hosted Gmail configuration for Enterprise Edition
  */
 export async function getHostedGmailConfig() {
-  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  
-  if (!isEnterprise) {
-    return null;
-  }
-  
   const secretProvider = await getSecretProviderInstance();
   
   return {
-    client_id: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET'),
-    project_id: await secretProvider.getAppSecret('EE_GMAIL_PROJECT_ID'),
-    redirect_uri: await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
+    client_id: await secretProvider.getAppSecret('GOOGLE_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET'),
+    project_id: await secretProvider.getAppSecret('GOOGLE_PROJECT_ID'),
+    redirect_uri: await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback'
   };
 }
 
@@ -50,19 +44,13 @@ export async function getHostedGmailConfig() {
  * Get hosted Microsoft configuration for Enterprise Edition
  */
 export async function getHostedMicrosoftConfig() {
-  const isEnterprise = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-  
-  if (!isEnterprise) {
-    return null;
-  }
-  
   const secretProvider = await getSecretProviderInstance();
   
   return {
-    client_id: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID'),
-    client_secret: await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_SECRET'),
-    tenant_id: await secretProvider.getAppSecret('EE_MICROSOFT_TENANT_ID') || 'common',
-    redirect_uri: await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
+    client_id: await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID'),
+    client_secret: await secretProvider.getAppSecret('MICROSOFT_CLIENT_SECRET'),
+    tenant_id: await secretProvider.getAppSecret('MICROSOFT_TENANT_ID') || 'common',
+    redirect_uri: await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback'
   };
 }
 
@@ -79,6 +67,7 @@ const PROVIDER_COLUMNS = [
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',
+  'inbound_ticket_defaults_id as inboundTicketDefaultsId',
   'created_at as createdAt',
   'updated_at as updatedAt'
 ];
@@ -105,6 +94,7 @@ async function getOrCreateProvider(
     providerName: string;
     mailbox: string;
     isActive: boolean;
+    inboundTicketDefaultsId?: string;
   },
   providerId?: string
 ) {
@@ -117,6 +107,7 @@ async function getOrCreateProvider(
         provider_name: data.providerName,
         mailbox: data.mailbox,
         is_active: data.isActive,
+        inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
         updated_at: trx.fn.now()
       })
       .returning(PROVIDER_COLUMNS);
@@ -139,6 +130,7 @@ async function getOrCreateProvider(
           provider_type: data.providerType,
           provider_name: data.providerName,
           is_active: data.isActive,
+          inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           updated_at: trx.fn.now()
         })
         .returning(PROVIDER_COLUMNS);
@@ -155,6 +147,7 @@ async function getOrCreateProvider(
           mailbox: data.mailbox,
           is_active: data.isActive,
           status: 'configuring',
+          inbound_ticket_defaults_id: data.inboundTicketDefaultsId || null,
           created_at: trx.fn.now(),
           updated_at: trx.fn.now()
         })
@@ -205,31 +198,50 @@ async function persistMicrosoftConfig(
     await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
   }
   
-  // Delete existing config if any
-  await trx('microsoft_email_provider_config')
-    .where({ email_provider_id: providerId, tenant })
-    .delete();
-  
-  // Insert new config
-  const msConfig = await trx('microsoft_email_provider_config')
-    .insert({
-      email_provider_id: providerId,
-      tenant,
-      client_id: effectiveClientId || null,
-      client_secret: effectiveClientSecret || null,
-      tenant_id: effectiveTenantId,
-      redirect_uri: effectiveRedirectUri,
-      auto_process_emails: config.auto_process_emails,
-      max_emails_per_sync: config.max_emails_per_sync,
-      folder_filters: JSON.stringify(config.folder_filters || []),
-      access_token: config.access_token,
-      refresh_token: config.refresh_token,
-      token_expires_at: config.token_expires_at,
-      created_at: trx.fn.now(),
-      updated_at: trx.fn.now()
-    })
-    .returning('*')
-    .then((rows: any[]) => rows[0]);
+  // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
+  const msConfig = await trx.raw(`
+    INSERT INTO microsoft_email_provider_config (
+      email_provider_id, tenant, client_id, client_secret, tenant_id, redirect_uri,
+      auto_process_emails, max_emails_per_sync, folder_filters,
+      access_token, refresh_token, token_expires_at,
+      webhook_subscription_id, webhook_expires_at, webhook_verification_token,
+      created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    ON CONFLICT (email_provider_id, tenant) DO UPDATE SET
+      client_id = EXCLUDED.client_id,
+      client_secret = EXCLUDED.client_secret,
+      tenant_id = EXCLUDED.tenant_id,
+      redirect_uri = EXCLUDED.redirect_uri,
+      auto_process_emails = EXCLUDED.auto_process_emails,
+      max_emails_per_sync = EXCLUDED.max_emails_per_sync,
+      folder_filters = EXCLUDED.folder_filters,
+      -- Preserve existing sensitive values if the new value is NULL
+      access_token = COALESCE(EXCLUDED.access_token, microsoft_email_provider_config.access_token),
+      refresh_token = COALESCE(EXCLUDED.refresh_token, microsoft_email_provider_config.refresh_token),
+      token_expires_at = COALESCE(EXCLUDED.token_expires_at, microsoft_email_provider_config.token_expires_at),
+      -- Preserve existing webhook linkage if the new value is NULL
+      webhook_subscription_id = COALESCE(EXCLUDED.webhook_subscription_id, microsoft_email_provider_config.webhook_subscription_id),
+      webhook_expires_at = COALESCE(EXCLUDED.webhook_expires_at, microsoft_email_provider_config.webhook_expires_at),
+      webhook_verification_token = COALESCE(EXCLUDED.webhook_verification_token, microsoft_email_provider_config.webhook_verification_token),
+      updated_at = CURRENT_TIMESTAMP
+    RETURNING *
+  `, [
+    providerId,
+    tenant,
+    effectiveClientId || null,
+    effectiveClientSecret || null,
+    effectiveTenantId,
+    effectiveRedirectUri,
+    config.auto_process_emails,
+    config.max_emails_per_sync,
+    JSON.stringify(config.folder_filters || []),
+    config.access_token || null,
+    config.refresh_token || null,
+    config.token_expires_at || null,
+    null, // webhook_subscription_id (preserve existing if null)
+    null, // webhook_expires_at (preserve existing if null)
+    null  // webhook_verification_token (preserve existing if null)
+  ]).then((result: any) => result.rows[0]);
   
   if (msConfig) {
     // For jsonb columns, PostgreSQL automatically parses the JSON, so no need to JSON.parse
@@ -322,11 +334,12 @@ async function persistGoogleConfig(
       auto_process_emails = EXCLUDED.auto_process_emails,
       max_emails_per_sync = EXCLUDED.max_emails_per_sync,
       label_filters = EXCLUDED.label_filters,
-      access_token = EXCLUDED.access_token,
-      refresh_token = EXCLUDED.refresh_token,
-      token_expires_at = EXCLUDED.token_expires_at,
-      history_id = EXCLUDED.history_id,
-      watch_expiration = EXCLUDED.watch_expiration,
+      -- Preserve existing sensitive values if the new value is NULL
+      access_token = COALESCE(EXCLUDED.access_token, google_email_provider_config.access_token),
+      refresh_token = COALESCE(EXCLUDED.refresh_token, google_email_provider_config.refresh_token),
+      token_expires_at = COALESCE(EXCLUDED.token_expires_at, google_email_provider_config.token_expires_at),
+      history_id = COALESCE(EXCLUDED.history_id, google_email_provider_config.history_id),
+      watch_expiration = COALESCE(EXCLUDED.watch_expiration, google_email_provider_config.watch_expiration),
       updated_at = CURRENT_TIMESTAMP
     RETURNING *
   `, [
@@ -446,6 +459,7 @@ export async function upsertEmailProvider(data: {
   providerName: string;
   mailbox: string;
   isActive: boolean;
+  inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
@@ -493,6 +507,7 @@ export async function createEmailProvider(data: {
   providerName: string;
   mailbox: string;
   isActive: boolean;
+  inboundTicketDefaultsId?: string;
   microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
 }, skipAutomation?: boolean): Promise<{ provider: EmailProvider }> {
@@ -508,6 +523,7 @@ export async function updateEmailProvider(
     providerName: string;
     mailbox: string;
     isActive: boolean;
+    inboundTicketDefaultsId?: string;
     microsoftConfig?: Omit<MicrosoftEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
     googleConfig?: Omit<GoogleEmailProviderConfig, 'email_provider_id' | 'tenant' | 'created_at' | 'updated_at'>;
   },
@@ -603,3 +619,97 @@ export async function testEmailProviderConnection(providerId: string): Promise<{
 
 // Re-export setupPubSub from the actual implementation
 // export { setupPubSub } from './setupPubSub';
+
+/**
+ * Initiate OAuth flow for email provider
+ */
+export async function initiateOAuth(params: {
+  provider: 'google' | 'microsoft';
+  redirectUri?: string;
+  providerId?: string;
+  hosted?: boolean;
+}): Promise<{
+  success: boolean;
+  authUrl?: string;
+  error?: string;
+}> {
+  try {
+    const user = await assertAuthenticated();
+    
+    if (!params.provider || !['microsoft', 'google'].includes(params.provider)) {
+      return { success: false, error: 'Invalid provider' };
+    }
+
+    // Import OAuth helpers
+    const { generateMicrosoftAuthUrl, generateGoogleAuthUrl, generateNonce } = await import('../../../utils/email/oauthHelpers');
+    type OAuthState = import('../../../utils/email/oauthHelpers').OAuthState;
+    
+    // Get OAuth credentials - use hosted credentials for EE or tenant-specific secrets for CE
+    const secretProvider = await getSecretProviderInstance();
+    let clientId: string | null = null;
+    let effectiveRedirectUri = params.redirectUri;
+
+    // Prefer server-side NEXTAUTH_URL for hosted detection
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
+
+    if (isHosted) {
+      // Use app-level configuration
+      if (params.provider === 'google') {
+        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+      } else if (params.provider === 'microsoft') {
+        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+      }
+    } else {
+      // Use tenant-specific or fallback credentials
+      clientId = params.provider === 'microsoft'
+        ? await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'microsoft_client_id') || null
+        : await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(user.tenant, 'google_client_id') || null;
+    }
+
+    if (!clientId) {
+      return { 
+        success: false,
+        error: `${params.provider} OAuth client ID not configured` 
+      };
+    }
+
+    // Generate OAuth state
+    const state: OAuthState = {
+      tenant: user.tenant,
+      userId: user.user_id,
+      providerId: params.providerId,
+      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${params.provider}/callback`,
+      timestamp: Date.now(),
+      nonce: generateNonce(),
+      hosted: !!isHosted
+    };
+
+    // Generate authorization URL
+    const authUrl = params.provider === 'microsoft'
+      ? generateMicrosoftAuthUrl(
+          clientId,
+          state.redirectUri,
+          state
+        )
+      : generateGoogleAuthUrl(
+          clientId,
+          state.redirectUri,
+          state
+        );
+
+    return {
+      success: true,
+      authUrl
+    };
+
+  } catch (error: any) {
+    console.error('Error initiating OAuth:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to initiate OAuth' 
+    };
+  }
+}

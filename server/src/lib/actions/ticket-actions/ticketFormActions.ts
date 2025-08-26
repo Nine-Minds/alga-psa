@@ -55,7 +55,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
     ]);
 
     // Handle optional prefilled company data separately
-    let selectedCompany = null;
+    let selectedCompany: any | null = null;
     let contacts: IContact[] = [];
 
     if (prefilledCompanyId) {

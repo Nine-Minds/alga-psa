@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
-import EmailRegistrationContainer from './EmailRegistrationContainer';
 import { CompanyDetailsSettings } from './CompanyDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
+import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 
@@ -27,12 +27,12 @@ export default function ClientPortalSettingsPage() {
 
   const tabs = [
     {
-      label: 'Company Details',
-      content: <CompanyDetailsSettings />
+      label: 'Account',
+      content: <ClientAccount />
     },
     {
-      label: 'Email Registration',
-      content: <EmailRegistrationContainer />
+      label: 'Company Details',
+      content: <CompanyDetailsSettings />
     }
   ];
   

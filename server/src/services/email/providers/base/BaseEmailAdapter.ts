@@ -76,10 +76,29 @@ export abstract class BaseEmailAdapter implements EmailProviderAdapter {
    * Handle errors consistently across providers
    */
   protected handleError(error: any, context: string): Error {
-    const errorMessage = `Error in ${context}: ${error.message || error}`;
+    // Try to extract helpful details from Axios-style errors
+    let details = '';
+    const res = error?.response;
+    if (res) {
+      const err = res.data?.error || res.data;
+      const code = err?.code || res.status;
+      const message = err?.message || res.statusText;
+      const inner = err?.innerError || err?.innererror;
+      const reqId = res.headers?.['request-id'] || res.headers?.['client-request-id'];
+      details = ` (code: ${code}${reqId ? `, request-id: ${reqId}` : ''}${inner?.dateTime ? `, time: ${inner.dateTime}` : ''})`;
+    }
+
+    const errorMessage = `Error in ${context}: ${error.message || error}${details}`;
     this.log('error', errorMessage, error);
-    
-    return new Error(errorMessage);
+    const wrapped = new Error(errorMessage);
+    // Propagate metadata for outer catch blocks
+    try {
+      (wrapped as any).status = res?.status;
+      (wrapped as any).code = (res?.data?.error?.code || res?.status) ?? undefined;
+      (wrapped as any).requestId = res?.headers?.['request-id'] || res?.headers?.['client-request-id'];
+      (wrapped as any).responseBody = res?.data;
+    } catch { /* no-op */ }
+    return wrapped;
   }
 
   // Abstract methods that must be implemented by each provider

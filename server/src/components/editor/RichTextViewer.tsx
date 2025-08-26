@@ -6,6 +6,7 @@ import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
 import '@blocknote/mantine/style.css';
 import { PartialBlock } from '@blocknote/core';
+import styles from '../tickets/ticket/TicketDetails.module.css';
 
 interface RichTextViewerProps {
   id?: string;
@@ -131,12 +132,18 @@ export default function RichTextViewer({
   });
 
   return (
-    <div className={`w-full ${className}`}>
-      <div className="w-full bg-white rounded-lg overflow-auto">
+    <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
+      <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
         <BlockNoteView
           editor={editor}
           theme="light"
-          className="w-full"
+          className="w-full min-w-0"
+          style={{
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
+            minWidth: 0,
+            maxWidth: '100%'
+          }}
         />
       </div>
     </div>

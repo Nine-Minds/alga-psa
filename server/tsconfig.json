@@ -4,6 +4,7 @@
     "outDir": "dist",
     "strictNullChecks": true,
     "noEmit": false,
+    "noImplicitAny": false,
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],

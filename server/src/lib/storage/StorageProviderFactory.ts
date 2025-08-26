@@ -5,7 +5,8 @@ import { LocalStorageProvider } from './providers/LocalStorageProvider';
 // Type-only import for S3 provider
 // import type { S3StorageProvider } from 'ee/lib/storage/providers/S3StorageProvider';
 export class StorageProviderFactory {
-    private static isEnterprise = process.env.EDITION === 'enterprise';
+    private static isEnterprise =
+        process.env.EDITION === 'enterprise' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     private static provider: StorageProviderInterface | null = null;
 
     static async createProvider(): Promise<StorageProviderInterface> {

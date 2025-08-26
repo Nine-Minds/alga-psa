@@ -79,6 +79,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await cleanupTemporaryFormsJob();
     });
 
+    // Note: Password reset token cleanup is handled automatically during token operations
+    // No pg-boss job needed
+
   }
   return jobScheduler;
 };
@@ -215,4 +218,7 @@ export const scheduleCreditReconciliationJob = async (
 
 // Re-export the cleanup temporary forms scheduling function
 export { scheduleCleanupTemporaryFormsJob } from '../../services/cleanupTemporaryFormsJob';
+
+// Note: Password reset token cleanup is handled automatically during token operations
+// No scheduled job needed since pg-boss is unreliable and auto-cleanup is more efficient
 

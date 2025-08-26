@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IUser, IPermission, IRole } from 'server/src/interfaces/auth.interfaces';
+import type { IPermission, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
+import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import { 
   getClientUserById, 
@@ -28,7 +29,7 @@ interface ClientUserDetailsProps {
 
 const ClientUserDetails: React.FC<ClientUserDetailsProps> = ({ userId, onUpdate }) => {
   const [user, setUser] = useState<IUser | null>(null);
-  const [currentUser, setCurrentUser] = useState<IUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');

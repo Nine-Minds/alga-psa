@@ -7,12 +7,18 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Mail, Shield, User } from 'lucide-react';
+import { Mail, Shield, User, Info } from 'lucide-react';
 import { IContact } from 'server/src/interfaces';
 import { 
   updateContactPortalAdminStatus, 
   getUserByContactId 
 } from 'server/src/lib/actions/contact-actions/contactActions';
+import { 
+  sendPortalInvitation,
+  getPortalInvitations,
+  revokePortalInvitation,
+  InvitationHistoryItem
+} from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { 
   assignRoleToUser, 
   removeRoleFromUser,
@@ -44,11 +50,13 @@ interface UserRole {
 export function ContactPortalTab({ contact, currentUserPermissions }: ContactPortalTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isSendingInvitation, setIsSendingInvitation] = useState(false);
   const [existingUser, setExistingUser] = useState<any>(null);
   const [isPortalAdmin, setIsPortalAdmin] = useState(contact.is_client_admin || false);
   const [clientRoles, setClientRoles] = useState<ClientRole[]>([]);
   const [selectedRoleId, setSelectedRoleId] = useState<string>('');
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [invitationHistory, setInvitationHistory] = useState<InvitationHistoryItem[]>([]);
 
   useEffect(() => {
     loadData();
@@ -71,6 +79,10 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       const roles = await getRoles();
       const clientPortalRoles = roles.filter(role => role.client && !role.msp);
       setClientRoles(clientPortalRoles);
+
+      // Load invitation history
+      const invitations = await getPortalInvitations(contact.contact_name_id);
+      setInvitationHistory(invitations);
     } catch (error) {
       console.error('Error loading portal tab data:', error);
       toast.error("Failed to load portal information");
@@ -85,10 +97,78 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
       return;
     }
 
-    // For now, just show a message that this feature is coming soon
-    toast("Client portal invitation feature will be available soon", {
-      icon: '🚧'
+    setIsSendingInvitation(true);
+    try {
+      const result = await sendPortalInvitation(contact.contact_name_id);
+      
+      if (result.success) {
+        toast.success(result.message || "Portal invitation sent successfully!");
+        // Reload invitation history to show the new invitation
+        await loadData();
+      } else {
+        toast.error(
+          <div>
+            <p>{result.error || "Failed to send invitation"}</p>
+            {result.error?.includes('default location') && (
+              <p className="text-sm mt-1">
+                Configure a default location with email in Company Settings → Locations
+              </p>
+            )}
+          </div>
+        );
+      }
+    } catch (error) {
+      console.error('Error sending portal invitation:', error);
+      toast.error("Failed to send invitation");
+    } finally {
+      setIsSendingInvitation(false);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string) => {
+    try {
+      setIsUpdating(true);
+      const result = await revokePortalInvitation(invitationId);
+      
+      if (result.success) {
+        toast.success("Invitation revoked successfully");
+        // Reload invitation history
+        await loadData();
+      } else {
+        toast.error(result.error || "Failed to revoke invitation");
+      }
+    } catch (error) {
+      console.error('Error revoking invitation:', error);
+      toast.error("Failed to revoke invitation");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
+  };
+
+  const getStatusBadge = (status: string) => {
+    const baseClasses = "inline-flex px-2 py-1 text-xs font-medium rounded-full";
+    switch (status) {
+      case 'pending':
+        return `${baseClasses} bg-yellow-100 text-yellow-800`;
+      case 'used':
+        return `${baseClasses} bg-green-100 text-green-800`;
+      case 'expired':
+        return `${baseClasses} bg-red-100 text-red-800`;
+      case 'revoked':
+        return `${baseClasses} bg-gray-100 text-gray-800`;
+      default:
+        return `${baseClasses} bg-gray-100 text-gray-800`;
+    }
   };
 
   const handlePortalAdminToggle = async (checked: boolean) => {
@@ -194,7 +274,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     Portal Administrator
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    When invited, users with this flag will be created with admin role in the client portal
+                    When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role.
                   </p>
                 </div>
                 <Switch
@@ -207,6 +287,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
               
               <div className="border-t pt-6">
                 <div className="space-y-4">
+                <Alert className="mb-4">
+                  <Info className="h-4 w-4" />
+                  <AlertDescription>
+                    Invitation emails will be sent from your organization's email system. 
+                    Replies will go to your company's default location email address.
+                  </AlertDescription>
+                </Alert>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-medium">No Portal Access</h4>
@@ -217,21 +304,13 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   <Button
                     id="send-invite-button"
                     onClick={handleSendInvitation}
-                    disabled={!currentUserPermissions.canInvite || !isPortalAdmin}
+                    disabled={!currentUserPermissions.canInvite || isSendingInvitation}
                     className="flex items-center gap-2"
-                    title={!isPortalAdmin ? "Enable Portal Administrator to send invitation" : undefined}
                   >
                     <Mail className="h-4 w-4" />
-                    Send Portal Invitation
+                    {isSendingInvitation ? "Sending..." : "Send Portal Invitation"}
                   </Button>
                 </div>
-                {!isPortalAdmin && (
-                  <Alert>
-                    <AlertDescription>
-                      Enable Portal Administrator to send an invitation. Currently, only admin invitations are supported.
-                    </AlertDescription>
-                  </Alert>
-                )}
                 </div>
               </div>
             </div>
@@ -329,6 +408,57 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                     }}
                     disabled={!currentUserPermissions.canUpdateRoles || isUpdating}
                   />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Invitation History */}
+          {invitationHistory.length > 0 && (
+            <div className="border-t pt-6">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-medium">Invitation History</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Recent portal invitations sent to this contact
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  {invitationHistory.map((invitation) => (
+                    <div key={invitation.invitation_id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium">{invitation.email}</span>
+                          <span className={getStatusBadge(invitation.status)}>
+                            {invitation.status}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          Sent: {formatDate(invitation.created_at)}
+                          {invitation.status === 'pending' && (
+                            <span> • Expires: {formatDate(invitation.expires_at)}</span>
+                          )}
+                          {invitation.used_at && (
+                            <span> • Used: {formatDate(invitation.used_at)}</span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      {invitation.status === 'pending' && currentUserPermissions.canInvite && (
+                        <Button
+                          id={`revoke-invitation-${invitation.invitation_id}`}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRevokeInvitation(invitation.invitation_id)}
+                          disabled={isUpdating}
+                          className="text-red-500 hover:text-red-600"
+                        >
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

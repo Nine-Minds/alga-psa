@@ -5,35 +5,27 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Label } from './ui/Label';
-import { Switch } from './ui/Switch';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/Card';
-import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { ExternalLink, Eye, EyeOff } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
-import { pubsub } from 'googleapis/build/src/apis/pubsub';
+import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
+import { useOAuthPopup } from './providers/gmail/useOAuthPopup';
+import { BasicConfigCard } from './providers/gmail/BasicConfigCard';
+import { ProcessingSettingsCard } from './providers/gmail/ProcessingSettingsCard';
+import { OAuthSection } from './providers/gmail/OAuthSection';
+import { ceGmailProviderSchema } from './providers/gmail/schemas';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
-const gmailProviderSchema = z.object({
-  providerName: z.string().min(1, 'Provider name is required'),
-  mailbox: z.string().email('Valid Gmail address is required'),
-  clientId: z.string().min(1, 'Client ID is required'),
-  clientSecret: z.string().min(1, 'Client Secret is required'),
-  projectId: z.string().min(1, 'Google Cloud Project ID is required'),
-  redirectUri: z.string().url('Valid redirect URI is required'),
-  isActive: z.boolean(),
-  autoProcessEmails: z.boolean(),
-  labelFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
-});
-
-type GmailProviderFormData = z.infer<typeof gmailProviderSchema>;
+type GmailProviderFormData = import('./providers/gmail/schemas').CEGmailProviderFormData;
 
 interface GmailProviderFormProps {
   tenant: string;
@@ -43,7 +35,7 @@ interface GmailProviderFormProps {
 }
 
 export function GmailProviderForm({ 
-  tenant, 
+  tenant,
   provider, 
   onSuccess, 
   onCancel 
@@ -51,24 +43,16 @@ export function GmailProviderForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showClientSecret, setShowClientSecret] = useState(false);
-  const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
-  const [oauthData, setOauthData] = useState<any>(null);
-  const [autoSubmitCountdown, setAutoSubmitCountdown] = useState<number | null>(null);
+  const { oauthStatus, oauthData, autoSubmitCountdown, openOAuthPopup, cancelAutoSubmit, setOauthStatus } = useOAuthPopup<any>({ provider: 'google', countdownSeconds: 0 });
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
-  // Clean up countdown on unmount
-  useEffect(() => {
-    return () => {
-      if (autoSubmitCountdown !== null) {
-        setAutoSubmitCountdown(null);
-      }
-    };
-  }, [autoSubmitCountdown]);
+  // No manual cleanup needed; handled by hook
 
   const form = useForm<GmailProviderFormData>({
-    resolver: zodResolver(gmailProviderSchema) as any,
+    resolver: zodResolver(ceGmailProviderSchema) as any,
     defaultValues: provider && provider.googleConfig ? {
       providerName: provider.providerName,
       mailbox: provider.mailbox,
@@ -79,15 +63,37 @@ export function GmailProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.googleConfig.auto_process_emails ?? true,
       labelFilters: provider.googleConfig.label_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.googleConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       redirectUri: `${window.location.origin}/api/auth/google/callback`,
       isActive: true,
       autoProcessEmails: true,
       labelFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  
+
+  // Load inbound ticket defaults options
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        // Non-fatal
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+  }, []);
 
   const onSubmit = async (data: GmailProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
@@ -120,6 +126,7 @@ export function GmailProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
         googleConfig: {
           client_id: data.clientId,
           client_secret: data.clientSecret,
@@ -135,14 +142,15 @@ export function GmailProviderForm({
             token_expires_at: activeOauthData.expiresAt
           })
         }
-      };
+
+      }
 
       console.log('📤 Final payload being sent:', JSON.stringify(payload, null, 2));
 
-      // For normal saves (not OAuth), skip automation to prevent duplicate Pub/Sub setup
+      // After OAuth, run automation once to set up Pub/Sub + watch
       const result = isEditing 
-        ? await updateEmailProvider(provider.id, payload, true) // skipAutomation: true
-        : await createEmailProvider(payload, true); // skipAutomation: true
+        ? await updateEmailProvider(provider.id, payload, false) // skipAutomation: false
+        : await createEmailProvider(payload, false); // skipAutomation: false
 
       onSuccess(result.provider);
 
@@ -168,7 +176,7 @@ export function GmailProviderForm({
         return;
       }
 
-      // Save provider first so credentials are available for OAuth
+      // Ensure provider exists so credentials are available for OAuth
       let providerId = provider?.id;
       if (!providerId) {
         const payload = {
@@ -177,6 +185,7 @@ export function GmailProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           googleConfig: {
             client_id: formData.clientId,
             client_secret: formData.clientSecret,
@@ -184,111 +193,33 @@ export function GmailProviderForm({
             redirect_uri: formData.redirectUri,
             auto_process_emails: formData.autoProcessEmails,
             label_filters: formData.labelFilters ? formData.labelFilters.split(',').map(l => l.trim()) : ['INBOX'],
-            max_emails_per_sync: formData.maxEmailsPerSync
+            max_emails_per_sync: formData.maxEmailsPerSync ?? 50
           }
         };
-
-        // OAuth flow - allow automation for initial setup
-        const result = await upsertEmailProvider(payload); // skipAutomation: false (default)
+        const result = await upsertEmailProvider(payload); // allow automation for initial setup
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from API
-      const response = await fetch('/api/email/oauth/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: 'google',
-          redirectUri: formData.redirectUri,
-          providerId: providerId
-        })
+      // Get OAuth URL from server action
+      const oauthResult = await initiateEmailOAuth({
+        provider: 'google',
+        redirectUri: formData.redirectUri,
+        providerId: providerId,
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate OAuth');
+      if (!oauthResult.success) {
+        throw new Error(oauthResult.error || 'Failed to initiate OAuth');
       }
+      const { authUrl } = oauthResult;
 
-      const { authUrl } = await response.json();
-
-      // Open OAuth popup
-      const popup = window.open(
-        authUrl,
-        'google-oauth',
-        'width=600,height=700,scrollbars=yes,resizable=yes'
-      );
-
-      if (!popup) {
-        throw new Error('Failed to open OAuth popup. Please allow popups for this site.');
-      }
-
-      // Monitor popup for completion
-      const checkClosed = setInterval(() => {
-        if (popup.closed) {
-          clearInterval(checkClosed);
-          if (oauthStatus === 'authorizing') {
-            setOauthStatus('idle');
-          }
-        }
-      }, 1000);
-
-      // Listen for OAuth callback
-      const messageHandler = (event: MessageEvent) => {
-        // Validate message is from our callback
-        if (event.data.type === 'oauth-callback' && event.data.provider === 'google') {
-          console.log('🔔 OAuth callback received:', {
-            success: event.data.success,
-            hasData: !!event.data.data,
-            dataKeys: event.data.data ? Object.keys(event.data.data) : 'N/A',
-            fullData: event.data
-          });
-          
-          clearInterval(checkClosed);
-          popup?.close();
-          
-          if (event.data.success) {
-            // Store the authorization code and tokens in OAuth data (not form)
-            // These are temporary OAuth fields, not part of the provider configuration
-            
-            console.log('💾 Storing OAuth data:', event.data.data);
-            
-            // Store tokens for the submit
-            setOauthData(event.data.data);
-            
-            setOauthStatus('success');
-            
-            // Store the OAuth data for auto-submission (avoid React state timing issues)
-            const oauthDataForSubmit = event.data.data;
-            
-            // Start countdown for auto-submission
-            setAutoSubmitCountdown(10);
-            const countdownInterval = setInterval(() => {
-              setAutoSubmitCountdown(prev => {
-                if (prev === null || prev <= 1) {
-                  clearInterval(countdownInterval);
-                  console.log('⏰ Auto-submitting form with OAuth data:', {
-                    hasOauthData: !!oauthDataForSubmit,
-                    oauthDataAtSubmit: oauthDataForSubmit
-                  });
-                  // Auto-submit the form with OAuth data
-                  form.handleSubmit((data) => onSubmit(data, oauthDataForSubmit))();
-                  return null;
-                }
-                return prev - 1;
-              });
-            }, 1000);
-          } else {
-            setOauthStatus('error');
-            setError(event.data.errorDescription || event.data.error || 'Authorization failed');
-          }
-          
-          window.removeEventListener('message', messageHandler);
-        }
-      };
-
-      window.addEventListener('message', messageHandler);
+      // Open popup and handle callback + auto-submit
+      openOAuthPopup(authUrl, {
+        onAfterSuccess: () => {},
+        onAutoSubmit: (oauthDataForSubmit) => {
+          form.handleSubmit((data) => onSubmit(data, oauthDataForSubmit))();
+        },
+        onError: (message) => setError(message),
+      });
 
     } catch (err: any) {
       setOauthStatus('error');
@@ -299,54 +230,55 @@ export function GmailProviderForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      {/* Error Display */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Gmail Address</li>}
+              {form.formState.errors.projectId && <li>Google Cloud Project ID</li>}
+              {form.formState.errors.clientId && <li>Client ID</li>}
+              {form.formState.errors.clientSecret && <li>Client Secret</li>}
+              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {/* OAuth Warning */}
+      {oauthStatus !== 'success' && (
+        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                <span className="text-yellow-600 font-semibold">⚠</span>
+              </div>
+            </div>
+            <div className="ml-3">
+              <h4 className="font-medium text-yellow-800">OAuth Authorization Required</h4>
+              <p className="text-sm text-yellow-700">
+                You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Basic Configuration */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Configuration</CardTitle>
-          <CardDescription>
-            Basic settings for your Gmail email provider
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="providerName">Provider Name *</Label>
-              <Input
-                id="providerName"
-                {...form.register('providerName')}
-                placeholder="e.g., Support Gmail"
-                className={hasAttemptedSubmit && form.formState.errors.providerName ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.providerName && (
-                <p className="text-sm text-red-500">{form.formState.errors.providerName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mailbox">Gmail Address *</Label>
-              <Input
-                id="mailbox"
-                type="email"
-                {...form.register('mailbox')}
-                placeholder="support@company.com"
-                className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
-              />
-              {form.formState.errors.mailbox && (
-                <p className="text-sm text-red-500">{form.formState.errors.mailbox.message}</p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={form.watch('isActive')}
-              onCheckedChange={(checked: boolean) => form.setValue('isActive', checked)}
-            />
-            <Label htmlFor="isActive">Enable this provider</Label>
-          </div>
-        </CardContent>
-      </Card>
+      <BasicConfigCard
+        form={form}
+        hasAttemptedSubmit={hasAttemptedSubmit}
+        title="Basic Configuration"
+        description="Basic settings for your Gmail email provider"
+      />
 
       {/* Google OAuth Configuration */}
       <Card>
@@ -434,161 +366,65 @@ export function GmailProviderForm({
             )}
           </div>
 
-          {/* OAuth Authorization */}
-          <div className={`p-4 rounded-lg transition-colors ${
-            oauthStatus === 'success' ? 'bg-green-50 border-2 border-green-200' : 'bg-blue-50'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-medium">Step 1: OAuth Authorization</h4>
-                <p className="text-sm text-muted-foreground">
-                  {oauthStatus === 'success' 
-                    ? 'Successfully authorized! Now click "' + (isEditing ? 'Update Provider' : 'Add Provider') + '" below to complete setup.'
-                    : 'Complete OAuth flow to grant access to Gmail'
-                  }
-                </p>
-              </div>
-              <Button
-                id="gmail-oauth-btn"
-                type="button"
-                variant="outline"
-                onClick={handleOAuthAuthorization}
-                disabled={!form.watch('clientId') || !form.watch('redirectUri') || oauthStatus === 'authorizing'}
-              >
-                {oauthStatus === 'authorizing' && 'Authorizing...'}
-                {oauthStatus === 'success' && <><CheckCircle className="h-4 w-4 mr-2" />Authorized</>}
-                {(oauthStatus === 'idle' || oauthStatus === 'error') && 'Authorize Access'}
-              </Button>
-            </div>
-          </div>
+      <OAuthSection
+        oauthStatus={oauthStatus}
+        onAuthorize={handleOAuthAuthorization}
+        authorizeButtonId="gmail-oauth-btn"
+        buttonDisabled={!form.watch('clientId') || !form.watch('redirectUri')}
+        isEditing={isEditing}
+        labels={{
+          title: 'Step 1: OAuth Authorization',
+          descriptionIdle: 'Complete OAuth flow to grant access to Gmail',
+          descriptionSuccess: 'Successfully authorized! Saving your settings...',
+          buttonIdleText: 'Authorize Access',
+          buttonAuthorizingText: 'Authorizing...',
+          buttonSuccessText: 'Authorized',
+        }}
+      />
+    </CardContent>
+  </Card>
 
-          {/* Next Step Indicator */}
-          {oauthStatus === 'success' && (
-            <div className="bg-amber-50 border-2 border-amber-200 p-4 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                      <span className="text-amber-600 font-semibold">2</span>
-                    </div>
-                  </div>
-                  <div className="ml-3">
-                    <h4 className="font-medium text-amber-800">Complete Setup</h4>
-                    <p className="text-sm text-amber-700">
-                      {autoSubmitCountdown !== null ? (
-                        <>Auto-completing in <strong>{autoSubmitCountdown}</strong> seconds, or click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below now.</>
-                      ) : (
-                        <>Click "<strong>{isEditing ? 'Update Provider' : 'Add Provider'}</strong>" below to finish configuration and set up Gmail notifications.</>
-                      )}
-                    </p>
-                  </div>
-                </div>
-                {autoSubmitCountdown !== null && (
-                  <Button
-                    id="cancel-auto-submit"
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setAutoSubmitCountdown(null);
-                    }}
-                  >
-                    Cancel Auto-Submit
-                  </Button>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  {/* Ticket Defaults selection */}
+  <Card>
+    <CardHeader>
+      <CardTitle>Ticket Defaults</CardTitle>
+      <CardDescription>
+        Select defaults to apply to email-created tickets
+        <Button
+          id="manage-defaults-link"
+          type="button"
+          variant="link"
+          className="ml-2 p-0 h-auto"
+          onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+        >
+          Manage defaults
+        </Button>
+      </CardDescription>
+    </CardHeader>
+    <CardContent>
+      <CustomSelect
+        id="gmail-inbound-defaults-select"
+        label="Inbound Ticket Defaults"
+        value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+        onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+        options={defaultsOptions}
+        placeholder="Select defaults (optional)"
+        allowClear
+      />
+      <div className="text-right">
+        <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+          Refresh list
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
 
 
-      {/* Advanced Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Advanced Settings</CardTitle>
-          <CardDescription>
-            Configure advanced email processing options
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="autoProcessEmails"
-              checked={form.watch('autoProcessEmails')}
-              onCheckedChange={(checked: boolean) => form.setValue('autoProcessEmails', checked)}
-            />
-            <Label htmlFor="autoProcessEmails">Automatically process new emails</Label>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="labelFilters">Label Filters</Label>
-              <Input
-                id="labelFilters"
-                {...form.register('labelFilters')}
-                placeholder="INBOX, Support, Custom Label"
-              />
-              <p className="text-xs text-muted-foreground">
-                Comma-separated list of Gmail labels to monitor (default: INBOX)
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="maxEmailsPerSync">Max Emails Per Sync</Label>
-              <Input
-                id="maxEmailsPerSync"
-                type="number"
-                {...form.register('maxEmailsPerSync', { valueAsNumber: true })}
-                min="1"
-                max="1000"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Error Display */}
-      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Gmail Address</li>}
-              {form.formState.errors.projectId && <li>Google Cloud Project ID</li>}
-              {form.formState.errors.clientId && <li>Client ID</li>}
-              {form.formState.errors.clientSecret && <li>Client Secret</li>}
-              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* OAuth Warning */}
-      {oauthStatus !== 'success' && (
-        <div className="bg-yellow-50 border-2 border-yellow-200 p-4 rounded-lg">
-          <div className="flex items-center">
-            <div className="flex-shrink-0">
-              <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                <span className="text-yellow-600 font-semibold">⚠</span>
-              </div>
-            </div>
-            <div className="ml-3">
-              <h4 className="font-medium text-yellow-800">OAuth Authorization Required</h4>
-              <p className="text-sm text-yellow-700">
-                You must complete OAuth authorization above before {isEditing ? 'updating' : 'adding'} the provider to enable Gmail notifications.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      <ProcessingSettingsCard
+        form={form}
+        title="Advanced Settings"
+        description="Configure advanced email processing options"
+      />
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">

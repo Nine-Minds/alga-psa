@@ -4,7 +4,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { useRouter } from 'next/navigation';
-import { MoreVertical, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, ExternalLink, Shield } from "lucide-react";
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
@@ -73,6 +73,7 @@ interface CompanyLinkProps {
 
 const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
   const linkId = `company-link-${company.company_id}`;
+  const isDefault = (company as any).is_default;
   
    useRegisterChild<ButtonComponent>({
      id: linkId,
@@ -82,15 +83,23 @@ const CompanyLink: React.FC<CompanyLinkProps> = ({ company, onClick }) => {
    });
 
   return (
-    <a
-      data-automation-id={linkId}
-      href={`/msp/companies/${company.company_id}`}
-      onClick={onClick}
-      className="text-blue-600 hover:underline font-medium whitespace-normal break-words"
-      title={company.company_name}
-    >
-      {company.company_name}
-    </a>
+    <div className="flex items-center">
+      <a
+        data-automation-id={linkId}
+        href={`/msp/companies/${company.company_id}`}
+        onClick={onClick}
+        className="text-blue-600 hover:underline font-medium whitespace-normal break-words"
+        title={company.company_name}
+      >
+        {company.company_name}
+      </a>
+      {isDefault && (
+        <div className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100" title="Default Company">
+          <Shield className="h-3 w-3 text-purple-600 mr-1" />
+          <span className="text-xs text-purple-700 font-medium">Default</span>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -261,13 +270,15 @@ const CompaniesList = ({
                                 <Pencil size={14} className="mr-2" />
                                 Edit
                             </DropdownMenu.Item>
-                            <DropdownMenu.Item 
-                                className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
-                                onSelect={() => handleDeleteCompany(record)}
-                            >
-                                <Trash2 size={14} className="mr-2" />
-                                Delete
-                            </DropdownMenu.Item>
+                            {!(record as any).is_default && (
+                                <DropdownMenu.Item 
+                                    className="px-2 py-1 text-sm cursor-pointer hover:bg-red-100 text-red-600 flex items-center rounded"
+                                    onSelect={() => handleDeleteCompany(record)}
+                                >
+                                    <Trash2 size={14} className="mr-2" />
+                                    Delete
+                                </DropdownMenu.Item>
+                            )}
                         </DropdownMenu.Content>
                     </DropdownMenu.Root>
                 </div>

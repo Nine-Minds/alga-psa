@@ -1,0 +1,14 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.manageNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.hostedEnv.namespace }}
+  labels:
+    name: {{ .Values.hostedEnv.namespace }}
+    type: hosted-environment
+    # Support both classic and revisioned Istio injection
+    istio-injection: enabled
+    istio.io/rev: {{ .Values.istio.revision | default "default" }}
+    branch: "{{ .Values.hostedEnv.sanitizedBranch }}"
+    {{- include "sebastian.labels" . | nindent 4 }}
+{{- end }}

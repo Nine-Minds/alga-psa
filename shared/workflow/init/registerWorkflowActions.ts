@@ -1928,14 +1928,15 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
 
   actionRegistry.registerSimpleAction(
     'resolve_inbound_ticket_defaults',
-    'Resolve default inbound ticket settings for a tenant',
+    'Resolve inbound ticket defaults (provider-specific required)',
     [
-      { name: 'tenant', type: 'string', required: true }
+      { name: 'tenant', type: 'string', required: true },
+      { name: 'providerId', type: 'string', required: true }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         const { resolveInboundTicketDefaults } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions.js');
-        const defaults = await resolveInboundTicketDefaults(params.tenant);
+        const defaults = await resolveInboundTicketDefaults(params.tenant, params.providerId);
         
         return defaults;
       } catch (error: any) {
@@ -1954,8 +1955,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'format', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
-      { name: 'author_id', type: 'string', required: false },
-      { name: 'metadata', type: 'object', required: false }
+      { name: 'author_id', type: 'string', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
@@ -1966,8 +1966,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           format: params.format,
           source: params.source,
           author_type: params.author_type,
-          author_id: params.author_id,
-          metadata: params.metadata
+          author_id: params.author_id
         }, context.tenant);
         
         return {
@@ -2096,10 +2095,31 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
-        const channel = await knex('channels')
+        let channel = await knex('channels')
           .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
-          .where({ tenant: context.tenant, channel_name: params.name, is_active: true })
+          .where({ tenant: context.tenant, channel_name: params.name })
+          .andWhere('is_inactive', false)
           .first();
+        if (!channel) {
+          // Fallback: default active channel, else first active by display_order
+          channel = await knex('channels')
+            .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+            .where({ tenant: context.tenant })
+            .andWhere('is_inactive', false)
+            .andWhere('is_default', true)
+            .first();
+          if (!channel) {
+            channel = await knex('channels')
+              .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+              .where({ tenant: context.tenant })
+              .andWhere('is_inactive', false)
+              .orderBy('display_order', 'asc')
+              .first();
+          }
+          if (!channel) {
+            logger.warn(`[ACTION] find_channel_by_name: No active channel found for tenant=${context.tenant}, name='${params.name}'`);
+          }
+        }
         
         return {
           success: !!channel,
@@ -2162,14 +2182,34 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const knex = await getAdminConnection();
         
         const query = knex('statuses')
-          .select('status_id as id', 'name', 'item_type', 'color')
-          .where({ tenant: context.tenant, name: params.name, is_active: true });
+          .select('status_id as id', 'name', 'item_type', 'is_closed')
+          .where({ tenant: context.tenant, name: params.name });
         
         if (params.item_type) {
           query.where('item_type', params.item_type);
         }
         
-        const status = await query.first();
+        let status = await query.first();
+        if (!status) {
+          // Fallback: default status for item_type (or 'ticket'), else first by order_number
+          const itemType = params.item_type || 'ticket';
+          status = await knex('statuses')
+            .select('status_id as id', 'name', 'item_type', 'is_closed')
+            .where({ tenant: context.tenant, item_type: itemType })
+            .andWhere('is_default', true)
+            .first();
+          if (!status) {
+            status = await knex('statuses')
+              .select('status_id as id', 'name', 'item_type', 'is_closed')
+              .where({ tenant: context.tenant, item_type: itemType })
+              .orderBy('order_number', 'asc')
+              .first();
+          }
+          if (!status) {
+            const it = params.item_type ? `, item_type='${params.item_type}'` : '';
+            logger.warn(`[ACTION] find_status_by_name: No status found for tenant=${context.tenant}, name='${params.name}'${it}`);
+          }
+        }
         
         return {
           success: !!status,
@@ -2195,10 +2235,21 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
         const knex = await getAdminConnection();
         
-        const priority = await knex('ticket_priorities')
-          .select('priority_id as id', 'priority_name as name', 'priority_level', 'color')
+        let priority = await knex('priorities')
+          .select('priority_id as id', 'priority_name as name', 'order_number', 'color', 'item_type')
           .where({ tenant: context.tenant, priority_name: params.name })
           .first();
+        if (!priority) {
+          // Fallback: first ticket priority by order_number
+          priority = await knex('priorities')
+            .select('priority_id as id', 'priority_name as name', 'order_number', 'color', 'item_type')
+            .where({ tenant: context.tenant, item_type: 'ticket' })
+            .orderBy('order_number', 'asc')
+            .first();
+          if (!priority) {
+            logger.warn(`[ACTION] find_priority_by_name: No priority found for tenant=${context.tenant}, name='${params.name}'`);
+          }
+        }
         
         return {
           success: !!priority,

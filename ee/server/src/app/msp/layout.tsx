@@ -1,7 +1,7 @@
 "use client";
 import { SessionProvider } from "next-auth/react";
-import DefaultLayout from "server/src/components/layout/DefaultLayout";
-import { TenantProvider } from "server/src/components/TenantProvider";
+import DefaultLayout from "@/components/layout/DefaultLayout";
+import { TenantProvider } from "@/components/TenantProvider";
 
 /**
  * MSP Layout for Enterprise Edition

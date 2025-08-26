@@ -1043,7 +1043,7 @@ export class ProjectService extends BaseService<IProject> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const results = [];
+      const results: IProject[] = [];
       
       for (const projectId of projectIds) {
         const project = await this.update(projectId, updates, context);

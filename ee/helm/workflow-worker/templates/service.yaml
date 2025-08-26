@@ -1,0 +1,21 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "workflow-worker.fullname" . }}
+  namespace: {{ include "workflow-worker.namespace" . }}
+  labels:
+    {{- include "workflow-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "workflow-worker.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+  ports:
+    - name: http
+      port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+{{- end }}
+

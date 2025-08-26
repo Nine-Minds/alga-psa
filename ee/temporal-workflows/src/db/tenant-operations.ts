@@ -17,24 +17,39 @@ export async function createTenantInDB(
   input: CreateTenantActivityInput
 ): Promise<CreateTenantActivityResult> {
   const log = logger();
-  log.info('Creating tenant in database', { tenantName: input.tenantName });
+  log.info('Creating tenant in database', { 
+    tenantName: input.tenantName,
+    licenseCount: input.licenseCount 
+  });
 
   try {
     const knex = await getAdminConnection();
     
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
+      const tenantData: any = {
+        company_name: input.tenantName,
+        email: input.email,
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now()
+      };
+      
+      // Add license count if provided
+      if (input.licenseCount !== undefined) {
+        tenantData.licensed_user_count = input.licenseCount;
+        tenantData.last_license_update = knex.fn.now();
+        tenantData.stripe_event_id = `temporal_${Date.now()}`; // Track that this came from Temporal
+      }
+      
       const tenantResult = await trx('tenants')
-        .insert({
-          company_name: input.tenantName,
-          email: input.email,
-          created_at: knex.fn.now(),
-          updated_at: knex.fn.now()
-        })
+        .insert(tenantData)
         .returning('tenant');
       
       const tenantId = tenantResult[0].tenant;
-      log.info('Tenant created successfully', { tenantId });
+      log.info('Tenant created successfully', { 
+        tenantId, 
+        licenseCount: input.licenseCount 
+      });
 
       // Create company if companyName is provided (now with tenant ID)
       let companyId: string | undefined;
@@ -44,12 +59,40 @@ export async function createTenantInDB(
           .insert({
             company_name: input.companyName,
             tenant: tenantId,
+            client_type: 'company',
+            is_inactive: false,
+            properties: {
+              type: 'msp',
+              is_system_company: true,
+              created_by: 'tenant_setup'
+            },
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           })
           .returning('company_id');
         companyId = companyResult[0].company_id;
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
+        
+        // Create default location for the MSP company with email from the tenant setup
+        // Insert minimal required fields to satisfy NOT NULL constraints
+        await trx('company_locations')
+          .insert({
+            location_id: knex.raw('gen_random_uuid()'),
+            company_id: companyId,
+            tenant: tenantId,
+            location_name: 'Main Office',
+            email: input.email, // default contact email
+            phone: '',
+            address_line1: 'N/A', // required, placeholder per migration convention
+            city: 'N/A', // required by schema
+            country_code: 'XX', // required by schema (ISO-3166 alpha-2)
+            country_name: 'Unknown', // required by schema
+            is_default: true,
+            is_active: true,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
+        log.info('Default location created', { companyId, email: input.email });
         
         // Note: Not updating tenant with company_id as column doesn't exist in schema
       }

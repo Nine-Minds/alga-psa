@@ -181,7 +181,7 @@ export class InvoiceZipJobHandler {
       const formData = new FormData();
       const timestamp = new Date().toISOString().replace(/[-:T.]/g, '').slice(0, 14);
       const fileName = `invoice_bundle_${timestamp}.zip`;
-      formData.append('file', new Blob([zipBuffer], {
+      formData.append('file', new Blob([new Uint8Array(zipBuffer)], {
         type: 'application/zip'
       }), fileName);
 

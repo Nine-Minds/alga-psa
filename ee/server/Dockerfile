@@ -46,10 +46,9 @@ COPY .env.example /app/server/.env
 COPY ./shared/dist/ ./shared/dist/
 COPY ./shared/package.json ./shared/package.json
 
-# Copy pre-built artifacts (must exist locally with EE features)
-# These should be built by Argo workflow with build-enterprise.sh
+# Copy pre-built Next.js artifacts (must exist locally with EE features)
+# server/dist is no longer required here; workflow-worker is built/deployed separately
 COPY ./server/.next ./server/.next
-COPY ./server/dist ./server/dist
 
 # Copy runtime files
 COPY ./server/public ./server/public

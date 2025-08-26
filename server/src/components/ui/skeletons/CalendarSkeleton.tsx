@@ -13,7 +13,7 @@ const CalendarSkeleton: React.FC<CalendarSkeletonProps> = ({
   showSidebar = true 
 }) => {
   const generateTimeSlots = () => {
-    const slots = [];
+    const slots: JSX.Element[] = [];
     for (let hour = 8; hour < 18; hour++) {
       slots.push(
         <div key={hour} className="h-16 border-b border-gray-200 flex items-center px-2">

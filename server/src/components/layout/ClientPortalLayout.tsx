@@ -4,7 +4,7 @@ import { ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut } from "next-auth/react";
-import { ExitIcon, PersonIcon } from '@radix-ui/react-icons';
+import { LogOut, User } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -145,23 +145,23 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                   </DropdownMenu.Trigger>
 
                   <DropdownMenu.Portal>
-                    <DropdownMenu.Content
-                      className="min-w-[220px] bg-subMenu-bg rounded-md p-1 shadow-md"
-                      sideOffset={5}
-                      align="end"
-                    >
+                  <DropdownMenu.Content
+                    className="min-w-[220px] bg-subMenu-bg rounded-md p-1 shadow-md"
+                    sideOffset={5}
+                    align="end"
+                  >
                       <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={() => router.push('/client-portal/profile')}
                       >
-                        <PersonIcon className="mr-2 h-3.5 w-3.5" />
+                        <User className="mr-2 h-3.5 w-3.5" />
                         <span>Profile</span>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={handleSignOut}
                       >
-                        <ExitIcon className="mr-2 h-3.5 w-3.5" />
+                        <LogOut className="mr-2 h-3.5 w-3.5" />
                         <span>Sign out</span>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>

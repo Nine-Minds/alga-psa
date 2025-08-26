@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 import { createOnboardingTestSession } from '../utils/onboarding-helpers';
-import { createTestTenant, type TenantTestOptions } from '../../lib/testing/tenant-test-factory';
+import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { verifyTenantSettings } from '../utils/db-verification';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 
 test.describe('Onboarding Provider Logic Tests', () => {
-  let db: any;
+  let db: ReturnType<typeof createTestDbConnection>;
 
-  test.beforeAll(async () => {
+  test.beforeAll(() => {
     db = createTestDbConnection();
   });
 

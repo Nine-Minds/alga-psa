@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { provider, redirectUri, hosted } = body;
+    const { provider, redirectUri } = body;
 
     if (!provider || !['microsoft', 'google'].includes(provider)) {
       return NextResponse.json({ error: 'Invalid provider' }, { status: 400 });
@@ -27,14 +27,18 @@ export async function POST(request: NextRequest) {
     let clientId: string | null = null;
     let effectiveRedirectUri = redirectUri;
 
-    if (hosted && process.env.NEXT_PUBLIC_EDITION === 'enterprise') {
-      // Use hosted configuration for Enterprise Edition
+    // Prefer server-side NEXTAUTH_URL for hosted detection
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHosted = nextauthUrl.startsWith('https://algapsa.com');
+
+    if (isHosted) {
+      // Use app-level configuration
       if (provider === 'google') {
-        clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('EE_GMAIL_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
+        clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/google/callback';
       } else if (provider === 'microsoft') {
-        clientId = await secretProvider.getAppSecret('EE_MICROSOFT_CLIENT_ID') || null;
-        effectiveRedirectUri = await secretProvider.getAppSecret('EE_MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
+        clientId = await secretProvider.getAppSecret('MICROSOFT_CLIENT_ID') || null;
+        effectiveRedirectUri = await secretProvider.getAppSecret('MICROSOFT_REDIRECT_URI') || 'https://api.algapsa.com/api/auth/microsoft/callback';
       }
     } else {
       // Use tenant-specific or fallback credentials
@@ -54,17 +58,29 @@ export async function POST(request: NextRequest) {
       tenant: user.tenant,
       userId: user.user_id,
       providerId: body.providerId,
-      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/${provider}/callback`,
+      redirectUri: effectiveRedirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')}/api/auth/${provider}/callback`,
       timestamp: Date.now(),
-      nonce: generateNonce()
+      nonce: generateNonce(),
+      hosted: true
     };
 
     // Generate authorization URL
+    // Determine Microsoft tenant authority (single-tenant support)
+    let msTenantAuthority: string | undefined;
+    if (provider === 'microsoft') {
+      msTenantAuthority = process.env.MICROSOFT_TENANT_ID
+        || (await secretProvider.getAppSecret('MICROSOFT_TENANT_ID'))
+        || (await secretProvider.getTenantSecret(user.tenant, 'microsoft_tenant_id'))
+        || 'common';
+    }
+
     const authUrl = provider === 'microsoft'
       ? generateMicrosoftAuthUrl(
           clientId,
           state.redirectUri,
-          state
+          state,
+          undefined as any,
+          msTenantAuthority
         )
       : generateGoogleAuthUrl(
           clientId,

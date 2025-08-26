@@ -1,0 +1,38 @@
+{{- if .Values.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "workflow-worker.fullname" . }}
+  namespace: {{ include "workflow-worker.namespace" . }}
+  labels:
+    {{- include "workflow-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+data:
+  worker-config.json: |
+    {
+      "logging": {
+        "level": "{{ .Values.logLevel }}",
+        "format": "json"
+      },
+      "healthCheck": {
+        "enabled": true,
+        "port": {{ .Values.service.port }},
+        "path": "/health"
+      },
+      "workflow": {
+        "distributed": {{ ternary "true" "false" .Values.workflow.distributedMode }},
+        "redis": {
+          "host": "{{ .Values.workflow.redis.host }}",
+          "port": {{ .Values.workflow.redis.port | int }},
+          "streamPrefix": "{{ .Values.workflow.redis.streamPrefix }}",
+          "consumerGroup": "{{ .Values.workflow.redis.consumerGroup }}",
+          "batchSize": {{ .Values.workflow.redis.batchSize | int }},
+          "idleTimeoutMs": {{ .Values.workflow.redis.idleTimeoutMs | int }}
+        },
+        "pollIntervalMs": {{ .Values.workflow.pollIntervalMs | int }},
+        "concurrencyLimit": {{ .Values.workflow.concurrencyLimit | int }},
+        "maxRetries": {{ .Values.workflow.maxRetries | int }}
+      }
+    }
+{{- end }}
+

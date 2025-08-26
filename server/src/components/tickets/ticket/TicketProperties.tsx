@@ -25,6 +25,8 @@ import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
+import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
+import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -70,7 +72,7 @@ interface TicketPropertiesProps {
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
-  const parts = [];
+  const parts: string[] = [];
   
   if (location.location_name) {
     parts.push(location.location_name);
@@ -148,6 +150,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
+  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
 
   const uniqueCompaniesForPicker = React.useMemo(() => {
     if (!companies) return [];
@@ -243,6 +246,19 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
     const remainingSeconds = seconds % 60;
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
+
+  // Load ticket display settings (date/time format)
+  useEffect(() => {
+    const loadDisplay = async () => {
+      try {
+        const s = await getTicketingDisplaySettings();
+        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
+      } catch (e) {
+        console.error('Failed to load ticketing display settings', e);
+      }
+    };
+    loadDisplay();
+  }, []);
 
   return (
     <div className="flex-shrink-0 space-y-6">
@@ -403,6 +419,21 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold">Created By</h5>
             <p className="text-sm">
               {createdByUser ? `${createdByUser.first_name} ${createdByUser.last_name}` : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <h5 className="font-bold">Created</h5>
+            <p className="text-sm">
+              {(() => {
+                if (!ticket.entered_at) return 'N/A';
+                try {
+                  const tz = getUserTimeZone();
+                  const local = utcToLocal(ticket.entered_at, tz);
+                  return formatDateTime(local, tz, dateTimeFormat);
+                } catch (e) {
+                  return ticket.entered_at;
+                }
+              })()}
             </p>
           </div>
           <div>

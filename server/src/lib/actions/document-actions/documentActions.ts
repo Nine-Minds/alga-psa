@@ -570,7 +570,7 @@ export async function downloadDocument(documentIdOrFileId: string) {
         headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
         headers.set('Content-Length', buffer.length.toString());
 
-        return new NextResponse(buffer, {
+        return new Response(buffer as any, {
             status: 200,
             headers
         });

@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
-import { changeOwnPassword } from 'server/src/lib/actions/user-actions/userActions';
+import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
+import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;
@@ -22,6 +23,21 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [needsPasswordReset, setNeedsPasswordReset] = useState(false);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await checkPasswordResetStatus();
+        setNeedsPasswordReset(!status.hasResetPassword);
+      } catch (error) {
+        console.error('Error checking password reset status:', error);
+        // Default to not showing warning if there's an error
+        setNeedsPasswordReset(false);
+      }
+    };
+    checkStatus();
+  }, []);
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +61,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
+        setNeedsPasswordReset(false);
         onSuccess?.();
       } else {
         setPasswordError(result.error || 'Failed to change password');
@@ -60,6 +77,9 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
         <CardTitle>Change Password</CardTitle>
       </CardHeader>
       <CardContent>
+        {needsPasswordReset && (
+          <PasswordResetWarning className="mb-4" />
+        )}
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
             <Label htmlFor="currentPassword">Current Password</Label>

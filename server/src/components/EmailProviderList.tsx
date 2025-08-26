@@ -30,6 +30,9 @@ import {
   Repeat
 } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
+import { updateEmailProvider } from 'server/src/lib/actions/email-actions/emailProviderActions';
 
 interface EmailProviderListProps {
   providers: EmailProvider[];
@@ -38,6 +41,7 @@ interface EmailProviderListProps {
   onTestConnection: (provider: EmailProvider) => void;
   onRefresh: () => void;
   onRefreshWatchSubscription: (provider: EmailProvider) => void;
+  onAddClick?: () => void;
 }
 
 export function EmailProviderList({
@@ -46,9 +50,45 @@ export function EmailProviderList({
   onDelete,
   onTestConnection,
   onRefresh,
-  onRefreshWatchSubscription
+  onRefreshWatchSubscription,
+  onAddClick
 }: EmailProviderListProps) {
-  
+  const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
+  const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        // Non-fatal; keep options empty
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+  }, []);
+
+  const handleChangeDefaults = async (provider: EmailProvider, newDefaultsId?: string) => {
+    try {
+      setUpdatingProviderId(provider.id);
+      await updateEmailProvider(provider.id, {
+        tenant: provider.tenant,
+        providerType: provider.providerType,
+        providerName: provider.providerName,
+        mailbox: provider.mailbox,
+        isActive: provider.isActive,
+        inboundTicketDefaultsId: newDefaultsId || undefined,
+      } as any);
+      onRefresh();
+    } catch (e) {
+      console.error('Failed to update provider defaults', e);
+    } finally {
+      setUpdatingProviderId(null);
+    }
+  };
+
   const getStatusIcon = (status: EmailProvider['status']) => {
     switch (status) {
       case 'connected':
@@ -117,6 +157,11 @@ export function EmailProviderList({
           <p className="text-muted-foreground text-center mb-4">
             Add an email provider to start receiving and processing inbound emails as tickets.
           </p>
+          {onAddClick && (
+            <Button id="empty-add-provider-btn" onClick={onAddClick}>
+              Add Email Provider
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
@@ -228,8 +273,6 @@ export function EmailProviderList({
                 <div className="text-xs text-muted-foreground space-x-4">
                   {provider.providerType === 'microsoft' && provider.microsoftConfig && (
                     <>
-                      <span>Auto-process: {provider.microsoftConfig.auto_process_emails ? 'Enabled' : 'Disabled'}</span>
-                      <span>Max per sync: {provider.microsoftConfig.max_emails_per_sync || 50}</span>
                       {provider.microsoftConfig.folder_filters && provider.microsoftConfig.folder_filters.length > 0 && (
                         <span>Folders: {provider.microsoftConfig.folder_filters.join(', ')}</span>
                       )}
@@ -237,14 +280,26 @@ export function EmailProviderList({
                   )}
                   {provider.providerType === 'google' && provider.googleConfig && (
                     <>
-                      <span>Auto-process: {provider.googleConfig.auto_process_emails ? 'Enabled' : 'Disabled'}</span>
-                      <span>Max per sync: {provider.googleConfig.max_emails_per_sync || 50}</span>
                       {provider.googleConfig.label_filters && provider.googleConfig.label_filters.length > 0 && (
                         <span>Labels: {provider.googleConfig.label_filters.join(', ')}</span>
                       )}
                     </>
                   )}
                 </div>
+              </div>
+
+              {/* Ticket Defaults Selector */}
+              <div className="mt-4">
+                <CustomSelect
+                  id={`provider-defaults-select-${provider.id}`}
+                  label="Ticket Defaults"
+                  value={provider.inboundTicketDefaultsId || ''}
+                  onValueChange={(v) => handleChangeDefaults(provider, v || undefined)}
+                  options={defaultsOptions}
+                  placeholder={defaultsOptions.length ? 'Select defaults...' : 'No defaults available'}
+                  allowClear
+                  disabled={updatingProviderId === provider.id}
+                />
               </div>
             </CardContent>
           </Card>

@@ -1,0 +1,226 @@
+{{- if .Values.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "workflow-worker.fullname" . }}
+  namespace: {{ include "workflow-worker.namespace" . }}
+  labels:
+    {{- include "workflow-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+spec:
+  replicas: {{ .Values.replicaCount }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge | default 1 }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable | default 0 }}
+  selector:
+    matchLabels:
+      {{- include "workflow-worker.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: workflow-worker
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.vault.enabled }}
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/role: "{{ .Values.vault.role }}"
+        vault.hashicorp.com/agent-inject-secret-worker: "{{ .Values.vault.secretPath }}"
+        vault.hashicorp.com/agent-inject-template-worker: |
+          {{`{{- with secret "`}}{{ .Values.vault.secretPath }}{{`" -}}
+          export NEXTAUTH_SECRET="{{ .Data.data.nextauth_secret }}"
+          export TOKEN_SECRET_KEY="{{ .Data.data.token_secret_key }}"
+          export CRYPTO_KEY="{{ .Data.data.crypto_key }}"
+          {{- end }}`}}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "workflow-worker.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: workflow-worker
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "workflow-worker.serviceAccountName" . }}
+      {{- if .Values.image.is_private }}
+      imagePullSecrets:
+        - name: "{{ .Values.image.credentials }}"
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{- toYaml .Values.affinity | nindent 8 }}
+      {{- else }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app.kubernetes.io/component
+                  operator: In
+                  values:
+                  - workflow-worker
+              topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{- toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: workflow-worker
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- if .Values.vault.enabled }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              . /vault/secrets/worker
+              exec node .
+          {{- end }}
+          env:
+            # Node.js
+            - name: NODE_ENV
+              value: "production"
+            - name: LOG_LEVEL
+              value: "{{ .Values.logLevel }}"
+            - name: PORT
+              value: "{{ .Values.service.port }}"
+
+            # DB configuration (app user)
+            - name: DB_TYPE
+              value: "{{ .Values.db.type | default "postgres" }}"
+            - name: DB_HOST
+              value: "{{ .Values.db.host }}"
+            - name: DB_PORT
+              value: "{{ .Values.db.port }}"
+            - name: DB_NAME_SERVER
+              value: "{{ .Values.db.serverDatabase }}"
+            - name: DB_USER_SERVER
+              value: "{{ .Values.db.user }}"
+            - name: DB_PASSWORD_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.serverPasswordSecret.name }}
+                  key: {{ .Values.db.serverPasswordSecret.key }}
+
+            # DB admin configuration (optional)
+            {{- if and .Values.db.adminPasswordSecret.name .Values.db.adminPasswordSecret.key }}
+            - name: DB_USER_ADMIN
+              value: "{{ .Values.db.adminUser | default "postgres" }}"
+            - name: DB_PASSWORD_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.db.adminPasswordSecret.name }}
+                  key: {{ .Values.db.adminPasswordSecret.key }}
+            {{- end }}
+
+            # Redis configuration
+            - name: REDIS_HOST
+              value: "{{ .Values.workflow.redis.host }}"
+            - name: REDIS_PORT
+              value: "{{ .Values.workflow.redis.port }}"
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.workflow.redis.passwordSecret.name }}
+                  key: {{ .Values.workflow.redis.passwordSecret.key }}
+
+            # Workflow worker configuration
+            - name: WORKFLOW_DISTRIBUTED_MODE
+              value: {{ ternary "\"true\"" "\"false\"" .Values.workflow.distributedMode | quote }}
+            - name: WORKFLOW_REDIS_STREAM_PREFIX
+              value: "{{ .Values.workflow.redis.streamPrefix }}"
+            - name: WORKFLOW_REDIS_CONSUMER_GROUP
+              value: "{{ .Values.workflow.redis.consumerGroup }}"
+            - name: WORKFLOW_REDIS_BATCH_SIZE
+              value: "{{ .Values.workflow.redis.batchSize }}"
+            - name: WORKFLOW_REDIS_IDLE_TIMEOUT_MS
+              value: "{{ .Values.workflow.redis.idleTimeoutMs }}"
+
+            # Internal runtime tuning
+            - name: POLL_INTERVAL_MS
+              value: "{{ .Values.workflow.pollIntervalMs }}"
+            - name: CONCURRENCY_LIMIT
+              value: "{{ .Values.workflow.concurrencyLimit }}"
+            - name: MAX_RETRIES
+              value: "{{ .Values.workflow.maxRetries }}"
+            - name: HEALTH_CHECK_INTERVAL_MS
+              value: "{{ .Values.workflow.healthCheckIntervalMs }}"
+            - name: METRICS_REPORTING_INTERVAL_MS
+              value: "{{ .Values.workflow.metricsReportingIntervalMs }}"
+
+            # Local secrets when Vault is disabled
+            {{- if not .Values.vault.enabled }}
+            - name: NEXTAUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workflow-worker.fullname" . }}-secrets
+                  key: NEXTAUTH_SECRET
+            - name: TOKEN_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workflow-worker.fullname" . }}-secrets
+                  key: TOKEN_SECRET_KEY
+            - name: CRYPTO_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "workflow-worker.fullname" . }}-secrets
+                  key: CRYPTO_KEY
+            {{- end }}
+
+            # Additional environment variables
+            {{- range .Values.extraEnv }}
+            - name: {{ .name }}
+              value: {{ .value | quote }}
+            {{- end }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.livenessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 3 }}
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            successThreshold: {{ .Values.readinessProbe.successThreshold | default 1 }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
+
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          volumeMounts:
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+      volumes:
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+{{- end }}

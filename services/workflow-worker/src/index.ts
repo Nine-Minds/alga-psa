@@ -10,12 +10,11 @@ import dotenv from 'dotenv';
 // Load environment variables from .env file
 dotenv.config();
 
-import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core';
+import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core/index.js';
 import { WorkflowWorker } from './WorkflowWorker.js';
 import { WorkerServer } from './server.js';
 import logger from '@alga-psa/shared/core/logger.js';
-import { initializeServerWorkflows } from '@alga-psa/shared/workflow';
-import { registerEmailActions } from './emailActionRegistrations.js';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow/index.js';
 
 async function startServices() {
   try {
@@ -26,10 +25,7 @@ async function startServices() {
     
     // Get the action registry and workflow runtime
     const actionRegistry = getActionRegistry();
-    
-    // Register email-specific actions for workflow worker
-    registerEmailActions(actionRegistry);
-    
+
     const workflowRuntime = getWorkflowRuntime(actionRegistry);
     
     // Create worker instance with configuration from environment

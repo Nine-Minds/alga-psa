@@ -7,7 +7,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { getLicenseChecker } from 'server/src/lib/licensing';
+import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { getAvailableRoles } from '@/lib/actions/onboarding-actions/onboardingActions';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
@@ -62,11 +62,49 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const checkLicenseStatus = async () => {
     try {
       setIsLoadingLicense(true);
-      const licenseChecker = await getLicenseChecker();
-      const currentUserCount = 1; // Owner user
-      const totalUsers = currentUserCount + data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
-      const status = await licenseChecker.checkUserLimit(totalUsers);
-      setLicenseInfo(status);
+      const result = await getLicenseUsageAction();
+      
+      if (result.success && result.data) {
+        const { limit, used } = result.data;
+        
+        // Only count team members that haven't been created yet
+        const createdEmails = data.createdTeamMemberEmails || [];
+        const pendingTeamMembers = data.teamMembers.filter(m => 
+          m.firstName && m.lastName && m.email && !createdEmails.includes(m.email)
+        ).length;
+        const totalAfterInvites = used + pendingTeamMembers;
+        
+        if (limit === null) {
+          // No limit
+          setLicenseInfo({ 
+            limit: Infinity, 
+            current: used, 
+            allowed: true 
+          });
+        } else {
+          // Has limit - check if we can add more
+          const canAddMore = used < limit;
+          const wouldExceed = totalAfterInvites > limit;
+          
+          let message: string | undefined = undefined;
+          if (!canAddMore) {
+            message = `License limit reached (${used}/${limit}). Contact support to increase your license limit.`;
+          } else if (wouldExceed && pendingTeamMembers > 0) {
+            const canAdd = limit - used;
+            message = `Adding ${pendingTeamMembers} user(s) would exceed the limit. You can add ${canAdd} more.`;
+          }
+          
+          setLicenseInfo({ 
+            limit, 
+            current: used,
+            allowed: canAddMore,
+            message
+          });
+        }
+      } else {
+        // If we can't get license info, assume no limit
+        setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
+      }
     } catch (error) {
       console.error('Error checking license status:', error);
       setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
@@ -99,9 +137,6 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     newMembers[index] = { ...newMembers[index], [field]: value };
     updateData({ teamMembers: newMembers });
   };
-
-  const validTeamMembersCount = data.teamMembers.filter(m => m.firstName && m.lastName && m.email).length;
-  const totalUsersAfterInvites = 1 + validTeamMembersCount; // 1 for owner + team members
 
   return (
     <div className="space-y-6">
@@ -145,8 +180,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 licenseInfo.allowed ? 'text-blue-800' : 'text-red-800'
               }`}>
                 {licenseInfo.limit === Infinity 
-                  ? `Users: ${totalUsersAfterInvites} (No limit)` 
-                  : `Users: ${totalUsersAfterInvites}/${licenseInfo.limit}`
+                  ? `Users: ${licenseInfo.current} (No limit)` 
+                  : `Users: ${licenseInfo.current}/${licenseInfo.limit}`
                 }
               </div>
               {licenseInfo.message && (

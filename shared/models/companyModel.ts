@@ -23,9 +23,9 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 export const companyFormSchema = z.object({
   company_name: z.string().min(1, 'Company name is required'),
   client_type: z.enum(['company', 'individual']).optional(),
-  url: z.string().url().optional().or(z.literal('')),
+  url: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
   phone_no: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.union([z.string().email(), z.literal(''), z.null()]).optional(),
   address: z.string().optional(),
   address_2: z.string().optional(),
   city: z.string().optional(),
@@ -171,27 +171,7 @@ export class CompanyModel {
     }
   }
 
-  /**
-   * Extract domain from URL
-   */
-  static extractDomainFromUrl(url: string): string | null {
-    try {
-      // Add protocol if missing
-      let urlWithProtocol = url;
-      if (!url.match(/^https?:\/\//)) {
-        urlWithProtocol = `https://${url}`;
-      }
-      
-      const urlObj = new URL(urlWithProtocol);
-      const hostname = urlObj.hostname;
-      
-      // Remove 'www.' if present
-      return hostname.replace(/^www\./, '');
-    } catch (error) {
-      console.error('Error extracting domain from URL:', error);
-      return null;
-    }
-  }
+  // Email domain extraction removed for security
 
   /**
    * Create default tax settings for a company
@@ -250,41 +230,7 @@ export class CompanyModel {
     });
   }
 
-  /**
-   * Add company email setting (domain suffix)
-   * Extracted from server/src/lib/actions/company-settings/emailSettings.ts
-   */
-  static async addCompanyEmailSetting(
-    companyId: string,
-    domain: string,
-    tenant: string,
-    trx: Knex.Transaction,
-    selfRegistrationEnabled: boolean = true
-  ): Promise<void> {
-    const settingId = uuidv4();
-    const now = new Date().toISOString();
-    
-    // Check if suffix already exists for this company
-    const existing = await trx('company_email_settings')
-      .where({
-        tenant,
-        company_id: companyId,
-        email_suffix: domain
-      })
-      .first();
-    
-    if (!existing) {
-      await trx('company_email_settings').insert({
-        setting_id: settingId,
-        company_id: companyId,
-        tenant,
-        email_suffix: domain,
-        self_registration_enabled: selfRegistrationEnabled,
-        created_at: now,
-        updated_at: now
-      });
-    }
-  }
+  // Email suffix functionality removed for security
 
   /**
    * Create a new company with complete validation
@@ -317,30 +263,24 @@ export class CompanyModel {
       companyData.properties.website = companyData.url;
     }
 
-    // Prepare data for insertion
-    const insertData = {
+    // Prepare data for insertion (only include fields that exist in companies table)
+    const insertData: any = {
       company_id: companyId,
       company_name: companyData.company_name,
       client_type: companyData.client_type || 'company',
       tenant,
       url: companyData.url || null,
-      phone_no: companyData.phone_no || null,
-      email: companyData.email || null,
-      address: companyData.address || null,
-      address_2: companyData.address_2 || null,
-      city: companyData.city || null,
-      state: companyData.state || null,
-      zip: companyData.zip || null,
-      country: companyData.country || null,
       notes: companyData.notes || null,
       is_inactive: false,
       created_at: now.toISOString(),
       updated_at: now.toISOString(),
-      properties: companyData.properties ? JSON.stringify(companyData.properties) : null,
-      parent_company_id: companyData.parent_company_id || null,
-      plan_id: companyData.plan_id || null,
-      is_default: companyData.is_default || false
+      properties: companyData.properties ? JSON.stringify(companyData.properties) : null
     };
+
+    // Add billing_email if email is provided
+    if (companyData.email) {
+      insertData.billing_email = companyData.email;
+    }
 
     // Insert company
     const [company] = await trx('companies')
@@ -356,28 +296,7 @@ export class CompanyModel {
         console.error('Failed to create default tax settings:', error);
       }
     }
-    
-    // Add website domain as email suffix if available and not skipped
-    if (!options.skipEmailSuffix) {
-      const websiteUrl = company.url || company.properties?.website;
-      if (websiteUrl) {
-        const domain = this.extractDomainFromUrl(websiteUrl);
-        if (domain) {
-          try {
-            await this.addCompanyEmailSetting(
-              company.company_id, 
-              domain, 
-              tenant, 
-              trx,
-              true // self-registration enabled by default
-            );
-          } catch (error) {
-            // Log error but don't fail company creation
-            console.error('Failed to add website domain as email suffix:', error);
-          }
-        }
-      }
-    }
+    // Email suffix functionality removed for security - no automatic domain registration
     
     // Parse properties back to object if it was stringified
     if (company.properties && typeof company.properties === 'string') {
@@ -432,13 +351,7 @@ export class CompanyModel {
       .where({ company_id: companyId, tenant })
       .update(dbData);
 
-    // Update email suffix if URL changed
-    if (updateData.url) {
-      const domain = this.extractDomainFromUrl(updateData.url);
-      if (domain) {
-        await this.addCompanyEmailSetting(companyId, domain, tenant, trx);
-      }
-    }
+    // Email suffix functionality removed for security
   }
 
   /**

@@ -1,7 +1,7 @@
 import { useRouter } from 'next/navigation';
 import { Button } from 'server/src/components/ui/Button';
 import { ReflectedDropdownMenu } from "server/src/components/ui/ReflectedDropdownMenu";
-import { MoreVertical, Pencil, Trash2, ExternalLink } from 'lucide-react';
+import { MoreVertical, Pencil, Trash2, ExternalLink, Shield } from 'lucide-react';
 import { MouseEvent } from 'react';
 import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -32,6 +32,7 @@ const CompanyGridCard = ({
     onTagsChange
 }: CompanyGridCardProps) => {
     const router = useRouter();
+    const isDefault = (company as any).is_default;
 
     const handleCardClick = () => {
         router.push(`/msp/companies/${company.company_id}`);
@@ -80,6 +81,12 @@ const CompanyGridCard = ({
                         >
                             {company.company_name}
                         </a>
+                        {isDefault && (
+                            <div className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100" title="Default Company">
+                                <Shield className="h-3 w-3 text-purple-600 mr-1" />
+                                <span className="text-xs text-purple-700 font-medium">Default</span>
+                            </div>
+                        )}
                     </h2>
                     <div className="text-sm text-gray-600 mt-1 space-y-0.5">
                         <p className="truncate">
@@ -162,13 +169,13 @@ const CompanyGridCard = ({
                                 variant: 'default',
                                 onSelect: () => handleEditCompany(company.company_id)
                             },
-                            {
+                            ...(!isDefault ? [{
                                 id: 'delete',
                                 text: 'Delete',
                                 icon: <Trash2 size={14} />,
-                                variant: 'destructive',
+                                variant: 'destructive' as const,
                                 onSelect: () => handleDeleteCompany(company)
-                            }
+                            }] : [])
                         ]}
                         contentProps={{
                             align: "end",

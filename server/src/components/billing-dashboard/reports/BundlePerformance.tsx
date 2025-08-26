@@ -68,7 +68,7 @@ const BundlePerformance: React.FC = () => {
       const companies = await getAllCompanies(false);
       
       // Get all companies using this bundle
-      const companiesWithBundle = [];
+      const companiesWithBundle: ICompany[] = [];
       let totalRevenue = 0;
       
       for (const company of companies) {

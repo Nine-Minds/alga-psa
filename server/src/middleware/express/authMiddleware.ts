@@ -92,12 +92,118 @@ export async function apiKeyAuthMiddleware(
     return next();
   }
 
+  // Skip authentication for Google email webhook (verified by signature in route)
+  if (req.path === '/api/email/webhooks/google' || req.path === '/api/email/webhooks/google/') {
+    return next();
+  }
+
+  // Skip authentication for Microsoft email webhook (validated in route)
+  if (req.path === '/api/email/webhooks/microsoft' || req.path === '/api/email/webhooks/microsoft/') {
+    return next();
+  }
+
+  // Skip API key requirement for OAuth initiation when user is authenticated via session
+  // The route itself checks session via getCurrentUser and returns 401 if not logged in
+  if (req.path === '/api/email/oauth/initiate' || req.path === '/api/email/oauth/initiate/') {
+    return next();
+  }
+
   const apiKey = req.headers['x-api-key'] as string;
+  const canary = (req.headers['x-canary'] as string) || undefined;
+
+  // Debug logging with safe masking
+  const maskKey = (k?: string) => {
+    if (!k) return 'none';
+    const len = k.length;
+    const prefix = k.slice(0, 4);
+    const suffix = k.slice(Math.max(0, len - 2));
+    return `${prefix}***${suffix} (len=${len})`;
+  };
+  try {
+    const pathForLog = req.path || '';
+    console.log(
+      `[auth] incoming API request`,
+      JSON.stringify({
+        path: pathForLog,
+        hasApiKey: !!apiKey,
+        apiKeyPreview: maskKey(apiKey),
+        canary: canary || 'none',
+        host: req.headers['host'] || 'unknown',
+      })
+    );
+  } catch (_) {
+    // ignore log errors
+  }
   
   if (!apiKey) {
     return res.status(401).json({
       error: 'Unauthorized: API key missing'
     });
+  }
+
+  // Allowlist: accept ALGA_AUTH_KEY for specific internal endpoints used by Runner
+  try {
+    const path = req.path || '';
+    // Normalize to handle optional trailing slash
+    const normalizedPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+    const isRunnerLookup =
+      normalizedPath === '/api/installs/lookup-by-host' ||
+      normalizedPath === '/api/installs/validate';
+    if (isRunnerLookup) {
+      try {
+        const secretProvider = await getSecretProviderInstance();
+        const allowKey =
+          (await secretProvider.getAppSecret('ALGA_AUTH_KEY')) ||
+          (await secretProvider.getAppSecret('alga_auth_key')) ||
+          process.env.ALGA_AUTH_KEY ||
+          (process.env as any).alga_auth_key;
+        // Additional diagnostics (masked)
+        try {
+          console.log(
+            `[auth] runner allowlist check`,
+            JSON.stringify({
+              path: normalizedPath,
+              providedApiKey: maskKey(apiKey),
+              allowKey: maskKey(allowKey || undefined),
+              allowKeyPresent: !!allowKey,
+              canary: canary || 'none',
+            })
+          );
+        } catch (_) {}
+
+        if (allowKey && apiKey === allowKey) {
+          return next();
+        }
+      } catch {
+        // Fallback to env only if provider not available
+        const allowKey = process.env.ALGA_AUTH_KEY || (process.env as any).alga_auth_key;
+        try {
+          console.log(
+            `[auth] runner allowlist fallback (env)`,
+            JSON.stringify({
+              path: normalizedPath,
+              providedApiKey: maskKey(apiKey),
+              allowKey: maskKey(allowKey || undefined),
+              allowKeyPresent: !!allowKey,
+              canary: canary || 'none',
+            })
+          );
+        } catch (_) {}
+
+        if (allowKey && apiKey === allowKey) {
+          return next();
+        }
+      }
+      // If we got here, allowlist check failed; log reason context
+      try {
+        console.warn(
+          `[auth] runner allowlist did not match; falling back to DB validation`,
+          JSON.stringify({ path: normalizedPath })
+        );
+      } catch (_) {}
+    }
+  } catch (_) {
+    // Continue to standard validation path on any error
   }
 
   try {

@@ -39,8 +39,7 @@ export const tagDefinitionSchema = z.object({
   channel_id: z.string().uuid().nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string()
+  created_at: z.string()
 });
 
 // Tag mapping schema
@@ -236,8 +235,7 @@ export class TagModel {
       channel_id: options?.channel_id || null,
       background_color: backgroundColor,
       text_color: textColor,
-      created_at: now,
-      updated_at: now
+      created_at: now
     };
     
     await trx('tag_definitions').insert(definition);

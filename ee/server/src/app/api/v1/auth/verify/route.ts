@@ -3,11 +3,11 @@ import {
   checkAuthVerificationLimit, 
   formatRateLimitError,
   logSecurityEvent 
-} from 'server/src/lib/security/rateLimiting';
-import { observability, observabilityLogger, observabilityMetrics } from 'server/src/lib/observability';
-import { verifyPassword } from 'server/src/utils/encryption/encryption';
+} from '@/lib/security/rateLimiting';
+import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
+import { verifyPassword } from '@/utils/encryption/encryption';
 import { withAdminTransaction } from '@alga-psa/shared/db';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 // Interface definitions
 interface AuthVerifyRequest {

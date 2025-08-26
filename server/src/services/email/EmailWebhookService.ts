@@ -64,7 +64,6 @@ export class EmailWebhookService {
           messageId: notification.resourceData.id,
           providerId,
           webhookData: notification,
-          maxRetries: 3,
         });
 
         console.log(`📧 Queued Microsoft email job: ${jobId}`);
@@ -114,7 +113,6 @@ export class EmailWebhookService {
         messageId: messageData.historyId || messageData.emailAddress, // Gmail uses historyId
         providerId,
         webhookData: messageData,
-        maxRetries: 3,
       });
 
       console.log(`📧 Queued Gmail email job: ${jobId}`);

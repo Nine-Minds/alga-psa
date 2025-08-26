@@ -3,8 +3,8 @@
  * 
  * This service manages extension registration, initialization, and lifecycle.
  */
-import { createTenantKnex } from '../../../../../server/src/lib/db';
-import logger from '../../../../../shared/core/logger';
+import { createTenantKnex } from '@/lib/db';
+import logger from '@alga-psa/shared/core/logger';
 import { ExtensionStorageService } from './storage/storageService';
 import {
   Extension,
@@ -15,7 +15,7 @@ import {
   ExtensionInitOptions,
   ExtensionRegistry as IExtensionRegistry
 } from './types';
-import { validateManifest } from './validator';
+import { validateManifestV2 } from './schemas/manifest-v2.schema';
 import {
   ExtensionError,
   ExtensionNotFoundError,
@@ -44,12 +44,12 @@ export class ExtensionRegistry implements IExtensionRegistry {
     manifest: ExtensionManifest,
     options: ExtensionInitOptions
   ): Promise<Extension> {
-    // Validate the manifest
-    const validationResult = validateManifest(manifest);
-    if (!validationResult.isValid) {
+    // Validate against Manifest v2
+    const v2 = validateManifestV2(manifest);
+    if (!v2.valid) {
       throw new ExtensionValidationError(
-        'Invalid extension manifest',
-        validationResult.errors
+        'Invalid extension manifest (v2)',
+        (v2.errors || []).map((msg) => ({ path: '', message: msg }))
       );
     }
 

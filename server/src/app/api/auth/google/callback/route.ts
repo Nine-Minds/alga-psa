@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
+import { configureGmailProvider } from '../../../../../lib/actions/email-actions/configureGmailProvider';
 import axios from 'axios';
 
 // make this dynamic
@@ -19,71 +20,80 @@ export async function GET(request: NextRequest) {
     const error = searchParams.get('error');
     const errorDescription = searchParams.get('error_description');
 
+    // Helper to respond with a safe base64-encoded payload posted to opener/parent and auto-close
+    const respondWithPostMessage = (payload: any) => {
+      const encoded = Buffer.from(JSON.stringify(payload)).toString('base64');
+      const html = `<!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Google OAuth Callback</title>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Helvetica, Arial, sans-serif; padding: 24px; }
+            .container { max-width: 640px; margin: 0 auto; }
+            .status { margin-top: 12px; color: #444; }
+            pre { background: #f6f8fa; padding: 12px; overflow: auto; border-radius: 6px; }
+            .ok { color: #0a7f2e; }
+            .err { color: #b00020; }
+            button { margin-top: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <h3>Google OAuth ${payload.success ? 'Success' : 'Error'}</h3>
+            <div id="status" class="status">Completing sign-in…</div>
+            <div id="details-wrap" style="display:none">
+              <p class="${payload.success ? 'ok' : 'err'}">${payload.success ? 'Authorized successfully.' : 'Authorization failed.'}</p>
+              <pre id="details"></pre>
+              <button onclick="window.close()">Close window</button>
+            </div>
+          </div>
+          <script>
+            (function(){
+              try {
+                var payload = JSON.parse(atob('${encoded}'));
+                var target = window.opener || window.parent;
+                if (target && target !== window) target.postMessage(payload, '*');
+              } catch (e) {}
+              try { window.close(); } catch (_) {}
+              setTimeout(function(){
+                if (!window.closed) {
+                  document.getElementById('status').textContent = 'You can close this window.';
+                  var wrap = document.getElementById('details-wrap');
+                  var pre = document.getElementById('details');
+                  wrap.style.display = 'block';
+                  try { pre.textContent = JSON.stringify(JSON.parse(atob('${encoded}')), null, 2); } catch(_) { pre.textContent = 'Unable to display details.'; }
+                }
+              }, 100);
+            })();
+          </script>
+        </body>
+      </html>`;
+      return new NextResponse(html, { status: 200, headers: { 'Content-Type': 'text/html' } });
+    };
+
     // Handle OAuth errors
     if (error) {
       console.error('Google OAuth error:', error, errorDescription);
-      
-      // Return HTML that communicates with the parent window
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Google OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'google',
-                success: false,
-                error: '${error}',
-                errorDescription: '${errorDescription || ''}'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: false,
+        error,
+        errorDescription: errorDescription || ''
+      });
     }
 
     // Validate required parameters
     if (!code || !state) {
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Google OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'google',
-                success: false,
-                error: 'missing_parameters',
-                errorDescription: 'Authorization code or state parameter is missing'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: false,
+        error: 'missing_parameters',
+        errorDescription: 'Authorization code or state parameter is missing'
+      });
     }
 
     // Parse state to get tenant and other info
@@ -92,56 +102,59 @@ export async function GET(request: NextRequest) {
       stateData = JSON.parse(Buffer.from(state, 'base64').toString());
     } catch (e) {
       console.error('Failed to parse state:', e);
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Google OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'google',
-                success: false,
-                error: 'invalid_state',
-                errorDescription: 'Invalid state parameter'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: false,
+        error: 'invalid_state',
+        errorDescription: 'Invalid state parameter'
+      });
     }
 
     // Get OAuth client credentials - check if this is a hosted EE flow
     const secretProvider = await getSecretProviderInstance();
-    const isHostedFlow = process.env.NEXT_PUBLIC_EDITION === 'enterprise' && 
-                        stateData.redirectUri && 
-                        stateData.redirectUri.includes('api.algapsa.com');
+    // Prefer server-side NEXTAUTH_URL for hosted detection; allow state flag as backup
+    const nextauthUrl = process.env.NEXTAUTH_URL || (await secretProvider.getAppSecret('NEXTAUTH_URL')) || '';
+    const isHostedByEnv = nextauthUrl.startsWith('https://algapsa.com');
+    const isHostedFlow = isHostedByEnv || stateData.hosted === true;
     
     let clientId: string | null = null;
     let clientSecret: string | null = null;
     
+    let credentialSource = 'unknown';
     if (isHostedFlow) {
-      // Use hosted configuration for Enterprise Edition
-      clientId = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_ID') || null;
-      clientSecret = await secretProvider.getAppSecret('EE_GMAIL_CLIENT_SECRET') || null;
+      // Use app-level configuration
+      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || null;
+      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || null;
+      credentialSource = 'app_secret';
     } else {
       // Use tenant-specific or fallback credentials
-      clientId = await secretProvider.getAppSecret('GOOGLE_CLIENT_ID') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id') || null;
-      clientSecret = await secretProvider.getAppSecret('GOOGLE_CLIENT_SECRET') || await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret') || null;
+      const envClientId = process.env.GOOGLE_CLIENT_ID || null;
+      const envClientSecret = process.env.GOOGLE_CLIENT_SECRET || null;
+      const tenantClientId = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_id');
+      const tenantClientSecret = await secretProvider.getTenantSecret(stateData.tenant, 'google_client_secret');
+      clientId = envClientId || tenantClientId || null;
+      clientSecret = envClientSecret || tenantClientSecret || null;
+      credentialSource = envClientId && envClientSecret ? 'env' : 'tenant_secret';
     }
+    clientId = clientId?.trim() || null;
+    clientSecret = clientSecret?.trim() || null;
     
-    const redirectUri = stateData.redirectUri || `${await secretProvider.getAppSecret('NEXT_PUBLIC_APP_URL')}/api/auth/google/callback`;
+    // Resolve redirect URI with priority similar to Microsoft
+    const hostedRedirect = await secretProvider.getAppSecret('GOOGLE_REDIRECT_URI');
+    const tenantRedirect = await secretProvider.getTenantSecret(stateData.tenant, 'google_redirect_uri');
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || (await secretProvider.getAppSecret('NEXT_PUBLIC_BASE_URL')) || 'http://localhost:3000';
+    const redirectUri = (isHostedFlow
+      ? hostedRedirect
+      : (process.env.GOOGLE_REDIRECT_URI || tenantRedirect)
+    ) || stateData.redirectUri || `${baseUrl}/api/auth/google/callback`;
+
+    const maskedClientId = clientId ? `${clientId.substring(0, 4)}...${clientId.substring(clientId.length - 4)}` : 'null';
+    console.log('[Google OAuth] Using credentials', {
+      source: credentialSource,
+      clientId: maskedClientId,
+      redirectUri
+    });
 
     if (!clientId || !clientSecret) {
       console.error('Google OAuth credentials not configured');
@@ -201,10 +214,16 @@ export async function GET(request: NextRequest) {
       if (stateData.providerId) {
         try {
           console.log(`💾 Saving OAuth tokens to database for provider: ${stateData.providerId}`);
-          const knex = await getAdminConnection();
+          const { knex, tenant } = await createTenantKnex();
           
           await knex('google_email_provider_config')
             .where('email_provider_id', stateData.providerId)
+            .modify((qb: any) => {
+              // Use the current tenant from context/cookies when available
+              if (tenant) {
+                qb.andWhere('tenant', tenant);
+              }
+            })
             .update({
               access_token: access_token,
               refresh_token: refresh_token || null,
@@ -213,6 +232,24 @@ export async function GET(request: NextRequest) {
             });
             
           console.log(`✅ OAuth tokens saved successfully for provider: ${stateData.providerId}`);
+
+          // Mark provider connection as connected and clear any previous error
+          try {
+            await knex('email_providers')
+              .where('id', stateData.providerId)
+              .modify((qb: any) => {
+                if (tenant) qb.andWhere('tenant', tenant);
+              })
+              .update({
+                connection_status: 'connected',
+                status: 'connected',
+                connection_error_message: null,
+                updated_at: knex.fn.now(),
+              });
+            console.log(`🔗 Provider ${stateData.providerId} marked as connected`);
+          } catch (statusErr: any) {
+            console.warn(`⚠️ Failed to update provider connection status for ${stateData.providerId}: ${statusErr.message}`);
+          }
         } catch (dbError: any) {
           console.error(`❌ Failed to save OAuth tokens to database: ${dbError.message}`, dbError);
           // Don't fail the OAuth flow - tokens will still be returned to frontend
@@ -221,102 +258,69 @@ export async function GET(request: NextRequest) {
         console.log('⚠️  No provider ID in state, skipping database token save');
       }
 
-      // Return success with tokens
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Google OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'google',
-                success: true,
-                data: {
-                  accessToken: '${access_token}',
-                  refreshToken: '${refresh_token || ''}',
-                  expiresAt: '${expiresAt.toISOString()}',
-                  code: '${code}',
-                  state: '${state}'
-                }
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
+      // After saving tokens, try to finalize Gmail setup (Pub/Sub + Watch) for this provider
+      // Run with the tenant from state to avoid cookie/header mismatch
+      if (stateData.providerId && stateData.tenant) {
+        try {
+          await runWithTenant(stateData.tenant, async () => {
+            const { knex } = await createTenantKnex();
+            const googleConfig = await knex('google_email_provider_config')
+              .select('project_id')
+              .where('email_provider_id', stateData.providerId)
+              .andWhere('tenant', stateData.tenant)
+              .first();
+
+            if (googleConfig?.project_id) {
+              console.log(`🔁 Finalizing Gmail provider after OAuth for provider ${stateData.providerId}`);
+              await configureGmailProvider({
+                tenant: stateData.tenant,
+                providerId: stateData.providerId,
+                projectId: googleConfig.project_id,
+                force: true
+              });
+            } else {
+              console.warn('⚠️ Skipping Gmail finalize: project_id missing');
+            }
+          });
+        } catch (finalizeError: any) {
+          console.error('⚠️ Failed to finalize Gmail provider after OAuth:', finalizeError?.message || finalizeError);
         }
-      );
+      }
+
+      // Return success with tokens
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: true,
+        data: {
+          accessToken: access_token,
+          refreshToken: refresh_token || '',
+          expiresAt: expiresAt.toISOString(),
+          code,
+          state
+        }
+      });
     } catch (tokenError: any) {
       console.error('Failed to exchange authorization code:', tokenError.response?.data || tokenError.message);
       
-      return new NextResponse(
-        `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>Google OAuth Callback</title>
-          </head>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'oauth-callback',
-                provider: 'google',
-                success: false,
-                error: 'token_exchange_failed',
-                errorDescription: '${tokenError.response?.data?.error_description || tokenError.message}'
-              }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-        `,
-        {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/html',
-          },
-        }
-      );
+      return respondWithPostMessage({
+        type: 'oauth-callback',
+        provider: 'google',
+        success: false,
+        error: 'token_exchange_failed',
+        errorDescription: tokenError.response?.data?.error_description || tokenError.message
+      });
     }
   } catch (error: any) {
     console.error('Unexpected error in Google OAuth callback:', error);
     
-    return new NextResponse(
-      `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Google OAuth Callback</title>
-        </head>
-        <body>
-          <script>
-            window.opener.postMessage({
-              type: 'oauth-callback',
-              provider: 'google',
-              success: false,
-              error: 'unexpected_error',
-              errorDescription: '${error.message}'
-            }, '*');
-            window.close();
-          </script>
-        </body>
-      </html>
-      `,
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'text/html',
-        },
-      }
-    );
+    const encoded = Buffer.from(JSON.stringify({
+      type: 'oauth-callback',
+      provider: 'google',
+      success: false,
+      error: 'unexpected_error',
+      errorDescription: error?.message || 'Unexpected error'
+    })).toString('base64');
+    return new NextResponse(`<!DOCTYPE html><html><head><meta charset="utf-8" /><title>Google OAuth Callback</title></head><body><script>(function(){try{var p=JSON.parse(atob('${encoded}'));(window.opener||window.parent).postMessage(p,'*')}catch(_){}try{window.close()}catch(_){}setTimeout(function(){if(!window.closed){document.body.innerHTML='<p>Authorization failed. You can close this window.</p>'}},100)})();</script></body></html>`, { status: 200, headers: { 'Content-Type': 'text/html' } });
   }
 }

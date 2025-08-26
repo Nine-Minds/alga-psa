@@ -354,6 +354,58 @@ This indicates a problem with the OAuth token saving process.`;
   }
 
   /**
+   * List Gmail message IDs added since a given historyId
+   */
+  async listMessagesSince(startHistoryId: string): Promise<string[]> {
+    try {
+      await this.ensureValidToken();
+      const messageIds: string[] = [];
+
+      let pageToken: string | undefined = undefined;
+      let lastHistoryId = startHistoryId;
+
+      do {
+        const historyResp: any = await this.gmail.users.history.list({
+          userId: 'me',
+          startHistoryId: lastHistoryId,
+          historyTypes: ['messageAdded'],
+          labelId: 'INBOX',
+          pageToken,
+        });
+
+        if (historyResp.data.history) {
+          for (const record of historyResp.data.history) {
+            if (record.messagesAdded) {
+              for (const msg of record.messagesAdded) {
+                if (msg.message?.id) {
+                  messageIds.push(msg.message.id);
+                }
+              }
+            }
+            // Track the most recent historyId seen
+            if (record.id) {
+              lastHistoryId = record.id;
+            }
+          }
+        }
+
+        pageToken = historyResp.data.nextPageToken || undefined;
+
+        // Update stored last historyId if API returned a newer one
+        const newHistoryId = historyResp.data.historyId || lastHistoryId;
+        if (!this.config.provider_config) {
+          this.config.provider_config = {};
+        }
+        this.config.provider_config.history_id = newHistoryId;
+      } while (pageToken);
+
+      return Array.from(new Set(messageIds));
+    } catch (error) {
+      throw this.handleError(error, 'listMessagesSince');
+    }
+  }
+
+  /**
    * Mark a message as processed
    */
   async markMessageProcessed(messageId: string): Promise<void> {

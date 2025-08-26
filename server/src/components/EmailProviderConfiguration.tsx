@@ -13,13 +13,15 @@ import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
 import { EmailProviderList } from './EmailProviderList';
 import { GmailProviderForm } from '@ee/components/GmailProviderForm';
-import { EmailProviderSelector } from './EmailProviderSelector';
+import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
+import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
 import { 
   getEmailProviders, 
   deleteEmailProvider, 
   testEmailProviderConnection 
 } from '../lib/actions/email-actions/emailProviderActions';
+import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
 export interface EmailProvider {
   id: string;
@@ -33,6 +35,7 @@ export interface EmailProvider {
   errorMessage?: string;
   createdAt: string;
   updatedAt: string;
+  inboundTicketDefaultsId?: string;
   // Vendor-specific config will be loaded separately
   microsoftConfig?: MicrosoftEmailProviderConfig;
   googleConfig?: GoogleEmailProviderConfig;
@@ -76,14 +79,12 @@ export interface GoogleEmailProviderConfig {
 }
 
 export interface EmailProviderConfigurationProps {
-  tenant: string;
   onProviderAdded?: (provider: EmailProvider) => void;
   onProviderUpdated?: (provider: EmailProvider) => void;
   onProviderDeleted?: (providerId: string) => void;
 }
 
-export function EmailProviderConfiguration({
-  tenant,
+function EmailProviderConfigurationContent({
   onProviderAdded,
   onProviderUpdated,
   onProviderDeleted
@@ -91,23 +92,40 @@ export function EmailProviderConfiguration({
   const [providers, setProviders] = useState<EmailProvider[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showProviderSelector, setShowProviderSelector] = useState(false);
-  const [isSetupMode, setIsSetupMode] = useState(false);
-  const [setupProviderType, setSetupProviderType] = useState<'microsoft' | 'google' | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<EmailProvider | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [showDefaultsManager, setShowDefaultsManager] = useState(false);
+  const [tenant, setTenant] = useState<string>('');
+  const [activeSection, setActiveSection] = useState<'providers' | 'defaults'>('providers');
+  const { openDrawer, closeDrawer } = useDrawer();
 
   // Load existing providers on component mount
   useEffect(() => {
     loadProviders();
-  }, [tenant]);
+  }, []);
 
-  // Update UI state based on providers
+  // Get tenant on mount
   useEffect(() => {
-    if (!loading) {
-      setShowProviderSelector(providers.length === 0 && !isSetupMode);
-    }
-  }, [providers, loading, isSetupMode]);
+    const fetchTenant = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (user?.tenant) {
+          setTenant(user.tenant);
+        }
+      } catch (error) {
+        console.error('Failed to get tenant:', error);
+      }
+    };
+    fetchTenant();
+  }, []);
+
+  // Listen for requests to open defaults tab from child forms
+  useEffect(() => {
+    const openDefaults = () => setActiveSection('defaults');
+    window.addEventListener('open-defaults-tab', openDefaults);
+    return () => window.removeEventListener('open-defaults-tab', openDefaults);
+  }, []);
+
+  // Wizard handles add flow; no inline auto-open
 
   const loadProviders = async () => {
     try {
@@ -123,17 +141,10 @@ export function EmailProviderConfiguration({
     }
   };
 
-  const handleProviderAdded = (provider: EmailProvider) => {
-    setProviders(prev => [...prev, provider]);
-    setIsSetupMode(false);
-    setSetupProviderType(null);
-    setShowProviderSelector(false);
-    onProviderAdded?.(provider);
-  };
+  // Add handled via wizard; we refresh list on completion
 
   const handleProviderUpdated = (provider: EmailProvider) => {
     setProviders(prev => prev.map(p => p.id === provider.id ? provider : p));
-    setSelectedProvider(null);
     onProviderUpdated?.(provider);
   };
 
@@ -143,11 +154,7 @@ export function EmailProviderConfiguration({
       
       setProviders(prev => prev.filter(p => p.id !== providerId));
       
-      // After deletion, show provider selector if no providers remain
-      const remainingProviders = providers.filter(p => p.id !== providerId);
-      if (remainingProviders.length === 0) {
-        setShowProviderSelector(true);
-      }
+      // No inline selector; wizard handles starting setup
       
       onProviderDeleted?.(providerId);
     } catch (err: any) {
@@ -198,24 +205,38 @@ export function EmailProviderConfiguration({
     }
   };
 
-  const handleProviderSelected = (providerType: 'google' | 'microsoft') => {
-    setSetupProviderType(providerType);
-    setIsSetupMode(true);
-    setShowProviderSelector(false);
-  };
-
-  const handleSetupCancel = () => {
-    setIsSetupMode(false);
-    setSetupProviderType(null);
-    // Return to selector if no providers exist, otherwise to list
-    if (providers.length === 0) {
-      setShowProviderSelector(true);
-    }
-  };
+  // Inline add/setup flow removed in favor of wizard
 
   const handleEditCancel = () => {
-    setSelectedProvider(null);
-    // Always return to provider list when editing
+    closeDrawer();
+  };
+
+  const openEditDrawer = (provider: EmailProvider) => {
+    openDrawer(
+      (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">Edit Email Provider</h2>
+            <p className="text-sm text-muted-foreground">Update configuration for {provider.providerName}</p>
+          </div>
+          {provider.providerType === 'microsoft' ? (
+            <MicrosoftProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          ) : (
+            <GmailProviderForm
+              tenant={tenant}
+              provider={provider}
+              onSuccess={(p) => { handleProviderUpdated(p); closeDrawer(); }}
+              onCancel={handleEditCancel}
+            />
+          )}
+        </div>
+      )
+    );
   };
 
   if (loading) {
@@ -229,231 +250,146 @@ export function EmailProviderConfiguration({
     );
   }
 
-  // Show provider selector when no providers exist and not in setup mode
-  if (showProviderSelector) {
+  // Build right-hand content for Providers section
+  const renderProvidersContent = () => {
+    // Standard providers view with wizard-based add flow
     return (
       <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
-          <p className="text-muted-foreground mt-2">
-            Set up inbound email processing to automatically create tickets from emails
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
+            <p className="text-muted-foreground">
+              Configure email providers to receive and process inbound emails as tickets
+            </p>
+          </div>
+          <Button 
+            id="add-provider-btn"
+            onClick={() => setWizardOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Email Provider
+          </Button>
         </div>
 
-        {/* Error Alert */}
         {error && (
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        <EmailProviderSelector onProviderSelected={handleProviderSelected} />
-      </div>
-    );
-  }
-
-  // Show setup form when in setup mode
-  if (isSetupMode && setupProviderType) {
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="text-center">
-          <h2 className="text-2xl font-bold tracking-tight">
-            Set up {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} Provider
-          </h2>
-          <p className="text-muted-foreground mt-2">
-            Configure your {setupProviderType === 'google' ? 'Gmail' : 'Microsoft 365'} account for inbound email processing
-          </p>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <Alert variant="destructive">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        <Card>
-          <CardContent className="pt-6">
-            {setupProviderType === 'microsoft' ? (
-              <MicrosoftProviderForm
-                tenant={tenant}
-                onSuccess={handleProviderAdded}
-                onCancel={handleSetupCancel}
-              />
-            ) : (
-              <GmailProviderForm
-                tenant={tenant}
-                onSuccess={handleProviderAdded}
-                onCancel={handleSetupCancel}
-              />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Email Provider Configuration</h2>
-          <p className="text-muted-foreground">
-            Configure email providers to receive and process inbound emails as tickets
-          </p>
-        </div>
-        <Button 
-          id="add-provider-btn"
-          onClick={() => setShowProviderSelector(true)}
-          disabled={providers.length > 0}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Email Provider
-        </Button>
-      </div>
-
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Ticket Defaults Management */}
-      {showDefaultsManager && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Manage Ticket Defaults</CardTitle>
-            <CardDescription>
-              Configure default values for tickets created from email processing
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <InboundTicketDefaultsManager 
-              onDefaultsChange={() => {
-                // Optionally refresh providers to show updated defaults
-                loadProviders();
-              }}
-            />
-            <div className="flex justify-end mt-6">
-              <Button 
-                id="close-defaults-btn"
-                variant="outline" 
-                onClick={() => setShowDefaultsManager(false)}
-              >
-                Close
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-
-      {/* Provider List - only show when providers exist */}
-      {providers.length > 0 && (
         <EmailProviderList
           providers={providers}
-          onEdit={setSelectedProvider}
+          onEdit={openEditDrawer}
           onDelete={handleProviderDeleted}
           onTestConnection={handleTestConnection}
           onRefresh={loadProviders}
           onRefreshWatchSubscription={handleRefreshWatchSubscription}
+          onAddClick={() => setWizardOpen(true)}
         />
-      )}
 
-      {/* Edit Provider Form */}
-      {selectedProvider && (
+
+        {/* Help Information */}
         <Card>
           <CardHeader>
-            <CardTitle>Edit Email Provider</CardTitle>
-            <CardDescription>
-              Update configuration for {selectedProvider.providerName}
-            </CardDescription>
+            <CardTitle>Setup Instructions</CardTitle>
           </CardHeader>
-          <CardContent>
-            {selectedProvider.providerType === 'microsoft' ? (
-              <MicrosoftProviderForm
-                tenant={tenant}
-                provider={selectedProvider}
-                onSuccess={handleProviderUpdated}
-                onCancel={handleEditCancel}
-              />
-            ) : (
-              <GmailProviderForm
-                tenant={tenant}
-                provider={selectedProvider}
-                onSuccess={handleProviderUpdated}
-                onCancel={handleEditCancel}
-              />
-            )}
+          <CardContent className="space-y-4">
+            <div>
+              <h4 className="font-medium mb-2">Microsoft 365 Setup</h4>
+              <p className="text-sm text-muted-foreground">
+                1. Register an application in Azure AD<br/>
+                2. Configure API permissions for Mail.Read<br/>
+                3. Set up the redirect URL in your app registration<br/>
+                4. Use the Client ID and Client Secret in the form above
+              </p>
+            </div>
+            <div>
+              <h4 className="font-medium mb-2">Gmail Setup</h4>
+              <p className="text-sm text-muted-foreground">
+                {process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
+                  <>
+                    1. Enter your Gmail address and provider name<br/>
+                    2. Click "Connect Gmail" to authorize access<br/>
+                    3. Configure email processing preferences<br/>
+                    4. Save to complete setup
+                  </>
+                ) : (
+                  <>
+                    1. Create a project in Google Cloud Console<br/>
+                    2. Enable Gmail API and create OAuth2 credentials<br/>
+                    3. Set up Pub/Sub topic for push notifications<br/>
+                    4. Configure the OAuth consent screen and add test users
+                  </>
+                )}
+              </p>
+            </div>
           </CardContent>
         </Card>
-      )}
+      </div>
+    );
+  };
 
-      {/* Management Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Management</CardTitle>
-          <CardDescription>
-            Additional configuration options for email processing
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button 
-            id="manage-defaults-btn"
-            variant="outline"
-            onClick={() => setShowDefaultsManager(true)}
-            disabled={showDefaultsManager}
+  // Vertical layout wrapper with left nav
+  return (
+    <div className="flex gap-6">
+      {/* Vertical tabs area with subtle separator bar and no card */}
+      <div className="w-56 shrink-0 pr-4 mr-4 border-r border-gray-200">
+        <nav className="flex flex-col gap-1">
+          <Button
+            id="nav-providers"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'providers'
+                ? 'text-purple-700 font-semibold underline decoration-purple-600 decoration-2 underline-offset-4 bg-purple-50'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveSection('providers')}
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Manage Ticket Defaults
+            Providers
           </Button>
-          <p className="text-sm text-muted-foreground mt-2">
-            Configure default values that will be applied to tickets created from email processing
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Help Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Setup Instructions</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-medium mb-2">Microsoft 365 Setup</h4>
-            <p className="text-sm text-muted-foreground">
-              1. Register an application in Azure AD<br/>
-              2. Configure API permissions for Mail.Read<br/>
-              3. Set up the redirect URL in your app registration<br/>
-              4. Use the Client ID and Client Secret in the form above
-            </p>
+          <Button
+            id="nav-defaults"
+            variant="ghost"
+            className={`justify-start w-full px-2 py-2 rounded-md ${
+              activeSection === 'defaults'
+                ? 'text-purple-700 font-semibold underline decoration-purple-600 decoration-2 underline-offset-4 bg-purple-50'
+                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveSection('defaults')}
+          >
+            Defaults
+          </Button>
+        </nav>
+      </div>
+      <div className="flex-1 min-w-0">
+        {activeSection === 'providers' ? (
+          <>
+            {renderProvidersContent()}
+            <ProviderSetupWizardDialog
+              isOpen={wizardOpen}
+              onClose={() => setWizardOpen(false)}
+              onComplete={async (provider) => { onProviderAdded?.(provider); setWizardOpen(false); await loadProviders(); }}
+              tenant={tenant}
+            />
+          </>
+        ) : (
+          <div className="space-y-4">
+            <InboundTicketDefaultsManager onDefaultsChange={() => {
+              // Refresh providers and notify forms to reload defaults lists
+              loadProviders();
+              window.dispatchEvent(new CustomEvent('inbound-defaults-updated'));
+            }} />
           </div>
-          <div>
-            <h4 className="font-medium mb-2">Gmail Setup</h4>
-            <p className="text-sm text-muted-foreground">
-              {process.env.NEXT_PUBLIC_EDITION === 'enterprise' ? (
-                <>
-                  1. Enter your Gmail address and provider name<br/>
-                  2. Click "Connect Gmail" to authorize access<br/>
-                  3. Configure email processing preferences<br/>
-                  4. Save to complete setup
-                </>
-              ) : (
-                <>
-                  1. Create a project in Google Cloud Console<br/>
-                  2. Enable Gmail API and create OAuth2 credentials<br/>
-                  3. Set up Pub/Sub topic for push notifications<br/>
-                  4. Configure the OAuth consent screen and add test users
-                </>
-              )}
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+        )}
+      </div>
     </div>
+  );
+}
+
+export function EmailProviderConfiguration(props: EmailProviderConfigurationProps) {
+  return (
+    <DrawerProvider>
+      <EmailProviderConfigurationContent {...props} />
+    </DrawerProvider>
   );
 }

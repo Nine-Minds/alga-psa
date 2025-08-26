@@ -358,6 +358,70 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
   }
 }
 
+/**
+ * Get contacts that do not yet have an associated client portal user.
+ * Optionally filter by company and status (active by default).
+ */
+export async function getContactsEligibleForInvitation(
+  companyId?: string,
+  status: ContactFilterStatus = 'active'
+): Promise<IContact[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
+  }
+
+  // RBAC: ensure user has permission to read contacts
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const { hasPermission } = await import('../../auth/rbac');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Check permission to read contacts
+  const canRead = await hasPermission(currentUser, 'contact', 'read', db);
+    
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
+  try {
+    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const q = trx('contacts as c')
+        .leftJoin('users as u', function(this: Knex.JoinClause) {
+          this.on('u.contact_id', 'c.contact_name_id')
+            .andOn('u.tenant', 'c.tenant')
+            .andOn(trx.raw('u.user_type = ?', ['client']));
+        })
+        .leftJoin('companies as comp', function(this: Knex.JoinClause) {
+          this.on('c.company_id', 'comp.company_id')
+            .andOn('comp.tenant', 'c.tenant');
+        })
+        .where('c.tenant', tenant)
+        .whereNull('u.user_id')
+        .modify((qb: Knex.QueryBuilder) => {
+          if (companyId) qb.andWhere('c.company_id', companyId);
+          if (status !== 'all') qb.andWhere('c.is_inactive', status === 'inactive');
+        })
+        .select('c.*', 'comp.company_name')
+        .orderBy('c.full_name', 'asc');
+
+      return q;
+    });
+
+    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
+      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      return { ...contact, avatarUrl: avatarUrl || null } as IContact;
+    }));
+
+    return contactsWithAvatars;
+  } catch (err) {
+    console.error('Error fetching contacts eligible for invitation:', err);
+    throw new Error('SYSTEM_ERROR: Failed to retrieve contacts eligible for invitation');
+  }
+}
+
 export async function getAllCompanies(): Promise<ICompany[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -549,8 +613,8 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // If company_id is being updated, verify it exists
-    if (contactData.company_id) {
+    // If company_id is being updated, verify it exists (but allow null to remove association)
+    if ('company_id' in contactData && contactData.company_id) {
       const company = await db('companies')
         .where({ company_id: contactData.company_id, tenant })
         .first();

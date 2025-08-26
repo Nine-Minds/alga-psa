@@ -18,6 +18,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { ExternalLink, Eye, EyeOff, CheckCircle } from 'lucide-react';
 import type { EmailProvider } from './EmailProviderConfiguration';
 import { createEmailProvider, updateEmailProvider, upsertEmailProvider } from '../lib/actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from 'server/src/lib/actions/email-actions/oauthActions';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from 'server/src/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const microsoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -29,7 +32,8 @@ const microsoftProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
+  maxEmailsPerSync: z.number().min(1).max(1000),
+  inboundTicketDefaultsId: z.string().uuid().optional()
 });
 
 type MicrosoftProviderFormData = z.infer<typeof microsoftProviderSchema>;
@@ -42,7 +46,7 @@ interface MicrosoftProviderFormProps {
 }
 
 export function MicrosoftProviderForm({ 
-  tenant, 
+  tenant,
   provider, 
   onSuccess, 
   onCancel 
@@ -52,7 +56,9 @@ export function MicrosoftProviderForm({
   const [showClientSecret, setShowClientSecret] = useState(false);
   const [oauthStatus, setOauthStatus] = useState<'idle' | 'authorizing' | 'success' | 'error'>('idle');
   const [oauthData, setOauthData] = useState<any>(null);
+  const [oauthMessageReceived, setOauthMessageReceived] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
@@ -68,15 +74,36 @@ export function MicrosoftProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
       folderFilters: provider.microsoftConfig.folder_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       redirectUri: `${window.location.origin}/api/auth/microsoft/callback`,
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  // Load inbound ticket defaults options
+  React.useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+  }, []);
+
+  
 
   const onSubmit = async (data: MicrosoftProviderFormData) => {
     setHasAttemptedSubmit(true);
@@ -97,6 +124,7 @@ export function MicrosoftProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: data.inboundTicketDefaultsId,
         microsoftConfig: {
           client_id: data.clientId,
           client_secret: data.clientSecret,
@@ -106,7 +134,8 @@ export function MicrosoftProviderForm({
           folder_filters: data.folderFilters ? data.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
           max_emails_per_sync: data.maxEmailsPerSync
         }
-      };
+
+      }
 
       const result = isEditing 
         ? await updateEmailProvider(provider.id, payload)
@@ -145,6 +174,7 @@ export function MicrosoftProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           microsoftConfig: {
             client_id: formData.clientId,
             client_secret: formData.clientSecret,
@@ -160,25 +190,16 @@ export function MicrosoftProviderForm({
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from API
-      const response = await fetch('/api/email/oauth/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: 'microsoft',
-          redirectUri: formData.redirectUri,
-          providerId: providerId
-        })
+      // Get OAuth URL via server action
+      const oauthInit = await initiateEmailOAuth({
+        provider: 'microsoft',
+        redirectUri: formData.redirectUri,
+        providerId: providerId,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate OAuth');
+      if (!oauthInit.success) {
+        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
       }
-
-      const { authUrl } = await response.json();
+      const { authUrl } = oauthInit;
 
       // Open OAuth popup
       const popup = window.open(
@@ -195,8 +216,9 @@ export function MicrosoftProviderForm({
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkClosed);
-          if (oauthStatus === 'authorizing') {
-            setOauthStatus('idle');
+          if (oauthStatus === 'authorizing' && !oauthMessageReceived) {
+            setOauthStatus('error');
+            setError('Authorization window closed before completing. Please try again.');
           }
         }
       }, 1000);
@@ -207,6 +229,7 @@ export function MicrosoftProviderForm({
         if (event.data.type === 'oauth-callback' && event.data.provider === 'microsoft') {
           clearInterval(checkClosed);
           popup?.close();
+          setOauthMessageReceived(true);
           
           if (event.data.success) {
             // Store the authorization code and tokens in OAuth data (not form)
@@ -235,6 +258,28 @@ export function MicrosoftProviderForm({
 
   return (
     <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
+      {/* Error Display (moved to top for visibility) */}
+      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            <p className="font-medium mb-2">Please fill in the required fields:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {form.formState.errors.providerName && <li>Provider Name</li>}
+              {form.formState.errors.mailbox && <li>Email Address</li>}
+              {form.formState.errors.clientId && <li>Client ID</li>}
+              {form.formState.errors.clientSecret && <li>Client Secret</li>}
+              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {error && (
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
       {/* Basic Configuration */}
       <Card>
         <CardHeader>
@@ -281,8 +326,43 @@ export function MicrosoftProviderForm({
             />
             <Label htmlFor="isActive">Enable this provider</Label>
           </div>
-        </CardContent>
-      </Card>
+      </CardContent>
+    </Card>
+
+    {/* Ticket Defaults selection */}
+    <Card>
+      <CardHeader>
+        <CardTitle>Ticket Defaults</CardTitle>
+        <CardDescription>
+          Select defaults to apply to email-created tickets
+          <Button
+            id="manage-defaults-link"
+            type="button"
+            variant="link"
+            className="ml-2 p-0 h-auto"
+            onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+          >
+            Manage defaults
+          </Button>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <CustomSelect
+          id="microsoft-inbound-defaults-select"
+          label="Inbound Ticket Defaults"
+          value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+          onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+          options={defaultsOptions}
+          placeholder="Select defaults (optional)"
+          allowClear
+        />
+        <div className="text-right">
+          <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+            Refresh list
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
 
       {/* Microsoft OAuth Configuration */}
       <Card>
@@ -400,15 +480,6 @@ export function MicrosoftProviderForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="autoProcessEmails"
-              checked={form.watch('autoProcessEmails')}
-              onCheckedChange={(checked: boolean) => form.setValue('autoProcessEmails', checked)}
-            />
-            <Label htmlFor="autoProcessEmails">Automatically process new emails</Label>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="folderFilters">Folder Filters</Label>
@@ -436,28 +507,6 @@ export function MicrosoftProviderForm({
 
         </CardContent>
       </Card>
-
-      {/* Error Display */}
-      {hasAttemptedSubmit && Object.keys(form.formState.errors).length > 0 && (
-        <Alert variant="destructive">
-          <AlertDescription>
-            <p className="font-medium mb-2">Please fill in the required fields:</p>
-            <ul className="list-disc list-inside space-y-1">
-              {form.formState.errors.providerName && <li>Provider Name</li>}
-              {form.formState.errors.mailbox && <li>Email Address</li>}
-              {form.formState.errors.clientId && <li>Client ID</li>}
-              {form.formState.errors.clientSecret && <li>Client Secret</li>}
-              {form.formState.errors.redirectUri && <li>Redirect URI</li>}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {error && (
-        <Alert variant="destructive">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Form Actions */}
       <div className="flex items-center justify-end space-x-2">
