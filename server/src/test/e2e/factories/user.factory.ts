@@ -19,8 +19,8 @@ export async function userFactory(db: any, input: UserInput) {
   const user = {
     user_id: faker.string.uuid(),
     tenant: input.tenant,
-    email: input.email || faker.internet.email().toLowerCase(),
-    username: input.username || faker.internet.username(),
+    email: input.email?.toLowerCase() || faker.internet.email().toLowerCase(),
+    username: input.username?.toLowerCase() || faker.internet.username().toLowerCase(),
     first_name: input.firstName || faker.person.firstName(),
     last_name: input.lastName || faker.person.lastName(),
     hashed_password: 'hashed_password_test',
