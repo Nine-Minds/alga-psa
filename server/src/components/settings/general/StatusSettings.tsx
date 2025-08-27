@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -18,10 +18,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import { StatusDialog } from './dialogs/StatusDialog';
+import { StatusImportDialog } from './dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';
+import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { useSearchParams } from 'next/navigation';
-// Dialog components will be passed as props or kept inline for now
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;
@@ -47,6 +50,10 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
+  
+  // Delete confirmation state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [statusToDelete, setStatusToDelete] = useState<IStatus | null>(null);
 
   useEffect(() => {
     const initUser = async () => {
@@ -94,7 +101,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
     }
   };
 
-  const handleDeleteStatus = async (statusId: string): Promise<void> => {
+  const handleDeleteStatusRequest = (statusId: string): void => {
     const status = statuses.find(s => s.status_id === statusId);
     if (status) {
       if (status.is_closed) {
@@ -106,20 +113,29 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
           return;
         }
       }
+      setStatusToDelete(status);
+      setShowDeleteDialog(true);
+    }
+  };
 
-      if (!confirm(`Are you sure you want to delete the status "${status.name}"? This action cannot be undone.`)) {
-        return;
-      }
+  const confirmDeleteStatus = async (): Promise<void> => {
+    if (!statusToDelete) return;
 
-      try {
-        await deleteStatus(statusId);
-        setStatuses(statuses.filter(s => s.status_id !== statusId));
-        toast.success('Status deleted successfully');
-      } catch (error) {
-        console.error('Error deleting status:', error);
-        const message = error instanceof Error ? error.message : 'Cannot delete status because it is currently in use';
+    try {
+      await deleteStatus(statusToDelete.status_id);
+      setStatuses(statuses.filter(s => s.status_id !== statusToDelete.status_id));
+      toast.success('Status deleted successfully');
+    } catch (error) {
+      console.error('Error deleting status:', error);
+      const message = error instanceof Error ? error.message : 'Cannot delete status because it is currently in use';
+      if (message.toLowerCase().includes('in use') || message.toLowerCase().includes('referenced') || message.toLowerCase().includes('foreign key')) {
+        toast.error(`Cannot delete "${statusToDelete.name}" because it is currently in use.`);
+      } else {
         toast.error(message);
       }
+    } finally {
+      setShowDeleteDialog(false);
+      setStatusToDelete(null);
     }
   };
 
@@ -416,7 +432,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
                     className="text-red-600 focus:text-red-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteStatus(item.status_id);
+                      handleDeleteStatusRequest(item.status_id);
                     }}
                   >
                     Delete
@@ -448,7 +464,67 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
         </div>
       </div>
 
-      {/* Dialogs will be added here as needed */}
+      {/* Status Dialog */}
+      <StatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        editingStatus={editingStatus}
+        selectedStatusType={selectedStatusType}
+        userId={userId}
+        existingStatuses={statuses}
+        onSuccess={async () => {
+          const updatedStatuses = await getStatuses(selectedStatusType);
+          setStatuses(updatedStatuses);
+        }}
+      />
+      
+      {/* Import Dialog */}
+      <StatusImportDialog
+        open={showStatusImportDialog}
+        onOpenChange={setShowStatusImportDialog}
+        availableStatuses={availableReferenceStatuses}
+        selectedStatuses={selectedImportStatuses}
+        onSelectionChange={(statusId) => {
+          setSelectedImportStatuses(prev => 
+            prev.includes(statusId) 
+              ? prev.filter(id => id !== statusId)
+              : [...prev, statusId]
+          );
+        }}
+        onImport={handleImportSelected}
+      />
+      
+      {/* Conflict Resolution Dialog */}
+      <ConflictResolutionDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflicts={importConflicts}
+        resolutions={conflictResolutions}
+        onResolutionChange={(itemId, resolution) => {
+          setConflictResolutions(prev => ({
+            ...prev,
+            [itemId]: resolution
+          }));
+        }}
+        onResolve={handleResolveConflicts}
+        onCancel={() => {
+          setShowConflictDialog(false);
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setStatusToDelete(null);
+        }}
+        itemName={statusToDelete?.name || ''}
+        itemType="Status"
+        onConfirm={confirmDeleteStatus}
+      />
     </div>
   );
 };

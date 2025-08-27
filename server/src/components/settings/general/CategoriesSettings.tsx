@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { 
   getAllCategories, 
@@ -192,6 +192,25 @@ const CategoriesSettings: React.FC = () => {
         return;
       }
 
+      // Check if any selected subcategories don't have their parent selected
+      const selectedSubcategories = availableReferenceCategories.filter(cat => 
+        selectedImportCategories.includes(cat.id) && cat.parent_category_uuid
+      );
+      
+      const missingParents = selectedSubcategories.filter(subcat => {
+        const parentId = subcat.parent_category_uuid;
+        return !selectedImportCategories.includes(parentId);
+      });
+      
+      if (missingParents.length > 0) {
+        const parentNames = missingParents.map(subcat => {
+          const parent = availableReferenceCategories.find(c => c.id === subcat.parent_category_uuid);
+          return parent?.category_name || 'Unknown parent';
+        });
+        toast.error(`Cannot import subcategories without their parent categories. Please also select: ${[...new Set(parentNames)].join(', ')}`);
+        return;
+      }
+
       const importOptions = { channel_id: importTargetChannel };
       
       if (importConflicts.length > 0) {
@@ -251,7 +270,7 @@ const CategoriesSettings: React.FC = () => {
       render: (value: string, record: ITicketCategory) => (
         <div className="flex items-center">
           {record.parent_category && (
-            <span className="text-muted-foreground mr-2 ml-4">↳</span>
+            <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2 ml-4" />
           )}
           <span className={`text-gray-700 font-medium ${record.parent_category ? '' : 'font-semibold'}`}>
             {value}
@@ -273,7 +292,7 @@ const CategoriesSettings: React.FC = () => {
       render: (value: number, record: ITicketCategory) => {
         if (!record.parent_category) {
           // For parent categories, show their main order
-          return <span className="text-gray-700 font-medium">{value}</span>;
+          return <span className="text-gray-700 font-semibold">{value}</span>;
         } else {
           // For subcategories, show their order within the parent
           const parentCategory = categories.find(cat => cat.category_id === record.parent_category);
@@ -283,9 +302,12 @@ const CategoriesSettings: React.FC = () => {
           const orderWithinParent = siblingSubcategories.findIndex(cat => cat.category_id === record.category_id) + 1;
           
           return (
-            <span className="text-gray-600 ml-4">
-              {orderWithinParent}
-            </span>
+            <div className="flex items-center pl-4">
+              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
+              <span className="text-gray-500 text-sm bg-gray-100 px-2 py-0.5 rounded">
+                {orderWithinParent}
+              </span>
+            </div>
           );
         }
       },
@@ -297,15 +319,18 @@ const CategoriesSettings: React.FC = () => {
       render: (value: string, record: ITicketCategory) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button id="category-actions-menu" variant="ghost" className="h-8 w-8 p-0">
+            <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => startEditing(record)}>
+            <DropdownMenuItem 
+              id={`edit-category-${value}-button`}
+              onClick={() => startEditing(record)}>
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem 
+              id={`delete-category-${value}-button`}
               onClick={() => setDeleteDialog({
                 isOpen: true,
                 categoryId: value,
@@ -550,6 +575,7 @@ const CategoriesSettings: React.FC = () => {
           setImportTargetChannel('');
         }} 
         title="Import Standard Categories"
+        className="max-w-3xl"
       >
         <DialogContent>
           <div className="space-y-4">
@@ -581,6 +607,7 @@ const CategoriesSettings: React.FC = () => {
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8">
                       <input
+                        id="select-all-categories-checkbox"
                         type="checkbox"
                         checked={availableReferenceCategories.length > 0 && selectedImportCategories.length === availableReferenceCategories.length}
                         onChange={(e) => {
@@ -595,9 +622,9 @@ const CategoriesSettings: React.FC = () => {
                     </div>
                     <div className="flex-1">Name</div>
                     <div className="flex-1">Description</div>
-                    <div className="w-20 text-center">Order</div>
+                    <div className="w-24 text-center">Order</div>
                   </div>
-                  <div className="max-h-[300px] overflow-y-auto">
+                  <div className="max-h-[350px] overflow-y-auto">
                     {(() => {
                       // Organize categories hierarchically
                       const parentCategories = availableReferenceCategories.filter(cat => !cat.parent_category_uuid);
@@ -614,6 +641,28 @@ const CategoriesSettings: React.FC = () => {
                       
                       return organizedCategories.map((category) => {
                         const isSubcategory = !!category.parent_category_uuid;
+                        
+                        // Calculate order display for subcategories
+                        let orderDisplay;
+                        if (isSubcategory) {
+                          const siblingSubcategories = organizedCategories.filter(
+                            cat => cat.parent_category_uuid === category.parent_category_uuid
+                          );
+                          const orderWithinParent = siblingSubcategories.findIndex(cat => cat.id === category.id) + 1;
+                          orderDisplay = (
+                            <div className="flex items-center justify-end pr-4">
+                              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1" />
+                              <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                {orderWithinParent}
+                              </span>
+                            </div>
+                          );
+                        } else {
+                          orderDisplay = (
+                            <span className="font-normal">{category.display_order}</span>
+                          );
+                        }
+                        
                         return (
                         <div 
                           key={category.id} 
@@ -623,18 +672,26 @@ const CategoriesSettings: React.FC = () => {
                         >
                           <div className="w-8">
                             <input
+                              id={`select-category-${category.id}-checkbox`}
                               type="checkbox"
                               checked={selectedImportCategories.includes(category.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
-                                  // If selecting a parent category, also select its children
                                   const categoriesToAdd = [category.id];
+                                  
+                                  // If selecting a subcategory, ensure parent is also selected
+                                  if (isSubcategory && !selectedImportCategories.includes(category.parent_category_uuid)) {
+                                    categoriesToAdd.push(category.parent_category_uuid);
+                                  }
+                                  
+                                  // If selecting a parent category, also select its children
                                   if (!isSubcategory) {
                                     const children = availableReferenceCategories.filter(
                                       c => c.parent_category_uuid === category.id
                                     );
                                     categoriesToAdd.push(...children.map(c => c.id));
                                   }
+                                  
                                   setSelectedImportCategories([
                                     ...selectedImportCategories,
                                     ...categoriesToAdd.filter(id => !selectedImportCategories.includes(id))
@@ -656,15 +713,17 @@ const CategoriesSettings: React.FC = () => {
                               className="w-4 h-4"
                             />
                           </div>
-                          <div className="flex-1">
-                            {isSubcategory && <span className="text-muted-foreground mr-2">↳</span>}
-                            {category.category_name}
+                          <div className="flex-1 flex items-center">
+                            {isSubcategory && <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />}
+                            <span className={isSubcategory ? 'text-sm font-normal' : 'text-sm font-semibold'}>
+                              {category.category_name}
+                            </span>
                           </div>
                           <div className="flex-1 text-sm text-muted-foreground">
                             {category.description || '-'}
                           </div>
-                          <div className="w-20 text-center text-sm text-muted-foreground">
-                            {category.display_order}
+                          <div className="w-24 text-center text-sm text-muted-foreground">
+                            {orderDisplay}
                           </div>
                         </div>
                       );

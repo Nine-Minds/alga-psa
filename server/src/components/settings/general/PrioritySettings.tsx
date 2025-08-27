@@ -21,6 +21,7 @@ import {
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { useSearchParams } from 'next/navigation';
+import { DeleteConfirmationDialog } from './dialogs/DeleteConfirmationDialog';
 
 interface PrioritySettingsProps {
   onShowConflictDialog?: (conflicts: ImportConflict[], type: 'priorities' | 'statuses', resolutions: Record<string, any>) => void;
@@ -43,6 +44,10 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
   const [availableReferencePriorities, setAvailableReferencePriorities] = useState<IStandardPriority[]>([]);
   const [selectedImportPriorities, setSelectedImportPriorities] = useState<string[]>([]);
   const [priorityColor, setPriorityColor] = useState('#6B7280');
+  
+  // Delete dialog state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [priorityToDelete, setPriorityToDelete] = useState<IPriority | null>(null);
 
   useEffect(() => {
     const initUser = async () => {
@@ -78,22 +83,32 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
     }
   };
 
-  const handleDeletePriority = async (priorityId: string): Promise<void> => {
+  const handleDeletePriorityRequest = (priorityId: string): void => {
     const priority = priorities.find(p => p.priority_id === priorityId);
     if (priority && 'tenant' in priority) {
-      if (!confirm(`Are you sure you want to delete the priority "${priority.priority_name}"? This action cannot be undone.`)) {
-        return;
-      }
+      setPriorityToDelete(priority as IPriority);
+      setShowDeleteDialog(true);
+    }
+  };
 
-      try {
-        await deletePriority(priorityId);
-        setPriorities(priorities.filter(p => p.priority_id !== priorityId));
-        toast.success('Priority deleted successfully');
-      } catch (error) {
-        console.error('Error deleting priority:', error);
-        const message = error instanceof Error ? error.message : 'Failed to delete priority';
+  const confirmDeletePriority = async (): Promise<void> => {
+    if (!priorityToDelete) return;
+
+    try {
+      await deletePriority(priorityToDelete.priority_id);
+      setPriorities(priorities.filter(p => p.priority_id !== priorityToDelete.priority_id));
+      toast.success('Priority deleted successfully');
+    } catch (error) {
+      console.error('Error deleting priority:', error);
+      const message = error instanceof Error ? error.message : 'Failed to delete priority';
+      if (message.toLowerCase().includes('in use') || message.toLowerCase().includes('referenced') || message.toLowerCase().includes('foreign key')) {
+        toast.error(`Cannot delete "${priorityToDelete.priority_name}" because it is currently in use.`);
+      } else {
         toast.error(message);
       }
+    } finally {
+      setShowDeleteDialog(false);
+      setPriorityToDelete(null);
     }
   };
 
@@ -262,7 +277,7 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
                     className="text-red-600 focus:text-red-600"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeletePriority(item.priority_id);
+                      handleDeletePriorityRequest(item.priority_id);
                     }}
                   >
                     Delete
@@ -574,6 +589,18 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        isOpen={showDeleteDialog}
+        onClose={() => {
+          setShowDeleteDialog(false);
+          setPriorityToDelete(null);
+        }}
+        itemName={priorityToDelete?.priority_name || ''}
+        itemType="Priority"
+        onConfirm={confirmDeletePriority}
+      />
     </div>
   );
 };
