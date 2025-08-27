@@ -10,7 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { MinusCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
+import { MinusCircle, XCircle, Info } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
@@ -348,14 +348,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    // Validate billing plan selection if multiple plans are available (skip for ad_hoc)
-    if (!isAdHoc && showBillingPlanSelector && eligibleBillingPlans.length > 1 && !entry?.billing_plan_id) {
-      setValidationErrors(prev => ({
-        ...prev,
-        billingPlan: 'Billing plan is required when multiple plans are available'
-      }));
-      return;
-    }
+    // Billing plan validation removed - billing plan is no longer required
 
     // Clear any existing validation errors
     setValidationErrors({});
@@ -490,7 +483,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 <div className="flex items-center">
                   <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                   <p className="text-sm text-blue-700">
-                    This service appears in multiple billing plans. Please select which plan to bill against.
+                    This service appears in multiple billing plans. You can optionally select which plan to bill against, or leave it blank to use the default.
                   </p>
                 </div>
               </div>
@@ -498,14 +491,14 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
             <div className="flex items-center space-x-1">
               <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
-                Billing Plan <span className="text-red-500">*</span>
+                Billing Plan <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <Tooltip content={
                 <p className="max-w-xs">
                   {!companyId
                     ? "Company information not available. The system will use the default billing plan."
                     : eligibleBillingPlans.length > 1
-                      ? "This service appears in multiple billing plans. Please select which plan to use for this time entry. Bucket plans are typically used first until depleted."
+                      ? "This service appears in multiple billing plans. You can optionally select which plan to use for this time entry, or leave it blank to use the default billing plan."
                       : eligibleBillingPlans.length === 1
                         ? `This time entry will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
                         : "No eligible billing plans found for this service."}
@@ -535,14 +528,14 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                   ? "No eligible plans"
                   : eligibleBillingPlans.length === 1
                     ? `Using ${eligibleBillingPlans[0].plan_name}`
-                      : "Select a billing plan"}
+                      : "Select a billing plan (optional)"}
               />
 
             {eligibleBillingPlans.length > 1 && (
               <div className="mt-1 text-xs text-gray-600">
                 <span className="flex items-center">
-                  <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                  Selecting the wrong plan may result in incorrect billing
+                  <Info className="h-3 w-3 text-blue-500 mr-1" />
+                  If no plan is selected, the system will use the default billing plan
                 </span>
               </div>
             )}

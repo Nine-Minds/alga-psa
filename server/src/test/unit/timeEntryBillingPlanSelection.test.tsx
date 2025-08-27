@@ -99,7 +99,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     expect(screen.getByText('Billing Plan')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan *');
+    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
@@ -145,7 +145,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     expect(screen.getByText('Billing Plan')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan *');
+    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
@@ -212,7 +212,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
   });
 
-  test('should validate billing plan selection when saving', async () => {
+  test('should allow saving without billing plan selection', async () => {
     // Mock the getCompanyIdForWorkItem function to return a company ID
     vi.mocked(planDisambiguation.getCompanyIdForWorkItem).mockResolvedValue('test-company-id');
     
@@ -261,10 +261,10 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     // Click the save button
     fireEvent.click(screen.getByText('Save'));
 
-    // The form should show a validation error
-    expect(screen.getByText('Billing plan is required when multiple plans are available')).toBeInTheDocument();
+    // The form should NOT show a validation error for missing billing plan
+    expect(screen.queryByText('Billing plan is required when multiple plans are available')).not.toBeInTheDocument();
 
-    // The onSave function should not be called
-    expect(mockOnSave).not.toHaveBeenCalled();
+    // The onSave function should be called since billing plan is no longer required
+    expect(mockOnSave).toHaveBeenCalledWith(0);
   });
 });
