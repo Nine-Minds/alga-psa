@@ -42,15 +42,18 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onOpenChange(false)}>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh]">
+    <Dialog 
+      isOpen={open} 
+      onClose={() => onOpenChange(false)}
+      title="Import Standard Statuses"
+      className="max-w-2xl"
+      id="import-status-dialog"
+    >
+      <DialogContent>
         <div className="flex flex-col h-full">
-          <div className="pb-4 border-b">
-            <h2 className="text-lg font-semibold">Import Standard Statuses</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Select the standard statuses you want to import
-            </p>
-          </div>
+          <p className="text-sm text-gray-500 mb-4">
+            Select the standard statuses you want to import
+          </p>
           
           <div className="flex items-center justify-between py-3 border-b">
             <div className="flex items-center space-x-2">
@@ -108,8 +111,9 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
               )}
             </div>
           </div>
-          
-          <DialogFooter>
+        </div>
+      </DialogContent>
+      <DialogFooter>
             <Button
               id="cancel-import-button"
               variant="outline"
@@ -125,9 +129,7 @@ export const StatusImportDialog: React.FC<StatusImportDialogProps> = ({
             >
               Import Selected ({selectedStatuses.length})
             </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
+      </DialogFooter>
     </Dialog>
   );
 };

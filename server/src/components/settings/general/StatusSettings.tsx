@@ -457,6 +457,7 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
         editingStatus={editingStatus}
         selectedStatusType={selectedStatusType}
         userId={userId}
+        existingStatuses={statuses}
         onSuccess={async () => {
           const updatedStatuses = await getStatuses(selectedStatusType);
           setStatuses(updatedStatuses);

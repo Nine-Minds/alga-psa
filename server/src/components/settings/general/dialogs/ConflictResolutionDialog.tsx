@@ -76,17 +76,22 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
   };
 
   return (
-    <Dialog isOpen={open} onClose={() => onOpenChange(false)}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+    <Dialog 
+      isOpen={open} 
+      onClose={() => onOpenChange(false)}
+      title="Resolve Import Conflicts"
+      className="max-w-3xl"
+      id="conflict-resolution-dialog"
+    >
+      <DialogContent>
         <div className="flex flex-col h-full">
           <div className="pb-4 border-b">
             <div className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-yellow-500" />
-              <h2 className="text-lg font-semibold">Resolve Import Conflicts</h2>
+              <p className="text-sm text-gray-500">
+                Some items already exist. Choose how to handle each conflict.
+              </p>
             </div>
-            <p className="text-sm text-gray-500 mt-1">
-              Some items already exist. Choose how to handle each conflict.
-            </p>
           </div>
           
           <div className="flex-1 overflow-y-auto py-4">
@@ -181,8 +186,9 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
               })}
             </div>
           </div>
-          
-          <DialogFooter>
+        </div>
+      </DialogContent>
+      <DialogFooter>
             <Button
               id="cancel-conflict-button"
               variant="outline"
@@ -197,9 +203,7 @@ export const ConflictResolutionDialog: React.FC<ConflictResolutionDialogProps> =
             >
               Apply Resolutions
             </Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
+      </DialogFooter>
     </Dialog>
   );
 };
