@@ -200,10 +200,11 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
+      width: '15%',
       render: (value: string, record: ITicketListItem) => (
         <button
           onClick={() => handleTicketClick(record.ticket_id as string)}
-          className="text-blue-500 hover:underline cursor-pointer bg-transparent border-none p-0"
+          className="text-blue-500 hover:underline cursor-pointer bg-transparent border-none p-0 break-words text-left"
         >
           {value}
         </button>

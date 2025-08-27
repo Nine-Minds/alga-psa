@@ -319,7 +319,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       col: {
         title: 'Ticket Number',
         dataIndex: 'ticket_number',
-        width: '9%',
+        width: '15%',
         render: (value: string, record: ITicketListItem) => {
           const filterQuery = getCurrentFiltersQuery();
           const href = filterQuery 
@@ -327,13 +327,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
             : `/msp/tickets/${record.ticket_id}`;
           
           return (
-            <Link
-              id={`ticket-number-link-${record.ticket_id}`}
-              href={href}
-              className="text-blue-500 hover:underline"
-            >
-              {value}
-            </Link>
+            <div className="max-w-full overflow-hidden">
+              <Link
+                id={`ticket-number-link-${record.ticket_id}`}
+                href={href}
+                className="text-blue-500 hover:underline break-words word-break text-sm whitespace-normal"
+                style={{ wordBreak: 'break-all' }}
+              >
+                {value}
+              </Link>
+            </div>
           );
         },
       }

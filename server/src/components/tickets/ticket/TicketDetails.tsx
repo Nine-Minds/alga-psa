@@ -1103,7 +1103,7 @@ const handleClose = () => {
                         {!isInDrawer && (
                             <BackNav href="/msp/tickets">Back to Tickets</BackNav>
                         )}
-                        <h6 className="text-sm font-medium whitespace-nowrap">#{ticket.ticket_number}</h6>
+                        <h6 className="text-sm font-medium text-nowrap flex-shrink-0">#{ticket.ticket_number}</h6>
                         <h1 className="text-xl font-bold break-words max-w-full min-w-0 flex-1" style={{overflowWrap: 'break-word', wordBreak: 'break-word', whiteSpace: 'pre-wrap'}}>{ticket.title}</h1>
                     </div>
                     
