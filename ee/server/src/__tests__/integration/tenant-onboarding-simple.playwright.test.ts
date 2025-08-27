@@ -26,21 +26,21 @@ test.describe('Tenant Onboarding Database Tests', () => {
       // Verify tenant exists in database
       const tenant = await db('tenants')
         .where('tenant', tenantData.tenant.tenantId)
-        .first();
+        .first() as { tenant: string; tenant_name: string } | undefined;
       expect(tenant).toBeDefined();
       
       // Verify admin user exists
       const user = await db('users')
         .where('user_id', tenantData.adminUser.userId)
-        .first();
+        .first() as { user_id: string; tenant: string; email: string } | undefined;
       expect(user).toBeDefined();
-      expect(user.tenant).toBe(tenantData.tenant.tenantId);
+      expect(user?.tenant).toBe(tenantData.tenant.tenantId);
       
       // Verify user role assignment
       const userRole = await db('user_roles')
         .where('user_id', tenantData.adminUser.userId)
         .where('tenant', tenantData.tenant.tenantId)
-        .first();
+        .first() as { user_id: string; role_id: string; tenant: string } | undefined;
       expect(userRole).toBeDefined();
       
       // Clean up
@@ -49,7 +49,7 @@ test.describe('Tenant Onboarding Database Tests', () => {
       // Verify cleanup worked
       const cleanedTenant = await db('tenants')
         .where('tenant', tenantData.tenant.tenantId)
-        .first();
+        .first() as { tenant: string } | undefined;
       expect(cleanedTenant).toBeUndefined();
       
     } finally {
@@ -109,10 +109,10 @@ test.describe('Tenant Onboarding Database Tests', () => {
       
       // Verify tenant 1 user can't see tenant 2 data
       const tenant1Users = await db('users')
-        .where('tenant', tenant1.tenant.tenantId);
+        .where('tenant', tenant1.tenant.tenantId) as Array<{ user_id: string; tenant: string; email: string }>;
       
       const tenant2Users = await db('users')
-        .where('tenant', tenant2.tenant.tenantId);
+        .where('tenant', tenant2.tenant.tenantId) as Array<{ user_id: string; tenant: string; email: string }>;
       
       expect(tenant1Users.length).toBe(1);
       expect(tenant2Users.length).toBe(1);
@@ -120,10 +120,10 @@ test.describe('Tenant Onboarding Database Tests', () => {
       
       // Verify companies are separate
       const tenant1Companies = await db('companies')
-        .where('tenant', tenant1.tenant.tenantId);
+        .where('tenant', tenant1.tenant.tenantId) as Array<{ company_id: string; tenant: string; company_name: string }>;
         
       const tenant2Companies = await db('companies')
-        .where('tenant', tenant2.tenant.tenantId);
+        .where('tenant', tenant2.tenant.tenantId) as Array<{ company_id: string; tenant: string; company_name: string }>;
       
       expect(tenant1Companies.length).toBe(1);
       expect(tenant2Companies.length).toBe(1);

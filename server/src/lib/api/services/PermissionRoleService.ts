@@ -448,7 +448,7 @@ export class PermissionRoleService extends BaseService<IRole> {
 
     // User count filters
     if (filters.user_count_min !== undefined || filters.user_count_max !== undefined) {
-      const havingConditions = [];
+      const havingConditions: Knex.Raw[] = [];
       if (filters.user_count_min !== undefined) {
         havingConditions.push(knex.raw('COUNT(DISTINCT ur.user_id) >= ?', [filters.user_count_min]));
       }
@@ -549,8 +549,11 @@ export class PermissionRoleService extends BaseService<IRole> {
 
   /**
    * Create method for base controller compatibility
+   * Overloads for BaseService compatibility
    */
-  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole> {
+  async create(data: Partial<IRole>, context: ServiceContext): Promise<IRole>;
+  async create(data: CreateRoleData, context: ServiceContext): Promise<IRole>;
+  async create(data: any, context: ServiceContext): Promise<IRole> {
     const role = await this.createRole(data, context);
     // Transform RoleResponse to IRole
     return {
@@ -1551,7 +1554,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const results = [];
+      const results: RoleResponse[] = [];
       
       for (const roleData of data.roles) {
         try {
@@ -1574,7 +1577,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      const results = [];
+      const results: RoleResponse[] = [];
       
       for (const update of data.updates) {
         try {
@@ -1598,7 +1601,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     
     return withTransaction(knex, async (trx) => {
       let deletedCount = 0;
-      const errors = [];
+      const errors: string[] = [];
       
       for (const roleId of data.role_ids) {
         try {
@@ -1667,7 +1670,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       // Check required permissions
-      const missingPermissions = [];
+      const missingPermissions: any[] = [];
       if (feature.required_permissions) {
         for (const permCheck of feature.required_permissions) {
           const result = await this.checkUserPermission(
@@ -1683,7 +1686,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       }
 
       // Check required roles
-      const missingRoles = [];
+      const missingRoles: string[] = [];
       if (feature.required_roles && feature.required_roles.length > 0) {
         const userRoles = await this.getUserRoles(userId, context);
         const userRoleIds = userRoles.map(r => r.role_id);

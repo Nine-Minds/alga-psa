@@ -4,10 +4,11 @@ import { MenuItem } from '../../config/menuConfig';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent } from 'server/src/types/ui-reflection/types';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
+import { Construction } from 'lucide-react';
 
 interface SidebarMenuItemProps {
   id: string;
-  item: MenuItem;
+  item: MenuItem & { underConstruction?: boolean };
   isActive: (path: string) => boolean;
   sidebarOpen: boolean;
   openSubmenu: string | null;
@@ -58,7 +59,14 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
         {...automationIdProps}
       >
       <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
-      {sidebarOpen && <span className="truncate">{item.name}</span>}
+      {sidebarOpen && (
+        <>
+          <span className="truncate">{item.name}</span>
+          {item.underConstruction && (
+            <Construction className="h-4 w-4 ml-auto flex-shrink-0 text-yellow-500" />
+          )}
+        </>
+      )}
     </a>
   );
 };

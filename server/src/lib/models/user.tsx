@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 import { IUser, IRole, IUserRole, IUserWithRoles, IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
 import { getConnection } from 'server/src/lib/db/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
@@ -38,10 +38,26 @@ const User = {
   findUserByEmail: async (email: string): Promise<IUser | undefined> => {
     const db = await getAdminConnection();
     try {
-      const user = await db<IUser>('users').select('*').where({ email }).first();
+      const user = await db<IUser>('users').select('*').where({ email: email.toLowerCase() }).first();
       return user;
     } catch (error) {
       logger.error(`Error finding user with email ${email}:`, error);
+      throw error;
+    }
+  },
+
+  // Find a user by email and user_type (e.g., 'internal' vs 'client').
+  // Email is normalized to lowercase to avoid case-sensitivity issues.
+  findUserByEmailAndType: async (email: string, userType: 'internal' | 'client'): Promise<IUser | undefined> => {
+    const db = await getAdminConnection();
+    try {
+      const user = await db<IUser>('users')
+        .select('*')
+        .where({ email: email.toLowerCase(), user_type: userType })
+        .first();
+      return user;
+    } catch (error) {
+      logger.error(`Error finding user with email ${email} and type ${userType}:`, error);
       throw error;
     }
   },
@@ -51,7 +67,7 @@ const User = {
     try {
       const user = await knexOrTrx<IUser>('users')
         .select('*')
-        .where('username', username)
+        .where('username', username.toLowerCase())
         .andWhere('tenant', tenant)
         .first();
       return user;
@@ -69,7 +85,6 @@ const User = {
         .where('tenant', tenant)
         .orderBy('created_at', 'asc')
         .first();
-      console.log('oldest user ', oldestUser);
       return oldestUser;
     } catch (error) {
       logger.error('Error finding oldest user:', error);
@@ -161,7 +176,7 @@ const User = {
   updatePassword: async (email: string, hashed_password: string): Promise<void> => {
     const db = await getAdminConnection();
     try {
-      await db<IUser>('users').where({ email }).update({ hashed_password });
+      await db<IUser>('users').where({ email: email.toLowerCase() }).update({ hashed_password });
       logger.system(`Password updated for user with email ${email}`);
     } catch (error) {
       logger.error(`Error updating password for user with email ${email}:`, error);

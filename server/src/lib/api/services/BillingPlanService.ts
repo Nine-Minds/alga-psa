@@ -255,8 +255,11 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
 
   /**
    * Create new billing plan with validation and audit trail
+   * Overloads for BaseService compatibility
    */
-  async create(data: CreateBillingPlanData, context: ServiceContext): Promise<any> {
+  async create(data: Partial<IBillingPlan>, context: ServiceContext): Promise<IBillingPlan>;
+  async create(data: CreateBillingPlanData, context: ServiceContext): Promise<any>;
+  async create(data: any, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
       return withTransaction(knex, async (trx) => {

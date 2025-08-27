@@ -81,6 +81,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.tenant',
         's.name as status_name',
         'p.priority_name',
+        'p.color as priority_color',
         'c.channel_name',
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -186,7 +187,8 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         .select(
           't.*',
           's.name as status_name',
-          'p.priority_name'
+          'p.priority_name',
+          'p.color as priority_color'
         )
         .leftJoin('statuses as s', function() {
           this.on('t.status_id', '=', 's.status_id')
@@ -568,6 +570,31 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         throw new Error('Contact not associated with a company');
       }
 
+      // Fetch default channel for client portal tickets
+      const defaultChannel = await trx('channels')
+        .where({
+          tenant,
+          is_default: true
+        })
+        .first();
+
+      if (!defaultChannel) {
+        throw new Error('No default channel configured for tickets');
+      }
+
+      // Fetch default status for tickets
+      const defaultStatus = await trx('statuses')
+        .where({
+          tenant,
+          is_default: true,
+          item_type: 'ticket'
+        })
+        .first();
+
+      if (!defaultStatus) {
+        throw new Error('No default status configured for tickets');
+      }
+
       // Validate input data using shared validation approach
       const validatedData = validateData(clientTicketSchema, {
         title: data.get('title'),
@@ -583,7 +610,9 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         company_id: contact.company_id,
         contact_id: user.contact_id, // Maps to contact_name_id in database
         entered_by: session.user.id,
-        source: 'client_portal'
+        source: 'client_portal',
+        channel_id: defaultChannel.channel_id,
+        status_id: defaultStatus.status_id
       };
 
       // Create adapters for client portal context

@@ -119,7 +119,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
           const users = await getAllUsers();
           setInternalUsers(users);
         } catch (error: any) {
-          console.error("Error fetching internal users:", error);
+          console.error("Error fetching MSP users:", error);
           toast.error("Failed to load users for Account Manager selection.");
         } finally {
           setIsLoadingUsers(false);
@@ -569,7 +569,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </Label>
                 <TextArea
                   data-automation-id="notes"
-                  value={formData.notes}
+                  value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
                   placeholder="Add any initial notes (optional)"
                   disabled={isSubmitting}

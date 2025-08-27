@@ -9,15 +9,18 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Button } from 'server/src/components/ui/Button';
-import { Input } from 'server/src/components/ui/Input';
-import { Label } from 'server/src/components/ui/Label';
-import { Switch } from 'server/src/components/ui/Switch';
-import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
+import { Switch } from '@/components/ui/Switch';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { CheckCircle, Clock, Shield } from 'lucide-react';
-import type { EmailProvider } from 'server/src/components/EmailProviderConfiguration';
-import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from 'server/src/lib/actions/email-actions/emailProviderActions';
+import type { EmailProvider } from '@/components/EmailProviderConfiguration';
+import { createEmailProvider, updateEmailProvider, upsertEmailProvider, getHostedMicrosoftConfig } from '@/lib/actions/email-actions/emailProviderActions';
+import { initiateEmailOAuth } from '@/lib/actions/email-actions/oauthActions';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { getInboundTicketDefaults } from '@/lib/actions/email-actions/inboundTicketDefaultsActions';
 
 const eeMicrosoftProviderSchema = z.object({
   providerName: z.string().min(1, 'Provider name is required'),
@@ -25,7 +28,8 @@ const eeMicrosoftProviderSchema = z.object({
   isActive: z.boolean(),
   autoProcessEmails: z.boolean(),
   folderFilters: z.string().optional(),
-  maxEmailsPerSync: z.number().min(1).max(1000)
+  maxEmailsPerSync: z.number().min(1).max(1000),
+  inboundTicketDefaultsId: z.string().uuid().optional()
 });
 
 type EEMicrosoftProviderFormData = z.infer<typeof eeMicrosoftProviderSchema>;
@@ -49,6 +53,7 @@ export function MicrosoftProviderForm({
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [oauthData, setOauthData] = useState<any>(null);
   const [autoSubmitCountdown, setAutoSubmitCountdown] = useState<number | null>(null);
+  const [defaultsOptions, setDefaultsOptions] = useState<{ value: string; label: string }[]>([]);
 
   const isEditing = !!provider;
 
@@ -69,14 +74,33 @@ export function MicrosoftProviderForm({
       isActive: provider.isActive,
       autoProcessEmails: provider.microsoftConfig.auto_process_emails ?? true,
       folderFilters: provider.microsoftConfig.folder_filters?.join(', ') || '',
-      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50
+      maxEmailsPerSync: provider.microsoftConfig.max_emails_per_sync ?? 50,
+      inboundTicketDefaultsId: (provider as any).inboundTicketDefaultsId || undefined
     } : {
       isActive: true,
       autoProcessEmails: true,
       folderFilters: '',
-      maxEmailsPerSync: 50
+      maxEmailsPerSync: 50,
+      inboundTicketDefaultsId: undefined
     }
   });
+
+  // Load inbound ticket defaults and respond to refresh event
+  useEffect(() => {
+    const loadDefaults = async () => {
+      try {
+        const res = await getInboundTicketDefaults();
+        const options = (res.defaults || []).map((d) => ({ value: d.id, label: d.display_name || d.short_name }));
+        setDefaultsOptions(options);
+      } catch (e) {
+        console.error('Failed to load inbound defaults', e);
+      }
+    };
+    loadDefaults();
+    const onUpdate = () => loadDefaults();
+    window.addEventListener('inbound-defaults-updated', onUpdate as any);
+    return () => window.removeEventListener('inbound-defaults-updated', onUpdate as any);
+  }, []);
 
   const onSubmit = async (data: EEMicrosoftProviderFormData, providedOauthData?: any) => {
     setHasAttemptedSubmit(true);
@@ -101,6 +125,7 @@ export function MicrosoftProviderForm({
         providerName: data.providerName,
         mailbox: data.mailbox,
         isActive: data.isActive,
+        inboundTicketDefaultsId: data.inboundTicketDefaultsId,
         microsoftConfig: {
           // EE hosted environment handles OAuth credentials automatically
           auto_process_emails: data.autoProcessEmails,
@@ -162,6 +187,7 @@ export function MicrosoftProviderForm({
           providerName: formData.providerName,
           mailbox: formData.mailbox,
           isActive: formData.isActive,
+          inboundTicketDefaultsId: (form.getValues() as any).inboundTicketDefaultsId || undefined,
           microsoftConfig: {
             auto_process_emails: formData.autoProcessEmails,
             folder_filters: formData.folderFilters ? formData.folderFilters.split(',').map(f => f.trim()) : ['Inbox'],
@@ -178,25 +204,15 @@ export function MicrosoftProviderForm({
         providerId = result.provider.id;
       }
 
-      // Get OAuth URL from API - EE version uses hosted OAuth configuration
-      const response = await fetch('/api/email/oauth/initiate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          provider: 'microsoft',
-          providerId: providerId,
-          hosted: true // Flag to indicate hosted environment
-        })
+      // Get OAuth URL via server action (hosted config auto-detected)
+      const oauthInit = await initiateEmailOAuth({
+        provider: 'microsoft',
+        providerId,
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to initiate OAuth');
+      if (!oauthInit.success) {
+        throw new Error(oauthInit.error || 'Failed to initiate OAuth');
       }
-
-      const { authUrl } = await response.json();
+      const { authUrl } = oauthInit;
 
       // Open OAuth popup
       const popup = window.open(
@@ -420,15 +436,6 @@ export function MicrosoftProviderForm({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="autoProcessEmails"
-              checked={form.watch('autoProcessEmails')}
-              onCheckedChange={(checked: boolean) => form.setValue('autoProcessEmails', checked)}
-            />
-            <Label htmlFor="autoProcessEmails">Automatically process new emails</Label>
-          </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="folderFilters">Folders to Monitor</Label>
@@ -455,6 +462,41 @@ export function MicrosoftProviderForm({
                 Maximum number of emails to process in each sync (1-1000)
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Ticket Defaults selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ticket Defaults</CardTitle>
+          <CardDescription>
+            Select defaults to apply to email-created tickets
+            <Button
+              id="manage-defaults-link"
+              type="button"
+              variant="link"
+              className="ml-2 p-0 h-auto"
+              onClick={() => window.dispatchEvent(new CustomEvent('open-defaults-tab'))}
+            >
+              Manage defaults
+            </Button>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CustomSelect
+            id="ee-microsoft-inbound-defaults-select"
+            label="Inbound Ticket Defaults"
+            value={(form.watch('inboundTicketDefaultsId') as any) || ''}
+            onValueChange={(v) => form.setValue('inboundTicketDefaultsId', v || undefined)}
+            options={defaultsOptions}
+            placeholder="Select defaults (optional)"
+            allowClear
+          />
+          <div className="text-right">
+            <Button id="refresh-defaults-list" type="button" variant="outline" size="sm" onClick={() => window.dispatchEvent(new CustomEvent('inbound-defaults-updated'))}>
+              Refresh list
+            </Button>
           </div>
         </CardContent>
       </Card>

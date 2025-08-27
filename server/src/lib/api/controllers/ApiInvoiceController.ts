@@ -632,8 +632,8 @@ export class ApiInvoiceController extends ApiBaseController {
           const data = bulkInvoiceCreditSchema.parse(body);
           
           // Process each invoice individually
-          const results = [];
-          const errors = [];
+          const results: any[] = [];
+          const errors: string[] = [];
           
           for (const invoiceId of data.invoice_ids) {
             try {

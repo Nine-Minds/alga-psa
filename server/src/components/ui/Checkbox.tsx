@@ -21,15 +21,15 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
   ...props 
 }) => {
   // Register with UI reflection system if id is provided
-  const updateMetadata = id ? useRegisterUIComponent<FormFieldComponent>({
+  const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
     type: 'formField',
     fieldType: 'checkbox',
-    id,
+    id: id || '__skip_registration_checkbox',
     label,
     value: checked,
     disabled,
     required
-  }) : undefined;
+  });
 
   // Update metadata when field props change
   useEffect(() => {

@@ -1,0 +1,21 @@
+{{- if and .Values.hostedEnv.enabled .Values.hostedEnv.codeServer.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: code-server
+  namespace: {{ .Values.hostedEnv.namespace }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+    app.kubernetes.io/component: code-server-alias
+spec:
+  type: ExternalName
+  externalName: {{ include "sebastian.fullname" . }}-code-server.{{ .Values.hostedEnv.namespace }}.svc.cluster.local
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+    - name: app
+      port: 3000
+      targetPort: 3000
+{{- end }}
+

@@ -1,4 +1,4 @@
-import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '../../../../shared/workflow/core';
+import { WorkflowContext, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from '@alga-psa/shared/workflow/core';
 
 // Define WorkflowState as a simple object instead of an enum for better portability during transpilation
 const WorkflowState = {

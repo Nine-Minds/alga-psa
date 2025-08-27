@@ -94,7 +94,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
   }, []);
 
   const validateForm = () => {
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!formData.name.trim()) validationErrors.push('Name');
     if (!formData.asset_tag.trim()) validationErrors.push('Asset Tag');
     if (!formData.asset_type) validationErrors.push('Asset Type');

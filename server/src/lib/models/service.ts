@@ -115,7 +115,8 @@ const Service = {
           'sc.tenant',
           // Select the service type name from custom type
           'ct.name as service_type_name'
-        );
+        )
+        .orderBy('sc.service_name', 'asc');
       log.info(`[Service.getAll] Found ${servicesData.length} services`);
 
       // Validate and transform using the final schema's parse method

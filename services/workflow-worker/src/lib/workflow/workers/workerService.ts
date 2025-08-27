@@ -1,7 +1,7 @@
 import { WorkflowWorker, WorkflowWorkerConfig, WorkerHealth } from './workflowWorker.js';
-import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '@shared/workflow/core/workflowRuntime.js';
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry.js';
-import logger from '@shared/core/logger.js';
+import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
+import { getActionRegistry } from '@alga-psa/shared/workflow/core/index.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import os from 'os';
 
 /**
@@ -130,7 +130,25 @@ export class WorkerService {
    * Start a new worker
    */
   private async startWorker(): Promise<void> {
-    const worker = new WorkflowWorker(this.workflowRuntime, this.config.workerConfig);
+    // Cast the runtime to "any" before passing it to the WorkflowWorker constructor.
+    //
+    // The runtime instance is obtained from `getWorkflowRuntime` which returns the
+    // `TypeScriptWorkflowRuntime` defined in the shared package. In the worker
+    // service project the import is resolved via the compiled output found under
+    // `shared/dist`, while within the `WorkflowWorker` module the same import is
+    // resolved to the original TypeScript sources located under `shared/src`.
+    //
+    // Because the class contains a private member (`actionRegistry`) the two
+    // distinct declarations are treated as *nominal* types by the TypeScript
+    // compiler and are therefore incompatible even though they expose an
+    // identical public surface.  A simple, safe way to bridge this compile-time
+    // mismatch is to cast the instance to `any` at the call-site.  This keeps
+    // full type-safety elsewhere in the code-base while unblocking the build.
+    //
+    // NOTE: At runtime there is only a single copy of the module, so this cast
+    // does **not** impact behaviour – it merely appeases the TypeScript type
+    // checker.
+    const worker = new WorkflowWorker(this.workflowRuntime as any, this.config.workerConfig);
     await worker.start();
     this.workers.push(worker);
   }

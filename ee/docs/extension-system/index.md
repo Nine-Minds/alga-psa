@@ -1,78 +1,57 @@
-# Alga PSA Extension System Documentation
+# Alga PSA Extension System Documentation (Enterprise)
 
-## Overview Documents
+## Overview
 
-1. [Client Extension System Overview](overview.md)
-   - Core architecture
-   - Extension points
-   - Security model
-   - Implementation approach
-   
-2. [Extension System Implementation Plan](implementation_plan.md)
-   - Phased implementation approach
-   - Resource requirements
-   - CE vs EE feature differentiation
-   - Success criteria and roadmap
+1. [Overview](overview.md)
+   - Goals and isolation model
+   - Architecture components (Runner, Registry, Gateway, UI)
+   - Security and quotas
+
+2. [Implementation Plan](implementation_plan.md)
+3. [Runner Service](runner.md)
+   - Responsibilities and interfaces
+   - Static UI asset hosting
+   - Execution model, quotas, and host APIs
 
 ## Technical Specifications
 
-1. [Extension Manifest Schema](manifest_schema.md)
-   - Schema definition
-   - Basic validation rules
-   - Examples
-   
-2. [Extension Registry Implementation](registry_implementation.md)
-   - Core registry service
-   - Extension context
-   - UI extension components
-   - Basic security considerations
+1. [Manifest v2 Schema](manifest_schema.md)
+   - Schema definition and examples
+   - Endpoints, ui.iframe, capabilities, precompiled artifacts, assets
+
+2. [Registry Implementation](registry_implementation.md)
+   - Data model (registry, version, bundle, install, logs)
+   - Services (publish/list/get/install)
+
+3. [API Routing Guide](api-routing-guide.md)
+   - `/api/ext/[extensionId]/[...]` gateway → Runner
+   - Header, limit, and timeout policies
+
+4. [Security & Signing](security_signing.md)
+   - Content‑addressed bundles (sha256:…)
+   - Signature verification and trust bundles
+   - Quotas and egress allowlists
 
 ## Developer Resources
 
-1. [Extension Development Guide](development_guide.md)
-   - Getting started
-   - Development workflow
-   - Best practices
-   - SDK reference
-   
-2. [Sample Extension Template](sample_template.md)
-   - File structure
-   - Code examples
-   - Build and packaging instructions
-   - Testing
+1. [Development Guide](development_guide.md)
+   - Building server handlers (WASM-first) that execute in the Runner
+   - Iframe UI with SDK and UI kit (served by the Runner)
+   - Packaging, signing, and publishing bundles
 
-## Implementation Roadmap
+2. [DataTable Integration Guide](datatable-integration-guide.md)
+   - Using the UI kit DataTable in iframe apps
 
-### Phase 1: Minimum Viable Extension System (Current Focus)
-- Core registry with basic lifecycle management
-- Simple extension manifest validation
-- Local extension loading (no marketplace)
-- Basic extension administration UI
+3. [Sample Extension](sample_template.md)
+   - Project structure
+   - Gateway usage
+   - End‑to‑end example
 
-### Phase 2: Core UI Extensions (Current Focus)
-- Navigation menu items
-- Dashboard widgets
-- Custom standalone pages
+## Core Rules (v2-only)
 
-### Phase 3: Basic API Extensions (Current Focus)
-- Simple custom API endpoints
-- Basic permission model
-- Manual approval process
+- All extension API requests use `/api/ext/[extensionId]/[...]` and are proxied to the Runner `POST /v1/execute` (see [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)).
+- UI is iframe-only and served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`.
+- The host constructs iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and bootstraps via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
+- Registry v2 is authoritative for extension versions and bundle metadata (see [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)).
 
-### Phase 4: Future Expansion
-- Entity page extensions
-- Workflow customization
-- Data model extensions
-- Advanced security features
-- Extension marketplace
-- Advanced developer tools
-
-## Next Steps (80/20 Approach)
-
-1. Create database migration for basic extension tables
-2. Implement minimal extension registry service
-3. Develop basic manifest validation using Zod
-4. Build simple extension lifecycle management
-5. Create UI extension slots for navigation and dashboard
-6. Develop custom page support
-7. Implement basic API endpoint extension support
+See the [Implementation Plan](implementation_plan.md) for additional details.

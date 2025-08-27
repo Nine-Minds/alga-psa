@@ -1,7 +1,7 @@
 import { createClient } from 'redis';
 import type { RedisClientType, RedisClientOptions } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import { getSecret } from '../../core/getSecret.js';
 import { 
   WorkflowEventBase, 
@@ -518,7 +518,7 @@ export class RedisStreamClient {
             }
             
             // Process messages in batches to improve efficiency
-            const processingPromises = [];
+            const processingPromises: Promise<void>[] = [];
             
             for (const message of messages) {
               processingPromises.push((async () => {
@@ -578,7 +578,7 @@ export class RedisStreamClient {
             }
             
             // Process claimed messages in batches
-            const claimedProcessingPromises = [];
+            const claimedProcessingPromises: Promise<void>[] = [];
             
             for (const message of claimedMessages) {
               claimedProcessingPromises.push((async () => {

@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { IPlanServiceRateTier, IUserTypeRate } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IPlanService } from 'server/src/interfaces/billing.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -275,7 +275,7 @@ export async function getPlanServicesWithConfigurations(planId: string): Promise
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(planId);
 
   // Get service details including service type name for each configuration
-  const result = [];
+  const result: Array<{ service: IService & { service_type_name?: string }; configuration: IPlanServiceConfiguration; typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null; userTypeRates?: IUserTypeRate[] }> = [];
   for (const config of configurations) {
     // Join service_catalog with service_types to get the name
     const service = await trx('service_catalog as sc')

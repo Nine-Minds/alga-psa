@@ -6,11 +6,11 @@ import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from 'server/src/lib/models/document';
 import { marked } from 'marked';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger';
 import { downloadDocument } from 'server/src/lib/actions/document-actions/documentActions';
 import { createPDFGenerationService } from 'server/src/services/pdf-generation.service';
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         headers.set('Content-Type', 'application/pdf');
         headers.set('Content-Disposition', `attachment; filename="${document.document_name || 'document'}.pdf"`);
         
-        return new NextResponse(result.buffer, { status: 200, headers });
+        return new Response(result.buffer as any, { status: 200, headers });
       } catch (pdfError) {
         logger.error(`Error generating PDF for document ${documentId}:`, pdfError);
         return NextResponse.json({ error: 'Failed to generate PDF.' }, { status: 500 });

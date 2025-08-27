@@ -1,16 +1,11 @@
 /**
  * UI Extension System
- * 
- * Exports all components needed for UI extensions
+ *
+ * Descriptor-based UI, tabs/pages/navigation, and host-side renderer have been removed.
+ * Runner iframe is now the only supported rendering mechanism.
+ *
+ * Public exports are limited to iframe bridge utilities and ExtensionProvider (if still used).
  */
 
-export * from './types';
 export * from './ExtensionProvider';
-export * from './ExtensionSlot';
-export * from './ExtensionRenderer';
-export * from './ExtensionErrorBoundary';
-
-// Export specific extension point components
-export * from './tabs';
-export * from './navigation';
-export * from './pages';
+export * from './iframeBridge';

@@ -82,6 +82,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       const result = await signIn('credentials', {
         email,
         password,
+        userType: 'client',
         redirect: false,
         callbackUrl,
       })
@@ -104,7 +105,12 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4" {...withDataAutomationId({ id: 'client-login-form' })}>
+    <form 
+      onSubmit={onSubmit} 
+      method="POST"
+      className="space-y-4" 
+      {...withDataAutomationId({ id: 'client-login-form' })}
+    >
       <div className="space-y-2">
         <Label htmlFor="client-email-field">Email</Label>
         <Input
@@ -164,7 +170,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
       <div className="text-sm">
         <Link
-          href="/client-portal/auth/forgot-password"
+          href="/auth/forgot-password"
           className="text-blue-600 hover:text-blue-800 transition-colors"
           {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >

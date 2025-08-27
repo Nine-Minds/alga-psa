@@ -1,8 +1,8 @@
 'use server';
 
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from "./user-actions/userActions";
-import logger from "@shared/core/logger.js";
+import logger from "@alga-psa/shared/core/logger.js";
 import { z } from "zod";
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';

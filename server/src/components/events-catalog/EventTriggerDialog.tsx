@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "server/src/components/
 import { Card } from "server/src/components/ui/Card";
 import { Trash2, Plus, ArrowRight } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@shared/workflow/types/eventCatalog";
+import { IEventCatalogEntry, ICreateWorkflowEventAttachment, ICreateWorkflowTrigger, ICreateWorkflowEventMapping } from "@alga-psa/shared/workflow";
 import { createWorkflowTrigger, createWorkflowEventMappings } from "server/src/lib/actions/workflow-trigger-actions";
 import { createWorkflowEventAttachment } from "server/src/lib/actions/workflow-event-attachment-actions";
 import { getAllWorkflowRegistrations } from "server/src/lib/actions/workflow-runtime-actions";
@@ -123,7 +123,7 @@ export default function EventTriggerDialog({ isOpen, onClose, event }: EventTrig
   const handleSubmit = async () => {
     setHasAttemptedSubmit(true);
     
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!selectedWorkflowId) validationErrors.push("Workflow");
     if (!triggerName.trim()) validationErrors.push("Trigger Name");
     

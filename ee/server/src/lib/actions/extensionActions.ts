@@ -1,11 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { createTenantKnex } from 'server/src/lib/db'
-import { withTransaction } from '@shared/db'
+import { createTenantKnex } from '@/lib/db'
+import { withTransaction } from '@alga-psa/shared/db'
 import { ExtensionRegistry } from '../extensions/registry'
 import { ExtensionStorageService } from '../extensions/storage/storageService'
-import logger from '@shared/core/logger'
+import logger from '@alga-psa/shared/core/logger.js'
 import { Extension, ExtensionManifest } from '../extensions/types'
 import { Knex } from 'knex'
 

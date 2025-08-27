@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { fetchExtensions, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
+import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { Extension } from '../../../lib/extensions/types';
 import ExtensionDetailsModal from './ExtensionDetailsModal';
 
@@ -51,8 +51,8 @@ export default function Extensions() {
   useEffect(() => {
     const loadExtensions = async () => {
       try {
-        const extensionsData = await fetchExtensions();
-        setExtensions(extensionsData.map(convertExtensionToUI));
+        const v2 = await fetchInstalledExtensionsV2();
+        setExtensions(v2.map((r: any) => ({ id: r.id, name: r.name, description: '', version: r.version, author: r.author || 'Unknown', isEnabled: r.is_enabled, createdAt: new Date(), updatedAt: new Date(), tenantId: r.tenant_id })));
         setLoading(false);
       } catch (err) {
         console.error('Failed to fetch extensions', err);
@@ -67,7 +67,7 @@ export default function Extensions() {
   // Handle enabling/disabling extensions
   const handleToggleExtension = async (id: string, currentStatus: boolean) => {
     try {
-      const result = await toggleExtension(id);
+      const result = await toggleExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
@@ -94,7 +94,7 @@ export default function Extensions() {
     }
     
     try {
-      const result = await uninstallExtension(id);
+      const result = await uninstallExtensionV2(id);
       if (!result.success) {
         alert(result.message);
         return;
@@ -116,15 +116,6 @@ export default function Extensions() {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-semibold text-gray-900">Extensions</h2>
-        <Link
-          href="/msp/settings/extensions/install"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md flex items-center gap-2 hover:bg-blue-700 transition-colors"
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Add Extension</span>
-        </Link>
       </div>
       
       {loading && (
@@ -154,15 +145,6 @@ export default function Extensions() {
           <p className="text-gray-600 mb-4">
             Install extensions to add new features and functionality to Alga PSA.
           </p>
-          <Link
-            href="/msp/settings/extensions/install"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md inline-flex items-center gap-2 hover:bg-blue-700 transition-colors"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            <span>Add Extension</span>
-          </Link>
         </div>
       )}
       

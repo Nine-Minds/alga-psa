@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@shared/db/admin';
-import { withTransaction } from '@shared/db';
-import { publishEvent } from '@shared/events/publisher';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { withTransaction } from '@alga-psa/shared/db';
+import { publishEvent } from '@alga-psa/shared/events/publisher.js';
 import { randomBytes } from 'crypto';
+import { MicrosoftGraphAdapter } from '@/services/email/providers/MicrosoftGraphAdapter';
+import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 
 interface MicrosoftNotification {
   changeType: string;
@@ -23,12 +25,38 @@ interface MicrosoftWebhookPayload {
   value: MicrosoftNotification[];
 }
 
+// Handle GET for Microsoft validation handshake
+export async function GET(request: NextRequest) {
+  try {
+    const url = request.nextUrl;
+    const validationToken = url.searchParams.get('validationtoken') || url.searchParams.get('validationToken');
+    if (validationToken) {
+      console.log('Microsoft webhook validation (GET) received');
+      return new NextResponse(validationToken, {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+    // If no token, just acknowledge
+    return new NextResponse('OK', { status: 200 });
+  } catch (error) {
+    console.error('Microsoft webhook GET handler error:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Handle subscription validation
-    const validationToken = request.headers.get('validationtoken');
+    // Microsoft may send validation either via querystring (GET) or header on POST in some flows/tests
+    const url = request.nextUrl;
+    const validationToken =
+      request.headers.get('validationtoken') ||
+      request.headers.get('ValidationToken') ||
+      url.searchParams.get('validationtoken') ||
+      url.searchParams.get('validationToken');
     if (validationToken) {
-      console.log('Microsoft webhook validation request received');
+      console.log('Microsoft webhook validation (POST) received (header/query)');
       return new NextResponse(validationToken, {
         status: 200,
         headers: {
@@ -38,7 +66,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse webhook payload
-    const payload: MicrosoftWebhookPayload = await request.json();
+    // Be robust to empty or non-JSON bodies during validation probes
+    let payload: MicrosoftWebhookPayload | undefined;
+    try {
+      const raw = await request.text();
+      if (!raw) {
+        // Empty body — acknowledge to avoid parse crashes during validation probes
+        return new NextResponse('OK', { status: 200 });
+      }
+      payload = JSON.parse(raw);
+    } catch {
+      // Non-JSON — acknowledge to avoid 500s during validation probes
+      return new NextResponse('OK', { status: 200 });
+    }
+    if (!payload) {
+      return new NextResponse('OK', { status: 200 });
+    }
     console.log('Microsoft webhook notification received:', {
       notificationCount: payload.value?.length || 0,
       timestamp: new Date().toISOString()
@@ -58,25 +101,44 @@ export async function POST(request: NextRequest) {
         const providerId = notification.subscriptionId;
         
         await withTransaction(knex, async (trx) => {
-          // Look up provider by subscription ID
-          const provider = await trx('email_providers')
-            .where('webhook_id', providerId)
-            .where('provider_type', 'microsoft')
-            .first();
+        // Look up provider by subscription ID via microsoft vendor config (consistent with Google design)
+        const row = await trx('microsoft_email_provider_config as mc')
+          .join('email_providers as ep', function() {
+            this.on('mc.email_provider_id', '=', 'ep.id')
+                .andOn('mc.tenant', '=', 'ep.tenant');
+          })
+          .where('mc.webhook_subscription_id', providerId)
+          .andWhere('ep.provider_type', 'microsoft')
+          .first(
+            'ep.*',
+            trx.raw('mc.client_id as mc_client_id'),
+            trx.raw('mc.client_secret as mc_client_secret'),
+            trx.raw('mc.tenant_id as mc_tenant_id'),
+            trx.raw('mc.access_token as mc_access_token'),
+            trx.raw('mc.refresh_token as mc_refresh_token'),
+            trx.raw('mc.token_expires_at as mc_token_expires_at'),
+            trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
+            trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
+            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token')
+          );
 
-          if (!provider) {
-            console.error(`Provider not found for subscription: ${providerId}`);
-            return;
-          }
+        if (!row) {
+          console.error(`Provider not found for subscription: ${providerId}`);
+          return;
+        }
 
-          // Validate client state
-          const vendorConfig = typeof provider.vendor_config === 'string' 
-            ? JSON.parse(provider.vendor_config) 
-            : provider.vendor_config;
-
-          if (notification.clientState !== vendorConfig.clientState) {
-            console.error(`Invalid client state for provider ${provider.id}`);
-            return;
+          // Validate clientState against stored verification token if present
+          // Note: MicrosoftGraphAdapter sets clientState to webhook_verification_token (not tenant ID)
+          const storedToken = (row as any).mc_webhook_verification_token as string | undefined;
+          if (storedToken) {
+            if (!notification.clientState) {
+              console.error(`Missing clientState for provider ${row.id}`);
+              return;
+            }
+            if (notification.clientState !== storedToken) {
+              console.error(`Invalid client state for provider ${row.id}`);
+              return;
+            }
           }
 
           // Extract message ID from resource
@@ -86,27 +148,77 @@ export async function POST(request: NextRequest) {
             return;
           }
 
-          // Publish INBOUND_EMAIL_RECEIVED event
-          await publishEvent({
-            eventType: 'INBOUND_EMAIL_RECEIVED',
-            tenant: provider.tenant,
-            payload: {
-              providerId: provider.id,
-              providerType: 'microsoft',
-              mailbox: provider.mailbox,
-              messageId: messageId,
-              changeType: notification.changeType,
-              webhookData: {
-                subscriptionId: notification.subscriptionId,
-                resource: notification.resource,
-                resourceData: notification.resourceData,
-                timestamp: new Date().toISOString()
-              }
-            }
-          });
+          // Build provider config to fetch full email details
+          // Derive webhook URL from environment (provider row doesn't store it in prod schema)
+          const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
+          const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
-          processedNotifications.push(messageId);
-          console.log(`Published event for Microsoft email: ${messageId} from ${provider.mailbox}`);
+          const providerConfig: EmailProviderConfig = {
+            id: row.id,
+            tenant: row.tenant,
+            name: row.provider_name || row.mailbox,
+            provider_type: 'microsoft',
+            mailbox: row.mailbox,
+            folder_to_monitor: 'Inbox',
+            active: row.is_active,
+            webhook_notification_url: (row as any).webhook_notification_url || derivedWebhookUrl,
+            webhook_subscription_id: row.mc_webhook_subscription_id,
+            webhook_verification_token: (row as any).webhook_verification_token || undefined,
+            webhook_expires_at: row.mc_webhook_expires_at,
+            connection_status: (row as any).connection_status || row.status || 'connected',
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            provider_config: {
+              client_id: (row as any).mc_client_id,
+              client_secret: (row as any).mc_client_secret,
+              tenant_id: (row as any).mc_tenant_id,
+              access_token: (row as any).mc_access_token,
+              refresh_token: (row as any).mc_refresh_token,
+              token_expires_at: (row as any).mc_token_expires_at,
+            },
+          } as any;
+
+          try {
+            const adapter = new MicrosoftGraphAdapter(providerConfig);
+            await adapter.connect();
+            const details = await adapter.getMessageDetails(messageId);
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: row.tenant,
+              payload: {
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
+                emailData: details,
+              },
+            });
+            processedNotifications.push(messageId);
+            console.log(`Published enriched event for Microsoft email: ${messageId} from ${row.mailbox}`);
+          } catch (detailErr: any) {
+            console.warn(`Failed to fetch/publish Microsoft message ${messageId}: ${detailErr?.message || detailErr}`);
+            // Fallback: publish minimal event to acknowledge
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: row.tenant,
+              payload: {
+                tenantId: row.tenant,
+                tenant: row.tenant,
+                providerId: row.id,
+                emailData: {
+                  id: messageId,
+                  provider: 'microsoft',
+                  providerId: row.id,
+                  tenant: row.tenant,
+                  receivedAt: new Date().toISOString(),
+                  from: { email: '', name: undefined },
+                  to: [],
+                  subject: notification.resourceData?.subject || '',
+                  body: { text: '', html: undefined },
+                } as any,
+              },
+            });
+            processedNotifications.push(messageId);
+          }
         });
       } catch (error) {
         console.error('Error processing Microsoft notification:', error);

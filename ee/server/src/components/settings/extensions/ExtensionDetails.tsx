@@ -8,14 +8,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ReflectionContainer } from '../../../../../server/src/lib/ui-reflection/ReflectionContainer';
-import { useAutomationIdAndRegister } from '../../../../../server/src/lib/ui-reflection/useAutomationIdAndRegister';
-import { ContainerComponent } from '../../../../../server/src/lib/ui-reflection/types';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
+import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
-import { logger } from '../../../../../server/src/utils/logger';
+// Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
+import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 
 /**
  * Extension Details page
@@ -28,6 +29,7 @@ export default function ExtensionDetails() {
   const [extension, setExtension] = useState<Extension | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [installInfo, setInstallInfo] = useState<{ domain: string | null; status: any } | null>(null);
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -44,8 +46,12 @@ export default function ExtensionDetails() {
         const foundExtension = await fetchExtensionById(extensionId);
         setExtension(foundExtension);
         setLoading(false);
+        if (foundExtension) {
+          const info = await getInstallInfo(extensionId).catch(() => null);
+          if (info) setInstallInfo({ domain: info.runner_domain || null, status: info.runner_status });
+        }
       } catch (err) {
-        logger.error('Failed to fetch extension details', { extensionId, error: err });
+        console.error('Failed to fetch extension details', { extensionId, error: err });
         setError('Failed to load extension details');
         setLoading(false);
       }
@@ -70,10 +76,19 @@ export default function ExtensionDetails() {
         prevExtension ? { ...prevExtension, isEnabled: !prevExtension.isEnabled } : null
       );
       
-      logger.info(`Extension ${extension.isEnabled ? 'disabled' : 'enabled'}`, { extensionId });
+      console.info(`Extension ${extension.isEnabled ? 'disabled' : 'enabled'}`, { extensionId });
     } catch (err) {
-      logger.error('Failed to toggle extension', { extensionId, error: err });
+      console.error('Failed to toggle extension', { extensionId, error: err });
       alert(`Failed to ${extension.isEnabled ? 'disable' : 'enable'} extension`);
+    }
+  };
+
+  const handleReprovision = async () => {
+    try {
+      const result = await reprovisionExtension(extensionId);
+      setInstallInfo({ domain: result.domain || null, status: { state: 'provisioning' } });
+    } catch (e) {
+      alert('Failed to reprovision');
     }
   };
   
@@ -90,12 +105,12 @@ export default function ExtensionDetails() {
         return;
       }
       
-      logger.info('Extension removed', { extensionId });
+      console.info('Extension removed', { extensionId });
       
       // Navigate back to extensions list
       router.push('/msp/settings/extensions');
     } catch (err) {
-      logger.error('Failed to remove extension', { extensionId, error: err });
+      console.error('Failed to remove extension', { extensionId, error: err });
       alert('Failed to remove extension');
     }
   };
@@ -201,9 +216,41 @@ export default function ExtensionDetails() {
                     <h2 className="text-lg font-medium text-gray-900">Extension Information</h2>
                   </div>
                 </div>
-                
+
                 {/* Content */}
                 <div className="p-6">
+                  <div className="mb-6">
+                    <div className="text-sm font-medium text-gray-500">Runtime Domain</div>
+                    <div className="mt-1 text-sm text-gray-900">{installInfo?.domain || '—'}</div>
+                    <div className="text-xs text-gray-500">{installInfo?.status?.state ? String(installInfo?.status?.state) : ''}</div>
+                    <div className="mt-2 flex gap-2">
+                      {installInfo?.domain ? (
+                        <>
+                          <a
+                            href={`https://${installInfo.domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
+                          >
+                            Open
+                          </a>
+                          <button
+                            onClick={() => navigator.clipboard.writeText(`https://${installInfo.domain}`)}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          >
+                            Copy
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={handleReprovision}
+                          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
+                        >
+                          Provision
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <dl className="grid grid-cols-1 gap-x-4 gap-y-6 sm:grid-cols-2">
                     <div className="sm:col-span-2">
                       <dt className="text-sm font-medium text-gray-500">Description</dt>

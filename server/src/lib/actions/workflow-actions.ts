@@ -1,14 +1,11 @@
 'use server';
 
 import { createTenantKnex } from 'server/src/lib/db';
-import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel';
-import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
-import WorkflowActionResultModel from '@shared/workflow/persistence/workflowActionResultModel';
-import { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@shared/workflow/persistence/workflowInterfaces';
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
-import { WorkflowDefinition, WorkflowMetadata } from '@shared/workflow/core/workflowDefinition';
-import { initializeServerWorkflows } from '@shared/workflow/init/serverInit';
+import { WorkflowExecutionModel, WorkflowEventModel, WorkflowActionResultModel } from '@alga-psa/shared/workflow/persistence';
+import type { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@alga-psa/shared/workflow/persistence';
+import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core';
+import type { WorkflowDefinition, WorkflowMetadata } from '@alga-psa/shared/workflow/core';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit.js';
 
 /**
  * Workflow metrics interface

@@ -3,18 +3,16 @@
 import React, { useState } from 'react';
 import * as Tabs from '@radix-ui/react-tabs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ITimePeriodView, IService } from 'server/src/interfaces';
+import { IService } from 'server/src/interfaces';
 
 // Import all the components
 import Overview from './Overview';
 import BillingPlans from './BillingPlans';
 import BillingPlansOverview from './billing-plans/BillingPlansOverview';
 // import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration'; // No longer used directly here
-import TimePeriods from './TimePeriods';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor'; // Import the editor component
-import ServiceCatalog from './ServiceCatalog';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
@@ -27,12 +25,10 @@ import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 
 interface BillingDashboardProps {
-  initialTimePeriods: ITimePeriodView[];
   initialServices: IService[];
 }
 
 const BillingDashboard: React.FC<BillingDashboardProps> = ({
-  initialTimePeriods,
   initialServices
 }) => {
   const router = useRouter();
@@ -63,9 +59,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'tax-rates',
     'plans',
     'plan-bundles',
-    'service-catalog',
     'billing-cycles',
-    'time-periods',
     'usage-tracking',
     'credits',
     'reconciliation'
@@ -144,16 +138,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           )}
         </Tabs.Content>
 
-        <Tabs.Content value="service-catalog">
-          <ServiceCatalog />
-        </Tabs.Content>
-
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
-        </Tabs.Content>
-
-        <Tabs.Content value="time-periods">
-          <TimePeriods initialTimePeriods={initialTimePeriods} />
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">

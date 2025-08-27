@@ -16,10 +16,8 @@ get_secret() {
     if [ -f "$secret_path" ]; then
         cat "$secret_path"
     elif [ ! -z "${!env_var}" ]; then
-        log "Using $env_var environment variable instead of Docker secret"
         echo "${!env_var}"
     else
-        log "Neither secret file $secret_path nor $env_var environment variable found, using default value"
         echo "$default_value"
     fi
 }

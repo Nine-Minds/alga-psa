@@ -1,60 +1,10 @@
 /**
- * Types for UI Extension Framework
+ * ext-v2 UI Types
+ *
+ * Legacy descriptor-era types have been removed. Host-side UI rendering is no longer supported.
+ * Only keep the ExtensionContextValue used by ExtensionProvider.
  */
 import { ReactNode } from 'react';
-import { 
-  ExtensionComponentType, 
-  TabExtensionProps,
-  NavigationItemProps,
-  DashboardWidgetProps,
-  CustomPageProps
-} from '../types';
-
-/**
- * Base extension component props
- */
-export interface BaseExtensionComponentProps {
-  extensionId: string;
-}
-
-/**
- * Extension slot props
- */
-export interface ExtensionSlotProps {
-  name: string;
-  filter?: (component: any) => boolean;
-  props?: Record<string, any>;
-}
-
-/**
- * Extension error boundary props
- */
-export interface ExtensionErrorBoundaryProps {
-  extensionId: string;
-  children: ReactNode;
-  fallback?: ReactNode | ((error: Error) => ReactNode);
-  onError?: (error: Error, info: { componentStack: string }) => void;
-}
-
-/**
- * Extension error boundary state
- */
-export interface ExtensionErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
-
-/**
- * Extension renderer props
- */
-export interface ExtensionRendererProps {
-  extensionId: string;
-  componentPath: string;
-  slotProps?: Record<string, any>;
-  defaultProps?: Record<string, any>;
-  onRender?: (timing: number) => void;
-  onError?: (error: Error) => void;
-}
 
 /**
  * Extension context
@@ -78,55 +28,17 @@ export interface ExtensionContextValue {
 }
 
 /**
- * Extension component metrics
+ * Optional: props/state for an error boundary, if used by consumers.
+ * If not needed, these can be removed later.
  */
-export interface ExtensionMetrics {
-  renders: Array<{
-    extensionId: string;
-    componentPath: string;
-    renderTime: number;
-    timestamp: number;
-  }>;
-  errors: Array<{
-    extensionId: string;
-    componentPath: string;
-    error: string;
-    timestamp: number;
-  }>;
+export interface ExtensionErrorBoundaryProps {
+  extensionId: string;
+  children: ReactNode;
+  fallback?: ReactNode | ((error: Error) => ReactNode);
+  onError?: (error: Error, info: { componentStack: string }) => void;
 }
 
-/**
- * Tab extension component props
- */
-export interface TabExtensionComponentProps extends BaseExtensionComponentProps, TabExtensionProps {
-  // Additional tab-specific props
-  isActive: boolean;
-}
-
-/**
- * Navigation item component props
- */
-export interface NavigationItemComponentProps extends BaseExtensionComponentProps, NavigationItemProps {
-  // Additional navigation-specific props
-  isActive: boolean;
-  isSidebarOpen: boolean;
-}
-
-/**
- * Dashboard widget component props
- */
-export interface DashboardWidgetComponentProps extends BaseExtensionComponentProps, DashboardWidgetProps {
-  // Additional widget-specific props
-  data?: any;
-  isLoading?: boolean;
-  refresh?: () => void;
-}
-
-/**
- * Custom page component props
- */
-export interface CustomPageComponentProps extends BaseExtensionComponentProps, CustomPageProps {
-  // Additional page-specific props
-  params?: Record<string, string>;
-  searchParams?: Record<string, string>;
+export interface ExtensionErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
 }

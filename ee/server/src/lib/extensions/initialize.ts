@@ -1,19 +1,14 @@
 import path from 'path';
 import { getExtensionLoader } from './loader';
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 
 export async function initializeExtensions(): Promise<void> {
   try {
     logger.info('Initializing extension system');
-    
-    // Get the extensions directory path
-    const extensionsDir = path.join(process.cwd(), 'extensions');
-    
-    // Create and use the extension loader
-    const loader = getExtensionLoader(extensionsDir);
-    await loader.loadExtensions();
-    
-    logger.info('Extension system initialized successfully');
+  
+    // Legacy filesystem scan removed per multi-tenancy overhaul.
+    // Registry-driven installs will be resolved on-demand by the API gateway.
+    logger.info('Extension system initialized (legacy scan disabled)');
   } catch (error) {
     logger.error('Failed to initialize extension system', {
       error: error instanceof Error ? error.message : 'Unknown error'

@@ -11,7 +11,7 @@ import { getContactByContactNameId } from 'server/src/lib/actions/contact-action
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData, validateArray } from '../../utils/validation';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { z } from 'zod';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { ICompany } from 'server/src/interfaces/company.interfaces';

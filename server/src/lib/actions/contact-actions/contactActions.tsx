@@ -11,6 +11,7 @@ import { getContactAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { createTag } from 'server/src/lib/actions/tagActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { ContactModel, CreateContactInput } from '@alga-psa/shared/models/contactModel';
 
 export async function getContactByContactNameId(contactNameId: string): Promise<IContact | null> {
   // Revert to using createTenantKnex for now
@@ -357,6 +358,70 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
   }
 }
 
+/**
+ * Get contacts that do not yet have an associated client portal user.
+ * Optionally filter by company and status (active by default).
+ */
+export async function getContactsEligibleForInvitation(
+  companyId?: string,
+  status: ContactFilterStatus = 'active'
+): Promise<IContact[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('SYSTEM_ERROR: Tenant configuration not found');
+  }
+
+  // RBAC: ensure user has permission to read contacts
+  const { getCurrentUser } = await import('../user-actions/userActions');
+  const { hasPermission } = await import('../../auth/rbac');
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('Unauthorized');
+  }
+  
+  // Check permission to read contacts
+  const canRead = await hasPermission(currentUser, 'contact', 'read', db);
+    
+  if (!canRead) {
+    throw new Error('Permission denied: Cannot read contacts');
+  }
+
+  try {
+    const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const q = trx('contacts as c')
+        .leftJoin('users as u', function(this: Knex.JoinClause) {
+          this.on('u.contact_id', 'c.contact_name_id')
+            .andOn('u.tenant', 'c.tenant')
+            .andOn(trx.raw('u.user_type = ?', ['client']));
+        })
+        .leftJoin('companies as comp', function(this: Knex.JoinClause) {
+          this.on('c.company_id', 'comp.company_id')
+            .andOn('comp.tenant', 'c.tenant');
+        })
+        .where('c.tenant', tenant)
+        .whereNull('u.user_id')
+        .modify((qb: Knex.QueryBuilder) => {
+          if (companyId) qb.andWhere('c.company_id', companyId);
+          if (status !== 'all') qb.andWhere('c.is_inactive', status === 'inactive');
+        })
+        .select('c.*', 'comp.company_name')
+        .orderBy('c.full_name', 'asc');
+
+      return q;
+    });
+
+    const contactsWithAvatars = await Promise.all(contacts.map(async (contact: IContact) => {
+      const avatarUrl = await getContactAvatarUrl(contact.contact_name_id, tenant);
+      return { ...contact, avatarUrl: avatarUrl || null } as IContact;
+    }));
+
+    return contactsWithAvatars;
+  } catch (err) {
+    console.error('Error fetching contacts eligible for invitation:', err);
+    throw new Error('SYSTEM_ERROR: Failed to retrieve contacts eligible for invitation');
+  }
+}
+
 export async function getAllCompanies(): Promise<ICompany[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
@@ -474,100 +539,45 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
-
-  // Validate required fields with specific messages
-  if (!contactData.full_name?.trim() && !contactData.email?.trim()) {
-    throw new Error('VALIDATION_ERROR: Full name and email address are required');
+  // Check permissions (keep authentication/authorization in server action)
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    throw new Error('No authenticated user found');
   }
-  if (!contactData.full_name?.trim()) {
-    throw new Error('VALIDATION_ERROR: Full name is required');
-  }
-  if (!contactData.email?.trim()) {
-    throw new Error('VALIDATION_ERROR: Email address is required');
+  
+  if (!await hasPermission(currentUser, 'contact', 'create')) {
+    throw new Error('Permission denied: Cannot create contacts');
   }
 
-  // Validate email format
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(contactData.email.trim())) {
-    throw new Error('VALIDATION_ERROR: Please enter a valid email address');
-  }
-
-
-  // Check if email already exists
-  const existingContact = await db('contacts')
-    .where({ email: contactData.email.trim().toLowerCase(), tenant })
-    .first();
-
-  if (existingContact) {
-    throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
-  }
-
-  // If company_id is provided, verify it exists
-  if (contactData.company_id) {
-    const company = await db('companies')
-      .where({ company_id: contactData.company_id, tenant })
-      .first();
-
-    if (!company) {
-      throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
-    }
-  }
-
-  // Prepare contact data with proper sanitization
-  const contactWithTenant = {
-    ...contactData,
-    full_name: contactData.full_name.trim(),
-    email: contactData.email.trim().toLowerCase(),
-    phone_number: contactData.phone_number?.trim() || null,
-    role: contactData.role?.trim() || null,
-    notes: contactData.notes?.trim() || null,
-    tenant: tenant,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+  // Convert to CreateContactInput format for the model
+  const createInput: CreateContactInput = {
+    full_name: contactData.full_name || '',
+    email: contactData.email,
+    phone_number: contactData.phone_number,
+    company_id: contactData.company_id || undefined,
+    role: contactData.role,
+    notes: contactData.notes || undefined,
+    is_inactive: contactData.is_inactive
   };
 
-  try {
-    const [newContact] = await db('contacts').insert(contactWithTenant).returning('*');
-
-    if (!newContact) {
-      throw new Error('SYSTEM_ERROR: Failed to create contact record');
-    }
-
-    return newContact;
-  } catch (err) {
-    // Log the error for debugging
-    console.error('Error creating contact:', err);
-
-    // Handle known error types
-    if (err instanceof Error) {
-      const message = err.message;
-
-      // If it's already one of our formatted errors, rethrow it
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('EMAIL_EXISTS:') ||
-        message.includes('FOREIGN_KEY_ERROR:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
-
-      // Handle database-specific errors
-      if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-        throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
-      }
-
-      if (message.includes('violates not-null constraint')) {
-        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-        throw new Error(`VALIDATION_ERROR: The ${field} is required`);
-      }
-
-      if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
-      }
-    }
-
-    // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
-  }
+  // Use the shared ContactModel to create the contact
+  // The model handles all validation and business logic
+  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const contact = await ContactModel.createContact(
+      createInput,
+      tenant,
+      trx
+    );
+    
+    // Convert to server IContact format (ensuring non-nullable fields)
+    return {
+      ...contact,
+      phone_number: contact.phone_number || '',
+      email: contact.email || '',
+      role: contact.role || '',
+      is_inactive: contact.is_inactive || false
+    } as IContact;
+  });
 }
 
 export async function updateContact(contactData: Partial<IContact>): Promise<IContact> {
@@ -603,8 +613,8 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // If company_id is being updated, verify it exists
-    if (contactData.company_id) {
+    // If company_id is being updated, verify it exists (but allow null to remove association)
+    if ('company_id' in contactData && contactData.company_id) {
       const company = await db('companies')
         .where({ company_id: contactData.company_id, tenant })
         .first();

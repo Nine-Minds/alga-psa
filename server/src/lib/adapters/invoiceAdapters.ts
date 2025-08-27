@@ -5,7 +5,7 @@ import type {
 } from 'server/src/interfaces/invoice.interfaces';
 // Ensure the correct type is imported
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
-import { DateValue } from '@shared/types/temporal';
+import { DateValue } from '@alga-psa/shared/types';
 import { Temporal } from '@js-temporal/polyfill';
 // toPlainDate is likely not needed here as we format to string for Wasm
 

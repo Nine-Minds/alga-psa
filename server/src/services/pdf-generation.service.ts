@@ -9,7 +9,7 @@ import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-execut
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
 import type { InvoiceViewModel as DbInvoiceViewModel, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
-import { DateValue } from '@shared/types/temporal';
+import { DateValue } from '@alga-psa/shared/types';
 import { browserPoolService, BrowserPoolService } from './browser-pool.service';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocument } from 'server/src/lib/actions/document-actions/documentActions';
@@ -118,7 +118,7 @@ export class PDFGenerationService {
   }
 
   private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
-    let tenantCompanyInfo = null;
+    let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
     const { knex } = await createTenantKnex();
     const tenantCompanyLink = await knex('tenant_companies')
       .where({ tenant: this.tenant, is_default: true })

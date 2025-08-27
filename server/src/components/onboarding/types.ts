@@ -4,6 +4,8 @@ export interface WizardData {
   lastName: string;
   companyName: string;
   email: string;
+  newPassword?: string;
+  confirmPassword?: string;
 
   // Team Members
   teamMembers: TeamMember[];
@@ -65,6 +67,7 @@ export interface OnboardingState {
 export interface StepProps {
   data: WizardData;
   updateData: (data: Partial<WizardData>) => void;
+  attemptedToProceed?: boolean;
 }
 
 export const STEPS = [

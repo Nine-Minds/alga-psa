@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getTaskDetails, claimTask, unclaimTask } from '../../lib/actions/workflow-actions/taskInboxActions';
-import { TaskDetails as TaskDetailsType } from '@shared/workflow/persistence/taskInboxInterfaces';
-import { WorkflowTaskStatus } from '@shared/workflow/persistence/workflowTaskModel';
+import { TaskDetails as TaskDetailsType } from '@alga-psa/shared/workflow/persistence';
+import { WorkflowTaskStatus } from '@alga-psa/shared/workflow/persistence';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { Card } from '../ui/Card';

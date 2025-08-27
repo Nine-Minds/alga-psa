@@ -1,6 +1,12 @@
 import { WorkflowFunction } from './workflowContext.js';
-import logger from '@shared/core/logger.js';
-import * as ts from 'typescript';
+import logger from '@alga-psa/shared/core/logger.js';
+// Ensure TypeScript loads correctly under ESM <-> CJS interop
+// When importing a CommonJS module (TypeScript) from ESM, the exports land on `default`
+// so `import * as ts` would yield `ts.default.ScriptTarget`. Normalize here.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import tsModule from 'typescript';
+const ts: typeof import('typescript') = (tsModule as any).default ?? (tsModule as any);
 
 /**
  * Interface for workflow metadata
@@ -89,7 +95,7 @@ export function deserializeWorkflowFunction(fnString: string): WorkflowFunction 
     const wrappedCode = fnString;
     
     // Check if ES2020 is available, fallback to ES2018 or ES5
-    let targetVersion: ts.ScriptTarget;
+    let targetVersion: typeof ts.ScriptTarget[keyof typeof ts.ScriptTarget];
     
     if (ts.ScriptTarget.ES2020 !== undefined) {
       targetVersion = ts.ScriptTarget.ES2020;

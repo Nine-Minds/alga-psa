@@ -10,17 +10,28 @@ const registrationLimiter = new RateLimiterMemory({
   duration: 3600, // per hour
 });
 
-const verificationLimiter = new RateLimiterMemory({
-  points: 3, // 3 attempts
-  duration: 300, // per 5 minutes
+// Add new auth verification limiter
+const authVerificationLimiter = new RateLimiterMemory({
+  points: 5, // 5 attempts
+  duration: 60, // per 60 seconds
+  blockDuration: 300, // Block for 5 minutes after limit exceeded
 });
 
-const emailLimiter = new RateLimiterMemory({
-  points: 3, // 3 emails
-  duration: 3600, // per hour
+// Portal invitation limiter
+const portalInvitationLimiter = new RateLimiterMemory({
+  points: 3, // 3 invitations
+  duration: 300, // per 5 mins
+  blockDuration: 300, // Block for 5 min after limit exceeded
 });
 
-interface RateLimitResult {
+// Password reset limiter
+const passwordResetLimiter = new RateLimiterMemory({
+  points: 3, // 3 reset attempts
+  duration: 900, // per 15 minutes
+  blockDuration: 900, // Block for 15 minutes after limit exceeded
+});
+
+export interface RateLimitResult {
   success: boolean;
   remainingPoints?: number;
   msBeforeNext?: number;
@@ -45,9 +56,12 @@ export async function checkRegistrationLimit(email: string): Promise<RateLimitRe
   }
 }
 
-export async function checkVerificationLimit(token: string): Promise<RateLimitResult> {
+// Email verification rate limiting functions removed - no longer needed
+
+// Add new function for auth verification rate limiting
+export async function checkAuthVerificationLimit(identifier: string): Promise<RateLimitResult> {
   try {
-    const rateLimitInfo = await verificationLimiter.consume(token);
+    const rateLimitInfo = await authVerificationLimiter.consume(identifier);
     return {
       success: true,
       remainingPoints: rateLimitInfo.remainingPoints,
@@ -64,9 +78,30 @@ export async function checkVerificationLimit(token: string): Promise<RateLimitRe
   }
 }
 
-export async function checkEmailLimit(email: string): Promise<RateLimitResult> {
+// Portal invitation rate limiting (per user)
+export async function checkPortalInvitationLimit(userId: string): Promise<RateLimitResult> {
   try {
-    const rateLimitInfo = await emailLimiter.consume(email);
+    const rateLimitInfo = await portalInvitationLimiter.consume(userId);
+    return {
+      success: true,
+      remainingPoints: rateLimitInfo.remainingPoints,
+      msBeforeNext: rateLimitInfo.msBeforeNext,
+    };
+  } catch (error) {
+    if (error instanceof Error) {
+      return {
+        success: false,
+        msBeforeNext: error.message ? parseInt(error.message) : undefined,
+      };
+    }
+    return { success: false };
+  }
+}
+
+// Password reset rate limiting (per email)
+export async function checkPasswordResetLimit(email: string): Promise<RateLimitResult> {
+  try {
+    const rateLimitInfo = await passwordResetLimiter.consume(email.toLowerCase());
     return {
       success: true,
       remainingPoints: rateLimitInfo.remainingPoints,
@@ -103,8 +138,8 @@ export async function logSecurityEvent(
   
   await auditLog(knex, {
     operation: eventType,
-    tableName: 'pending_registrations',
-    recordId: eventDetails.registrationId || 'unknown',
+    tableName: eventDetails.tableName || 'audit_log',
+    recordId: eventDetails.recordId || 'unknown',
     changedData: {},
     details: {
       ...eventDetails,

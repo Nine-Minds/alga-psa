@@ -30,6 +30,14 @@ server:
   service:
     type: "ClusterIP"
     port: 3000
+  persistence:
+    enabled: false
+    size: 10Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: ""
+    existingClaim: ""
+    annotations: {}
 
 
 hocuspocus:
@@ -44,6 +52,9 @@ hocuspocus:
     type: "ClusterIP"
     port: 1234
 
+# Development Pod Configuration
+devPod:
+  enabled: false
 
 podLabels: {}
 
@@ -91,6 +102,11 @@ config:
   redis: # Redis configuration only if redis enabled is true
     host: redis
     port: 6379
+    # Prefer using a secret for the password.
+    # If not provided, falls back to literal `password` below (legacy).
+    passwordSecret:
+      name: ""     # e.g., "redis-credentials"
+      key:  ""     # e.g., "REDIS_PASSWORD"
     password: password
     db: 0
   llm:
@@ -120,6 +136,10 @@ config:
         enabled: false  # Set to true to enable S3 in enterprise edition
         region: 'us-west-2'
         bucket: 'company-files'
+        # Separate bucket for extension bundles served by the runner. Required
+        # for EE extensions; when unset, extension bundle uploads will fail
+        # with a configuration error.
+        bundle_bucket: 'alga-ext'
         access_key: ''  # AWS access key
         secret_key: ''  # AWS secret key
         endpoint: ''    # Optional custom endpoint for S3-compatible services
@@ -210,6 +230,16 @@ email:
   port: 465
   user: ""
   password: ""
+  # Optional: explicitly set provider ("smtp" or "resend"). If omitted, factory auto-detects based on RESEND_API_KEY
+  provider: ""
+  # For RESEND: prefer providing via secret
+  resendApiKeySecret:
+    name: ""   # e.g., resend-credentials
+    key:  ""   # e.g., RESEND_API_KEY
+  # Or provide inline for dev/testing (DO NOT use in production)
+  resendApiKey: ""
+  # Optional custom base URL for self-hosted Resend or proxy
+  resendBaseUrl: ""
 
 
 crypto:
@@ -229,6 +259,25 @@ google_auth:
   enabled: false
   client_id: "get from google"
   client_secret: "get from google"
+
+# Gmail Integration (Enterprise Edition)
+gmail_integration:
+  enabled: false
+  client_id: ""
+  client_secret: ""
+  project_id: ""
+  redirect_uri: ""
+
+# Microsoft Graph (Microsoft 365) integration
+microsoft_integration:
+  enabled: false
+  # Azure AD App Registration (delegated) credentials
+  client_id: ""
+  client_secret: ""
+  # Use tenant GUID for single-tenant; use 'common' only for multi-tenant
+  tenant_id: ""
+  # OAuth redirect URI configured in the app registration
+  redirect_uri: ""
 
 # Secret Provider Configuration
 # Controls how secrets are read and written across different providers
@@ -316,3 +365,27 @@ logging:
     path: '/print_info'
     level: 'info'
     token: 'abcd1234'
+
+# Development environment configuration
+devEnv:
+  enabled: false
+  namespace: msp-dev
+
+# Vault Agent configuration for secret injection
+vaultAgent:
+  enabled: false
+  role: alga-psa
+  secretPath: secret/data/alga-psa/server
+  sharedSecretPath: secret/data/alga-psa/shared
+
+# Istio sidecar configuration (esp. for Vault agent compatibility)
+# By default, exclude Vault's port 8200 from Envoy interception so
+# init containers/sidecars can reach Vault before Envoy is ready.
+istio:
+  sidecar:
+    # List of outbound ports to bypass Envoy (comma-joined in template)
+    excludeOutboundPorts: ["8200"]
+    # Optional CIDR ranges to bypass Envoy egress (string). Leave empty to disable.
+    excludeOutboundIPRanges: ""
+    # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
+    includeOutboundIPRanges: ""

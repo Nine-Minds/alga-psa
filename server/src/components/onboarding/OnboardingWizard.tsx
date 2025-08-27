@@ -18,7 +18,8 @@ import {
   addClientContact,
   setupBilling,
   configureTicketing,
-  completeOnboarding
+  completeOnboarding,
+  validateOnboardingDefaults
 } from 'server/src/lib/actions/onboarding-actions/onboardingActions';
 
 interface OnboardingWizardProps {
@@ -44,12 +45,15 @@ export function OnboardingWizard({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<number, string>>({});
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const [wizardData, setWizardData] = useState<WizardData>({
     // Company Info
     firstName: '',
     lastName: '',
     companyName: '',
     email: '',
+    newPassword: '',
+    confirmPassword: '',
 
     // Team Members
     teamMembers: [{ firstName: '', lastName: '', email: '', role: 'technician' }],
@@ -104,7 +108,8 @@ export function OnboardingWizard({
             firstName: wizardData.firstName,
             lastName: wizardData.lastName,
             companyName: wizardData.companyName,
-            email: wizardData.email
+            email: wizardData.email,
+            newPassword: wizardData.newPassword
           });
           if (!companyResult.success) {
             setErrors(prev => ({ ...prev, [stepIndex]: companyResult.error || 'Failed to save company info' }));
@@ -131,6 +136,11 @@ export function OnboardingWizard({
             if (teamResult.data?.created && teamResult.data.created.length > 0) {
               const allCreated = [...new Set([...existingEmails, ...teamResult.data.created])];
               setWizardData(prev => ({ ...prev, createdTeamMemberEmails: allCreated }));
+              
+              // Show warning if some users were skipped
+              if (teamResult.data.message) {
+                setErrors(prev => ({ ...prev, [stepIndex]: teamResult.data.message }));
+              }
             }
           }
           break;
@@ -212,6 +222,9 @@ export function OnboardingWizard({
   };
 
   const handleNext = async () => {
+    // Mark the current step as attempted
+    setAttemptedSteps(prev => new Set([...prev, currentStep]));
+    
     if (currentStep < STEPS.length - 1) {
       const saved = await saveStepData(currentStep);
       if (saved) {
@@ -254,6 +267,17 @@ export function OnboardingWizard({
     
     setIsLoading(true);
     try {
+      // Validate we have required defaults before finishing
+      if (wizardData.channelName || wizardData.channelId) {
+        const validationResult = await validateOnboardingDefaults();
+        
+        if (!validationResult.success) {
+          setErrors(prev => ({ ...prev, [5]: validationResult.error || 'Validation failed' }));
+          setIsLoading(false);
+          return;
+        }
+      }
+      
       // Save final step (ticketing)
       if (wizardData.channelName || wizardData.channelId) {
         const ticketingResult = await configureTicketing({
@@ -294,8 +318,23 @@ export function OnboardingWizard({
   };
 
   const isFirstStepValid = () => {
-    const { firstName, lastName, companyName, email } = wizardData;
-    return !!(firstName && lastName && companyName && email);
+    const { firstName, lastName, companyName, email, newPassword, confirmPassword } = wizardData;
+    
+    // Basic field validation
+    if (!firstName || !lastName || !companyName || !email || !newPassword || !confirmPassword) {
+      return false;
+    }
+    
+    // Password validation
+    if (newPassword.length < 8) {
+      return false;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      return false;
+    }
+    
+    return true;
   };
 
   const isTicketingStepValid = () => {
@@ -361,7 +400,7 @@ export function OnboardingWizard({
       case 3:
         return <ClientContactStep data={wizardData} updateData={updateData} />;
       case 4:
-        return <BillingSetupStep data={wizardData} updateData={updateData} />;
+        return <BillingSetupStep data={wizardData} updateData={updateData} attemptedToProceed={attemptedSteps.has(4)} />;
       case 5:
         return <TicketingConfigStep data={wizardData} updateData={updateData} />;
       default:

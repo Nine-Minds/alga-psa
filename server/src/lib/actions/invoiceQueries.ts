@@ -1,6 +1,6 @@
 'use server';
 
-import { withTransaction } from '../../../../shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
 import {
@@ -116,7 +116,7 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
       const companyProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
-      const addressParts = [];
+      const addressParts: string[] = [];
       if (invoice.address_line1) addressParts.push(invoice.address_line1);
       if (invoice.address_line2) addressParts.push(invoice.address_line2);
       if (invoice.city || invoice.state_province || invoice.postal_code) {
@@ -205,7 +205,7 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
       const companyProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
-      const addressParts = [];
+      const addressParts: string[] = [];
       if (invoice.address_line1) addressParts.push(invoice.address_line1);
       if (invoice.address_line2) addressParts.push(invoice.address_line2);
       if (invoice.city || invoice.state_province || invoice.postal_code) {

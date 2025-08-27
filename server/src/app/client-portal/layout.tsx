@@ -1,5 +1,5 @@
 "use client";
-import { SessionProvider } from "next-auth/react"; 
+import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider"; 
 import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
 
 export default function Layout({
@@ -8,10 +8,10 @@ export default function Layout({
   children: React.ReactNode;
 }>) {
   return (
-    <SessionProvider>
+    <AppSessionProvider>
       <ClientPortalLayout>
         {children}
       </ClientPortalLayout>
-    </SessionProvider>
+    </AppSessionProvider>
   );
 }

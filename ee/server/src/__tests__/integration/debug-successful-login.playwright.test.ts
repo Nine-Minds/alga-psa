@@ -2,7 +2,7 @@
  * Debug test for successful login with tenant credentials
  */
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 import { createTestDbConnection } from '../../lib/testing/db-test-utils';
 import { createTestTenant } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';

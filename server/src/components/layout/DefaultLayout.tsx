@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Sidebar from "./Sidebar";
+import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
@@ -88,7 +88,7 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   return (
     <DrawerProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <SidebarWithFeatureFlags sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header
             sidebarOpen={sidebarOpen}

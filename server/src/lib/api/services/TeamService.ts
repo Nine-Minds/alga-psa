@@ -391,23 +391,28 @@ export class TeamService extends BaseService<ITeam> {
   
         const [team] = await trx('teams').insert(teamData).returning('*');
   
-        // Add members if provided
+        // Collect all member IDs including the manager
+        const allMemberIds = new Set<string>();
+        
+        // Add provided members
         if (data.members && data.members.length > 0) {
-          const memberIds = data.members.map(m => m.user_id);
-          
-          // Validate manager is not a member
-          if (data.manager_id && !validateManagerNotMember(data.manager_id, memberIds)) {
-            throw new ValidationError('Manager cannot be a team member');
-          }
-  
-          // Add members
-          const memberInserts = memberIds.map(userId => ({
+          data.members.forEach(m => allMemberIds.add(m.user_id));
+        }
+        
+        // Add manager as a member if specified
+        if (data.manager_id) {
+          allMemberIds.add(data.manager_id);
+        }
+
+        // Add all members to the team
+        if (allMemberIds.size > 0) {
+          const memberInserts = Array.from(allMemberIds).map(userId => ({
             team_id: team.team_id,
             user_id: userId,
             tenant: context.tenant,
             created_at: new Date()
           }));
-  
+
           await trx('team_members').insert(memberInserts);
         }
   
@@ -471,9 +476,7 @@ export class TeamService extends BaseService<ITeam> {
             })
             .where('users.is_inactive', false)
             .pluck('team_members.user_id');
-          if (!validateManagerNotMember(data.manager_id, memberIds)) {
-            throw new ValidationError('Manager cannot be a team member');
-          }
+          // Managers can be team members, so no need to validate this restriction
         }
       }
 
@@ -581,10 +584,7 @@ export class TeamService extends BaseService<ITeam> {
         throw new ConflictError('User is already a team member');
       }
 
-      // Check if user is the team manager
-      if (team.manager_id === userId) {
-        throw new ValidationError('Manager cannot be added as a team member');
-      }
+      // Managers can be team members, so no need to check this restriction
 
       // Check team size limit
       const currentMemberCount = await trx('team_members')
@@ -684,10 +684,7 @@ export class TeamService extends BaseService<ITeam> {
         throw new BadRequestError('Some users not found or inactive');
       }
 
-      // Check for manager in member list
-      if (team.manager_id && userIds.includes(team.manager_id)) {
-        throw new ValidationError('Manager cannot be added as a team member');
-      }
+      // Managers can be team members, so no need to check this restriction
 
       // Check for existing members
       const existingMembers = await trx('team_members')
@@ -793,16 +790,10 @@ export class TeamService extends BaseService<ITeam> {
         throw new Error('Manager not found or inactive');
       }
 
-      // Check if manager is currently a team member - remove if so
+      // Check if manager is currently a team member
       const isCurrentMember = await trx('team_members')
         .where({ team_id: teamId, user_id: managerId, tenant: context.tenant })
         .first();
-      
-      if (isCurrentMember) {
-        await trx('team_members')
-          .where({ team_id: teamId, user_id: managerId, tenant: context.tenant })
-          .del();
-      }
 
       // Update team manager
       await trx('teams')
@@ -811,6 +802,16 @@ export class TeamService extends BaseService<ITeam> {
           manager_id: managerId,
           updated_at: new Date()
         });
+
+      // Add manager as team member if they're not already a member
+      if (!isCurrentMember) {
+        await trx('team_members').insert({
+          team_id: teamId,
+          user_id: managerId,
+          tenant: context.tenant,
+          created_at: new Date()
+        });
+      }
 
       // Publish manager assigned event
       await publishEvent({
@@ -2214,7 +2215,7 @@ export class TeamService extends BaseService<ITeam> {
       })
       .first();
 
-    let parent = null;
+    let parent: ITeam | null = null;
     if (parentRelation) {
       parent = await this.getById(parentRelation.parent_team_id, context);
     }

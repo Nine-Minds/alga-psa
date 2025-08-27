@@ -10,6 +10,8 @@ export interface TenantCreationInput {
   };
   companyName?: string;
   billingPlan?: string;
+  licenseCount?: number; // Number of licenses for the tenant
+  checkoutSessionId?: string; // Stripe checkout session ID for status updates
 }
 
 export interface TenantCreationResult {
@@ -20,12 +22,16 @@ export interface TenantCreationResult {
   emailSent: boolean;
   success: boolean;
   createdAt: ISO8601String;
+  // Customer tracking information
+  customerCompanyId?: string;
+  customerContactId?: string;
 }
 
 export interface CreateTenantActivityInput {
   tenantName: string;
   email: string;
   companyName?: string;
+  licenseCount?: number; // Number of licenses for the tenant
 }
 
 export interface CreateTenantActivityResult {
@@ -69,7 +75,6 @@ export interface SendWelcomeEmailActivityInput {
   };
   temporaryPassword: string;
   companyName?: string;
-  loginUrl?: string;
 }
 
 export interface SendWelcomeEmailActivityResult {
@@ -80,7 +85,7 @@ export interface SendWelcomeEmailActivityResult {
 
 // Workflow execution state for queries
 export interface TenantCreationWorkflowState {
-  step: 'initializing' | 'creating_tenant' | 'creating_admin_user' | 'setting_up_data' | 'sending_welcome_email' | 'completed' | 'failed';
+  step: 'initializing' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
   tenantId?: string;
   adminUserId?: string;
   companyId?: string;
@@ -98,4 +103,23 @@ export interface TenantCreationCancelSignal {
 export interface TenantCreationUpdateSignal {
   field: string;
   value: any;
+}
+
+// Portal User Creation Types
+export interface CreatePortalUserActivityInput {
+  tenantId: string;
+  email: string;
+  password?: string; // Optional - will generate if not provided
+  contactId: string;
+  companyId: string;
+  firstName?: string;
+  lastName?: string;
+  roleId?: string; // Optional specific role ID
+  isClientAdmin?: boolean; // Whether the user should be a client admin
+}
+
+export interface CreatePortalUserActivityResult {
+  userId: string;
+  roleId: string;
+  temporaryPassword?: string; // Only set if password was generated
 }

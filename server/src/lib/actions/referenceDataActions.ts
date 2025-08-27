@@ -1,7 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { IStandardPriority, IPriority } from 'server/src/interfaces/ticket.interfaces';
 import { IStandardStatus, IStatus } from 'server/src/interfaces/status.interface';
@@ -48,7 +48,6 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     mapFields: (source: IStandardStatus, tenantId: string, userId: string, options?: any) => ({
       name: source.name,
       status_type: source.item_type,
-      item_type: source.item_type,
       order_number: source.display_order,
       is_closed: source.is_closed,
       is_default: source.is_default,
@@ -61,7 +60,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
         .where({
           tenant: tenantId,
           name: data.name,
-          item_type: data.item_type
+          status_type: data.status_type
         })
         .first();
       return !!existing;
@@ -290,51 +289,63 @@ export async function checkImportConflicts(
     if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || 
         dataType === 'interaction_types' || dataType === 'service_categories' || 
         dataType === 'categories' || dataType === 'channels') {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       const orderValue = mappedData[orderField];
       
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
-        const whereClause: any = {
-          tenant: currentUser.tenant,
-          [orderField]: orderValue
-        };
-        
-        // For statuses, use status_type; for priorities, use item_type
-        if (dataType === 'statuses' && mappedData.status_type) {
-          whereClause.status_type = mappedData.status_type;
-        } else if (dataType === 'priorities' && mappedData.item_type) {
-          whereClause.item_type = mappedData.item_type;
-        }
-        
-        const existingWithOrder = await trx(config.targetTable)
-          .where(whereClause)
-          .first();
-          
-        if (existingWithOrder) {
-          // Find next available order number
-          const maxOrderWhereClause: any = {
-            tenant: currentUser.tenant
+        // For categories, skip subcategories - they don't conflict with parent category orders
+        if (dataType === 'categories' && item.parent_category_uuid) {
+          // Subcategories have their own order space within their parent
+          // No need to check for conflicts here
+        } else {
+          const whereClause: any = {
+            tenant: currentUser.tenant,
+            [orderField]: orderValue
           };
           
           // For statuses, use status_type; for priorities, use item_type
           if (dataType === 'statuses' && mappedData.status_type) {
-            maxOrderWhereClause.status_type = mappedData.status_type;
+            whereClause.status_type = mappedData.status_type;
           } else if (dataType === 'priorities' && mappedData.item_type) {
-            maxOrderWhereClause.item_type = mappedData.item_type;
+            whereClause.item_type = mappedData.item_type;
+          } else if (dataType === 'categories') {
+            // For parent categories, only check against other parent categories
+            whereClause.parent_category = null;
           }
           
-          const maxOrder = await trx(config.targetTable)
-            .where(maxOrderWhereClause)
-            .max(orderField + ' as max')
+          const existingWithOrder = await trx(config.targetTable)
+            .where(whereClause)
             .first();
             
-          conflicts.push({
-            referenceItem: item,
-            conflictType: 'order',
-            existingItem: existingWithOrder,
-            suggestedOrder: (maxOrder?.max || 0) + 1
-          });
-          hasOrderConflict = true;
+          if (existingWithOrder) {
+            // Find next available order number
+            const maxOrderWhereClause: any = {
+              tenant: currentUser.tenant
+            };
+            
+            // For statuses, use status_type; for priorities, use item_type
+            if (dataType === 'statuses' && mappedData.status_type) {
+              maxOrderWhereClause.status_type = mappedData.status_type;
+            } else if (dataType === 'priorities' && mappedData.item_type) {
+              maxOrderWhereClause.item_type = mappedData.item_type;
+            } else if (dataType === 'categories') {
+              // For parent categories, only check against other parent categories
+              maxOrderWhereClause.parent_category = null;
+            }
+            
+            const maxOrder = await trx(config.targetTable)
+              .where(maxOrderWhereClause)
+              .max(orderField + ' as max')
+              .first();
+              
+            conflicts.push({
+              referenceItem: item,
+              conflictType: 'order',
+              existingItem: existingWithOrder,
+              suggestedOrder: (maxOrder?.max || 0) + 1
+            });
+            hasOrderConflict = true;
+          }
         }
       }
     }
@@ -373,8 +384,8 @@ export async function importReferenceData(
       );
     }
     
-    const importedItems = [];
-    const skippedItems = [];
+    const importedItems: any[] = [];
+    const skippedItems: Array<{ name: any; reason: string }> = [];
     
     for (const item of referenceData) {
     const itemId = item.id || item.priority_id || item.standard_status_id || item.status_id || item.type_id;
@@ -400,7 +411,7 @@ export async function importReferenceData(
     }
     
     if (resolution?.action === 'reorder' && resolution.newOrder !== undefined) {
-      const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+      const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       mappedData[orderField] = resolution.newOrder;
     }
     
@@ -418,46 +429,58 @@ export async function importReferenceData(
     }
     
     // Check for order conflicts proactively for data types with orders
-    const orderField = dataType === 'priorities' ? 'order_number' : 'display_order';
+    const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
     const hasOrderField = dataType === 'priorities' || dataType === 'statuses' || 
                           dataType === 'service_types' || dataType === 'interaction_types' || 
                           dataType === 'service_categories' || dataType === 'categories' || 
                           dataType === 'channels';
     
     if (hasOrderField && mappedData[orderField] !== undefined) {
-      const orderCheckClause: any = {
-        tenant: currentUser.tenant,
-        [orderField]: mappedData[orderField]
-      };
-      
-      // Add type-specific constraints for order checking
-      if (dataType === 'statuses' && mappedData.status_type) {
-        orderCheckClause.status_type = mappedData.status_type;
-      } else if (dataType === 'priorities' && mappedData.item_type) {
-        orderCheckClause.item_type = mappedData.item_type;
-      }
-      
-      const existingWithOrder = await trx(config.targetTable)
-        .where(orderCheckClause)
-        .first();
-      
-      if (existingWithOrder) {
-        // Find next available order
-        const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+      // Skip order conflict checking for subcategories
+      if (dataType === 'categories' && item.parent_category_uuid) {
+        // Subcategories maintain their order within parent groups
+        // No conflict checking needed
+      } else {
+        const orderCheckClause: any = {
+          tenant: currentUser.tenant,
+          [orderField]: mappedData[orderField]
+        };
         
+        // Add type-specific constraints for order checking
         if (dataType === 'statuses' && mappedData.status_type) {
-          maxOrderWhereClause.status_type = mappedData.status_type;
+          orderCheckClause.status_type = mappedData.status_type;
         } else if (dataType === 'priorities' && mappedData.item_type) {
-          maxOrderWhereClause.item_type = mappedData.item_type;
+          orderCheckClause.item_type = mappedData.item_type;
+        } else if (dataType === 'categories') {
+          // For parent categories, only check against other parent categories
+          orderCheckClause.parent_category = null;
         }
         
-        const maxOrderResult = await trx(config.targetTable)
-          .where(maxOrderWhereClause)
-          .max(orderField + ' as max')
+        const existingWithOrder = await trx(config.targetTable)
+          .where(orderCheckClause)
           .first();
         
-        const nextOrder = (maxOrderResult?.max || 0) + 1;
-        mappedData[orderField] = nextOrder;
+        if (existingWithOrder) {
+          // Find next available order
+          const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+          
+          if (dataType === 'statuses' && mappedData.status_type) {
+            maxOrderWhereClause.status_type = mappedData.status_type;
+          } else if (dataType === 'priorities' && mappedData.item_type) {
+            maxOrderWhereClause.item_type = mappedData.item_type;
+          } else if (dataType === 'categories') {
+            // For parent categories, only check against other parent categories
+            maxOrderWhereClause.parent_category = null;
+          }
+          
+          const maxOrderResult = await trx(config.targetTable)
+            .where(maxOrderWhereClause)
+            .max(orderField + ' as max')
+            .first();
+          
+          const nextOrder = (maxOrderResult?.max || 0) + 1;
+          mappedData[orderField] = nextOrder;
+        }
       }
     }
     
@@ -490,6 +513,35 @@ export async function importReferenceData(
             });
             continue;
           }
+        }
+      }
+      
+      // Check for existing defaults before inserting
+      if (dataType === 'channels' && mappedData.is_default === true) {
+        // Check if there's already a default channel
+        const existingDefault = await trx('channels')
+          .where({ tenant: currentUser.tenant, is_default: true })
+          .first();
+        
+        if (existingDefault) {
+          // Don't import as default if one already exists
+          mappedData.is_default = false;
+        }
+      }
+      
+      if (dataType === 'statuses' && mappedData.is_default === true) {
+        // Check if there's already a default status of the same type
+        const existingDefault = await trx('statuses')
+          .where({ 
+            tenant: currentUser.tenant, 
+            is_default: true,
+            status_type: mappedData.status_type 
+          })
+          .first();
+        
+        if (existingDefault) {
+          // Don't import as default if one already exists
+          mappedData.is_default = false;
         }
       }
       
@@ -538,7 +590,7 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
     const referenceData = await getReferenceData(dataType, filters);
     const config = referenceDataConfigs[dataType];
     
-    const availableItems = [];
+    const availableItems: any[] = [];
     
     for (const item of referenceData) {
       const mappedData = config.mapFields(item, currentUser.tenant, currentUser.user_id, filters);
@@ -555,4 +607,111 @@ export async function getAvailableReferenceData(dataType: ReferenceDataType, fil
     
     return availableItems;
   });
+}
+
+export async function deleteReferenceDataItem(
+  dataType: ReferenceDataType,
+  itemId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser?.user_id || !currentUser?.tenant) {
+      throw new Error('User not authenticated or tenant not found');
+    }
+
+    const config = referenceDataConfigs[dataType];
+    const { knex: db } = await createTenantKnex();
+
+    // Define the ID field name for each data type
+    const idFieldMap: Record<ReferenceDataType, string> = {
+      priorities: 'priority_id',
+      statuses: 'status_id',
+      service_types: 'id',
+      task_types: 'id',
+      interaction_types: 'id',
+      service_categories: 'id',
+      categories: 'category_id',
+      channels: 'channel_id'
+    };
+
+    const idField = idFieldMap[dataType];
+    if (!idField) {
+      throw new Error(`Unknown ID field for data type: ${dataType}`);
+    }
+
+    await withTransaction(db, async (trx) => {
+      // Check if the item exists and belongs to the tenant
+      const existing = await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .first();
+
+      if (!existing) {
+        throw new Error('Item not found or access denied');
+      }
+
+      // Special handling for channels - check if it has categories
+      if (dataType === 'channels') {
+        const categoryCount = await trx('categories')
+          .where({
+            channel_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (categoryCount && parseInt(categoryCount.count as string) > 0) {
+          throw new Error('Cannot delete board with existing categories. Please delete all categories first.');
+        }
+      }
+
+      // Special handling for categories - check if it has subcategories
+      if (dataType === 'categories') {
+        const subcategoryCount = await trx('categories')
+          .where({
+            parent_category: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (subcategoryCount && parseInt(subcategoryCount.count as string) > 0) {
+          throw new Error('Cannot delete category with existing subcategories. Please delete all subcategories first.');
+        }
+      }
+
+      // Special handling for service_types - check if it has service catalog entries
+      if (dataType === 'service_types') {
+        const serviceCount = await trx('service_catalog')
+          .where({
+            custom_service_type_id: itemId,
+            tenant: currentUser.tenant
+          })
+          .count('* as count')
+          .first();
+
+        if (serviceCount && parseInt(serviceCount.count as string) > 0) {
+          throw new Error('Cannot delete service type that is being used by services. Please update or delete the services first.');
+        }
+      }
+
+      // Delete the item
+      await trx(config.targetTable)
+        .where({
+          [idField]: itemId,
+          tenant: currentUser.tenant
+        })
+        .delete();
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting reference data item:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
 }

@@ -12,8 +12,23 @@ import {
   createInboundTicketDefaults, 
   updateInboundTicketDefaults 
 } from '../../lib/actions/email-actions/inboundTicketDefaultsActions';
-import { getTicketFieldOptions } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
+import { getTicketFieldOptions, getCategoriesByChannel } from '../../lib/actions/email-actions/ticketFieldOptionsActions';
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
+// Dedicated pickers used elsewhere in the app
+import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
+import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
+import UserPicker from 'server/src/components/ui/UserPicker';
+// Loaders to hydrate pickers with full data
+import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
+import type { IChannel, IPriority } from 'server/src/interfaces';
+import type { ICompany } from 'server/src/interfaces/company.interfaces';
+import type { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
+import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
 export interface InboundTicketDefaultsFormProps {
   defaults?: InboundTicketDefaults | null;
@@ -55,10 +70,40 @@ export function InboundTicketDefaultsForm({
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Data for dedicated pickers
+  const [channels, setChannels] = useState<IChannel[]>([]);
+  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [priorities, setPriorities] = useState<IPriority[]>([]);
+  const [usersWithRoles, setUsersWithRoles] = useState<IUserWithRoles[]>([]);
+  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('all');
+  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+
+  // Note: category/subcategory are now selected via CategoryPicker
+
   // Load field options on mount
   useEffect(() => {
     loadFieldOptions();
   }, []);
+
+  // Load categories when channel changes (server-side filtered)
+  useEffect(() => {
+    const loadCategoriesForChannel = async () => {
+      if (!formData.channel_id) {
+        // Clear categories if no channel selected
+        setFieldOptions(prev => ({ ...prev, categories: [] }));
+        return;
+      }
+      try {
+        const { categories } = await getCategoriesByChannel(formData.channel_id);
+        setFieldOptions(prev => ({ ...prev, categories }));
+      } catch (err) {
+        // On error, keep categories empty for safety
+        setFieldOptions(prev => ({ ...prev, categories: [] }));
+      }
+    };
+    loadCategoriesForChannel();
+  }, [formData.channel_id]);
 
   // Populate form when editing
   useEffect(() => {
@@ -85,6 +130,19 @@ export function InboundTicketDefaultsForm({
       setLoadingOptions(true);
       const data = await getTicketFieldOptions();
       setFieldOptions(data.options);
+
+      // Hydrate dedicated pickers with richer datasets
+      // Channels with full metadata for ChannelPicker
+      const [allChannels, allCompanies, allPriorities, allUsers] = await Promise.all([
+        getAllChannels(true),
+        getAllCompanies(true),
+        getAllPriorities('ticket'),
+        getAllUsers(true, 'internal')
+      ]);
+      setChannels(allChannels || []);
+      setCompanies(allCompanies || []);
+      setPriorities((allPriorities as IPriority[]) || []);
+      setUsersWithRoles(allUsers || []);
     } catch (err: any) {
       setError('Failed to load field options');
     } finally {
@@ -101,7 +159,7 @@ export function InboundTicketDefaultsForm({
     }
 
     if (!formData.channel_id || !formData.status_id || !formData.priority_id) {
-      setError('Channel, status, and priority are required');
+      setError('Board, status, and priority are required');
       return;
     }
 
@@ -140,10 +198,22 @@ export function InboundTicketDefaultsForm({
   };
 
   const handleDefaultChange = (field: string, value: string | null) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFormData(prev => {
+      const next = { ...prev, [field]: value } as typeof prev;
+      // Clear dependent fields when parents change
+      if (field === 'channel_id') {
+        next.category_id = '';
+        next.subcategory_id = '';
+      }
+      if (field === 'category_id') {
+        next.subcategory_id = '';
+      }
+      if (field === 'company_id' && prev.company_id !== value) {
+        // Clear location if company changes
+        next.location_id = '';
+      }
+      return next;
+    });
   };
 
   if (loadingOptions) {
@@ -219,16 +289,15 @@ export function InboundTicketDefaultsForm({
         <div className="grid grid-cols-2 gap-4">
           {/* Required Fields */}
           <div>
-            <Label htmlFor="channel_id">Channel *</Label>
-            <CustomSelect
+          <Label htmlFor="channel_id">Board *</Label>
+            <ChannelPicker
               id="channel_id"
-              value={formData.channel_id}
-              onValueChange={(value) => handleDefaultChange('channel_id', value)}
-              options={fieldOptions.channels.map(c => ({ 
-                value: c.id, 
-                label: c.name + (c.is_default ? ' (Default)' : '') 
-              }))}
-              placeholder="Select channel"
+              channels={channels}
+              selectedChannelId={formData.channel_id || null}
+              onSelect={(value) => handleDefaultChange('channel_id', value)}
+              filterState={channelFilterState}
+              onFilterStateChange={setChannelFilterState}
+              placeholder="Select Board"
             />
           </div>
 
@@ -248,13 +317,14 @@ export function InboundTicketDefaultsForm({
 
           <div>
             <Label htmlFor="priority_id">Priority *</Label>
-            <CustomSelect
+            <PrioritySelect
               id="priority_id"
               value={formData.priority_id}
               onValueChange={(value) => handleDefaultChange('priority_id', value)}
-              options={fieldOptions.priorities.map(p => ({ 
-                value: p.id, 
-                label: p.name + (p.is_default ? ' (Default)' : '') 
+              options={priorities.map(p => ({ 
+                value: p.priority_id, 
+                label: p.priority_name, 
+                color: p.color 
               }))}
               placeholder="Select priority"
             />
@@ -263,65 +333,98 @@ export function InboundTicketDefaultsForm({
           {/* Optional Fields */}
           <div>
             <Label htmlFor="company_id">Company</Label>
-            <CustomSelect
+            <CompanyPicker
               id="company_id"
-              value={formData.company_id}
-              onValueChange={(value) => handleDefaultChange('company_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.companies.map(c => ({ value: c.id, label: c.name }))
-              ]}
-              placeholder="Select company"
+              companies={companies}
+              selectedCompanyId={formData.company_id || null}
+              onSelect={(value) => handleDefaultChange('company_id', value || '')}
+              filterState={companyFilterState}
+              onFilterStateChange={setCompanyFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              placeholder="Select Client"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Used as a catch-all when no company can be matched from the email; otherwise ignored.
+            </p>
           </div>
 
           <div>
             <Label htmlFor="category_id">Category</Label>
-            <CustomSelect
+            <CategoryPicker
               id="category_id"
-              value={formData.category_id}
-              onValueChange={(value) => handleDefaultChange('category_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.categories
-                  .filter(c => !c.parent_id)
-                  .map(c => ({ value: c.id, label: c.name }))
-              ]}
-              placeholder="Select category"
+              categories={(fieldOptions.categories || []).map((c): ITicketCategory => ({
+                category_id: c.id,
+                category_name: c.name,
+                parent_category: c.parent_id,
+                channel_id: c.channel_id
+              }))}
+              selectedCategories={(() => {
+                // Represent current selection as either subcategory or parent
+                if (formData.subcategory_id) return [formData.subcategory_id];
+                if (formData.category_id) return [formData.category_id];
+                return [];
+              })()}
+              onSelect={(categoryIds) => {
+                const selectedId = categoryIds[0] || '';
+                if (!selectedId) {
+                  handleDefaultChange('category_id', '');
+                  handleDefaultChange('subcategory_id', '');
+                  return;
+                }
+                const found = fieldOptions.categories.find(c => c.id === selectedId);
+                if (found?.parent_id) {
+                  // Selected a subcategory
+                  handleDefaultChange('category_id', found.parent_id);
+                  handleDefaultChange('subcategory_id', found.id);
+                } else {
+                  // Selected a top-level category
+                  handleDefaultChange('category_id', selectedId);
+                  handleDefaultChange('subcategory_id', '');
+                }
+              }}
+              placeholder={formData.channel_id ? 'Select category' : 'Select board first'}
+              multiSelect={false}
+              disabled={!formData.channel_id}
+              showReset
+              allowEmpty
             />
+            {formData.channel_id && (fieldOptions.categories || []).filter(c => !c.parent_id && String(c.channel_id || '') === String(formData.channel_id)).length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">No categories found for the selected board.</p>
+            )}
           </div>
 
           <div>
-            <Label htmlFor="subcategory_id">Subcategory</Label>
+            <Label htmlFor="location_id">Location</Label>
             <CustomSelect
-              id="subcategory_id"
-              value={formData.subcategory_id}
-              onValueChange={(value) => handleDefaultChange('subcategory_id', value)}
-              options={[
-                { value: '', label: 'None' },
-                ...fieldOptions.categories
-                  .filter(c => c.parent_id === formData.category_id)
-                  .map(c => ({ value: c.id, label: c.name }))
-              ]}
-              placeholder="Select subcategory"
-              disabled={!formData.category_id}
+              id="location_id"
+              value={formData.location_id}
+              onValueChange={(value) => handleDefaultChange('location_id', value || '')}
+              options={fieldOptions.locations
+                .filter(l => !formData.company_id || l.company_id === formData.company_id)
+                .map(l => ({ value: l.id, label: l.name }))}
+              placeholder={formData.company_id ? 'Select location' : 'Select company first (optional)'}
+              disabled={!formData.company_id}
+              allowClear
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Only applied when the catch-all company is used (no match case).
+            </p>
           </div>
 
           <div>
             <Label htmlFor="entered_by">Entered By</Label>
-            <CustomSelect
-              id="entered_by"
-              value={formData.entered_by || 'system'}
-              onValueChange={(value) => handleDefaultChange('entered_by', value === 'system' ? null : value)}
-              options={[
-                { value: 'system', label: 'System (null)' },
-                ...fieldOptions.users.map(u => ({ value: u.id, label: `${u.name} (${u.username})` }))
-              ]}
-              placeholder="Select user or system"
+            <UserPicker
+              label={undefined}
+              value={formData.entered_by || ''}
+              onValueChange={(value) => handleDefaultChange('entered_by', value || null)}
+              users={usersWithRoles}
+              placeholder="System (null)"
+              userTypeFilter="internal"
+              buttonWidth="full"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              System tickets will show "System" as creator
+              Used only when we cannot match a contact or company. System tickets will show "System" as creator.
             </p>
           </div>
         </div>

@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '../../utils/tagCleanup';
 import { 
@@ -29,7 +29,7 @@ import {
 } from '../../../lib/eventBus/events';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
-import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
+import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel.js';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 
@@ -352,7 +352,7 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
           .select('*');
           
         // Step 3: Store resources for recreation, excluding those that would violate constraints
-        const resourcesToRecreate = [];
+        const resourcesToRecreate: any[] = [];
         for (const resource of existingResources) {
           // Skip resources where additional_user_id would equal the new assigned_to
           if (resource.additional_user_id !== updateData.assigned_to) {

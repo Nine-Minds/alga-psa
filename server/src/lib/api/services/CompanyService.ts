@@ -9,7 +9,6 @@ import { ICompany, ICompanyLocation } from 'server/src/interfaces/company.interf
 import { withTransaction } from '@shared/db';
 import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { addCompanyEmailSetting } from 'server/src/lib/actions/company-settings/emailSettings';
 import { NotFoundError } from '../../api/middleware/apiMiddleware';
 import { 
   CreateCompanyData, 
@@ -202,15 +201,7 @@ export class CompanyService extends BaseService<ICompany> {
           // Continue without tax settings - they can be added later
         }
     
-        // Try to add default email settings with tenant context (after transaction)
-        try {
-          await runWithTenant(context.tenant, async () => {
-            await addCompanyEmailSetting(company.company_id, 'default');
-          });
-        } catch (emailError) {
-          console.warn('Failed to create default email settings:', emailError);
-          // Continue without email settings - they can be added later
-        }
+        // Email suffix functionality removed for security
     
         // Publish event
         await publishEvent({

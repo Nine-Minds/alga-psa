@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from "next-auth/jwt"
 import { JWT } from 'next-auth/jwt';
-import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 interface CustomToken extends JWT {
   error?: string;
@@ -12,7 +12,7 @@ interface CustomToken extends JWT {
 
 export async function authorizationMiddleware(req: NextRequest) {
   const secretProvider = await getSecretProviderInstance();
-  const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET') || process.env.NEXTAUTH_SECRET;
+  const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
   const token = await getToken({ req, secret: nextAuthSecret }) as CustomToken;
 
   if (!token) {

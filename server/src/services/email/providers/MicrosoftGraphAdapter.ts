@@ -1,7 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
 /**
  * Microsoft Graph API adapter for email processing
@@ -38,28 +39,44 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   protected async loadCredentials(): Promise<void> {
     try {
-      const secretProvider = await getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
+      const vendorConfig = this.config.provider_config || {};
 
-      if (!secret) {
-        throw new Error('No email provider credentials found');
+      // Preferred: load from DB-backed provider_config (parity with Gmail)
+      if (vendorConfig.access_token && vendorConfig.refresh_token) {
+        this.accessToken = vendorConfig.access_token;
+        this.refreshToken = vendorConfig.refresh_token;
+        this.tokenExpiresAt = vendorConfig.token_expires_at
+          ? new Date(vendorConfig.token_expires_at)
+          : undefined;
+        this.log('info', 'Loaded Microsoft OAuth credentials from provider configuration');
+        return;
       }
 
-      const allCredentials = JSON.parse(secret);
-      const credentials = allCredentials[this.config.id];
-
-      if (!credentials || credentials.provider !== 'microsoft') {
-        throw new Error('Microsoft credentials not found');
+      // Temporary fallback: read from tenant secret storage (read-only)
+      try {
+        const secretProvider = await getSecretProviderInstance();
+        const secret = await secretProvider.getTenantSecret(
+          this.config.tenant,
+          'email_provider_credentials'
+        );
+        if (secret) {
+          const allCredentials = JSON.parse(secret);
+          const credentials = allCredentials[this.config.id];
+          if (credentials && credentials.provider === 'microsoft') {
+            this.accessToken = credentials.accessToken;
+            this.refreshToken = credentials.refreshToken;
+            this.tokenExpiresAt = credentials.accessTokenExpiresAt
+              ? new Date(credentials.accessTokenExpiresAt)
+              : undefined;
+            this.log('info', 'Loaded Microsoft OAuth credentials from secrets (fallback)');
+            return;
+          }
+        }
+      } catch (e) {
+        this.log('warn', 'Failed to read credentials from secrets provider (fallback).');
       }
 
-      this.accessToken = credentials.accessToken;
-      this.refreshToken = credentials.refreshToken;
-      this.tokenExpiresAt = new Date(credentials.accessTokenExpiresAt);
-
-      this.log('info', 'Credentials loaded successfully');
+      throw new Error('Microsoft OAuth tokens not found. Please complete authorization.');
     } catch (error) {
       throw this.handleError(error, 'loadCredentials');
     }
@@ -74,34 +91,50 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('No refresh token available');
       }
 
-      const secretProvider = await getSecretProviderInstance();
-      const clientId = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id');
-      const clientSecret = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret');
+      const vendorConfig = this.config.provider_config || {};
+
+      // Prefer env or provider_config, then fallback to tenant secrets
+      let clientId = vendorConfig.client_id || process.env.MICROSOFT_CLIENT_ID;
+      let clientSecret = vendorConfig.client_secret || process.env.MICROSOFT_CLIENT_SECRET;
+
+      if (!clientId || !clientSecret) {
+        const secretProvider = await getSecretProviderInstance();
+        clientId = clientId || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_id'));
+        clientSecret = clientSecret || (await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_client_secret'));
+      }
 
       if (!clientId || !clientSecret) {
         throw new Error('Microsoft OAuth credentials not configured');
       }
 
-      const tokenUrl = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+      // Determine tenant authority for single-tenant apps
+      const vendorTenantId = (this.config.provider_config as any)?.tenant_id || this.config.provider_config?.tenantId;
+      let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
+      if (!tenantAuthority) {
+        try {
+          const secretProvider = await getSecretProviderInstance();
+          tenantAuthority = await secretProvider.getTenantSecret(this.config.tenant, 'microsoft_tenant_id')
+            || await secretProvider.getAppSecret('MICROSOFT_TENANT_ID')
+            || 'common';
+        } catch {
+          tenantAuthority = 'common';
+        }
+      }
+
+      const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(tenantAuthority)}/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         refresh_token: this.refreshToken,
         grant_type: 'refresh_token',
-        scope: 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.ReadWrite',
+        scope: 'https://graph.microsoft.com/.default offline_access',
       });
 
       const response = await axios.post(tokenUrl, params.toString(), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       });
 
-      const { 
-        access_token, 
-        refresh_token, 
-        expires_in 
-      } = response.data;
+      const { access_token, refresh_token, expires_in } = response.data;
 
       this.accessToken = access_token;
       if (refresh_token) {
@@ -109,10 +142,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       // Calculate expiry with 5-minute buffer
-      const expiryTime = new Date(Date.now() + (expires_in - 300) * 1000);
+      const expiryTime = new Date(Date.now() + (Number(expires_in || 3600) - 300) * 1000);
       this.tokenExpiresAt = expiryTime;
 
-      // Update stored credentials
+      // Update stored credentials (DB + in-memory config)
       await this.updateStoredCredentials();
 
       this.log('info', 'Access token refreshed successfully');
@@ -126,33 +159,31 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   private async updateStoredCredentials(): Promise<void> {
     try {
-      const secretProvider = await getSecretProviderInstance();
-      const secret = await secretProvider.getTenantSecret(
-        this.config.tenant, 
-        'email_provider_credentials'
-      );
+      // Update in-memory provider_config
+      if (!this.config.provider_config) this.config.provider_config = {};
+      this.config.provider_config.access_token = this.accessToken;
+      this.config.provider_config.refresh_token = this.refreshToken;
+      this.config.provider_config.token_expires_at = this.tokenExpiresAt?.toISOString();
 
-      const allCredentials = secret ? JSON.parse(secret) : {};
-      
-      allCredentials[this.config.id] = {
-        provider: 'microsoft',
-        accessToken: this.accessToken,
-        refreshToken: this.refreshToken,
-        accessTokenExpiresAt: this.tokenExpiresAt?.toISOString(),
-        refreshTokenExpiresAt: this.tokenExpiresAt ? 
-          new Date(this.tokenExpiresAt.getTime() + (30 * 24 * 60 * 60 * 1000)).toISOString() : // 30 days
-          undefined,
-        mailbox: this.config.mailbox,
-        tenantId: this.config.provider_config?.tenantId,
-      };
-
-      await secretProvider.setTenantSecret(
-        this.config.tenant,
-        'email_provider_credentials',
-        JSON.stringify(allCredentials, null, 2)
-      );
+      // Persist to DB (parity with Gmail)
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({
+            access_token: this.accessToken,
+            refresh_token: this.refreshToken,
+            token_expires_at: this.tokenExpiresAt?.toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        this.log('info', 'Persisted refreshed Microsoft OAuth tokens to database');
+      } catch (dbErr: any) {
+        this.log('error', `Failed to persist Microsoft credentials to DB: ${dbErr?.message}`);
+      }
     } catch (error) {
       this.log('warn', 'Failed to update stored credentials', error);
+      throw error;
     }
   }
 
@@ -179,13 +210,27 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         throw new Error('Webhook notification URL not configured');
       }
 
+      // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
+      // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
+      const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
         resource: `/me/mailFolders('${this.config.folder_to_monitor}')/messages`,
-        expirationDateTime: new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString(), // 3 days
+        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
+
+      // Log payload with masked clientState for diagnostics
+      const maskedState = subscription.clientState
+        ? `${String(subscription.clientState).slice(0, 4)}...(${String(subscription.clientState).length})`
+        : 'none';
+      this.log('info', 'Creating Microsoft subscription', {
+        notificationUrl: subscription.notificationUrl,
+        resource: subscription.resource,
+        expirationDateTime: subscription.expirationDateTime,
+        clientState: maskedState,
+      });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
       
@@ -193,9 +238,31 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.config.webhook_subscription_id = response.data.id;
       this.config.webhook_expires_at = response.data.expirationDateTime;
 
+      // Persist webhook details only in microsoft vendor config
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({
+            webhook_subscription_id: response.data.id,
+            webhook_expires_at: response.data.expirationDateTime,
+            webhook_verification_token: this.config.webhook_verification_token || null,
+            updated_at: new Date().toISOString(),
+          });
+      } catch (dbErr: any) {
+        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
+      }
+
       this.log('info', `Webhook subscription created: ${response.data.id}`);
     } catch (error) {
-      throw this.handleError(error, 'registerWebhookSubscription');
+      // Enrich/log details (status, request-id, body) before throwing
+      const enriched = this.handleError(error, 'registerWebhookSubscription');
+      this.log('error', 'Subscription creation failed', {
+        message: enriched.message,
+        context: 'registerWebhookSubscription',
+      });
+      throw enriched;
     }
   }
 
@@ -216,6 +283,17 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       this.config.webhook_expires_at = newExpiry;
       this.config.last_subscription_renewal = new Date().toISOString();
+
+      // Persist renewal
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({ webhook_expires_at: newExpiry, updated_at: new Date().toISOString() });
+      } catch (dbErr: any) {
+        this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
+      }
 
       this.log('info', `Webhook subscription renewed until ${newExpiry}`);
     } catch (error) {
@@ -268,6 +346,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       const response = await this.httpClient.get(`/me/messages/${messageId}`, {
         params: {
           $expand: 'attachments',
+          $select:
+            'internetMessageHeaders,receivedDateTime,subject,body,bodyPreview,from,toRecipients,ccRecipients,conversationId',
+        },
+        headers: {
+          Prefer: 'outlook.body-content-type="text"',
         },
       });
 
@@ -322,15 +405,18 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   /**
    * Test the connection to Microsoft Graph
    */
-  async testConnection(): Promise<{ success: boolean; error?: string; }> {
+  async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.httpClient.get('/me');
+      const resp = await this.httpClient.get('/me');
+      const profile = resp.data || {};
+      const mailbox = (profile.mail || profile.userPrincipalName || '').toLowerCase();
+      const expected = (this.config.mailbox || '').toLowerCase();
+      if (expected && mailbox && mailbox !== expected) {
+        return { success: false, error: `Email mismatch: expected ${this.config.mailbox}, got ${mailbox}` };
+      }
       return { success: true };
     } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Connection test failed' 
-      };
+      return { success: false, error: error.message || 'Connection test failed' };
     }
   }
 
@@ -367,13 +453,21 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     try {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
+      const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
         resource: `/me/mailFolders('Inbox')/messages`,
-        expirationDateTime: new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString(), // 72 hours
-        clientState: 'secretClientValue'
+        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
+        clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
+
+      this.log('info', 'Posting Microsoft subscription payload', {
+        notificationUrl: subscription.notificationUrl,
+        resource: subscription.resource,
+        expirationDateTime: subscription.expirationDateTime,
+        clientState: subscription.clientState ? '**masked**' : 'none',
+      });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
       const subscriptionId = response.data.id;
@@ -385,10 +479,17 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         subscriptionId
       };
     } catch (error: any) {
-      this.log('error', 'Failed to initialize webhook', error);
+      // Let base adapter enrich the error with axios response details
+      const enriched = this.handleError(error, 'initializeWebhook');
+      this.log('error', 'Failed to initialize webhook', {
+        message: enriched.message,
+        status: (enriched as any).status,
+        code: (enriched as any).code,
+        requestId: (enriched as any).requestId,
+      });
       return {
         success: false,
-        error: error.message
+        error: enriched.message
       };
     }
   }

@@ -87,7 +87,7 @@ export class Dashboard {
    */
   async verifyOnboardingNotCompleted(): Promise<void> {
     // Should be redirected to onboarding or see onboarding prompts
-    const isOnOnboarding = await this.page.url().includes('/onboarding');
+    const isOnOnboarding = this.page.url().includes('/onboarding');
     const hasOnboardingIndicator = await this.onboardingIndicator.isVisible();
     
     expect(isOnOnboarding || hasOnboardingIndicator).toBe(true);
@@ -271,12 +271,12 @@ export class Dashboard {
     try {
       await this.navigateToTickets();
       await this.page.goBack();
-    } catch (error) {
+    } catch {
       // If tickets aren't accessible, try clients
       try {
         await this.navigateToClients();
         await this.page.goBack();
-      } catch (error) {
+      } catch {
         // If neither are accessible, that might be expected for this user
         console.warn('Limited navigation access detected');
       }

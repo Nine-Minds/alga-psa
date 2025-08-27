@@ -7,6 +7,7 @@
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { TenantEmailSettings, EmailProviderConfig } from '../../../types/email.types';
+import { TenantEmailService } from '../../services/TenantEmailService';
 
 export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
   const user = await getCurrentUser();
@@ -17,10 +18,8 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
   const { knex, tenant } = await createTenantKnex();
 
   try {
-    // Get email settings from database
-    const settings = await knex('tenant_email_settings')
-      .where({ tenant_id: tenant })
-      .first();
+    // Use TenantEmailService to get email settings
+    const settings = await TenantEmailService.getTenantEmailSettings(tenant || '', knex);
 
     if (!settings) {
       // Return default settings if none exist
@@ -50,30 +49,20 @@ export async function getEmailSettings(): Promise<TenantEmailSettings | null> {
       return defaultSettings;
     }
 
-    // Parse JSON fields
-    const tenantSettings: TenantEmailSettings = {
-      tenantId: settings.tenant_id,
-      defaultFromDomain: settings.default_from_domain,
-      customDomains: settings.custom_domains || [],
-      emailProvider: settings.email_provider,
-      providerConfigs: settings.provider_configs || [],
-      trackingEnabled: settings.tracking_enabled,
-      maxDailyEmails: settings.max_daily_emails,
-      createdAt: settings.created_at,
-      updatedAt: settings.updated_at
+    // Don't expose sensitive data like passwords and API keys in full
+    const sanitizedSettings = {
+      ...settings,
+      providerConfigs: settings.providerConfigs.map(config => ({
+        ...config,
+        config: {
+          ...config.config,
+          password: config.config.password ? '***' : '',
+          apiKey: config.config.apiKey ? '***' : ''
+        }
+      }))
     };
 
-    // Don't expose sensitive data like passwords and API keys in full
-    tenantSettings.providerConfigs = tenantSettings.providerConfigs.map(config => ({
-      ...config,
-      config: {
-        ...config.config,
-        password: config.config.password ? '***' : '',
-        apiKey: config.config.apiKey ? '***' : ''
-      }
-    }));
-
-    return tenantSettings;
+    return sanitizedSettings;
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
     throw new Error('Failed to fetch email settings');

@@ -77,7 +77,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, companyBillingP
   ]);
 
   // Determine which invoice is more recent (if both exist)
-  let latestInvoice = null;
+  let latestInvoice: any = null;
   if (traditionalPathInvoice && fixedFeePathInvoice) {
     const traditionalDate = new Date(traditionalPathInvoice.invoice_date);
     const fixedFeeDate = new Date(fixedFeePathInvoice.invoice_date);

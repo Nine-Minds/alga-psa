@@ -7,6 +7,10 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import UserAvatar from '../../ui/UserAvatar';
 import { getUserAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
+
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+
+import { getUsersCompanyInfo } from 'server/src/lib/actions/user-actions/userCompanyActions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,11 +24,13 @@ interface UserListProps {
   users: IUser[];
   onDeleteUser: (userId: string) => Promise<void>;
   onUpdate: () => void;
+  selectedCompanyId?: string | null;
 }
 
-const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) => {
+const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate, selectedCompanyId = null }) => {
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [userAvatars, setUserAvatars] = useState<Record<string, string | null>>({});
+  const [userCompanies, setUserCompanies] = useState<Record<string, { company_id: string; company_name: string } | null>>({});
   const { openDrawer } = useDrawer();
 
   useEffect(() => {
@@ -64,6 +70,43 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
     }
   }, [users.length]); // Only re-run when the number of users changes
 
+  useEffect(() => {
+    // Fetch associated company for client users in bulk
+    const fetchCompaniesForUsers = async () => {
+      const usersToFetch = users
+        .filter((u) => u.user_type === 'client' && userCompanies[u.user_id] === undefined)
+        .map((u) => u.user_id);
+
+      if (usersToFetch.length === 0) return;
+
+      try {
+        const result = await getUsersCompanyInfo(usersToFetch);
+        const map: Record<string, { company_id: string; company_name: string } | null> = {};
+        result.forEach((row) => {
+          map[row.user_id] = row.company_id
+            ? { company_id: row.company_id, company_name: row.company_name || 'Unnamed Company' }
+            : null;
+        });
+        setUserCompanies((prev) => ({ ...prev, ...map }));
+      } catch (e) {
+        console.error('Error fetching companies for users', e);
+      }
+    };
+
+    if (users.length > 0) {
+      fetchCompaniesForUsers();
+    }
+  }, [users, userCompanies]);
+
+  // Filter by selected company if provided (client users only)
+  const visibleUsers = React.useMemo(() => {
+    if (!selectedCompanyId) return users;
+    const clientUsers = users.filter((u) => u.user_type === 'client');
+    const allResolved = clientUsers.every((u) => userCompanies[u.user_id] !== undefined);
+    if (!allResolved) return users; // avoid flicker while resolving
+    return users.filter((u) => userCompanies[u.user_id]?.company_id === selectedCompanyId);
+  }, [users, userCompanies, selectedCompanyId]);
+
   const handleDeleteClick = async (user: IUser): Promise<void> => {
     setUserToDelete(user);
   };
@@ -75,9 +118,31 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
     }
   };
 
+  
+
   const handleEditClick = (userId: string) => {
     openDrawer(<UserDetails userId={userId} onUpdate={onUpdate} />);
   };
+
+  const handleCompanyClick = async (companyId: string) => {
+    if (companyId) {
+      // Fetch the company data first
+      const { getCompanyById } = await import('server/src/lib/actions/company-actions/companyActions');
+      const company = await getCompanyById(companyId);
+      if (company) {
+        openDrawer(
+          <CompanyDetails
+            company={company}
+            isInDrawer={true}
+            quickView={true}
+          />
+        );
+      }
+    }
+  };
+
+  // Check if we should show the Client column (when we have client portal users)
+  const hasClientUsers = users.some(u => u.user_type === 'client');
 
   const columns = [
     {
@@ -106,6 +171,34 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
       dataIndex: 'email',
       width: '20%'
     },
+    ...(hasClientUsers
+      ? [{
+          title: 'Client',
+          dataIndex: 'company',
+          width: '20%',
+          render: (_: any, record: IUser) => {
+            const company = userCompanies[record.user_id];
+            if (company === undefined) {
+              return <span className="text-gray-400">Loading...</span>;
+            }
+            if (!company) {
+              return <span className="text-gray-400">No Company</span>;
+            }
+            return (
+              <button
+                id={`open-company-details-${record.user_id}`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleCompanyClick(company.company_id);
+                }}
+                className="text-blue-500 hover:underline text-left whitespace-normal break-words"
+              >
+                {company.company_name}
+              </button>
+            );
+          },
+        }]
+      : []),
     {
       title: 'Role',
       dataIndex: 'roles',
@@ -171,10 +264,7 @@ const UserList: React.FC<UserListProps> = ({ users, onDeleteUser, onUpdate }) =>
 
   return (
     <div>
-      <DataTable
-        data={users}
-        columns={columns}
-      />
+      <DataTable data={visibleUsers} columns={columns} />
 
       {userToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

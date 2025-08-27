@@ -3,20 +3,85 @@ import pluginJs from "@eslint/js";
 import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import pluginReact from "eslint-plugin-react";
+import pluginReactHooks from "eslint-plugin-react-hooks";
 import customRules from "./eslint-plugin-custom-rules/index.js";
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Ensure tsconfig resolution works regardless of process.cwd()
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
+  // Configuration for JavaScript files (no TypeScript)
   {
-    files: ["**/*.{js,mjs,cjs,ts,jsx,tsx}"],
+    files: ["**/*.{js,mjs,cjs}"],
     ignores: [
       "eslint-plugin-custom-rules/**/*",
       "eslint.config.js",
       "**/eslint.config.js",
-      "ee/server/migrations/**/*" // Ignore EE migration files (usually .cjs)
+      "ee/server/migrations/**/*", // Ignore EE migration files (usually .cjs)
+      "ee/extensions/**/*", // Exclude extension bundles/examples from lint to reduce load and avoid false positives
+      "dist/**/*",
+      "**/.next/**/*",
+      "**/out/**/*",
+      "tools/**/*",
+      ".ai/**/*",
+      "**/build/**/*",
+      "server/public/**/*",
+      "shared/workflow/workflows/system-email-processing-workflow.ts", // Plain JS for workflow runtime compatibility
+      "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
     ],
 
-    // Define language options
+    // Define language options for JS files
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        React: true,
+        JSX: true
+      },
+      ecmaVersion: 2020,
+      sourceType: "module"
+    },
+
+    plugins: {
+      "custom-rules": customRules,
+    },
+
+    rules: {
+      // Base ESLint rules for JS
+      "no-unused-vars": "warn",
+      "no-undef": "warn",
+      "no-console": "off",
+      
+      // Custom rules
+      "custom-rules/map-return-type": "off",
+      "custom-rules/check-required-props": "error",
+      "custom-rules/no-legacy-ext-imports": "error",
+    }
+  },
+
+  // Configuration for TypeScript files
+  {
+    files: ["**/*.{ts,tsx}"],
+    ignores: [
+      "eslint-plugin-custom-rules/**/*",
+      "eslint.config.js",
+      "**/eslint.config.js",
+      "ee/server/migrations/**/*",
+      "ee/extensions/**/*",
+      "dist/**/*",
+      "**/.next/**/*",
+      "**/out/**/*",
+      "tools/**/*",
+      ".ai/**/*",
+      "**/build/**/*",
+      "server/public/**/*",
+      "shared/workflow/workflows/system-email-processing-workflow.ts",
+      "server/src/invoice-templates/assemblyscript/**/*" // AssemblyScript files have different syntax
+    ],
+
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -27,17 +92,26 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
-        project: ["./server/tsconfig.json", "./ee/server/tsconfig.json", "./shared/tsconfig.json"],
+        project: [
+          path.join(__dirname, 'server/tsconfig.eslint.json'),
+          path.join(__dirname, 'ee/server/tsconfig.eslint.json'),
+          path.join(__dirname, 'shared/tsconfig.json'),
+          path.join(__dirname, 'services/workflow-worker/tsconfig.eslint.json'),
+          path.join(__dirname, 'ee/server/packages/ui-kit/tsconfig.json'),
+          path.join(__dirname, 'ee/server/packages/extension-iframe-sdk/tsconfig.json'),
+          path.join(__dirname, 'ee/server/packages/extension-iframe-sdk/examples/vite-react/tsconfig.json'),
+        ],
         ecmaFeatures: {
           jsx: true
         },
-        tsconfigRootDir: process.cwd(),
+        tsconfigRootDir: __dirname,
       },
     },
 
     // Add base rules and plugins
     plugins: {
       "@typescript-eslint": tseslint,
+      "react-hooks": pluginReactHooks,
       "custom-rules": customRules,
     },
 
@@ -67,9 +141,14 @@ export default [
       "@typescript-eslint/unbound-method": "warn",
       "@typescript-eslint/no-non-null-assertion": "warn",
 
+      // React hooks rules
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
+
       // Custom rules as warnings
       "custom-rules/map-return-type": "off",
       "custom-rules/check-required-props": "error",
+      "custom-rules/no-legacy-ext-imports": "error",
 
       // Base ESLint rules
       "no-unused-vars": "off", // Turn off in favor of @typescript-eslint/no-unused-vars
@@ -121,4 +200,17 @@ export default [
       }
     }
   },
+
+  // Configuration for test files
+  {
+    files: ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx", "**/*.playwright.test.ts", "**/__tests__/**/*.ts", "**/__tests__/**/*.tsx"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.browser,
+        React: true,
+        JSX: true
+      }
+    }
+  }
 ];

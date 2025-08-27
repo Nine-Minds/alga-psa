@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; img-src 'self' data:; connect-src 'self';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hello World Extension</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #ffffff;
+        --fg: #111827;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root { --bg: #0b1120; --fg: #e5e7eb; }
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        background: var(--bg);
+        color: var(--fg);
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+      }
+      .card {
+        border: 1px solid rgba(0,0,0,0.08);
+        border-radius: 12px;
+        padding: 24px 28px;
+        max-width: 520px;
+        text-align: center;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+        background: rgba(255,255,255,0.75);
+        backdrop-filter: saturate(180%) blur(10px);
+      }
+      h1 { margin: 0 0 8px; font-size: 24px; }
+      p { margin: 0 0 8px; font-size: 14px; opacity: 0.9; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Hello World</h1>
+      <p>This is a minimal Alga EE extension UI.</p>
+      <p id="ctx">Loading context…</p>
+    </div>
+    <script src="./main.js" type="module"></script>
+  </body>
+</html>

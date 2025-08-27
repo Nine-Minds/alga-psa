@@ -306,6 +306,7 @@ export class FeatureFlags {
       'enable_time_tracking': true,
       'enable_billing': true,
       'enable_reporting': true,
+      'email-configuration': false, // Email configuration feature flag (disabled by default)
       
       // New features (disabled by default)
       'new_ticket_ui': false,

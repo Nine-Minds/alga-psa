@@ -1,316 +1,148 @@
-# Extension API Routing Guide
+# Extension API Routing Guide (Gateway → Runner)
 
-This guide explains how to implement and use the dynamic API routing system for Alga PSA extensions.
+This guide specifies the v2-only extension API gateway pattern used to route tenant requests to out-of-process extension handlers executed by the Runner service.
 
-## Overview
+Key points:
+- Route pattern: `/api/ext/[extensionId]/[...path]`
+- Resolve tenant install → version → content_hash → manifest endpoint mapping
+- Proxy to Runner `POST /v1/execute` with strict header and size/time policies
+- Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
-The extension system supports dynamic API routing that allows extensions to provide custom API endpoints without hardcoding extension IDs. This is accomplished through Next.js dynamic routing patterns.
+## Route Structure
 
-## Dynamic Extension API Pattern
-
-### Route Structure
-
-Extensions can provide API endpoints using the following pattern:
-
-```
-/api/extensions/[extensionId]/{endpoint-path}
-```
-
-Where:
-- `[extensionId]` is the dynamic extension identifier (UUID)
-- `{endpoint-path}` is the custom endpoint path defined by the extension
-
-### Example Routes
+Next.js app route:
 
 ```
-/api/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/agreements
-/api/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/agreements/agr-001
-/api/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/statements
-/api/extensions/63a7a0dc-7836-4a5f-aa08-ecdb31b064b5/sync
+server/src/app/api/ext/[extensionId]/[...path]/route.ts
 ```
 
-## Implementation
+Supports methods: GET, POST, PUT, PATCH, DELETE.
 
-### 1. Creating API Route Files
+The URL conveys:
+- `extensionId`: the registry or install identifier for the extension
+- `path`: the arbitrary path that should match an endpoint in the manifest
 
-Create API routes in the following directory structure:
-
+Example requests:
 ```
-server/src/app/api/extensions/[extensionId]/
-├── agreements/
-│   ├── route.ts
-│   └── [id]/
-│       └── route.ts
-├── statements/
-│   ├── route.ts
-│   └── [id]/
-│       ├── route.ts
-│       └── charges/
-│           └── route.ts
-└── sync/
-    └── route.ts
+/api/ext/com.alga.softwareone/agreements
+/api/ext/com.alga.softwareone/agreements/agr-001
+/api/ext/com.alga.softwareone/agreements/sync?force=true
 ```
 
-### 2. Route Handler Implementation
+## Request Pipeline (per request)
 
-Each route handler receives the `extensionId` as a parameter:
+1) Resolve tenant context
+- Derive `tenant_id` from auth/session
+- Verify RBAC: the user can access this extension/endpoint
 
-```typescript
+2) Resolve install/version
+- Look up the tenant’s install for `extensionId`
+- Determine the active `version_id` and `content_hash`
+
+3) Resolve endpoint from manifest
+- Load manifest for the resolved version (cacheable)
+- Match `{method, pathname}` to a manifest endpoint (`api.endpoints`)
+- If not found, return 404
+
+4) Build Runner Execute request
+- Normalize HTTP input (method, path, query, allowed headers, body_b64)
+- Add context `{request_id, tenant_id, extension_id, version_id, content_hash}`
+- Set limits `{timeout_ms}` from `EXT_GATEWAY_TIMEOUT_MS`
+
+5) Call Runner `/v1/execute`
+- `POST ${RUNNER_BASE_URL}/v1/execute`
+- Authenticate with a short‑lived service token
+
+6) Map Runner response → NextResponse
+- Apply header allowlist; enforce size/time limits
+- Return `{status, headers, body}` from Runner
+
+## Example (abridged)
+
+```ts
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { extensionId: string } }
-) {
-  try {
-    const { extensionId } = params;
-    
-    console.log(`[API] Extension ID: ${extensionId}`);
-    
-    // Your API logic here
-    // In a real implementation, you would:
-    // 1. Validate the extension ID
-    // 2. Check user permissions for this extension
-    // 3. Fetch/process data based on extension configuration
-    
-    return NextResponse.json({
-      success: true,
-      data: [], // Your data here
-      meta: {
-        extensionId
-      }
-    });
-  } catch (error) {
-    console.error('Error in API endpoint:', error);
-    return NextResponse.json(
-      { 
-        success: false, 
-        error: 'Operation failed' 
-      },
-      { status: 500 }
-    );
-  }
-}
-```
+export async function handler(req: NextRequest, ctx: { params: { extensionId: string; path: string[] } }) {
+  const requestId = req.headers.get('x-request-id') || crypto.randomUUID();
+  const method = req.method;
+  const { extensionId, path } = ctx.params;
+  const pathname = '/' + (path || []).join('/');
+  const url = new URL(req.url);
 
-### 3. Descriptor Configuration
+  const tenantId = await getTenantFromAuth(req);
+  await assertAccess(tenantId, extensionId, method, pathname);
 
-In your extension descriptors, use template variables for dynamic endpoints:
+  const install = await getTenantInstall(tenantId, extensionId);
+  if (!install) return NextResponse.json({ error: 'Not installed' }, { status: 404 });
+  const { version_id, content_hash } = await resolveVersion(install);
 
-```json
-{
-  "type": "table",
-  "data": {
-    "key": "agreements",
-    "source": "api",
-    "endpoint": "/api/extensions/{{extensionId}}/agreements"
-  }
-}
-```
+  const endpoint = await resolveEndpoint(version_id, method, pathname);
+  if (!endpoint) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
-### 4. Handler Implementation
-
-In your TypeScript handlers, use the extension context for API calls:
-
-```typescript
-export async function refreshData(event: MouseEvent, context: HandlerContext) {
-  try {
-    // Use dynamic extension ID from context
-    const response = await context.api.post(`/api/extensions/${context.extension.id}/sync`, {
-      syncData: true
-    });
-
-    if (response.data.success) {
-      context.ui.toast('Data refreshed successfully', 'success');
-      if (context.table) {
-        context.table.refresh();
-      }
-    }
-  } catch (error) {
-    console.error('Failed to refresh data:', error);
-    context.ui.toast('Failed to refresh data', 'error');
-  }
-}
-```
-
-## Template Variable Substitution
-
-### Available Variables
-
-The extension system automatically substitutes the following template variables:
-
-- `{{extensionId}}` - The current extension's UUID
-- `{{params.id}}` - URL parameter (for detail routes)
-- `{{params.*}}` - Any URL parameter
-- `{{row.*}}` - Table row data (in table cell descriptors)
-
-### Substitution Process
-
-1. **Endpoint URLs**: Template variables in API endpoints are substituted before making requests
-2. **Table Cells**: Template variables in table cell descriptors are substituted with row data
-3. **Handler Parameters**: Template variables in handler params are substituted with context data
-
-### Expression Evaluation
-
-The system supports complex JavaScript expressions in templates:
-
-```json
-{
-  "type": "Badge",
-  "props": {
-    "variant": "{{row.status === 'active' ? 'success' : row.status === 'pending' ? 'warning' : 'secondary'}}"
-  },
-  "children": ["{{row.status}}"]
-}
-```
-
-```json
-{
-  "type": "span",
-  "children": ["{{row.currency}} {{row.amount.toLocaleString()}}"]
-}
-```
-
-## Security Considerations
-
-### 1. Extension ID Validation
-
-Always validate extension IDs in your API routes:
-
-```typescript
-// Validate UUID format
-const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-if (!uuidRegex.test(extensionId)) {
-  return NextResponse.json({ error: 'Invalid extension ID' }, { status: 400 });
-}
-```
-
-### 2. Permission Checking
-
-Implement proper permission checks:
-
-```typescript
-// Check if user has access to this extension
-const hasAccess = await checkExtensionPermissions(userId, extensionId);
-if (!hasAccess) {
-  return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-}
-```
-
-### 3. Input Sanitization
-
-Sanitize all input parameters:
-
-```typescript
-import { z } from 'zod';
-
-const schema = z.object({
-  name: z.string().max(100),
-  status: z.enum(['active', 'inactive', 'pending'])
-});
-
-const validatedData = schema.parse(requestBody);
-```
-
-## Error Handling
-
-### Standard Error Response Format
-
-Use consistent error response formats:
-
-```typescript
-interface ErrorResponse {
-  success: false;
-  error: string;
-  code?: string;
-  details?: any;
-}
-
-interface SuccessResponse<T> {
-  success: true;
-  data: T;
-  meta?: {
-    extensionId: string;
-    total?: number;
-    page?: number;
+  const bodyBuf = method === 'GET' ? undefined : Buffer.from(await req.arrayBuffer());
+  const execReq = {
+    context: { request_id: requestId, tenant_id: tenantId, extension_id: extensionId, content_hash, version_id },
+    http: {
+      method,
+      path: pathname,
+      query: Object.fromEntries(url.searchParams.entries()),
+      headers: filterRequestHeaders(req.headers),
+      body_b64: bodyBuf ? bodyBuf.toString('base64') : undefined
+    },
+    limits: { timeout_ms: Number(process.env.EXT_GATEWAY_TIMEOUT_MS) || 5000 }
   };
+
+  const runnerResp = await fetch(`${process.env.RUNNER_BASE_URL}/v1/execute`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-request-id': requestId,
+      'authorization': await getRunnerServiceToken()
+    },
+    body: JSON.stringify(execReq),
+    signal: AbortSignal.timeout(Number(process.env.EXT_GATEWAY_TIMEOUT_MS) || 5000)
+  });
+
+  if (!runnerResp.ok) {
+    return NextResponse.json({ error: 'Runner error' }, { status: 502 });
+  }
+  const { status, headers, body_b64 } = await runnerResp.json();
+  const resHeaders = filterResponseHeaders(headers);
+  const body = body_b64 ? Buffer.from(body_b64, 'base64') : undefined;
+  return new NextResponse(body, { status, headers: resHeaders });
 }
+
+export { handler as GET, handler as POST, handler as PUT, handler as PATCH, handler as DELETE };
 ```
 
-### Error Types
+## Header Policy
 
-Handle common error scenarios:
+Forward (allowlist):
+- `x-request-id`, `accept`, `content-type`, `accept-encoding`, `user-agent`
+- `x-alga-tenant` (gateway‑generated), `x-alga-extension` (gateway‑generated)
+- `x-idempotency-key` (gateway‑generated for non‑GET)
 
-```typescript
-// Not found
-return NextResponse.json(
-  { success: false, error: 'Resource not found' },
-  { status: 404 }
-);
+Strip:
+- End‑user `authorization` header (gateway authenticates user and uses a service token to the Runner)
 
-// Validation error
-return NextResponse.json(
-  { success: false, error: 'Invalid input', details: validationErrors },
-  { status: 400 }
-);
+Response allowlist:
+- `content-type`, `cache-control` (safe), custom `x-ext-*` headers
+- Disallow `set-cookie` and hop‑by‑hop headers
 
-// Server error
-return NextResponse.json(
-  { success: false, error: 'Internal server error' },
-  { status: 500 }
-);
-```
+## Limits and Timeouts
+
+- Request/response body size caps (e.g., 5–10 MB)
+- Default timeout: `EXT_GATEWAY_TIMEOUT_MS` (5s default), with safe per‑endpoint overrides
+- Limited header propagation and standardized error mapping (e.g., 404/413/502/504)
 
 ## Testing
 
-### 1. Unit Testing Routes
+- Unit‑test manifest endpoint resolution and RBAC guards
+- Integration‑test end‑to‑end proxy behavior and error mapping
+- Inject fake Runner responses to validate header/body handling and timeouts
 
-```typescript
-import { GET } from './route';
-import { NextRequest } from 'next/server';
+## Related References
 
-describe('Extension API Route', () => {
-  it('should return data for valid extension ID', async () => {
-    const request = new NextRequest('http://localhost/api/extensions/test-id/agreements');
-    const params = { extensionId: 'test-extension-id' };
-    
-    const response = await GET(request, { params });
-    const data = await response.json();
-    
-    expect(data.success).toBe(true);
-    expect(data.meta.extensionId).toBe('test-extension-id');
-  });
-});
-```
-
-### 2. Integration Testing
-
-Test the complete flow from descriptor to API:
-
-```typescript
-// Test template substitution
-const descriptor = {
-  endpoint: "/api/extensions/{{extensionId}}/agreements"
-};
-
-const substituted = substituteTemplate(descriptor.endpoint, {
-  extensionId: 'test-id'
-});
-
-expect(substituted).toBe('/api/extensions/test-id/agreements');
-```
-
-## Best Practices
-
-1. **Consistent Naming**: Use consistent endpoint naming conventions
-2. **Version Management**: Include API versioning for future compatibility
-3. **Pagination**: Implement pagination for list endpoints
-4. **Caching**: Add appropriate caching headers
-5. **Logging**: Include comprehensive logging for debugging
-6. **Documentation**: Document all endpoints with OpenAPI/Swagger
-
-## Migration from Static Routes
-
-If you have existing static routes (e.g., `/api/extensions/softwareone/`), you can maintain them for backward compatibility while implementing the dynamic pattern for new features.
-
-The dynamic routing system is designed to coexist with static routes, allowing for gradual migration.
+- Gateway route scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+- Runner execution API: `POST /v1/execute` (see Runner responsibilities in [runner.md](runner.md))
+- Registry v2 integration for resolution: [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)

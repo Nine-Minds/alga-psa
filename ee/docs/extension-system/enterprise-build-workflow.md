@@ -1,365 +1,117 @@
-# Enterprise Build Workflow Guide
-
-This guide explains the enterprise edition build process for Alga PSA extensions, including the proper workflow for developing and deploying enterprise features.
-
-## Overview
-
-The Alga PSA extension system uses a one-way build process where Enterprise Edition (EE) files serve as the source of truth and are copied to the main server during builds. Understanding this workflow is crucial for proper development and avoiding overwrites.
-
-## Build Architecture
-
-### Directory Structure
-
-```
-alga-psa/
-├── ee/server/src/                    # 🎯 SOURCE (Enterprise Edition)
-│   ├── lib/extensions/
-│   ├── app/msp/extensions/
-│   └── lib/actions/extension-actions/
-├── server/src/                       # 📦 TARGET (Main Server)
-│   ├── lib/extensions/               # ← Copied from EE
-│   ├── app/msp/extensions/          # ← Copied from EE
-│   └── lib/actions/extension-actions/ # ← Copied from EE
-└── scripts/
-    └── build-enterprise.sh          # 🔧 Build Script
-```
-
-### Build Flow
-
-```
-EE Source Files → Build Script → Main Server Files → Application
-     ↓               ↓              ↓               ↓
-   Edit Here     Copies Files    Never Edit     Runtime
-```
-
-## Enterprise Build Script
-
-### Script Location
-
-The build script is located at:
-```
-/scripts/build-enterprise.sh
-```
-
-### Script Function
-
-The script performs these operations:
-
-1. **Environment Check**: Verifies `NEXT_PUBLIC_EDITION=enterprise`
-2. **Directory Creation**: Creates target directories in main server
-3. **File Copying**: Copies EE files to main server locations
-4. **Validation**: Ensures all required files are copied
-
-### File Mapping
-
-| EE Source | Main Server Target | Purpose |
-|-----------|-------------------|---------|
-| `ee/server/src/app/msp/extensions/` | `server/src/app/msp/extensions/` | Extension routes and pages |
-| `ee/server/src/lib/extensions/` | `server/src/lib/extensions/` | Extension libraries and UI components |
-| `ee/server/src/lib/actions/extension-actions/` | `server/src/lib/actions/extension-actions/` | Server actions for extension operations |
-
-## Proper Development Workflow
-
-### ✅ Correct Workflow
-
-1. **Edit EE Source Files**:
-   ```bash
-   # Edit files in ee/server/src/
-   vim ee/server/src/lib/extensions/ui/DescriptorRenderer.tsx
-   ```
-
-2. **Run Enterprise Build**:
-   ```bash
-   NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-   ```
-
-3. **Test Changes**:
-   ```bash
-   # Changes are now live in main server
-   # Test your extension functionality
-   ```
-
-### ❌ Incorrect Workflow (Will Cause Overwrites)
-
-```bash
-# DON'T DO THIS - Files will be overwritten
-vim server/src/lib/extensions/ui/DescriptorRenderer.tsx
-
-# Later when enterprise build runs:
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-# ↑ This overwrites your changes!
-```
-
-## Build Commands
-
-### Manual Build
-
-Run the enterprise build script directly:
-
-```bash
-cd /home/coder/alga-psa
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-```
-
-### Build with Application
-
-The enterprise build is integrated into the main build process:
-
-```bash
-cd /home/coder/alga-psa/server
-NEXT_PUBLIC_EDITION=enterprise npm run build
-```
-
-This runs:
-1. Enterprise build script (copies EE files)
-2. Next.js build process (builds the application)
-
-### Development Mode
-
-For development, you typically only need the enterprise build:
-
-```bash
-# Just copy EE files without full build
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-```
-
-## Script Output
-
-### Successful Build
-
-```
-🏢 Building Enterprise Edition...
-📁 Copying EE extension files to main server...
-   📄 Copying extension routes...
-   ✅ Extension routes copied
-   📚 Copying extension libraries...
-   ✅ Extension libraries copied
-   🎬 Copying extension actions...
-   ✅ Extension actions copied
-✅ Enterprise Edition build complete!
-🚀 Extension system ready for deployment
-
-📝 Note: Files now use @shared imports for clean cross-hierarchy compatibility
-```
-
-### Build Skipped (Wrong Environment)
-
-```
-🏢 Building Enterprise Edition...
-ℹ️  Not building enterprise edition (NEXT_PUBLIC_EDITION=)
-```
-
-## Environment Variables
-
-### Required Variables
-
-- `NEXT_PUBLIC_EDITION=enterprise` - Enables enterprise build
-
-### Setting Environment Variable
-
-```bash
-# For single command
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-
-# For session
-export NEXT_PUBLIC_EDITION=enterprise
-./scripts/build-enterprise.sh
-
-# In package.json script
-"build:enterprise": "NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh"
-```
-
-## Common Issues and Solutions
-
-### Issue 1: Changes Not Appearing
-
-**Problem**: Made changes but don't see them in the application.
-
-**Solution**: 
-1. Verify you edited EE source files (not main server files)
-2. Run enterprise build script
-3. Check console output for successful copy
-
-### Issue 2: Files Being Overwritten
-
-**Problem**: Changes keep disappearing after builds.
-
-**Root Cause**: Editing main server files instead of EE source files.
-
-**Solution**:
-1. Copy your changes from main server to EE source
-2. Always edit EE source files going forward
-3. Run enterprise build to deploy
-
-### Issue 3: Build Script Not Running
-
-**Problem**: Build script exits without copying files.
-
-**Common Causes**:
-- Missing `NEXT_PUBLIC_EDITION=enterprise` environment variable
-- Permissions issue with script execution
-- Missing source directories
-
-**Solution**:
-```bash
-# Ensure environment variable is set
-echo $NEXT_PUBLIC_EDITION
-
-# Make script executable
-chmod +x ./scripts/build-enterprise.sh
-
-# Check if EE directories exist
-ls -la ee/server/src/lib/extensions/
-```
-
-### Issue 4: Import Path Issues
-
-**Problem**: Import errors after copying files.
-
-**Cause**: Path differences between EE and main server structure.
-
-**Solution**: Use relative imports or @shared imports:
-
-```typescript
-// Good - relative import
-import { ComponentRegistry } from './ComponentRegistry';
-
-// Good - @shared import  
-import { logger } from '@shared/core/logger';
-
-// Avoid - absolute paths that may not exist
-import { DataTable } from 'server/src/components/ui/DataTable';
-```
-
-## File Ownership
-
-### EE-Only Files
-
-These files should ONLY exist in EE and be copied:
-
-- `lib/extensions/ui/DescriptorRenderer.tsx`
-- `lib/extensions/ui/descriptors/ComponentRegistry.ts`
-- `app/msp/extensions/[extensionId]/[...path]/page.tsx`
-- `lib/actions/extension-actions/extensionActions.ts`
-
-### Shared Files
-
-These files may exist in both EE and main server:
-
-- `app/api/extensions/[extensionId]/*/route.ts` (API routes)
-- Utility functions and types
-
-## Best Practices
-
-### 1. Always Edit EE Source
-
-Make this your default workflow:
-```bash
-# Navigate to EE source
-cd ee/server/src/lib/extensions/
-
-# Edit files here
-vim ui/DescriptorRenderer.tsx
-
-# Deploy changes
-cd ../../../..
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-```
-
-### 2. Verify Build Success
-
-Always check the build output:
-```
-✅ Extension routes copied
-✅ Extension libraries copied  
-✅ Extension actions copied
-```
-
-### 3. Use Git to Track Changes
-
-Monitor which files are being modified:
-```bash
-# Before editing
-git status
-
-# After enterprise build
-git status  # Should show modified files in server/src/
-```
-
-### 4. Regular Builds
-
-Run enterprise build frequently during development:
-```bash
-# Create an alias for convenience
-alias ee-build='NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh'
-
-# Use it regularly
-ee-build
-```
-
-## Integration with CI/CD
-
-### Build Pipeline
-
-```yaml
-# Example GitHub Actions
-- name: Build Enterprise Edition
-  run: |
-    NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-    
-- name: Build Application
-  run: |
-    cd server
-    NEXT_PUBLIC_EDITION=enterprise npm run build
-```
-
-### Environment Configuration
-
-```bash
-# Production deployment
-export NEXT_PUBLIC_EDITION=enterprise
-```
-
-## Troubleshooting Build Issues
-
-### Debug Build Process
-
-1. **Check Environment**:
-   ```bash
-   echo "NEXT_PUBLIC_EDITION: $NEXT_PUBLIC_EDITION"
-   ```
-
-2. **Verify Source Files**:
-   ```bash
-   ls -la ee/server/src/lib/extensions/
-   ```
-
-3. **Check Permissions**:
-   ```bash
-   ls -la scripts/build-enterprise.sh
-   ```
-
-4. **Manual Copy Test**:
-   ```bash
-   cp -r ee/server/src/lib/extensions/* server/src/lib/extensions/
-   ```
-
-### Clean Build
-
-If builds are inconsistent, clean and rebuild:
-
-```bash
-# Remove copied files
-rm -rf server/src/lib/extensions/
-rm -rf server/src/app/msp/extensions/
-rm -rf server/src/lib/actions/extension-actions/
-
-# Run fresh build
-NEXT_PUBLIC_EDITION=enterprise ./scripts/build-enterprise.sh
-```
-
-This enterprise build workflow ensures that:
-- EE features remain properly isolated
-- Changes are tracked in the correct source files  
-- Builds are reproducible and consistent
-- No work is accidentally lost to overwrites
+# Enterprise Build Workflow: pack → sign → publish
+
+This guide outlines the enterprise pipeline to build, package, sign, and publish extension bundles to S3-compatible storage (e.g., MinIO), and references related docs and APIs.
+
+References
+- Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
+- Runner S3 Integration: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Initiate Upload API: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
+
+## Objectives and Pipeline
+
+The enterprise pipeline is responsible for taking a compiled extension, producing an integrity-verifiable bundle, optionally signing it, and publishing it to the canonical, immutable S3 location based on its content hash.
+
+Stages:
+1) Build: Produce compiled assets (e.g., entry.wasm, UI assets, manifest.json) in a dist directory.
+2) Pack: Create bundle.tar.zst from the dist directory and compute sha256.
+3) Sign (optional): Produce a SIGNATURE file tied to the bundle with the chosen algorithm.
+4) Publish: Use the server API to initiate upload, PUT the bundle to storage via presigned URL, and finalize with manifest/signature.
+
+Output:
+- S3 canonical objects are written to:
+  - sha256/<hash>/bundle.tar.zst
+  - sha256/<hash>/manifest.json
+
+## Example Commands
+
+Assumptions:
+- Your extension build outputs to ./my-extension/dist and includes manifest.json at that path.
+- You have Node 18+ available.
+
+- Pack
+  node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
+
+- Sign (optional; placeholder)
+  node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
+
+- Publish
+  node ee/tools/ext-bundle/publish.ts --bundle ./out/bundle.tar.zst --manifest ./my-extension/dist/manifest.json --declared-hash <sha256>
+
+Notes:
+- The pack step writes a sidecar SHA file (bundle.sha256 or <basename>.sha256). You can use this value as the --declared-hash in publish to enforce integrity at the server.
+- The sign step currently writes a placeholder SIGNATURE file next to the bundle. If provided to publish (via --signature and --signature-algorithm), it will be forwarded to finalize. Replace with real signing logic in your environment.
+
+## Environment Requirements and Local MinIO
+
+Server/Storage configuration (server process):
+- STORAGE_ENDPOINT: e.g., http://localhost:9000
+- STORAGE_BUCKET: e.g., alga-bundles
+- STORAGE_REGION: e.g., us-east-1
+- STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY: MinIO credentials
+- STORAGE_USE_PATH_STYLE: true (required for MinIO)
+- EXT_BUNDLES_ALLOW_INSECURE: true (for local/manual validation), or send header x-alga-admin: true
+- RUNNER_* not required for publishing (see Runner doc for serving/execution config)
+
+MinIO local setup:
+- Run MinIO locally and create the configured bucket.
+- Ensure path-style access and credentials align with the server config.
+- Validate access using the E2E walkthrough: [ee/docs/extension-system/e2e-minio-walkthrough.md](ee/docs/extension-system/e2e-minio-walkthrough.md:1)
+
+CLI scripts (no external deps; Node 18+):
+- Pack: [ee/tools/ext-bundle/pack.ts](ee/tools/ext-bundle/pack.ts:1)
+- Sign: [ee/tools/ext-bundle/sign.ts](ee/tools/ext-bundle/sign.ts:1)
+- Publish: [ee/tools/ext-bundle/publish.ts](ee/tools/ext-bundle/publish.ts:1)
+
+Auth for local/manual runs:
+- Set ALGA_ADMIN_HEADER=true in the environment to automatically inject x-alga-admin: true on API calls from publish.ts.
+
+## CI Example Outline
+
+This is an outline; adapt to your CI system (GitHub Actions, GitLab CI, Jenkins, etc.).
+
+Environment variables/secrets (CI):
+- SERVER_BASE: Base URL of the server (e.g., https://ee.example.com or http://localhost:3000 in local CI)
+- ALGA_ADMIN_HEADER=true (for non-production/internal pipelines only)
+- STORAGE_* vars should be set on the server side; CI does not require them unless testing end-to-end with a local server+MinIO instance.
+
+Pipeline steps:
+- Step 1: Build extension
+  - Run your package build (e.g., npm ci && npm run build) producing ./my-extension/dist with manifest.json.
+- Step 2: Pack
+  - node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
+  - Extract the sha256 from ./out/bundle.sha256 for later steps (or capture console output).
+- Step 3: Sign (optional)
+  - node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
+  - Store SIGNATURE as an artifact if you need auditability.
+- Step 4: Publish
+  - node ee/tools/ext-bundle/publish.ts \
+      --bundle ./out/bundle.tar.zst \
+      --manifest ./my-extension/dist/manifest.json \
+      --declared-hash <sha256> \
+      --server "$SERVER_BASE" \
+      --signature ./out/bundle.tar.zst.SIGNATURE \
+      --signature-algorithm cosign
+  - Parse the output JSON { extension, version, contentHash } for downstream steps or notifications.
+- Step 5: Validate (optional)
+  - Optionally perform a GET on server endpoints or MinIO to confirm the objects exist at sha256/<contentHash>/...
+  - For end-to-end UI checks, consider a smoke test that loads the extension UI in a test environment.
+
+## Notes and Best Practices
+
+- Immutability:
+  - Ensure published bundles are content-addressed via sha256; treat canonical paths as immutable.
+- Caching:
+  - Downstream Runner and browser clients should leverage immutable URLs and ETag/If-None-Match semantics for efficient serving. See: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Manifests:
+  - Keep manifest.json minimal but sufficient: extension, version, entry.wasm path, and UI asset mapping. Validate JSON strictly in CI.
+- Error handling:
+  - The publish script prints detailed errors for initiate/PUT/finalize failures. Monitor CI logs and surface them in notifications.
+
+## Related Docs
+
+- Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
+- E2E Walkthrough (MinIO): [ee/docs/extension-system/e2e-minio-walkthrough.md](ee/docs/extension-system/e2e-minio-walkthrough.md:1)
+- Runner S3 Integration: [ee/docs/extension-system/runner-s3-integration.md](ee/docs/extension-system/runner-s3-integration.md:1)
+- Initiate Upload API: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)

@@ -3,12 +3,13 @@
 import TagDefinition, { ITagDefinition } from 'server/src/lib/models/tagDefinition';
 import TagMapping, { ITagMapping, ITagWithDefinition } from 'server/src/lib/models/tagMapping';
 import { ITag, TaggedEntityType } from 'server/src/interfaces/tag.interfaces';
-import { withTransaction } from '@shared/db';
+import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex, getCurrentTenantId } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 import { Knex } from 'knex';
+import { TagModel, CreateTagInput } from '@alga-psa/shared/models/tagModel';
 
 export async function findTagsByEntityId(entityId: string, entityType: string): Promise<ITag[]> {
   const { knex: db } = await createTenantKnex();

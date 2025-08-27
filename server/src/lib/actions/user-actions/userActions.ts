@@ -7,15 +7,16 @@ import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/op
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
-import { withAdminTransaction, withTransaction } from '@shared/db';
+import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
-import { verifyEmailSuffix, getCompanyByEmailSuffix } from 'server/src/lib/actions/company-settings/emailSettings';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
+import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
+import logger from '@alga-psa/shared/core/logger.js';
 
 interface ActionResult {
   success: boolean;
@@ -49,12 +50,20 @@ export async function checkEmailExistsGlobally(email: string): Promise<boolean> 
       return !!existingUser;
     });
   } catch (error) {
-    console.error('Error checking email existence globally:', error);
-    throw new Error('Failed to check email existence');
+    logger.error('Error checking email existence globally:', error);
+    throw error; // Preserve original error
   }
 }
 
-export async function addUser(userData: { firstName: string; lastName: string; email: string, password: string, roleId?: string }): Promise<IUser> {
+export async function addUser(userData: { 
+  firstName: string; 
+  lastName: string; 
+  email: string;
+  password: string;
+  roleId?: string;
+  userType?: 'internal' | 'client';
+  contactId?: string;
+}): Promise<IUser> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -72,7 +81,7 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Role is required");
       }
 
-      // Validate that the role exists and is an MSP role
+      // Validate that the role exists
       const role = await trx('roles')
         .where({ role_id: userData.roleId, tenant: tenant || undefined })
         .first();
@@ -81,7 +90,12 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         throw new Error("Invalid role");
       }
       
-      if (!role.msp) {
+      // Validate role matches user type
+      const isClientUser = userData.userType === 'client';
+      if (isClientUser && !role.client) {
+        throw new Error("Cannot assign MSP role to client portal user");
+      }
+      if (!isClientUser && !role.msp) {
         throw new Error("Cannot assign client portal role to MSP user");
       }
 
@@ -89,6 +103,16 @@ export async function addUser(userData: { firstName: string; lastName: string; e
       const emailExists = await checkEmailExistsGlobally(userData.email);
       if (emailExists) {
         throw new Error("A user with this email address already exists");
+      }
+
+      // Check license limits for  MSP (internal) users
+      if (userData.userType !== 'client') {
+        const { getLicenseUsage } = await import('../../license/get-license-usage');
+        const usage = await getLicenseUsage(tenant!, trx);
+        
+        if (usage.limit !== null && usage.used >= usage.limit) {
+          throw new Error("You've reached your MSP user licence limit.");
+        }
       }
 
       const [user] = await trx('users')
@@ -100,7 +124,8 @@ export async function addUser(userData: { firstName: string; lastName: string; e
           is_inactive: false,
           hashed_password: await hashPassword(userData.password),
           tenant: tenant || undefined,
-          user_type: 'internal' // Explicitly set user_type for MSP users
+          user_type: userData.userType || 'internal', // Default to 'internal' for backward compatibility
+          contact_id: userData.contactId || undefined
         }).returning('*');
 
       await trx('user_roles').insert({
@@ -109,17 +134,29 @@ export async function addUser(userData: { firstName: string; lastName: string; e
         tenant: tenant || undefined
       });
 
+      // Mark that the user hasn't reset their initial password
+      await UserPreferences.upsert(trx, {
+        user_id: user.user_id,
+        setting_name: 'has_reset_password',
+        setting_value: false,
+        updated_at: new Date()
+      });
+
       revalidatePath('/settings');
       return user;
     });
   } catch (error: any) {
-    console.error('Error adding user:', error);
+    logger.error('Error adding user:', error);
     // Pass through the specific error message if it's about duplicate email
     if (error.message === "A user with this email address already exists") {
       throw error;
     }
     // Pass through permission denied errors
     if (error.message === "Permission denied: Cannot create user") {
+      throw error;
+    }
+    // Pass through license limit errors
+    if (error.message === "You've reached your internal user licence limit.") {
       throw error;
     }
     throw new Error('Failed to add user');
@@ -162,40 +199,161 @@ export async function deleteUser(userId: string): Promise<void> {
 
     revalidatePath('/settings');
   } catch (error) {
-    console.error('Error deleting user:', error);
+    logger.error('Error deleting user:', error);
     throw new Error('Failed to delete user');
   }
 }
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
-    console.log('Getting current user from session');
+    logger.debug('Getting current user from session');
     const session = await getServerSession(authOptions);
 
-    if (!session?.user?.email) {
-      console.log('No user email found in session');
+    if (!session?.user) {
+      logger.debug('No user found in session');
       return null;
     }
 
-    console.log(`Looking up user by email: ${session.user.email}`);
-    const user = await User.findUserByEmail(session.user.email);
-
-    if (!user) {
-      console.log(`User not found for email: ${session.user.email}`);
+    // Use the user ID from the session if available (most reliable)
+    const sessionUser = session.user as any;
+    if (sessionUser.id && sessionUser.tenant) {
+      logger.debug(`Using user ID from session: ${sessionUser.id}, tenant: ${sessionUser.tenant}`);
+      
+      // Get connection with tenant context already set
+      const {knex, tenant} = await createTenantKnex();
+      
+      // Verify tenant matches session for security
+      if (tenant && tenant !== sessionUser.tenant) {
+        logger.error(`Tenant mismatch: session has ${sessionUser.tenant} but context has ${tenant}`);
+        throw new Error('Tenant context mismatch');
+      }
+      
+      // Use transaction to avoid connection pool exhaustion
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // For Citus, we need to explicitly filter by tenant in the query
+        // Even though User.get includes tenant filter, be explicit for safety
+        const user = await trx<IUser>('users')
+          .select('*')
+          .where('user_id', sessionUser.id)
+          .where('tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .first();
+        
+        if (!user) {
+          logger.debug(`User not found for ID: ${sessionUser.id} in tenant: ${sessionUser.tenant}`);
+          return null;
+        }
+        
+        logger.debug(`Fetching roles for user ID: ${user.user_id}`);
+        // Get roles with explicit tenant filter for Citus
+        const roles = await trx<IRole>('roles')
+          .join('user_roles', function() {
+            this.on('roles.role_id', '=', 'user_roles.role_id')
+                .andOn('roles.tenant', '=', 'user_roles.tenant');
+          })
+          .where('user_roles.user_id', user.user_id)
+          .where('user_roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .where('roles.tenant', sessionUser.tenant) // Explicit tenant filter for Citus
+          .select('roles.*');
+        
+        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+        
+        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        return { ...user, roles, avatarUrl };
+      });
+    }
+    
+    // Fallback paths should fail in production for security
+    if (process.env.NODE_ENV === 'production') {
+      logger.error('Session missing user ID or tenant - cannot safely retrieve user in production');
+      return null;
+    }
+    
+    // Development-only fallbacks with warnings
+    if (!session.user.email) {
+      logger.debug('No user email found in session');
       return null;
     }
 
-    const {knex} = await createTenantKnex();
-    console.log(`Fetching roles for user ID: ${user.user_id}`);
-    const roles = await User.getUserRoles(knex, user.user_id);
+    logger.warn(`DEVELOPMENT ONLY: Falling back to email lookup for: ${session.user.email} - this is unsafe in production`);
+    
+    // Get current tenant from context
+    const {knex, tenant} = await createTenantKnex();
+    if (!tenant) {
+      logger.error('No tenant context available for email-based lookup');
+      return null;
+    }
+    
+    // If we have user type in session, use it for more accurate lookup
+    if (sessionUser.user_type) {
+      logger.debug(`Looking up user by email and type: ${session.user.email}, ${sessionUser.user_type}, tenant: ${tenant}`);
+      
+      return await withTransaction(knex, async (trx: Knex.Transaction) => {
+        // Explicit query with tenant filter for Citus
+        const user = await trx<IUser>('users')
+          .select('*')
+          .where('email', session.user.email.toLowerCase())
+          .where('user_type', sessionUser.user_type)
+          .where('tenant', tenant) // Explicit tenant filter for Citus
+          .first();
+        
+        if (!user) {
+          logger.debug(`User not found for email: ${session.user.email}, type: ${sessionUser.user_type}, tenant: ${tenant}`);
+          return null;
+        }
+        
+        // Get roles with explicit tenant filter
+        const roles = await trx<IRole>('roles')
+          .join('user_roles', function() {
+            this.on('roles.role_id', '=', 'user_roles.role_id')
+                .andOn('roles.tenant', '=', 'user_roles.tenant');
+          })
+          .where('user_roles.user_id', user.user_id)
+          .where('user_roles.tenant', tenant) // Explicit tenant filter for Citus
+          .where('roles.tenant', tenant) // Explicit tenant filter for Citus
+          .select('roles.*');
+        
+        const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+        
+        logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+        return { ...user, roles, avatarUrl };
+      });
+    }
+    
+    // Last resort: email-only lookup (development only)
+    logger.warn(`DEVELOPMENT ONLY: Email-only lookup for: ${session.user.email} in tenant: ${tenant}`);
+    
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const user = await trx<IUser>('users')
+        .select('*')
+        .where('email', session.user.email.toLowerCase())
+        .where('tenant', tenant) // Explicit tenant filter for Citus
+        .first();
 
-    const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+      if (!user) {
+        logger.debug(`User not found for email: ${session.user.email} in tenant: ${tenant}`);
+        return null;
+      }
+      
+      // Get roles with explicit tenant filter
+      const roles = await trx<IRole>('roles')
+        .join('user_roles', function() {
+          this.on('roles.role_id', '=', 'user_roles.role_id')
+              .andOn('roles.tenant', '=', 'user_roles.tenant');
+        })
+        .where('user_roles.user_id', user.user_id)
+        .where('user_roles.tenant', tenant) // Explicit tenant filter for Citus
+        .where('roles.tenant', tenant) // Explicit tenant filter for Citus
+        .select('roles.*');
 
-    console.log(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
-    return { ...user, roles, avatarUrl };
+      const avatarUrl = await getUserAvatarUrl(user.user_id, user.tenant);
+
+      logger.debug(`Current user retrieved successfully: ${user.user_id} with ${roles.length} roles`);
+      return { ...user, roles, avatarUrl };
+    });
   } catch (error) {
-    console.error('Failed to get current user:', error);
-    throw new Error('Failed to get current user');
+    logger.error('Failed to get current user:', error);
+    // Preserve the original error and stack trace
+    throw error;
   }
 }
 
@@ -217,7 +375,7 @@ export async function findUserById(id: string): Promise<IUserWithRoles | null> {
       return user || null;
     });
   } catch (error) {
-    console.error(`Failed to find user with id ${id}:`, error);
+    logger.error(`Failed to find user with id ${id}:`, error);
     throw new Error('Failed to find user');
   }
 }
@@ -255,7 +413,7 @@ export async function getAllUsers(includeInactive: boolean = true, userType?: st
       );
     });
   } catch (error) {
-    console.error('Failed to fetch users:', error);
+    logger.error('Failed to fetch users:', error);
     throw new Error('Failed to fetch users');
   }
 }
@@ -278,7 +436,7 @@ export async function updateUser(userId: string, userData: Partial<IUser>): Prom
       return updatedUser || null;
     });
   } catch (error) {
-    console.error(`Failed to update user with id ${userId}:`, error);
+    logger.error(`Failed to update user with id ${userId}:`, error);
     throw new Error('Failed to update user');
   }
 }
@@ -315,7 +473,7 @@ export async function updateUserRoles(userId: string, roleIds: string[]): Promis
 
     revalidatePath('/settings');
   } catch (error) {
-    console.error(`Failed to update roles for user with id ${userId}:`, error);
+    logger.error(`Failed to update roles for user with id ${userId}:`, error);
     throw new Error('Failed to update user roles');
   }
 }
@@ -332,7 +490,7 @@ export async function getUserRoles(userId: string, knexConnection?: Knex | Knex.
     const roles = await User.getUserRoles(knex, userId);
     return roles;
   } catch (error) {
-    console.error(`Failed to fetch roles for user with id ${userId}:`, error);
+    logger.error(`Failed to fetch roles for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles');
   }
 }
@@ -347,7 +505,7 @@ export async function getAllRoles(): Promise<IRole[]> {
       return roles;
     });
   } catch (error) {
-    console.error('Failed to fetch all roles:', error);
+    logger.error('Failed to fetch all roles:', error);
     throw new Error('Failed to fetch all roles');
   }
 }
@@ -368,8 +526,29 @@ export async function getMSPRoles(): Promise<IRole[]> {
       return roles;
     });
   } catch (error) {
-    console.error('Failed to fetch MSP roles:', error);
+    logger.error('Failed to fetch MSP roles:', error);
     throw new Error('Failed to fetch MSP roles');
+  }
+}
+
+/**
+ * Get Client Portal roles only (roles with client flag = true)
+ */
+export async function getClientPortalRoles(): Promise<IRole[]> {
+  try {
+    const {knex: db, tenant} = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const roles = await trx('roles')
+        .where({ 
+          tenant: tenant || undefined,
+          client: true 
+        })
+        .select('*');
+      return roles;
+    });
+  } catch (error) {
+    logger.error('Failed to fetch client portal roles:', error);
+    throw new Error('Failed to fetch client portal roles');
   }
 }
 
@@ -403,7 +582,7 @@ export async function getUserRolesWithPermissions(userId: string, knexConnection
       });
     }
   } catch (error) {
-    console.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
+    logger.error(`Failed to fetch roles with permissions for user with id ${userId}:`, error);
     throw new Error('Failed to fetch user roles with permissions');
   }
 }
@@ -416,7 +595,7 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
-      console.log('No current user found, returning empty permissions.');
+      logger.debug('No current user found, returning empty permissions.');
       return [];
     }
 
@@ -433,10 +612,10 @@ export async function getCurrentUserPermissions(): Promise<string[]> {
       return acc;
     }, new Set<string>());
 
-    console.log(`User ${currentUser.user_id} has permissions: ${Array.from(allPermissions).join(', ')}`);
+    logger.debug(`User ${currentUser.user_id} has permissions: ${Array.from(allPermissions).join(', ')}`);
     return Array.from(allPermissions);
   } catch (error) {
-    console.error('Failed to get current user permissions:', error);
+    logger.error('Failed to get current user permissions:', error);
     // Depending on requirements, you might want to return empty array or re-throw
     // Returning empty array for now to avoid breaking flows that might expect an array
     return [];
@@ -461,7 +640,7 @@ export async function getUserWithRoles(userId: string): Promise<IUserWithRoles |
       return user || null;
     });
   } catch (error) {
-    console.error(`Failed to fetch user with roles for id ${userId}:`, error);
+    logger.error(`Failed to fetch user with roles for id ${userId}:`, error);
     throw new Error('Failed to fetch user with roles');
   }
 }
@@ -484,7 +663,7 @@ export async function getMultipleUsersWithRoles(userIds: string[]): Promise<IUse
       return users.filter((user): user is IUserWithRoles => user !== undefined);
     });
   } catch (error) {
-    console.error('Failed to fetch multiple users with roles:', error);
+    logger.error('Failed to fetch multiple users with roles:', error);
     throw new Error('Failed to fetch multiple users with roles');
   }
 }
@@ -508,7 +687,7 @@ export async function getUserPreference(userId: string, settingName: string): Pr
       return preference.setting_value;
     }
   } catch (error) {
-    console.error('Failed to get user preference:', error);
+    logger.error('Failed to get user preference:', error);
     throw new Error('Failed to get user preference');
   }
 }
@@ -530,35 +709,21 @@ export async function setUserPreference(userId: string, settingName: string, set
       updated_at: new Date()
     });
   } catch (error) {
-    console.error('Failed to set user preference:', error);
+    logger.error('Failed to set user preference:', error);
     throw new Error('Failed to set user preference');
   }
 }
 
 export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; companyId?: string; tenant?: string }> {
   try {
-    // First check if email matches any company email suffixes
-    const isValidSuffix = await verifyEmailSuffix(email);
-    if (isValidSuffix) {
-      const result = await getCompanyByEmailSuffix(email);
-      if (result) {
-        return {
-          exists: false, // Not a contact, but valid email suffix
-          isActive: true,
-          companyId: result.companyId,
-          tenant: result.tenant
-        };
-      }
-    }
-
-    // If not a valid suffix, check contacts
+    // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .join('companies', function() {
           this.on('companies.company_id', '=', 'contacts.company_id')
               .andOn('companies.tenant', '=', 'contacts.tenant');
         })
-        .where({ 'contacts.email': email })
+        .where({ 'contacts.email': email.toLowerCase() })
         .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
         .first();
     });
@@ -574,7 +739,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
       tenant: contact.tenant
     };
   } catch (error) {
-    console.error('Failed to verify contact email:', error);
+    logger.error('Failed to verify contact email:', error);
     throw new Error('Failed to verify contact email');
   }
 }
@@ -602,7 +767,7 @@ export async function registerClientUser(
           this.on('companies.company_id', '=', 'contacts.company_id')
               .andOn('companies.tenant', '=', 'contacts.tenant');
         })
-        .where({ 'contacts.email': email })
+        .where({ 'contacts.email': email.toLowerCase() })
         .select(
           'contacts.contact_name_id',
           'contacts.company_id',
@@ -632,14 +797,14 @@ export async function registerClientUser(
       const lastName = nameParts.slice(1).join(' ') || '';
 
       // Create the user with client user type
-      console.log('Creating new user record...');
+      logger.debug('Creating new user record...');
       const hashedPassword = await hashPassword(password);
-      console.log('Password hashed successfully');
+      logger.debug('Password hashed successfully');
 
       const [user] = await trx('users')
         .insert({
-          email,
-          username: email,
+          email: email.toLowerCase(),
+          username: email.toLowerCase(),
           first_name: firstName,
           last_name: lastName,
           hashed_password: hashedPassword,
@@ -651,9 +816,8 @@ export async function registerClientUser(
         })
         .returning('*');
 
-      // Get the default client portal user role
-      // After migration, "Client" role is now "User" in client portal
-      let clientRole = await trx('roles')
+      // Get the default client portal user role (must exist via migrations)
+      const clientRole = await trx('roles')
         .where({ 
           tenant: contact.tenant,
           client: true,
@@ -662,46 +826,51 @@ export async function registerClientUser(
         .whereRaw('LOWER(role_name) = ?', ['user'])
         .first();
 
-      // Fallback: try old "client" role name for backwards compatibility
       if (!clientRole) {
-        clientRole = await trx('roles')
-          .where({ tenant: contact.tenant })
-          .whereRaw('LOWER(role_name) = ?', ['client'])
-          .first();
-      }
-
-      if (!clientRole) {
-        // If role doesn't exist, create it. This is a fallback.
-        // The primary mechanism should be the migration.
-        [clientRole] = await trx('roles')
-          .insert({
-            role_name: 'User',
-            description: 'Standard client portal user',
-            tenant: contact.tenant,
-            msp: false,
-            client: true
-          })
-          .returning('*');
+        throw new Error('Client portal User role not found for tenant');
       }
 
       // Assign the role to the user
-      if (clientRole) {
-        await trx('user_roles').insert({
-          user_id: user.user_id,
-          role_id: clientRole.role_id,
-          tenant: contact.tenant
-        });
-      } else {
-        // This case should ideally not be reached if the migration and fallback work.
-        console.error(`Critical: Could not find or create a client role for tenant ${contact.tenant}`);
-        throw new Error('Client role could not be assigned.');
-      }
+      await trx('user_roles').insert({
+        user_id: user.user_id,
+        role_id: clientRole.role_id,
+        tenant: contact.tenant
+      });
 
       return { success: true };
     });
   } catch (error) {
-    console.error('Error registering client user:', error);
+    logger.error('Error registering client user:', error);
     return { success: false, error: 'Failed to register user' };
+  }
+}
+
+export async function checkPasswordResetStatus(): Promise<{ hasResetPassword: boolean }> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { hasResetPassword: true }; // Default to true if no user
+    }
+
+    const {knex} = await createTenantKnex();
+
+    // RBAC check - users can only check their own password reset status
+    if (!await hasPermission(currentUser, 'user', 'read', knex)) {
+      // Use standardized permission error to avoid silent success paths
+      throwPermissionError('check password reset status');
+    }
+
+    // UserPreferences enforces tenant scoping internally (tenant is part of its unique key)
+    const preference = await UserPreferences.get(knex, currentUser.user_id, 'has_reset_password');
+    
+    // For existing users without this preference, assume they have already reset their password
+    // Only new users created after this feature will have has_reset_password = false
+    const hasReset = preference ? preference.setting_value === true : true;
+    
+    return { hasResetPassword: hasReset };
+  } catch (error) {
+    logger.error('Error checking password reset status:', error);
+    return { hasResetPassword: true }; // Default to true on error to avoid showing warning
   }
 }
 
@@ -726,9 +895,18 @@ export async function changeOwnPassword(
     const hashedPassword = await hashPassword(newPassword);
     await User.updatePassword(currentUser.email, hashedPassword);
 
+    // Mark that the user has reset their password
+    const {knex} = await createTenantKnex();
+    await UserPreferences.upsert(knex, {
+      user_id: currentUser.user_id,
+      setting_name: 'has_reset_password',
+      setting_value: true,
+      updated_at: new Date()
+    });
+
     return { success: true };
   } catch (error) {
-    console.error('Error changing password:', error);
+    logger.error('Error changing password:', error);
     return { success: false, error: 'Failed to change password' };
   }
 }
@@ -771,22 +949,11 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
         }
       }
 
-      // If no contact or no company found, try to get company from user's email domain
-      const emailDomain = user.email.split('@')[1];
-      if (!emailDomain) return null;
-
-      const emailSetting = await trx('company_email_settings')
-        .where({
-          email_suffix: emailDomain,
-          tenant: tenant
-        })
-        .select('company_id')
-        .first();
-
-      return emailSetting?.company_id || null;
+      // Email suffix functionality removed for security
+      return null;
     });
   } catch (error) {
-    console.error('Error getting user company ID:', error);
+    logger.error('Error getting user company ID:', error);
     throw new Error('Failed to get user company ID');
   }
 }
@@ -824,7 +991,7 @@ export async function getUserContactId(userId: string): Promise<string | null> {
       return user?.contact_id || null;
     });
   } catch (error) {
-    console.error('Error getting user contact ID:', error);
+    logger.error('Error getting user contact ID:', error);
     throw new Error('Failed to get user contact ID');
   }
 }
@@ -864,7 +1031,7 @@ export async function adminChangeUserPassword(
 
     return { success: true };
   } catch (error) {
-    console.error('Error changing user password:', error);
+    logger.error('Error changing user password:', error);
     return { success: false, error: 'Failed to change user password' };
   }
 }
@@ -943,7 +1110,7 @@ export async function uploadUserAvatar(
 
     // Use the imageUrl returned by the service
     const avatarUrl = uploadResult.imageUrl;
-    console.log(`[uploadUserAvatar] New avatar URL: ${avatarUrl}`);
+    logger.debug(`[uploadUserAvatar] New avatar URL: ${avatarUrl}`);
 
     return {
       success: true,
@@ -952,7 +1119,7 @@ export async function uploadUserAvatar(
     };
 
   } catch (error: any) {
-    console.error('[UserActions] Failed to upload user avatar:', {
+    logger.error('[UserActions] Failed to upload user avatar:', {
       operation: 'uploadUserAvatar',
       userId,
       errorMessage: error.message || 'Unknown error',
@@ -1022,7 +1189,7 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
     return { success: true, message: deleteResult.message || 'Avatar deleted successfully.' };
 
   } catch (error: any) {
-    console.error(`[UserActions] Failed to delete user avatar:`, {
+    logger.error(`[UserActions] Failed to delete user avatar:`, {
       operation: 'deleteUserAvatar',
       userId,
       errorMessage: error.message || 'Unknown error',
@@ -1066,7 +1233,7 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
       return users;
     });
   } catch (error) {
-    console.error('Error getting client users:', error);
+    logger.error('Error getting client users:', error);
     throw error;
   }
 }

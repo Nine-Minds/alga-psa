@@ -34,6 +34,7 @@ import UserPreferences from 'server/src/lib/models/userPreferences';
 import { generateResourceLinks, addHateoasLinks } from '../utils/responseHelpers';
 import { NotFoundError, ConflictError, ValidationError, ForbiddenError } from '../middleware/apiMiddleware';
 import logger from '@shared/core/logger';
+import { validateSystemContext } from './SystemContext';
 
 // Extended interfaces for service operations
 export interface UserWithFullDetails extends IUserWithRoles {
@@ -187,30 +188,37 @@ export class UserService extends BaseService<IUser> {
 
   /**
    * Create new user with validation and role assignment
+   * Overloads align with BaseService signature while supporting rich DTO
    */
-  async create(data: CreateUserData, context: ServiceContext): Promise<UserWithFullDetails> {
+  async create(data: Partial<IUser>, context: ServiceContext): Promise<IUser>;
+  async create(data: CreateUserData, context: ServiceContext): Promise<UserWithFullDetails>;
+  async create(data: any, context: ServiceContext): Promise<IUser> {
     await this.ensurePermission(context, 'user', 'create');
     
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // Validate email uniqueness across all tenants
+      // Validate email uniqueness per tenant + user_type (allow same email across different types)
+      const targetUserType = data.user_type || 'internal';
       const existingUserByEmail = await trx('users')
-        .where('email', data.email.toLowerCase())
+        .where('tenant', context.tenant)
+        .andWhere('email', data.email.toLowerCase())
+        .andWhere('user_type', targetUserType)
         .first();
 
       if (existingUserByEmail) {
         throw new Error('A user with this email address already exists');
       }
 
-      // Validate username uniqueness within tenant
+      // Validate username uniqueness within tenant + user_type (allow same username across different types)
       const existingUserByUsername = await trx('users')
-        .where('username', data.username)
         .where('tenant', context.tenant)
+        .andWhere('username', data.username.toLowerCase())
+        .andWhere('user_type', targetUserType)
         .first();
 
       if (existingUserByUsername) {
-        throw new Error('A user with this username already exists');
+        throw new Error('A user with this username already exists for this user type');
       }
 
       // Validate role IDs if provided
@@ -227,7 +235,7 @@ export class UserService extends BaseService<IUser> {
       // Prepare user data
       const userData = {
         user_id: knex.raw('gen_random_uuid()'),
-        username: data.username,
+        username: data.username.toLowerCase(),
         first_name: data.first_name || null,
         last_name: data.last_name || null,
         email: data.email.toLowerCase(),
@@ -249,7 +257,7 @@ export class UserService extends BaseService<IUser> {
 
       // Assign roles
       if (data.role_ids && data.role_ids.length > 0) {
-        const userRoles = data.role_ids.map(roleId => ({
+        const userRoles = data.role_ids.map((roleId: string) => ({
           user_id: createdUser.user_id,
           role_id: roleId,
           tenant: context.tenant
@@ -275,7 +283,7 @@ export class UserService extends BaseService<IUser> {
         includeHateoas: true
       }, trx);
 
-      return enhancedUser;
+      return enhancedUser as unknown as IUser;
     });
   }
 
@@ -297,10 +305,12 @@ export class UserService extends BaseService<IUser> {
         throw new Error('User not found or permission denied');
       }
 
-      // Validate email uniqueness if changing email
+      // Validate email uniqueness per user_type if changing email
       if (data.email && data.email.toLowerCase() !== existingUser.email) {
+        const userTypeToCheck = (data.user_type || existingUser.user_type || 'internal');
         const emailExists = await trx('users')
           .where('email', data.email.toLowerCase())
+          .andWhere('user_type', userTypeToCheck)
           .whereNot('user_id', id)
           .first();
 
@@ -313,6 +323,7 @@ export class UserService extends BaseService<IUser> {
       const updateData = {
         ...data,
         email: data.email ? data.email.toLowerCase() : undefined,
+        username: data.username ? data.username.toLowerCase() : undefined,
         updated_at: knex.raw('now()')
       };
 
@@ -1424,6 +1435,24 @@ export class UserService extends BaseService<IUser> {
     action: string,
     trx?: Knex.Transaction
   ): Promise<void> {
+    // Validate system context if using zero UUID
+    try {
+      validateSystemContext(context);
+    } catch (error) {
+      logger.error('Invalid system context detected', { 
+        error, 
+        userId: context.userId,
+        resource,
+        action 
+      });
+      throw new ForbiddenError('Invalid system context');
+    }
+
+    // If validated as system context, bypass permission checks
+    if (context.userId === '00000000-0000-0000-0000-000000000000') {
+      return;
+    }
+
     const { knex } = await this.getKnex();
     const db = trx || knex;
     

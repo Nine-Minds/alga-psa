@@ -2,7 +2,7 @@
  * Debug test to examine the actual login page structure
  */
 
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('debug login page structure', async ({ page }) => {
   // Navigate to root path

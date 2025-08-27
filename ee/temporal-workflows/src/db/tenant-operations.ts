@@ -1,5 +1,6 @@
 import { Context } from '@temporalio/activity';
-import { getAdminDatabase, executeTransaction } from './connection.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import type { Knex } from 'knex';
 import type {
   CreateTenantActivityInput,
   CreateTenantActivityResult,
@@ -16,35 +17,82 @@ export async function createTenantInDB(
   input: CreateTenantActivityInput
 ): Promise<CreateTenantActivityResult> {
   const log = logger();
-  log.info('Creating tenant in database', { tenantName: input.tenantName });
+  log.info('Creating tenant in database', { 
+    tenantName: input.tenantName,
+    licenseCount: input.licenseCount 
+  });
 
   try {
-    const adminDb = await getAdminDatabase();
+    const knex = await getAdminConnection();
     
-    const result = await executeTransaction(adminDb, async (client) => {
+    const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
-      const tenantResult = await client.query(
-        `INSERT INTO tenants (company_name, email, created_at, updated_at) 
-         VALUES ($1, $2, NOW(), NOW()) 
-         RETURNING tenant`,
-        [input.tenantName, input.email]
-      );
+      const tenantData: any = {
+        company_name: input.tenantName,
+        email: input.email.toLowerCase(),
+        created_at: knex.fn.now(),
+        updated_at: knex.fn.now()
+      };
       
-      const tenantId = tenantResult.rows[0].tenant;
-      log.info('Tenant created successfully', { tenantId });
+      // Add license count if provided
+      if (input.licenseCount !== undefined) {
+        tenantData.licensed_user_count = input.licenseCount;
+        tenantData.last_license_update = knex.fn.now();
+        tenantData.stripe_event_id = `temporal_${Date.now()}`; // Track that this came from Temporal
+      }
+      
+      const tenantResult = await trx('tenants')
+        .insert(tenantData)
+        .returning('tenant');
+      
+      const tenantId = tenantResult[0].tenant;
+      log.info('Tenant created successfully', { 
+        tenantId, 
+        licenseCount: input.licenseCount 
+      });
 
       // Create company if companyName is provided (now with tenant ID)
       let companyId: string | undefined;
       
       if (input.companyName) {
-        const companyResult = await client.query(
-          `INSERT INTO companies (company_name, tenant, created_at, updated_at) 
-           VALUES ($1, $2, NOW(), NOW()) 
-           RETURNING company_id`,
-          [input.companyName, tenantId]
-        );
-        companyId = companyResult.rows[0].company_id;
+        const companyResult = await trx('companies')
+          .insert({
+            company_name: input.companyName,
+            tenant: tenantId,
+            client_type: 'company',
+            is_inactive: false,
+            properties: {
+              type: 'msp',
+              is_system_company: true,
+              created_by: 'tenant_setup'
+            },
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          })
+          .returning('company_id');
+        companyId = companyResult[0].company_id;
         log.info('Company created', { companyId, companyName: input.companyName, tenantId });
+        
+        // Create default location for the MSP company with email from the tenant setup
+        // Insert minimal required fields to satisfy NOT NULL constraints
+        await trx('company_locations')
+          .insert({
+            location_id: knex.raw('gen_random_uuid()'),
+            company_id: companyId,
+            tenant: tenantId,
+            location_name: 'Main Office',
+            email: input.email.toLowerCase(), // default contact email (lowercased)
+            phone: '',
+            address_line1: 'N/A', // required, placeholder per migration convention
+            city: 'N/A', // required by schema
+            country_code: 'XX', // required by schema (ISO-3166 alpha-2)
+            country_name: 'Unknown', // required by schema
+            is_default: true,
+            is_active: true,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
+        log.info('Default location created', { companyId, email: input.email });
         
         // Note: Not updating tenant with company_id as column doesn't exist in schema
       }
@@ -74,17 +122,19 @@ export async function setupTenantDataInDB(
   log.info('Setting up tenant data', { tenantId: input.tenantId });
 
   try {
-    const adminDb = await getAdminDatabase();
+    const knex = await getAdminConnection();
     const setupSteps: string[] = [];
 
-    await executeTransaction(adminDb, async (client) => {
+    await knex.transaction(async (trx: Knex.Transaction) => {
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
-        await client.query(
-          `INSERT INTO tenant_email_settings (tenant_id, email_provider, fallback_enabled, tracking_enabled)
-           VALUES ($1, 'resend', true, false)`,
-          [input.tenantId]
-        );
+        await trx('tenant_email_settings')
+          .insert({
+            tenant_id: input.tenantId,
+            email_provider: 'resend',
+            fallback_enabled: true,
+            tracking_enabled: false
+          });
         setupSteps.push('email_settings');
       } catch (error) {
         // If it already exists, that's fine
@@ -93,11 +143,16 @@ export async function setupTenantDataInDB(
 
       // Initialize tenant settings with onboarding flags set to false
       try {
-        await client.query(
-          `INSERT INTO tenant_settings (tenant, onboarding_completed, onboarding_skipped, onboarding_data, settings, created_at, updated_at)
-           VALUES ($1, false, false, null, null, NOW(), NOW())`,
-          [input.tenantId]
-        );
+        await trx('tenant_settings')
+          .insert({
+            tenant: input.tenantId,
+            onboarding_completed: false,
+            onboarding_skipped: false,
+            onboarding_data: null,
+            settings: null,
+            created_at: knex.fn.now(),
+            updated_at: knex.fn.now()
+          });
         setupSteps.push('tenant_settings');
       } catch (error) {
         // If it already exists, that's fine
@@ -107,11 +162,12 @@ export async function setupTenantDataInDB(
       // Create tenant-company association if we have a company
       if (input.companyId) {
         try {
-          await client.query(
-            `INSERT INTO tenant_companies (tenant, company_id, is_default)
-             VALUES ($1, $2, true)`,
-            [input.tenantId, input.companyId]
-          );
+          await trx('tenant_companies')
+            .insert({
+              tenant: input.tenantId,
+              company_id: input.companyId,
+              is_default: true
+            });
           setupSteps.push('tenant_company_association');
         } catch (error) {
           // If it already exists, that's fine
@@ -146,31 +202,31 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
   log.info('Rolling back tenant creation', { tenantId });
 
   try {
-    const adminDb = await getAdminDatabase();
+    const knex = await getAdminConnection();
 
-    await executeTransaction(adminDb, async (client) => {
+    await knex.transaction(async (trx: Knex.Transaction) => {
       // Delete in proper order to avoid foreign key violations
       
       // Delete user roles first (references users)
-      await client.query('DELETE FROM user_roles WHERE tenant = $1', [tenantId]);
+      await trx('user_roles').where({ tenant: tenantId }).delete();
       
       // Delete users (references tenant)
-      await client.query('DELETE FROM users WHERE tenant = $1', [tenantId]);
+      await trx('users').where({ tenant: tenantId }).delete();
       
       // Delete tenant_companies associations (references tenant and companies)
-      await client.query('DELETE FROM tenant_companies WHERE tenant = $1', [tenantId]);
+      await trx('tenant_companies').where({ tenant: tenantId }).delete();
       
       // Delete tenant_email_settings (references tenant indirectly)
-      await client.query('DELETE FROM tenant_email_settings WHERE tenant_id = $1', [tenantId]);
+      await trx('tenant_email_settings').where({ tenant_id: tenantId }).delete();
       
       // Delete tenant_settings (references tenant)
-      await client.query('DELETE FROM tenant_settings WHERE tenant = $1', [tenantId]);
+      await trx('tenant_settings').where({ tenant: tenantId }).delete();
       
       // Delete companies (references tenant)
-      await client.query('DELETE FROM companies WHERE tenant = $1', [tenantId]);
+      await trx('companies').where({ tenant: tenantId }).delete();
       
       // Delete the tenant last
-      await client.query('DELETE FROM tenants WHERE tenant = $1', [tenantId]);
+      await trx('tenants').where({ tenant: tenantId }).delete();
     });
 
     log.info('Tenant rollback completed', { tenantId });

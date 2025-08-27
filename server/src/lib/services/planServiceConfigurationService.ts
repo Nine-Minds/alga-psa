@@ -92,8 +92,8 @@ export class PlanServiceConfigurationService {
       // Proceed using the baseConfig.configuration_type as fallback
     }
     
-    let typeConfig = null;
-    let rateTiers = undefined;
+    let typeConfig: IPlanServiceBucketConfig | IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | null = null;
+    let rateTiers: IPlanServiceRateTier[] | undefined = undefined;
     // let userTypeRates = undefined; // Removed
 
     // If the plan is a Bucket plan, always fetch from bucket config table

@@ -2,7 +2,7 @@
  * Email Provider Manager - Handles email provider configuration and sending
  */
 
-import logger from '@shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger.js';
 import {
   IEmailProvider,
   IEmailProviderManager,

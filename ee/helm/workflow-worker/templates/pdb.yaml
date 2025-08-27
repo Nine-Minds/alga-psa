@@ -1,0 +1,17 @@
+{{- if and .Values.enabled .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "workflow-worker.fullname" . }}
+  namespace: {{ include "workflow-worker.namespace" . }}
+  labels:
+    {{- include "workflow-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: workflow-worker
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "workflow-worker.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: workflow-worker
+{{- end }}
+

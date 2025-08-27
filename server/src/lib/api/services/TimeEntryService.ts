@@ -397,7 +397,7 @@ export class TimeEntryService extends BaseService<any> {
 
   // Override bulk methods to match BaseService signature
   async bulkCreateTimeEntries(data: BulkTimeEntryData, context: ServiceContext): Promise<any[]> {
-    const results = [];
+    const results: { success: boolean; data?: any; error?: string }[] = [];
     
     for (const entryData of data.entries) {
       try {
@@ -413,7 +413,7 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkUpdateTimeEntries(data: BulkUpdateTimeEntryData, context: ServiceContext): Promise<any[]> {
-    const results = [];
+    const results: { success: boolean; data?: any; error?: string; entry_id?: string }[] = [];
     
     for (const { entry_id, data: updateData } of data.entries) {
       try {
@@ -429,7 +429,7 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async bulkDeleteTimeEntries(data: BulkDeleteTimeEntryData, context: ServiceContext): Promise<any[]> {
-    const results = [];
+    const results: { success: boolean; error?: string; entry_id: string }[] = [];
     
     for (const entryId of data.entry_ids) {
       try {
@@ -664,7 +664,7 @@ export class TimeEntryService extends BaseService<any> {
   // Approval operations
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    const results = [];
+    const results: { success: boolean; error?: string; entry_id: string }[] = [];
     
     for (const entryId of data.entry_ids) {
       try {
@@ -727,7 +727,7 @@ export class TimeEntryService extends BaseService<any> {
 
   async requestChanges(data: RequestTimeEntryChangesData, context: ServiceContext): Promise<any[]> {
     const { knex } = await this.getKnex();
-    const results = [];
+    const results: { success: boolean; error?: string; entry_id: string }[] = [];
     
     for (const entryId of data.entry_ids) {
       try {

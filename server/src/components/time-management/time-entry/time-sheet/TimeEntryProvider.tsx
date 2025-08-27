@@ -206,8 +206,8 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       }];
     } else {
       // For ad-hoc items, get the scheduled times from the schedule entry
-      let startTime, endTime;
-      let scheduleEntry = null;
+      let startTime: Date, endTime: Date;
+      let scheduleEntry: { scheduled_start: string; scheduled_end: string } | null = null;
       
       if (workItem.type === 'ad_hoc') {
         scheduleEntry = await fetchScheduleEntryForWorkItem(workItem.work_item_id);

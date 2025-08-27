@@ -7,11 +7,11 @@ import { authenticateUser } from "server/src/lib/actions/auth";
 import { getKeycloakToken } from "server/src/utils/keycloak";
 import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
-import logger from '@shared/core/logger';
+import logger from '@alga-psa/shared/core/logger.js';
 import "server/src/types/next-auth";
 import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 // import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
@@ -105,6 +105,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
                 twoFactorCode: { label: "2FA Code", type: "text" },
+                userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("server/src/lib/db/admin");
@@ -124,9 +125,15 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                     }
 
                     console.log('Attempting to authenticate user:', credentials.email);
-                    const user = await authenticateUser(credentials.email, credentials.password);
+                    console.log('user type', credentials.userType);
+                    console.log('next auth secret', process.env.NEXTAUTH_SECRET);
+                    const user = await authenticateUser(credentials.email, credentials.password, credentials.userType);
                     if (!user) {
                         console.log('Authentication failed: No user returned');
+                        return null;
+                    }
+                    if (credentials.userType && user.user_type !== credentials.userType) {
+                        console.log('Authentication failed: User type mismatch', { expected: credentials.userType, actual: user.user_type });
                         return null;
                     }
                     console.log('User authenticated successfully:', {
@@ -136,7 +143,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                     });
 
                     // If it's a client user, get the contact and company information
-                    let companyId = null;
+                    let companyId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -155,7 +162,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id;
+                            companyId = contact.company_id || undefined;
                             console.log('Company information found:', { companyId });
                             logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
                         } else {
@@ -198,7 +205,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                         proToken: '',
                         tenant: user.tenant,
                         user_type: user.user_type,
-                        companyId: companyId,
+                        companyId: companyId ?? undefined,
                         contactId: user.contact_id
                     };
                     console.log('Authorization successful. Returning user data:', {
@@ -445,6 +452,7 @@ export const options: NextAuthOptions = {
                 email: { label: "Email", type: "email" },
                 password: { label: "Password", type: "password" },
                 twoFactorCode: { label: "2FA Code", type: "text" },
+                userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("server/src/lib/db/admin");
@@ -464,9 +472,13 @@ export const options: NextAuthOptions = {
                     }
 
                     console.log('Attempting to authenticate user:', credentials.email);
-                    const user = await authenticateUser(credentials.email, credentials.password);
+                    const user = await authenticateUser(credentials.email, credentials.password, credentials.userType);
                     if (!user) {
                         console.log('Authentication failed: No user returned');
+                        return null;
+                    }
+                    if (credentials.userType && user.user_type !== credentials.userType) {
+                        console.log('Authentication failed: User type mismatch', { expected: credentials.userType, actual: user.user_type });
                         return null;
                     }
                     console.log('User authenticated successfully:', {
@@ -476,7 +488,7 @@ export const options: NextAuthOptions = {
                     });
 
                     // If it's a client user, get the contact and company information
-                    let companyId = null;
+                    let companyId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -495,7 +507,7 @@ export const options: NextAuthOptions = {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id;
+                            companyId = contact.company_id || undefined;
                             console.log('Company information found:', { companyId });
                             logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
                         } else {
@@ -733,8 +745,11 @@ export const options: NextAuthOptions = {
 
 async function validateUser(token: any) {
     try {
-        // Fetch the user from the database using email (lowercase for consistency)
-        const user = await User.findUserByEmail(token.email.toLowerCase());
+        // Fetch the user from the database using email and user_type (lowercase for consistency)
+        const user = await User.findUserByEmailAndType(
+          token.email.toLowerCase(),
+          (token.user_type === 'client' || token.user_type === 'internal') ? token.user_type : 'internal'
+        );
 
         // Check if the user exists and matches
         if (!user || user.user_id !== token.id || user.username !== token.username) {
@@ -754,11 +769,7 @@ async function validateUser(token: any) {
             return null;
         }
 
-        // Verify user type matches
-        if (user.user_type !== token.user_type) {
-            logger.warn(`User type mismatch for email: ${token.email}`);
-            return null;
-        }
+        // user_type already matched via lookup
 
         return user;
     } catch (error) {

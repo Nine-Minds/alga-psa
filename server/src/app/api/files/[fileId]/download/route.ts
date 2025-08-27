@@ -32,12 +32,12 @@ export async function GET(
         console.log('Headers set:', Object.fromEntries(headers.entries()));
 
         console.log('Sending file response...');
-        return new NextResponse(result.buffer, {
+        return new Response(result.buffer as any, {
             status: 200,
             headers,
         });
     } catch (error) {
         console.error('Download error:', error);
-        return new NextResponse('Download failed', { status: 500 });
+        return new Response('Download failed', { status: 500 });
     }
 }

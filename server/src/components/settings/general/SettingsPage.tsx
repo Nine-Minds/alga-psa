@@ -9,42 +9,65 @@ import CustomTabs, { TabContent } from "server/src/components/ui/CustomTabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
-import GeneralSettings from './GeneralSettings';
-import UserManagement from './UserManagement';
+import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
+import UserManagement from 'server/src/components/settings/general/UserManagement';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
+import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
+import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
 // Dynamic imports for heavy settings components
-const TicketingSettings = dynamic(() => import('./TicketingSettings'), {
+const TicketingSettings = dynamic(() => import('server/src/components/settings/general/TicketingSettings'), {
   loading: () => <SettingsTabSkeleton title="Ticketing Settings" description="Loading ticketing configuration..." />,
   ssr: false
 });
 
-const TeamManagement = dynamic(() => import('./TeamManagement'), {
+const TeamManagement = dynamic(() => import('server/src/components/settings/general/TeamManagement'), {
   loading: () => <SettingsTabSkeleton title="Team Management" description="Loading team configuration..." showTabs={false} />,
   ssr: false
 });
-import InteractionTypesSettings from './InteractionTypeSettings';
-import TimePeriodSettings from '../billing/TimePeriodSettings';
-import BillingSettings from '../billing/BillingSettings'; // Import the new component
-import NumberingSettings from './NumberingSettings';
-import NotificationsTab from './NotificationsTab';
-import { TaxRegionsManager } from '../tax/TaxRegionsManager'; // Import the new component
+import InteractionTypesSettings from 'server/src/components/settings/general/InteractionTypeSettings';
+import TimeEntrySettings from 'server/src/components/settings/time-entry/TimeEntrySettings';
+import BillingSettings from 'server/src/components/settings/billing/BillingSettings'; // Import the new component
+import NumberingSettings from 'server/src/components/settings/general/NumberingSettings';
+import NotificationsTab from 'server/src/components/settings/general/NotificationsTab';
+import { TaxRegionsManager } from 'server/src/components/settings/tax/TaxRegionsManager'; // Import the new component
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
 import QboIntegrationSettings from '../integrations/QboIntegrationSettings'; // Import the actual settings component
-import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
 // Extensions are only available in Enterprise Edition
-import { EmailSettings } from '../../admin/EmailSettings';
+import { EmailSettings } from 'server/src/components/admin/EmailSettings';
+import { EmailProviderConfiguration } from 'server/src/components/EmailProviderConfiguration';
 // Removed import: import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
 // Revert to standard function component
 const SettingsPage = (): JSX.Element =>  {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const billingFeatureFlag = useFeatureFlag('billing-enabled');
+  const isBillingEnabled = typeof billingFeatureFlag === 'boolean' ? billingFeatureFlag : billingFeatureFlag?.enabled;
+  const advancedFeatureFlag = useFeatureFlag('advanced-features-enabled');
+  const isAdvancedFeaturesEnabled = typeof advancedFeatureFlag === 'boolean' ? advancedFeatureFlag : advancedFeatureFlag?.enabled;
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+  // Dynamically load the Extensions (Manage) component only if EE is available
+  const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
+    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),
+    {
+      loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
+      ssr: false
+    }
+  ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
+
+  // Dynamically load the new Installer (Server Actions) via EE loader boundary, to avoid direct app imports here
+  const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
+    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicInstallExtensionComponent as any),
+    {
+      loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
+      ssr: false
+    }
+  ) : () => null;
 
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
@@ -86,7 +109,9 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>General Settings</CardTitle>
-            <CardDescription>Manage your organization's settings</CardDescription>
+            <CardDescription>
+              Manage your organization name and default company. The default company is used for configuration purposes and represents your MSP.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <GeneralSettings />
@@ -136,10 +161,10 @@ const SettingsPage = (): JSX.Element =>  {
         <Card>
           <CardHeader>
             <CardTitle>Time Entry Settings</CardTitle>
-            <CardDescription>Manage your time entry settings</CardDescription>
+            <CardDescription>Manage your time entry settings and time periods</CardDescription>
           </CardHeader>
           <CardContent>
-            <TimePeriodSettings />
+            <TimeEntrySettings />
           </CardContent>
         </Card>
       ),
@@ -160,7 +185,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Tax",
-      content: (
+      content: isBillingEnabled ? (
         <Card>
           <CardHeader>
             <CardTitle>Tax Settings</CardTitle>
@@ -170,6 +195,8 @@ const SettingsPage = (): JSX.Element =>  {
             <TaxRegionsManager />
           </CardContent>
         </Card>
+      ) : (
+        <FeaturePlaceholder />
       ),
     },
     {
@@ -188,33 +215,80 @@ const SettingsPage = (): JSX.Element =>  {
     },
     { // Add the new Integrations tab definition
       label: "Integrations",
-      // Render the QBO settings client component directly
-      content: <QboIntegrationSettings />,
+      content: isAdvancedFeaturesEnabled ? (
+        <div className="space-y-6">
+          {/* QuickBooks Online Integration */}
+          <QboIntegrationSettings />
+          
+          {/* Inbound Email Integration */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Inbound Email Integration</CardTitle>
+              <CardDescription>
+                Configure email providers to automatically process incoming emails into tickets
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <EmailProviderConfiguration />
+            </CardContent>
+          </Card>
+        </div>
+      ) : <FeaturePlaceholder />,
     }
   ];
 
-  // Add Extensions tab conditionally if EE is available
-  const tabContent: TabContent[] = isEEAvailable 
-    ? [
-        ...baseTabContent,
-        {
-          label: "Extensions",
-          content: (
-            <Card>
-              <CardHeader>
-                <CardTitle>Extension Management</CardTitle>
-                <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <p>Extension management is only available in Enterprise Edition.</p>
-                </div>
-              </CardContent>
-            </Card>
-          ),
-        }
-      ]
-    : baseTabContent;
+  // Always include an "Extensions" tab.
+  // - EE: full Manage + Install sub-tabs
+  // - OSS: enterprise-only stub
+  const tabContent: TabContent[] = [
+    ...baseTabContent,
+    {
+      label: "Extensions",
+      content: (
+        <Card>
+          <CardHeader>
+            <CardTitle>Extension Management</CardTitle>
+            <CardDescription>Install, configure, and manage extensions to extend Alga PSA functionality</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isEEAvailable ? (
+              <div className="space-y-4">
+                <CustomTabs
+                  tabs={[
+                    {
+                      label: "Manage",
+                      content: (
+                        <div className="py-2">
+                          <DynamicExtensionsComponent />
+                        </div>
+                      )
+                    },
+                    {
+                      label: "Install",
+                      content: (
+                        <div className="py-2">
+                          {/* EE server-actions installer, styled with standard UI */}
+                          <DynamicInstallComponent />
+                        </div>
+                      )
+                    }
+                  ] as TabContent[]}
+                  defaultTab="Manage"
+                />
+              </div>
+            ) : (
+              <div className="text-center py-10">
+                <div className="text-lg font-medium text-gray-900">Enterprise feature</div>
+                <p className="text-sm text-gray-600 mt-2">
+                  Extensions are available in the Enterprise edition of Alga PSA.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ),
+    }
+  ];
 
 
   return (

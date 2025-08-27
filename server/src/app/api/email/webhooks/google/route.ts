@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@shared/db/admin';
-import { withTransaction } from '@shared/db';
-import { publishEvent } from '@shared/events/publisher';
+import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { withTransaction } from '@alga-psa/shared/db';
+import { publishEvent } from '@alga-psa/shared/events/publisher.js';
+import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
+import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
 
 interface GooglePubSubMessage {
@@ -160,34 +162,117 @@ export async function POST(request: NextRequest) {
       console.log(`✅ Recorded historyId ${notification.historyId} as processed for provider ${provider.id}`);
     
 
-      // Publish INBOUND_EMAIL_RECEIVED event
-      console.log(`📤 Publishing INBOUND_EMAIL_RECEIVED event for provider ${provider.id}`);
-      await publishEvent({
-        eventType: 'INBOUND_EMAIL_RECEIVED',
+      // Guard: ensure OAuth tokens exist before attempting Gmail API calls
+      if (!googleConfig.access_token || !googleConfig.refresh_token) {
+        console.warn(`⚠️  Gmail OAuth tokens missing for provider ${provider.id}. Skipping fetch and marking provider as error.`);
+        try {
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              connection_status: 'error',
+              connection_error_message: 'Gmail OAuth tokens missing. Reconnect the Gmail provider to continue.'
+            });
+        } catch (updateErr) {
+          console.warn('Failed to update provider connection_status when tokens missing:', updateErr);
+        }
+        return; // Exit transaction early; webhook will be acked below without events
+      }
+
+      // Build EmailProviderConfig for GmailAdapter
+      const providerConfig: EmailProviderConfig = {
+        id: provider.id,
         tenant: provider.tenant,
-        payload: {
-          providerId: provider.id,
-          providerType: 'google',
-          mailbox: provider.mailbox,
-          historyId: notification.historyId,
-          webhookData: {
-            emailAddress: notification.emailAddress,
-            historyId: notification.historyId,
-            messageId: payloadData.messageId,
-            publishTime: payloadData.publishTime,
-            subscription: payloadData.subscription,
-            timestamp: new Date().toISOString()
+        name: provider.name || provider.mailbox,
+        provider_type: 'google',
+        mailbox: provider.mailbox,
+        folder_to_monitor: 'Inbox',
+        active: provider.is_active,
+        webhook_notification_url: provider.webhook_notification_url,
+        connection_status: provider.connection_status || 'connected',
+        created_at: provider.created_at,
+        updated_at: provider.updated_at,
+        provider_config: {
+          project_id: googleConfig.project_id,
+          pubsub_topic_name: googleConfig.pubsub_topic_name,
+          pubsub_subscription_name: googleConfig.pubsub_subscription_name,
+          client_id: googleConfig.client_id,
+          client_secret: googleConfig.client_secret,
+          access_token: googleConfig.access_token,
+          refresh_token: googleConfig.refresh_token,
+          token_expires_at: googleConfig.token_expires_at,
+          history_id: googleConfig.history_id,
+          watch_expiration: googleConfig.watch_expiration,
+        },
+      } as any;
+
+      try {
+        // Use GmailAdapter to fetch message IDs since historyId and publish enriched events
+        const adapter = new GmailAdapter(providerConfig);
+        await adapter.connect();
+
+        // Per Gmail docs, list history since our last saved history_id, not the incoming one
+        const startHistoryId = String(googleConfig.history_id || ((Number(notification.historyId) || 0) - 1));
+        console.log(`🔎 Listing Gmail messages since saved historyId ${startHistoryId} (notification ${notification.historyId})`);
+        const messageIds = await adapter.listMessagesSince(startHistoryId);
+
+        if (!messageIds || messageIds.length === 0) {
+          console.log(`ℹ️ No new Gmail messages since historyId ${notification.historyId} for ${provider.mailbox}`);
+        } else {
+          console.log(`📬 Found ${messageIds.length} new Gmail message(s) to publish`);
+        }
+
+        // Publish one INBOUND_EMAIL_RECEIVED per Gmail message with full emailData
+        for (const msgId of messageIds) {
+          try {
+            const details = await adapter.getMessageDetails(msgId);
+            await publishEvent({
+              eventType: 'INBOUND_EMAIL_RECEIVED',
+              tenant: provider.tenant,
+              payload: {
+                tenantId: provider.tenant,
+                tenant: provider.tenant,
+                providerId: provider.id,
+                emailData: details,
+              },
+            });
+            console.log(`✅ Published INBOUND_EMAIL_RECEIVED with emailData for ${msgId}`);
+            processed = true;
+          } catch (detailErr: any) {
+            console.warn(`⚠️ Failed to fetch/publish Gmail message ${msgId}: ${detailErr.message}`);
           }
         }
-      });
 
-      processed = true;
-      console.log(`✅ Published INBOUND_EMAIL_RECEIVED event for Gmail:`, {
-        email: notification.emailAddress,
-        historyId: notification.historyId,
-        providerId: provider.id,
-        tenant: provider.tenant
-      });
+        // Advance our stored history cursor to the latest notification's historyId
+        try {
+          await trx('google_email_provider_config')
+            .where('email_provider_id', provider.id)
+            .update({ history_id: String(notification.historyId), updated_at: trx.fn.now() });
+          console.log(`📝 Updated stored Gmail history_id to ${notification.historyId} for provider ${provider.id}`);
+        } catch (updateHistoryErr: any) {
+          console.warn('⚠️ Failed to persist updated history_id:', updateHistoryErr?.message || updateHistoryErr);
+        }
+      } catch (oauthErr: any) {
+        const msg = oauthErr?.message || String(oauthErr);
+        const raw = typeof oauthErr === 'object' ? JSON.stringify(oauthErr) : String(oauthErr);
+        console.error('[GOOGLE] OAuth error while fetching Gmail messages:', { message: msg, raw });
+        if (msg.includes('invalid_grant') || msg.includes('invalid_rapt')) {
+          console.error('⚠️ Gmail OAuth requires re-authorization (invalid_grant/invalid_rapt). Marking provider as error.');
+          try {
+            await trx('email_providers')
+              .where('id', provider.id)
+              .update({
+                connection_status: 'error',
+                connection_error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
+              });
+          } catch (updateErr) {
+            console.warn('Failed to update provider connection_status after OAuth error:', updateErr);
+          }
+          // Do not throw; acknowledge webhook without publishing events to avoid retries storm
+        } else {
+          // Unknown error; log and continue (acknowledge webhook)
+          console.error('Unhandled Gmail fetch error:', msg);
+        }
+      }
     });
 
     // Acknowledge the message

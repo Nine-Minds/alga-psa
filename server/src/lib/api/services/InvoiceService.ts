@@ -310,8 +310,11 @@ export class InvoiceService extends BaseService<IInvoice> {
 
   /**
    * Create a new invoice
+   * Overloads for BaseService compatibility
    */
-  async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice> {
+  async create(data: Partial<IInvoice>, context: ServiceContext): Promise<IInvoice>;
+  async create(data: CreateInvoice, context: ServiceContext): Promise<IInvoice>;
+  async create(data: any, context: ServiceContext): Promise<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
     const { knex } = await this.getKnex();
@@ -321,7 +324,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const invoiceNumber = await generateInvoiceNumber(trx);
 
       // Calculate taxes if needed
-      let taxCalculation = null;
+      let taxCalculation: { tax_amount: number; tax_region: string; tax_rate: number; calculation_date: string } | null = null;
       if (data.items?.length) {
         taxCalculation = await this.calculateTaxes({
           company_id: data.company_id,
@@ -1457,4 +1460,3 @@ export class InvoiceService extends BaseService<IInvoice> {
 
 
 }
-

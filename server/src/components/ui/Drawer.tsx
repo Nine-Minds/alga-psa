@@ -2,7 +2,7 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { SessionProvider } from "next-auth/react";
+import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import { Theme } from '@radix-ui/themes';
 
 import { useRegisterUIComponent } from "server/src/types/ui-reflection/useRegisterUIComponent";
@@ -33,13 +33,13 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
   drawerVariant
 }) => {
   // Always register drawer when mounted, but track open state
-  const updateMetadata = id ? useRegisterUIComponent<DrawerComponent>({
+  const updateMetadata = useRegisterUIComponent<DrawerComponent>({
     type: 'drawer',
-    id,
+    id: id || '__skip_registration_drawer',
     open: isOpen,
     width: isInDrawer ? '40%' : '50%',
     children: reflectionChildren
-  }) : undefined;
+  });
   return (
     <Dialog.Root modal open={isOpen} onOpenChange={(open) => {
       if (!open) onClose(); // Ensure onClose is called when dialog is closed
@@ -53,13 +53,13 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
           className={`fixed inset-y-0 right-0 w-fit max-w-[60vw] bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
-          <SessionProvider>
+          <AppSessionProvider>
             <Theme>
               <div className="p-6">
                 {children}
               </div>
             </Theme>
-          </SessionProvider>
+          </AppSessionProvider>
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"

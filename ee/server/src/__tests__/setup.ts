@@ -58,7 +58,7 @@ process.env.NEXTAUTH_SECRET = 'test-secret';
 
 // Console warnings that we want to suppress in tests
 const originalConsoleWarn = console.warn;
-console.warn = (...args: any[]) => {
+console.warn = (...args: unknown[]) => {
   const message = args[0];
   if (
     typeof message === 'string' &&

@@ -6,7 +6,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { StepProps } from '../types';
-import { CheckCircle, ChevronDown, ChevronUp, Package } from 'lucide-react';
+import { CheckCircle, ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { 
@@ -14,12 +14,14 @@ import {
   importServiceTypes, 
   getTenantServiceTypes 
 } from 'server/src/lib/actions/onboarding-actions/serviceTypeActions';
+import { deleteReferenceDataItem } from 'server/src/lib/actions/referenceDataActions';
 import { createServiceType } from 'server/src/lib/actions/serviceActions';
 import { useSession } from 'next-auth/react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Plus } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-export function BillingSetupStep({ data, updateData }: StepProps) {
+export function BillingSetupStep({ data, updateData, attemptedToProceed = false }: StepProps) {
   const { data: session } = useSession();
   const isServiceCreated = !!data.serviceId;
   const [showServiceTypes, setShowServiceTypes] = useState(false);
@@ -103,15 +105,39 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
   const serviceTypeOptions = tenantTypes.map(type => ({
     value: type.id,
-    label: `${type.name} (${type.billing_method})`
+    label: type.name
   }));
+
+  const removeServiceType = async (typeId: string) => {
+    try {
+      const result = await deleteReferenceDataItem('service_types', typeId);
+      if (result.success) {
+        // Remove from tenant types
+        setTenantTypes(prev => prev.filter(t => t.id !== typeId));
+        
+        // If this was the selected type, clear it
+        if (data.serviceTypeId === typeId) {
+          updateData({ serviceTypeId: undefined });
+        }
+        
+        // Refresh data from server
+        loadTenantServiceTypes();
+        toast.success('Service type deleted successfully');
+      } else {
+        toast.error(result.error || 'Failed to delete service type');
+      }
+    } catch (error) {
+      console.error('Error deleting service type:', error);
+      toast.error('Failed to delete service type');
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="space-y-2">
         <h2 className="text-xl font-semibold">Create Your First Service</h2>
         <p className="text-sm text-gray-600">
-          Add a billable service to your catalog. This will be available when creating invoices and tracking time.
+          Add a service type to your catalog. This will be used for time tracking. When billing becomes available, it will also be used for creating invoices.
         </p>
       </div>
 
@@ -127,38 +153,83 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
         </div>
       )}
 
-      {/* Service Types Section */}
-      <div className="border rounded-lg">
-        <button
-          type="button"
-          onClick={() => setShowServiceTypes(!showServiceTypes)}
-          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Package className="w-5 h-5 text-gray-500" />
-            <span className="font-medium">Service Types</span>
-            {tenantTypes.length === 0 && (
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
-            )}
-          </div>
-          {showServiceTypes ? (
-            <ChevronUp className="w-4 h-4 text-gray-500" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-gray-500" />
-          )}
-        </button>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="serviceName">Service Name *</Label>
+          <Input
+            id="serviceName"
+            value={data.serviceName}
+            onChange={(e) => updateData({ serviceName: e.target.value })}
+            placeholder="Managed IT Services"
+          />
+        </div>
 
+        <div>
+          <Label htmlFor="serviceDescription" className="block mb-2">Service Description</Label>
+          <TextArea
+            id="serviceDescription"
+            value={data.serviceDescription}
+            onChange={(e) => updateData({ serviceDescription: e.target.value })}
+            placeholder="Comprehensive IT support and management services..."
+            rows={3}
+            className="!max-w-none"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="serviceTypeId">
+            Service Type *
+            {(!data.serviceTypeId && attemptedToProceed) && (
+              <span className="text-xs text-red-600 ml-2">(Required)</span>
+            )}
+          </Label>
+          <div className="grid grid-cols-2 gap-2">
+            <CustomSelect
+              id="service-type-select"
+              value={data.serviceTypeId || ''}
+              onValueChange={(value) => updateData({ serviceTypeId: value })}
+              options={serviceTypeOptions}
+              disabled={isLoadingTypes || serviceTypeOptions.length === 0}
+              placeholder={serviceTypeOptions.length === 0 ? "Create or import service types" : "Select a service type"}
+            />
+            <Button
+              id="manage-service-types-button"
+              type="button"
+              variant="outline"
+              onClick={() => setShowServiceTypes(!showServiceTypes)}
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Manage Service Types</span>
+            </Button>
+          </div>
+          {serviceTypeOptions.length === 0 && !isLoadingTypes && (
+            <p className="text-xs text-red-600">
+              Click "Manage Service Types" to create or import service types
+            </p>
+          )}
+        </div>
+
+        {/* Service Types Management Section */}
         {showServiceTypes && (
-          <div className="p-4 border-t space-y-4">
+          <div className="border rounded-lg p-4 space-y-4">
+            <div className="rounded-md bg-blue-50 p-4 mb-4">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">Note:</span> Service types define how services are billed. Fixed billing means a flat rate, while Per Unit billing charges based on quantity (e.g., hours worked).
+              </p>
+            </div>
+            
             <div className="flex gap-2">
               <Button
                 id="import-standard-types-btn"
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setShowImportDialog(true);
-                  setShowAddForm(false);
-                  loadStandardServiceTypes();
+                  setShowImportDialog(prev => !prev);
+                  if (!showImportDialog) {
+                    setShowAddForm(false);
+                    loadStandardServiceTypes();
+                  }
                 }}
                 className="flex-1"
               >
@@ -170,14 +241,16 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setShowAddForm(true);
-                  setShowImportDialog(false);
-                  // Calculate next order number
-                  const maxOrder = tenantTypes.reduce((max, t) => {
-                    const order = (t as any).order_number || (t as any).display_order || 0;
-                    return Math.max(max, order);
-                  }, 0);
-                  setServiceTypeForm(prev => ({ ...prev, displayOrder: maxOrder + 1 }));
+                  setShowAddForm(prev => !prev);
+                  if (!showAddForm) {
+                    setShowImportDialog(false);
+                    // Calculate next order number
+                    const maxOrder = tenantTypes.reduce((max, t) => {
+                      const order = (t as any).order_number || (t as any).display_order || 0;
+                      return Math.max(max, order);
+                    }, 0);
+                    setServiceTypeForm(prev => ({ ...prev, displayOrder: maxOrder + 1 }));
+                  }
                 }}
                 className="flex-1"
               >
@@ -188,7 +261,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
             {/* Add New Service Type Form */}
             {showAddForm && (
-              <div className="border rounded-lg p-4 space-y-4 mb-4">
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">Add New Service Type</h4>
                 
                 <div className="space-y-4">
@@ -242,14 +315,6 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      id="isActive"
-                      checked={serviceTypeForm.isActive}
-                      onCheckedChange={(checked) => setServiceTypeForm(prev => ({ ...prev, isActive: checked }))}
-                    />
-                    <Label htmlFor="isActive" className="cursor-pointer">Active</Label>
-                  </div>
                 </div>
 
                 <div className="flex gap-2 justify-end">
@@ -275,7 +340,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                     type="button"
                     onClick={async () => {
                       if (!serviceTypeForm.name.trim()) {
-                        alert('Service type name is required');
+                        toast.error('Service type name is required');
                         return;
                       }
 
@@ -285,6 +350,16 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                         let latestTypes: any[] = [];
                         if (result.success && result.data) {
                           latestTypes = result.data;
+                        }
+
+                        // Check if service type already exists using latest data
+                        const nameExists = latestTypes.some(type => 
+                          type.name.toLowerCase() === serviceTypeForm.name.trim().toLowerCase()
+                        );
+                        
+                        if (nameExists) {
+                          toast.error('Service type with this name already exists');
+                          return;
                         }
                         
                         // Calculate the actual next order number to avoid conflicts
@@ -308,11 +383,11 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
                         console.log('Creating service type with order:', finalOrder, 'Existing orders:', allOrders);
 
-                        const createdType = await createServiceType({
+                        await createServiceType({
                           name: serviceTypeForm.name,
                           description: serviceTypeForm.description || null,
                           billing_method: serviceTypeForm.billingMethod,
-                          is_active: serviceTypeForm.isActive,
+                          is_active: true,
                           order_number: finalOrder
                         });
 
@@ -330,7 +405,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                         setShowAddForm(false);
                       } catch (error) {
                         console.error('Error creating service type:', error);
-                        alert('Failed to create service type. Please try again.');
+                        toast.error('Failed to create service type. Please try again.');
                       }
                     }}
                     disabled={!serviceTypeForm.name.trim()}
@@ -343,7 +418,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
 
             {/* Import Dialog */}
             {showImportDialog && (
-              <div className="border rounded-lg p-4 space-y-4">
+              <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">Import Standard Service Types</h4>
                 
                 <p className="text-sm text-gray-600">
@@ -392,7 +467,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {standardTypes.map(type => (
+                  {standardTypes.map((type, idx) => (
                     <tr key={type.id} className="hover:bg-gray-50">
                       <td className="px-4 py-2">
                         <Checkbox
@@ -401,7 +476,7 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                         />
                       </td>
                       <td className="px-4 py-2 text-sm">{type.name}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{type.billing_method}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600">{type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}</td>
                       <td className="px-4 py-2 text-sm text-gray-600">{type.display_order || 0}</td>
                     </tr>
                   ))}
@@ -421,79 +496,70 @@ export function BillingSetupStep({ data, updateData }: StepProps) {
                 </Button>
               </div>
             )}
+
+            {/* Current Service Types */}
+            {tenantTypes.length > 0 && (
+              <div className="mt-4">
+                <Label className="mb-2 block">Current Service Types</Label>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 border-b">
+                      <tr>
+                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Billing Method</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {tenantTypes.map((type, idx) => (
+                        <tr key={type.id}>
+                          <td className="px-2 py-1 text-xs">{type.name}</td>
+                          <td className="px-2 py-1 text-center text-xs text-gray-600">
+                            {type.billing_method === 'fixed' ? 'Fixed' : 'Per Unit'}
+                          </td>
+                          <td className="px-2 py-1 text-center text-xs text-gray-600">
+                            {(type as any).order_number || (type as any).display_order || '-'}
+                          </td>
+                          <td className="px-2 py-1 text-center">
+                            <Button
+                              id={`service-type-remove-${idx}`}
+                              data-type-id={type.id}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeServiceType(type.id)}
+                              className="p-1 h-6 w-6"
+                              title="Remove service type"
+                            >
+                              <Trash2 className="h-3 w-3 text-gray-500 hover:text-red-600" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="serviceTypeId">Service Type *</Label>
-          <CustomSelect
-            value={data.serviceTypeId || ''}
-            onValueChange={(value) => updateData({ serviceTypeId: value })}
-            options={serviceTypeOptions}
-            disabled={isLoadingTypes || serviceTypeOptions.length === 0}
-            placeholder={serviceTypeOptions.length === 0 ? "Import service types first" : "Select a service type"}
-          />
-          {serviceTypeOptions.length === 0 && !isLoadingTypes && (
-            <p className="text-xs text-red-600">
-              You must import service types above before creating a service
-            </p>
-          )}
-        </div>
 
         <div className="space-y-2">
-          <Label htmlFor="serviceName">Service Name *</Label>
+          <Label htmlFor="servicePrice">Default Rate</Label>
           <Input
-            id="serviceName"
-            value={data.serviceName}
-            onChange={(e) => updateData({ serviceName: e.target.value })}
-            placeholder="Managed IT Services"
-            disabled={!data.serviceTypeId}
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="billingMethod">Billing Method</Label>
-            <Input
-              id="billingMethod"
-              value={tenantTypes.find(t => t.id === data.serviceTypeId)?.billing_method || ''}
-              disabled
-              className="bg-gray-100"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="servicePrice">Default Rate</Label>
-            <Input
-              id="servicePrice"
-              value={data.servicePrice}
-              onChange={(e) => updateData({ servicePrice: e.target.value })}
-              placeholder="150"
-              disabled={!data.serviceTypeId}
-            />
-          </div>
-        </div>
-
-        <div>
-          <Label htmlFor="serviceDescription" className="block mb-2">Service Description</Label>
-          <TextArea
-            id="serviceDescription"
-            value={data.serviceDescription}
-            onChange={(e) => updateData({ serviceDescription: e.target.value })}
-            placeholder="Comprehensive IT support and management services..."
-            rows={3}
-            disabled={!data.serviceTypeId}
-            className="!max-w-none"
+            id="servicePrice"
+            value={data.servicePrice}
+            onChange={(e) => updateData({ servicePrice: e.target.value })}
+            placeholder="150"
           />
         </div>
       </div>
 
-      {serviceTypeOptions.length === 0 && (
-        <div className="rounded-md bg-blue-50 p-4">
-          <p className="text-sm text-blue-800">
-            <span className="font-semibold">Action Required:</span> Import at least one service type from the section above to proceed with service creation.
+      {serviceTypeOptions.length === 0 && attemptedToProceed && (
+        <div className="rounded-md bg-red-50 border border-red-200 p-4">
+          <p className="text-sm text-red-800">
+            <span className="font-semibold">Action Required:</span> Click "Manage Service Types" above to create or import at least one service type before creating a service.
           </p>
         </div>
       )}

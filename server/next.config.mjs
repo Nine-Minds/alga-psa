@@ -1,10 +1,12 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import webpack from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 
 const nextConfig = {
   eslint: {
@@ -13,7 +15,6 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: true,
-  output: 'standalone',
   transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
   // Rewrites required for PostHog
   async rewrites() {
@@ -35,8 +36,8 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer }) => {
-    // Disable webpack cache
-    config.cache = false;
+    // Enable webpack cache for faster builds
+    config.cache = true;
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
@@ -51,6 +52,11 @@ const nextConfig = {
         '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
+        // Also map deep EE paths used without the @ee alias to CE stubs
+        // This ensures CE builds don't fail when code references ee/server/src directly
+        'ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+          ? path.join(__dirname, '../ee/server/src')
+          : path.join(__dirname, 'src/empty')
       },
       modules: [
         ...config.resolve.modules || ['node_modules'],
@@ -143,6 +149,19 @@ const nextConfig = {
       //     ],
       //   })
       // );
+    }
+
+    // In CE builds, replace any deep import of the EE S3 provider with the CE stub.
+    // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
+    // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
+    if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(
+          /(.*)(ee[\\\/]server[\\\/]src[\\\/]|@ee[\\\/])lib[\\\/]storage[\\\/]providers[\\\/]S3StorageProvider(\.[jt]s)?$/,
+          path.join(__dirname, 'src/empty/lib/storage/providers/S3StorageProvider')
+        )
+      );
     }
 
     return config;

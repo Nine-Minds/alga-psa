@@ -233,26 +233,28 @@ export async function systemEmailProcessingWorkflow(context) {
       data.set('matchedClient', matchedClient);
     }
     
-    // Step 3: Get tenant-level inbound ticket defaults
+    // Step 3: Get inbound ticket defaults (provider-specific if set for this provider)
     setState('RESOLVING_TICKET_DEFAULTS');
-    console.log('Resolving inbound ticket defaults for tenant:', tenant);
+    console.log('Resolving inbound ticket defaults for tenant:', tenant, 'provider:', providerId);
     
     let ticketDefaults = await actions.resolve_inbound_ticket_defaults({
-      tenant: tenant
+      tenant: tenant,
+      providerId: providerId
     });
     
     if (!ticketDefaults) {
       console.error(`No inbound ticket defaults configured for tenant ${tenant}. Email processing cannot continue.`);
       setState('ERROR_NO_TICKET_DEFAULTS');
-      throw new Error(`No inbound ticket defaults configured for tenant ${tenant}. Please configure default ticket settings for email processing.`);
+      // Exit early without attempting ticket creation when defaults are missing
+      return;
     }
     
     console.log('Using ticket defaults:', ticketDefaults);
     data.set('ticketDefaults', ticketDefaults);
     
-    // Step 4: Create new ticket from email using tenant defaults
+    // Step 4: Create new ticket from email using resolved defaults
     setState('CREATING_TICKET');
-    console.log('Creating new ticket from email with tenant defaults');
+    console.log('Creating new ticket from email with resolved defaults');
     
     // Override defaults with matched client info if available
     const finalCompanyId = matchedClient?.companyId || ticketDefaults.company_id;

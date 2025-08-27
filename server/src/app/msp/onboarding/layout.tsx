@@ -1,3 +1,5 @@
+import { Toaster } from 'react-hot-toast';
+
 export default function OnboardingLayout({
   children,
 }: {
@@ -7,6 +9,7 @@ export default function OnboardingLayout({
   return (
     <div className="min-h-screen">
       {children}
+      <Toaster position="top-right" />
     </div>
   );
 }

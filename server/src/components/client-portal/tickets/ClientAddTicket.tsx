@@ -71,7 +71,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
   };
 
   const validateForm = () => {
-    const validationErrors = [];
+    const validationErrors: string[] = [];
     if (!title.trim()) validationErrors.push('Title is required');
     if (!description.trim()) validationErrors.push('Description is required');
     if (!priorityId) validationErrors.push('Please select a priority');

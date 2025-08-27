@@ -35,6 +35,37 @@ export async function generateTemporaryPassword(length: number = 12): Promise<st
   return password.split('').sort(() => Math.random() - 0.5).join('');
 }
 
+// Email template color scheme
+const COLORS = {
+  // Brand colors
+  primary: '#8a4dea',
+  primaryDark: '#7c3aed',
+  primaryLight: '#a366f0',
+  primarySubtle: '#faf8ff',
+  primaryAccent: '#f3f0ff',
+  
+  // Neutral colors
+  textPrimary: '#0f172a',
+  textSecondary: '#334155',
+  textMuted: '#64748b',
+  textLight: '#94a3b8',
+  textOnDark: '#cbd5e1',
+  
+  // Background colors
+  bgPrimary: '#ffffff',
+  bgSecondary: '#f8fafc',
+  bgDark: '#1e293b',
+  
+  // Border colors
+  borderLight: '#e2e8f0',
+  borderSubtle: '#e9e5f5',
+  
+  // State colors
+  warning: '#f59e0b',
+  warningBg: '#fffbeb',
+  warningText: '#92400e',
+};
+
 /**
  * Create welcome email content
  */
@@ -43,46 +74,218 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   htmlBody: string;
   textBody: string;
 } {
-  const { tenantName, adminUser, temporaryPassword, companyName, loginUrl } = input;
-  const displayName = companyName || tenantName;
-  const defaultLoginUrl = loginUrl || process.env.APPLICATION_URL || 'https://your-app.com/login';
+  const { tenantName, adminUser, temporaryPassword } = input;
+  const defaultLoginUrl = process.env.APPLICATION_URL;
+  const baseUrl = defaultLoginUrl?.replace(/\/$/, '') || '';
+  const clientPortalLoginUrl = `${baseUrl}/auth/signin?callbackUrl=/client-portal/dashboard`;
+  const currentYear = new Date().getFullYear();
   
-  const subject = `Welcome to ${displayName} - Your Account is Ready`;
+  const subject = `Welcome to Alga PSA - Your Account is Ready`;
   
   const htmlBody = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Welcome to ${displayName}</title>
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: #3B82F6; color: white; padding: 20px; border-radius: 8px 8px 0 0; text-align: center; }
-    .content { background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; }
-    .footer { background: #6B7280; color: white; padding: 15px; border-radius: 0 0 8px 8px; text-align: center; font-size: 12px; }
-    .credentials { background: white; padding: 20px; border-radius: 6px; border-left: 4px solid #10B981; margin: 20px 0; }
-    .login-button { display: inline-block; background: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; margin: 20px 0; }
-    .warning { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 6px; padding: 15px; margin: 20px 0; }
-    .code { font-family: 'Courier New', monospace; background: #f1f5f9; padding: 2px 6px; border-radius: 3px; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>Welcome to ${displayName}!</h1>
-    <p>Your tenant account has been successfully created</p>
-  </div>
+  <!DOCTYPE html>
+  <html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Alga PSA</title>
+    <style>
+      body { 
+        font-family: Inter, system-ui, sans-serif; 
+        line-height: 1.6; 
+        color: ${COLORS.textPrimary}; 
+        max-width: 600px; 
+        margin: 0 auto; 
+        padding: 20px; 
+        background-color: ${COLORS.bgSecondary}; 
+      }
+      .header { 
+        background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); 
+        color: white; 
+        padding: 32px 24px; 
+        border-radius: 12px 12px 0 0; 
+        text-align: center; 
+      }
+      .header h1 {
+        font-family: Poppins, system-ui, sans-serif;
+        font-weight: 700;
+        font-size: 28px;
+        margin: 0 0 8px 0;
+      }
+      .header p {
+        margin: 0;
+        opacity: 1;
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.95);
+      }
+      .content { 
+        background: ${COLORS.bgPrimary}; 
+        padding: 32px; 
+        border: 1px solid ${COLORS.borderLight}; 
+        border-top: none; 
+        border-bottom: none; 
+      }
+      .footer { 
+        background: ${COLORS.bgDark}; 
+        color: ${COLORS.textOnDark}; 
+        padding: 24px; 
+        border-radius: 0 0 12px 12px; 
+        text-align: center; 
+        font-size: 14px; 
+        line-height: 1.6;
+      }
+      .footer p {
+        margin: 6px 0;
+        color: ${COLORS.textOnDark};
+      }
+      .footer p:last-child {
+        color: ${COLORS.textLight};
+        font-size: 13px;
+        margin-top: 16px;
+      }
+      .credentials { 
+        background: ${COLORS.primarySubtle}; 
+        padding: 24px; 
+        border-radius: 8px; 
+        border: 1px solid ${COLORS.borderSubtle};
+        border-left: 4px solid ${COLORS.primary};
+        margin: 24px 0; 
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+      .credentials h3 {
+        color: ${COLORS.textPrimary};
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .credentials p {
+        margin: 8px 0;
+        color: ${COLORS.textSecondary};
+      }
+      .login-button { 
+        display: inline-block; 
+        background: ${COLORS.primary}; 
+        color: ${COLORS.bgPrimary} !important; 
+        padding: 14px 32px; 
+        text-decoration: none; 
+        border-radius: 8px; 
+        font-weight: 600; 
+        margin: 24px 0; 
+        font-family: Poppins, system-ui, sans-serif; 
+        font-size: 16px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .login-button:hover {
+        background: ${COLORS.primaryDark};
+        color: ${COLORS.bgPrimary} !important;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+      }
+      .warning { 
+        background: ${COLORS.warningBg}; 
+        border: 1px solid ${COLORS.warning}; 
+        border-radius: 8px; 
+        padding: 20px; 
+        margin: 24px 0; 
+      }
+      .warning h4 {
+        color: ${COLORS.warningText};
+        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 600;
+      }
+      .warning ul {
+        margin: 0;
+        padding-left: 20px;
+        color: ${COLORS.warningText};
+      }
+      .warning li {
+        margin: 4px 0;
+      }
+      .code { 
+        font-family: 'Courier New', monospace; 
+        background: ${COLORS.borderLight}; 
+        padding: 4px 8px; 
+        border-radius: 4px; 
+        color: ${COLORS.textPrimary}; 
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .brand-highlight { 
+        color: ${COLORS.primary}; 
+        font-weight: 600;
+      }
+      h2 {
+        color: ${COLORS.textPrimary};
+        font-family: Poppins, system-ui, sans-serif;
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 16px 0;
+      }
+      h3 {
+        color: ${COLORS.textPrimary};
+        font-size: 18px;
+        font-weight: 600;
+        margin: 24px 0 12px 0;
+      }
+      p {
+        color: ${COLORS.textSecondary};
+        margin: 0 0 16px 0;
+      }
+      ol {
+        color: ${COLORS.textSecondary};
+        margin: 0 0 16px 0;
+        padding-left: 24px;
+      }
+      ol li {
+        margin: 8px 0;
+      }
+      a {
+        color: ${COLORS.primary};
+        text-decoration: underline;
+      }
+      a:hover {
+        color: ${COLORS.primaryDark};
+      }
+      .tagline {
+        background: ${COLORS.primarySubtle};
+        border-left: 3px solid ${COLORS.primary};
+        padding: 20px 24px;
+        margin: 24px 0;
+        font-style: normal;
+        color: ${COLORS.textSecondary};
+        border-radius: 6px;
+        line-height: 1.7;
+      }
+      .divider {
+        height: 1px;
+        background: ${COLORS.borderLight};
+        margin: 32px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <h1>Welcome to Alga PSA!</h1>
+      <p>Your account has been successfully created</p>
+    </div>
   
   <div class="content">
     <h2>Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
     
-    <p>Congratulations! Your new tenant account for <strong>${tenantName}</strong> has been successfully set up. You have been designated as the administrator and can now access your management portal.</p>
+    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on Alga PSA. You have been designated as the administrator and can now access both Alga PSA and your management portal.</p>
+    
+    <div class="tagline">
+      Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
+    </div>
     
     <div class="credentials">
       <h3>Your Login Credentials</h3>
       <p><strong>Email:</strong> ${adminUser.email}</p>
       <p><strong>Temporary Password:</strong> <span class="code">${temporaryPassword}</span></p>
       <p><strong>Login URL:</strong> <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></p>
+      <p><strong>Client Portal Login:</strong> <a href="${clientPortalLoginUrl}">${clientPortalLoginUrl}</a></p>
     </div>
     
     <div class="warning">
@@ -96,16 +299,18 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     </div>
     
     <div style="text-align: center;">
-      <a href="${defaultLoginUrl}" class="login-button">Login Now</a>
+      <a href="${defaultLoginUrl}" class="login-button" style="margin-right: 8px;">Login Now</a>
+      <a href="${clientPortalLoginUrl}" class="login-button">Open Client Portal</a>
     </div>
+    
+    <div class="divider"></div>
     
     <h3>What's Next?</h3>
     <ol>
       <li>Click the login button above or visit: <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></li>
       <li>Enter your email and temporary password</li>
-      <li>Create a new secure password when prompted</li>
-      <li>Complete your profile setup</li>
-      <li>Start configuring your tenant settings</li>
+      <li>Complete the onboarding wizard, including changing your password, setting up your profile, and configuring your ticketing and billing settings</li>
+      <li>Start transforming your business with Alga PSA</li>
     </ol>
     
     <h3>Need Help?</h3>
@@ -116,13 +321,14 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   
   <div class="footer">
     <p>This email was sent automatically as part of your tenant creation process.</p>
-    <p>If you did not request this account, please contact support immediately.</p>
+    <p>If you did not request this account, please contact support.</p>
+    <p>© ${currentYear} Nine Minds. All rights reserved.</p>
   </div>
 </body>
 </html>`;
 
   const textBody = `
-Welcome to ${displayName}!
+Welcome to Alga PSA!
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
@@ -132,6 +338,7 @@ LOGIN CREDENTIALS:
 Email: ${adminUser.email}
 Temporary Password: ${temporaryPassword}
 Login URL: ${defaultLoginUrl}
+Client Portal Login: ${clientPortalLoginUrl}
 
 IMPORTANT SECURITY INFORMATION:
 - This is a temporary password that expires in 24 hours
@@ -141,18 +348,23 @@ IMPORTANT SECURITY INFORMATION:
 
 GETTING STARTED:
 1. Visit: ${defaultLoginUrl}
-2. Enter your email and temporary password
-3. Create a new secure password when prompted
-4. Complete your profile setup
-5. Start configuring your tenant settings
+2. Or visit the client portal: ${clientPortalLoginUrl}
+3. Enter your email and temporary password
+4. Create a new secure password when prompted
+5. Complete your profile setup
+6. Start configuring your tenant settings
 
 Need help? Contact our support team if you have any questions.
+
+Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
 
 Welcome aboard!
 
 ---
 This email was sent automatically as part of your tenant creation process.
-If you did not request this account, please contact support immediately.
+If you did not request this account, please contact support.
+
+© ${currentYear} Nine Minds. All rights reserved.
 `;
 
   return { subject, htmlBody, textBody };
@@ -173,6 +385,9 @@ export async function sendWelcomeEmail(
   });
 
   try {
+    // Get the email service instance
+    const emailServiceInstance = await emailService;
+    
     // Create email content
     const { subject, htmlBody, textBody } = createWelcomeEmailContent(input);
     
@@ -192,12 +407,12 @@ export async function sendWelcomeEmail(
     };
 
     // Validate email before sending
-    if (!emailService.validateEmail(input.adminUser.email)) {
+    if (!emailServiceInstance.validateEmail(input.adminUser.email)) {
       throw new Error(`Invalid email address: ${input.adminUser.email}`);
     }
 
     // Send the email
-    const emailResult = await emailService.sendEmail(emailParams);
+    const emailResult = await emailServiceInstance.sendEmail(emailParams);
 
     log.info('Welcome email sent successfully', {
       tenantId: input.tenantId,
