@@ -97,6 +97,7 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
           onChange={(e) => updateData({ email: e.target.value })}
           placeholder="john@acmeit.com"
           required
+          disabled
         />
         <p className="text-xs text-gray-500">
           This will be used for signing in to your account.
