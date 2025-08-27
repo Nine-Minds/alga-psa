@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
-import { QuestionMarkCircledIcon, ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
+import { ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
@@ -144,15 +144,6 @@ const Header: React.FC<HeaderProps> = ({
         </ol>
       </nav>
       <div className="flex items-center">
-        <Link
-          href="https://nineminds.com/resources"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-main-500 hover:text-gray-700 mr-2"
-          aria-label="Help"
-        >
-          <QuestionMarkCircledIcon className="w-5 h-5" />
-        </Link>
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
             <button className="relative" aria-label="User menu">
