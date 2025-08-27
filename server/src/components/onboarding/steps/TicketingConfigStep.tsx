@@ -803,7 +803,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           <div className="p-4 border-t space-y-4">
             <div className="rounded-md bg-blue-50 p-4 mb-4">
               <p className="text-sm text-blue-800">
-                Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of a prefix and a sequential number with zero-padding.
+                Configure how ticket numbers are generated. Each ticket will have a unique identifier consisting of an optional prefix and a sequential number with optional zero-padding.
               </p>
             </div>
             
@@ -812,21 +812,27 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <Label htmlFor="ticketPrefix">Ticket Prefix</Label>
                 <Input
                   id="ticketPrefix"
-                  value={data.ticketPrefix || 'TK-'}
+                  value={data.ticketPrefix ?? ''}
                   onChange={(e) => updateData({ ticketPrefix: e.target.value })}
                   placeholder="TK-"
                 />
+                <p className="text-xs text-gray-500">
+                  Optional. Leave empty for no prefix or enter a custom prefix (e.g., "TK-", "TICKET-")
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ticketPaddingLength">Padding Length</Label>
                 <Input
                   id="ticketPaddingLength"
                   type="number"
-                  value={data.ticketPaddingLength || 6}
-                  onChange={(e) => updateData({ ticketPaddingLength: parseInt(e.target.value) || 6 })}
+                  value={data.ticketPaddingLength ?? 6}
+                  onChange={(e) => updateData({ ticketPaddingLength: parseInt(e.target.value) || 0 })}
                   min="1"
                   max="10"
                 />
+                <p className="text-xs text-gray-500">
+                  Minimum total digits. E.g., 6 makes "1" become "000001"
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="ticketStartNumber">Starting Number</Label>
@@ -841,7 +847,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             </div>
             
             <p className="text-xs text-gray-500">
-              Example: {data.ticketPrefix || 'TK-'}{String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength || 6, '0')}
+              Example: {data.ticketPrefix || ''}{String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength || 0, '0')}
             </p>
           </div>
         )}

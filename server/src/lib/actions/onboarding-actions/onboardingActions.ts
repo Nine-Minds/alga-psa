@@ -732,8 +732,8 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Configure ticket numbering if provided
-      if (data.ticketPrefix || data.ticketStartNumber || data.ticketPaddingLength) {
+      // Configure ticket numbering - check if any numbering field is explicitly set
+      if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
         const existingNumbering = await trx('next_number')
           .where({ tenant, entity_type: 'TICKET' })
           .first();
@@ -742,8 +742,8 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           await trx('next_number')
             .where({ tenant, entity_type: 'TICKET' })
             .update({
-              prefix: data.ticketPrefix || 'TIC',
-              padding_length: data.ticketPaddingLength || 6,
+              prefix: data.ticketPrefix ?? '',
+              padding_length: data.ticketPaddingLength ?? 6,
               ...(data.ticketStartNumber && { 
                 last_number: 0,
                 initial_value: data.ticketStartNumber 
@@ -753,10 +753,10 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           await trx('next_number').insert({
             tenant,
             entity_type: 'TICKET',
-            prefix: data.ticketPrefix || 'TIC',
-            padding_length: data.ticketPaddingLength || 6,
+            prefix: data.ticketPrefix ?? '',
+            padding_length: data.ticketPaddingLength ?? 6,
             last_number: 0,
-            initial_value: data.ticketStartNumber || 1000
+            initial_value: data.ticketStartNumber || 1
           });
         }
       }

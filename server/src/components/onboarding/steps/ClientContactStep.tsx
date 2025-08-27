@@ -1,14 +1,34 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { StepProps } from '../types';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle } from 'lucide-react';
 
 export function ClientContactStep({ data, updateData }: StepProps) {
   const hasClientInfo = !!(data.clientName || data.clientEmail || data.clientPhone || data.clientUrl || data.clientId);
   const isContactCreated = !!data.contactId;
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
+
+  // Email validation
+  useEffect(() => {
+    if (!hasInteractedWithEmail || !data.contactEmail) {
+      setEmailError(null);
+      return;
+    }
+
+    const email = data.contactEmail.trim();
+    if (email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailError('Please enter a valid email address');
+      } else {
+        setEmailError(null);
+      }
+    }
+  }, [data.contactEmail, hasInteractedWithEmail]);
 
   if (!hasClientInfo) {
     return (
@@ -61,9 +81,23 @@ export function ClientContactStep({ data, updateData }: StepProps) {
             id="contactEmail"
             type="email"
             value={data.contactEmail}
-            onChange={(e) => updateData({ contactEmail: e.target.value })}
+            onChange={(e) => {
+              updateData({ contactEmail: e.target.value });
+              if (!hasInteractedWithEmail && e.target.value) {
+                setHasInteractedWithEmail(true);
+              }
+            }}
+            onBlur={() => setHasInteractedWithEmail(true)}
             placeholder="john.smith@example.com"
+            className={emailError ? 'border-red-500' : ''}
+            aria-describedby="email-error"
           />
+          {emailError && (
+            <div id="email-error" className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{emailError}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
