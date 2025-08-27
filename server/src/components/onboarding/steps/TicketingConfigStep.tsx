@@ -342,6 +342,25 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const handleImportCategories = async () => {
     if (selectedCategories.length === 0 || !importTargetChannel) return;
     
+    // Check if any selected subcategories don't have their parent selected
+    const selectedSubcategories = availableCategories.filter(cat => 
+      selectedCategories.includes(cat.id) && cat.parent_category_uuid
+    );
+    
+    const missingParents = selectedSubcategories.filter(subcat => {
+      const parentId = subcat.parent_category_uuid;
+      return !selectedCategories.includes(parentId);
+    });
+    
+    if (missingParents.length > 0) {
+      const parentNames = missingParents.map(subcat => {
+        const parent = availableCategories.find(c => c.id === subcat.parent_category_uuid);
+        return parent?.category_name || 'Unknown parent';
+      });
+      toast.error(`Cannot import subcategories without their parent categories. Please also select: ${[...new Set(parentNames)].join(', ')}`);
+      return;
+    }
+    
     setIsImporting(prev => ({ ...prev, categories: true }));
     try {
       const result = await importReferenceData('categories', selectedCategories, { channel_id: importTargetChannel });
@@ -1390,38 +1409,86 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableCategories.map((category, idx) => {
-                          // Find parent category name if this is a subcategory
-                          const parentCategory = category.parent_category_uuid 
-                            ? availableCategories.find(c => c.id === category.parent_category_uuid)
-                            : null;
+                        {(() => {
+                          // Organize categories hierarchically: parents first, then their children
+                          const parentCategories = availableCategories
+                            .filter(c => !c.parent_category_uuid)
+                            .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                          const hierarchicalCategories: any[] = [];
                           
-                          return (
-                            <tr key={category.id} className="hover:bg-gray-50">
-                              <td className="px-3 py-2">
-                                <Checkbox
-                                  checked={selectedCategories.includes(category.id)}
-                                  onChange={() => {
-                                    if (selectedCategories.includes(category.id)) {
-                                      setSelectedCategories(selectedCategories.filter(id => id !== category.id));
-                                    } else {
-                                      setSelectedCategories([...selectedCategories, category.id]);
-                                    }
-                                  }}
-                                />
-                              </td>
-                              <td className="px-3 py-2 text-sm">
-                                {category.parent_category_uuid && (
-                                  <span className="ml-4 text-gray-500">
-                                    {parentCategory ? `${parentCategory.category_name} → ` : '→ '}
+                          parentCategories.forEach(parent => {
+                            hierarchicalCategories.push(parent);
+                            // Add children immediately after parent, sorted by display order
+                            const children = availableCategories
+                              .filter(c => c.parent_category_uuid === parent.id)
+                              .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                            hierarchicalCategories.push(...children);
+                          });
+                          
+                          return hierarchicalCategories.map((category, idx) => {
+                            const isSubcategory = !!category.parent_category_uuid;
+                            const parentNotSelected = isSubcategory && !selectedCategories.includes(category.parent_category_uuid);
+                            
+                            // For subcategories, calculate their order within the parent
+                            let displayOrder;
+                            if (isSubcategory) {
+                              const siblingSubcategories = hierarchicalCategories
+                                .filter(cat => cat.parent_category_uuid === category.parent_category_uuid);
+                              displayOrder = siblingSubcategories.findIndex(cat => cat.id === category.id) + 1;
+                            } else {
+                              displayOrder = category.display_order || 0;
+                            }
+                            
+                            return (
+                              <tr key={category.id} className="hover:bg-gray-50">
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-1">
+                                    <Checkbox
+                                      checked={selectedCategories.includes(category.id)}
+                                      onChange={() => {
+                                        if (selectedCategories.includes(category.id)) {
+                                          setSelectedCategories(selectedCategories.filter(id => id !== category.id));
+                                        } else {
+                                          // If selecting a subcategory, automatically select its parent
+                                          if (isSubcategory && !selectedCategories.includes(category.parent_category_uuid)) {
+                                            setSelectedCategories([...selectedCategories, category.parent_category_uuid, category.id]);
+                                          } else {
+                                            setSelectedCategories([...selectedCategories, category.id]);
+                                          }
+                                        }
+                                      }}
+                                    />
+                                    {parentNotSelected && selectedCategories.includes(category.id) && (
+                                      <span className="text-xs text-orange-600" title="Parent category will be automatically selected">
+                                        ⚠️
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 text-sm">
+                                  {isSubcategory && (
+                                    <span className="ml-4 text-gray-400">↳ </span>
+                                  )}
+                                  <span className={isSubcategory ? '' : 'font-semibold'}>
+                                    {category.category_name}
                                   </span>
-                                )}
-                                {category.category_name}
-                              </td>
-                              <td className="px-3 py-2 text-sm text-gray-600">{category.display_order || 0}</td>
-                            </tr>
-                          );
-                        })}
+                                </td>
+                                <td className="px-3 py-2 text-sm">
+                                  {isSubcategory ? (
+                                    <div className="flex items-center pl-4">
+                                      <span className="text-muted-foreground mr-1">↳</span>
+                                      <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                        {displayOrder}
+                                      </span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-700 font-semibold">{displayOrder}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
                       </tbody>
                     </table>
                   </div>
@@ -1523,17 +1590,41 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             ? data.categories.find(c => c.category_id === category.parent_category)
                             : null;
                           
+                          // For subcategories, calculate their order within the parent
+                          let displayOrder;
+                          if (isSubcategory) {
+                            const siblingSubcategories = hierarchicalCategories
+                              .filter(cat => cat.parent_category === category.parent_category)
+                              .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+                            displayOrder = siblingSubcategories.findIndex(cat => cat.category_id === category.category_id) + 1;
+                          } else {
+                            displayOrder = category.display_order || 0;
+                          }
+                          
                           return (
                             <tr key={category.category_id}>
                               <td className="px-2 py-1 text-xs">
                                 {isSubcategory && (
-                                  <span className="ml-4 text-gray-400">
-                                    {parentCategory ? `${parentCategory.category_name} → ` : '→ '}
-                                  </span>
+                                  <span className="ml-8 text-gray-400">↳ </span>
                                 )}
-                                {category.category_name}
+                                <span className={isSubcategory ? '' : 'font-semibold'}>
+                                  {category.category_name}
+                                </span>
                               </td>
-                              <td className="px-2 py-1 text-center text-xs text-gray-600">{category.display_order || '-'}</td>
+                              <td className="px-2 py-1 text-xs">
+                                {isSubcategory ? (
+                                  <div className="flex items-center justify-center">
+                                    <span className="text-muted-foreground mr-1 ml-12">↳</span>
+                                    <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
+                                      {displayOrder}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <div className="text-center">
+                                    <span className="text-gray-700 font-semibold">{displayOrder}</span>
+                                  </div>
+                                )}
+                              </td>
                               <td className="px-2 py-1 text-center">
                                 <Button
                                   id={`category-remove-${idx}`}

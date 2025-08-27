@@ -293,47 +293,59 @@ export async function checkImportConflicts(
       const orderValue = mappedData[orderField];
       
       if (orderValue && !hasNameConflict) { // Only check order if no name conflict
-        const whereClause: any = {
-          tenant: currentUser.tenant,
-          [orderField]: orderValue
-        };
-        
-        // For statuses, use status_type; for priorities, use item_type
-        if (dataType === 'statuses' && mappedData.status_type) {
-          whereClause.status_type = mappedData.status_type;
-        } else if (dataType === 'priorities' && mappedData.item_type) {
-          whereClause.item_type = mappedData.item_type;
-        }
-        
-        const existingWithOrder = await trx(config.targetTable)
-          .where(whereClause)
-          .first();
-          
-        if (existingWithOrder) {
-          // Find next available order number
-          const maxOrderWhereClause: any = {
-            tenant: currentUser.tenant
+        // For categories, skip subcategories - they don't conflict with parent category orders
+        if (dataType === 'categories' && item.parent_category_uuid) {
+          // Subcategories have their own order space within their parent
+          // No need to check for conflicts here
+        } else {
+          const whereClause: any = {
+            tenant: currentUser.tenant,
+            [orderField]: orderValue
           };
           
           // For statuses, use status_type; for priorities, use item_type
           if (dataType === 'statuses' && mappedData.status_type) {
-            maxOrderWhereClause.status_type = mappedData.status_type;
+            whereClause.status_type = mappedData.status_type;
           } else if (dataType === 'priorities' && mappedData.item_type) {
-            maxOrderWhereClause.item_type = mappedData.item_type;
+            whereClause.item_type = mappedData.item_type;
+          } else if (dataType === 'categories') {
+            // For parent categories, only check against other parent categories
+            whereClause.parent_category = null;
           }
           
-          const maxOrder = await trx(config.targetTable)
-            .where(maxOrderWhereClause)
-            .max(orderField + ' as max')
+          const existingWithOrder = await trx(config.targetTable)
+            .where(whereClause)
             .first();
             
-          conflicts.push({
-            referenceItem: item,
-            conflictType: 'order',
-            existingItem: existingWithOrder,
-            suggestedOrder: (maxOrder?.max || 0) + 1
-          });
-          hasOrderConflict = true;
+          if (existingWithOrder) {
+            // Find next available order number
+            const maxOrderWhereClause: any = {
+              tenant: currentUser.tenant
+            };
+            
+            // For statuses, use status_type; for priorities, use item_type
+            if (dataType === 'statuses' && mappedData.status_type) {
+              maxOrderWhereClause.status_type = mappedData.status_type;
+            } else if (dataType === 'priorities' && mappedData.item_type) {
+              maxOrderWhereClause.item_type = mappedData.item_type;
+            } else if (dataType === 'categories') {
+              // For parent categories, only check against other parent categories
+              maxOrderWhereClause.parent_category = null;
+            }
+            
+            const maxOrder = await trx(config.targetTable)
+              .where(maxOrderWhereClause)
+              .max(orderField + ' as max')
+              .first();
+              
+            conflicts.push({
+              referenceItem: item,
+              conflictType: 'order',
+              existingItem: existingWithOrder,
+              suggestedOrder: (maxOrder?.max || 0) + 1
+            });
+            hasOrderConflict = true;
+          }
         }
       }
     }
@@ -424,39 +436,51 @@ export async function importReferenceData(
                           dataType === 'channels';
     
     if (hasOrderField && mappedData[orderField] !== undefined) {
-      const orderCheckClause: any = {
-        tenant: currentUser.tenant,
-        [orderField]: mappedData[orderField]
-      };
-      
-      // Add type-specific constraints for order checking
-      if (dataType === 'statuses' && mappedData.status_type) {
-        orderCheckClause.status_type = mappedData.status_type;
-      } else if (dataType === 'priorities' && mappedData.item_type) {
-        orderCheckClause.item_type = mappedData.item_type;
-      }
-      
-      const existingWithOrder = await trx(config.targetTable)
-        .where(orderCheckClause)
-        .first();
-      
-      if (existingWithOrder) {
-        // Find next available order
-        const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+      // Skip order conflict checking for subcategories
+      if (dataType === 'categories' && item.parent_category_uuid) {
+        // Subcategories maintain their order within parent groups
+        // No conflict checking needed
+      } else {
+        const orderCheckClause: any = {
+          tenant: currentUser.tenant,
+          [orderField]: mappedData[orderField]
+        };
         
+        // Add type-specific constraints for order checking
         if (dataType === 'statuses' && mappedData.status_type) {
-          maxOrderWhereClause.status_type = mappedData.status_type;
+          orderCheckClause.status_type = mappedData.status_type;
         } else if (dataType === 'priorities' && mappedData.item_type) {
-          maxOrderWhereClause.item_type = mappedData.item_type;
+          orderCheckClause.item_type = mappedData.item_type;
+        } else if (dataType === 'categories') {
+          // For parent categories, only check against other parent categories
+          orderCheckClause.parent_category = null;
         }
         
-        const maxOrderResult = await trx(config.targetTable)
-          .where(maxOrderWhereClause)
-          .max(orderField + ' as max')
+        const existingWithOrder = await trx(config.targetTable)
+          .where(orderCheckClause)
           .first();
         
-        const nextOrder = (maxOrderResult?.max || 0) + 1;
-        mappedData[orderField] = nextOrder;
+        if (existingWithOrder) {
+          // Find next available order
+          const maxOrderWhereClause: any = { tenant: currentUser.tenant };
+          
+          if (dataType === 'statuses' && mappedData.status_type) {
+            maxOrderWhereClause.status_type = mappedData.status_type;
+          } else if (dataType === 'priorities' && mappedData.item_type) {
+            maxOrderWhereClause.item_type = mappedData.item_type;
+          } else if (dataType === 'categories') {
+            // For parent categories, only check against other parent categories
+            maxOrderWhereClause.parent_category = null;
+          }
+          
+          const maxOrderResult = await trx(config.targetTable)
+            .where(maxOrderWhereClause)
+            .max(orderField + ' as max')
+            .first();
+          
+          const nextOrder = (maxOrderResult?.max || 0) + 1;
+          mappedData[orderField] = nextOrder;
+        }
       }
     }
     
