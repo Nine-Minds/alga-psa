@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star } from 'lucide-react';
+import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight } from 'lucide-react';
 import { StepProps } from '../types';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
@@ -1459,15 +1459,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                       }}
                                     />
                                     {parentNotSelected && selectedCategories.includes(category.id) && (
-                                      <span className="text-xs text-orange-600" title="Parent category will be automatically selected">
-                                        ⚠️
-                                      </span>
+                                      <div title="Parent category will be automatically selected">
+                                        <AlertTriangle className="h-3 w-3 text-orange-600" />
+                                      </div>
                                     )}
                                   </div>
                                 </td>
                                 <td className="px-3 py-2 text-sm">
                                   {isSubcategory && (
-                                    <span className="ml-4 text-gray-400">↳ </span>
+                                    <CornerDownRight className="inline-block h-3 w-3 ml-4 mr-1 text-gray-400" />
                                   )}
                                   <span className={isSubcategory ? '' : 'font-semibold'}>
                                     {category.category_name}
@@ -1476,7 +1476,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                 <td className="px-3 py-2 text-sm">
                                   {isSubcategory ? (
                                     <div className="flex items-center pl-4">
-                                      <span className="text-muted-foreground mr-1">↳</span>
+                                      <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1" />
                                       <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
                                         {displayOrder}
                                       </span>
@@ -1605,7 +1605,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             <tr key={category.category_id}>
                               <td className="px-2 py-1 text-xs">
                                 {isSubcategory && (
-                                  <span className="ml-8 text-gray-400">↳ </span>
+                                  <CornerDownRight className="inline-block h-3 w-3 ml-8 mr-1 text-gray-400" />
                                 )}
                                 <span className={isSubcategory ? '' : 'font-semibold'}>
                                   {category.category_name}
@@ -1614,7 +1614,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <td className="px-2 py-1 text-xs">
                                 {isSubcategory ? (
                                   <div className="flex items-center justify-center">
-                                    <span className="text-muted-foreground mr-1 ml-12">↳</span>
+                                    <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1 ml-12" />
                                     <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
                                       {displayOrder}
                                     </span>

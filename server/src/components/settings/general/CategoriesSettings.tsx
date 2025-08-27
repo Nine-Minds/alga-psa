@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { 
   getAllCategories, 
@@ -270,7 +270,7 @@ const CategoriesSettings: React.FC = () => {
       render: (value: string, record: ITicketCategory) => (
         <div className="flex items-center">
           {record.parent_category && (
-            <span className="text-muted-foreground mr-2 ml-4">↳</span>
+            <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2 ml-4" />
           )}
           <span className={`text-gray-700 font-medium ${record.parent_category ? '' : 'font-semibold'}`}>
             {value}
@@ -303,7 +303,7 @@ const CategoriesSettings: React.FC = () => {
           
           return (
             <div className="flex items-center pl-4">
-              <span className="text-muted-foreground mr-2">↳</span>
+              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />
               <span className="text-gray-500 text-sm bg-gray-100 px-2 py-0.5 rounded">
                 {orderWithinParent}
               </span>
@@ -647,7 +647,7 @@ const CategoriesSettings: React.FC = () => {
                           const orderWithinParent = siblingSubcategories.findIndex(cat => cat.id === category.id) + 1;
                           orderDisplay = (
                             <div className="flex items-center justify-end pr-4">
-                              <span className="text-muted-foreground mr-1">↳</span>
+                              <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1" />
                               <span className="text-gray-500 text-xs bg-gray-100 px-1.5 py-0.5 rounded">
                                 {orderWithinParent}
                               </span>
@@ -708,8 +708,8 @@ const CategoriesSettings: React.FC = () => {
                               className="w-4 h-4"
                             />
                           </div>
-                          <div className="flex-1">
-                            {isSubcategory && <span className="text-muted-foreground mr-2">↳</span>}
+                          <div className="flex-1 flex items-center">
+                            {isSubcategory && <CornerDownRight className="h-3 w-3 text-muted-foreground mr-2" />}
                             <span className={isSubcategory ? 'text-sm font-normal' : 'text-sm font-semibold'}>
                               {category.category_name}
                             </span>
