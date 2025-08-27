@@ -27,6 +27,20 @@ import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
+import { 
+  validateClientForm, 
+  validateCompanyName, 
+  validateWebsiteUrl, 
+  validateEmailAddress, 
+  validatePhoneNumber, 
+  validatePostalCode, 
+  validateCityName, 
+  validateAddress, 
+  validateContactName,
+  validateIndustry,
+  validateStateProvince,
+  type ValidationResult 
+} from 'server/src/lib/utils/clientFormValidation';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
@@ -106,6 +120,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdCompany, setCreatedCompany] = useState<ICompany | null>(null);
   const router = useRouter();
@@ -151,23 +166,113 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       setError(null);
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
+      setFieldErrors({});
     }
   }, [open]);
 
+  // Real-time field validation function
+  const validateField = (fieldName: string, value: string, additionalData?: any) => {
+    let error: string | null = null;
+    
+    // If field is empty, only validate if it's a required field
+    if (!value || !value.trim()) {
+      // Only company name is required, all other fields are optional
+      if (fieldName === 'company_name') {
+        error = 'Company name is required';
+      }
+      // For optional fields, clear any existing errors when empty
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: ''
+      }));
+      return error;
+    }
+    
+    // Only show validation errors if:
+    // 1. Form has been submitted once, OR
+    // 2. Field already has an error (to clear it when fixed), OR
+    // 3. Field has content that's clearly problematic (like "1" or emojis)
+    const shouldShowError = hasAttemptedSubmit || 
+                           fieldErrors[fieldName] || 
+                           (value.trim().length > 0 && (
+                             value.trim() === '1' || 
+                             value.trim().length < 2 ||
+                             /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(value)
+                           ));
+    
+    switch (fieldName) {
+      case 'company_name':
+        error = validateCompanyName(value);
+        break;
+      case 'url':
+        error = validateWebsiteUrl(value);
+        break;
+      case 'location_email':
+        error = validateEmailAddress(value);
+        break;
+      case 'location_phone':
+        error = validatePhoneNumber(value);
+        break;
+      case 'postal_code':
+        error = validatePostalCode(value, additionalData?.countryCode);
+        break;
+      case 'city':
+        error = validateCityName(value);
+        break;
+      case 'address_line1':
+        error = validateAddress(value);
+        break;
+      case 'contact_name':
+        error = validateContactName(value);
+        break;
+      case 'contact_email':
+        error = validateEmailAddress(value);
+        break;
+      case 'contact_phone':
+        error = validatePhoneNumber(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
+        break;
+      case 'state_province':
+        error = validateStateProvince(value);
+        break;
+    }
+    
+    // Only set the error if we should show it, otherwise clear it
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: (shouldShowError && error) ? error : ''
+    }));
+    
+    return shouldShowError ? error : null;
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
 
     setHasAttemptedSubmit(true);
-    const errors: string[] = [];
     
-    // Validate required fields
-    if (!formData.company_name.trim()) {
-      errors.push('Company name');
-    }
+    // Comprehensive validation
+    const validationResult = validateClientForm({
+      companyName: formData.company_name,
+      websiteUrl: formData.url,
+      email: locationData.email,
+      phone: locationData.phone,
+      address: locationData.address_line1,
+      city: locationData.city,
+      postalCode: locationData.postal_code,
+      countryCode: locationData.country_code,
+      contactName: contactData.full_name,
+      contactEmail: contactData.email,
+      contactPhone: contactData.phone_number
+    });
     
-    if (errors.length > 0) {
-      setValidationErrors(errors);
+    if (!validationResult.isValid) {
+      setFieldErrors(validationResult.errors);
+      const errorMessages = Object.values(validationResult.errors).filter(Boolean);
+      setValidationErrors(errorMessages);
       return;
     }
 
@@ -237,9 +342,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }
   };
 
-  const clearErrorIfSubmitted = () => {
+  const clearErrorIfSubmitted = (fieldName?: string) => {
     if (hasAttemptedSubmit) {
       setValidationErrors([]);
+      if (fieldName) {
+        setFieldErrors(prev => ({
+          ...prev,
+          [fieldName]: ''
+        }));
+      }
     }
   };
 
@@ -268,6 +379,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       }
       return updatedState;
     });
+    
+    // Real-time validation - trigger immediately for better UX
+    let validationField = field;
+    if (field === 'properties.industry') {
+      validationField = 'industry';
+    }
+    
+    // Always call validateField - it will handle when to show errors internally
+    validateField(validationField, value as string);
   };
 
   const handleLocationChange = (field: keyof CreateLocationData, value: string | boolean | null) => {
@@ -275,6 +395,26 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       ...prev,
       [field]: value
     }));
+    
+    // Real-time validation for specific fields
+    const validationFieldMap: Record<string, string> = {
+      'email': 'location_email',
+      'phone': 'location_phone',
+      'postal_code': 'postal_code',
+      'city': 'city',
+      'address_line1': 'address_line1',
+      'state_province': 'state_province'
+    };
+    
+    const validationField = validationFieldMap[field as string];
+    // Always call validateField for location fields - it will handle when to show errors internally  
+    if (validationField) {
+      if (validationField === 'postal_code') {
+        validateField(validationField, value as string, { countryCode: locationData.country_code });
+      } else {
+        validateField(validationField, value as string);
+      }
+    }
   };
 
   const handleContactChange = (field: keyof CreateContactData, value: string) => {
@@ -282,6 +422,19 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       ...prev,
       [field]: value
     }));
+    
+    // Real-time validation for contact fields
+    const validationFieldMap: Record<string, string> = {
+      'full_name': 'contact_name',
+      'email': 'contact_email',
+      'phone_number': 'contact_phone'
+    };
+    
+    const validationField = validationFieldMap[field as string];
+    // Always call validateField for contact fields - it will handle when to show errors internally
+    if (validationField) {
+      validateField(validationField, value);
+    }
   };
 
   const handleCountryChange = (countryCode: string, countryName: string) => {
@@ -309,7 +462,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <p className="font-medium mb-2">Please correct the following errors:</p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -343,12 +496,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   value={formData.company_name}
                   onChange={(e) => {
                     handleCompanyChange('company_name', e.target.value);
-                    clearErrorIfSubmitted();
+                    clearErrorIfSubmitted('company_name');
                   }}
                   placeholder="Enter company name"
                   disabled={isSubmitting}
-                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && !formData.company_name.trim() ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.company_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.company_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.company_name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -377,8 +533,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={formData.properties?.industry || ''}
                     onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.industry && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.industry}</p>
+                  )}
                 </div>
               </div>
 
@@ -393,8 +552,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     onChange={(e) => handleCompanyChange('url', e.target.value)}
                     placeholder="https://example.com"
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.url && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
+                  )}
                 </div>
 
                 <div>
@@ -429,8 +591,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   value={locationData.address_line1}
                   onChange={(e) => handleLocationChange('address_line1', e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.address_line1 ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.address_line1 && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.address_line1}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -443,8 +608,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={locationData.city}
                     onChange={(e) => handleLocationChange('city', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.city ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.city && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.city}</p>
+                  )}
                 </div>
 
                 <div>
@@ -456,8 +624,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={locationData.state_province || ''}
                     onChange={(e) => handleLocationChange('state_province', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.state_province ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.state_province && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.state_province}</p>
+                  )}
                 </div>
 
                 <div>
@@ -469,8 +640,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={locationData.postal_code || ''}
                     onChange={(e) => handleLocationChange('postal_code', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.postal_code ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.postal_code && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.postal_code}</p>
+                  )}
                 </div>
 
                 <div>
@@ -488,15 +662,20 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   />
                 </div>
 
-                <PhoneInput
-                  label="Phone"
-                  value={locationData.phone || ''}
-                  onChange={(value) => handleLocationChange('phone', value)}
-                  countryCode={locationData.country_code}
-                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
-                  disabled={isSubmitting}
-                  data-automation-id="location_phone"
-                />
+                <div>
+                  <PhoneInput
+                    label="Phone"
+                    value={locationData.phone || ''}
+                    onChange={(value) => handleLocationChange('phone', value)}
+                    countryCode={locationData.country_code}
+                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    disabled={isSubmitting}
+                    data-automation-id="location_phone"
+                  />
+                  {fieldErrors.location_phone && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.location_phone}</p>
+                  )}
+                </div>
 
                 <div>
                   <Label htmlFor="location_email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -508,8 +687,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={locationData.email || ''}
                     onChange={(e) => handleLocationChange('email', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.location_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.location_email && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.location_email}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -530,8 +712,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   value={contactData.full_name}
                   onChange={(e) => handleContactChange('full_name', e.target.value)}
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.contact_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -545,19 +730,27 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     value={contactData.email}
                     onChange={(e) => handleContactChange('email', e.target.value)}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.contact_email && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
+                  )}
                 </div>
 
-                <PhoneInput
-                  label="Phone"
-                  value={contactData.phone_number}
-                  onChange={(value) => handleContactChange('phone_number', value)}
-                  countryCode={locationData.country_code}
-                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
-                  disabled={isSubmitting}
-                  data-automation-id="contact_phone"
-                />
+                <div>
+                  <PhoneInput
+                    label="Phone"
+                    value={contactData.phone_number}
+                    onChange={(value) => handleContactChange('phone_number', value)}
+                    countryCode={locationData.country_code}
+                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    disabled={isSubmitting}
+                    data-automation-id="contact_phone"
+                  />
+                  {fieldErrors.contact_phone && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -591,6 +784,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               onClick={() => {
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
+                setFieldErrors({});
                 onOpenChange(false);
               }}
             >
@@ -600,8 +794,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               id="create-company-btn"
               type="submit"
               form="quick-add-company-form"
-              disabled={isSubmitting}
-              className={!formData.company_name.trim() ? 'opacity-50' : ''}
+              disabled={isSubmitting || !formData.company_name.trim()}
+              className={(!formData.company_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </Button>
