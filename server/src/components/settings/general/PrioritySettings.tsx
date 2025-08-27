@@ -20,14 +20,22 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import { useSearchParams } from 'next/navigation';
 
 interface PrioritySettingsProps {
   onShowConflictDialog?: (conflicts: ImportConflict[], type: 'priorities' | 'statuses', resolutions: Record<string, any>) => void;
+  initialPriorityType?: string | null;
 }
 
-const PrioritySettings = ({ onShowConflictDialog }: PrioritySettingsProps): JSX.Element => {
+const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: PrioritySettingsProps): JSX.Element => {
+  const searchParams = useSearchParams();
   const [priorities, setPriorities] = useState<(IPriority | IStandardPriority)[]>([]);
-  const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>('ticket');
+  const [selectedPriorityType, setSelectedPriorityType] = useState<'ticket' | 'project_task'>(() => {
+    // Use initialPriorityType if provided, otherwise default to 'ticket'
+    const validTypes: ('ticket' | 'project_task')[] = ['ticket', 'project_task'];
+    const typeFromUrl = initialPriorityType || searchParams?.get('type');
+    return validTypes.includes(typeFromUrl as 'ticket' | 'project_task') ? (typeFromUrl as 'ticket' | 'project_task') : 'ticket';
+  });
   const [userId, setUserId] = useState<string>('');
   const [showPriorityDialog, setShowPriorityDialog] = useState(false);
   const [editingPriority, setEditingPriority] = useState<IPriority | null>(null);
@@ -189,7 +197,16 @@ const PrioritySettings = ({ onShowConflictDialog }: PrioritySettingsProps): JSX.
           <h3 className="text-lg font-semibold text-gray-800">Priorities</h3>
           <CustomSelect
             value={selectedPriorityType}
-            onValueChange={(value) => setSelectedPriorityType(value as 'ticket' | 'project_task')}
+            onValueChange={(value) => {
+              const newType = value as 'ticket' | 'project_task';
+              setSelectedPriorityType(newType);
+              
+              // Update URL with new type parameter
+              const currentSearchParams = new URLSearchParams(window.location.search);
+              currentSearchParams.set('type', newType);
+              const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+              window.history.pushState({}, '', newUrl);
+            }}
             options={[
               { value: 'ticket', label: 'Ticket Priorities' },
               { value: 'project_task', label: 'Project Task Priorities' }

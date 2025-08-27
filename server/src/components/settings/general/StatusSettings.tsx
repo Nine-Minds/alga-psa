@@ -20,11 +20,22 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import { useSearchParams } from 'next/navigation';
 // Dialog components will be passed as props or kept inline for now
 
-const StatusSettings = (): JSX.Element => {
+interface StatusSettingsProps {
+  initialStatusType?: string | null;
+}
+
+const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element => {
+  const searchParams = useSearchParams();
   const [statuses, setStatuses] = useState<IStatus[]>([]);
-  const [selectedStatusType, setSelectedStatusType] = useState<ItemType>('ticket');
+  const [selectedStatusType, setSelectedStatusType] = useState<ItemType>(() => {
+    // Use initialStatusType if provided, otherwise default to 'ticket'
+    const validTypes: ItemType[] = ['ticket', 'project', 'interaction'];
+    const typeFromUrl = initialStatusType || searchParams?.get('type');
+    return validTypes.includes(typeFromUrl as ItemType) ? (typeFromUrl as ItemType) : 'ticket';
+  });
   const [userId, setUserId] = useState<string>('');
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [editingStatus, setEditingStatus] = useState<IStatus | null>(null);
@@ -351,7 +362,16 @@ const StatusSettings = (): JSX.Element => {
           </h3>
           <CustomSelect
             value={selectedStatusType}
-            onValueChange={(value: string) => setSelectedStatusType(value as ItemType)}
+            onValueChange={(value: string) => {
+              const newType = value as ItemType;
+              setSelectedStatusType(newType);
+              
+              // Update URL with new type parameter
+              const currentSearchParams = new URLSearchParams(window.location.search);
+              currentSearchParams.set('type', newType);
+              const newUrl = `/msp/settings?${currentSearchParams.toString()}`;
+              window.history.pushState({}, '', newUrl);
+            }}
             options={[
               { value: 'ticket', label: 'Ticket Statuses' },
               { value: 'project', label: 'Project Statuses' },
