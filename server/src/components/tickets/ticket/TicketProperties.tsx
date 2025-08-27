@@ -37,6 +37,7 @@ interface TicketPropertiesProps {
   channel: any;
   elapsedTime: number;
   isRunning: boolean;
+  isTimerLocked?: boolean;
   timeDescription: string;
   team: ITeam | null;
   additionalAgents: ITicketResource[];
@@ -106,6 +107,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   channel,
   elapsedTime,
   isRunning,
+  isTimerLocked = false,
   timeDescription,
   team,
   additionalAgents,
@@ -279,7 +281,14 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
           <div className="flex justify-center space-x-2">
             {!isRunning ? (
-              <Button {...withDataAutomationId({ id: `${id}-start-timer-btn` })} onClick={onStart} className={`w-24`} variant='soft'>
+              <Button
+                {...withDataAutomationId({ id: `${id}-start-timer-btn` })}
+                onClick={onStart}
+                className={`w-24 ${isTimerLocked ? 'opacity-60' : ''}`}
+                variant='soft'
+                aria-disabled={isTimerLocked}
+                title={isTimerLocked ? 'Timer active in another window' : undefined}
+              >
                 <Play className="mr-2 h-4 w-4" /> Start
               </Button>
             ) : (

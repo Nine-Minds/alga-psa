@@ -1,5 +1,5 @@
 "use client";
-import { SessionProvider } from "next-auth/react";
+import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import DefaultLayout from "server/src/components/layout/DefaultLayout";
 import { TagProvider } from "server/src/context/TagContext";
 import { OnboardingProvider } from "server/src/components/onboarding/OnboardingProvider";
@@ -15,7 +15,7 @@ export default function MspLayout({
   const isOnboardingPage = pathname === '/msp/onboarding';
 
   return (
-    <SessionProvider>
+    <AppSessionProvider>
       <PostHogUserIdentifier />
       <TagProvider>
         <OnboardingProvider>
@@ -28,6 +28,6 @@ export default function MspLayout({
           )}
         </OnboardingProvider>
       </TagProvider>
-    </SessionProvider>
+    </AppSessionProvider>
   );
 }

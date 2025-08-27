@@ -155,40 +155,41 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
     }
   };
 
-  // Create separate components for each section to enable independent suspense boundaries
-  const TicketInfoSection = () => (
-    <Suspense fallback={<div id="ticket-info-loading-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
-      <TicketDetails
-        id="ticket-details-component"
-        initialTicket={ticketData.ticket}
-        onClose={() => router.back()}
-        // Pass pre-fetched data as props
-        initialComments={ticketData.comments}
-        initialDocuments={ticketData.documents}
-        initialCompany={ticketData.company}
-        initialContacts={ticketData.contacts}
-        initialContactInfo={ticketData.contactInfo}
-        initialCreatedByUser={ticketData.createdByUser}
-        initialChannel={ticketData.channel}
-        initialAdditionalAgents={ticketData.additionalAgents}
-        initialAvailableAgents={ticketData.availableAgents}
-        initialUserMap={ticketData.userMap}
-        statusOptions={ticketData.options.status}
-        agentOptions={ticketData.options.agent}
-        channelOptions={ticketData.options.channel}
-        priorityOptions={ticketData.options.priority}
-        initialCategories={ticketData.categories}
-        initialCompanies={ticketData.companies}
-        initialLocations={ticketData.locations}
-        initialAgentSchedules={ticketData.agentSchedules}
-        // Pass optimized handlers
-        onTicketUpdate={handleTicketUpdate}
-        onAddComment={handleAddComment}
-        onUpdateDescription={handleUpdateDescription}
-        isSubmitting={isSubmitting}
-      />
-    </Suspense>
+  // Render directly to avoid redefining a component each render,
+  // which can cause unmount/mount cycles and side-effects
+  return (
+    <div id="ticket-details-container-wrapper">
+      <Suspense fallback={<div id="ticket-info-loading-skeleton" className="animate-pulse bg-gray-200 h-64 rounded-lg mb-6"></div>}>
+        <TicketDetails
+          id="ticket-details-component"
+          initialTicket={ticketData.ticket}
+          onClose={() => router.back()}
+          // Pass pre-fetched data as props
+          initialComments={ticketData.comments}
+          initialDocuments={ticketData.documents}
+          initialCompany={ticketData.company}
+          initialContacts={ticketData.contacts}
+          initialContactInfo={ticketData.contactInfo}
+          initialCreatedByUser={ticketData.createdByUser}
+          initialChannel={ticketData.channel}
+          initialAdditionalAgents={ticketData.additionalAgents}
+          initialAvailableAgents={ticketData.availableAgents}
+          initialUserMap={ticketData.userMap}
+          statusOptions={ticketData.options.status}
+          agentOptions={ticketData.options.agent}
+          channelOptions={ticketData.options.channel}
+          priorityOptions={ticketData.options.priority}
+          initialCategories={ticketData.categories}
+          initialCompanies={ticketData.companies}
+          initialLocations={ticketData.locations}
+          initialAgentSchedules={ticketData.agentSchedules}
+          // Pass optimized handlers
+          onTicketUpdate={handleTicketUpdate}
+          onAddComment={handleAddComment}
+          onUpdateDescription={handleUpdateDescription}
+          isSubmitting={isSubmitting}
+        />
+      </Suspense>
+    </div>
   );
-
-  return <div id="ticket-details-container-wrapper"><TicketInfoSection /></div>;
 }

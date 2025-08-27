@@ -168,7 +168,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [currentComment, setCurrentComment] = useState<IComment | null>(null);
 
     const [elapsedTime, setElapsedTime] = useState(0);
-    const [isRunning, setIsRunning] = useState(true);
+    const [isRunning, setIsRunning] = useState(false);
     const [timeDescription, setTimeDescription] = useState('');
     const [tags, setTags] = useState<ITag[]>([]);
     const { tags: allTags } = useTags();
@@ -192,17 +192,27 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
     // Timer logic
     const tick = useCallback(() => {
-        setElapsedTime(prevTime => prevTime + 1);
-    }, []);
+        setElapsedTime(prevTime => {
+            const next = prevTime + 1;
+            try {
+                console.log('[TicketDetails][tick] +1s ->', next, 'isRunning=', isRunning);
+            } catch {}
+            return next;
+        });
+    }, [isRunning]);
 
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        let intervalId: NodeJS.Timeout | undefined;
         if (isRunning) {
+            console.log('[TicketDetails] starting 1s UI timer');
             intervalId = setInterval(tick, 1000);
+        } else {
+            console.log('[TicketDetails] not running; UI timer not started');
         }
         return () => {
             if (intervalId) {
                 clearInterval(intervalId);
+                console.log('[TicketDetails] cleared 1s UI timer');
             }
         };
     }, [isRunning, tick]);
@@ -239,33 +249,93 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     
     
     // Add automatic interval tracking using the custom hook
-    const { currentIntervalId } = useTicketTimeTracking(
+    // Unique holder ID per tab for lock ownership
+    const [holderId] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const existing = sessionStorage.getItem('tabHolderId');
+            if (existing) return existing;
+            const id = crypto.randomUUID();
+            sessionStorage.setItem('tabHolderId', id);
+            return id;
+        }
+        return Math.random().toString(36).slice(2);
+    });
+
+    const {
+        isTracking,
+        currentIntervalId,
+        isLockedByOther,
+        startTracking,
+        stopTracking,
+        refreshLockState,
+    } = useTicketTimeTracking(
         initialTicket.ticket_id || '',
         initialTicket.ticket_number || '',
         initialTicket.title || '',
-        userId || ''
+        userId || '',
+        { autoStart: false, holderId }
     );
 
-    // Restore timer if an open interval exists (e.g., when opening in a new tab)
-    useEffect(() => {
-        if (!initialTicket.ticket_id || !userId) return;
+    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
+    const startTrackingRef = React.useRef(startTracking);
+    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
 
-        const restoreTimer = async () => {
+    // Reflect tracking state into local stopwatch state
+    useEffect(() => {
+        console.log('[TicketDetails] isTracking changed ->', isTracking);
+        setIsRunning(!!isTracking);
+    }, [isTracking]);
+
+    // Proactive auto-start on mount when userId/ticketId ready (no dialog on lock)
+    const autoStartedRef = React.useRef(false);
+    useEffect(() => {
+        const auto = async () => {
+            if (autoStartedRef.current) return;
+            if (!initialTicket.ticket_id || !userId) return;
+            if (isTracking) return;
+            console.log('[TicketDetails] auto-start attempt');
             try {
-                const openInterval = await intervalService.getOpenInterval(initialTicket.ticket_id!, userId);
-                if (openInterval && openInterval.startTime) {
-                    const start = new Date(openInterval.startTime);
-                    const elapsed = Math.floor((Date.now() - start.getTime()) / 1000);
-                    setElapsedTime(elapsed);
-                    setIsRunning(true);
+                const started = await startTrackingRef.current(false);
+                console.log('[TicketDetails] auto-start result ->', started);
+                if (started) {
+                    setElapsedTime(0);
+                    autoStartedRef.current = true;
                 }
-            } catch (error) {
-                console.error('Error restoring timer from open interval:', error);
+            } catch (e) {
+                console.log('[TicketDetails] auto-start error', e);
             }
         };
+        auto();
+        // only attempt once when ids are ready and not already tracking
+    }, [initialTicket.ticket_id, userId, isTracking]);
 
-        restoreTimer();
-    }, [initialTicket.ticket_id, userId, intervalService]);
+    // New screens start from zero; no seeding from existing intervals
+
+    // Log holder id creation
+    useEffect(() => {
+        if (holderId) {
+            console.log('[TicketDetails] holderId for this tab:', holderId);
+        }
+    }, [holderId]);
+
+    // Log UI button handlers
+    useEffect(() => {
+        console.log('[TicketDetails] mounted; ticket=', initialTicket.ticket_id, 'user=', userId);
+        return () => {
+            console.log('[TicketDetails] unmounting; will call stopTracking in cleanup below');
+        };
+    }, [initialTicket.ticket_id, userId]);
+
+    // Poll lock state periodically to update UI lock indicator
+    useEffect(() => {
+        let id: any;
+        const poll = async () => {
+            try { await refreshLockState(); } catch {}
+        };
+        id = setInterval(poll, 5000);
+        poll();
+        return () => clearInterval(id);
+    }, [refreshLockState]);
     
     // Function to close the current interval before navigation
     // Enhanced function to close the interval - will find and close any open interval for this ticket
@@ -297,6 +367,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Fixed navigation function - wait for interval to close before navigating
     const handleBackToTickets = useCallback(async () => {
         try {
+            // Stop tracking and release lock before leaving
+            await stopTracking();
             // Wait for the interval to close
             await closeCurrentInterval();
             
@@ -317,7 +389,65 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 router.push('/msp/tickets');
             }
         }
-    }, [closeCurrentInterval, onClose, router]);
+    }, [closeCurrentInterval, onClose, router, stopTracking]);
+
+    // Handle timer control actions with locking
+    const [isReplaceDialogOpen, setIsReplaceDialogOpen] = useState(false);
+
+    const doStart = useCallback(async (force = false) => {
+        if (!initialTicket.ticket_id || !userId) return;
+        try {
+            const started = await startTracking(force);
+            if (started) {
+                setElapsedTime(0);
+                setIsRunning(true);
+            } else if (!force) {
+                // Locked elsewhere
+                setIsReplaceDialogOpen(true);
+            }
+        } catch (e) {
+            console.error('Failed to start tracking:', e);
+        }
+    }, [initialTicket.ticket_id, userId, startTracking]);
+
+    const handleStartClick = useCallback(() => {
+        console.log('[TicketDetails] Start button clicked');
+        doStart(false);
+    }, [doStart]);
+
+    const handleConfirmReplace = useCallback(async () => {
+        setIsReplaceDialogOpen(false);
+        await doStart(true);
+    }, [doStart]);
+
+    const handlePauseClick = useCallback(async () => {
+        try {
+            console.log('[TicketDetails] Pause button clicked');
+            await stopTracking();
+        } catch {}
+        setIsRunning(false);
+    }, [stopTracking]);
+
+    const handleStopClick = useCallback(async () => {
+        try {
+            console.log('[TicketDetails] Stop/Reset button clicked');
+            await stopTracking();
+        } catch {}
+        setIsRunning(false);
+        setElapsedTime(0);
+    }, [stopTracking]);
+
+    // Ensure we stop tracking only when component unmounts (not on re-renders)
+    const stopTrackingRef = React.useRef(stopTracking);
+    useEffect(() => {
+        stopTrackingRef.current = stopTracking;
+    }, [stopTracking]);
+    useEffect(() => {
+        return () => {
+            console.log('[TicketDetails] unmount cleanup -> stopTracking');
+            stopTrackingRef.current?.().catch(() => {});
+        };
+    }, []);
 
     const handleCompanyClick = async () => {
         if (ticket.company_id) {
@@ -1032,6 +1162,18 @@ const handleClose = () => {
                     cancelLabel="Cancel"
                 />
                 
+                {/* Timer Replace Confirmation */}
+                <ConfirmationDialog
+                    id={`${id}-replace-timer-dialog`}
+                    isOpen={isReplaceDialogOpen}
+                    onClose={() => setIsReplaceDialogOpen(false)}
+                    onConfirm={handleConfirmReplace}
+                    title="Timer Active Elsewhere"
+                    message="This ticket's timer is active in another window. Do you want to take over and replace it here?"
+                    confirmLabel="Replace Here"
+                    cancelLabel="Cancel"
+                />
+
                 <ConfirmationDialog
                     id={`${id}-time-period-dialog`}
                     isOpen={isTimeEntryPeriodDialogOpen}
@@ -1115,12 +1257,10 @@ const handleClose = () => {
                                 elapsedTime={elapsedTime}
                                 isRunning={isRunning}
                                 timeDescription={timeDescription}
-                                onStart={() => setIsRunning(true)}
-                                onPause={() => setIsRunning(false)}
-                                onStop={() => {
-                                    setIsRunning(false);
-                                    setElapsedTime(0);
-                                }}
+                                isTimerLocked={isLockedByOther}
+                                onStart={handleStartClick}
+                                onPause={handlePauseClick}
+                                onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
                                 onAddTimeEntry={handleAddTimeEntry}
                                 onCompanyClick={handleCompanyClick}
