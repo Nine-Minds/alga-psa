@@ -31,6 +31,7 @@ export interface TeamMember {
   lastName: string;
   email: string;
   role: string;
+  password?: string;
 }
 
 export interface ClientData {
@@ -181,7 +182,8 @@ export async function addSingleTeamMember(member: TeamMember): Promise<Onboardin
 
         // Create new user (same logic as addTeamMembers)
         const userId = require('crypto').randomUUID();
-        const tempPassword = await hashPassword('TempPassword123!');
+        // Use provided password or generate a default one
+        const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
         await trx('users').insert({
           user_id: userId,
@@ -330,7 +332,8 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
 
           // Create new user
           const userId = require('crypto').randomUUID();
-          const tempPassword = await hashPassword('TempPassword123!');
+          // Use provided password or generate a default one
+          const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
           await trx('users').insert({
             user_id: userId,

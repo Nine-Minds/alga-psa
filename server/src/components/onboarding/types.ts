@@ -55,6 +55,7 @@ export interface TeamMember {
   lastName: string;
   email: string;
   role: string;
+  password?: string;
 }
 
 export interface OnboardingState {

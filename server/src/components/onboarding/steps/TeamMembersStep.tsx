@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Trash2, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
@@ -23,6 +23,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const [savingMemberIndex, setSavingMemberIndex] = useState<number | null>(null);
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
   const [hasUnsavedForm, setHasUnsavedForm] = useState(false);
+  const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     checkLicenseStatus();
@@ -127,8 +128,8 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     const member = data.teamMembers[index];
     
     // Validate fields
-    if (!member.firstName || !member.lastName || !member.email) {
-      setSaveErrors(prev => ({ ...prev, [index]: 'Please fill in all fields' }));
+    if (!member.firstName || !member.lastName || !member.email || !member.password) {
+      setSaveErrors(prev => ({ ...prev, [index]: 'Please fill in all required fields including password' }));
       return;
     }
 
@@ -136,6 +137,12 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(member.email)) {
       setSaveErrors(prev => ({ ...prev, [index]: 'Please enter a valid email address' }));
+      return;
+    }
+
+    // Validate password strength (at least 8 characters)
+    if (member.password.length < 8) {
+      setSaveErrors(prev => ({ ...prev, [index]: 'Password must be at least 8 characters long' }));
       return;
     }
 
@@ -182,7 +189,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     updateData({
       teamMembers: [
         ...data.teamMembers,
-        { firstName: '', lastName: '', email: '', role: defaultRole }
+        { firstName: '', lastName: '', email: '', role: defaultRole, password: '' }
       ]
     });
   };
@@ -334,6 +341,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
                 placeholder="jane@company.com"
                 disabled={isAlreadyCreated}
+                autoComplete="off"
               />
             </div>
 
@@ -347,6 +355,38 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               />
             </div>
           </div>
+
+          {!isAlreadyCreated && (
+            <div className="space-y-2">
+              <Label>Temporary Password</Label>
+              <div className="relative">
+                <Input
+                  type={showPasswords[index] ? "text" : "password"}
+                  value={member.password || ''}
+                  onChange={(e) => updateTeamMember(index, 'password', e.target.value)}
+                  placeholder="Set temporary password"
+                  disabled={isAlreadyCreated}
+                  className="pr-10"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswords(prev => ({ ...prev, [index]: !prev[index] }))}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  disabled={isAlreadyCreated}
+                >
+                  {showPasswords[index] ? (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                The user will need to change this password on first login
+              </p>
+            </div>
+          )}
           
           {hasError && (
             <div className="rounded-md bg-red-50 border border-red-200 p-3">
