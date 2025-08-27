@@ -1067,6 +1067,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
+                              id="select-all-channels-checkbox"
                               checked={availableChannels.length > 0 && 
                                 availableChannels.every(c => selectedChannels.includes(c.id))}
                               onChange={() => {
@@ -1089,6 +1090,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <tr key={channel.id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
+                                id={`select-channel-${channel.id}-checkbox`}
                                 checked={selectedChannels.includes(channel.id)}
                                 onChange={() => {
                                   if (selectedChannels.includes(channel.id)) {
@@ -1172,7 +1174,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`channel-remove-${idx}`}
+                              id={`remove-channel-${channel.channel_id}-button`}
                               data-channel-id={channel.channel_id}
                               type="button"
                               variant="ghost"
@@ -1392,6 +1394,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
+                              id="select-all-categories-checkbox"
                               checked={availableCategories.length > 0 && 
                                 availableCategories.every(c => selectedCategories.includes(c.id))}
                               onChange={() => {
@@ -1444,6 +1447,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                 <td className="px-3 py-2">
                                   <div className="flex items-center gap-1">
                                     <Checkbox
+                                      id={`select-category-${category.id}-checkbox`}
                                       checked={selectedCategories.includes(category.id)}
                                       onChange={() => {
                                         if (selectedCategories.includes(category.id)) {
@@ -1627,7 +1631,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               </td>
                               <td className="px-2 py-1 text-center">
                                 <Button
-                                  id={`category-remove-${idx}`}
+                                  id={`remove-category-${category.category_id}-button`}
                                   data-category-id={category.category_id}
                                   type="button"
                                   variant="ghost"
@@ -1851,6 +1855,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
+                              id="select-all-statuses-checkbox"
                               checked={availableStatuses.length > 0 && 
                                 availableStatuses.every(s => selectedStatuses.includes(s.standard_status_id))}
                               onChange={() => {
@@ -1874,6 +1879,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <tr key={status.standard_status_id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
+                                id={`select-status-${status.standard_status_id}-checkbox`}
                                 checked={selectedStatuses.includes(status.standard_status_id)}
                                 onChange={() => {
                                   if (selectedStatuses.includes(status.standard_status_id)) {
@@ -1965,7 +1971,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`status-remove-${idx}`}
+                              id={`remove-status-${status.status_id}-button`}
                               data-status-id={status.status_id}
                               type="button"
                               variant="ghost"
@@ -2150,6 +2156,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
+                              id="select-all-priorities-checkbox"
                               checked={availablePriorities.length > 0 && 
                                 availablePriorities.every(p => selectedPriorities.includes(p.priority_id))}
                               onChange={() => {
@@ -2172,6 +2179,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <tr key={priority.priority_id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
+                                id={`select-priority-${priority.priority_id}-checkbox`}
                                 checked={selectedPriorities.includes(priority.priority_id)}
                                 onChange={() => {
                                   if (selectedPriorities.includes(priority.priority_id)) {
@@ -2273,7 +2281,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                             <td className="px-2 py-1 text-center">
                               {priorityId ? (
                                 <Button
-                                  id={`priority-remove-${index}`}
+                                  id={`remove-priority-${priorityId}-button`}
                                   data-priority-id={priorityId}
                                   type="button"
                                   variant="ghost"

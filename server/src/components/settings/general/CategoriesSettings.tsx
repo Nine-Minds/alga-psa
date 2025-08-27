@@ -319,15 +319,18 @@ const CategoriesSettings: React.FC = () => {
       render: (value: string, record: ITicketCategory) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button id="category-actions-menu" variant="ghost" className="h-8 w-8 p-0">
+            <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => startEditing(record)}>
+            <DropdownMenuItem 
+              id={`edit-category-${value}-button`}
+              onClick={() => startEditing(record)}>
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem 
+              id={`delete-category-${value}-button`}
               onClick={() => setDeleteDialog({
                 isOpen: true,
                 categoryId: value,
@@ -604,6 +607,7 @@ const CategoriesSettings: React.FC = () => {
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8">
                       <input
+                        id="select-all-categories-checkbox"
                         type="checkbox"
                         checked={availableReferenceCategories.length > 0 && selectedImportCategories.length === availableReferenceCategories.length}
                         onChange={(e) => {
@@ -668,6 +672,7 @@ const CategoriesSettings: React.FC = () => {
                         >
                           <div className="w-8">
                             <input
+                              id={`select-category-${category.id}-checkbox`}
                               type="checkbox"
                               checked={selectedImportCategories.includes(category.id)}
                               onChange={(e) => {
