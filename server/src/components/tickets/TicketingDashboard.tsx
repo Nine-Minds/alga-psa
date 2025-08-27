@@ -325,12 +325,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           const href = filterQuery 
             ? `/msp/tickets/${record.ticket_id}?returnFilters=${encodeURIComponent(filterQuery)}`
             : `/msp/tickets/${record.ticket_id}`;
-          
           return (
             <Link
               id={`ticket-number-link-${record.ticket_id}`}
               href={href}
-              className="text-blue-500 hover:underline"
+              className="text-blue-500 hover:underline block break-all whitespace-normal"
+              style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
             >
               {value}
             </Link>
