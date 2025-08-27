@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { getStatuses, createStatus, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
+import { getStatuses, deleteStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { IStatus, IStandardStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -18,10 +18,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import { StatusDialog } from './dialogs/StatusDialog';
+import { StatusImportDialog } from './dialogs/StatusImportDialog';
+import { ConflictResolutionDialog } from './dialogs/ConflictResolutionDialog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { useSearchParams } from 'next/navigation';
-// Dialog components will be passed as props or kept inline for now
 
 interface StatusSettingsProps {
   initialStatusType?: string | null;
@@ -448,7 +450,54 @@ const StatusSettings = ({ initialStatusType }: StatusSettingsProps): JSX.Element
         </div>
       </div>
 
-      {/* Dialogs will be added here as needed */}
+      {/* Status Dialog */}
+      <StatusDialog
+        open={showStatusDialog}
+        onOpenChange={setShowStatusDialog}
+        editingStatus={editingStatus}
+        selectedStatusType={selectedStatusType}
+        userId={userId}
+        onSuccess={async () => {
+          const updatedStatuses = await getStatuses(selectedStatusType);
+          setStatuses(updatedStatuses);
+        }}
+      />
+      
+      {/* Import Dialog */}
+      <StatusImportDialog
+        open={showStatusImportDialog}
+        onOpenChange={setShowStatusImportDialog}
+        availableStatuses={availableReferenceStatuses}
+        selectedStatuses={selectedImportStatuses}
+        onSelectionChange={(statusId) => {
+          setSelectedImportStatuses(prev => 
+            prev.includes(statusId) 
+              ? prev.filter(id => id !== statusId)
+              : [...prev, statusId]
+          );
+        }}
+        onImport={handleImportSelected}
+      />
+      
+      {/* Conflict Resolution Dialog */}
+      <ConflictResolutionDialog
+        open={showConflictDialog}
+        onOpenChange={setShowConflictDialog}
+        conflicts={importConflicts}
+        resolutions={conflictResolutions}
+        onResolutionChange={(itemId, resolution) => {
+          setConflictResolutions(prev => ({
+            ...prev,
+            [itemId]: resolution
+          }));
+        }}
+        onResolve={handleResolveConflicts}
+        onCancel={() => {
+          setShowConflictDialog(false);
+          setImportConflicts([]);
+          setConflictResolutions({});
+        }}
+      />
     </div>
   );
 };
