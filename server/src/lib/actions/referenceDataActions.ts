@@ -48,7 +48,6 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     mapFields: (source: IStandardStatus, tenantId: string, userId: string, options?: any) => ({
       name: source.name,
       status_type: source.item_type,
-      item_type: source.item_type,
       order_number: source.display_order,
       is_closed: source.is_closed,
       is_default: source.is_default,
@@ -61,7 +60,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
         .where({
           tenant: tenantId,
           name: data.name,
-          item_type: data.item_type
+          status_type: data.status_type
         })
         .first();
       return !!existing;
