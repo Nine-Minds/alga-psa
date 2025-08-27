@@ -265,20 +265,23 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     {
       title: 'Ticket Number',
       dataIndex: 'ticket_number',
-      width: '9%',
+      width: '15%',
       render: (value: string, record: ITicketListItem) => (
-        <Link
-          href={`/msp/tickets/${record.ticket_id}`}
-          className="text-blue-500 hover:underline"
-        >
-          {value}
-        </Link>
+        <div className="max-w-full overflow-hidden">
+          <Link
+            href={`/msp/tickets/${record.ticket_id}`}
+            className="text-blue-500 hover:underline break-words word-break text-sm whitespace-normal"
+            style={{ wordBreak: 'break-all' }}
+          >
+            {value}
+          </Link>
+        </div>
       ),
     },
     {
       title: 'Title',
       dataIndex: 'title',
-      width: '20%',
+      width: '18%',
     },
     {
       title: 'Status',

@@ -955,8 +955,8 @@ const handleClose = () => {
                         {!isInDrawer && (
                             <BackNav href="/msp/tickets">Back to Tickets</BackNav>
                         )}
-                        <h6 className="text-sm font-medium">#{ticket.ticket_number}</h6>
-                        <h1 className="text-xl font-bold">{ticket.title}</h1>
+                        <h6 className="text-sm font-medium text-nowrap flex-shrink-0">#{ticket.ticket_number}</h6>
+                        <h1 className="text-xl font-bold break-words min-w-0 flex-1">{ticket.title}</h1>
                     </div>
                     
                     {/* Add popout button only when in drawer */}
