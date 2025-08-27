@@ -1,4 +1,5 @@
 import PgBoss, { Job, WorkHandler } from 'pg-boss';
+import logger from '@shared/core/logger';
 import { getPostgresConnection } from '../db/knexfile';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { JobService } from '../../services/job.service';
@@ -174,26 +175,47 @@ export class JobScheduler implements IJobScheduler {
     interval: string,
     data: T
   ): Promise<string | null> {
-    // Convert cron expression to pg-boss interval
-    let pgBossInterval: string;
-    
-    if (interval.includes('*')) {
-      // Simple conversion for daily jobs
+    // Convert a cron-ish input into a coarse interval, since we're using delayed send()
+    let pgBossInterval: string = interval;
+    if (/(^|\s)\*/.test(interval)) {
+      // Any cron expression is coerced to daily interval here
       pgBossInterval = '24 hours';
-    } else {
-      // For other intervals, use as-is
-      pgBossInterval = interval;
     }
-    
+
     if (!data.tenantId) {
       throw new Error('tenantId is required in job data');
     }
-    return await this.boss.send(jobName, data, {
+    const tenantId = String((data as Record<string, unknown>).tenantId);
+    const key = `${jobName}:${tenantId}`;
+
+    logger.debug('Scheduling recurring job via delayed send', {
+      jobName,
+      tenantId,
+      requestedInterval: interval,
+      effectiveInterval: pgBossInterval,
+      singletonKey: key,
+    });
+
+    const id = await this.boss.send(jobName, data, {
       startAfter: pgBossInterval,
       retryLimit: 3,
       retryBackoff: true,
-      singletonKey: jobName
+      // Make singleton per-tenant, not global across all tenants
+      singletonKey: key,
     });
+
+    if (!id) {
+      logger.info('Recurring job send returned null (singleton already queued)', {
+        jobName,
+        tenantId,
+        singletonKey: key,
+        effectiveInterval: pgBossInterval,
+      });
+    } else {
+      logger.debug('Recurring job scheduled', { jobName, tenantId, id });
+    }
+
+    return id; // null means identical singleton already exists
   }
 
   public registerJobHandler<T extends Record<string, unknown>>(
