@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
@@ -9,6 +9,32 @@ import { StepProps } from '../types';
 export function CompanyInfoStep({ data, updateData }: StepProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  
+  // Use a local variable for cleaner code
+  const password = data.newPassword || '';
+  const confirmPassword = data.confirmPassword || '';
+
+  // Password strength validation
+  useEffect(() => {
+    if (!password) {
+      setPasswordStrength(null);
+      return;
+    }
+
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    const isLongEnough = password.length >= 8;
+
+    const score = [hasLowerCase, hasUpperCase, hasNumber, hasSpecialChar, isLongEnough]
+      .filter(Boolean).length;
+
+    if (score <= 2) setPasswordStrength('weak');
+    else if (score <= 4) setPasswordStrength('medium');
+    else setPasswordStrength('strong');
+  }, [password]);
 
   return (
     <div className="space-y-6">
@@ -109,11 +135,13 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
             <Input
               id="newPassword"
               type={showNewPassword ? "text" : "password"}
-              value={data.newPassword || ''}
+              value={password}
               onChange={(e) => updateData({ newPassword: e.target.value })}
-              placeholder="Enter your new password"
+              placeholder="Create a strong password"
               required
+              autoComplete="new-password"
               className="pr-10"
+              aria-describedby="password-requirements"
             />
             <button
               type="button"
@@ -127,9 +155,36 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
               )}
             </button>
           </div>
-          <p className="text-xs text-gray-500">
-            Must be at least 8 characters long.
-          </p>
+          
+          <div id="password-requirements" className="text-sm mt-1">
+            <p className="text-gray-500">Password must contain:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li className={password.length >= 8 ? 'text-green-500' : 'text-gray-500'}>
+                At least 8 characters
+              </li>
+              <li className={/[A-Z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
+                One uppercase letter
+              </li>
+              <li className={/[a-z]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
+                One lowercase letter
+              </li>
+              <li className={/\d/.test(password) ? 'text-green-500' : 'text-gray-500'}>
+                One number
+              </li>
+              <li className={/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-500' : 'text-gray-500'}>
+                One special character
+              </li>
+            </ul>
+            {passwordStrength && (
+              <p className={`mt-2 font-medium ${
+                passwordStrength === 'strong' ? 'text-green-600' :
+                passwordStrength === 'medium' ? 'text-yellow-600' :
+                'text-red-600'
+              }`}>
+                Password strength: {passwordStrength.charAt(0).toUpperCase() + passwordStrength.slice(1)}
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -140,11 +195,15 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
             <Input
               id="confirmPassword"
               type={showConfirmPassword ? "text" : "password"}
-              value={data.confirmPassword || ''}
+              value={confirmPassword}
               onChange={(e) => updateData({ confirmPassword: e.target.value })}
-              placeholder="Confirm your new password"
+              placeholder="Re-enter your password"
               required
-              className="pr-10"
+              autoComplete="new-password"
+              className={`pr-10 ${
+                confirmPassword && password && 
+                confirmPassword !== password ? 'border-red-500' : ''
+              }`}
             />
             <button
               type="button"
@@ -158,6 +217,13 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
               )}
             </button>
           </div>
+          {confirmPassword && password && (
+            <p className={`text-sm ${
+              confirmPassword === password ? 'text-green-500' : 'text-red-500'
+            }`}>
+              {confirmPassword === password ? 'Passwords match' : 'Passwords do not match'}
+            </p>
+          )}
         </div>
       </div>
 

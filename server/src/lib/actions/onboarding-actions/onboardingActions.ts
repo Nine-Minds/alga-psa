@@ -31,6 +31,7 @@ export interface TeamMember {
   lastName: string;
   email: string;
   role: string;
+  password?: string;
 }
 
 export interface ClientData {
@@ -139,6 +140,138 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
   }
 }
 
+export async function addSingleTeamMember(member: TeamMember): Promise<OnboardingActionResult> {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, error: 'No authenticated user found' };
+    }
+    const tenant = await getTenantForCurrentRequest();
+    if (!tenant) {
+      return { success: false, error: 'No tenant found' };
+    }
+
+    // Check license limits for MSP (internal) users
+    const { getLicenseUsage } = await import('../../license/get-license-usage');
+    const usage = await getLicenseUsage(tenant);
+    
+    if (usage.limit !== null && usage.used >= usage.limit) {
+      return { 
+        success: false, 
+        error: `You've reached your internal user licence limit of ${usage.limit}. Please remove or deactivate existing users to add new ones.`
+      };
+    }
+
+    const { knex } = await createTenantKnex();
+    let created: string | null = null;
+    let alreadyExists = false;
+    let error: string | null = null;
+
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      try {
+        // Check if user already exists
+        const existingUser = await trx('users')
+          .where({ email: member.email.toLowerCase(), tenant })
+          .first();
+
+        if (existingUser) {
+          alreadyExists = true;
+          error = `User with email ${member.email} already exists`;
+          return;
+        }
+
+        // Create new user (same logic as addTeamMembers)
+        const userId = require('crypto').randomUUID();
+        // Use provided password or generate a default one
+        const tempPassword = await hashPassword(member.password || 'TempPassword123!');
+
+        await trx('users').insert({
+          user_id: userId,
+          tenant,
+          username: member.email.toLowerCase(),  // Use email as username
+          first_name: member.firstName,
+          last_name: member.lastName,
+          email: member.email.toLowerCase(),
+          hashed_password: tempPassword,
+          is_inactive: false,
+          user_type: 'internal',  // Internal user type for team members
+          created_at: new Date(),
+          updated_at: new Date()
+        });
+
+        // Get role from roles table by role_name
+        const role = await trx('roles')
+          .where({ 
+            role_name: member.role.toLowerCase(), // Convert to lowercase to match DB convention
+            tenant 
+          })
+          .first();
+
+        if (role) {
+          await trx('user_roles').insert({
+            user_id: userId,
+            role_id: role.role_id,
+            tenant
+          });
+        } else {
+          console.warn(`Role not found: ${member.role.toLowerCase()} for tenant ${tenant}`);
+          // Try to assign a default role
+          const defaultRole = await trx('roles')
+            .where({ tenant, msp: true })
+            .orderBy('role_name')
+            .first();
+          
+          if (defaultRole) {
+            await trx('user_roles').insert({
+              user_id: userId,
+              role_id: defaultRole.role_id,
+              tenant
+            });
+          }
+        }
+
+        // Mark that the user hasn't reset their initial password
+        const UserPreferences = await import('server/src/lib/models/userPreferences').then(m => m.default);
+        await UserPreferences.upsert(trx, {
+          user_id: userId,
+          setting_name: 'has_reset_password',
+          setting_value: false,
+          updated_at: new Date()
+        });
+
+        created = member.email;
+      } catch (memberError) {
+        error = memberError instanceof Error ? memberError.message : 'Unknown error';
+      }
+    });
+
+    revalidatePath('/msp/onboarding');
+    
+    if (created) {
+      return { 
+        success: true, 
+        data: { 
+          created: created,
+          licenseStatus: { current: usage.used + 1, limit: usage.limit }
+        }
+      };
+    } else if (alreadyExists) {
+      return { 
+        success: false, 
+        error: error || `User with email ${member.email} already exists`
+      };
+    } else {
+      return { 
+        success: false, 
+        error: error || 'Failed to create team member'
+      };
+    }
+  } catch (error) {
+    console.error('Error adding single team member:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingActionResult> {
   try {
     const currentUser = await getCurrentUser();
@@ -199,7 +332,8 @@ export async function addTeamMembers(members: TeamMember[]): Promise<OnboardingA
 
           // Create new user
           const userId = require('crypto').randomUUID();
-          const tempPassword = await hashPassword('TempPassword123!');
+          // Use provided password or generate a default one
+          const tempPassword = await hashPassword(member.password || 'TempPassword123!');
 
           await trx('users').insert({
             user_id: userId,
@@ -601,8 +735,8 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     };
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Configure ticket numbering if provided
-      if (data.ticketPrefix || data.ticketStartNumber || data.ticketPaddingLength) {
+      // Configure ticket numbering - check if any numbering field is explicitly set
+      if (data.ticketPrefix !== undefined || data.ticketStartNumber !== undefined || data.ticketPaddingLength !== undefined) {
         const existingNumbering = await trx('next_number')
           .where({ tenant, entity_type: 'TICKET' })
           .first();
@@ -611,8 +745,8 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           await trx('next_number')
             .where({ tenant, entity_type: 'TICKET' })
             .update({
-              prefix: data.ticketPrefix || 'TIC',
-              padding_length: data.ticketPaddingLength || 6,
+              prefix: data.ticketPrefix ?? '',
+              padding_length: data.ticketPaddingLength ?? 6,
               ...(data.ticketStartNumber && { 
                 last_number: 0,
                 initial_value: data.ticketStartNumber 
@@ -622,10 +756,10 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           await trx('next_number').insert({
             tenant,
             entity_type: 'TICKET',
-            prefix: data.ticketPrefix || 'TIC',
-            padding_length: data.ticketPaddingLength || 6,
+            prefix: data.ticketPrefix ?? '',
+            padding_length: data.ticketPaddingLength ?? 6,
             last_number: 0,
-            initial_value: data.ticketStartNumber || 1000
+            initial_value: data.ticketStartNumber || 1
           });
         }
       }
