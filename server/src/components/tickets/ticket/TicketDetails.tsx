@@ -276,6 +276,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         { autoStart: false, holderId }
     );
 
+    // Stabilize startTracking for effects to avoid repeated auto-attempts due to function identity changes
+    const startTrackingRef = React.useRef(startTracking);
+    useEffect(() => { startTrackingRef.current = startTracking; }, [startTracking]);
+
     // Reflect tracking state into local stopwatch state
     useEffect(() => {
         console.log('[TicketDetails] isTracking changed ->', isTracking);
@@ -291,7 +295,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             if (isTracking) return;
             console.log('[TicketDetails] auto-start attempt');
             try {
-                const started = await startTracking(false);
+                const started = await startTrackingRef.current(false);
                 console.log('[TicketDetails] auto-start result ->', started);
                 if (started) {
                     setElapsedTime(0);
@@ -303,7 +307,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
         auto();
         // only attempt once when ids are ready and not already tracking
-    }, [initialTicket.ticket_id, userId, startTracking, isTracking]);
+    }, [initialTicket.ticket_id, userId, isTracking]);
 
     // New screens start from zero; no seeding from existing intervals
 

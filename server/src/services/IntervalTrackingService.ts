@@ -37,6 +37,9 @@ export class IntervalTrackingService {
     return new Promise((resolve, reject) => {
       // Check if IndexedDB is available
       if (!window.indexedDB) {
+        try {
+          console.log('[lock:block]', 'Not starting: IndexedDB is not supported in this browser');
+        } catch {}
         reject(new Error('IndexedDB is not supported in this browser'));
         return;
       }
@@ -48,6 +51,9 @@ export class IntervalTrackingService {
 
       request.onerror = (event) => {
         console.error('Failed to open IndexedDB:', event);
+        try {
+          console.log('[lock:block]', 'Not starting: Failed to open IndexedDB');
+        } catch {}
         reject(new Error('Failed to open IndexedDB'));
       };
 
@@ -99,7 +105,16 @@ export class IntervalTrackingService {
         const nowIso = new Date().toISOString();
         const write = (record: any) => {
           const putReq = store.put(record);
-          putReq.onsuccess = () => { db.close(); resolve(true); };
+          putReq.onsuccess = () => {
+            try {
+              console.log(
+                '[lock:lock]',
+                `Acquired lock for ticket ${ticketId} as holder ${holderId} (user ${userId})`
+              );
+            } catch {}
+            db.close();
+            resolve(true);
+          };
           putReq.onerror = (err) => { console.error('Error acquiring tracking:', err); db.close(); reject(new Error('Failed to acquire tracking')); };
         };
         if (!existing) {
@@ -107,8 +122,23 @@ export class IntervalTrackingService {
           return;
         }
         if (existing.holderId === holderId || force) {
+          if (force && existing.holderId !== holderId) {
+            // Reassigning lock from another holder
+            try {
+              console.log(
+                '[lock:move]',
+                `Reassigned lock for ticket ${ticketId} from holder ${existing.holderId} to ${holderId} (user ${userId})`
+              );
+            } catch {}
+          }
           write({ ticketId, userId, holderId, updatedAt: nowIso });
         } else {
+          try {
+            console.log(
+              '[lock:block]',
+              `Blocked by existing lock on ticket ${ticketId} held by holder ${existing.holderId} (user ${existing.userId})`
+            );
+          } catch {}
           db.close();
           resolve(false);
         }
@@ -127,7 +157,16 @@ export class IntervalTrackingService {
         const existing = (e.target as IDBRequest).result as any | undefined;
         if (existing && existing.holderId === holderId) {
           const delReq = store.delete(ticketId);
-          delReq.onsuccess = () => { db.close(); resolve(); };
+          delReq.onsuccess = () => {
+            try {
+              console.log(
+                '[lock:unlock]',
+                `Released lock for ticket ${ticketId} held by holder ${holderId}`
+              );
+            } catch {}
+            db.close();
+            resolve();
+          };
           delReq.onerror = (err) => { console.error('Error clearing tracking:', err); db.close(); reject(new Error('Failed to clear tracking')); };
         } else {
           db.close();
@@ -864,7 +903,15 @@ export class IntervalTrackingStateMachine {
 
   // Start event: attempts to acquire lock and start a new interval
   async start(force = false): Promise<boolean> {
-    if (!this.ticketId || !this.userId) return false;
+    if (!this.ticketId || !this.userId) {
+      try {
+        console.log(
+          '[lock:block]',
+          `Not starting: missing ${!this.ticketId ? 'ticketId' : ''}${!this.ticketId && !this.userId ? ' and ' : ''}${!this.userId ? 'userId' : ''}`
+        );
+      } catch {}
+      return false;
+    }
     try { console.log('[IntervalMachine] start called force=', force); } catch {}
     this.setState('acquiring_lock');
     try {
@@ -981,7 +1028,15 @@ export class IntervalTrackingStateMachine {
         tget.onsuccess = (ev) => {
           const existing = (ev.target as IDBRequest).result;
           if (existing && existing.holderId === this.holderId) {
-            tstore.delete(this.ticketId);
+            const delReq = tstore.delete(this.ticketId);
+            delReq.onsuccess = () => {
+              try {
+                console.log(
+                  '[lock:unlock]',
+                  `Released lock for ticket ${this.ticketId} held by holder ${this.holderId} (beforeunload)`
+                );
+              } catch {}
+            };
           }
         };
       };
