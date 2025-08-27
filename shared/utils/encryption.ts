@@ -30,7 +30,6 @@ export async function hashPassword(password: string): Promise<string> {
  */
 export async function verifyPassword(password: string, storedHash: string): Promise<boolean> {
   const key = await getSecret('nextauth_secret', 'NEXTAUTH_SECRET');
-  console.log(`key '${key}'`);
   if (!key) {
     throw new Error('Failed to retrieve the encryption key from the secret provider');
   }
@@ -38,8 +37,6 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   const iterations = Number(process.env.ITERATIONS) || 10000;
   const keyLength = Number(process.env.KEY_LENGTH) || 64;
   const digest = process.env.ALGORITHM || 'sha512';
-  
-  console.log(`iterations: ${iterations}, keyLength: ${keyLength}, digest: ${digest}, storedHash: ${storedHash}, password: ${password}`);
 
   if (!password || !storedHash) {
     return false;
@@ -53,12 +50,14 @@ export async function verifyPassword(password: string, storedHash: string): Prom
     }
 
     const hash = crypto.pbkdf2Sync(password, key + salt, iterations, keyLength, digest).toString('hex');
-    console.log(`salt: ${salt}, originalHash: ${originalHash}, hash: ${hash}`);
     
     // Compare the computed hash with the original hash
     return hash === originalHash;
   } catch (error) {
-    console.error('Error during password verification:', error);
+    // Log error without exposing sensitive details
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error during password verification');
+    }
     return false;
   }
 }
