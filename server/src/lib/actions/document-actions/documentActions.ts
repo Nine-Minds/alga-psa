@@ -1,7 +1,6 @@
 'use server'
 
 import { StorageService } from 'server/src/lib/storage/StorageService';
-import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
@@ -26,7 +25,6 @@ import {
 } from 'server/src/interfaces/document.interface';
 import { IDocumentAssociation, IDocumentAssociationInput, DocumentAssociationEntityType } from 'server/src/interfaces/document-association.interface';
 import { v4 as uuidv4 } from 'uuid';
-import { getStorageConfig } from 'server/src/config/storage';
 import { deleteFile } from 'server/src/lib/actions/file-actions/fileActions';
 import { NextResponse } from 'next/server';
 import { deleteDocumentContent } from './documentContentActions';
@@ -1640,24 +1638,10 @@ async function getImageUrlCore(file_id: string, useTransaction: boolean = true):
       return null;
     }
 
-    // Determine storage provider type
-    const config = await getStorageConfig();
-    const providerType = config.defaultProvider;
-
-    if (providerType === 'local') {
-      return `/api/documents/view/${file_id}`;
-    } else if (providerType === 's3') {
-      const provider = await StorageProviderFactory.createProvider();
-      if ('getPublicUrl' in provider && typeof provider.getPublicUrl === 'function') {
-        return await provider.getPublicUrl(fileDetails.storage_path);
-      } else {
-        console.error('getImageUrlCore: S3 provider instance does not implement getPublicUrl method.');
-        return null;
-      }
-    } else {
-      console.error(`getImageUrlCore: Unsupported storage provider type: ${providerType}`);
-      return null;
-    }
+    // Always use the API endpoint approach for consistency
+    // This works for both local and S3/MinIO storage providers
+    // The /api/documents/view endpoint handles fetching from the actual storage
+    return `/api/documents/view/${file_id}`;
   } catch (error) {
     console.error(`getImageUrlCore: Error generating URL for file_id ${file_id}:`, error);
     return null;
