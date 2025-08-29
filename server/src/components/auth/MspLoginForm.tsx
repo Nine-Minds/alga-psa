@@ -122,7 +122,7 @@ export default function MspLoginForm({ callbackUrl, onError, onTwoFactorRequired
           <Link href="/auth/forgot-password"
           className="font-medium text-purple-600 hover:text-purple-500"
           {...withDataAutomationId({ id: 'msp-forgot-password-link' })}>
-            Forgot password?
+            Forgot your password?
           </Link>
         </div>
 

@@ -7,7 +7,7 @@ import MspLoginForm from 'server/src/components/auth/MspLoginForm';
 import TwoFactorInput from 'server/src/components/auth/TwoFA';
 import Alert from 'server/src/components/auth/Alert';
 import { AlertProps } from 'server/src/interfaces';
-import { Shield, Ticket, Mail, Calendar, Clock, Users, FileText } from 'lucide-react';
+import { Ticket, Mail, Calendar, Clock, Users, FileText, Layers } from 'lucide-react';
 
 export default function MspSignIn() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
@@ -122,7 +122,7 @@ export default function MspSignIn() {
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Shield className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
+                <Layers className="w-5 h-5 text-purple-600 mt-1 flex-shrink-0" />
                 <div>
                   <h3 className="text-gray-800 font-semibold text-sm">Project Management Tools</h3>
                 </div>
