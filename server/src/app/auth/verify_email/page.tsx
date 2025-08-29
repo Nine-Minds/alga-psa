@@ -44,7 +44,7 @@ const VerifyEmailContent = () => {
         // Redirect after 10 seconds
         if (countdown <= 0) {
         clearInterval(interval);
-        router.push('/auth/signin');
+        router.push('/auth/msp/signin');
         }
 
         return () => clearInterval(interval);
