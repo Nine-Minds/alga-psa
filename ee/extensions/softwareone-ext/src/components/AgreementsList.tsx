@@ -1,4 +1,4 @@
-import { useRouter } from 'next/navigation';
+// Note: legacy component retained for reference; prefer pages/AgreementsList
 import { dummyAgreements } from '../data/dummyAgreements';
 import { Agreement } from '../types/agreement';
 
