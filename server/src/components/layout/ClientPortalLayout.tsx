@@ -27,7 +27,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/auth/signin?callbackUrl=/client-portal/dashboard' });
+    signOut({ callbackUrl: '/auth/client-portal/signin' });
     console.log('Signing out...');
   };
 

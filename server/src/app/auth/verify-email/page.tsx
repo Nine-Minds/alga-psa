@@ -82,7 +82,7 @@ const VerifyEmailContent = () => {
             }
             <p className="text-gray-500 mb-4">Redirecting in {countdown} seconds...</p>
             <button
-            onClick={() => router.push('/auth/signin')}
+            onClick={() => router.push('/auth/msp/signin')}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-md shadow hover:bg-indigo-700 transition"
             >
             Go to Sign In

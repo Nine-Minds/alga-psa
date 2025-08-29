@@ -86,7 +86,7 @@ export default function Register() {
         user_type: 'internal'
       });
       if (wasSuccess) {
-        router.push(`/auth/check_email?email=${formData.email}&type=register`);
+        router.push(`/auth/check-email?email=${formData.email}&type=register`);
       } else {
         setIsAlertOpen(true);
         setAlertInfo({

@@ -28,7 +28,8 @@ export default function SignOutDialog({ isOpen, onClose }: SignOutDialogProps) {
       posthog.reset();
     }
     
-    await signOut({ callbackUrl: '/auth/signin?callbackUrl=/client-portal/dashboard' });
+    // Redirect to the general signin page which will redirect appropriately
+    await signOut({ callbackUrl: '/auth/signin' });
   };
 
   return (
