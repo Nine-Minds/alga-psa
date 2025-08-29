@@ -1,0 +1,56 @@
+{
+  "name": "@alga/extension-iframe-sdk",
+  "version": "0.1.0",
+  "private": false,
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "description": "Client SDK for building Alga iframe-delivered extensions (postMessage bridge + React hooks).",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "react": "^18"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.5",
+    "jsdom": "^25.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/jsdom": "^21.1.7",
+    "@types/node": "^22.4.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/your-repo.git",
+    "directory": "packages/extension-iframe-sdk"
+  },
+  "keywords": [
+    "alga-psa",
+    "extension",
+    "iframe",
+    "sdk",
+    "postMessage",
+    "react",
+    "hooks"
+  ]
+}
+

@@ -7,3 +7,4 @@ if (!el) {
   throw new Error('Root element #root not found');
 }
 createRoot(el).render(<App />);
+

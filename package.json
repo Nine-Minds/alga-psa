@@ -5,7 +5,8 @@
     "server",
     "ee/server",
     "services/workflow-worker",
-    "shared"
+    "shared",
+    "packages/*"
   ],
   "scripts": {
     "migrate": "knex migrate:latest",

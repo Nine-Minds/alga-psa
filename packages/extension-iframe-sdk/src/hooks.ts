@@ -61,3 +61,4 @@ export function useAuthToken(bridge: IframeBridge): string | null {
 export function useResize(bridge: IframeBridge): (height: number) => void {
   return useMemo(() => (h: number) => bridge.emitToHost('resize', { height: h }), [bridge]);
 }
+
