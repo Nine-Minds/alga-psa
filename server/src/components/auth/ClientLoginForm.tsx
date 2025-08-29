@@ -159,6 +159,16 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         </div>
       </div>
 
+      <div className="text-right">
+        <Link
+          href="/auth/forgot-password"
+          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+          {...withDataAutomationId({ id: 'client-forgot-password-link' })}
+        >
+          Forgot your password?
+        </Link>
+      </div>
+
       <Button
         id="client-sign-in-button"
         type="submit"
@@ -167,16 +177,6 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       >
         {isLoading ? 'Signing in...' : 'Sign In'}
       </Button>
-
-      <div className="text-sm">
-        <Link
-          href="/auth/forgot-password"
-          className="text-blue-600 hover:text-blue-800 transition-colors"
-          {...withDataAutomationId({ id: 'client-forgot-password-link' })}
-        >
-          Forgot your password?
-        </Link>
-      </div>
     </form>
   )
 }

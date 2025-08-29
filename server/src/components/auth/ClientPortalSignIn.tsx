@@ -4,17 +4,15 @@ import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import ClientLoginForm from 'server/src/components/auth/ClientLoginForm';
-import RegisterForm from 'server/src/components/auth/RegisterForm';
 import TwoFactorInput from 'server/src/components/auth/TwoFA';
 import Alert from 'server/src/components/auth/Alert';
 import { AlertProps } from 'server/src/interfaces';
-import { Ticket, FileText, Clock, MessageCircle, Eye, History } from 'lucide-react';
+import { Ticket, FileText, Eye, History } from 'lucide-react';
 
 export default function ClientPortalSignIn() {
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
   const searchParams = useSearchParams();
 
   const callbackUrl = searchParams?.get('callbackUrl') || '/client-portal/dashboard';
@@ -140,47 +138,18 @@ export default function ClientPortalSignIn() {
           <Card className="max-w-md w-full bg-white shadow-xl">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
-                {showRegister ? 'Create Account' : 'Client Portal Login'}
+                Client Portal Login
               </CardTitle>
               <CardDescription className="text-center">
-                {showRegister ?
-                  'Create your account to access the client portal.' :
-                  'Please enter your credentials to access your account.'
-                }
+                Please enter your credentials to access your account.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {showRegister ? (
-                <>
-                  <RegisterForm />
-                  <p className="mt-4 text-center text-sm text-gray-600">
-                    Already have an account?{' '}
-                    <button
-                      onClick={() => setShowRegister(false)}
-                      className="font-medium text-indigo-600 hover:text-indigo-500"
-                    >
-                      Sign in
-                    </button>
-                  </p>
-                </>
-              ) : (
-                <>
-                  <ClientLoginForm
-                    callbackUrl={callbackUrl}
-                    onError={handleError}
-                    onTwoFactorRequired={() => setIsOpen2FA(true)}
-                  />
-                  <p className="mt-4 text-center text-sm text-gray-600">
-                    Don't have an account?{' '}
-                    <button
-                      onClick={() => setShowRegister(true)}
-                      className="font-medium text-indigo-600 hover:text-indigo-500"
-                    >
-                      Create one
-                    </button>
-                  </p>
-                </>
-              )}
+              <ClientLoginForm
+                callbackUrl={callbackUrl}
+                onError={handleError}
+                onTwoFactorRequired={() => setIsOpen2FA(true)}
+              />
               <div className="mt-6 pt-6 border-t text-center">
                 <a href="/auth/msp/signin" className="text-sm text-gray-600 hover:text-indigo-600">
                   MSP Staff? Login here →
