@@ -163,7 +163,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
       user_type: userType  // Include the correct user type in token
     });
 
-    const resetLink = `${process.env.HOST}/auth/password-reset/set-new-password?token=${recoverToken}&portal=${portal}`;
+    const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/password-reset/set-new-password?token=${recoverToken}&portal=${portal}`;
     
     // Use SystemEmailService for password reset (no tenant context needed)
     const systemEmailService = await getSystemEmailService();
