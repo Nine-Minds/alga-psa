@@ -314,7 +314,8 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
         // }),
     ],
     pages: {
-        signIn: '/auth/signin',
+        signIn: '/auth/signin', // This will redirect to the appropriate page
+        signOut: '/auth/signin', // After sign out, go to the redirect page
     },
     session: {
         strategy: "jwt",
@@ -668,7 +669,8 @@ export const options: NextAuthOptions = {
         // }),
     ],
     pages: {
-        signIn: '/auth/signin',
+        signIn: '/auth/signin', // This will redirect to the appropriate page
+        signOut: '/auth/signin', // After sign out, go to the redirect page
     },
     session: {
         strategy: "jwt",

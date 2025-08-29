@@ -77,254 +77,304 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   const { tenantName, adminUser, temporaryPassword } = input;
   const defaultLoginUrl = process.env.APPLICATION_URL;
   const baseUrl = defaultLoginUrl?.replace(/\/$/, '') || '';
-  const clientPortalLoginUrl = `${baseUrl}/auth/signin?callbackUrl=/client-portal/dashboard`;
+  const clientPortalLoginUrl = `${baseUrl}/auth/client-portal/signin`;
   const currentYear = new Date().getFullYear();
   
   const subject = `Welcome to Alga PSA - Your Account is Ready`;
   
   const htmlBody = `
   <!DOCTYPE html>
-  <html>
+  <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="en">
   <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
+    <!--[if !mso]><!-->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!--<![endif]-->
     <title>Welcome to Alga PSA</title>
-    <style>
-      body { 
-        font-family: Inter, system-ui, sans-serif; 
-        line-height: 1.6; 
-        color: ${COLORS.textPrimary}; 
-        max-width: 600px; 
-        margin: 0 auto; 
-        padding: 20px; 
-        background-color: ${COLORS.bgSecondary}; 
+    <!--[if mso]>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:AllowPNG/>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+    <![endif]-->
+    <style type="text/css">
+      /* Web fonts for modern clients */
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
+      
+      /* Reset styles for better email client compatibility */
+      table {border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
+      a {text-decoration: none; color: #8a4dea;}
+      h1, h2, h3, h4, h5, h6 {color: #0f172a; margin: 0; padding: 0; mso-line-height-rule: exactly;}
+      p {margin: 0; padding: 0; mso-line-height-rule: exactly;}
+      
+      /* Ensure proper spacing */
+      td {mso-line-height-rule: exactly;}
+      
+      /* Outlook.com specific fix */
+      .ExternalClass {width: 100%;}
+      .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td {line-height: 100%;}
+      
+      /* Rounded corners for all modern clients - not just WebKit */
+      .email-container {border-radius: 12px !important; overflow: hidden !important;}
+      .rounded-top {border-radius: 12px 12px 0 0 !important;}
+      .rounded-bottom {border-radius: 0 0 12px 12px !important;}
+      .rounded {border-radius: 8px !important;}
+      .rounded-small {border-radius: 6px !important;}
+      .credential-box {border-radius: 8px !important;}
+      .tagline-box {border-radius: 6px !important;}
+      .warning-box {border-radius: 6px !important;}
+      .shadow {box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07) !important;}
+      
+      /* Progressive enhancement for modern clients */
+      @media screen and (-webkit-min-device-pixel-ratio:0) {
+        /* WebKit specific enhancements */
+        .button-hover:hover {background-color: #7c3aed !important; transform: translateY(-1px) !important; box-shadow: 0 4px 8px rgba(138, 77, 234, 0.3) !important;}
+        /* Keep Nine Minds button blue on hover using secondary-300 */
+        .button-hover-blue:hover {background-color: rgb(58, 186, 224) !important; box-shadow: 0 4px 8px rgba(64, 207, 249, 0.3) !important;}
       }
-      .header { 
-        background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); 
-        color: white; 
-        padding: 32px 24px; 
-        border-radius: 12px 12px 0 0; 
-        text-align: center; 
+      
+      /* Support for non-WebKit modern browsers */
+      @supports (border-radius: 12px) {
+        .email-container {border-radius: 12px !important; overflow: hidden !important;}
+        .rounded-top {border-radius: 12px 12px 0 0 !important;}
+        .rounded-bottom {border-radius: 0 0 12px 12px !important;}
+        .rounded {border-radius: 8px !important;}
+        .rounded-small {border-radius: 6px !important;}
       }
-      .header h1 {
-        font-family: Poppins, system-ui, sans-serif;
-        font-weight: 700;
-        font-size: 28px;
-        margin: 0 0 8px 0;
-      }
-      .header p {
-        margin: 0;
-        opacity: 1;
-        font-size: 16px;
-        color: rgba(255, 255, 255, 0.95);
-      }
-      .content { 
-        background: ${COLORS.bgPrimary}; 
-        padding: 32px; 
-        border: 1px solid ${COLORS.borderLight}; 
-        border-top: none; 
-        border-bottom: none; 
-      }
-      .footer { 
-        background: ${COLORS.bgDark}; 
-        color: ${COLORS.textOnDark}; 
-        padding: 24px; 
-        border-radius: 0 0 12px 12px; 
-        text-align: center; 
-        font-size: 14px; 
-        line-height: 1.6;
-      }
-      .footer p {
-        margin: 6px 0;
-        color: ${COLORS.textOnDark};
-      }
-      .footer p:last-child {
-        color: ${COLORS.textLight};
-        font-size: 13px;
-        margin-top: 16px;
-      }
-      .credentials { 
-        background: ${COLORS.primarySubtle}; 
-        padding: 24px; 
-        border-radius: 8px; 
-        border: 1px solid ${COLORS.borderSubtle};
-        border-left: 4px solid ${COLORS.primary};
-        margin: 24px 0; 
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-      }
-      .credentials h3 {
-        color: ${COLORS.textPrimary};
-        margin: 0 0 16px 0;
-        font-size: 18px;
-        font-weight: 600;
-      }
-      .credentials p {
-        margin: 8px 0;
-        color: ${COLORS.textSecondary};
-      }
-      .login-button { 
-        display: inline-block; 
-        background: ${COLORS.primary}; 
-        color: ${COLORS.bgPrimary} !important; 
-        padding: 14px 32px; 
-        text-decoration: none; 
-        border-radius: 8px; 
-        font-weight: 600; 
-        margin: 24px 0; 
-        font-family: Poppins, system-ui, sans-serif; 
-        font-size: 16px;
-        transition: all 0.2s ease;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-      }
-      .login-button:hover {
-        background: ${COLORS.primaryDark};
-        color: ${COLORS.bgPrimary} !important;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        transform: translateY(-1px);
-      }
-      .warning { 
-        background: ${COLORS.warningBg}; 
-        border: 1px solid ${COLORS.warning}; 
-        border-radius: 8px; 
-        padding: 20px; 
-        margin: 24px 0; 
-      }
-      .warning h4 {
-        color: ${COLORS.warningText};
-        margin: 0 0 12px 0;
-        font-size: 16px;
-        font-weight: 600;
-      }
-      .warning ul {
-        margin: 0;
-        padding-left: 20px;
-        color: ${COLORS.warningText};
-      }
-      .warning li {
-        margin: 4px 0;
-      }
-      .code { 
-        font-family: 'Courier New', monospace; 
-        background: ${COLORS.borderLight}; 
-        padding: 4px 8px; 
-        border-radius: 4px; 
-        color: ${COLORS.textPrimary}; 
-        font-size: 14px;
-        font-weight: 600;
-      }
-      .brand-highlight { 
-        color: ${COLORS.primary}; 
-        font-weight: 600;
-      }
-      h2 {
-        color: ${COLORS.textPrimary};
-        font-family: Poppins, system-ui, sans-serif;
-        font-size: 24px;
-        font-weight: 600;
-        margin: 0 0 16px 0;
-      }
-      h3 {
-        color: ${COLORS.textPrimary};
-        font-size: 18px;
-        font-weight: 600;
-        margin: 24px 0 12px 0;
-      }
-      p {
-        color: ${COLORS.textSecondary};
-        margin: 0 0 16px 0;
-      }
-      ol {
-        color: ${COLORS.textSecondary};
-        margin: 0 0 16px 0;
-        padding-left: 24px;
-      }
-      ol li {
-        margin: 8px 0;
-      }
-      a {
-        color: ${COLORS.primary};
-        text-decoration: underline;
-      }
-      a:hover {
-        color: ${COLORS.primaryDark};
-      }
-      .tagline {
-        background: ${COLORS.primarySubtle};
-        border-left: 3px solid ${COLORS.primary};
-        padding: 20px 24px;
-        margin: 24px 0;
-        font-style: normal;
-        color: ${COLORS.textSecondary};
-        border-radius: 6px;
-        line-height: 1.7;
-      }
-      .divider {
-        height: 1px;
-        background: ${COLORS.borderLight};
-        margin: 32px 0;
+      
+      /* Dark mode support */
+      @media (prefers-color-scheme: dark) {
+        /* Dark mode styles kept minimal for safety */
       }
     </style>
   </head>
-  <body>
-    <div class="header">
-      <h1>Welcome to Alga PSA!</h1>
-      <p>Your account has been successfully created</p>
-    </div>
-  
-  <div class="content">
-    <h2>Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
-    
-    <p>Congratulations! Your new account for <strong>${tenantName}</strong> has been successfully set up on Alga PSA. You have been designated as the administrator and can now access both Alga PSA and your management portal.</p>
-    
-    <div class="tagline">
-      Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
-    </div>
-    
-    <div class="credentials">
-      <h3>Your Login Credentials</h3>
-      <p><strong>Email:</strong> ${adminUser.email}</p>
-      <p><strong>Temporary Password:</strong> <span class="code">${temporaryPassword}</span></p>
-      <p><strong>Login URL:</strong> <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></p>
-      <p><strong>Client Portal Login:</strong> <a href="${clientPortalLoginUrl}">${clientPortalLoginUrl}</a></p>
-    </div>
-    
-    <div class="warning">
-      <h4>⚠️ Important Security Information</h4>
-      <ul>
-        <li>This is a <strong>temporary password</strong> that expires in 24 hours</li>
-        <li>You will be required to change it on your first login</li>
-        <li>Please store this password securely and do not share it</li>
-        <li>If you don't login within 24 hours, you'll need to request a password reset</li>
-      </ul>
-    </div>
-    
-    <div style="text-align: center;">
-      <a href="${defaultLoginUrl}" class="login-button" style="margin-right: 8px;">Login Now</a>
-      <a href="${clientPortalLoginUrl}" class="login-button">Open Client Portal</a>
-    </div>
-    
-    <div class="divider"></div>
-    
-    <h3>What's Next?</h3>
-    <ol>
-      <li>Click the login button above or visit: <a href="${defaultLoginUrl}">${defaultLoginUrl}</a></li>
-      <li>Enter your email and temporary password</li>
-      <li>Complete the onboarding wizard, including changing your password, setting up your profile, and configuring your ticketing and billing settings</li>
-      <li>Start transforming your business with Alga PSA</li>
-    </ol>
-    
-    <h3>Need Help?</h3>
-    <p>If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
-    
-    <p>Welcome aboard!</p>
-  </div>
-  
-  <div class="footer">
-    <p>This email was sent automatically as part of your tenant creation process.</p>
-    <p>If you did not request this account, please contact support.</p>
-    <p>© ${currentYear} Nine Minds. All rights reserved.</p>
-  </div>
-</body>
+  <body style="margin: 0; padding: 0; word-spacing: normal; background-color: #f8fafc; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+      <tr>
+        <td>
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" width="100%" style="border-collapse: collapse;" class="wrapper" bgcolor="#f8fafc">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-spacing: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);" class="email-container shadow" bgcolor="#ffffff">
+              <tr>
+                <td>
+                  <!-- Header -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                    <tr>
+                      <td align="center" bgcolor="#8a4dea" class="rounded-top" style="background: linear-gradient(135deg, #8a4dea 0%, #a366f0 100%); background-color: #8a4dea; padding: 40px 24px; text-align: center; border-radius: 12px 12px 0 0;">
+                        <h1 style="font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 32px; color: #ffffff; margin: 0 0 8px 0; line-height: 1.2;">Welcome to Alga PSA!</h1>
+                        <p style="font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 16px; color: #ffffff; margin: 0; opacity: 0.95;">Your account has been successfully created</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <!-- Main Content -->
+                  <tr>
+                    <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
+                      <h2 style="color: #0f172a; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 24px; font-weight: 600; margin-bottom: 16px; line-height: 1.3;">Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
+                      
+                      <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">Congratulations! Your new account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> has been successfully set up. You now have access to two powerful portals designed to streamline your operations.</p>
+                      
+                      <!-- Tagline with spacing -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 6px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#faf8ff" class="tagline-box" style="background-color: #faf8ff; border-left: 4px solid #8a4dea; padding: 20px 24px; border-radius: 6px;">
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; line-height: 1.7; font-size: 15px; font-style: italic;">Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.</p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Two Portal Access Section -->
+                      <h3 style="color: #0f172a; font-size: 20px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 32px 0 20px 0;">Your Two Portal Access</h3>
+                      
+                      <!-- MSP Portal -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 16px;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#f8f4ff" style="background-color: #f8f4ff; padding: 24px; border: 1px solid #e9e5f5; border-left: 4px solid #8a4dea; border-radius: 8px;">
+                                  <h4 style="color: #8a4dea; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">🏢 MSP Management Portal</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;">${defaultLoginUrl}</a></p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- NineMinds Portal -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 24px;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#f0fbff" style="background-color: #f0fbff; padding: 24px; border: 1px solid #bae6fd; border-left: 4px solid #40cff9; border-radius: 8px;">
+                                  <h4 style="color: #0284c7; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">👥 Nine Minds Portal</h4>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0; line-height: 1.6; font-size: 14px;">Nine Minds Client Portal where you can submit support tickets, track them, and get help from our team.</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 14px;"><b style="color: #0f172a; font-weight: 600;">Login URL:</b> <a href="${clientPortalLoginUrl}" style="color: #0284c7; text-decoration: underline;">${clientPortalLoginUrl}</a></p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Shared Credentials -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 8px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#faf8ff" class="credential-box" style="background-color: #faf8ff; padding: 24px; border: 1px solid #e9e5f5; border-radius: 8px;">
+                                  <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">🔐 Your Login Credentials (Same for Both Portals)</h3>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Email:</b> ${adminUser.email}</p>
+                                  <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 8px 0; font-size: 15px;"><b style="color: #0f172a; font-weight: 600;">Temporary Password:</b> <span style="font-family: 'Courier New', monospace; background-color: #e2e8f0; padding: 4px 8px; color: #0f172a; font-size: 14px; font-weight: 600; letter-spacing: 0.5px;">${temporaryPassword}</span></p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Warning with spacing -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
+                        <tr>
+                          <td style="padding: 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-radius: 6px; overflow: hidden;">
+                              <tr>
+                                <td bgcolor="#fffbeb" class="warning-box" style="background-color: #fffbeb; border: 1px solid #f59e0b; padding: 20px; border-radius: 6px;">
+                                  <h4 style="color: #92400e; font-size: 16px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">⚠️ Important Security Information</h4>
+                                  <p style="padding-left: 0px; color: #92400e; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 14px; margin: 0;">
+                                    &bull; This temporary password is used only for your first login<br>
+                                    &bull; You will be required to create a new password when you sign in<br>
+                                  </p>
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Buttons - VML Bulletproof Pattern -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 32px 0;">
+                        <tr>
+                          <td align="center">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="border-collapse: collapse;">
+                              <tr>
+                                <td style="padding-right: 12px;">
+                                  <!-- MSP Portal Button -->
+                                  <!--[if mso]>
+                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${defaultLoginUrl}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#8a4dea">
+                                    <w:anchorlock/>
+                                    <center>
+                                  <![endif]-->
+                                  <a href="${defaultLoginUrl}" class="button-hover rounded" style="background-color:#8a4dea;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> MSP Portal →</a>
+                                  <!--[if mso]>
+                                    </center>
+                                  </v:roundrect>
+                                  <![endif]-->
+                                </td>
+                                <td style="padding-left: 12px;">
+                                  <!-- Client Portal Button -->
+                                  <!--[if mso]>
+                                  <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${clientPortalLoginUrl}" style="height:48px;v-text-anchor:middle;width:200px;" arcsize="17%" stroke="f" fillcolor="#40cff9">
+                                    <w:anchorlock/>
+                                    <center>
+                                  <![endif]-->
+                                  <a href="${clientPortalLoginUrl}" class="button-hover button-hover-blue rounded" style="background-color:#40cff9;color:#ffffff;display:inline-block;padding:14px 28px;font-family:'Poppins',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:15px;font-weight:600;text-align:center;text-decoration:none;border-radius:8px;-webkit-text-size-adjust:none;mso-hide:all;"> Nine Minds Portal →</a>
+                                  <!--[if mso]>
+                                    </center>
+                                  </v:roundrect>
+                                  <![endif]-->
+                                </td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <!-- Divider -->
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                        <tr>
+                          <td style="padding: 32px 0 24px 0;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
+                              <tr>
+                                <td style="height: 1px; background-color: #e2e8f0; font-size: 1px; line-height: 1px;">&nbsp;</td>
+                              </tr>
+                            </table>
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">What's Next?</h3>
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">1.</b> Visit the <a href="${defaultLoginUrl}" style="color: #8a4dea; text-decoration: underline;"> MSP Portal</a>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">2.</b> Enter your email and temporary password
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">3.</b> Complete the onboarding wizard and set your new password
+                          </td>
+                        </tr>
+                        <tr>
+                          <td style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding-bottom: 12px; line-height: 1.6; font-size: 15px;">
+                            <b style="color: #8a4dea;">4.</b> Start transforming your business with Alga PSA
+                          </td>
+                        </tr>
+                      </table>
+                      
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 24px 0;">
+                        <tr>
+                          <td>
+                            <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">Need Help?</h3>
+                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
+                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${clientPortalLoginUrl}" style="color: #0284c7; text-decoration: underline;"> Nine Minds Client Portal</a></p>
+                            
+                            <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 24px 0 0 0;">Welcome aboard!</p>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" bgcolor="#1e293b" class="rounded-bottom" style="background-color: #1e293b; color: #cbd5e1; padding: 32px 24px; text-align: center; font-size: 14px; line-height: 1.6; border-radius: 0 0 12px 12px;">
+                      <p style="color: #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 8px 0;">This email was sent automatically as part of your tenant creation process.</p>
+                      <p style="color: #cbd5e1; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">If you did not request this account, please contact support.</p>
+                      <p style="color: #94a3b8; font-size: 13px; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0;">© ${currentYear} Nine Minds. All rights reserved.</p>
+                    </td>
+                  </tr>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+        </td>
+      </tr>
+    </table>
+  </body>
 </html>`;
 
   const textBody = `
@@ -332,31 +382,35 @@ Welcome to Alga PSA!
 
 Hello ${adminUser.firstName} ${adminUser.lastName},
 
-Congratulations! Your new tenant account for "${tenantName}" has been successfully set up.
+Congratulations! Your new account for "${tenantName}" has been successfully set up. You now have access to two powerful portals designed to streamline your operations.
 
-LOGIN CREDENTIALS:
+YOUR TWO PORTAL ACCESS:
+
+🏢 MSP MANAGEMENT PORTAL
+Your main dashboard for managing your MSP business operations, including tickets, projects, and team management.
+Login URL: ${defaultLoginUrl}
+
+👥 NINE MINDS PORTAL
+Nine Minds Client Portal where you can submit support tickets, track them, and get help from our team.
+Login URL: ${clientPortalLoginUrl}
+
+LOGIN CREDENTIALS (Same for Both Portals):
 Email: ${adminUser.email}
 Temporary Password: ${temporaryPassword}
-Login URL: ${defaultLoginUrl}
-Client Portal Login: ${clientPortalLoginUrl}
 
 IMPORTANT SECURITY INFORMATION:
-- This is a temporary password that expires in 24 hours
-- You will be required to change it on your first login
-- Please store this password securely and do not share it
-- If you don't login within 24 hours, you'll need to request a password reset
+- This temporary password is used only for your first login
+- You will be required to create a new password when you sign in
 
-GETTING STARTED:
-1. Visit: ${defaultLoginUrl}
-2. Or visit the client portal: ${clientPortalLoginUrl}
-3. Enter your email and temporary password
-4. Create a new secure password when prompted
-5. Complete your profile setup
-6. Start configuring your tenant settings
+What's Next?
+1. Visit the MSP Portal: ${defaultLoginUrl}
+2. Enter your email and temporary password
+3. Complete the onboarding wizard and set your new password
+4. Start transforming your business with Alga PSA
 
-Need help? Contact our support team if you have any questions.
-
-Say goodbye to scattered tools, manual workarounds, and overly complex systems. Alga PSA by Nine Minds brings everything together in one powerful platform — intuitive, user-focused, and built to grow with your business.
+Need help?
+If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
+For support, use the Nine Minds Client Portal: ${clientPortalLoginUrl} 
 
 Welcome aboard!
 

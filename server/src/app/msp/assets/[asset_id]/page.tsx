@@ -16,7 +16,7 @@ export default async function AssetPage({ params }: Props) {
   const resolvedParams = await params;
   const session = await getServerSession();
   if (!session?.user) {
-    redirect('/auth/signin');
+    redirect('/auth/msp/signin');
   }
 
   const userEmail = await getCurrentUser();
@@ -24,7 +24,7 @@ export default async function AssetPage({ params }: Props) {
   
   if (!userId) {
     console.error('User ID is missing from the session');
-    redirect('/auth/signin');
+    redirect('/auth/msp/signin');
   }
 
   try {
@@ -32,7 +32,7 @@ export default async function AssetPage({ params }: Props) {
     const user = await User.get(knex, userId);
     if (!user) {
       console.error(`User not found for ID: ${userId}`);
-      redirect('/auth/signin');
+      redirect('/auth/msp/signin');
     }
 
     const asset = await getAsset(resolvedParams.asset_id);

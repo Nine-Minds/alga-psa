@@ -10,7 +10,7 @@ import { getConnection } from 'server/src/lib/db/db';
 export default async function AssetsPage() {
   const session = await getServerSession();
   if (!session?.user) {
-    redirect('/auth/signin');
+    redirect('/auth/msp/signin');
   }
 
   const userEmail = await getCurrentUser();
@@ -18,7 +18,7 @@ export default async function AssetsPage() {
   
   if (!userId) {
     console.error('User ID is missing from the session');
-    redirect('/auth/signin');
+    redirect('/auth/msp/signin');
   }
 
   try {
@@ -26,7 +26,7 @@ export default async function AssetsPage() {
     const user = await User.get(knex, userId);
     if (!user) {
       console.error(`User not found for ID: ${userId}`);
-      redirect('/auth/signin');
+      redirect('/auth/msp/signin');
     }
 
     const assets: AssetListResponse = await listAssets({});

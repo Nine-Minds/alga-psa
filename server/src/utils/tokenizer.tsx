@@ -14,16 +14,19 @@ async function getSecretKey(): Promise<Secret> {
 
 
 export async function createToken(userRegister: IUserRegister) {
-    logger.system('Creating token');
-    const { username, email, password, companyName } = userRegister;
+    logger.debug('Creating token');
+    const { username, email, password, companyName, user_type } = userRegister;
     const secretKey = await getSecretKey();
 
+    // expiresIn can be a number (seconds) or a string like '1h', '7d', etc.
+    const expiresIn: string | number = process.env.TOKEN_EXPIRES || '1h';
+    
     const token = jwt.sign(
-        { username, email, password, companyName },
+        { username, email, password, companyName, user_type },
         secretKey,
         { 
-            expiresIn: process.env.TOKEN_EXPIRES ? parseInt(process.env.TOKEN_EXPIRES) : 3600 // 1 hour in seconds
-        }
+            expiresIn
+        } as SignOptions
     );
 
     return token;
@@ -32,7 +35,7 @@ export async function createToken(userRegister: IUserRegister) {
 
 export async function getInfoFromToken(token: string): Promise<TokenResponse> {
     try {
-        logger.system('Getting user info from token');
+        logger.debug('Getting user info from token');
         const secretKey = await getSecretKey();
         const decoded = jwt.verify(token, secretKey) as IUserRegister;
         return {

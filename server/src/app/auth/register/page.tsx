@@ -86,7 +86,7 @@ export default function Register() {
         user_type: 'internal'
       });
       if (wasSuccess) {
-        router.push(`/auth/check_email?email=${formData.email}&type=register`);
+        router.push(`/auth/check-email?email=${formData.email}&type=register`);
       } else {
         setIsAlertOpen(true);
         setAlertInfo({
@@ -293,7 +293,7 @@ export default function Register() {
 
           <p className="mt-2 text-center text-sm text-gray-600">
             Already have an account?{' '}
-            <Link href="/auth/signin" className="font-medium text-purple-600 hover:text-purple-500">
+            <Link href="/auth/msp/signin" className="font-medium text-purple-600 hover:text-purple-500">
               Log in
             </Link>
           </p>

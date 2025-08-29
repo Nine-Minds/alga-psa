@@ -7,13 +7,14 @@ import * as Label from '@radix-ui/react-label';
 import * as Form from '@radix-ui/react-form';
 import { recoverPassword } from 'server/src/lib/actions/useRegister';
 import { Input } from 'server/src/components/ui/Input';
-
+import { Button } from 'server/src/components/ui/Button';
+import toast from 'react-hot-toast';
 
 type FormData = {
   email: string;
 };
 
-const ForgotPassword: React.FC = () => {
+const MspForgotPassword: React.FC = () => {
   const [formData, setFormData] = useState<FormData>({
     email: '',
   });
@@ -22,9 +23,12 @@ const ForgotPassword: React.FC = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log('Password reset requested for:', formData.email);
-    await recoverPassword(formData.email);
-    router.push(`/auth/check_email?email=${formData.email}&type=forgot_password`);
+    console.log('Password reset requested for MSP user:', formData.email);
+    
+    // Always show success message for security - don't reveal if email exists
+    await recoverPassword(formData.email, 'msp');
+    toast.success('If an account exists with this email, a password reset link has been sent.');
+    router.push(`/auth/check-email?email=${formData.email}&type=forgot_password&portal=msp`);
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -36,13 +40,13 @@ const ForgotPassword: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center pt-20 min-h-screen bg-white">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white">
+    <div className="flex flex-col items-center pt-20 min-h-screen bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100">
+      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-lg">
         <div className="text-center">
           <div className="inline-block align-middle content-center">
             <Image
               src="/images/avatar-purple-background.png"
-              alt="Pippa Wilkinson"
+              alt="AlgaPSA Logo"
               width={60}
               height={60}
               className="rounded-full"
@@ -71,17 +75,21 @@ const ForgotPassword: React.FC = () => {
               </Form.Control>
             </div>
           </Form.Field>
-          <Form.Submit asChild>
-            <button
-              type="submit"
-              className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-md shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-            >
-              Reset password
-            </button>
-          </Form.Submit>
+          <div className="flex justify-center">
+            <Form.Submit asChild>
+              <Button
+                id="send-password-reset-button"
+                variant="default"
+                type="submit"
+                className="w-full"
+              >
+                Send Reset Link
+              </Button>
+            </Form.Submit>
+          </div>
         </Form.Root>
         <div className="text-center">
-          <Link href="/auth/signin" className="text-sm font-medium text-purple-600 hover:text-purple-500">
+          <Link href="/auth/msp/signin" className="text-sm font-medium text-purple-600 hover:text-purple-500">
             ← Back to log in
           </Link>
         </div>
@@ -90,4 +98,4 @@ const ForgotPassword: React.FC = () => {
   );
 };
 
-export default ForgotPassword;
+export default MspForgotPassword;
