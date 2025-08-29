@@ -1,14 +1,16 @@
 "use client";
 import React from 'react';
-
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { Button } from 'server/src/components/ui/Button';
 
 const PasswordResetConfirmation: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const portal = searchParams?.get('portal') || 'msp';
 
   const handleContinue = () => {
-    router.push('/auth/signin'); 
+    router.push(portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin'); 
   };
 
   return (
@@ -27,14 +29,16 @@ const PasswordResetConfirmation: React.FC = () => {
         <p className="text-sm text-gray-600">
           Your password has been successfully reset.
           <br />
-          Click below to log in magically.
+          Click below to sign in with your new password.
         </p>
-        <button
+        <Button
+          id="proceed-to-sign-in-btn"
+          variant="default"
           onClick={handleContinue}
           className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
         >
           Continue
-        </button>
+        </Button>
       </div>
     </div>
   );
