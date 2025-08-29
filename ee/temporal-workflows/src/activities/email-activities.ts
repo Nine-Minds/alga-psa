@@ -77,7 +77,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
   const { tenantName, adminUser, temporaryPassword } = input;
   const defaultLoginUrl = process.env.APPLICATION_URL;
   const baseUrl = defaultLoginUrl?.replace(/\/$/, '') || '';
-  const clientPortalLoginUrl = `${baseUrl}/auth/signin?callbackUrl=/client-portal/dashboard`;
+  const clientPortalLoginUrl = `${baseUrl}/auth/client-portal/signin`;
   const currentYear = new Date().getFullYear();
   
   const subject = `Welcome to Alga PSA - Your Account is Ready`;

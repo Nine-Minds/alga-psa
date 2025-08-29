@@ -268,7 +268,12 @@ export async function sessionAuthMiddleware(
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      return res.redirect(`/auth/signin?callbackUrl=${callbackUrl}`);
+      // Redirect to appropriate login page based on the path
+      if (req.originalUrl.includes('/client-portal')) {
+        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
+      } else {
+        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+      }
     }
     
     // Try alternative token parsing first
@@ -286,7 +291,12 @@ export async function sessionAuthMiddleware(
     if (!token) {
       // No session token, redirect to login
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      return res.redirect(`/auth/signin?callbackUrl=${callbackUrl}`);
+      // Redirect to appropriate login page based on the path
+      if (req.originalUrl.includes('/client-portal')) {
+        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
+      } else {
+        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+      }
     }
 
     const userType = token.user_type as string;
@@ -297,13 +307,23 @@ export async function sessionAuthMiddleware(
     if (isClientPortal && userType !== 'client') {
       // Non-client users cannot access client portal
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      return res.redirect(`/auth/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      // Redirect with error to appropriate login page
+      if (req.originalUrl.includes('/client-portal')) {
+        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      } else {
+        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      }
     }
 
     if (!isClientPortal && userType === 'client') {
       // Client users cannot access MSP routes
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      return res.redirect(`/auth/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      // Redirect with error to appropriate login page
+      if (req.originalUrl.includes('/client-portal')) {
+        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      } else {
+        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
+      }
     }
 
     // Store user info for downstream middleware
@@ -316,7 +336,7 @@ export async function sessionAuthMiddleware(
     return next();
   } catch (error) {
     console.error('Error validating session:', error);
-    return res.redirect('/auth/signin');
+    return res.redirect('/auth/msp/signin');
   }
 }
 
@@ -379,7 +399,7 @@ export async function authorizationMiddleware(
     
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
-      return res.redirect('/auth/signin');
+      return res.redirect('/auth/msp/signin');
     }
     
     // Get token for web routes (session-based) with adapted request
@@ -392,12 +412,12 @@ export async function authorizationMiddleware(
     // For web routes, validate session token
     if (!token) {
       // No token found, redirect to sign in (for web routes)
-      return res.redirect('/auth/signin');
+      return res.redirect('/auth/msp/signin');
     }
 
     if (token.error === "TokenValidationError") {
       // Token validation failed, redirect to sign in
-      return res.redirect('/auth/signin');
+      return res.redirect('/auth/msp/signin');
     }
 
     // Set the tenant based on the user's token (matching Next.js middleware behavior)
@@ -407,7 +427,7 @@ export async function authorizationMiddleware(
     } else {
       // Handle the case where tenant is not in the token
       console.error('Tenant information not found in the token');
-      return res.redirect('/auth/signin');
+      return res.redirect('/auth/msp/signin');
     }
   } catch (error) {
     console.error('Authorization middleware error:', error);

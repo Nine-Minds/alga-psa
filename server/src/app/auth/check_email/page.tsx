@@ -79,7 +79,7 @@ const CheckEmailContent: React.FC = () => {
           </p>
         </div>
         <div className="text-center">
-          <Link href="/auth/signin" className="text-sm font-medium text-purple-600 hover:text-purple-500">
+          <Link href="/auth/msp/signin" className="text-sm font-medium text-purple-600 hover:text-purple-500">
             ← Back to log in
           </Link>
         </div>
