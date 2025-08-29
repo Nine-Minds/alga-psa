@@ -9,9 +9,7 @@ import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/
 
 import { getInfoFromToken, createToken } from 'server/src/utils/tokenizer';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { getEmailService } from 'server/src/services/emailService';
-import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
-import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+import { getSystemEmailService } from 'server/src/lib/email';
 import logger from 'server/src/utils/logger';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
@@ -167,27 +165,85 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
 
     const resetLink = `${process.env.HOST}/auth/password-reset/set-new-password?token=${recoverToken}&portal=${portal}`;
     
-    const emailService = await getEmailService();
-    const emailSent = await emailService.sendTemplatedEmail({
-      toEmail: email,
-      subject: 'Password Reset Request',
-      templateName: 'password-reset',
-      templateData: { 
-        email, 
-        username: userInfo.username,
-        userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username,
-        resetLink: resetLink,
-        expirationTime: '1 hour',
-        supportEmail: 'support@algapsa.com',
-        companyName: 'AlgaPSA',
-        currentYear: new Date().getFullYear()
-      },
-    });
-
-    if (!emailSent) {
-      logger.error('Failed to send recover password email');
-      return false;
+    // Use SystemEmailService for password reset (no tenant context needed)
+    const systemEmailService = await getSystemEmailService();
+    
+    // Get tenant's database connection to fetch the template
+    // For password reset, we'll use system templates or hardcoded template
+    const db = await getAdminConnection();
+    
+    // Try to get template from system_email_templates table
+    let templateHtml: string | null = null;
+    let templateSubject = 'Password Reset Request';
+    
+    try {
+      const template = await db('system_email_templates')
+        .select('html_content', 'subject')
+        .where({ name: 'password-reset' })
+        .first();
+      
+      if (template) {
+        templateHtml = template.html_content;
+        templateSubject = template.subject || templateSubject;
+      }
+    } catch (error) {
+      logger.debug('Could not fetch password-reset template from database, using default');
     }
+    
+    // Prepare template data
+    const templateData = {
+      email,
+      username: userInfo.username,
+      userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username,
+      resetLink: resetLink,
+      expirationTime: '1 hour',
+      supportEmail: 'support@algapsa.com',
+      companyName: 'AlgaPSA',
+      currentYear: new Date().getFullYear()
+    };
+    
+    // If we have a template from the database, use it
+    if (templateHtml) {
+      // Process template variables
+      const processedHtml = Object.entries(templateData).reduce((html, [key, value]) => {
+        return html.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      }, templateHtml);
+      
+      const processedSubject = Object.entries(templateData).reduce((subject, [key, value]) => {
+        return subject.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      }, templateSubject);
+      
+      // Create text version from HTML
+      const textContent = processedHtml
+        .replace(/<[^>]*>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      const emailResult = await systemEmailService.sendEmail({
+        to: email,
+        subject: processedSubject,
+        html: processedHtml,
+        text: textContent
+      });
+      
+      if (!emailResult.success) {
+        logger.error('Failed to send recover password email:', emailResult.error);
+        return false;
+      }
+    } else {
+      // Use built-in password reset method with default template
+      const emailResult = await systemEmailService.sendPasswordReset({
+        username: templateData.userName,
+        resetUrl: resetLink,
+        expirationTime: templateData.expirationTime
+      });
+      
+      if (!emailResult.success) {
+        logger.error('Failed to send recover password email:', emailResult.error);
+        return false;
+      }
+    }
+    
     logger.info(`Recover password email sent successfully for User [ ${email} ]`);
     return true;
   } else {
@@ -224,16 +280,18 @@ export async function registerUser({ username, email, password, companyName }: I
 
   if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
     const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
-    const emailService = await getEmailService();
-    const emailSent = await emailService.sendTemplatedEmail({
-      toEmail: email,
-      subject: 'Verify your email',
-      templateName: 'verify_email',
-      templateData: { verificationUrl, username },
+    
+    // Use SystemEmailService for email verification
+    const systemEmailService = await getSystemEmailService();
+    const emailResult = await systemEmailService.sendEmailVerification({
+      email: email,
+      verificationUrl: verificationUrl,
+      companyName: companyName,
+      expirationTime: '24 hours'
     });
 
-    if (!emailSent) {
-      logger.error('Failed to send verification email');
+    if (!emailResult.success) {
+      logger.error('Failed to send verification email:', emailResult.error);
       return false;
     }
     logger.info(`Verification email sent successfully for User [ ${email} ]`);
