@@ -1,0 +1,15 @@
+{
+  "name": "com.alga.softwareone",
+  "publisher": "Alga",
+  "version": "0.1.0",
+  "runtime": "wasm-js@1",
+  "capabilities": [],
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "Software One" }
+    }
+  },
+  "assets": ["ui/**/*"]
+}

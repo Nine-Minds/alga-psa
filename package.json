@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "install:ignore": "npm ci --ignore-scripts",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",

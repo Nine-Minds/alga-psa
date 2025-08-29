@@ -26,6 +26,10 @@ interface ManifestV2 {
   ui?: {                        // iframe UI (served by Runner)
     type: 'iframe';
     entry: string;              // e.g., "ui/index.html"
+    hooks?: {                   // host integration points
+      appMenu?: { label: string };
+      [key: string]: unknown;   // future: tabs, placeholders
+    };
   };
   api?: {
     endpoints: Array<{
@@ -54,7 +58,11 @@ interface ManifestV2 {
   "version": "1.2.3",
   "runtime": "wasm-js@1",
   "capabilities": ["http.fetch", "storage.kv", "secrets.get"],
-  "ui": { "type": "iframe", "entry": "ui/index.html" },
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": { "appMenu": { "label": "Agreements" } }
+  },
   "api": {
     "endpoints": [
       { "method": "GET", "path": "/agreements", "handler": "dist/handlers/http/list_agreements" },
@@ -78,6 +86,7 @@ interface ManifestV2 {
 - runtime: currently `wasm-js@1`
 - api.endpoints: unique method+path pairs; paths must start with `/`
 - handler paths, entry, precompiled artifacts, and `ui.entry` must exist in the bundle
+- `ui.hooks.appMenu.label` must be a non-empty string when present
 - capabilities: must be recognized by the platform; least‑privilege encouraged
 - assets: glob patterns limited to static files; no hidden files by default
 

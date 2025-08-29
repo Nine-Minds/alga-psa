@@ -19,7 +19,14 @@ export interface ManifestV2 {
   version: string;
   runtime: string;            // e.g., "wasm-js@1" or "wasm32-wasi@X"
   capabilities?: string[];    // e.g., ["http.fetch", "storage.kv"]
-  ui?: { type: "iframe"; entry: string };
+  ui?: {
+    type: "iframe";
+    entry: string;
+    hooks?: {
+      appMenu?: { label: string };
+      [key: string]: unknown;
+    };
+  };
   api?: { endpoints: ManifestEndpoint[] };
   assets?: string[];
   precompiled?: { [target: string]: string }; // optional mapping target->path (future-proof)
@@ -304,6 +311,35 @@ export function validateManifestShape(input: unknown, opts?: ValidationOptions):
           path: "ui.entry",
           message: "Field 'ui.entry' must not contain '..'.",
         });
+      }
+
+      if ("hooks" in u && typeof u.hooks !== "undefined") {
+        const hooks = u.hooks as unknown;
+        if (typeof hooks !== "object" || hooks === null || Array.isArray(hooks)) {
+          issues.push({
+            path: "ui.hooks",
+            message: "Field 'ui.hooks' must be an object if provided.",
+          });
+        } else {
+          const h = hooks as Record<string, unknown>;
+          if ("appMenu" in h && typeof h.appMenu !== "undefined") {
+            const m = h.appMenu as unknown;
+            if (typeof m !== "object" || m === null || Array.isArray(m)) {
+              issues.push({
+                path: "ui.hooks.appMenu",
+                message: "Field 'ui.hooks.appMenu' must be an object if provided.",
+              });
+            } else {
+              const mo = m as Record<string, unknown>;
+              if (!("label" in mo) || typeof mo.label !== "string" || mo.label.trim() === "") {
+                issues.push({
+                  path: "ui.hooks.appMenu.label",
+                  message: "Field 'ui.hooks.appMenu.label' is required and must be a non-empty string.",
+                });
+              }
+            }
+          }
+        }
       }
     }
   }
