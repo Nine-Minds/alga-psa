@@ -87,14 +87,20 @@ Based on your codebase, integration points are:
 
 #### **Separate Authentication Flow**
 
-- **Route Segregation**: Client authentication routes under `/auth/client/`.
+- **Route Segregation**: Authentication routes are now separated by portal type:
+  - **MSP Portal**: `/auth/msp/signin` and `/auth/msp/forgot-password`
+  - **Client Portal**: `/auth/client-portal/signin` and `/auth/client-portal/forgot-password`
+- **Shared Password Reset**: `/auth/password-reset/set-new-password` (used by both portals)
 - **Client Sessions**: Use `next-auth` sessions but with a client-specific strategy.
 
-#### **Implementation Steps**
+#### **Implementation Details**
 
-- **Extend NextAuth Configuration**: Update `app/api/auth/[...nextauth]/options.ts` to handle client users.
-- **Database Models**: Modify the `User` model to include a `userType` field (e.g., `internal`, `client`).
-- **Authentication Middleware**: Update `authorizationMiddleware.ts` to handle client users.
+- **Portal-Specific Login Pages**: 
+  - MSP portal uses purple theme with features list
+  - Client portal uses blue theme, no self-registration
+- **User Type Separation**: Database models include `user_type` field (`internal` for MSP, `client` for Client Portal)
+- **Authentication Middleware**: Updated to handle both user types and portal-specific redirects
+- **Email Service**: Uses `SystemEmailService` for authentication emails (password reset, verification)
 
 ### **3. Authorization**
 
