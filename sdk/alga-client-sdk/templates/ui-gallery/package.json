@@ -1,0 +1,15 @@
+{
+  "name": "__PACKAGE_NAME__",
+  "version": "0.1.0",
+  "private": false,
+  "description": "__DESCRIPTION__",
+  "type": "module",
+  "scripts": {
+    "dev": "echo 'Open ui/index.html in your browser'",
+    "build": "node scripts/build.mjs",
+    "pack": "alga pack-project --project . --out dist/bundle.tar.zst"
+  },
+  "dependencies": {
+    "alga-client-sdk": "__SDK_VERSION__"
+  }
+}

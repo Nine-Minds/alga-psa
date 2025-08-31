@@ -1,6 +1,6 @@
 # Enterprise Build Workflow: pack → sign → publish
 
-This guide outlines the enterprise pipeline to build, package, sign, and publish extension bundles to S3-compatible storage (e.g., MinIO), and references related docs and APIs.
+This guide outlines the enterprise pipeline to build, package, sign, and publish extension bundles to S3-compatible storage (e.g., MinIO), and references related docs and APIs. Use the `alga` Client SDK CLI for packing, signing, and publishing.
 
 References
 - Development Guide: [ee/docs/extension-system/development_guide.md](ee/docs/extension-system/development_guide.md:1)
@@ -25,18 +25,22 @@ Output:
 
 ## Example Commands
 
+Install the CLI (local dev):
+- In the monorepo: `npm run build:sdk && npm -w sdk/alga-client-sdk link`
+- Then run: `alga --help`
+
 Assumptions:
 - Your extension build outputs to ./my-extension/dist and includes manifest.json at that path.
 - You have Node 18+ available.
 
 - Pack
-  node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
+  alga pack ./my-extension/dist ./out/bundle.tar.zst
 
 - Sign (optional; placeholder)
-  node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
+  alga sign ./out/bundle.tar.zst --algorithm cosign
 
 - Publish
-  node ee/tools/ext-bundle/publish.ts --bundle ./out/bundle.tar.zst --manifest ./my-extension/dist/manifest.json --declared-hash <sha256>
+  alga publish --bundle ./out/bundle.tar.zst --manifest ./my-extension/dist/manifest.json --declared-hash <sha256>
 
 Notes:
 - The pack step writes a sidecar SHA file (bundle.sha256 or <basename>.sha256). You can use this value as the --declared-hash in publish to enforce integrity at the server.
@@ -59,10 +63,10 @@ MinIO local setup:
 - Ensure path-style access and credentials align with the server config.
 - Validate access using the E2E walkthrough: [ee/docs/extension-system/e2e-minio-walkthrough.md](ee/docs/extension-system/e2e-minio-walkthrough.md:1)
 
-CLI scripts (no external deps; Node 18+):
-- Pack: [ee/tools/ext-bundle/pack.ts](ee/tools/ext-bundle/pack.ts:1)
-- Sign: [ee/tools/ext-bundle/sign.ts](ee/tools/ext-bundle/sign.ts:1)
-- Publish: [ee/tools/ext-bundle/publish.ts](ee/tools/ext-bundle/publish.ts:1)
+CLI (via alga-client-sdk):
+- Pack: `alga pack <inputDir> <outputBundlePath>`
+- Sign: `alga sign <bundlePath> --algorithm cosign|x509|pgp`
+- Publish: `alga publish --bundle <bundle> --manifest <manifest.json> [...options]`
 
 Auth for local/manual runs:
 - Set ALGA_ADMIN_HEADER=true in the environment to automatically inject x-alga-admin: true on API calls from publish.ts.
@@ -80,13 +84,13 @@ Pipeline steps:
 - Step 1: Build extension
   - Run your package build (e.g., npm ci && npm run build) producing ./my-extension/dist with manifest.json.
 - Step 2: Pack
-  - node ee/tools/ext-bundle/pack.ts ./my-extension/dist ./out/bundle.tar.zst
+  - alga pack ./my-extension/dist ./out/bundle.tar.zst
   - Extract the sha256 from ./out/bundle.sha256 for later steps (or capture console output).
 - Step 3: Sign (optional)
-  - node ee/tools/ext-bundle/sign.ts ./out/bundle.tar.zst --algorithm cosign
+  - alga sign ./out/bundle.tar.zst --algorithm cosign
   - Store SIGNATURE as an artifact if you need auditability.
-- Step 4: Publish
-  - node ee/tools/ext-bundle/publish.ts \
+-- Step 4: Publish
+  - alga publish \
       --bundle ./out/bundle.tar.zst \
       --manifest ./my-extension/dist/manifest.json \
       --declared-hash <sha256> \

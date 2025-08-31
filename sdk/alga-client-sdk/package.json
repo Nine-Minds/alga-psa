@@ -1,0 +1,43 @@
+{
+  "name": "alga-client-sdk",
+  "version": "0.1.0",
+  "description": "Alga Client SDK CLI and tools for building, packing, signing, and publishing extensions.",
+  "private": false,
+  "type": "module",
+  "bin": {
+    "alga": "dist/src/cli.js"
+  },
+  "main": "dist/src/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js"
+    }
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "node --enable-source-maps dist/cli.js --help || true",
+    "lint": "echo 'TODO: add linter'",
+    "test": "echo 'TODO: add tests' && exit 0"
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "keywords": [
+    "alga",
+    "extensions",
+    "sdk",
+    "cli"
+  ],
+  "author": "Alga",
+  "license": "AGPL-3.0-only",
+  "dependencies": {
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
