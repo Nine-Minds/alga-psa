@@ -34,6 +34,10 @@ export default defineConfig({
       ],
       output: {
         format: 'es',
+        // Force .js extensions for entries and chunks (avoid .mjs)
+        entryFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        chunkFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        assetFileNames: (assetInfo) => `${assetInfo.name ?? '[name]'}[extname]`,
         // Don't inline dynamic imports with multiple entries
         inlineDynamicImports: false,
       },

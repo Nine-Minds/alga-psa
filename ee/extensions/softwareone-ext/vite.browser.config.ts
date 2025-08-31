@@ -25,6 +25,10 @@ export default defineConfig({
       external: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       output: {
         format: 'es',
+        // Force .js extensions for entries and chunks
+        entryFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        chunkFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        assetFileNames: (assetInfo) => `${assetInfo.name ?? '[name]'}[extname]`,
         // Use import maps to resolve React from the global scope
         paths: {
           'react': 'https://esm.sh/react@18',
