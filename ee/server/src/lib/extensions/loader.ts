@@ -121,11 +121,6 @@ export class ExtensionLoader {
   private processManifestPaths(manifest: ExtensionManifest, extensionPath: string): ExtensionManifest {
     const processed = { ...manifest };
 
-    // Process main entry point
-    if (processed.main) {
-      processed.main = this.resolveExtensionPath(processed.main, extensionPath);
-    }
-
     // Process component paths
     if (processed.components) {
       processed.components = processed.components.map(component => ({

@@ -14,7 +14,6 @@ export interface ExtensionManifest {
   homepage?: string;
   repository?: string;
   license?: string;
-  main: string;
   components?: any[]; // Components can have various structures based on type
   permissions?: any; // Can be string[] or object with nested permissions
   requiredExtensions?: string[];

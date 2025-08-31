@@ -70,7 +70,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
           version: manifest.version,
           description: manifest.description || null,
           manifest: JSON.stringify(manifest),
-          main_entry_point: manifest.main || null,
+          main_entry_point: null,
           updated_at: new Date()
         })
         .returning('*');
@@ -93,7 +93,7 @@ export class ExtensionRegistry implements IExtensionRegistry {
         description: manifest.description || null,
         version: manifest.version,
         manifest: JSON.stringify(manifest),
-        main_entry_point: manifest.main || null,
+        main_entry_point: null,
         is_enabled: manifest.autoEnable || false // Use autoEnable from manifest
       })
       .returning('*');

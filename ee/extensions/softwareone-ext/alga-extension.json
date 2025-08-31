@@ -7,8 +7,7 @@
     "name": "Alga Development Team",
     "email": "dev@alga.io"
   },
-  "minAppVersion": "1.5.0",
-  "main": "index.js",
+  "minAppVersion": "0.9.0",
   "autoEnable": true,
   "permissions": [
     "ui:view",
