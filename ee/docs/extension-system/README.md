@@ -57,7 +57,7 @@ Design goals:
 - EXT_GATEWAY_TIMEOUT_MS — gateway → runner request timeout
 - SIGNING_TRUST_BUNDLE — trust anchors for signature verification
 
-## Configuration Summary (Single Source)
+## Configuration Summary
 
 Server and Runner use these environment variables:
 

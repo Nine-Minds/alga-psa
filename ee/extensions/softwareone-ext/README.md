@@ -38,16 +38,7 @@ This project includes a v2 `manifest.json` and tools to produce a content‑addr
   - `node ee/tools/ext-bundle/pack-project.ts --project ee/extensions/softwareone-ext --out dist/softwareone/bundle.tar.zst`
   - Stages `manifest.json`, and includes `ui/` + `dist/` if present, then packs using `pack.ts`.
   - Overwrite existing bundle: append `--force` (otherwise you’ll be prompted in interactive shells)
-- Manual staging (equivalent):
-  - `BUNDLE_DIR=$(mktemp -d -t swone-bundle.XXXXXX)`
-  - `cp ee/extensions/softwareone-ext/manifest.json "$BUNDLE_DIR/manifest.json"`
-  - `mkdir -p "$BUNDLE_DIR/ui" && cp ee/docs/examples/extension-bundle-v2/ui/index.html "$BUNDLE_DIR/ui/index.html"`
-  - `node ee/tools/ext-bundle/pack.ts "$BUNDLE_DIR" dist/softwareone/bundle.tar.zst`
 - Result artifacts: `dist/softwareone/bundle.tar.zst` and `dist/softwareone/bundle.sha256`
-
-## Publish (optional)
-- If your server implements the ext‑bundle API:
-  - `node ee/tools/ext-bundle/publish.ts --bundle dist/softwareone/bundle.tar.zst --manifest ee/extensions/softwareone-ext/manifest.json --server http://localhost:3000`
 
 ## Known Limitations
 - Descriptor handlers are placeholders; no server execution environment is included here.
