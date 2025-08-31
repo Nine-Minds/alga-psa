@@ -54,6 +54,19 @@ export class ExtensionLoader {
       // Read and parse manifest
       const manifestContent = await fs.readFile(manifestPath, 'utf-8');
       const manifest: ExtensionManifest = JSON.parse(manifestContent);
+
+      // Enforce minAppVersion if provided
+      if (manifest.minAppVersion) {
+        const appVersion = await this.getAppVersion();
+        if (!this.isVersionGte(appVersion, manifest.minAppVersion)) {
+          logger.warn('Extension skipped: requires higher app version', {
+            extension: manifest.name,
+            required: manifest.minAppVersion,
+            current: appVersion,
+          });
+          return; // Do not register
+        }
+      }
       
       // Convert relative paths to absolute paths
       const processedManifest = this.processManifestPaths(manifest, extensionPath);
@@ -73,6 +86,60 @@ export class ExtensionLoader {
       });
       throw error;
     }
+  }
+
+  /**
+   * Determine the running app version for EE server.
+   * Prefers APP_VERSION env; falls back to ee/server/package.json version; defaults to "0.0.0".
+   */
+  private async getAppVersion(): Promise<string> {
+    const envVer = (process.env.APP_VERSION || '').trim();
+    if (envVer) return envVer;
+    try {
+      const candidates = [
+        path.resolve(process.cwd(), 'ee/server/package.json'),
+        path.resolve(process.cwd(), 'package.json'),
+        path.resolve(process.cwd(), '../package.json'),
+        path.resolve(process.cwd(), '../../ee/server/package.json'),
+        path.resolve(process.cwd(), '../../server/package.json'),
+        '/app/ee/server/package.json',
+        '/app/server/package.json',
+      ];
+      for (const p of candidates) {
+        try {
+          const raw = await fs.readFile(p, 'utf-8');
+          const pkg = JSON.parse(raw);
+          const v = (pkg.version || '').trim();
+          if (v) return v;
+        } catch {
+          /* try next */
+        }
+      }
+      return '0.0.0';
+    } catch {
+      return '0.0.0';
+    }
+  }
+
+  /**
+   * Minimal semver compare: returns true if a >= b.
+   * Only compares numeric major.minor.patch; ignores pre-release/build.
+   */
+  private isVersionGte(a: string, b: string): boolean {
+    const pa = this.parseSemver(a);
+    const pb = this.parseSemver(b);
+    for (let i = 0; i < 3; i++) {
+      if (pa[i] > pb[i]) return true;
+      if (pa[i] < pb[i]) return false;
+    }
+    return true;
+  }
+
+  private parseSemver(v: string): [number, number, number] {
+    const cleaned = String(v || '').split(/[+-]/)[0]; // drop pre-release/build
+    const parts = cleaned.split('.').slice(0, 3).map((s) => parseInt(s, 10));
+    const [maj, min, pat] = [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+    return [isFinite(maj) ? maj : 0, isFinite(min) ? min : 0, isFinite(pat) ? pat : 0];
   }
 
   private processManifestPaths(manifest: ExtensionManifest, extensionPath: string): ExtensionManifest {
