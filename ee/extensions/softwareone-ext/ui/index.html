@@ -22,21 +22,7 @@
       nav a.active { text-decoration: underline; }
       main { padding: 16px; }
     </style>
-    <script type="importmap">
-      {
-        "imports": {
-          "react": "https://esm.sh/react@18",
-          "react-dom": "https://esm.sh/react-dom@18",
-          "react-dom/client": "https://esm.sh/react-dom@18/client",
-          "react/jsx-runtime": "https://esm.sh/react@18/jsx-runtime",
-          "react/jsx-dev-runtime": "https://esm.sh/react@18/jsx-dev-runtime",
-          "react-router-dom": "https://esm.sh/react-router-dom@6?deps=react@18,react-dom@18",
-          "formik": "https://esm.sh/formik@2?deps=react@18,react-dom@18",
-          "yup": "https://esm.sh/yup@1",
-          "@tanstack/react-query": "https://esm.sh/@tanstack/react-query@4?deps=react@18"
-        }
-      }
-    </script>
+    <!-- React and router are bundled into main.js; no import map needed. -->
   </head>
   <body>
     <header>

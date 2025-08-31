@@ -22,13 +22,8 @@ export default defineConfig({
         }
         defaultHandler(warning);
       },
-      external: [
-        'react',
-        'react-dom',
-        'react/jsx-runtime',
-        'react/jsx-dev-runtime',
-        'react-router-dom',
-      ],
+      // Bundle React and router into the iframe to avoid host-provided externals
+      external: [],
       output: {
         format: 'es',
         entryFileNames: () => 'main.js',
@@ -42,8 +37,6 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'react': path.resolve('./node_modules/react'),
-      'react-dom': path.resolve('./node_modules/react-dom'),
       '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
     },
   },
