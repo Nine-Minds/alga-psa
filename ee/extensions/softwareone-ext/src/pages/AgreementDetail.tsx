@@ -5,21 +5,14 @@ import { Agreement } from '../types';
 import { dummyAgreements, dummyOrdersByAgreement, dummySubscriptionsByAgreement } from '../data/dummyAgreements';
 import { Button, Card, Stack, Text, Badge, DataTable } from '@alga/ui-kit';
 
-// Simple Dialog component replacement
-const Dialog: React.FC<{
-  open: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}> = ({ open, onClose, children }) => {
+// Simple Dialog component replacement for this demo
+const Dialog: React.FC<{ open: boolean; onClose: () => void; children: React.ReactNode }>
+  = ({ open, onClose, children }) => {
   if (!open) return null;
-
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4">
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
         <div className="relative bg-white rounded-lg max-w-md w-full shadow-xl">
           {children}
         </div>
@@ -46,7 +39,9 @@ export const AgreementDetail: React.FC = () => {
       <div style={{ padding: 16 }}>
         <Card>
           <Text>Agreement not found.</Text>
-          <Button variant="secondary" onClick={() => navigate('/softwareone/agreements')} style={{ marginTop: 8 }}>Back to Agreements</Button>
+          <Button variant="secondary" onClick={() => navigate('/softwareone/agreements')} style={{ marginTop: 8 }}>
+            Back to Agreements
+          </Button>
         </Card>
       </div>
     );
@@ -70,24 +65,12 @@ export const AgreementDetail: React.FC = () => {
 
       <Tabs.Root value={activeTab} onValueChange={setActiveTab} className="w-full">
         <Tabs.List className="flex border-b mb-6">
-          <Tabs.Trigger value="overview" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            SoftwareOne
-          </Tabs.Trigger>
-          <Tabs.Trigger value="subscriptions" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            Subscriptions ({subscriptions?.length || 0})
-          </Tabs.Trigger>
-          <Tabs.Trigger value="orders" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            Orders ({orders?.length || 0})
-          </Tabs.Trigger>
-          <Tabs.Trigger value="consumer" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            Consumer
-          </Tabs.Trigger>
-          <Tabs.Trigger value="billing" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            Billing
-          </Tabs.Trigger>
-          <Tabs.Trigger value="details" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">
-            Details
-          </Tabs.Trigger>
+          <Tabs.Trigger value="overview" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">SoftwareOne</Tabs.Trigger>
+          <Tabs.Trigger value="subscriptions" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Subscriptions ({subscriptions?.length || 0})</Tabs.Trigger>
+          <Tabs.Trigger value="orders" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Orders ({orders?.length || 0})</Tabs.Trigger>
+          <Tabs.Trigger value="consumer" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Consumer</Tabs.Trigger>
+          <Tabs.Trigger value="billing" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Billing</Tabs.Trigger>
+          <Tabs.Trigger value="details" className="px-4 py-2 hover:bg-gray-50 data-[state=active]:border-b-2 data-[state=active]:border-blue-500">Details</Tabs.Trigger>
         </Tabs.List>
 
         <Tabs.Content value="overview">
@@ -156,139 +139,49 @@ export const AgreementDetail: React.FC = () => {
             )}
           </Card>
         </Tabs.Content>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Order Date
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Total Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Items
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {orders.map((order) => (
-                      <tr key={order.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {order.orderNumber}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {order.orderDate}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {agreement.currency} {order.totalAmount}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {order.status}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {order.items?.length || 0} items
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-8 text-center text-gray-500">
-                No orders found for this agreement
-              </div>
-            )}
-          </div>
-        </Tabs.Content>
 
         <Tabs.Content value="consumer">
-          <div className="space-y-4">
-            <h3 className="font-semibold">Consumer Information</h3>
-            <div className="bg-gray-50 p-4 rounded">
-              <dl className="space-y-2">
-                <div className="flex justify-between">
-                  <dt className="text-gray-600">Consumer ID:</dt>
-                  <dd className="font-mono text-sm">{agreement.consumer}</dd>
-                </div>
-                {company ? (
-                  <>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-600">Mapped Company:</dt>
-                      <dd>{company.name}</dd>
-                    </div>
-                    <div className="flex justify-between">
-                      <dt className="text-gray-600">Company Type:</dt>
-                      <dd>{company.type}</dd>
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-4">
-                    <div className="p-4 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200">
-                      This consumer is not mapped to any company in Alga PSA.
-                      You may need to create or link a company for billing purposes.
-                    </div>
-                  </div>
-                )}
-              </dl>
-            </div>
-          </div>
+          <Card>
+            <Text tone="muted">No consumer mapping available in demo data.</Text>
+          </Card>
         </Tabs.Content>
 
         <Tabs.Content value="billing">
-          <div className="space-y-4">
-            <h3 className="font-semibold">Billing Configuration</h3>
-            <div className="p-4 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
-              Billing integration features will be available in the next version.
-              This will allow you to:
-              <ul className="list-disc list-inside mt-2">
-                <li>Map agreement charges to Alga invoices</li>
-                <li>Configure automated billing rules</li>
-                <li>Set up markup percentages</li>
-                <li>Generate billing reports</li>
-              </ul>
-            </div>
-          </div>
+          <Card>
+            <Text tone="muted">Billing configuration editing is not implemented in this demo.</Text>
+          </Card>
         </Tabs.Content>
 
         <Tabs.Content value="details">
-          <div className="space-y-4">
-            <h3 className="font-semibold">Technical Details</h3>
-            <div className="bg-gray-50 p-4 rounded font-mono text-sm">
-              <pre>{JSON.stringify(agreement, null, 2)}</pre>
-            </div>
-          </div>
+          <Card>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(agreement, null, 2)}</pre>
+          </Card>
         </Tabs.Content>
       </Tabs.Root>
 
-      {/* Activation Dialog */}
-      <Dialog open={showActivateDialog} onClose={() => setShowActivateDialog(false)}>
-        <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Activate Agreement</h2>
-          <p className="mb-6">This is a demo-only activation.</p>
-          <div className="flex justify-end gap-3">
-            <button onClick={() => setShowActivateDialog(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-            <button onClick={handleActivate} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Activate</button>
+      {/* Edit Dialog Placeholder */}
+      <Dialog open={showEditDialog} onClose={() => setShowEditDialog(false)}>
+        <div className="p-4 space-y-4">
+          <Text as="h3" weight={600}>Edit Agreement</Text>
+          <Text tone="muted">Editing is not implemented in this demo.</Text>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowEditDialog(false)}>Close</Button>
           </div>
         </div>
       </Dialog>
 
-      {/* Edit Dialog - Placeholder */}
-      <Dialog open={showEditDialog} onClose={() => setShowEditDialog(false)}>
-        <div className="p-6">
-          <h2 className="text-lg font-semibold mb-4">Edit Agreement Configuration</h2>
-          <div className="p-4 rounded-md bg-blue-50 text-blue-800 border border-blue-200">
-            Edit functionality will be implemented in the next phase.
-          </div>
-          <div className="flex justify-end mt-6">
-            <button 
-              onClick={() => setShowEditDialog(false)}
-              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-            >
-              Close
-            </button>
+      {/* Activate Dialog Placeholder */}
+      <Dialog open={showActivateDialog} onClose={() => setShowActivateDialog(false)}>
+        <div className="p-4 space-y-4">
+          <Text as="h3" weight={600}>Activate Agreement</Text>
+          <Text>Are you sure you want to activate this agreement?</Text>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setShowActivateDialog(false)}>Cancel</Button>
+            <Button onClick={handleActivate}>Activate</Button>
           </div>
         </div>
       </Dialog>
     </div>
   );
 };
+
