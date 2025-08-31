@@ -2,9 +2,7 @@
 
 Manifest v2 is the canonical specification for the Enterprise Extension System. It defines out-of-process execution, signed content-addressed bundles, explicit API endpoints, and iframe-only UI served by the Runner.
 
-- API requests are routed through the host Gateway at `/api/ext/[extensionId]/[...path]` and proxied to the Runner `POST /v1/execute` (gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)).
-- UI assets are served by the Runner at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`. The host constructs the iframe src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45).
-- Registry v2 provides version/manifest resolution and bundle metadata (see [ExtensionRegistryServiceV2](ee/server/src/lib/extensions/registry-v2.ts:48)).
+- See “Correctness Rules” in the README for canonical routing and UI serving behavior (Gateway route, Runner static UI, iframe bootstrap). Gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 Manifest v2 defines signed, content-addressed bundles executed out-of-process and rendered via iframe UI.
 

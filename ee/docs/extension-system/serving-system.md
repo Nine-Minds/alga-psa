@@ -2,10 +2,7 @@
 
 This document specifies the v2-only serving and execution model. All extension server handlers execute out-of-process in the Runner, and all UI assets are served by the Runner. The host app never dynamically imports tenant code and does not serve ext-ui via Next.js.
 
-Key guarantees:
-- API Gateway route: `/api/ext/[extensionId]/[...path]` proxies to Runner `POST /v1/execute`
-- Static UI: Runner serves iframe assets at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
-- Iframe bootstrap: host constructs the src via [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initializes via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
+Key guarantees: See “Correctness Rules” in the README for the canonical list (Gateway route, Runner static UI, iframe bootstrap).
 
 ## Overview
 
