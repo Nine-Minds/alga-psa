@@ -4,7 +4,7 @@
   "description": "Browse and bill SoftwareOne agreements inside Alga PSA",
   "main": "dist/index.js",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.iframe.config.ts",
     "clean": "rm -rf dist",
     "dev": "vite",
     "test": "vitest",
