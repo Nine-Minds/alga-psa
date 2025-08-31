@@ -12,7 +12,7 @@ const entries = glob.sync('src/{components,pages,iframe}/**/*.{ts,tsx}').reduce(
 export default defineConfig({
   plugins: [],
   esbuild: {
-    jsx: 'automatic',
+    jsx: 'transform',
   },
   build: {
     lib: {

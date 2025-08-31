@@ -44,7 +44,11 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      // Force a single React and ReactDOM instance across app and UI kit
+      'react': path.resolve(__dirname, 'node_modules/react'),
+      'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
       '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
     },
+    dedupe: ['react', 'react-dom'],
   },
 });

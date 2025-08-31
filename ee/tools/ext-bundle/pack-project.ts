@@ -66,7 +66,8 @@ function main() {
   const stage = mkdtempSync(join(tmpdir(), 'alga-ext-stage-'));
 
   // Copy known bundle bits if present
-  const entries = ['manifest.json', 'ui', 'dist', 'artifacts', 'precompiled', 'SIGNATURE', 'sbom.spdx.json'];
+  // Note: do NOT include top-level 'dist' to avoid hosts accidentally importing library modules.
+  const entries = ['manifest.json', 'ui', 'artifacts', 'precompiled', 'SIGNATURE', 'sbom.spdx.json'];
   for (const rel of entries) {
     const src = join(project, rel);
     if (existsSync(src)) {
@@ -75,15 +76,7 @@ function main() {
     }
   }
 
-  // Ensure UI can import built ESM from a path under ui/
-  // If project has dist/, also mirror it to ui/dist for static serving
-  const projDist = join(project, 'dist');
-  if (existsSync(projDist)) {
-    const uiDist = join(stage, 'ui', 'dist');
-    ensureDir(dirname(uiDist));
-    cpSync(projDist, uiDist, { recursive: true });
-    console.log('[pack-project] staged: ui/dist (mirrored from dist)');
-  }
+  // Expect iframe bundle to already be emitted under ui/dist/iframe by the package build
 
   // Ensure output dir exists
   ensureDir(dirname(outPath));
