@@ -90,35 +90,11 @@ export class ExtensionLoader {
 
   /**
    * Determine the running app version for EE server.
-   * Prefers APP_VERSION env; falls back to ee/server/package.json version; defaults to "0.0.0".
+   * Uses APP_VERSION env only; defaults to "0.0.0".
    */
   private async getAppVersion(): Promise<string> {
     const envVer = (process.env.APP_VERSION || '').trim();
-    if (envVer) return envVer;
-    try {
-      const candidates = [
-        path.resolve(process.cwd(), 'ee/server/package.json'),
-        path.resolve(process.cwd(), 'package.json'),
-        path.resolve(process.cwd(), '../package.json'),
-        path.resolve(process.cwd(), '../../ee/server/package.json'),
-        path.resolve(process.cwd(), '../../server/package.json'),
-        '/app/ee/server/package.json',
-        '/app/server/package.json',
-      ];
-      for (const p of candidates) {
-        try {
-          const raw = await fs.readFile(p, 'utf-8');
-          const pkg = JSON.parse(raw);
-          const v = (pkg.version || '').trim();
-          if (v) return v;
-        } catch {
-          /* try next */
-        }
-      }
-      return '0.0.0';
-    } catch {
-      return '0.0.0';
-    }
+    return envVer || '0.0.0';
   }
 
   /**
