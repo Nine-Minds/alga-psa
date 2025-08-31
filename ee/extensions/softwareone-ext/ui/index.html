@@ -56,29 +56,39 @@
       import { createRoot } from 'react-dom/client';
       import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-      // Note: when running unbundled from the project, built ESM lives in ../dist.
-      // The packer mirrors dist to ui/dist for bundles, so both paths work post-pack.
-      import { AgreementsList } from '../dist/pages/AgreementsList.js';
-      import { AgreementDetail } from '../dist/pages/AgreementDetail.js';
-      import { StatementsList } from '../dist/pages/StatementsList.js';
-      import { StatementDetail } from '../dist/pages/StatementDetail.js';
-      import SettingsPageWrapper from '../dist/components/SettingsPageWrapper.js';
+      // Dynamically resolve dist path: try ../dist (dev) then fallback to ./dist (bundled)
+      let AgreementsList, AgreementDetail, StatementsList, StatementDetail, SettingsPageWrapper;
+      try {
+        ({ AgreementsList } = await import('../dist/pages/AgreementsList.js'));
+        ({ AgreementDetail } = await import('../dist/pages/AgreementDetail.js'));
+        ({ StatementsList } = await import('../dist/pages/StatementsList.js'));
+        ({ StatementDetail } = await import('../dist/pages/StatementDetail.js'));
+        ({ default: SettingsPageWrapper } = await import('../dist/components/SettingsPageWrapper.js'));
+      } catch (e) {
+        ({ AgreementsList } = await import('./dist/pages/AgreementsList.js'));
+        ({ AgreementDetail } = await import('./dist/pages/AgreementDetail.js'));
+        ({ StatementsList } = await import('./dist/pages/StatementsList.js'));
+        ({ StatementDetail } = await import('./dist/pages/StatementDetail.js'));
+        ({ default: SettingsPageWrapper } = await import('./dist/components/SettingsPageWrapper.js'));
+      }
 
-      const App = () => (
-        <Router>
-          <Routes>
-            <Route path="/agreements" element={<AgreementsList />} />
-            <Route path="/agreement/:id" element={<AgreementDetail />} />
-            <Route path="/statements" element={<StatementsList />} />
-            <Route path="/statement/:id" element={<StatementDetail />} />
-            <Route path="/settings" element={<SettingsPageWrapper />} />
-            <Route path="*" element={<Navigate to="/agreements" replace />} />
-          </Routes>
-        </Router>
+      const appEl = React.createElement(
+        Router,
+        null,
+        React.createElement(
+          Routes,
+          null,
+          React.createElement(Route, { path: '/agreements', element: React.createElement(AgreementsList) }),
+          React.createElement(Route, { path: '/agreement/:id', element: React.createElement(AgreementDetail) }),
+          React.createElement(Route, { path: '/statements', element: React.createElement(StatementsList) }),
+          React.createElement(Route, { path: '/statement/:id', element: React.createElement(StatementDetail) }),
+          React.createElement(Route, { path: '/settings', element: React.createElement(SettingsPageWrapper) }),
+          React.createElement(Route, { path: '*', element: React.createElement(Navigate, { to: '/agreements', replace: true }) })
+        )
       );
 
       const root = createRoot(document.getElementById('root'));
-      root.render(<App />);
+      root.render(appEl);
     </script>
   </body>
   </html>

@@ -1,7 +1,7 @@
 {
   "name": "com.alga.softwareone",
   "publisher": "Alga",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "runtime": "wasm-js@1",
   "capabilities": [],
   "ui": {
