@@ -518,7 +518,6 @@ Stored verbatim JSON from SoftwareOne under storage.set('swone/raw/agreements', 
   "version": "0.1.0",
   "description": "Browse & bill SoftwareOne agreements inside Alga PSA",
   "minAppVersion": "1.5.0",
-  "tenantMode": "specific",
   "main": "dist/index.js",
   "permissions": {
     "api": [

@@ -8,7 +8,6 @@
     "email": "dev@alga.io"
   },
   "minAppVersion": "1.5.0",
-  "tenantMode": "specific",
   "main": "index.js",
   "autoEnable": true,
   "permissions": [

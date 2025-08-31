@@ -58,7 +58,7 @@ export class ExtensionLoader {
       // Convert relative paths to absolute paths
       const processedManifest = this.processManifestPaths(manifest, extensionPath);
       
-      // Register the extension for all tenants (or specific ones based on tenantMode)
+      // Register the extension for all tenants (tenant-scoped only system)
       await this.registerExtensionForTenants(processedManifest, extensionPath);
       
       logger.info('Extension loaded successfully', { 
@@ -119,15 +119,8 @@ export class ExtensionLoader {
       const { getAdminConnection } = await import('@/lib/db/admin');
       const knex = await getAdminConnection();
       
-      // Get all tenants or specific ones based on tenantMode
-      let tenants: any[] = [];
-      if (manifest.tenantMode === 'all' || !manifest.tenantMode) {
-        tenants = await knex('tenants').select('tenant');
-      } else if (manifest.tenantMode === 'specific') {
-        // For now, register for all tenants even in specific mode
-        // In the future, this could read from a configuration
-        tenants = await knex('tenants').select('tenant');
-      }
+      // Tenant-only system: register for all tenants
+      const tenants: any[] = await knex('tenants').select('tenant');
 
       // Register extension for each tenant
       for (const tenant of tenants) {

@@ -20,7 +20,6 @@ export interface ExtensionManifest {
   requiredExtensions?: string[];
   settings?: ExtensionSettingDefinition[];
   assets?: string[];
-  tenantMode?: 'all' | 'specific';
   autoEnable?: boolean;
   minAppVersion?: string;
   api?: {
