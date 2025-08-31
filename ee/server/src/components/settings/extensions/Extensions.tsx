@@ -11,8 +11,9 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
-import { PlusIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
-import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2, getBundleInfoForInstall } from '../../../lib/actions/extRegistryV2Actions';
+import { AlertCircleIcon, CheckCircleIcon, XCircleIcon, Settings, EyeIcon } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } from '../../../lib/actions/extRegistryV2Actions';
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -20,12 +21,14 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 /**
  * Extensions management page
  */
+type ExtRow = Extension & { id: string };
+
 export default function Extensions() {
-  const [extensions, setExtensions] = useState<Extension[]>([]);
+  const [extensions, setExtensions] = useState<ExtRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [installInfo, setInstallInfo] = useState<Record<string, { domain: string | null; status: any }>>({});
-  const [bundleKeys, setBundleKeys] = useState<Record<string, string>>({});
+  const [viewing, setViewing] = useState<ExtRow | null>(null);
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
@@ -49,14 +52,6 @@ export default function Extensions() {
           })
         );
         setInstallInfo(Object.fromEntries(entries));
-        // Fetch bundle storage key per extension
-        const bundleEntries = await Promise.all(
-          mapped.map(async (ext: any) => {
-            const b = await getBundleInfoForInstall(ext.id).catch(() => null);
-            return [ext.id, b?.canonical_key ?? ''];
-          })
-        );
-        setBundleKeys(Object.fromEntries(bundleEntries));
         setLoading(false);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'unknown error';
@@ -130,6 +125,7 @@ export default function Extensions() {
   };
   
   return (
+    <>
     <ReflectionContainer id="extensions-page" label="Extensions Management">
       <div className="p-6" {...automationIdProps}>
         <div className="flex justify-between items-center mb-6">
@@ -169,34 +165,58 @@ export default function Extensions() {
             <ExtensionsTable
               rows={extensions}
               installInfo={installInfo}
-              bundleKeys={bundleKeys}
               onReprovision={handleReprovision}
               onToggle={handleToggleExtension}
               onRemove={handleRemoveExtension}
+              onView={setViewing}
             />
           </div>
         )}
       </div>
     </ReflectionContainer>
+    {viewing && (
+      <Dialog open={true} onOpenChange={() => setViewing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{viewing.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p>
+              <strong>Version:</strong> {viewing.manifest.version}
+            </p>
+            <p>
+              <strong>Author:</strong> {viewing.manifest.author}
+            </p>
+            <p>
+              <strong>Domain:</strong> {installInfo[viewing.id]?.domain || '—'}
+            </p>
+            {installInfo[viewing.id]?.status?.state && (
+              <p>
+                <strong>Status:</strong> {String(installInfo[viewing.id]?.status?.state)}
+              </p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+    )}
+    </>
   );
 }
-
-type ExtRow = Extension & { id: string };
 
 function ExtensionsTable({
   rows,
   installInfo,
-  bundleKeys,
   onReprovision,
   onToggle,
   onRemove,
+  onView,
 }: {
   rows: ExtRow[];
   installInfo: Record<string, { domain: string | null; status: any }>;
-  bundleKeys: Record<string, string>;
   onReprovision: (id: string) => void;
   onToggle: (id: string, current: boolean) => void;
   onRemove: (id: string) => void;
+  onView: (ext: ExtRow) => void;
 }) {
   const columns = useMemo<ColumnDefinition<ExtRow>[]>(() => [
     {
@@ -244,12 +264,12 @@ function ExtensionsTable({
     {
       title: 'Version',
       dataIndex: ['manifest','version'],
-      width: '75px'
+      width: '40px'
     },
     {
       title: 'Author',
       dataIndex: ['manifest','author'],
-      width: '75px'
+      width: '40px'
     },
     {
       title: 'Domain',
@@ -257,23 +277,21 @@ function ExtensionsTable({
       // No fixed width: allow Domain column to flex and absorb remaining space
       render: (_v, extension) => (
         <div className="flex flex-col gap-1">
-          <div className="text-sm text-gray-900 truncate">{installInfo[extension.id]?.domain || '—'}</div>
+          <div className="text-sm text-gray-900 truncate">
+            {installInfo[extension.id]?.domain ? (
+              <a
+                href={`https://${installInfo[extension.id]?.domain}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary-600 hover:underline"
+              >
+                {installInfo[extension.id]?.domain}
+              </a>
+            ) : '—'}
+          </div>
           <div className="text-xs text-gray-500">
             {(installInfo[extension.id]?.status?.state) ? String(installInfo[extension.id]?.status?.state) : ''}
           </div>
-          {bundleKeys[extension.id] && (
-            <div className="mt-1 flex items-center gap-2 min-w-0">
-              <code className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-2 py-0.5 truncate">
-                {bundleKeys[extension.id]}
-              </code>
-              <button
-                onClick={() => navigator.clipboard.writeText(bundleKeys[extension.id])}
-                className="inline-flex items-center px-2 py-0.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200 whitespace-nowrap"
-              >
-                Copy
-              </button>
-            </div>
-          )}
         </div>
       )
     },
@@ -285,14 +303,14 @@ function ExtensionsTable({
       cellClassName: 'sticky right-0 bg-white z-10',
       render: (_v, extension) => (
         <div className="grid grid-cols-2 gap-2 justify-items-stretch">
-          <Link
-            href={`/msp/settings/extensions/${extension.id}`}
+          <button
+            onClick={() => onView(extension)}
             className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
             data-automation-id={`extension-view-${extension.id}`}
           >
             <EyeIcon className="h-3.5 w-3.5 mr-1" />
             View
-          </Link>
+          </button>
           <Link
             href={`/msp/settings/extensions/${extension.id}/settings`}
             className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-blue-100 text-blue-700 hover:bg-blue-200"
@@ -301,24 +319,7 @@ function ExtensionsTable({
             <Settings className="h-3.5 w-3.5 mr-1" />
             Settings
           </Link>
-          {installInfo[extension.id]?.domain ? (
-            <>
-              <a
-                href={`https://${installInfo[extension.id]?.domain}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-green-100 text-green-700 hover:bg-green-200"
-              >
-                Open
-              </a>
-              <button
-                onClick={() => navigator.clipboard.writeText(`https://${installInfo[extension.id]?.domain}`)}
-                className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-              >
-                Copy
-              </button>
-            </>
-          ) : (
+          {installInfo[extension.id]?.domain ? null : (
             <button
               onClick={() => onReprovision(extension.id)}
               className="inline-flex items-center justify-center px-3 py-1 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
@@ -355,7 +356,7 @@ function ExtensionsTable({
         </div>
       )
     }
-  ], [installInfo, bundleKeys, onRemove, onReprovision, onToggle]);
+  ], [installInfo, onRemove, onReprovision, onToggle, onView]);
 
   return (
     <DataTable<ExtRow>
