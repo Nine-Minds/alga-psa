@@ -1,9 +1,8 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 import { glob } from 'glob';
 
-// Find all component and page files to be used as entry points
+// Find component and page files to be used as entry points
 const entries = glob.sync('src/{components,pages}/**/*.{ts,tsx}').reduce((acc, file) => {
   const name = file.replace('src/', '').replace(/\.tsx?$/, '');
   acc[name] = path.resolve(__dirname, file);
@@ -11,7 +10,10 @@ const entries = glob.sync('src/{components,pages}/**/*.{ts,tsx}').reduce((acc, f
 }, {});
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [],
+  esbuild: {
+    jsx: 'automatic',
+  },
   build: {
     lib: {
       entry: entries,
@@ -19,7 +21,17 @@ export default defineConfig({
       fileName: (format, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
-      external: [],  // Bundle everything including React JSX runtime
+      // Leave common libs to the host app to avoid duplicate React instances
+      external: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-router-dom',
+        'formik',
+        'yup',
+        '@tanstack/react-query',
+      ],
       output: {
         format: 'es',
         // Don't inline dynamic imports with multiple entries
@@ -35,6 +47,8 @@ export default defineConfig({
       // Ensure we use the same React instance
       'react': path.resolve('./node_modules/react'),
       'react-dom': path.resolve('./node_modules/react-dom'),
+      // Resolve local UI kit source without publishing/installing
+      '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
     }
   }
 });

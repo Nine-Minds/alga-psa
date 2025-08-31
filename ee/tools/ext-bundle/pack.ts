@@ -20,10 +20,12 @@
  *   - System tools: tar, zstd (recommended)
  */
 
-import { statSync, createReadStream, writeFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
+import { statSync, createReadStream, writeFileSync, mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, resolve, basename, dirname } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawnSync, spawn } from 'node:child_process';
+import { createInterface } from 'node:readline/promises';
+import { stdin as rlStdin, stdout as rlStdout } from 'node:process';
 
 function die(msg: string, code = 1): never {
   console.error(`[pack] ${msg}`);
@@ -76,11 +78,13 @@ function which(bin: string): boolean {
 async function main() {
   const args = process.argv.slice(2);
   if (args.length < 2) {
-    die('Usage: node ee/tools/ext-bundle/pack.ts <inputDir> <outputBundlePath(.tar.zst)>');
+    die('Usage: node ee/tools/ext-bundle/pack.ts <inputDir> <outputBundlePath(.tar.zst)> [--force]');
   }
 
   const inputDir = resolve(args[0]);
   const outputPath = resolve(args[1]);
+  const force = args.includes('--force') || process.env.PACK_FORCE === '1' || process.env.PACK_FORCE === 'true';
+  let allowOverwrite = force;
 
   // Validate input
   let st: ReturnType<typeof statSync>;
@@ -95,6 +99,21 @@ async function main() {
 
   // Ensure parent dir for output exists
   ensureDir(dirname(outputPath));
+
+  // If output exists, prompt unless forced
+  if (existsSync(outputPath) && !force) {
+    if (rlStdin.isTTY && rlStdout.isTTY) {
+      const rl = createInterface({ input: rlStdin, output: rlStdout });
+      const answer = (await rl.question(`[pack] Output exists at ${outputPath}. Overwrite? [y/N] `)).trim().toLowerCase();
+      await rl.close();
+      if (answer !== 'y' && answer !== 'yes') {
+        die('Aborted by user.');
+      }
+      allowOverwrite = true;
+    } else {
+      die(`Output exists: ${outputPath}. Re-run with --force to overwrite.`);
+    }
+  }
 
   // Validate tools
   const hasTar = which('tar');
@@ -129,7 +148,7 @@ async function main() {
   const tarProc = spawn('tar', tarArgs, { stdio: ['ignore', 'pipe', 'inherit'] });
 
   // Spawn zstd -19 -T0 -o <output>
-  const zstdArgs = ['-19', '-T0', '-o', outputPath];
+  const zstdArgs = ['-19', '-T0', ...(allowOverwrite ? ['-f'] : []), '-o', outputPath];
   const zstdProc = spawn('zstd', zstdArgs, { stdio: ['pipe', 'inherit', 'inherit'] });
 
   // Pipe tar stdout to zstd stdin

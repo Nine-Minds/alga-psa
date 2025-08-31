@@ -19,6 +19,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
+      "@alga/ui-kit": ["../..//server/packages/ui-kit/src"],
       "@swone/api/*": ["src/api/*"],
       "@swone/components/*": ["src/components/*"],
       "@swone/handlers/*": ["src/handlers/*"],
