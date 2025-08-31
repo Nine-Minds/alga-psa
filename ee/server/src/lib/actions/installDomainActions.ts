@@ -20,6 +20,7 @@ function normalizeHash(input?: string | null): string | null {
 
 /** installs.lookupByHost: returns tenant, extension (registry_id), and current content_hash */
 export async function lookupByHost(hostRaw: string): Promise<{ tenant_id: string; extension_id: string; content_hash: string } | null> {
+  console.log('lookup by host called');
   const host = normalizeHost(hostRaw);
   if (!host) throw new Error('missing host');
 
