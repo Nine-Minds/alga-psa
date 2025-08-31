@@ -57,6 +57,24 @@ Design goals:
 - EXT_GATEWAY_TIMEOUT_MS — gateway → runner request timeout
 - SIGNING_TRUST_BUNDLE — trust anchors for signature verification
 
+## Configuration Summary (Single Source)
+
+Server and Runner use these environment variables:
+
+- Gateway/Runner
+  - `RUNNER_BASE_URL` (Gateway → Runner execute API)
+  - `RUNNER_PUBLIC_BASE` (iframe UI base)
+  - `EXT_GATEWAY_TIMEOUT_MS` (Gateway timeout)
+  - `SIGNING_TRUST_BUNDLE` (signature verification trust anchors)
+
+- Object Storage (S3/MinIO)
+  - `STORAGE_S3_ENDPOINT`, `STORAGE_S3_REGION`
+  - `STORAGE_S3_ACCESS_KEY`, `STORAGE_S3_SECRET_KEY`
+  - `STORAGE_S3_BUCKET`, `STORAGE_S3_FORCE_PATH_STYLE`
+  - `STORAGE_S3_BUNDLE_BUCKET` (optional override for bundles)
+
+Refer to this list from other docs to avoid drift. See Runner S3 guide for runtime‑specific notes.
+
 ## Getting Started
 
 - Read the [Overview](overview.md)

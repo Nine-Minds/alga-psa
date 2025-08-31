@@ -45,11 +45,12 @@ Notes:
 ## Environment Requirements and Local MinIO
 
 Server/Storage configuration (server process):
-- STORAGE_ENDPOINT: e.g., http://localhost:9000
-- STORAGE_BUCKET: e.g., alga-bundles
-- STORAGE_REGION: e.g., us-east-1
-- STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY: MinIO credentials
-- STORAGE_USE_PATH_STYLE: true (required for MinIO)
+- STORAGE_S3_ENDPOINT: e.g., http://localhost:9000 (MinIO)
+- STORAGE_S3_BUCKET: e.g., alga-bundles
+- STORAGE_S3_REGION: e.g., us-east-1
+- STORAGE_S3_ACCESS_KEY, STORAGE_S3_SECRET_KEY: MinIO credentials
+- STORAGE_S3_FORCE_PATH_STYLE: true (required for MinIO)
+- STORAGE_S3_BUNDLE_BUCKET: optional separate bucket for bundles (required by server code in this setup)
 - EXT_BUNDLES_ALLOW_INSECURE: true (for local/manual validation), or send header x-alga-admin: true
 - RUNNER_* not required for publishing (see Runner doc for serving/execution config)
 
