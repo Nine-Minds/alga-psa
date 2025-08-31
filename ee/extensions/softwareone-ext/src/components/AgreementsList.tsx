@@ -6,7 +6,7 @@ export function AgreementsList() {
   const router = useRouter();
 
   const handleRowClick = (agreement: Agreement) => {
-    router.push(`/softwareone/agreement/${agreement.id}`);
+  router.push(`/agreement/${agreement.id}`);
   };
 
   const getStatusBadge = (status: Agreement['status']) => {

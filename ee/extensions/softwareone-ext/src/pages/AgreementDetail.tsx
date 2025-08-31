@@ -39,7 +39,7 @@ export const AgreementDetail: React.FC = () => {
       <div style={{ padding: 16 }}>
         <Card>
           <Text>Agreement not found.</Text>
-          <Button variant="secondary" onClick={() => navigate('/softwareone/agreements')} style={{ marginTop: 8 }}>
+          <Button variant="secondary" onClick={() => navigate('/agreements')} style={{ marginTop: 8 }}>
             Back to Agreements
           </Button>
         </Card>
@@ -51,7 +51,7 @@ export const AgreementDetail: React.FC = () => {
     <div style={{ padding: 16 }}>
       <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: 12 }}>
         <Stack>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/softwareone/agreements')}>← Back</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/agreements')}>← Back</Button>
           <Text as="h1" size="lg" weight={700}>{agreement.name}</Text>
           <Text tone="muted">{agreement.product} • {agreement.vendor}</Text>
         </Stack>
@@ -184,4 +184,3 @@ export const AgreementDetail: React.FC = () => {
     </div>
   );
 };
-

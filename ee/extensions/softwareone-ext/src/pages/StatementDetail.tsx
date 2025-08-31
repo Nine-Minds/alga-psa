@@ -17,7 +17,7 @@ export const StatementDetail: React.FC = () => {
       <div style={{ padding: 16 }}>
         <Card>
           <Text>Statement not found.</Text>
-          <Button variant="secondary" onClick={() => navigate('/softwareone/statements')} style={{ marginTop: 8 }}>Back to Statements</Button>
+          <Button variant="secondary" onClick={() => navigate('/statements')} style={{ marginTop: 8 }}>Back to Statements</Button>
         </Card>
       </div>
     );
@@ -27,7 +27,7 @@ export const StatementDetail: React.FC = () => {
     <div style={{ padding: 16 }}>
       <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: 12 }}>
         <Stack>
-          <Button variant="secondary" size="sm" onClick={() => navigate('/softwareone/statements')}>← Back</Button>
+          <Button variant="secondary" size="sm" onClick={() => navigate('/statements')}>← Back</Button>
           <Text as="h1" size="lg" weight={700}>Statement {statement.statementNumber}</Text>
           <Text tone="muted">{new Date(statement.periodStart).toLocaleDateString()} - {new Date(statement.periodEnd).toLocaleDateString()}</Text>
         </Stack>
@@ -85,4 +85,3 @@ export const StatementDetail: React.FC = () => {
     </div>
   );
 };
-

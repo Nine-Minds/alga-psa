@@ -56,11 +56,13 @@
       import { createRoot } from 'react-dom/client';
       import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
-      import { AgreementsList } from './dist/pages/AgreementsList.js';
-      import { AgreementDetail } from './dist/pages/AgreementDetail.js';
-      import { StatementsList } from './dist/pages/StatementsList.js';
-      import { StatementDetail } from './dist/pages/StatementDetail.js';
-      import SettingsPageWrapper from './dist/components/SettingsPageWrapper.js';
+      // Note: when running unbundled from the project, built ESM lives in ../dist.
+      // The packer mirrors dist to ui/dist for bundles, so both paths work post-pack.
+      import { AgreementsList } from '../dist/pages/AgreementsList.js';
+      import { AgreementDetail } from '../dist/pages/AgreementDetail.js';
+      import { StatementsList } from '../dist/pages/StatementsList.js';
+      import { StatementDetail } from '../dist/pages/StatementDetail.js';
+      import SettingsPageWrapper from '../dist/components/SettingsPageWrapper.js';
 
       const App = () => (
         <Router>

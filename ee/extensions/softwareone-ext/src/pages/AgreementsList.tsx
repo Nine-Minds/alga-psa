@@ -15,7 +15,7 @@ export const AgreementsList: React.FC = () => {
 
   // Navigate to agreement detail
   const handleRowClick = (row: Agreement) => {
-    navigate(`/softwareone/agreement/${row.id}`);
+    navigate(`/agreement/${row.id}`);
   };
 
   // Handle row selection
@@ -41,7 +41,7 @@ export const AgreementsList: React.FC = () => {
       <Stack direction="row" justify="space-between" align="center" style={{ marginBottom: 12 }}>
         <Text as="h1" size="lg" weight={700}>SoftwareOne Agreements</Text>
         <Stack direction="row" gap={8}>
-          <Button variant="secondary" onClick={() => navigate('/settings/softwareone')}>Settings</Button>
+          <Button variant="secondary" onClick={() => navigate('/settings')}>Settings</Button>
         </Stack>
       </Stack>
 
@@ -63,7 +63,7 @@ export const AgreementsList: React.FC = () => {
             data={agreements}
             columns={[
               { key: 'name', header: 'Agreement', sortable: true, render: (r) => (
-                <button onClick={() => navigate(`/softwareone/agreement/${r.id}`)} style={{ color: 'var(--alga-primary)', background: 'transparent', border: 0, cursor: 'pointer' }}>
+                <button onClick={() => navigate(`/agreement/${r.id}`)} style={{ color: 'var(--alga-primary)', background: 'transparent', border: 0, cursor: 'pointer' }}>
                   {r.name}
                 </button>
               ) },

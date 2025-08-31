@@ -35,7 +35,7 @@ export const StatementsList: React.FC = () => {
     if (selectedRows.length === 0) return;
     alert(`Demo: Billing ${selectedRows.length} statements`);
   };
-  const handleRowClick = (row: Statement) => navigate(`/softwareone/statement/${row.id}`);
+  const handleRowClick = (row: Statement) => navigate(`/statement/${row.id}`);
 
   return (
     <div style={{ padding: 16 }}>
@@ -45,7 +45,7 @@ export const StatementsList: React.FC = () => {
           {selectedRows.length > 0 && (
             <Button onClick={handleBulkBilling}>Bill Selected ({selectedRows.length})</Button>
           )}
-          <Button variant="secondary" onClick={() => navigate('/softwareone/agreements')}>View Agreements</Button>
+          <Button variant="secondary" onClick={() => navigate('/agreements')}>View Agreements</Button>
         </Stack>
       </Stack>
 
@@ -96,4 +96,3 @@ export const StatementsList: React.FC = () => {
     </div>
   );
 };
-

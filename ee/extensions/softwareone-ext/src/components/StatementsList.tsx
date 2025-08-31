@@ -6,7 +6,7 @@ export function StatementsList() {
   const router = useRouter();
 
   const handleRowClick = (statement: Statement) => {
-    router.push(`/softwareone/statement/${statement.id}`);
+  router.push(`/statement/${statement.id}`);
   };
 
   const getStatusBadge = (status: Statement['status']) => {
