@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'path';
 import { glob } from 'glob';
 
-// Find component and page files to be used as entry points
-const entries = glob.sync('src/{components,pages}/**/*.{ts,tsx}').reduce((acc, file) => {
+// Find component, page, and iframe files to be used as entry points
+const entries = glob.sync('src/{components,pages,iframe}/**/*.{ts,tsx}').reduce((acc, file) => {
   const name = file.replace('src/', '').replace(/\.tsx?$/, '');
   acc[name] = path.resolve(__dirname, file);
   return acc;
