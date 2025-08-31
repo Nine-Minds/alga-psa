@@ -21,6 +21,17 @@ export default defineConfig({
       fileName: (format, entryName) => `${entryName}.js`,
     },
     rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        // Silence Radix "use client" module-level directive warnings
+        if (
+          warning.code === 'MODULE_LEVEL_DIRECTIVE' &&
+          /node_modules\/@radix-ui\//.test(String((warning as any).id || '')) &&
+          String(warning.message || '').includes('"use client"')
+        ) {
+          return;
+        }
+        defaultHandler(warning);
+      },
       // Leave common libs to the host app to avoid duplicate React instances
       external: [
         'react',

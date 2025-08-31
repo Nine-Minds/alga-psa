@@ -12,6 +12,16 @@ export default defineConfig({
       name: 'softwareone-iframe-app',
     },
     rollupOptions: {
+      onwarn(warning, defaultHandler) {
+        if (
+          warning.code === 'MODULE_LEVEL_DIRECTIVE' &&
+          /node_modules\/@radix-ui\//.test(String((warning as any).id || '')) &&
+          String(warning.message || '').includes('"use client"')
+        ) {
+          return;
+        }
+        defaultHandler(warning);
+      },
       external: [
         'react',
         'react-dom',
@@ -38,4 +48,3 @@ export default defineConfig({
     },
   },
 });
-
