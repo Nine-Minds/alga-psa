@@ -52,11 +52,26 @@
     </main>
 
     <script type="module">
-      // Load compiled TSX React app. Prefer ../dist for dev; fallback to ./dist for packaged bundles.
-      try {
-        await import('../dist/iframe/main.js');
-      } catch (e) {
-        await import('./dist/iframe/main.js');
+      // Load compiled TSX React app from the content-addressed base when available.
+      const path = window.location.pathname;
+      const hashMatch = path.match(/^(.*?\/sha256:[^/]+\/)/);
+      const base = hashMatch ? hashMatch[1] : (path.endsWith('/') ? path : path.slice(0, path.lastIndexOf('/') + 1));
+      const candidates = [
+        `${base}dist/iframe/main.js`,           // packaged layout: sha256:<hash>/dist/iframe/main.js
+        `${base}ui/dist/iframe/main.js`,        // alternative packaged: sha256:<hash>/ui/dist/iframe/main.js
+        new URL('../dist/iframe/main.js', import.meta.url).toString(), // dev layout when served from ui/index.html
+        new URL('./dist/iframe/main.js', import.meta.url).toString(),   // fallback
+      ];
+      let loaded = false;
+      for (const url of candidates) {
+        try {
+          await import(url);
+          loaded = true;
+          break;
+        } catch {}
+      }
+      if (!loaded) {
+        console.error('[SoftwareOne] Failed to load iframe entry from candidates:', candidates);
       }
     </script>
   </body>
