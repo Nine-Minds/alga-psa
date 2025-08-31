@@ -728,22 +728,21 @@ Implementation notes:
 
 The following summarizes the current EE extension implementation and where the unsafe patterns arise:
 
-- Initialization loads from local filesystem:
+- Initialization from local filesystem: REMOVED
   - File: `ee/server/src/lib/extensions/initialize.ts`
-  - Behavior: Computes `extensionsDir = path.join(process.cwd(), 'extensions')` and calls `loader.loadExtensions()`; any directory under `extensions/` is treated as an extension.
+  - Status: Filesystem scanning disabled; v1 loader deleted. Initialization logs only.
 
-- Loader reads manifests and rewrites paths to local extension files:
-  - File: `ee/server/src/lib/extensions/loader.ts`
-  - Behavior: Reads `<ext>/alga-extension.json`, rewrites `main`, `components[*].component`, and `api.endpoints[*].handler` to paths under `/extensions/<extName>/...`, then registers the extension for all tenants by enumerating `tenants` table (no per-tenant isolation on discovery).
+- Loader reads alga-extension.json: REMOVED
+  - File: `ee/server/src/lib/extensions/loader.ts` (deleted)
+  - Status: No filesystem manifests. v2 registry + runner-only.
 
-- Registry persists extension metadata and main entry point:
+- Registry persists v2 metadata only:
   - File: `ee/server/src/lib/extensions/registry.ts`
-  - Behavior: `registerExtension()` stores `manifest` JSON and `main_entry_point` (from manifest) in `extensions` table; manages `extension_permissions` and per-tenant records but assumes extensions are available via the on-disk paths.
+  - Status: `main_entry_point` removed; registry stores manifest v2 JSON and v2 registry entities.
 
-- UI runtime dynamically imports extension JS from server endpoint:
+- UI runtime dynamically imports extension JS from server endpoint: REMOVED
   - File: `ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx`
-  - Behavior: In browser, uses `import(/* webpackIgnore */ componentUrl)` where `componentUrl = /api/extensions/${extensionId}/components/${componentPath}`. This implies an API that serves raw JS modules from the extension’s on-disk files.
-  - Note: Docs reference this endpoint (`/api/extensions/[extensionId]/components/[...path]`), though the implementation may live outside the visible tree in this workspace.
+  - Status: Host-side descriptor rendering/dynamic import deprecated. UI delivered via runner iframe only.
 
 - Installation accepts uploaded file as extension package:
   - File: `ee/server/src/lib/actions/extensionActions.ts` (`installExtension`)
