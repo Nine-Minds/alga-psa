@@ -31,7 +31,8 @@ export default defineConfig({
         assetFileNames: (assetInfo) => `${assetInfo.name ?? '[name]'}[extname]`,
       },
     },
-    outDir: 'ui',
+    // Emit to ui/dist/iframe/main.js so index.html can import "./dist/iframe/main.js"
+    outDir: 'ui/dist/iframe',
     emptyOutDir: false,
     sourcemap: true,
   },
