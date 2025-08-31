@@ -1,14 +1,12 @@
 # SoftwareOne Extension (Enterprise)
 
-This package adds SoftwareOne navigation, settings, agreements, and statements UI to Alga PSA. The host app loads it from a filesystem manifest today; optional EE v2 packaging is available for experimenting with the runner-based architecture.
+This package adds SoftwareOne navigation, settings, agreements, and statements UI to Alga PSA. Delivery is v2‑only via the runner/iframe architecture using the v2 manifest and bundle.
 
 ## Current State
-- Host auto‑registers via `alga-extension.json` and rewrites relative asset paths for serving.
 - UI is a mix of JSON descriptors (navigation, settings page) and React pages/components (agreements, statements, details), built with Vite.
 - No server WASM handlers are included; descriptor handler stubs are present only for typing.
 
 ## Directory Structure
-- `alga-extension.json` — Filesystem manifest (navigation, routes, settings, component descriptors)
 - `manifest.json` — EE v2 bundle manifest (used for runner packaging)
 - `src/descriptors/` — JSON descriptors (navigation + settings page)
 - `src/components/` — React wrappers and UI pieces referenced by descriptors
@@ -31,9 +29,7 @@ This package adds SoftwareOne navigation, settings, agreements, and statements U
 - Vite dev server (for UI iteration): `npm run dev`
 
 ## Host Integration
-- On boot, the server scans `ee/extensions/*` for `alga-extension.json` and registers each extension for tenants.
-- Relative manifest paths like `./descriptors/...` resolve to `/extensions/softwareone-ext/...` for static serving by the host.
-- Reference: `ee/server/src/lib/extensions/loader.ts`
+- Install via v2 registry and serve UI through the runner iframe per the v2 docs.
 
 ## Packaging (EE v2, optional)
 This project includes a v2 `manifest.json` and tools to produce a content‑addressed bundle for the EE runner.

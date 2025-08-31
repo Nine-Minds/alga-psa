@@ -163,7 +163,6 @@ export interface Extension {
   description: string | null;
   version: string;
   manifest: ExtensionManifest;
-  main_entry_point: string | null;
   is_enabled: boolean;
   created_at: Date;
   updated_at: Date;
