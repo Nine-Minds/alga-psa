@@ -3,7 +3,11 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [],
-  esbuild: { jsx: 'automatic' },
+  esbuild: { jsx: 'transform' },
+  define: {
+    'process.env.NODE_ENV': '"production"',
+    'process.env': '{}'
+  },
   build: {
     lib: {
       entry: path.resolve(__dirname, 'src/iframe/main.tsx'),
@@ -26,6 +30,8 @@ export default defineConfig({
       external: [],
       output: {
         format: 'es',
+        // Force a truly single-file bundle
+        inlineDynamicImports: true,
         entryFileNames: () => 'main.js',
         chunkFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
         assetFileNames: (assetInfo) => `${assetInfo.name ?? '[name]'}[extname]`,
