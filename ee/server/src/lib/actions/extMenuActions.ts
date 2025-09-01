@@ -21,7 +21,7 @@ export async function listAppMenuItemsForTenant(): Promise<AppMenuItem[]> {
     .join('extension_registry as er', 'er.id', 'ti.registry_id')
     .where('ti.tenant_id', tenant)
     .andWhere('ti.is_enabled', true)
-    .andWhereNotNull('ev.ui')
+    .whereNotNull('ev.ui')
     .andWhereRaw("(ev.ui::jsonb #> '{hooks,appMenu,label}') is not null")
     .andWhereRaw("(ev.ui::jsonb #>> '{hooks,appMenu,label}') <> ''")
     .select({ id: 'er.id' })
