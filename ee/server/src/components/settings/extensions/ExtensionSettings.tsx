@@ -2,19 +2,21 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ChevronLeftIcon } from '@heroicons/react/24/outline';
-import { ReflectionContainer, automationId } from '@/lib/ui-reflection';
-import { toast } from '@/hooks/use-toast';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ChevronLeft } from 'lucide-react';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
+import { toast } from 'react-hot-toast';
+import { Switch } from '@/components/ui/Switch';
+import { Input } from '@/components/ui/Input';
+import { TextArea } from '@/components/ui/TextArea';
+import CustomSelect from '@/components/ui/CustomSelect';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { fetchExtensionById, getExtensionSettings, updateExtensionSettings, resetExtensionSettings } from '@/lib/actions/extensionActions';
 import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '@/lib/extensions/types';
+
+// Local helper to attach automation IDs consistently (data attribute only)
+const automationId = (id: string) => ({ 'data-automation-id': id });
 
 export default function ExtensionSettings() {
   const params = useParams();
@@ -52,6 +54,14 @@ export default function ExtensionSettings() {
     return Object.keys(settingsByCategory);
   }, [settingsByCategory]);
   
+  // Track active tab for controlled Tabs (must be before any early returns)
+  const [activeTab, setActiveTab] = useState<string>('');
+  useEffect(() => {
+    if (categories.length > 0) {
+      setActiveTab((prev) => (prev && categories.includes(prev) ? prev : categories[0]));
+    }
+  }, [categories]);
+
   // Load extension and settings data
   useEffect(() => {
     const loadExtensionAndSettings = async () => {
@@ -85,11 +95,7 @@ export default function ExtensionSettings() {
         setHasChanges(false);
       } catch (error) {
         console.error('Failed to load extension settings', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load extension settings.',
-          variant: 'destructive',
-        });
+        toast.error('Failed to load extension settings.');
       } finally {
         setIsLoading(false);
       }
@@ -115,27 +121,16 @@ export default function ExtensionSettings() {
       const result = await updateExtensionSettings(extensionId, settingsData);
       
       if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
+        toast.error(result.message || 'Failed to save extension settings.');
         return;
       }
       
-      toast({
-        title: 'Success',
-        description: 'Extension settings saved successfully.',
-      });
+      toast.success('Extension settings saved successfully.');
       
       setHasChanges(false);
     } catch (error) {
       console.error('Failed to save extension settings', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save extension settings.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to save extension settings.');
     } finally {
       setIsLoading(false);
     }
@@ -153,11 +148,7 @@ export default function ExtensionSettings() {
       const result = await resetExtensionSettings(extensionId);
       
       if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.message,
-          variant: 'destructive',
-        });
+        toast.error(result.message || 'Failed to reset extension settings.');
         return;
       }
       
@@ -170,17 +161,10 @@ export default function ExtensionSettings() {
       setSettingsData(defaultSettings);
       setHasChanges(false);
       
-      toast({
-        title: 'Success',
-        description: 'Settings reset to default values.',
-      });
+      toast.success('Settings reset to default values.');
     } catch (error) {
       console.error('Failed to reset extension settings', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to reset extension settings.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to reset extension settings.');
     } finally {
       setIsLoading(false);
     }
@@ -207,7 +191,7 @@ export default function ExtensionSettings() {
         
       case 'text':
         return (
-          <Textarea
+          <TextArea
             id={`setting-${key}`}
             value={value || ''}
             placeholder={placeholder || ''}
@@ -242,27 +226,19 @@ export default function ExtensionSettings() {
         
       case 'select':
         return (
-          <Select
+          <CustomSelect
+            options={(options || []).map((opt) => ({ value: opt.value.toString(), label: opt.label }))}
             value={value || ''}
-            onValueChange={(value) => handleSettingChange(key, value)}
-          >
-            <SelectTrigger className="max-w-md" {...automationIdProps}>
-              <SelectValue placeholder={placeholder || 'Select an option'} />
-            </SelectTrigger>
-            <SelectContent>
-              {options?.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            onValueChange={(val) => handleSettingChange(key, val)}
+            placeholder={placeholder || 'Select an option'}
+            className="max-w-md"
+            {...automationIdProps}
+          />
         );
         
       default:
         return (
           <Input
-            id={`setting-${key}`}
             value={value || ''}
             placeholder={placeholder || ''}
             onChange={(e) => handleSettingChange(key, e.target.value)}
@@ -293,7 +269,7 @@ export default function ExtensionSettings() {
   }
   
   const automationIdProps = automationId(`extension-settings-${extensionId}`);
-  
+
   return (
     <ReflectionContainer id={`extension-settings-${extensionId}`} label="Extension Settings">
       <div className="p-6" {...automationIdProps}>
@@ -306,7 +282,7 @@ export default function ExtensionSettings() {
               className="mr-2"
               onClick={() => router.push(`/msp/settings/extensions/${extensionId}`)}
             >
-              <ChevronLeftIcon className="h-4 w-4" />
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-semibold text-gray-900">
               {extension.name} Settings
@@ -345,7 +321,7 @@ export default function ExtensionSettings() {
                 <p className="text-gray-500">This extension doesn't have any configurable settings.</p>
               </div>
             ) : (
-              <Tabs defaultValue={categories[0]}>
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                   {categories.map((category) => (
                     <TabsTrigger key={category} value={category}>

@@ -1,17 +1,19 @@
 import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
 import path from 'path';
 import { glob } from 'glob';
 
-// Find all component and page files to be used as entry points
-const entries = glob.sync('src/{components,pages}/**/*.{ts,tsx}').reduce((acc, file) => {
+// Find component, page, and iframe files to be used as entry points
+const entries = glob.sync('src/{components,pages,iframe}/**/*.{ts,tsx}').reduce((acc, file) => {
   const name = file.replace('src/', '').replace(/\.tsx?$/, '');
   acc[name] = path.resolve(__dirname, file);
   return acc;
 }, {});
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [],
+  esbuild: {
+    jsx: 'transform',
+  },
   build: {
     lib: {
       entry: entries,
@@ -23,6 +25,10 @@ export default defineConfig({
       external: ['react', 'react-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
       output: {
         format: 'es',
+        // Force .js extensions for entries and chunks
+        entryFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        chunkFileNames: (chunkInfo) => `${chunkInfo.name}.js`,
+        assetFileNames: (assetInfo) => `${assetInfo.name ?? '[name]'}[extname]`,
         // Use import maps to resolve React from the global scope
         paths: {
           'react': 'https://esm.sh/react@18',
@@ -36,4 +42,10 @@ export default defineConfig({
     sourcemap: true,
     emptyOutDir: true,
   },
+  resolve: {
+    alias: {
+      // Resolve local UI kit source when building browser-targeted bundles
+      '@alga/ui-kit': path.resolve(__dirname, '..', '..', 'server', 'packages', 'ui-kit', 'src'),
+    }
+  }
 });

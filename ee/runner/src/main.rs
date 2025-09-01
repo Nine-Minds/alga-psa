@@ -4,6 +4,7 @@ mod engine;
 mod cache;
 mod util;
 mod registry;
+mod secrets;
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 

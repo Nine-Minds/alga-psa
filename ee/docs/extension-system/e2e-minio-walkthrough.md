@@ -2,8 +2,8 @@
 
 This document provides a concrete, step-by-step manual validation flow for uploading an extension bundle to S3-compatible storage (MinIO), finalizing the bundle, and verifying visibility in the Extensions list using the Install page UI.
 
-Links to relevant routes and UI pages:
-- Initiate upload API: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- Links to relevant routes and UI pages:
+- Upload Proxy API: [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1)
 - Finalize API: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
 - Abort API: [ee/server/src/app/api/ext-bundles/abort/route.ts](ee/server/src/app/api/ext-bundles/abort/route.ts:1)
 - Install UI page: [ee/server/src/app/msp/settings/extensions/install/page.tsx](ee/server/src/app/msp/settings/extensions/install/page.tsx:1)
@@ -40,13 +40,11 @@ Step 2 — Use the Install Page UI
   - cache-control (optional): e.g. public, max-age=31536000 (or leave empty).
   - Manifest JSON: Paste the minimal manifest from Step 1.
 
-Step 3 — Initiate Upload
-- Click the initiate/upload action in the UI.
-- Verify a presigned URL is rendered (HTTP PUT URL to S3/MinIO), along with any required headers.
+Step 3 — Upload (Proxy)
+- Click upload. The server streams your file to S3 via the upload‑proxy API and returns a staging key.
 
-Step 4 — Upload to S3 (PUT)
-- From the UI, trigger the upload of bundle.tar.zst to the provided presigned URL (HTTP PUT).
-- Verify the UI status shows the object has been uploaded successfully (HTTP 200/204). If your UI shows progress or completion indicators, confirm they complete without error.
+Step 4 — Verify Upload
+- Confirm the UI shows upload completion with a returned staging key.
 
 Step 5 — Finalize
 - Click finalize in the UI.
@@ -87,8 +85,8 @@ Troubleshooting
   - Verify endpoint and region values match your MinIO configuration.
   - Ensure bucket exists and credentials are correct.
 
-References
-- Initiate: [ee/server/src/app/api/ext-bundles/initiate-upload/route.ts](ee/server/src/app/api/ext-bundles/initiate-upload/route.ts:1)
+- References
+- Upload Proxy: [ee/server/src/app/api/ext-bundles/upload-proxy/route.ts](ee/server/src/app/api/ext-bundles/upload-proxy/route.ts:1)
 - Finalize: [ee/server/src/app/api/ext-bundles/finalize/route.ts](ee/server/src/app/api/ext-bundles/finalize/route.ts:1)
 - Abort: [ee/server/src/app/api/ext-bundles/abort/route.ts](ee/server/src/app/api/ext-bundles/abort/route.ts:1)
 - Install UI: [ee/server/src/app/msp/settings/extensions/install/page.tsx](ee/server/src/app/msp/settings/extensions/install/page.tsx:1)

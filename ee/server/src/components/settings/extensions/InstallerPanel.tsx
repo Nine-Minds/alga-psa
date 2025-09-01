@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { TextArea } from '@/components/ui/TextArea';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 // EE server actions
 import { extFinalizeUpload, extAbortUpload, extUploadProxy } from '../../../lib/actions/extBundleActions';
@@ -74,7 +75,7 @@ export default function InstallerPanel() {
     const f = e.target.files?.[0] ?? null;
     if (f) {
       if (!f.name.endsWith('.tar.zst')) {
-        alert('File must end with ".tar.zst", ' + f.name);
+        toast.error(`File must end with ".tar.zst": ${f.name}`);
         e.currentTarget.value = '';
         return;
       }
