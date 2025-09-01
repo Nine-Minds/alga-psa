@@ -175,7 +175,7 @@ export default function Extensions() {
       </div>
     </ReflectionContainer>
     {viewing && (
-      <Dialog open={true} onOpenChange={() => setViewing(null)}>
+      <Dialog isOpen={true} onClose={() => setViewing(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{viewing.name}</DialogTitle>
@@ -185,7 +185,7 @@ export default function Extensions() {
               <strong>Version:</strong> {viewing.manifest.version}
             </p>
             <p>
-              <strong>Author:</strong> {viewing.manifest.author}
+              <strong>Author:</strong> {typeof viewing.manifest.author === 'string' ? viewing.manifest.author : viewing.manifest.author?.name ?? '—'}
             </p>
             <p>
               <strong>Domain:</strong> {installInfo[viewing.id]?.domain || '—'}
