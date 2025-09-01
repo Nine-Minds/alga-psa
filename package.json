@@ -11,6 +11,7 @@
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
+    "postinstall": "node scripts/link-alga-sdk.mjs",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",

@@ -17,6 +17,7 @@ import { fetchInstalledExtensionsV2, toggleExtensionV2, uninstallExtensionV2 } f
 import { getInstallInfo, reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
+import { toast } from 'react-hot-toast';
 
 /**
  * Extensions management page
@@ -70,7 +71,7 @@ export default function Extensions() {
     try {
       const result = await toggleExtensionV2(id);
       if (!result.success) {
-        alert(result.message);
+        toast.error(result.message || 'Failed to update extension state');
         return;
       }
   
@@ -81,11 +82,11 @@ export default function Extensions() {
         )
       );
   
-      console.info(`Extension ${currentStatus ? 'disabled' : 'enabled'}`, { id });
+      toast.success(`Extension ${currentStatus ? 'disabled' : 'enabled'}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
       console.error('Failed to toggle extension', { id, error: msg });
-      alert(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
+      toast.error(`Failed to ${currentStatus ? 'disable' : 'enable'} extension`);
     }
   };
   
@@ -98,7 +99,7 @@ export default function Extensions() {
     try {
       const result = await uninstallExtensionV2(id);
       if (!result.success) {
-        alert(result.message);
+        toast.error(result.message || 'Failed to remove extension');
         return;
       }
   
@@ -107,11 +108,11 @@ export default function Extensions() {
         prevExtensions.filter(ext => ext.id !== id)
       );
   
-      console.info('Extension removed', { id });
+      toast.success('Extension removed');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'unknown error';
       console.error('Failed to remove extension', { id, error: msg });
-      alert('Failed to remove extension');
+      toast.error('Failed to remove extension');
     }
   };
 
@@ -120,7 +121,7 @@ export default function Extensions() {
       const result = await reprovisionExtension(id);
       setInstallInfo((prev) => ({ ...prev, [id]: { domain: result.domain || null, status: { state: 'provisioning' } } }));
     } catch (e) {
-      alert('Failed to reprovision');
+      toast.error('Failed to reprovision');
     }
   };
   
@@ -188,17 +189,7 @@ export default function Extensions() {
               <strong>Author:</strong> {typeof viewing.manifest.author === 'string' ? viewing.manifest.author : viewing.manifest.author?.name ?? '—'}
             </p>
             <p>
-              <strong>Domain:</strong>{' '}
-              {installInfo[viewing.id]?.domain ? (
-                <a
-                  href={`https://${installInfo[viewing.id]?.domain}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary-600 hover:underline"
-                >
-                  {installInfo[viewing.id]?.domain}
-                </a>
-              ) : '—'}
+              <strong>Domain:</strong> {installInfo[viewing.id]?.domain || '—'}
             </p>
             {installInfo[viewing.id]?.status?.state && (
               <p>

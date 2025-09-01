@@ -10,6 +10,7 @@ export interface ExtensionManifest {
   name: string;
   description?: string;
   version: string;
+  main?: string;
   author?: string | { name: string; email?: string };
   homepage?: string;
   repository?: string;
@@ -139,10 +140,15 @@ export type ExtensionComponentDefinition =
  */
 export interface ExtensionSettingDefinition {
   key: string;
-  type: 'string' | 'number' | 'boolean' | 'select' | 'multiselect';
+  type: 'string' | 'text' | 'number' | 'boolean' | 'select' | 'multiselect';
   label: string;
   description?: string;
+  // Historical/alternate default fields used by some UIs
   default?: any;
+  defaultValue?: any;
+  // Optional UI helpers
+  placeholder?: string;
+  category?: string;
   options?: Array<{
     label: string;
     value: string | number | boolean;
@@ -152,6 +158,9 @@ export interface ExtensionSettingDefinition {
   min?: number;
   max?: number;
 }
+
+// Convenience type used by client code
+export type ExtensionSettingType = ExtensionSettingDefinition['type'];
 
 /**
  * Database extension model
