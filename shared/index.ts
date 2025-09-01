@@ -16,7 +16,7 @@ export * from './interfaces/contact.interfaces';
 export * from './interfaces/tag.interfaces';
 export * from './interfaces/validation.interfaces';
 
-export { default as logger } from '@alga-psa/shared/core/logger.js';
+export { default as logger } from '@alga-psa/shared/core/logger';
 
 // Re-export extension utilities
 export * from './extension-utils';

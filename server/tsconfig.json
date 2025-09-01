@@ -29,8 +29,8 @@
       "@shared/core/*": ["../shared/core/*"],
       "@shared/types": ["../shared/types"],
       "@shared/types/*": ["../shared/types/*"],
-      "@ee": ["../ee/server/src", "src/empty"],
-      "@ee/*": ["../ee/server/src/*", "src/empty/*"]
+      "@ee": ["src/empty"],
+      "@ee/*": ["src/empty/*"]
     }
   },
   "include": [

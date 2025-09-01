@@ -1,7 +1,7 @@
 "use server";
 
 import type { Knex } from 'knex';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 function normalizeHost(input?: string | null): string | null {
   if (!input) return null;

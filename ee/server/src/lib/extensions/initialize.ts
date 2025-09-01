@@ -1,4 +1,4 @@
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 
 export async function initializeExtensions(): Promise<void> {
   try {

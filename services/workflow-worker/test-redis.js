@@ -4,7 +4,7 @@
 import { createClient } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
-import { getSecretProviderInstance } from '../../shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '../../shared/core/secretProvider';
 
 // Load environment variables
 dotenv.config();

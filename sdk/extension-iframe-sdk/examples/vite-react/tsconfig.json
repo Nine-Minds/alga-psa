@@ -13,10 +13,9 @@
     "noEmit": true,
     "paths": {
       "@alga/extension-iframe-sdk": ["../../src"],
-      "@alga/ui-kit": ["../../../ui-kit/src"],
-      "@alga/ui-kit/*": ["../../../ui-kit/src/*"]
+      "@alga-psa/ui-kit": ["../../../ui-kit/src"],
+      "@alga-psa/ui-kit/*": ["../../../ui-kit/src/*"]
     }
   },
   "include": ["src", "vite-env.d.ts"]
 }
-

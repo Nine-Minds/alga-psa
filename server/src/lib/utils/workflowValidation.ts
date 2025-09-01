@@ -3,7 +3,7 @@
  */
 
 import { z } from 'zod';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import * as ts from 'typescript';
 import { Project, Node, SyntaxKind, ObjectLiteralExpression } from 'ts-morph';
 

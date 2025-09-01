@@ -1,8 +1,7 @@
-import logger from '@alga-psa/shared/core/logger.js';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
-import { CompositeSecretProvider } from '@alga-psa/shared/core/CompositeSecretProvider.js';
-import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider.js';
-import { FileSystemSecretProvider } from '@alga-psa/shared/core/FileSystemSecretProvider.js';
+import logger from '@shared/core/logger';
+import { getSecretProviderInstance } from '@shared/core/secretProvider';
+import { EnvSecretProvider } from '@shared/core/EnvSecretProvider';
+import { FileSystemSecretProvider } from '@shared/core/FileSystemSecretProvider';
 import { DB_HOST } from '@/lib/init/serverInit';
 
 /**
