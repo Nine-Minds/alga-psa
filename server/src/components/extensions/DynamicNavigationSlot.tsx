@@ -43,7 +43,7 @@ export const DynamicNavigationSlot: React.FC<DynamicNavigationSlotProps> = ({ co
         {items.map((it) => (
           <li key={it.id}>
             <Link
-              href={"/msp/settings/extensions/" + encodeURIComponent(it.id)}
+              href={"/msp/extensions/" + encodeURIComponent(it.id)}
               className="flex items-center gap-2 px-2 py-2 rounded hover:bg-[#2a2b32] text-sm text-gray-200"
               data-automation-id={"ext-menu-" + it.id}
             >
