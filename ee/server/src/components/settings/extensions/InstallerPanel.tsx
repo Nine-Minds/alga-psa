@@ -44,6 +44,7 @@ export default function InstallerPanel() {
 
   // Background flow state
   const uploadKeyRef = useRef<string | null>(null);
+  const manifestFileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Outcomes
   const [error, setError] = useState<ApiError | null>(null);
@@ -52,6 +53,19 @@ export default function InstallerPanel() {
   // Optional manifest prompt (only shown if server requires it)
   const [needsManifest, setNeedsManifest] = useState(false);
   const [manifestJson, setManifestJson] = useState('');
+
+  const handleManifestFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      try {
+        const text = await f.text();
+        setManifestJson(text);
+      } catch {
+        toast.error('Failed to read manifest file');
+      }
+    }
+    e.target.value = '';
+  }, []);
 
   const reset = useCallback(async () => {
     try {
@@ -69,6 +83,9 @@ export default function InstallerPanel() {
     setSuccess(null);
     setNeedsManifest(false);
     setManifestJson('');
+    if (manifestFileInputRef.current) {
+      manifestFileInputRef.current.value = '';
+    }
   }, []);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -256,7 +273,29 @@ export default function InstallerPanel() {
                   The server requested the manifest.json for this bundle to complete installation.
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="installer-manifest-json">Manifest JSON</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="installer-manifest-json">Manifest JSON</Label>
+                    <div>
+                      <Input
+                        id="installer-manifest-file"
+                        type="file"
+                        accept=".json"
+                        ref={manifestFileInputRef}
+                        className="hidden"
+                        onChange={handleManifestFileChange}
+                        disabled={installing}
+                      />
+                      <Button
+                        id="installer-manifest-browse-btn"
+                        type="button"
+                        variant="outline"
+                        onClick={() => manifestFileInputRef.current?.click()}
+                        disabled={installing}
+                      >
+                        Browse
+                      </Button>
+                    </div>
+                  </div>
                   <TextArea
                     id="installer-manifest-json"
                     placeholder='Paste the manifest.json content here'
