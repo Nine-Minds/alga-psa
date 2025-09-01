@@ -21,6 +21,8 @@ export default [
       "eslint.config.js",
       "**/eslint.config.js",
       "ee/server/migrations/**/*", // Ignore EE migration files (usually .cjs)
+      // Mirror packages under ee/server that aren't primary sources (avoid duplicate lint targets)
+      "ee/server/packages/extension-iframe-sdk/**/*",
       "ee/extensions/**/*", // Exclude extension bundles/examples from lint to reduce load and avoid false positives
       "dist/**/*",
       "**/.next/**/*",
@@ -70,6 +72,8 @@ export default [
       "eslint.config.js",
       "**/eslint.config.js",
       "ee/server/migrations/**/*",
+      // Mirror packages under ee/server that aren't primary sources (avoid duplicate lint targets)
+      "ee/server/packages/extension-iframe-sdk/**/*",
       "ee/extensions/**/*",
       "dist/**/*",
       "**/.next/**/*",
