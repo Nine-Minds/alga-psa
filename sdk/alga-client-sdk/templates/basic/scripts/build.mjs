@@ -1,11 +1,12 @@
 import { mkdirSync, cpSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 function ensureDir(p) { try { mkdirSync(p, { recursive: true }); } catch {} }
 
-function copyRecursive(src, dest) { cpSync(src, dest, { recursive: true }); }
-
-const root = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const root = resolve(__dirname, '..');
 const dist = resolve(root, 'dist');
 
 ensureDir(dist);
@@ -23,9 +24,8 @@ if (existsSync(manifestSrc)) {
 const uiSrc = resolve(root, 'ui');
 if (existsSync(uiSrc)) {
   const uiDest = resolve(dist, 'ui');
-  copyRecursive(uiSrc, uiDest);
+  cpSync(uiSrc, uiDest, { recursive: true });
   console.log(`[build] copied UI to: ${uiDest}`);
 }
 
 console.log('[build] done');
-

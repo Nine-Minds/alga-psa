@@ -1,8 +1,4 @@
-# __PACKAGE_NAME__
+# Alga Extension (Basic Template)
 
-Minimal Alga extension (hello world) with a super basic iframe UI.
+This is a basic starter for an Alga client extension.
 
-- Dev UI: open `ui/index.html` in your browser.
-- Build: `npm run build` (optional if you add a build step)
-- Pack: `npm run pack` or `alga pack-project --project . --out dist/bundle.tar.zst`
-- Manifest: a minimal `manifest.json` is included and already references `ui/index.html`.

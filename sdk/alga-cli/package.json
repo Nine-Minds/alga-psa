@@ -1,26 +1,25 @@
 {
-  "name": "@alga-psa/client-sdk",
+  "name": "@alga-psa/cli",
   "version": "0.1.0",
   "private": false,
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js"
+  "bin": {
+    "alga": "dist/cli.js"
   },
   "files": [
-    "dist",
-    "templates"
+    "dist"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run build"
   },
-  "dependencies": {},
-  "publishConfig": {
-    "access": "public"
+  "dependencies": {
+    "@alga-psa/client-sdk": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

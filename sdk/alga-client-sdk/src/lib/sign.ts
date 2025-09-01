@@ -3,7 +3,9 @@ import { resolve, dirname, join, basename } from 'node:path';
 
 export type SignOptions = { algorithm: 'cosign' | 'x509' | 'pgp' };
 
-export function signBundlePlaceholder(bundlePath: string, opts: SignOptions) {
+export async function sign(bundlePathOrOpts: string | { bundlePath: string; algorithm: SignOptions['algorithm'] }, maybeOpts?: SignOptions) {
+  const bundlePath = typeof bundlePathOrOpts === 'string' ? bundlePathOrOpts : bundlePathOrOpts.bundlePath;
+  const opts = (typeof bundlePathOrOpts === 'string' ? (maybeOpts as SignOptions) : { algorithm: bundlePathOrOpts.algorithm });
   const bundle = resolve(bundlePath);
   let st: ReturnType<typeof statSync>;
   try { st = statSync(bundle); } catch { throw new Error(`Bundle not found: ${bundle}`); }
@@ -24,4 +26,3 @@ export function signBundlePlaceholder(bundlePath: string, opts: SignOptions) {
   writeFileSync(sigPath, content, { encoding: 'utf8', flag: 'w' });
   return { signaturePath: sigPath };
 }
-
