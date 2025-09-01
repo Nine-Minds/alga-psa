@@ -188,7 +188,17 @@ export default function Extensions() {
               <strong>Author:</strong> {typeof viewing.manifest.author === 'string' ? viewing.manifest.author : viewing.manifest.author?.name ?? '—'}
             </p>
             <p>
-              <strong>Domain:</strong> {installInfo[viewing.id]?.domain || '—'}
+              <strong>Domain:</strong>{' '}
+              {installInfo[viewing.id]?.domain ? (
+                <a
+                  href={`https://${installInfo[viewing.id]?.domain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-600 hover:underline"
+                >
+                  {installInfo[viewing.id]?.domain}
+                </a>
+              ) : '—'}
             </p>
             {installInfo[viewing.id]?.status?.state && (
               <p>
