@@ -2,7 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "noImplicitAny": false
+    "noImplicitAny": false,
+    "paths": {
+      "@/*": ["server/src/*", "ee/server/src/*"]
+    }
   },
   "include": [
     "src/**/*.ts",
@@ -12,6 +15,13 @@
   "exclude": [
     "node_modules",
     "dist",
-    "src/components/flow"
+    "src/components/flow",
+    // Skip tests
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.playwright.test.ts",
+    "src/__tests__/**"
   ]
 }
