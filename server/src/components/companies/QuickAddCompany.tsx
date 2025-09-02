@@ -37,8 +37,8 @@ import {
   validateCityName, 
   validateAddress, 
   validateContactName,
-  validateIndustry,
   validateStateProvince,
+  validateIndustry,
   type ValidationResult 
 } from 'server/src/lib/utils/clientFormValidation';
 
@@ -188,24 +188,15 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       return error;
     }
     
-    // Only show validation errors if:
-    // 1. Form has been submitted once, OR
-    // 2. Field already has an error (to clear it when fixed), OR
-    // 3. Field has content that's clearly problematic (like "1" or emojis)
-    const shouldShowError = hasAttemptedSubmit || 
-                           fieldErrors[fieldName] || 
-                           (value.trim().length > 0 && (
-                             value.trim() === '1' || 
-                             value.trim().length < 2 ||
-                             /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(value)
-                           ));
-    
     switch (fieldName) {
       case 'company_name':
         error = validateCompanyName(value);
         break;
       case 'url':
         error = validateWebsiteUrl(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
         break;
       case 'location_email':
         error = validateEmailAddress(value);
@@ -219,6 +210,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       case 'city':
         error = validateCityName(value);
         break;
+      case 'state_province':
+        error = validateStateProvince(value);
+        break;
       case 'address_line1':
         error = validateAddress(value);
         break;
@@ -231,21 +225,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       case 'contact_phone':
         error = validatePhoneNumber(value);
         break;
-      case 'industry':
-        error = validateIndustry(value);
-        break;
-      case 'state_province':
-        error = validateStateProvince(value);
-        break;
     }
     
-    // Only set the error if we should show it, otherwise clear it
     setFieldErrors(prev => ({
       ...prev,
-      [fieldName]: (shouldShowError && error) ? error : ''
+      [fieldName]: error || ''
     }));
     
-    return shouldShowError ? error : null;
+    return error;
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
@@ -258,10 +245,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     const validationResult = validateClientForm({
       companyName: formData.company_name,
       websiteUrl: formData.url,
+      industry: formData.properties?.industry,
       email: locationData.email,
       phone: locationData.phone,
       address: locationData.address_line1,
       city: locationData.city,
+      stateProvince: locationData.state_province,
       postalCode: locationData.postal_code,
       countryCode: locationData.country_code,
       contactName: contactData.full_name,
@@ -269,11 +258,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       contactPhone: contactData.phone_number
     });
     
+    // Early return if validation fails - prevent async operations
     if (!validationResult.isValid) {
       setFieldErrors(validationResult.errors);
       const errorMessages = Object.values(validationResult.errors).filter(Boolean);
       setValidationErrors(errorMessages);
-      return;
+      return; // Stop here - don't proceed with async submit logic
     }
 
     setIsSubmitting(true);
@@ -380,14 +370,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       return updatedState;
     });
     
-    // Real-time validation - trigger immediately for better UX
-    let validationField = field;
-    if (field === 'properties.industry') {
-      validationField = 'industry';
-    }
-    
-    // Always call validateField - it will handle when to show errors internally
-    validateField(validationField, value as string);
+    // Real-time validation - always validate when user types
+    validateField(field, value as string);
   };
 
   const handleLocationChange = (field: keyof CreateLocationData, value: string | boolean | null) => {
@@ -402,12 +386,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       'phone': 'location_phone',
       'postal_code': 'postal_code',
       'city': 'city',
-      'address_line1': 'address_line1',
-      'state_province': 'state_province'
+      'state_province': 'state_province',
+      'address_line1': 'address_line1'
     };
     
     const validationField = validationFieldMap[field as string];
-    // Always call validateField for location fields - it will handle when to show errors internally  
     if (validationField) {
       if (validationField === 'postal_code') {
         validateField(validationField, value as string, { countryCode: locationData.country_code });
@@ -492,6 +475,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   Company Name *
                 </Label>
                 <Input
+                  id="company_name"
                   data-automation-id="company-name-input"
                   value={formData.company_name}
                   onChange={(e) => {
@@ -529,6 +513,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Industry
                   </Label>
                   <Input
+                    id="industry"
                     data-automation-id="industry"
                     value={formData.properties?.industry || ''}
                     onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
@@ -547,6 +532,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Website URL
                   </Label>
                   <Input
+                    id="url"
                     data-automation-id="url"
                     value={formData.url}
                     onChange={(e) => handleCompanyChange('url', e.target.value)}
@@ -587,6 +573,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   Street Address
                 </Label>
                 <Input
+                  id="address_line1"
                   data-automation-id="address_line1"
                   value={locationData.address_line1}
                   onChange={(e) => handleLocationChange('address_line1', e.target.value)}
@@ -604,6 +591,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     City
                   </Label>
                   <Input
+                    id="city"
                     data-automation-id="city"
                     value={locationData.city}
                     onChange={(e) => handleLocationChange('city', e.target.value)}
@@ -620,6 +608,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     State
                   </Label>
                   <Input
+                    id="state_province"
                     data-automation-id="state_province"
                     value={locationData.state_province || ''}
                     onChange={(e) => handleLocationChange('state_province', e.target.value)}
@@ -636,6 +625,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Zip Code
                   </Label>
                   <Input
+                    id="postal_code"
                     data-automation-id="postal_code"
                     value={locationData.postal_code || ''}
                     onChange={(e) => handleLocationChange('postal_code', e.target.value)}
@@ -682,6 +672,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Email
                   </Label>
                   <Input
+                    id="location_email"
                     data-automation-id="location_email"
                     type="email"
                     value={locationData.email || ''}
@@ -708,6 +699,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   Name
                 </Label>
                 <Input
+                  id="contact_name"
                   data-automation-id="contact_name"
                   value={contactData.full_name}
                   onChange={(e) => handleContactChange('full_name', e.target.value)}
@@ -725,6 +717,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Email
                   </Label>
                   <Input
+                    id="contact_email"
                     data-automation-id="contact_email"
                     type="email"
                     value={contactData.email}
@@ -761,6 +754,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   Notes
                 </Label>
                 <TextArea
+                  id="notes"
                   data-automation-id="notes"
                   value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
