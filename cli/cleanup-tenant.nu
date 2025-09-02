@@ -345,7 +345,7 @@ def "main cleanup" [
         "plan_services" "bundle_billing_plans" "plan_bundles"
         
         # Company details (must come before companies)
-        "company_tax_rates" "company_tax_settings" "company_locations"
+        "company_tax_rates" "company_tax_settings"
         "tenant_companies"
         
         # Project/task entities
@@ -399,7 +399,12 @@ def "main cleanup" [
         
         # === LEVEL 5: Tickets and related ===
         # Tickets MUST be deleted BEFORE categories, statuses, etc that it references
+        # AND BEFORE company_locations that tickets reference via location_id
         "tickets"
+        
+        # === LEVEL 6: Company locations (referenced by tickets.location_id) ===
+        # Must be deleted AFTER tickets
+        "company_locations"
         
         # === LEVEL 6: Lookup tables referenced by tickets ===
         # These can only be deleted AFTER tickets
