@@ -1,5 +1,9 @@
 // Client-safe version utility
+// Import package.json to get version at build time
+import packageJson from '../../../package.json';
+
 export function getAppVersion(): string {
-  // Use NEXT_PUBLIC_ prefixed environment variable for client-side access
-  return process.env.NEXT_PUBLIC_APP_VERSION || 'unknown';
+  // Use package.json version which is available at build time
+  // This works for both client and server side
+  return packageJson.version || 'unknown';
 }
