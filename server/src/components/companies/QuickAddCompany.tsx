@@ -661,7 +661,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}
-                    dataAutomationId="company-location-phone"
+                    data-automation-id="company-location-phone"
                   />
                   {fieldErrors.location_phone && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.location_phone}</p>
@@ -740,7 +740,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}
-                    dataAutomationId="company-contact-phone"
+                    data-automation-id="company-contact-phone"
                   />
                   {fieldErrors.contact_phone && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
