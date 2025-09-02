@@ -1,10 +1,13 @@
 import { mkdirSync, cpSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 
 function ensureDir(p) { try { mkdirSync(p, { recursive: true }); } catch {} }
-function copyRecursive(src, dest) { cpSync(src, dest, { recursive: true }); }
 
-const root = process.cwd();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const root = resolve(__dirname, '..');
 const dist = resolve(root, 'dist');
 
 ensureDir(dist);
@@ -22,9 +25,39 @@ if (existsSync(manifestSrc)) {
 const uiSrc = resolve(root, 'ui');
 if (existsSync(uiSrc)) {
   const uiDest = resolve(dist, 'ui');
-  copyRecursive(uiSrc, uiDest);
+  cpSync(uiSrc, uiDest, { recursive: true });
   console.log(`[build] copied UI to: ${uiDest}`);
 }
 
-console.log('[build] done');
+// Build React UI gallery using local project deps (@alga-psa/ui-kit from npm)
+try {
+  const esbuild = await import('esbuild');
+  await esbuild.build({
+    entryPoints: [resolve(root, 'src/main.tsx')],
+    outfile: resolve(dist, 'ui/index.js'),
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    jsx: 'automatic',
+    sourcemap: false,
+    minify: true,
+    resolveExtensions: ['.tsx', '.ts', '.jsx', '.js'],
+    define: { 'process.env.NODE_ENV': '"production"' }
+  });
 
+  // Copy UI Kit tokens CSS via package export resolution
+  const require = createRequire(import.meta.url);
+  let tokensCss;
+  try {
+    tokensCss = require.resolve('@alga-psa/ui-kit/theme.css');
+  } catch {}
+  if (tokensCss && existsSync(tokensCss)) {
+    const destCss = resolve(dist, 'ui/theme.css');
+    cpSync(tokensCss, destCss);
+    console.log(`[build] copied tokens CSS to: ${destCss}`);
+  }
+} catch (e) {
+  console.warn('[build] ui-gallery React build skipped (missing local deps). Run `npm install` first.');
+}
+
+console.log('[build] done');

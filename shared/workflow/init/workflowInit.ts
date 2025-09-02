@@ -1,6 +1,6 @@
 import { getActionRegistry } from '../core/actionRegistry';
 import { getWorkflowRuntime } from '../core/workflowRuntime';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@shared/core/logger.js';
 
 /**
  * Initialize the workflow system

@@ -3,7 +3,12 @@
   "publisher": "Your Org",
   "version": "0.1.0",
   "runtime": "wasm-js@1",
-  "ui": { "type": "iframe", "entry": "ui/index.html" },
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "__PACKAGE_NAME__" }
+    }
+  },
   "assets": ["ui/**/*"]
 }
-

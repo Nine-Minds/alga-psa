@@ -1,28 +1,11 @@
-Alga Client SDK
-===============
+# @alga-psa/client-sdk
 
-CLI and programmatic tools for building, packing, signing, and publishing Alga extensions.
+Client SDK for building Alga extensions. Provides programmatic APIs and command helpers used by the `@alga-psa/cli`.
 
-Install (local dev)
--------------------
-- From monorepo root:
-  - Build: `npm run build:sdk`
-  - Link globally (dev): `npm -w sdk/alga-client-sdk link`
-  - Use: `alga --help`
+## Commands (planned)
+- createNewProject / createUiProject: scaffold a new extension from templates
+- packProject: bundle an extension project
+- publish: upload a bundle to the registry
+- sign: sign a bundle for distribution
 
-- From the package folder:
-  - Build: `npm run build`
-  - Use without link: `node dist/src/cli.js --help`
-
-CLI
----
-- create-new-project [dir] --name <pkg>
-- create-ui-project [dir] --name <pkg>
-- pack <inputDir> <outputPath> [--force]
-- pack-project --project <path> --out <bundle> [--force]
-- publish --bundle <path> --manifest <path> [--server <url>] [--declared-hash <sha>] [--signature <path>] [--signature-algorithm <algo>]
-- sign <bundlePath> --algorithm cosign|x509|pgp
-
-Node Support
-------------
-- Requires Node.js >= 18. Windows support is best-effort.
+Use via the CLI: `npx @alga-psa/cli create extension`.
