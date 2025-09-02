@@ -121,8 +121,12 @@ def --wrapped main [
        print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\""
        print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\" --skip-onboarding"
        print "  nu main.nu list-tenants           # List all tenants"
-       print "  nu main.nu delete-tenant <id> [--force]  # Delete a tenant"
-       print "    Example: nu main.nu delete-tenant test-tenant-id --force"
+       print ""
+       print "  nu main.nu cleanup-tenant <action> [args]  # Clean up test tenant data"
+       print "    Actions:"
+       print "      list [--environment local|production]     # List all tenants"
+       print "      inspect <id> [--environment local|production]  # Inspect tenant data"
+       print "      cleanup <id> [--environment local|production] [--execute] [--preserve-tenant] [--force]"
        print ""
        print "Alternatively, source the script ('source main.nu') and run commands directly:"
        print "  run-migrate <action>"
@@ -599,15 +603,24 @@ def --wrapped main [
        "list-tenants" => {
            list-tenants
        }
-       "delete-tenant" => {
-           let tenant_id = ($args | get 1? | default null)
+       "cleanup-tenant" => {
+           let action = ($args | get 1? | default null)
            
-           if $tenant_id == null {
-               error make { msg: $"($env.ALGA_COLOR_RED)delete-tenant requires tenant ID argument($env.ALGA_COLOR_RESET)" }
+           if $action == null {
+               # Show help for cleanup-tenant
+               nu cli/cleanup-tenant.nu
+               return
            }
            
-           let force = (check-flag $args "--force")
-           delete-tenant $tenant_id --force $force
+           # Build the command arguments
+           let remaining_args = ($args | skip 2 | str join " ")
+           
+           # Execute the cleanup-tenant script with the action and remaining arguments
+           if $remaining_args == "" {
+               nu cli/cleanup-tenant.nu $action
+           } else {
+               nu cli/cleanup-tenant.nu $action ...(($args | skip 2))
+           }
        }
        # Hosted environment commands
        "hosted-env-create" => {
@@ -643,7 +656,7 @@ def --wrapped main [
            hosted-env-status $branch
        }
        _ => {
-           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', 'config', 'create-tenant', 'list-tenants', or 'delete-tenant'.($env.ALGA_COLOR_RESET)" }
+           error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', 'config', 'create-tenant', 'list-tenants', or 'cleanup-tenant'.($env.ALGA_COLOR_RESET)" }
        }
    }
 }
