@@ -621,12 +621,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="postal_code" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
                     Zip Code
                   </Label>
                   <Input
-                    id="postal_code"
-                    data-automation-id="postal_code"
+                    id="company-postal-code"
+                    data-automation-id="company-postal-code"
                     value={locationData.postal_code || ''}
                     onChange={(e) => handleLocationChange('postal_code', e.target.value)}
                     disabled={isSubmitting}
@@ -654,13 +654,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <PhoneInput
+                    id="company-location-phone"
                     label="Phone"
                     value={locationData.phone || ''}
                     onChange={(value) => handleLocationChange('phone', value)}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}
-                    data-automation-id="location_phone"
+                    data-automation-id="company-location-phone"
                   />
                   {fieldErrors.location_phone && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.location_phone}</p>
@@ -668,12 +669,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="location_email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-location-email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </Label>
                   <Input
-                    id="location_email"
-                    data-automation-id="location_email"
+                    id="company-location-email"
+                    data-automation-id="company-location-email"
                     type="email"
                     value={locationData.email || ''}
                     onChange={(e) => handleLocationChange('email', e.target.value)}
@@ -713,12 +714,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact_email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </Label>
                   <Input
-                    id="contact_email"
-                    data-automation-id="contact_email"
+                    id="company-contact-email"
+                    data-automation-id="company-contact-email"
                     type="email"
                     value={contactData.email}
                     onChange={(e) => handleContactChange('email', e.target.value)}
@@ -732,13 +733,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <PhoneInput
+                    id="company-contact-phone"
                     label="Phone"
                     value={contactData.phone_number}
                     onChange={(value) => handleContactChange('phone_number', value)}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}
-                    data-automation-id="contact_phone"
+                    data-automation-id="company-contact-phone"
                   />
                   {fieldErrors.contact_phone && (
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
@@ -771,7 +773,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <DialogFooter>
           <div className="flex justify-between mt-6 w-full">
             <Button
-              id="cancel-quick-add-company-btn"
+              id="cancel-create-company-button"
               type="button"
               variant="ghost"
               disabled={isSubmitting}

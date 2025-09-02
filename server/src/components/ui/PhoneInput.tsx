@@ -3,6 +3,7 @@ import { Input } from './Input';
 import { Label } from './Label';
 
 interface PhoneInputProps {
+  id?: string;
   label?: string;
   value: string;
   onChange: (value: string) => void;
@@ -16,6 +17,7 @@ interface PhoneInputProps {
 }
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
+  id,
   label,
   value,
   onChange,
@@ -83,7 +85,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     <div className={className}>
       {label && (
         <Label 
-          htmlFor={dataAutomationId} 
+          htmlFor={id || dataAutomationId} 
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           {label}
@@ -91,7 +93,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </Label>
       )}
       <Input
-        id={dataAutomationId}
+        id={id || dataAutomationId}
         data-automation-id={dataAutomationId}
         type="tel"
         value={displayValue}
