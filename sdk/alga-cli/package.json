@@ -14,6 +14,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
+    "@alga-psa/client-sdk": "^0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.4.0"
