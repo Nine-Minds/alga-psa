@@ -198,6 +198,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       {/* Version info */}
       <div className="px-4 py-3 border-t border-gray-700">
         <a 
+          id="app-version-link"
           href="https://github.com/Nine-Minds/alga-psa/releases" 
           target="_blank" 
           rel="noopener noreferrer"
