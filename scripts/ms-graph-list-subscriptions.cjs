@@ -12,9 +12,10 @@
  * - secrets/MICROSOFT_CLIENT_SECRET
  *
  * Usage:
- *   node scripts/ms-graph-list-subscriptions.js
- *   node scripts/ms-graph-list-subscriptions.js --id <subscriptionId>
- *   ACCESS_TOKEN=... node scripts/ms-graph-list-subscriptions.js
+ *   node scripts/ms-graph-list-subscriptions.cjs
+ *   node scripts/ms-graph-list-subscriptions.cjs --id <subscriptionId>
+ *   node scripts/ms-graph-list-subscriptions.cjs --user <userPrincipalName|userId>
+ *   ACCESS_TOKEN=... node scripts/ms-graph-list-subscriptions.cjs
  */
 
 /* eslint-disable no-console */
@@ -64,6 +65,7 @@ async function getAppOnlyToken() {
 async function main() {
   const subId = getArg('--id');
   const verbose = process.argv.includes('--verbose');
+  const userArg = getArg('--user');
   const accessToken = process.env.ACCESS_TOKEN || null;
 
   let token = accessToken;
@@ -101,10 +103,21 @@ async function main() {
     }
 
     console.log(JSON.stringify(data, null, 2));
+
+    // When listing, optionally show resources with /me rewritten to a specific user
     if (!subId && Array.isArray(data.value)) {
       console.log(`\nTotal: ${data.value.length}`);
       for (const s of data.value) {
-        console.log(`- ${s.id} | ${s.resource} | expires: ${s.expirationDateTime}`);
+        const resource = s.resource || '';
+        const normalized = userArg && resource.startsWith('/me')
+          ? resource.replace(/^\/me/, `/users/${userArg}`)
+          : resource;
+
+        if (userArg && normalized !== resource) {
+          console.log(`- ${s.id} | ${normalized} (orig: ${resource}) | expires: ${s.expirationDateTime}`);
+        } else {
+          console.log(`- ${s.id} | ${resource} | expires: ${s.expirationDateTime}`);
+        }
       }
     }
   } catch (err) {
