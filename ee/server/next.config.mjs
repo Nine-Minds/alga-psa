@@ -15,9 +15,16 @@ const nextConfig = {
     // Helpful aliases and module resolution
     config.resolve = {
       ...config.resolve,
+      // Allow imports like './file.js' to resolve to TS sources during build
+      extensionAlias: {
+        '.js': ['.js', '.ts', '.tsx'],
+      },
       alias: {
         ...config.resolve?.alias,
         '@': path.join(__dirname, 'src'),
+        // Monorepo shared package aliases
+        '@shared': path.join(__dirname, '../../shared'),
+        '@alga-psa/shared': path.join(__dirname, '../../shared'),
       },
       modules: [
         ...(config.resolve?.modules || ['node_modules']),
