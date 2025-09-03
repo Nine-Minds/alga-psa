@@ -51,8 +51,8 @@ export def build-image [
     print $"($env.ALGA_COLOR_CYAN)Build output will be streamed to terminal...($env.ALGA_COLOR_RESET)"
     
     if $edition == "ee" {
-        # EE build includes everything
-        docker build --platform linux/amd64 -f server/Dockerfile ...$tag_args .
+        # EE: build using ee/server Dockerfile that builds from ee/server workspace
+        docker build --platform linux/amd64 -f ee/server/Dockerfile.build ...$tag_args .
     } else {
         # CE build excludes EE directory
         docker build --platform linux/amd64 -f server/Dockerfile ...$tag_args --build-arg EXCLUDE_EE=true .

@@ -13,32 +13,30 @@ WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
 FROM base AS deps
-# Copy package files for both root and server parts of the project
+# Copy package files for root and workspaces
 COPY package.json package-lock.json ./
 COPY server/package.json ./server/
 COPY ee/server/package.json ./ee/server/
+COPY shared/package.json ./shared/
 COPY tsconfig.base.json ./
 COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
 
+# Install root deps and each workspace so node_modules are present
 RUN npm install
-## Ensure workspace installs for server and shared so node_modules exist per workspace
-RUN npm install --workspace=server --workspace=shared
+RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 
 # Builder stage for compiling the application
 FROM deps AS builder
-# Copy all project files and build the server
+# Copy all project files
 COPY . .
 
 WORKDIR /app
-RUN npm install --workspace=shared
-RUN npm run build --workspace=shared
+# Ensure shared is built for imports
+RUN npm install --workspace=shared && npm run build --workspace=shared
 
-# Copy EE files and build enterprise edition
-COPY scripts/ ./scripts/
+# Build Enterprise Edition from ee/server workspace directly
 ENV NEXT_PUBLIC_EDITION=enterprise
-RUN ./scripts/build-enterprise.sh
-
-WORKDIR /app/server
+RUN npm run build --workspace=ee/server
 
 # Create secrets directory and populate with secure placeholder values
 RUN mkdir -p /app/secrets && \
@@ -66,7 +64,8 @@ RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /ap
     sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /app/server/.env  
 
 WORKDIR /app
-RUN npm run build:ee
+# Build step completed above; ensure artifacts exist
+RUN test -d /app/ee/server/.next
 
 # Final production image with minimal runtime artifacts
 FROM node:alpine
@@ -96,7 +95,10 @@ RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /ap
 
 # Copy built application and node_modules from earlier stages -- minimalist approach
 COPY --from=builder /app/shared ./shared
-COPY --from=builder /app/server/.next ./server/.next
+# Copy EE Next build output into runtime location expected by entrypoint
+COPY --from=builder /app/ee/server/.next ./server/.next
+# Prefer EE public assets when present
+COPY --from=builder /app/ee/server/public ./server/public
 COPY --from=builder /app/server/public ./server/public
 COPY --from=builder /app/server/next.config.mjs ./server/
 COPY --from=builder /app/server/tsconfig.json ./server/
@@ -112,8 +114,9 @@ COPY --from=builder /app/secrets ./secrets
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/server/node_modules ./server/node_modules
 
-# Copy EE migrations (they get merged during build-enterprise.sh)
-COPY --from=builder /app/ee/server/migrations/ ./server/migrations/
+# Provide EE migrations/seeds for runtime merging in setup
+COPY --from=builder /app/ee/server/migrations/ ./ee/server/migrations/
+COPY --from=builder /app/ee/server/seeds/ ./ee/server/seeds/
 
 COPY server/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
