@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef } from 'react';
-import { bootstrapIframe } from '@ee/lib/extensions/ui/iframeBridge';
+import { bootstrapIframe } from 'ee/server/src/lib/extensions/ui/iframeBridge';
 
 type Props = {
   domain: string; // e.g. ext-abc.tenant.example.com
