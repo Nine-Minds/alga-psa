@@ -485,15 +485,15 @@ def "main cleanup" [
         print "Breaking circular dependencies..."
         
         # The circular dependency chain:
-        # companies.account_manager → users.user_id
+        # companies.account_manager_id → users.user_id
         # users.contact_id → contacts.contact_id (NOT NULL constraint!)
         # contacts.company_id → companies.company_id
         
-        # Step 1: NULL out account_manager in companies to break companies → users dependency
+        # Step 1: NULL out account_manager_id in companies to break companies → users dependency
         try {
-            let null_query = "UPDATE companies SET account_manager = NULL WHERE tenant = '" + $tenant_id + "'"
+            let null_query = "UPDATE companies SET account_manager_id = NULL WHERE tenant = '" + $tenant_id + "'"
             execute-sql $null_query --env-name $environment
-            print "  Cleared account_manager references in companies"
+            print "  Cleared account_manager_id references in companies"
         } catch {
             # Ignore if column doesn't exist or already NULL
         }
