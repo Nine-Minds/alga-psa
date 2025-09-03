@@ -24,7 +24,7 @@ export function generateMicrosoftAuthUrl(
   scopes: string[] = ['https://graph.microsoft.com/.default', 'offline_access'],
   tenantAuthority: string = 'common'
 ): string {
-  const baseUrl = `https://login.microsoftonline.com/${encodeURIComponent(tenantAuthority)}/oauth2/v2.0/authorize`;
+  const baseUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
   
   const params = new URLSearchParams({
     client_id: clientId,

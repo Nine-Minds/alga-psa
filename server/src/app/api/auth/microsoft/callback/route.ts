@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
     // Exchange authorization code for tokens
     try {
       const authority = tenantAuthority || 'common';
-      const tokenUrl = `https://login.microsoftonline.com/${encodeURIComponent(authority)}/oauth2/v2.0/token`;
+      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
