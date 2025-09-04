@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
+import { getInstallInfo } from '@/lib/actions/extensionDomainActions';
 import ExtensionIframe from './ExtensionIframe';
 
 export const metadata = { title: 'Extension' };

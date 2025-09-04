@@ -17,7 +17,9 @@ echo "📁 Copying EE extension files to main server..."
 
 # Create directories in main server if they don't exist
 mkdir -p server/src/app/msp/extensions
+mkdir -p server/src/app/api/extensions
 mkdir -p server/src/lib/extensions
+mkdir -p server/src/lib/actions
 mkdir -p server/src/lib/actions/extension-actions
 
 # Copy EE extension routes
@@ -25,6 +27,13 @@ if [ -d "ee/server/src/app/msp/extensions" ]; then
     echo "   📄 Copying extension routes..."
     cp -r ee/server/src/app/msp/extensions/* server/src/app/msp/extensions/
     echo "   ✅ Extension routes copied"
+fi
+
+# Copy EE API routes
+if [ -d "ee/server/src/app/api/extensions" ]; then
+    echo "   🌐 Copying extension API routes..."
+    cp -r ee/server/src/app/api/extensions/* server/src/app/api/extensions/
+    echo "   ✅ Extension API routes copied"
 fi
 
 # Copy EE extension libraries
@@ -35,9 +44,14 @@ if [ -d "ee/server/src/lib/extensions" ]; then
 fi
 
 # Copy EE extension actions
-if [ -d "ee/server/src/lib/actions/extension-actions" ]; then
+if [ -d "ee/server/src/lib/actions" ]; then
     echo "   🎬 Copying extension actions..."
-    cp -r ee/server/src/lib/actions/extension-actions/* server/src/lib/actions/extension-actions/
+    # Copy direct action files (like extensionDomainActions.ts)
+    cp ee/server/src/lib/actions/*.ts server/src/lib/actions/ 2>/dev/null || true
+    # Copy extension-actions subdirectory if it exists
+    if [ -d "ee/server/src/lib/actions/extension-actions" ]; then
+        cp -r ee/server/src/lib/actions/extension-actions/* server/src/lib/actions/extension-actions/
+    fi
     echo "   ✅ Extension actions copied"
 fi
 
