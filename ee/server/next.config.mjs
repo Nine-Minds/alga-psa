@@ -34,6 +34,7 @@ const nextConfig = {
     };
 
     // Exclude optional DB drivers not used (prevents bundling/resolve errors)
+    // Also externalize sharp and its platform-specific helper packages so Next doesn't try to bundle them.
     config.externals = [
       ...(config.externals || []),
       'oracledb',
@@ -42,6 +43,8 @@ const nextConfig = {
       'sqlite3',
       'better-sqlite3',
       'tedious',
+      'sharp',
+      /@img\/sharp-.*/,
     ];
 
     // Treat .mjs in node_modules as JS auto
