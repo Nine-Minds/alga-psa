@@ -32,7 +32,12 @@ FROM deps AS builder
 # Install sharp (with optional platform deps) into both CE and EE workspaces
 RUN apk add --no-cache libc6-compat \
  && npm --workspace=server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save \
- && npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save
+ && npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save \
+ && npm --workspace=server install --no-save @img/sharp-linuxmusl-x64 @img/sharp-libvips-linuxmusl-x64 \
+ && npm --workspace=ee/server install --no-save @img/sharp-linuxmusl-x64 @img/sharp-libvips-linuxmusl-x64
+
+# Help Next locate the sharp module during build
+ENV NEXT_SHARP_PATH=/app/ee/server/node_modules/sharp
 
 # Copy all project files
 COPY . .
