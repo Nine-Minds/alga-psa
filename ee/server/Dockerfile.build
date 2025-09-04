@@ -29,7 +29,7 @@ RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 FROM deps AS builder
 
 # Ensure sharp optional dependency installs with correct linuxmusl binary on Alpine
-RUN npm install -g --include=optional sharp
+RUN npm install -g --os=linux --libc=musl --cpu=x64 sharp
 
 # Copy all project files
 COPY . .
