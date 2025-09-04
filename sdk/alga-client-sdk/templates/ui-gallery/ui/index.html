@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>__PACKAGE_NAME__ – UI Gallery</title>
+    <style>
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+      .card { border: 1px solid #ddd; border-radius: 8px; padding: 16px; }
+      h1 { margin-bottom: 16px; font-size: 20px; }
+      h2 { margin: 0 0 8px 0; font-size: 16px; }
+      button { padding: 8px 12px; border-radius: 6px; border: 1px solid #ccc; background: #f7f7f7; cursor: pointer; }
+      button:hover { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <link rel="stylesheet" href="./theme.css" />
+    <div id="root"></div>
+    <script type="module" src="./index.js"></script>
+  </body>
+  </html>
