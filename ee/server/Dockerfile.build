@@ -83,7 +83,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     imagemagick \
     ghostscript \
     chromium \
-    nss \
+    libnss3 \
     libfreetype6 \
     libharfbuzz0b \
     fonts-freefont-ttf \
