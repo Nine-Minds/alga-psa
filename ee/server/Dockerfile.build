@@ -28,8 +28,8 @@ RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 # Builder stage for compiling the application
 FROM deps AS builder
 
-# Ensure sharp optional dependency installs with correct linuxmusl binary on Alpine
-RUN npm install -g --os=linux --libc=musl --cpu=x64 sharp
+# Ensure sharp is installed in the EE workspace with the linuxmusl binary on Alpine
+RUN npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save
 
 # Copy all project files
 COPY . .
