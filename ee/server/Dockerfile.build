@@ -1,14 +1,16 @@
 # Start with a base image and install system dependencies
-FROM node:alpine AS base
-RUN apk add --no-cache \
+FROM node:20-bullseye AS base
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
+    ca-certificates \
+    curl \
+    nano \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    curl \
-    nano
+ && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Stage for installing dependencies (cache-friendly)
@@ -27,17 +29,6 @@ RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 
 # Builder stage for compiling the application
 FROM deps AS builder
-
-# musl-based images need platform-specific sharp binaries in each workspace that may import it
-# Install sharp (with optional platform deps) into both CE and EE workspaces
-RUN apk add --no-cache libc6-compat \
- && npm --workspace=server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save \
- && npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save \
- && npm --workspace=server install --no-save @img/sharp-linuxmusl-x64 @img/sharp-libvips-linuxmusl-x64 \
- && npm --workspace=ee/server install --no-save @img/sharp-linuxmusl-x64 @img/sharp-libvips-linuxmusl-x64
-
-# Help Next locate the sharp module during build
-ENV NEXT_SHARP_PATH=/app/ee/server/node_modules/sharp
 
 # Copy all project files
 COPY . .
@@ -80,22 +71,23 @@ WORKDIR /app
 RUN test -d /app/ee/server/.next
 
 # Final production image with minimal runtime artifacts
-FROM node:alpine
-RUN apk add --no-cache bash \
+FROM node:20-bullseye-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bash \
+    ca-certificates \
+    curl \
+    nano \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    curl \
-    nano \
     chromium \
     nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+    libfreetype6 \
+    libharfbuzz0b \
+    fonts-freefont-ttf \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -148,7 +140,7 @@ ENV NEXT_PUBLIC_EDITION=enterprise
 
 # Puppeteer chromium configuration
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 # Secret provider configuration
 # Default configuration for composite secret system

@@ -2,27 +2,27 @@
 # Designed for Argo workflows and CI systems that build separately
 # Expects .next, dist, shared/dist to exist locally with EE features included
 
-FROM node:alpine
-RUN apk add --no-cache \
+FROM node:20-bullseye-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
     bash \
+    ca-certificates \
+    curl \
+    nano \
     postgresql-client \
-    redis \
+    redis-tools \
     graphicsmagick \
     imagemagick \
     ghostscript \
-    curl \
-    nano \
     chromium \
     nss \
-    freetype \
-    freetype-dev \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+    libfreetype6 \
+    libharfbuzz0b \
+    fonts-freefont-ttf \
+ && rm -rf /var/lib/apt/lists/*
 
 # Tell Puppeteer to skip installing Chrome. We'll use the installed chromium.
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 WORKDIR /app
 
