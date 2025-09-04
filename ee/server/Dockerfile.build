@@ -68,7 +68,7 @@ RUN sed -i 's/NEXT_PUBLIC_EDITION=community/NEXT_PUBLIC_EDITION=enterprise/' /ap
 
 WORKDIR /app
 # Build step completed above; ensure artifacts exist
-RUN test -d /app/ee/server/.next
+RUN test -d /app/ee/server/.next && mkdir -p /app/ee/server/public
 
 # Final production image with minimal runtime artifacts
 FROM node:20-bullseye-slim
