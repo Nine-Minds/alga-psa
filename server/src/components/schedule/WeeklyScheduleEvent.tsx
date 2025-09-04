@@ -48,6 +48,32 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   technicianMap = {}
 }) => {
   const eventRef = useRef<HTMLDivElement>(null);
+  const [isShort, setIsShort] = React.useState(false);
+  
+  // Calculate event duration in minutes
+  const eventDuration = Math.floor((new Date(event.scheduled_end).getTime() - new Date(event.scheduled_start).getTime()) / (1000 * 60));
+  
+  useEffect(() => {
+    const checkHeight = () => {
+      if (eventRef.current) {
+        setIsShort(eventRef.current.offsetHeight < 40);
+      }
+    };
+    
+    checkHeight();
+    
+    const resizeObserver = new ResizeObserver(checkHeight);
+    if (eventRef.current) {
+      resizeObserver.observe(eventRef.current);
+    }
+    
+    return () => {
+      if (eventRef.current) {
+        resizeObserver.unobserve(eventRef.current);
+      }
+      resizeObserver.disconnect();
+    };
+  }, []);
   
   useEffect(() => {
     if (eventRef.current && isComparison) {
@@ -95,14 +121,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 text-xs overflow-hidden rounded-md ${textColor}`}
+      className={`absolute inset-0 ${isShort || eventDuration <= 15 ? 'text-[10px]' : 'text-xs'} overflow-hidden rounded-md ${textColor}`}
       style={{
         backgroundColor,
         opacity,
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',
         margin: 0,
-        padding: '4px',
+        padding: isShort || eventDuration <= 15 ? '2px' : '4px',
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
         outline: 'none'
       }}
@@ -136,13 +162,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
 
-      <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 200 }}>
+      <div className={`flex justify-end ${isShort || eventDuration <= 15 ? 'gap-0.5 pr-0.5 pt-0.5' : 'gap-1 mt-0.5'}`} style={{ zIndex: 200 }}>
         {isPrimary && (
           <Button
             id={`delete-entry-${event.entry_id}-btn`}
             variant="icon"
             size="icon"
-            className="w-4 h-4 delete-button"
+            className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} delete-button`}
             onClick={(e) => {
               e.stopPropagation();
               onDeleteEvent(event);
@@ -150,14 +176,26 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
             title="Delete Entry"
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <Trash className="w-4 h-4 pointer-events-none" />
+            <Trash className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} pointer-events-none`} />
           </Button>
         )}
       </div>
 
       {/* Only display the title, not any time information */}
-      <div className="font-semibold truncate">{mainTitle}</div>
-      {subtitle && <div className="truncate text-xs">{subtitle}</div>}
+      {isShort || eventDuration <= 15 ? (
+        // For short events, show text with minimal padding
+        <div className="flex items-center px-0.5 pb-0.5">
+          <div className="font-medium truncate flex-1" style={{ fontSize: '9px', lineHeight: '1.1' }}>
+            {mainTitle}
+          </div>
+        </div>
+      ) : (
+        // For normal events, show two lines
+        <>
+          <div className="font-semibold truncate">{mainTitle}</div>
+          {subtitle && <div className="truncate text-xs">{subtitle}</div>}
+        </>
+      )}
     </div>
   );
 };

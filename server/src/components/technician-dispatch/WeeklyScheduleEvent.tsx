@@ -38,9 +38,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
 }) => {
   const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [isNarrow, setIsNarrow] = useState(false);
+  const [isShort, setIsShort] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
   const isNarrowRef = useRef(false);
+  const isShortRef = useRef(false);
+  
+  // Calculate event duration in minutes
+  const eventDuration = Math.floor((new Date(event.scheduled_end).getTime() - new Date(event.scheduled_start).getTime()) / (1000 * 60));
 
   const handleMouseLeave = () => {
     if (!isDropdownOpen) {
@@ -67,9 +72,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   useEffect(() => {
     if (eventRef.current) {
       const initialWidth = eventRef.current.offsetWidth;
+      const initialHeight = eventRef.current.offsetHeight;
       const initialIsNarrow = initialWidth < 80;
+      const initialIsShort = initialHeight < 40;
       isNarrowRef.current = initialIsNarrow;
+      isShortRef.current = initialIsShort;
       setIsNarrow(initialIsNarrow);
+      setIsShort(initialIsShort);
     }
     
     let resizeTimeoutId: number | null = null;
@@ -82,11 +91,18 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       resizeTimeoutId = window.setTimeout(() => {
         if (eventRef.current) {
           const currentWidth = eventRef.current.offsetWidth;
+          const currentHeight = eventRef.current.offsetHeight;
           const currentIsNarrow = currentWidth < 80;
+          const currentIsShort = currentHeight < 40;
           
           if (currentIsNarrow !== isNarrowRef.current) {
             isNarrowRef.current = currentIsNarrow;
             setIsNarrow(currentIsNarrow);
+          }
+          
+          if (currentIsShort !== isShortRef.current) {
+            isShortRef.current = currentIsShort;
+            setIsShort(currentIsShort);
           }
         }
       }, 100);
@@ -150,7 +166,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 text-xs overflow-hidden rounded-md ${bg} ${text}`}
+      className={`absolute inset-0 ${isShort || eventDuration <= 15 ? 'text-[10px]' : 'text-xs'} overflow-hidden rounded-md ${bg} ${text}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={handleMouseLeave}
       title={tooltipTitle}
@@ -165,7 +181,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',
         margin: 0,
-        padding: '4px',
+        padding: isShort || eventDuration <= 15 ? '2px' : '4px',
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
         outline: 'none'
       }}
@@ -195,32 +211,33 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
       {/* Buttons container - only show if not a private event or user is creator */}
-      <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 200 }}>
+      {!isPrivateNonOwner && (
+      <div className={`flex justify-end ${isShort || eventDuration <= 15 ? 'gap-0.5 pr-0.5 pt-0.5' : 'gap-1 mt-0.5'}`} style={{ zIndex: 200 }}>
           {/* Show individual buttons if not narrow and not a private event or user is creator */}
-          {!isNarrow && !isPrivateNonOwner && (
-            <div className="flex gap-1">
+          {!isNarrow && (
+            <div className={`flex ${isShort || eventDuration <= 15 ? 'gap-0.5' : 'gap-1'}`}>
               <Button
                 id={`view-details-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 details-button"
+                className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} details-button`}
                 onClick={handleViewDetails}
                 title="View Details"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <ExternalLink className="w-4 h-4 pointer-events-none" />
+                <ExternalLink className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} pointer-events-none`} />
               </Button>
 
               <Button
                 id={`delete-entry-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 delete-button"
+                className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} delete-button`}
                 onClick={handleDeleteClick}
                 title="Delete schedule entry"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <Trash className="w-4 h-4 pointer-events-none" />
+                <Trash className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} pointer-events-none`} />
               </Button>
             </div>
           )}
@@ -234,7 +251,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                     id={`more-options-${event.entry_id}`}
                     variant="icon"
                     size="icon"
-                    className="w-4 h-4 dropdown-trigger"
+                    className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} dropdown-trigger`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -244,7 +261,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                       e.preventDefault();
                     }}
                   >
-                    <MoreVertical className="w-4 h-4 pointer-events-none" />
+                    <MoreVertical className={`${isShort || eventDuration <= 15 ? 'w-3 h-3' : 'w-4 h-4'} pointer-events-none`} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -280,14 +297,27 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
             </div>
           )}
         </div>
+      )}
 
       {/* Event content - show limited info for private events */}
-      <div className="font-semibold truncate">
-        {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
-      </div>
-      <div className="truncate text-xs">
-        {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
-      </div>
+      {isShort || eventDuration <= 15 ? (
+        // For short events, show text with minimal padding
+        <div className="flex items-center px-0.5 pb-0.5">
+          <div className="font-medium truncate flex-1" style={{ fontSize: '9px', lineHeight: '1.1' }}>
+            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+          </div>
+        </div>
+      ) : (
+        // For normal events, show two lines
+        <>
+          <div className="font-semibold truncate">
+            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+          </div>
+          <div className="truncate text-xs">
+            {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
+          </div>
+        </>
+      )}
 
       {/* Confirmation Dialog for Delete */}
       <ConfirmationDialog
