@@ -50,7 +50,7 @@ A comprehensive Professional Services Automation platform designed for Managed S
 - **Event Processing**: Redis-based event bus with Zod schema validation
 - **Workflow Engine**: Event-sourced workflow system with TypeScript support
 - **Real-time Collaboration**: Hocuspocus integration
-- **Authentication**: NextAuth.js
+- **Authentication**: NextAuth.js with multi-portal support (MSP and Client Portal)
 - **UI Components**: Radix-based component library
 
 ## Getting Started

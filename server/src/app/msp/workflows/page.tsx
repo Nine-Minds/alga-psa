@@ -13,11 +13,11 @@ export default function WorkflowsPage() {
       try {
         const user = await getCurrentUser();
         if (!user) {
-          router.push('/auth/signin');
+          router.push('/auth/msp/signin');
         }
       } catch (error) {
         console.error('Authentication check failed:', error);
-        router.push('/auth/signin');
+        router.push('/auth/msp/signin');
       }
     };
 

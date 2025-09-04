@@ -128,14 +128,14 @@ export default function PortalSetupPage() {
           if (signinRes && (signinRes as any).error) {
             // Fallback to manual sign-in if auto sign-in fails
             toast.success('Account ready. Please sign in.');
-            router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
+            router.push('/auth/client-portal/signin?message=Account created successfully. Please sign in.');
           } else {
             toast.success('Welcome to the client portal!');
             router.push('/client-portal/dashboard');
           }
         } catch (e) {
           toast.success('Account ready. Please sign in.');
-          router.push('/client-portal/dashboard?message=Account created successfully. Please sign in.');
+          router.push('/auth/client-portal/signin?message=Account created successfully. Please sign in.');
         }
       } else {
         toast.error(result.error || 'Failed to create account');
@@ -181,7 +181,7 @@ export default function PortalSetupPage() {
               </AlertDescription>
             </Alert>
             <Button 
-              onClick={() => router.push('/client-portal/dashboard')}
+              onClick={() => router.push('/auth/client-portal/signin')}
               id='btn=signin'
               className="w-full"
             >
@@ -329,7 +329,7 @@ export default function PortalSetupPage() {
           <div className="text-center text-xs text-muted-foreground">
             Already have an account?{' '}
             <button
-              onClick={() => router.push('/client-portal/dashboard')}
+              onClick={() => router.push('/auth/client-portal/signin')}
               className="text-blue-600 hover:underline"
             >
               Sign in to portal

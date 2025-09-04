@@ -30,7 +30,7 @@ export default function VerifyPage() {
           <Button
             id="return-to-signin-button"
             variant="outline"
-            onClick={() => router.push('/auth/signin')}
+            onClick={() => router.push('/auth/msp/signin')}
             className="mt-4"
           >
             Return to Sign In
