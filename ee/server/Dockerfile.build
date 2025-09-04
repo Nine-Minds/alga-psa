@@ -28,8 +28,11 @@ RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 # Builder stage for compiling the application
 FROM deps AS builder
 
-# Ensure sharp is installed in the EE workspace with the linuxmusl binary on Alpine
-RUN npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save
+# musl-based images need platform-specific sharp binaries in each workspace that may import it
+# Install sharp (with optional platform deps) into both CE and EE workspaces
+RUN apk add --no-cache libc6-compat \
+ && npm --workspace=server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save \
+ && npm --workspace=ee/server install --include=optional --os=linux --libc=musl --cpu=x64 sharp --no-save
 
 # Copy all project files
 COPY . .
