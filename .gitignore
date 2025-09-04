@@ -118,6 +118,9 @@ volumes/
 
 *.code-workspace
 
+# npm local cache (build tools)
+.npm-cache*
+.npm/_logs/
 # package-lock.json
 .aider*
 
