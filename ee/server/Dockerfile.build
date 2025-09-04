@@ -27,15 +27,16 @@ RUN npm install --workspace=shared --workspace=server --workspace=ee/server
 
 # Builder stage for compiling the application
 FROM deps AS builder
+
+# Ensure sharp optional dependency installs with correct linuxmusl binary on Alpine
+RUN npm install --include=optional sharp --workspace=ee/server
+
 # Copy all project files
 COPY . .
 
 WORKDIR /app
 # Ensure shared is built for imports
 RUN npm install --workspace=shared && npm run build --workspace=shared
-
-# Ensure sharp optional dependency installs with correct linuxmusl binary on Alpine
-RUN npm install --include=optional sharp --workspace=ee/server
 
 # Build Enterprise Edition from ee/server workspace directly
 ENV NEXT_PUBLIC_EDITION=enterprise
