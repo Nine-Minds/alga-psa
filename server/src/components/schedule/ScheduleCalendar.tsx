@@ -695,36 +695,59 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
       }
       
       // Create a temporary updated event for UI update
-      const updatedEvent = {
+      const updatedEvent: IScheduleEntry = {
         ...event,
-        scheduled_start: direction === 'top' ? newStart : initialStart,
-        scheduled_end: direction === 'bottom' ? newEnd : initialEnd
+        scheduled_start: direction === 'top' ? newStart : new Date(event.scheduled_start),
+        scheduled_end: direction === 'bottom' ? newEnd : new Date(event.scheduled_end)
       };
       
       // Update the event locally for immediate feedback
       updateEventLocally(updatedEvent);
     };
     
-    const handleResizeEnd = async () => {
+    const handleResizeEnd = async (finalEvent: globalThis.MouseEvent) => {
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeEnd);
       
-      // Get the current state of the event after resizing
-      const currentEvent = events.find(e => e.entry_id === event.entry_id);
-      if (currentEvent) {
-        // Save the changes to the server
-        const result = await updateScheduleEntry(event.entry_id, {
-          ...currentEvent,
-          assigned_user_ids: currentEvent.assigned_user_ids,
-          ...(currentEvent.entry_id.includes('_') ? { original_entry_id: currentEvent.original_entry_id } : {})
-        });
-        
-        if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
+      // Calculate final position based on last mouse position
+      const deltaY = finalEvent.clientY - startY;
+      const deltaMinutes = Math.round(deltaY / 20) * 15;
+      
+      let finalStart = new Date(initialStart);
+      let finalEnd = new Date(initialEnd);
+      
+      if (direction === 'top') {
+        finalStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
+        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
+          // Revert if too short
           await fetchEvents();
-        } else if (!result.success) {
-          console.error("Resize failed, reverting UI");
-          await fetchEvents();
+          return;
         }
+      } else {
+        finalEnd = new Date(initialEnd.getTime() + deltaMinutes * 60000);
+        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
+          // Revert if too short
+          await fetchEvents();
+          return;
+        }
+      }
+      
+      // Save the final changes to the server
+      const updatedEvent = {
+        ...event,
+        scheduled_start: finalStart,
+        scheduled_end: finalEnd,
+        assigned_user_ids: event.assigned_user_ids,
+        ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
+      };
+      
+      const result = await updateScheduleEntry(event.entry_id, updatedEvent);
+      
+      if (result.success && result.entry && (result.entry.recurrence_pattern || event.recurrence_pattern)) {
+        await fetchEvents();
+      } else if (!result.success) {
+        console.error("Resize failed, reverting UI");
+        await fetchEvents();
       }
     };
     
