@@ -41,6 +41,7 @@ server:
 
 
 hocuspocus:
+  enabled: true
   image: 
     name: harbor.nineminds.com/nineminds/sebastian_hocuspocus
     is_private: true
@@ -365,6 +366,32 @@ logging:
     path: '/print_info'
     level: 'info'
     token: 'abcd1234'
+
+# Secret Provider Configuration
+# Controls how secrets are read and written across different providers
+secrets_provider:
+  # Comma-separated list of providers to try for reading secrets, in order
+  # Supported providers: env, filesystem, vault
+  readChain: "env,filesystem"
+
+  # Single provider used for writing/updating secrets
+  # Supported providers: filesystem, vault
+  writeProvider: "filesystem"
+
+  # Optional environment variable prefix for EnvSecretProvider
+  # If set, env provider will look for PREFIX_secretName in addition to secretName
+  envPrefix: ""
+
+  # Vault configuration (only used if vault is in readChain or writeProvider)
+  vault:
+    # Vault server address (e.g., https://vault.example.com)
+    addr: ""
+    # Vault authentication token (prefer injecting via secret)
+    token: ""
+    # Path for application secrets
+    appSecretPath: "kv/data/app/secrets"
+    # Path template for tenant secrets
+    tenantSecretPathTemplate: "kv/data/tenants/{tenantId}/secrets"
 
 # Development environment configuration
 devEnv:
