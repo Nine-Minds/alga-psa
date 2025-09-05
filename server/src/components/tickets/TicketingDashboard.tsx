@@ -42,6 +42,7 @@ interface TicketingDashboardProps {
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
   initialCompanies: ICompany[];
+  initialTags?: string[];
   nextCursor: string | null;
   onLoadMore: () => Promise<void>;
   onFiltersChanged: (filters: Partial<ITicketListFilters>) => void;
@@ -71,6 +72,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialPriorities,
   initialCategories,
   initialCompanies,
+  initialTags = [],
   nextCursor,
   onLoadMore,
   onFiltersChanged,
@@ -129,9 +131,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Tag-related state
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(initialFilterValues.tags || []);
   const ticketTagsRef = useRef<Record<string, ITag[]>>({});
-  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>(
+    initialTags.map(tagText => ({ tag_text: tagText } as ITag))
+  );
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
@@ -190,18 +194,34 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     fetchTags();
   }, [initialTickets]);
 
-  // Fetch all unique tags only once on mount
+  // Track if tags have been initialized to prevent re-sorting
+  const tagsInitializedRef = useRef(false);
+  
+  // Fetch all unique tags only once on mount and merge with initial tags
   useEffect(() => {
+    if (tagsInitializedRef.current) return; // Already initialized, don't re-sort
+    
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('ticket');
-        setAllUniqueTags(allTags);
+        // Merge with initial tags from server
+        const initialTagsAsITag = initialTags.map(tagText => ({ tag_text: tagText } as ITag));
+        const mergedTags = [...initialTagsAsITag];
+        
+        allTags.forEach(tag => {
+          if (!mergedTags.some(t => t.tag_text === tag.tag_text)) {
+            mergedTags.push(tag);
+          }
+        });
+        
+        setAllUniqueTags(mergedTags);
+        tagsInitializedRef.current = true; // Mark as initialized
       } catch (error) {
         console.error('Error fetching all tags:', error);
       }
     };
     fetchAllTags();
-  }, []);
+  }, [initialTags]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -233,6 +253,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       searchQuery: debouncedSearchQuery,
       channelFilterState: channelFilterState,
       showOpenOnly: selectedStatus === 'open',
+      tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
     onFiltersChanged(currentFilters);
   }, [
@@ -242,7 +263,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedCategories, 
     selectedCompany, 
     debouncedSearchQuery, 
-    channelFilterState
+    channelFilterState,
+    selectedTags
     // Removed onFiltersChanged from dependencies to prevent infinite loop
   ]);
 

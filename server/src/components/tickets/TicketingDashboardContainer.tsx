@@ -67,6 +67,9 @@ export default function TicketingDashboardContainer({
     if (filters.channelFilterState && filters.channelFilterState !== 'active') {
       params.set('channelFilterState', filters.channelFilterState);
     }
+    if (filters.tags && filters.tags.length > 0) {
+      params.set('tags', filters.tags.join(','));
+    }
 
     // Update URL without causing a page refresh
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
@@ -149,6 +152,7 @@ export default function TicketingDashboardContainer({
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}
       initialCompanies={consolidatedData.options.companies}
+      initialTags={consolidatedData.options.tags || []}
       nextCursor={nextCursor}
       onLoadMore={handleLoadMore} 
       onFiltersChanged={handleFiltersChanged}

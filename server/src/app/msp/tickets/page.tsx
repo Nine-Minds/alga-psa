@@ -43,6 +43,9 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.channelFilterState = channelFilterState;
       }
     }
+    if (searchParams?.tags && typeof searchParams.tags === 'string') {
+      filtersFromURL.tags = searchParams.tags.split(',');
+    }
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
