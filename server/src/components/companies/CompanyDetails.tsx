@@ -162,6 +162,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  
+  // Update editedCompany when company prop changes
+  useEffect(() => {
+    setEditedCompany(company);
+  }, [company]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
@@ -176,6 +181,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     priorityOptions: SelectOption[];
     channelOptions: IChannel[];
     categories: ITicketCategory[];
+    tags?: string[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
@@ -262,7 +268,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
           channelOptions: options.channelOptions,
-          categories: options.categories
+          categories: options.categories,
+          tags: options.tags
         });
       } catch (error) {
         console.error('Error fetching ticket form options:', error);
@@ -686,6 +693,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
+              initialTags={ticketFormOptions.tags || []}
             />
           ) : (
             <div className="flex justify-center items-center h-32">
@@ -963,7 +971,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          // In quick view we only render the Details tab. Force default to Details
+          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+          defaultTab={quickView ? 'Details' : findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />
 

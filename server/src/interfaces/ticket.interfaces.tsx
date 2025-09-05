@@ -55,6 +55,7 @@ export interface ITicketListFilters {
   searchQuery?: string;
   channelFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
+  tags?: string[];
 }
 
 export interface IPriority extends TenantEntity {
