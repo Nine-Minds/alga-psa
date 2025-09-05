@@ -10,6 +10,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { IChannel } from 'server/src/interfaces';
+import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketingDashboardContainerProps {
   consolidatedData: {
@@ -21,18 +22,21 @@ interface TicketingDashboardContainerProps {
       categories: ITicketCategory[];
       companies: ICompany[];
       users: IUser[];
+      tags?: string[];
     };
     tickets: ITicketListItem[];
     nextCursor: string | null;
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
+  displaySettings?: TicketingDisplaySettings;
 }
 
 export default function TicketingDashboardContainer({ 
   consolidatedData,
   currentUser,
-  initialFilters
+  initialFilters,
+  displaySettings
 }: TicketingDashboardContainerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
@@ -159,6 +163,7 @@ export default function TicketingDashboardContainer({
       initialFilterValues={activeFilters}
       isLoadingMore={isLoading}
       user={currentUser}
+      displaySettings={displaySettings}
     />
   );
 }

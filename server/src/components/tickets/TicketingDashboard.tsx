@@ -28,7 +28,7 @@ import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAut
 import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
 import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
 import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
-import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
@@ -49,6 +49,7 @@ interface TicketingDashboardProps {
   initialFilterValues: Partial<ITicketListFilters>;
   isLoadingMore: boolean;
   user?: IUser;
+  displaySettings?: TicketingDisplaySettings;
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -78,7 +79,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   onFiltersChanged,
   initialFilterValues,
   isLoadingMore,
-  user
+  user,
+  displaySettings
 }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['ticket']);
@@ -110,8 +112,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
-  const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>({
+  const [dateTimeFormat, setDateTimeFormat] = useState<string>(displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a');
+  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(displaySettings?.list?.columnVisibility || {
     ticket_number: true,
     title: true,
     status: true,
@@ -124,7 +126,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     tags: true,
     actions: true,
   });
-  const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(false);
+  const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(displaySettings?.list?.tagsInlineUnderTitle || false);
   
   // Quick View state
   const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
@@ -151,21 +153,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useEffect(() => {
     setTickets(initialTickets);
   }, [initialTickets]);
-
-  // Load ticket display settings (date/time format)
-  useEffect(() => {
-    const loadDisplay = async () => {
-      try {
-        const s = await getTicketingDisplaySettings();
-        if (s?.dateTimeFormat) setDateTimeFormat(s.dateTimeFormat);
-        if (s?.list?.columnVisibility) setColumnVisibility(s.list.columnVisibility as Record<string, boolean>);
-        if (typeof s?.list?.tagsInlineUnderTitle === 'boolean') setTagsInlineUnderTitle(s.list.tagsInlineUnderTitle);
-      } catch (e) {
-        console.error('Failed to load ticketing display settings', e);
-      }
-    };
-    loadDisplay();
-  }, []);
 
   // Fetch ticket-specific tags when initial tickets change
   useEffect(() => {

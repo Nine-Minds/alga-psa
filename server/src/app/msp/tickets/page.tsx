@@ -1,5 +1,6 @@
 import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
 import { Suspense } from 'react';
 import TicketsLoading from './loading';
@@ -68,7 +69,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     };
 
     // Fetch consolidated data for the ticket list with initial filters
-    const consolidatedData = await getConsolidatedTicketListData(user, fetchFilters);
+    const [consolidatedData, displaySettings] = await Promise.all([
+      getConsolidatedTicketListData(user, fetchFilters),
+      getTicketingDisplaySettings()
+    ]);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
@@ -77,6 +81,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
             consolidatedData={consolidatedData} 
             currentUser={user}
             initialFilters={initialFilters}
+            displaySettings={displaySettings}
           />
         </Suspense>
       </div>
