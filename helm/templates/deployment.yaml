@@ -86,14 +86,6 @@ spec:
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
-          - name: APP_VERSION
-            value: "{{ .Values.version }}"
-          - name: NEXT_PUBLIC_APP_VERSION
-            value: "{{ .Values.version }}"
-          - name: APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
-          - name: NEXT_PUBLIC_APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
           - name: APP_NAME
             value: "{{ .Values.nameOverride }}"
           - name: APP_ENV
@@ -101,7 +93,7 @@ spec:
           - name: NODE_ENV
             value: "{{ .Values.env }}"
           - name: HOST
-            value: "{{ include "sebastian.resolveHost" . }}"
+            value: "{{ include \"sebastian.resolveHost\" . }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
 
@@ -179,20 +171,22 @@ spec:
           - name: DB_NAME_SERVER
             value: "{{ .Values.config.db.server_database }}"
           - name: DB_PASSWORD_ADMIN
-            {{- with .Values.config.db.server_password_admin_secret }}
+            {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
             valueFrom:
               secretKeyRef:
-                name: {{ .name | quote }}
-                key: {{ .key | quote }}
+                name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
+                key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
+                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
             {{- else }}
             value: {{ .Values.config.db.server_admin_password | quote }}
             {{- end }}
           - name: DB_PASSWORD_SERVER
-            {{- with .Values.config.db.server_password_secret }}
+            {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
             valueFrom:
               secretKeyRef:
-                name: {{ .name | quote }}
-                key: {{ .key | quote }}
+                name: {{ .Values.config.db.server_password_secret.name | quote }}
+                key: {{ .Values.config.db.server_password_secret.key | quote }}
+                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
             {{- else }}
             value: {{ .Values.config.db.server_password | quote }}
             {{- end }}
