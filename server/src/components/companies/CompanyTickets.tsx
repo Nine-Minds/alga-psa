@@ -24,6 +24,7 @@ import { getTicketingDisplaySettings, TicketingDisplaySettings } from 'server/sr
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import { TagFilter } from 'server/src/components/tags';
 
 interface CompanyTicketsProps {
   companyId: string;
@@ -32,6 +33,7 @@ interface CompanyTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
+  initialTags?: string[];
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -53,7 +55,8 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   initialChannels = [],
   initialStatuses = [],
   initialPriorities = [],
-  initialCategories = []
+  initialCategories = [],
+  initialTags = []
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,6 +79,8 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -115,6 +120,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
         searchQuery: debouncedSearchQuery,
         channelFilterState: channelFilterState,
         showOpenOnly: selectedStatus === 'open',
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
       };
 
       const result = await getTicketsForListWithCursor(currentUser, filters, cursor);
@@ -131,7 +137,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
+  }, [companyId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState, selectedTags]);
 
   // Load tickets when filters change
   useEffect(() => {
@@ -206,6 +212,24 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     ticketTagsRef.current[ticketId] = tags;
   }, []);
 
+  // Initialize available tags from props (only once)
+  const tagsInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!tagsInitializedRef.current && initialTags.length > 0) {
+      const uniqueTags = initialTags.map((tagText, index) => ({
+        tag_id: `temp-${index}`,
+        tag_text: tagText,
+        tagged_type: 'ticket' as const,
+        tagged_id: '',
+        tenant: '',
+        created_at: new Date(),
+        updated_at: new Date()
+      }));
+      setAllUniqueTags(uniqueTags);
+      tagsInitializedRef.current = true;
+    }
+  }, [initialTags]);
+
   // Fetch tags for tickets
   useEffect(() => {
     const fetchTags = async () => {
@@ -243,11 +267,25 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       showClient: false, // Don't show client column since we're already on company page
     }), [initialCategories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
 
+  // Filter tickets by selected tags
+  const filteredTickets = useMemo(() => {
+    if (selectedTags.length === 0) return tickets;
+    
+    return tickets.filter(ticket => {
+      if (!ticket.ticket_id) return false;
+      const ticketTags = ticketTagsRef.current[ticket.ticket_id] || [];
+      const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
+      
+      // Check if ticket has any of the selected tags
+      return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
+    });
+  }, [tickets, selectedTags]);
+
   const ticketsWithIds = useMemo(() =>
-    tickets.map((ticket): any => ({
+    filteredTickets.map((ticket): any => ({
       ...ticket,
       id: ticket.ticket_id 
-    })), [tickets]);
+    })), [filteredTickets]);
 
   const handleResetFilters = useCallback(() => {
     setSelectedChannel(null);
@@ -257,6 +295,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     setExcludedCategories([]);
     setSearchQuery('');
     setChannelFilterState('active');
+    setSelectedTags([]);
   }, []);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
@@ -355,6 +394,20 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           className="h-[38px] min-w-[200px] text-sm"
           containerClassName=""
         />
+        
+        {allUniqueTags.length > 0 && (
+          <TagFilter
+            allTags={allUniqueTags}
+            selectedTags={selectedTags}
+            onTagSelect={(tag) => {
+              setSelectedTags(prev => 
+                prev.includes(tag) 
+                  ? prev.filter(t => t !== tag)
+                  : [...prev, tag]
+              );
+            }}
+          />
+        )}
         
         <Button
           id="company-tickets-reset-filters-btn"

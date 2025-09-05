@@ -27,6 +27,7 @@ import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { TagFilter } from 'server/src/components/tags';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -37,6 +38,7 @@ interface ContactTicketsProps {
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
+  initialTags?: string[];
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -60,7 +62,8 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   initialChannels = [],
   initialStatuses = [],
   initialPriorities = [],
-  initialCategories = []
+  initialCategories = [],
+  initialTags = []
 }) => {
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +85,8 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
@@ -121,6 +126,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         searchQuery: debouncedSearchQuery,
         channelFilterState: channelFilterState,
         showOpenOnly: selectedStatus === 'open',
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
       };
 
       const result = await getTicketsForListWithCursor(currentUser, filters, cursor);
@@ -137,7 +143,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [contactId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
+  }, [contactId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState, selectedTags]);
 
   // Load tickets when filters change
   useEffect(() => {
@@ -234,6 +240,24 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     }
   }, [openDrawer]);
 
+  // Initialize available tags from props (only once)
+  const tagsInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!tagsInitializedRef.current && initialTags.length > 0) {
+      const uniqueTags = initialTags.map((tagText, index) => ({
+        tag_id: `temp-${index}`,
+        tag_text: tagText,
+        tagged_type: 'ticket' as const,
+        tagged_id: '',
+        tenant: '',
+        created_at: new Date(),
+        updated_at: new Date()
+      }));
+      setAllUniqueTags(uniqueTags);
+      tagsInitializedRef.current = true;
+    }
+  }, [initialTags]);
+
   // Fetch tags for tickets
   useEffect(() => {
     const fetchTags = async () => {
@@ -287,6 +311,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     setExcludedCategories([]);
     setSearchQuery('');
     setChannelFilterState('active');
+    setSelectedTags([]);
   };
 
   const handleTicketAdded = useCallback(() => {
@@ -319,15 +344,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-4 mb-4 flex-wrap">
-          <Input
-            id="contact-tickets-search-input"
-            placeholder="Search tickets..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-[38px] min-w-[200px] text-sm"
-          />
-          
+        <div className="flex items-center gap-3 flex-wrap">
           {initialChannels.length > 0 && (
             <ChannelPicker
               id="contact-tickets-channel-picker"
@@ -375,6 +392,28 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
             />
           )}
           
+          <Input
+            id="contact-tickets-search-input"
+            placeholder="Search tickets..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-[38px] min-w-[200px] text-sm"
+          />
+          
+          {allUniqueTags.length > 0 && (
+            <TagFilter
+              allTags={allUniqueTags}
+              selectedTags={selectedTags}
+              onTagSelect={(tag) => {
+                setSelectedTags(prev => 
+                  prev.includes(tag) 
+                    ? prev.filter(t => t !== tag)
+                    : [...prev, tag]
+                );
+              }}
+            />
+          )}
+          
           <Button
             id="contact-tickets-reset-filters-btn"
             variant="outline"
@@ -385,7 +424,6 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
             Reset Filters
           </Button>
         </div>
-
 
         {/* Tickets Table */}
         {isLoading && tickets.length === 0 ? (
@@ -402,7 +440,19 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           <>
             <DataTable
               id="contact-tickets-table"
-              data={tickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }))}
+              data={(() => {
+                // Filter tickets by selected tags
+                const filteredTickets = selectedTags.length === 0 
+                  ? tickets 
+                  : tickets.filter(ticket => {
+                      if (!ticket.ticket_id) return false;
+                      const ticketTags = ticketTagsRef.current[ticket.ticket_id] || [];
+                      const ticketTagTexts = ticketTags.map(tag => tag.tag_text);
+                      return selectedTags.some(selectedTag => ticketTagTexts.includes(selectedTag));
+                    });
+                
+                return filteredTickets.map(ticket => ({ ...ticket, id: ticket.ticket_id }));
+              })()}
               columns={columns}
               pagination={false}
             />

@@ -181,6 +181,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     priorityOptions: SelectOption[];
     channelOptions: IChannel[];
     categories: ITicketCategory[];
+    tags?: string[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
@@ -267,7 +268,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
           channelOptions: options.channelOptions,
-          categories: options.categories
+          categories: options.categories,
+          tags: options.tags
         });
       } catch (error) {
         console.error('Error fetching ticket form options:', error);
@@ -691,6 +693,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
+              initialTags={ticketFormOptions.tags || []}
             />
           ) : (
             <div className="flex justify-center items-center h-32">
