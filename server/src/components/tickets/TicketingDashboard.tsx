@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import Link from 'next/link';
 import { ITicket, ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { QuickAddTicket } from './QuickAddTicket';
@@ -21,18 +20,17 @@ import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreVertical, XCircle, Clock, Trash2, ExternalLink } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
+import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useIntervalTracking } from 'server/src/hooks/useIntervalTracking';
 import { IntervalManagementDrawer } from 'server/src/components/time-management/interval-tracking/IntervalManagementDrawer';
-import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
 import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 
 interface TicketingDashboardProps {
   id?: string;
@@ -112,21 +110,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
-  const [dateTimeFormat, setDateTimeFormat] = useState<string>(displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a');
-  const [columnVisibility, setColumnVisibility] = useState<Record<string, boolean>>(displaySettings?.list?.columnVisibility || {
-    ticket_number: true,
-    title: true,
-    status: true,
-    priority: true,
-    board: true,
-    category: true,
-    client: true,
-    created: true,
-    created_by: true,
-    tags: true,
-    actions: true,
-  });
-  const [tagsInlineUnderTitle, setTagsInlineUnderTitle] = useState<boolean>(displaySettings?.list?.tagsInlineUnderTitle || false);
   
   // Quick View state
   const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
@@ -293,210 +276,28 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
   };
 
-  const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => {
-    const cols: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
+  // Custom function for clicking on tickets with filter preservation
+  const handleTicketClick = useCallback((ticketId: string) => {
+    const filterQuery = getCurrentFiltersQuery();
+    const href = filterQuery 
+      ? `/msp/tickets/${ticketId}?returnFilters=${encodeURIComponent(filterQuery)}`
+      : `/msp/tickets/${ticketId}`;
+    window.location.href = href;
+  }, [getCurrentFiltersQuery]);
 
-    cols.push({
-      key: 'ticket_number',
-      col: {
-        title: 'Ticket Number',
-        dataIndex: 'ticket_number',
-        width: '9%',
-        render: (value: string, record: ITicketListItem) => {
-          const filterQuery = getCurrentFiltersQuery();
-          const href = filterQuery 
-            ? `/msp/tickets/${record.ticket_id}?returnFilters=${encodeURIComponent(filterQuery)}`
-            : `/msp/tickets/${record.ticket_id}`;
-          return (
-            <Link
-              id={`ticket-number-link-${record.ticket_id}`}
-              href={href}
-              className="text-blue-500 hover:underline block break-all whitespace-normal"
-              style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
-            >
-              {value}
-            </Link>
-          );
-        },
-      }
-    });
 
-    cols.push({
-      key: 'title',
-      col: {
-        title: 'Title',
-        dataIndex: 'title',
-        width: tagsInlineUnderTitle ? '26%' : '20%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex flex-col gap-1">
-            <span>{value}</span>
-            {tagsInlineUnderTitle && columnVisibility['tags'] && record.ticket_id && (
-              <div onClick={(e) => e.stopPropagation()}>
-                <TagManager
-                  entityId={record.ticket_id}
-                  entityType="ticket"
-                  initialTags={ticketTagsRef.current[record.ticket_id] || []}
-                  onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
-                />
-              </div>
-            )}
-          </div>
-        )
-      }
-    });
-
-    cols.push({ key: 'status', col: { title: 'Status', dataIndex: 'status_name', width: '9%' } });
-
-    cols.push({
-      key: 'priority',
-      col: {
-        title: 'Priority',
-        dataIndex: 'priority_name',
-        width: '9%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full border border-gray-300" style={{ backgroundColor: record.priority_color || '#6B7280' }} />
-            <span>{value}</span>
-          </div>
-        ),
-      }
-    });
-
-    cols.push({ key: 'board', col: { title: 'Board', dataIndex: 'channel_name', width: '9%' } });
-
-    cols.push({
-      key: 'category',
-      col: {
-        title: 'Category',
-        dataIndex: 'category_id',
-        width: '10%',
-        render: (value: string, record: ITicketListItem) => {
-          if (!value && !record.subcategory_id) return 'No Category';
-          if (record.subcategory_id) {
-            const subcategory = categories.find(c => c.category_id === record.subcategory_id);
-            if (!subcategory) return 'Unknown Category';
-            const parent = categories.find(c => c.category_id === subcategory.parent_category);
-            return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
-          }
-          const category = categories.find(c => c.category_id === value);
-          if (!category) return 'Unknown Category';
-          return category.category_name;
-        },
-      }
-    });
-
-    cols.push({
-      key: 'client',
-      col: {
-        title: 'Client',
-        dataIndex: 'company_name',
-        width: '9%',
-        render: (value: string, record: ITicketListItem) => (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              if (record.company_id) onQuickViewCompany(record.company_id);
-            }}
-            className="text-blue-500 hover:underline text-left whitespace-normal break-words"
-          >
-            {value || 'No Client'}
-          </button>
-        ),
-      }
-    });
-
-    cols.push({
-      key: 'created',
-      col: {
-        title: 'Created',
-        dataIndex: 'entered_at',
-        width: '12%',
-        render: (value: string | null) => {
-          if (!value) return '—';
-          try {
-            const tz = getUserTimeZone();
-            const local = utcToLocal(value, tz);
-            return formatDateTime(local, tz, dateTimeFormat);
-          } catch (e) {
-            return value;
-          }
-        },
-      }
-    });
-
-    cols.push({ key: 'created_by', col: { title: 'Created By', dataIndex: 'entered_by_name', width: '9%' } });
-
-    cols.push({
-      key: 'tags',
-      col: {
-        title: 'Tags',
-        dataIndex: 'tags',
-        width: '13%',
-        render: (value: string, record: ITicketListItem) => {
-          if (!record.ticket_id) return null;
-          return (
-            <div onClick={(e) => e.stopPropagation()}>
-              <TagManager
-                entityId={record.ticket_id}
-                entityType="ticket"
-                initialTags={ticketTagsRef.current[record.ticket_id] || []}
-                onTagsChange={(tags) => handleTagsChange(record.ticket_id!, tags)}
-              />
-            </div>
-          );
-        },
-      }
-    });
-
-    cols.push({
-      key: 'actions',
-      col: {
-        title: 'Actions',
-        dataIndex: 'actions',
-        width: '3%',
-        render: (value: string, record: ITicketListItem) => (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button id={`ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-                <span className="sr-only">Open menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white z-50">
-              <DropdownMenuItem
-                className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 text-red-600 flex items-center"
-                onSelect={() => handleDeleteTicket(record.ticket_id as string, record.title || record.ticket_number)}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ),
-      }
-    });
-
-    // Apply visibility and tagsInline flag
-    const visibleCols = cols.filter(({ key }) => {
-      // Hide separate tags column when tags are inline under title or when tags are disabled
-      if (key === 'tags') {
-        // If tags are disabled, don't show the column
-        if (!columnVisibility['tags']) return false;
-        // If tags are inline under title, don't show separate column
-        if (tagsInlineUnderTitle) return false;
-        // Otherwise show the separate tags column
-        return true;
-      }
-      // Title should always be visible to avoid an empty table
-      if (key === 'title') return true;
-      return columnVisibility[key] !== false;
-    }).map(x => x.col);
-
-    return visibleCols;
-  }, [ticketTagsRef, allUniqueTags, columnVisibility, tagsInlineUnderTitle, dateTimeFormat, getCurrentFiltersQuery]);
-
-  // Create columns with categories data
-  const columns = useMemo(() => createTicketColumns(categories), [categories, createTicketColumns]);
+  // Create columns using shared utility
+  const columns = useMemo(() => 
+    createTicketColumns({
+      categories,
+      displaySettings: displaySettings || undefined,
+      onTicketClick: handleTicketClick,
+      onDeleteClick: handleDeleteTicket,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showClient: true,
+      onClientClick: onQuickViewCompany,
+    }), [categories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
 
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {

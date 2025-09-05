@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 import { IChannel, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -13,16 +12,21 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { getTicketsForListWithCursor } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { MoreVertical, XCircle, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from 'server/src/components/ui/DropdownMenu';
+import { XCircle } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
-import Link from 'next/link';
 import { useDrawer } from "server/src/context/DrawerContext";
 import TicketDetails from 'server/src/components/tickets/ticket/TicketDetails';
 import { getConsolidatedTicketData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { QuickAddTicket } from 'server/src/components/tickets/QuickAddTicket';
+import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
+import { getTicketingDisplaySettings, TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { ITag } from 'server/src/interfaces/tag.interfaces';
+import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
+import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 
 interface ContactTicketsProps {
   contactId: string;
@@ -62,11 +66,12 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<IUser | null>(null);
+  const [displaySettings, setDisplaySettings] = useState<TicketingDisplaySettings | null>(null);
+  const ticketTagsRef = useRef<Record<string, ITag[]>>({});
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isQuickAddTicketOpen, setIsQuickAddTicketOpen] = useState(false);
-  
   const { openDrawer } = useDrawer();
 
   // Filter states
@@ -80,17 +85,24 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  // Initialize user
+  // Pre-fetch tag permissions
+  useTagPermissions(['ticket']);
+
+  // Initialize user and settings
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndSettings = async () => {
       try {
-        const user = await getCurrentUser();
+        const [user, settings] = await Promise.all([
+          getCurrentUser(),
+          getTicketingDisplaySettings()
+        ]);
         setCurrentUser(user);
+        setDisplaySettings(settings);
       } catch (error) {
-        console.error('Error fetching current user:', error);
+        console.error('Error fetching user or settings:', error);
       }
     };
-    fetchUser();
+    fetchUserAndSettings();
   }, []);
 
   // Load tickets when filters change
@@ -196,113 +208,68 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     }
   }, [currentUser, openDrawer]);
 
-  const createTicketColumns = useCallback((categories: ITicketCategory[]): ColumnDefinition<ITicketListItem>[] => [
-    {
-      title: 'Ticket Number',
-      dataIndex: 'ticket_number',
-      width: '15%',
-      render: (value: string, record: ITicketListItem) => (
-        <button
-          onClick={() => handleTicketClick(record.ticket_id as string)}
-          className="text-blue-500 hover:underline cursor-pointer bg-transparent border-none p-0 block break-all whitespace-normal text-left"
-          style={{ wordBreak: 'break-all', overflowWrap: 'anywhere' }}
-        >
-          {value}
-        </button>
-      ),
-    },
-    {
-      title: 'Title',
-      dataIndex: 'title',
-      render: (value: string, record: ITicketListItem) => (
-        <div className="break-words" title={value}>
-          {value}
-        </div>
-      ),
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status_name',
-      render: (value: string) => value,
-    },
-    {
-      title: 'Priority',
-      dataIndex: 'priority_name',
-      render: (value: string, record: ITicketListItem) => (
-        <div className="flex items-center gap-2">
-          <div 
-            className="w-3 h-3 rounded-full border border-gray-300" 
-            style={{ backgroundColor: record.priority_color || '#6B7280' }}
+  const handleTagsChange = useCallback((ticketId: string, tags: ITag[]) => {
+    ticketTagsRef.current[ticketId] = tags;
+  }, []);
+
+  const handleCompanyClick = useCallback(async (companyId: string) => {
+    try {
+      const company = await getCompanyById(companyId);
+      if (company) {
+        openDrawer(
+          <CompanyDetails 
+            company={company} 
+            documents={[]} 
+            contacts={[]} 
+            isInDrawer={true}
+            quickView={true}
           />
-          <span>{value}</span>
-        </div>
-      ),
-    },
-    {
-      title: 'Category',
-      dataIndex: 'category_id',
-      render: (value: string, record: ITicketListItem) => {
-        if (!value && !record.subcategory_id) return 'No Category';
+        );
+      } else {
+        toast.error('Company not found');
+      }
+    } catch (error) {
+      console.error('Error loading company:', error);
+      toast.error('Failed to load company details');
+    }
+  }, [openDrawer]);
 
-        // If there's a subcategory, use that for display
-        if (record.subcategory_id) {
-          const subcategory = categories.find(c => c.category_id === record.subcategory_id);
-          if (!subcategory) return 'Unknown Category';
+  // Fetch tags for tickets
+  useEffect(() => {
+    const fetchTags = async () => {
+      if (tickets.length === 0) return;
+      
+      try {
+        const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
+        const tags = await findTagsByEntityIds(ticketIds, 'ticket');
+        
+        const newTicketTags: Record<string, ITag[]> = {};
+        tags.forEach(tag => {
+          if (!newTicketTags[tag.tagged_id]) {
+            newTicketTags[tag.tagged_id] = [];
+          }
+          newTicketTags[tag.tagged_id].push(tag);
+        });
+        
+        ticketTagsRef.current = newTicketTags;
+      } catch (error) {
+        console.error('Error fetching tags:', error);
+      }
+    };
+    fetchTags();
+  }, [tickets]);
 
-          const parent = categories.find(c => c.category_id === subcategory.parent_category);
-          return parent ? `${parent.category_name} → ${subcategory.category_name}` : subcategory.category_name;
-        }
-
-        // Otherwise use the main category
-        const category = categories.find(c => c.category_id === value);
-        if (!category) return 'Unknown Category';
-        return category.category_name;
-      },
-    },
-    {
-      title: 'Board',
-      dataIndex: 'channel_name',
-      render: (value: string) => value || 'N/A',
-    },
-    {
-      title: 'Created By',
-      dataIndex: 'entered_by_name',
-      render: (value: string) => value || 'N/A',
-    },
-    {
-      title: 'Actions',
-      dataIndex: 'actions',
-      width: '5%',
-      render: (value: any, record: ITicketListItem) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button id={`contact-ticket-actions-${record.ticket_id}`} variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem asChild>
-              <Link href={`/msp/tickets/${record.ticket_id}`}>
-                Go to ticket
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleTicketClick(record.ticket_id as string)}>
-              View details
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={() => handleDeleteTicket(record.ticket_id as string, record.ticket_number)}
-              className="text-red-600"
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
-    },
-  ], [handleTicketClick, handleDeleteTicket]);
-
-  const columns = useMemo(() => createTicketColumns(initialCategories), [createTicketColumns, initialCategories]);
+  const columns = useMemo(() => 
+    createTicketColumns({
+      categories: initialCategories,
+      displaySettings: displaySettings || undefined,
+      onTicketClick: handleTicketClick,
+      onDeleteClick: handleDeleteTicket,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showClient: true, // Show client column in contact view
+      onClientClick: handleCompanyClick,
+    }), [initialCategories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleCompanyClick]);
 
   const handleCategorySelect = (
     selectedCategories: string[],
@@ -327,9 +294,6 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     loadTickets(undefined, true);
     setIsQuickAddTicketOpen(false);
   }, [loadTickets]);
-
-  const isFiltered = selectedChannel || selectedStatus !== 'open' || selectedPriority !== 'all' || 
-                    selectedCategories.length > 0 || searchQuery || channelFilterState !== 'active';
 
   if (!currentUser) {
     return (

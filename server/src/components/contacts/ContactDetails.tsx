@@ -330,6 +330,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                 documents={[]} 
                 contacts={[]} 
                 isInDrawer={true}
+                quickView={true}
               />
             );
           }, delay);

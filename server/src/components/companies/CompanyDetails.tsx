@@ -162,6 +162,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  
+  // Update editedCompany when company prop changes
+  useEffect(() => {
+    setEditedCompany(company);
+  }, [company]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
@@ -963,7 +968,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          // In quick view we only render the Details tab. Force default to Details
+          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+          defaultTab={quickView ? 'Details' : findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />
 
