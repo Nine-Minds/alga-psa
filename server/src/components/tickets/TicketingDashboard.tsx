@@ -14,7 +14,7 @@ import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
-import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
+import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IChannel, ICompany, IUser } from 'server/src/interfaces';
@@ -181,34 +181,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     fetchTags();
   }, [initialTickets]);
 
-  // Track if tags have been initialized to prevent re-sorting
-  const tagsInitializedRef = useRef(false);
-  
-  // Fetch all unique tags only once on mount and merge with initial tags
-  useEffect(() => {
-    if (tagsInitializedRef.current) return; // Already initialized, don't re-sort
-    
-    const fetchAllTags = async () => {
-      try {
-        const allTags = await findAllTagsByType('ticket');
-        // Merge with initial tags from server
-        const initialTagsAsITag = initialTags.map(tagText => ({ tag_text: tagText } as ITag));
-        const mergedTags = [...initialTagsAsITag];
-        
-        allTags.forEach(tag => {
-          if (!mergedTags.some(t => t.tag_text === tag.tag_text)) {
-            mergedTags.push(tag);
-          }
-        });
-        
-        setAllUniqueTags(mergedTags);
-        tagsInitializedRef.current = true; // Mark as initialized
-      } catch (error) {
-        console.error('Error fetching all tags:', error);
-      }
-    };
-    fetchAllTags();
-  }, [initialTags]);
+  // No longer need client-side tag fetching since we get all tags from server
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 

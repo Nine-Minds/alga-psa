@@ -45,7 +45,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       }
     }
     if (searchParams?.tags && typeof searchParams.tags === 'string') {
-      filtersFromURL.tags = searchParams.tags.split(',');
+      // Decode each tag to handle special characters that were encoded
+      filtersFromURL.tags = searchParams.tags.split(',').map(tag => decodeURIComponent(tag));
     }
 
     // Apply defaults for missing parameters
@@ -65,7 +66,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       companyId: initialFilters.companyId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       channelFilterState: initialFilters.channelFilterState || 'active',
-      showOpenOnly: (initialFilters.statusId === 'open') || false
+      showOpenOnly: (initialFilters.statusId === 'open') || false,
+      tags: initialFilters.tags || undefined
     };
 
     // Fetch consolidated data for the ticket list with initial filters

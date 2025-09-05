@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
@@ -72,7 +72,9 @@ export default function TicketingDashboardContainer({
       params.set('channelFilterState', filters.channelFilterState);
     }
     if (filters.tags && filters.tags.length > 0) {
-      params.set('tags', filters.tags.join(','));
+      // Encode each tag to handle special characters like commas
+      const encodedTags = filters.tags.map(tag => encodeURIComponent(tag));
+      params.set('tags', encodedTags.join(','));
     }
 
     // Update URL without causing a page refresh
