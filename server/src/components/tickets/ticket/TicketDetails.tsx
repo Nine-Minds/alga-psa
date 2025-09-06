@@ -642,7 +642,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 return true;
             } else {
                 // Use the regular createComment action for MSP portal
-                if (ticket.ticket_id) {
+                if (ticket.ticket_id && userId) {
                     // Call the regular comment creation action
                     const newComment = await createComment({
                         ticket_id: ticket.ticket_id,
@@ -650,7 +650,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         is_internal: isInternal,
                         is_resolution: isResolution,
                         user_id: userId,
-                        author_type: 'internal'
+                        author_type: 'internal' // Will be overridden based on user type in the action
                     });
                     
                     if (newComment) {

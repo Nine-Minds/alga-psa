@@ -62,6 +62,7 @@ interface TicketConversationProps {
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
+  overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -85,6 +86,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onContentChange,
   hideInternalTab = false,
   isSubmitting = false,
+  overrides = {},
 }) => {
   const [showEditor, setShowEditor] = useState(false);
   const [reverseOrder, setReverseOrder] = useState(false);
@@ -183,6 +185,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     fetchContactAvatarUrls();
   }, [conversations, ticket.tenant, userMap]);
 
+  // Log when conversations prop changes
+  useEffect(() => {
+    try {
+      console.log('[TicketConversation] conversations changed', {
+        count: conversations.length,
+        items: conversations.map(c => ({ id: c.comment_id, updated_at: c.updated_at, noteLen: (c.note || '').length }))
+      });
+    } catch {}
+  }, [conversations]);
+
   const getAuthorInfo = (conversation: IComment) => {
     if (conversation.user_id) {
       // The userMap should already have the updated avatar URLs from the useEffect above
@@ -195,24 +207,37 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     // Use the sorted comments based on the reverseOrder state
     const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
     
-    return commentsToRender.map((conversation): JSX.Element => (
+    return commentsToRender.map((conversation): JSX.Element => {
+      const override = overrides[conversation.comment_id || ''];
+      const mergedConversation = override
+        ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }
+        : conversation;
+      const itemKey = `${conversation.comment_id}-${conversation.updated_at || ''}-${(conversation.note || '').length}`;
+      console.log('[TicketConversation][renderComments] Rendering', {
+        key: itemKey,
+        comment_id: mergedConversation.comment_id,
+        updated_at: mergedConversation.updated_at,
+        noteLen: (mergedConversation.note || '').length,
+      });
+      return (
       <CommentItem
-        key={conversation.comment_id}
-        id={`${id}-comment-${conversation.comment_id}`}
-        conversation={conversation}
+        key={itemKey}
+        id={`${id}-comment-${mergedConversation.comment_id}`}
+        conversation={mergedConversation}
         user={getAuthorInfo(conversation)}
         currentUserId={currentUser?.id}
-        isEditing={isEditing && currentComment?.comment_id === conversation.comment_id}
+        isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
         currentComment={currentComment}
         ticketId={ticket.ticket_id || ''}
         userMap={userMap}
         onContentChange={onContentChange}
         onSave={onSave}
         onClose={onClose}
-        onEdit={() => onEdit(conversation)}
+        onEdit={() => onEdit(mergedConversation)}
         onDelete={onDelete}
       />
-    ));
+    );
+    });
   };
 
   // Build tab content array based on hideInternalTab

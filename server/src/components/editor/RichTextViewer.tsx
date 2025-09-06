@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
@@ -120,31 +120,51 @@ export default function RichTextViewer({
     return finalBlocks;
   })();
 
-  // Create editor instance with content
-  const editor = useCreateBlockNote({
-    initialContent: parsedContent,
-    // The editor is read-only by default in this component
-    domAttributes: {
-      editor: {
-        class: 'pointer-events-none', // Disable interactions with the editor
+  // A small inner component that creates the editor; we key this by content
+  function ViewerCore({ blocks }: { blocks: PartialBlock[] }) {
+    const editor = useCreateBlockNote({
+      initialContent: blocks,
+      // The editor is read-only by default in this component
+      domAttributes: {
+        editor: {
+          class: 'pointer-events-none', // Disable interactions with the editor
+        },
       },
-    },
-  });
+    });
+    
+    return (
+      <BlockNoteView
+        editor={editor}
+        theme="light"
+        className="w-full min-w-0"
+        style={{
+          overflowWrap: 'break-word',
+          wordBreak: 'break-word',
+          minWidth: 0,
+          maxWidth: '100%'
+        }}
+      />
+    );
+  }
+
+  // Create a key that changes when content changes to force re-mount of editor
+  const contentKey = useMemo(() => {
+    try {
+      const key = JSON.stringify(parsedContent);
+      console.log('[RichTextViewer] contentKey computed', {
+        keyHashLen: key.length,
+        blocks: Array.isArray(parsedContent) ? parsedContent.length : undefined
+      });
+      return key;
+    } catch {
+      return String(Date.now());
+    }
+  }, [parsedContent]);
 
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
       <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
-        <BlockNoteView
-          editor={editor}
-          theme="light"
-          className="w-full min-w-0"
-          style={{
-            overflowWrap: 'break-word',
-            wordBreak: 'break-word',
-            minWidth: 0,
-            maxWidth: '100%'
-          }}
-        />
+        <ViewerCore key={contentKey} blocks={parsedContent} />
       </div>
     </div>
   );
