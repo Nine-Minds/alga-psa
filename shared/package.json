@@ -31,7 +31,8 @@
     "./models/userModel.js": "./dist/models/userModel.js",
     "./extensions/domain.js": "./dist/extensions/domain.js",
     "./extensions/installs.js": "./dist/extensions/installs.js",
-    "./extensions/types.js": "./dist/extensions/types.js"
+    "./extensions/types.js": "./dist/extensions/types.js",
+    "./*": "./dist/*"
   },
   "scripts": {
     "build": "tsc",

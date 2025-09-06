@@ -1,0 +1,67 @@
+{{- if .Values.istio.enabled }}
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: {{ include "sebastian.fullname" . }}-vs
+  namespace: {{ include "sebastian.namespace" . }}
+  labels:
+    {{- include "sebastian.labels" . | nindent 4 }}
+spec:
+  gateways:
+  - {{ include "sebastian.namespace" . }}/{{ include "sebastian.fullname" . }}-gw
+  hosts:
+  {{- range .Values.istio.hosts }}
+  - {{ . | quote }}
+  {{- end }}
+  http:
+  # Route: explicit green host
+  - name: green-direct
+    match:
+    - authority:
+        exact: {{ .Values.istio.routes.green.host | quote }}
+      uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ printf "%s.%s.svc.cluster.local" .Values.istio.routes.green.service (include "sebastian.namespace" .) | quote }}
+        port:
+          number: {{ .Values.istio.routes.green.port }}
+  # Route: explicit blue host (optional)
+  - name: blue-direct
+    match:
+    - authority:
+        exact: {{ .Values.istio.routes.blue.host | quote }}
+      uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ printf "%s.%s.svc.cluster.local" .Values.istio.routes.blue.service (include "sebastian.namespace" .) | quote }}
+        port:
+          number: {{ .Values.istio.routes.blue.port }}
+  # Route: default apex host to green by default
+  - name: default-colored
+    match:
+    - headers:
+        :authority:
+          exact: {{ .Values.istio.routes.default.host | quote }}
+      uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ printf "%s.%s.svc.cluster.local" .Values.istio.routes.default.service (include "sebastian.namespace" .) | quote }}
+        port:
+          number: {{ .Values.istio.routes.default.port }}
+  # Optional extra route for an ops/debug host
+  - name: istio-host
+    match:
+    - headers:
+        :authority:
+          exact: {{ .Values.istio.routes.istio.host | quote }}
+      uri:
+        prefix: "/"
+    route:
+    - destination:
+        host: {{ printf "%s.%s.svc.cluster.local" .Values.istio.routes.istio.service (include "sebastian.namespace" .) | quote }}
+        port:
+          number: {{ .Values.istio.routes.istio.port }}
+{{- end }}
