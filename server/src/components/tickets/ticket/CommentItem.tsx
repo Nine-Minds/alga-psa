@@ -310,7 +310,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   }]
                 }];
               }
-              console.log('[CommentItem] render viewer', {
+              if (process.env.NODE_ENV !== 'production') console.log('[CommentItem] render viewer', {
                 comment_id: conversation.comment_id,
                 updated_at: conversation.updated_at,
                 noteLen: (conversation.note || '').length,

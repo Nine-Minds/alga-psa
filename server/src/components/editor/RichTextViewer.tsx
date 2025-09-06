@@ -151,7 +151,7 @@ export default function RichTextViewer({
   const contentKey = useMemo(() => {
     try {
       const key = JSON.stringify(parsedContent);
-      console.log('[RichTextViewer] contentKey computed', {
+      if (process.env.NODE_ENV !== 'production') console.log('[RichTextViewer] contentKey computed', {
         keyHashLen: key.length,
         blocks: Array.isArray(parsedContent) ? parsedContent.length : undefined
       });

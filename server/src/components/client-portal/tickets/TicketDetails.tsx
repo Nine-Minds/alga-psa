@@ -198,13 +198,13 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
         }
       }
       
-      console.log('[ClientPortal][handleSave] Attempting save', {
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Attempting save', {
         comment_id: currentComment.comment_id,
         hasNote: !!updates.note,
         noteLen: updates.note ? updates.note.length : 0,
       });
       await updateClientTicketComment(currentComment.comment_id, updates);
-      console.log('[ClientPortal][handleSave] Save succeeded');
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Save succeeded');
 
       // Prepare an optimistic version of the updated comment for immediate UI update and later merge
       const optimisticUpdatedAt = new Date().toISOString();
@@ -216,7 +216,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
         if (!prev) return prev;
         const updatedConversations = (prev.conversations || []).map(conv => {
           if (conv.comment_id === optimisticCommentId) {
-            console.log('[ClientPortal][optimistic] Updating local state', {
+            if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][optimistic] Updating local state', {
               comment_id: conv.comment_id,
               prevUpdatedAt: conv.updated_at,
               nextUpdatedAt: optimisticUpdatedAt,
@@ -246,11 +246,11 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       setCurrentComment(null);
 
       // Refresh ticket details to get the authoritative updated comment
-      console.log('[ClientPortal][handleSave] Refetching ticket details');
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetching ticket details');
       const details = await getClientTicketDetails(ticketId);
       const detailsWithExtras = details as TicketWithDetails;
       const fetchedConv = (detailsWithExtras.conversations || []).find(c => c.comment_id === optimisticCommentId);
-      console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
         comment_id: optimisticCommentId,
         fetchedUpdatedAt: fetchedConv?.updated_at,
         fetchedNoteLen: (fetchedConv?.note || '').length,
@@ -263,7 +263,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
             const fetchedTime = conv.updated_at ? new Date(conv.updated_at).getTime() : 0;
             const optimisticTime = new Date(optimisticUpdatedAt).getTime();
             if (optimisticTime > fetchedTime) {
-              console.log('[ClientPortal][merge] Keeping optimistic version', {
+              if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][merge] Keeping optimistic version', {
                 optimisticUpdatedAt,
                 fetchedUpdatedAt: conv.updated_at,
                 fetchedNoteLen: (conv.note || '').length,
@@ -275,7 +275,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                 updated_at: optimisticUpdatedAt,
               } as IComment;
             } else {
-              console.log('[ClientPortal][merge] Keeping fetched version', {
+              if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][merge] Keeping fetched version', {
                 optimisticUpdatedAt,
                 fetchedUpdatedAt: conv.updated_at,
               });

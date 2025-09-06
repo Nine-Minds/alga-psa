@@ -88,6 +88,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   isSubmitting = false,
   overrides = {},
 }) => {
+  // Ensure we have a stable id for interactive element ids
+  const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
   const [reverseOrder, setReverseOrder] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
@@ -188,7 +190,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Log when conversations prop changes
   useEffect(() => {
     try {
-      console.log('[TicketConversation] conversations changed', {
+      if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation] conversations changed', {
         count: conversations.length,
         items: conversations.map(c => ({ id: c.comment_id, updated_at: c.updated_at, noteLen: (c.note || '').length }))
       });
@@ -213,7 +215,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }
         : conversation;
       const itemKey = `${conversation.comment_id}-${conversation.updated_at || ''}-${(conversation.note || '').length}`;
-      console.log('[TicketConversation][renderComments] Rendering', {
+      if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation][renderComments] Rendering', {
         key: itemKey,
         comment_id: mergedConversation.comment_id,
         updated_at: mergedConversation.updated_at,
@@ -310,7 +312,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <h2 className="text-xl font-bold">Comments</h2>
           {!showEditor && (
             <Button
-              id={`${id}-show-comment-editor-btn`}
+              id={`${compId}-show-comment-editor-btn`}
               onClick={handleAddCommentClick}
             >
               Add Comment
@@ -336,7 +338,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   {!hideInternalTab && (
                     <div className="flex items-center space-x-2">
                       <Switch
-                        id={`${id}-internal-toggle`}
+                        id={`${compId}-internal-toggle`}
                         checked={isInternalToggle}
                         onCheckedChange={setIsInternalToggle}
                       />
@@ -347,7 +349,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   )}
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id={`${id}-resolution-toggle`}
+                      id={`${compId}-resolution-toggle`}
                       checked={isResolutionToggle}
                       onCheckedChange={setIsResolutionToggle}
                     />
@@ -358,7 +360,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 </div>
                 <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
                   <TextEditor
-                    {...withDataAutomationId({ id: `${id}-editor` })}
+                    {...withDataAutomationId({ id: `${compId}-editor` })}
                     key={editorKey}
                     roomName={`ticket-${ticket.ticket_id}`}
                     initialContent={DEFAULT_BLOCK}
@@ -367,14 +369,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">
                   <Button
-                    id={`${id}-add-comment-btn`}
+                    id={`${compId}-add-comment-btn`}
                     onClick={handleSubmitComment}
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Adding...' : 'Add Comment'}
                   </Button>
                   <Button
-                    id={`${id}-cancel-comment-btn`}
+                    id={`${compId}-cancel-comment-btn`}
                     onClick={handleCancelComment}
                     variant="outline"
                     disabled={isSubmitting}
@@ -393,6 +395,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onTabChange={onTabChange}
           extraContent={
             <button
+              id={`${compId}-toggle-order-btn`}
               onClick={toggleCommentOrder}
               className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent px-4 py-2 ml-auto"
             >
