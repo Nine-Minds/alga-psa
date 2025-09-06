@@ -5,6 +5,35 @@ namespace: msp
 nameOverride: ""
 fullnameOverride: ""
 host: "localhost"
+
+# Istio ingress configuration
+istio:
+  enabled: false
+  gateway:
+    selector:
+      istio: ingress
+  hosts:
+    - sebastian.9minds.ai
+    - green-sebastian.9minds.ai
+    - blue-sebastian.9minds.ai
+    - istio.9minds.ai
+  routes:
+    green:
+      host: green-sebastian.9minds.ai
+      service: sebastian-green
+      port: 3000
+    blue:
+      host: blue-sebastian.9minds.ai
+      service: sebastian-blue
+      port: 3000
+    default:
+      host: sebastian.9minds.ai
+      service: sebastian-green
+      port: 3000
+    istio:
+      host: istio.9minds.ai
+      service: sebastian-green
+      port: 3000
 #env: "development"
 
 #FIXME: In image change nineminds to public when we we make image public 
