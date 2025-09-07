@@ -6,7 +6,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 
 - Deliverables:
   - JSON Schemas: Charge IR, Facts (including Tax Fact Packs), Events, Context, Program (pipeline config)
-  - TypeScript/AssemblyScript SDK interfaces mirroring schemas
+  - TypeScript SDK interfaces mirroring schemas (for Javy JS/TS modules)
   - Determinism & Money policy (integer cents, rounding rules)
   - Module Manifest Spec (declare-what-you-use for facts/events/scope)
   - Core Fact Packs (V1) catalog with field lists and filters
@@ -96,17 +96,17 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 - Acceptance:
   - End-to-end invoice generation from Program to DB; audit lines present
 
-## Phase 6 — SDK, CLI, and Authoring UX
+## Phase 6 — SDK, CLI, and Authoring UX (Javy)
 
 - Deliverables:
-  - `@alga/billing-plugin-sdk` (AssemblyScript) + scaffolding templates
-  - CLI: build/sign/publish, dry-run against fixtures, local test harness, `plan-inputs`
+  - `@alga/billing-plugin-sdk` (JavaScript/TypeScript for Javy) + scaffolding templates
+  - CLI: build/sign/publish, dry-run against fixtures, local test harness, `plan-inputs`; compile-to-Wasm step
 - TODOs:
-  - Example modules published (Fixed, Hourly, Usage, Bucket, Bundle, Discounts, Tax)
+  - Example modules published (Fixed, Hourly, Usage, Bucket, Bundle, Discounts, Tax) in JS/TS
   - Documentation and best practices
   - CLI tests for plan-inputs and publish flows
 - Acceptance:
-  - Third-party module can be authored, tested, published, and bound successfully
+  - Third-party module can be authored in JS/TS, tested (vitest), compiled to Wasm (Javy), published, and bound successfully
 
 ## Phase 7 — Security & Performance Hardening
 

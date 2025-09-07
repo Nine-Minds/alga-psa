@@ -104,9 +104,16 @@ All data is provided by the host; modules do not access storage or network.
 ## Adoption Strategy
 
 - Start with official templates: Fixed Producer, Hourly Producer, Usage Producer, Bucket Producer, Bundle Transformer, Standard Discounts.
-- Provide an SDK (AssemblyScript first) with helpers for FMV allocation, proration, tier evaluation, rounding, and safe money operations.
-- CLI for build/sign/publish and local dry‑run against fixtures.
-- Parity tests vs current engine before cutover; dual‑run with diffs; feature flags for selective rollout.
+- Default module target: Javy (JavaScript/TypeScript compiled to Wasm/QuickJS). Provide a JS/TS SDK with helpers for FMV allocation, proration, tier evaluation, rounding, and safe money operations.
+- CLI for build/sign/publish and local dry-run against fixtures; run vitest directly on JS and integration on compiled Wasm.
+- Feature-flagged rollout per tenant as needed.
+
+## Module Target: Javy (JavaScript/TypeScript → Wasm)
+
+- Author modules in TypeScript or JavaScript.
+- Compile with Javy to Wasm (QuickJS runtime embedded) and execute in the orchestrator with CPU/memory limits.
+- Determinism: shim Date/Math.random; pass `now`/`seed` via Context; freeze intrinsics; integer cents money ops.
+- Performance: cache module instances; avoid per-scope cold starts; JSON I/O remains the boundary.
 
 ## Out of Scope
 
