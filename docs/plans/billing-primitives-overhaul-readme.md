@@ -122,6 +122,15 @@ All data is provided by the host; modules do not access storage or network.
 - Determinism: shim Date/Math.random; pass `now`/`seed` via Context; freeze intrinsics; integer cents money ops.
 - Performance: on-demand fetch/instantiate per use is acceptable for expected size/volume. Revisit caching/instance reuse if measurements warrant it.
 
+## Module Trust & Ownership
+
+- Trust tiers:
+  - System modules: authored, reviewed, and signed by Alga. Default for V1.
+  - Tenant modules (future): authored and signed by a tenant; allowed by explicit allowlists and review policies.
+  - Partner modules (future): vetted publisher program; signed and versioned similarly to system modules.
+- Registry metadata (DB): `origin_type (system|tenant|partner)`, `owner_tenant_id?`, `trust_tier`, `signature`, `sha256`, `created_by`, `created_at`.
+- Binding precedence: more specific overrides win — `plan_id` > `plan_type` > tenant default > global default (system). In V1, only system modules are available to bind; tenant overrides are disabled until a later phase.
+
 ## Out of Scope
 
 - Direct data access from modules (WASM remains pure compute).

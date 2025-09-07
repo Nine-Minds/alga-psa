@@ -24,6 +24,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Tables: `billing_scripts`, `billing_script_bindings`, `billing_executions`
   - CRUD actions/APIs for upload, versioning, signing, binding
   - Module storage via `StorageService` (provider‑agnostic: local or S3‑compatible like MinIO); DB stores metadata + provider path
+  - Trust/ownership fields in registry: `origin_type (system|tenant|partner)`, `owner_tenant_id?`, `trust_tier`, `signature`, `sha256`
 - TODOs:
   - Implement blob storage (DB for V1), hashing, optional signing
   - Binding resolution logic with priorities and scoping (tenant, plan_type, plan_id, bundle_id)
@@ -98,7 +99,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 - Acceptance:
   - End-to-end invoice generation from Program to DB; audit lines present
 
-## Phase 6 — SDK, CLI, and Authoring UX (Javy)
+## Phase 6 — SDK, CLI, and Authoring UX (Javy; system modules)
 
 - Deliverables:
   - `@alga/billing-plugin-sdk` (JavaScript/TypeScript for Javy) + scaffolding templates
@@ -108,7 +109,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Documentation and best practices
   - CLI tests for plan-inputs and publish flows
 - Acceptance:
-  - Third-party module can be authored in JS/TS, tested (vitest), compiled to Wasm (Javy), published, and bound successfully
+  - System module can be authored in JS/TS, tested (vitest), compiled to Wasm (Javy), published, and bound successfully
 
 ## Phase 7 — Security & Performance Hardening
 
@@ -121,6 +122,19 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Clear error surfaces and fallbacks
 - Acceptance:
   - Meets SLOs for throughput and latency; safe under stress
+
+## Phase 7a — Tenant Custom Modules (optional later phase)
+
+- Deliverables:
+  - Publisher flow for tenant modules (upload → hash/sign → store via StorageService → registry insert)
+  - Review/allowlist workflow and trust tiers; per-tenant quotas; revocation path
+  - Binding UI to opt-in to tenant/partner modules by scope with precedence rules
+- TODOs:
+  - Signature verification on fetch and execution policy enforcement
+  - Malicious module tests (infinite loop, memory abuse) → time/memory caps validated
+  - Observability for module errors segregated per tenant
+- Acceptance:
+  - Tenant-authored module passes tests, is reviewed/allowed, and can be bound and executed within limits
 
 ## Phase 8 — Release & Enablement
 
