@@ -71,12 +71,12 @@ All data is provided by the host; modules do not access storage or network.
 - Audit: log `module_id/version/hash`, input hash, outputs snapshot, duration, warnings; store on invoice details and in a `billing_executions` table.
 - Release gating: feature flags per tenant if desired (no legacy coupling assumed).
 
-## Module Storage and Caching
+## Module Storage and Loading
 
 - Storage abstraction: use `StorageService` (`server/src/lib/storage/StorageService.ts`) and `StorageProviderFactory` for provider‑agnostic storage (local filesystem or S3‑compatible such as MinIO in on‑prem/EE).
 - Artifacts: store compiled Wasm modules (Javy) as immutable blobs. Persist metadata in DB (e.g., `module_id`, `version`, `sha256`, `size`, provider path).
-- Access: orchestrators read via `StorageService` (private/VPC endpoints for remote providers). No CDN/CloudFront is needed since execution is server‑side.
-- Caching: maintain local LRU cache (disk + memory) keyed by `sha256`; prefetch based on active bindings before scheduled runs.
+- Access: orchestrators read on-demand via `StorageService` (private/VPC endpoints for remote providers). No CDN/CloudFront is needed since execution is server‑side.
+- Caching: not required initially; modules are fetched on demand. If needed, an LRU/disk cache can be introduced later without changing module contracts.
 
 ## Security and Determinism
 
@@ -120,7 +120,7 @@ All data is provided by the host; modules do not access storage or network.
 - Author modules in TypeScript or JavaScript.
 - Compile with Javy to Wasm (QuickJS runtime embedded) and execute in the orchestrator with CPU/memory limits.
 - Determinism: shim Date/Math.random; pass `now`/`seed` via Context; freeze intrinsics; integer cents money ops.
-- Performance: cache module instances; avoid per-scope cold starts; JSON I/O remains the boundary.
+- Performance: on-demand fetch/instantiate per use is acceptable for expected size/volume. Revisit caching/instance reuse if measurements warrant it.
 
 ## Out of Scope
 

@@ -38,9 +38,9 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Program runner: deterministic stage ordering, scope fan-out for Producers
   - Fact Planner service: resolves manifests → builds a unified Fact Plan
   - Test harness scaffold (vitest) for module and pipeline tests
-  - Module cache (disk + memory) keyed by `sha256` with prefetch based on active bindings
+  - On-demand module fetch via `StorageService` (no local cache in V1)
 - TODOs:
-  - Module cache (in-memory) with eviction
+  - (Optional later) instrumentation for load times and memory; no module cache in V1
   - Input hashing, output snapshotting, structured warnings capture
   - Error handling with safe fallbacks; feature flag gating
 - Acceptance:
@@ -114,7 +114,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 
 - Deliverables:
   - Module signing + allowlists, review gates
-  - Load tests and concurrency benchmarks; cache tuning
+  - Load tests and concurrency benchmarks; focus on fetch latency and CPU/memory limits
 - TODOs:
   - Fuzz/property tests for modules and orchestrator
   - Memory/time budget telemetry; backpressure controls
