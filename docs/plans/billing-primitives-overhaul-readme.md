@@ -71,6 +71,13 @@ All data is provided by the host; modules do not access storage or network.
 - Audit: log `module_id/version/hash`, input hash, outputs snapshot, duration, warnings; store on invoice details and in a `billing_executions` table.
 - Release gating: feature flags per tenant if desired (no legacy coupling assumed).
 
+## Module Storage and Caching
+
+- Storage abstraction: use `StorageService` (`server/src/lib/storage/StorageService.ts`) and `StorageProviderFactory` for provider‑agnostic storage (local filesystem or S3‑compatible such as MinIO in on‑prem/EE).
+- Artifacts: store compiled Wasm modules (Javy) as immutable blobs. Persist metadata in DB (e.g., `module_id`, `version`, `sha256`, `size`, provider path).
+- Access: orchestrators read via `StorageService` (private/VPC endpoints for remote providers). No CDN/CloudFront is needed since execution is server‑side.
+- Caching: maintain local LRU cache (disk + memory) keyed by `sha256`; prefetch based on active bindings before scheduled runs.
+
 ## Security and Determinism
 
 - WASM sandbox without FS/network; timeouts and memory caps per module.

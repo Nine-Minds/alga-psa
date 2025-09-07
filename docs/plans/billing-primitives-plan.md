@@ -23,6 +23,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 - Deliverables:
   - Tables: `billing_scripts`, `billing_script_bindings`, `billing_executions`
   - CRUD actions/APIs for upload, versioning, signing, binding
+  - Module storage via `StorageService` (provider‑agnostic: local or S3‑compatible like MinIO); DB stores metadata + provider path
 - TODOs:
   - Implement blob storage (DB for V1), hashing, optional signing
   - Binding resolution logic with priorities and scoping (tenant, plan_type, plan_id, bundle_id)
@@ -37,6 +38,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Program runner: deterministic stage ordering, scope fan-out for Producers
   - Fact Planner service: resolves manifests → builds a unified Fact Plan
   - Test harness scaffold (vitest) for module and pipeline tests
+  - Module cache (disk + memory) keyed by `sha256` with prefetch based on active bindings
 - TODOs:
   - Module cache (in-memory) with eviction
   - Input hashing, output snapshotting, structured warnings capture
