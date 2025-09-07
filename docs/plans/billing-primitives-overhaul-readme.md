@@ -77,6 +77,7 @@ All data is provided by the host; modules do not access storage or network.
 - Artifacts: store compiled Wasm modules (Javy) as immutable blobs. Persist metadata in DB (e.g., `module_id`, `version`, `sha256`, `size`, provider path).
 - Access: orchestrators read on-demand via `StorageService` (private/VPC endpoints for remote providers). No CDN/CloudFront is needed since execution is server‑side.
 - Caching: not required initially; modules are fetched on demand. If needed, an LRU/disk cache can be introduced later without changing module contracts.
+ - Build model: modules are precompiled at publish time (CI/publisher service). The orchestrator never compiles modules at runtime.
 
 ## Security and Determinism
 

@@ -1,6 +1,6 @@
-# Tax V2 Enhancement: Overview and Design
+# Tax Transformer: Overview and Design
 
-Scope: V2 enhancement to move tax computation into the billing runtime as a Transformer. V1 continues to use host-side TaxService; this design allows a clean evolution without breaking existing behavior.
+Scope: V1 tax computation implemented as a Transformer within the billing runtime. This design supports multi-component taxes, inclusive/exclusive pricing, and flexible rounding policies, while keeping modules pure and deterministic.
 
 ## Goals
 - Treat tax as code: deterministic, versioned, auditable.
@@ -48,8 +48,6 @@ Scope: V2 enhancement to move tax computation into the billing runtime as a Tran
 - Explicit `TaxPolicyPack` defines ordering (component sequence), inclusive/exclusive rules, and rounding modes.
 - No network calls; providers (e.g., Avalara/TaxJar) integrate host-side to produce Fact Packs if desired.
 
-## Compatibility & Rollout
-- V1 (current): host TaxService remains the default path.
-- V2 (opt-in): enable `mod.tax@X` Transformer for selected tenants; verify parity via previews and golden fixtures.
-- Dual-run possible: compute both and diff; record both outcomes in `billing_executions` for audit during rollout.
-
+## Rollout
+- Tax Transformer ships in V1 as part of the standard Program.
+- Feature flags can control tenant rollout; use previews and golden fixtures for validation where needed.

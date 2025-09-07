@@ -1,4 +1,4 @@
-# Tax V2: Fact Packs and Module Manifest
+# Tax: Fact Packs and Module Manifest (V1)
 
 ## Fact Packs (V2)
 
@@ -56,4 +56,3 @@ Notes:
 ## Planning and CLI
 - `alga-billing plan-inputs` will include the Tax packs when the Tax Transformer is enabled in the Program.
 - Preview runs can show the tax components per jurisdiction and any rounding adjustments as separate lines.
-

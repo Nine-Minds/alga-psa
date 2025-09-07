@@ -26,7 +26,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
   - Module storage via `StorageService` (provider‑agnostic: local or S3‑compatible like MinIO); DB stores metadata + provider path
   - Trust/ownership fields in registry: `origin_type (system|tenant|partner)`, `owner_tenant_id?`, `trust_tier`, `signature`, `sha256`
 - TODOs:
-  - Implement blob storage (DB for V1), hashing, optional signing
+  - Implement artifact storage via `StorageService` (no DB BLOBs), hashing, signing
   - Binding resolution logic with priorities and scoping (tenant, plan_type, plan_id, bundle_id)
   - Admin UI stub or CLI for managing modules
 - Acceptance:
@@ -104,6 +104,7 @@ This plan outlines the steps to introduce the primitives-based WASM billing runt
 - Deliverables:
   - `@alga/billing-plugin-sdk` (JavaScript/TypeScript for Javy) + scaffolding templates
   - CLI: build/sign/publish, dry-run against fixtures, local test harness, `plan-inputs`; compile-to-Wasm step
+  - Publisher/build service: precompile modules; orchestrator does not compile at runtime
 - TODOs:
   - Example modules published (Fixed, Hourly, Usage, Bucket, Bundle, Discounts, Tax) in JS/TS
   - Documentation and best practices

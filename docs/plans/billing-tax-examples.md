@@ -1,4 +1,4 @@
-# Tax V2: Worked Examples
+# Tax: Worked Examples (V1)
 
 ## 1) US Multi-Component (Exclusive)
 
@@ -55,4 +55,3 @@ stages:
   - transformer: mod.tax@2.x   # V2 tax transformer here
   - validator: mod.money-nonnegative@1.x
 ```
-
