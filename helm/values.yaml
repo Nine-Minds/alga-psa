@@ -371,6 +371,33 @@ devEnv:
   enabled: false
   namespace: msp-dev
 
+# Hosted environment configuration (safe defaults)
+# Ensures templates that reference hostedEnv do not error when unused
+hostedEnv:
+  enabled: false
+  namespace: msp-hosted
+  manageNamespace: false
+  sanitizedBranch: ""
+  branch: ""
+  repository:
+    url: ""
+    branch: ""
+  persistence:
+    enabled: false
+    storageClass: ""
+    size: 10Gi
+  codeServer:
+    enabled: false
+    pullPolicy: IfNotPresent
+    image:
+      repository: codercom/code-server
+      tag: "4.91.1"
+      pullPolicy: IfNotPresent
+    service:
+      type: ClusterIP
+      port: 8080
+
+
 # Vault Agent configuration for secret injection
 vaultAgent:
   enabled: false
