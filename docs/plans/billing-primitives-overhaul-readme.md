@@ -67,9 +67,9 @@ All data is provided by the host; modules do not access storage or network.
 - Data prep: fetch facts/events, build contexts and scopes deterministically.
 - Module registry/bindings: map scopes (e.g., plan_type, plan_id, bundle_id, tenant) to module@version; respect allowlists/signatures.
 - Execution: run WASM modules with strict CPU/memory limits; ensure deterministic ordering and JSON I/O.
-- Tax & rounding (V1): apply tax via existing TaxService; final rounding/persistence; emit invoices + details.
+- Tax: applied via a Tax Transformer (V1) using Tax Fact Packs; host handles final rounding/persistence and invoice emission.
 - Audit: log `module_id/version/hash`, input hash, outputs snapshot, duration, warnings; store on invoice details and in a `billing_executions` table.
-- Fallback: feature flags for dual‑run, parity checks, and safe rollback to legacy engine.
+- Release gating: feature flags per tenant if desired (no legacy coupling assumed).
 
 ## Security and Determinism
 
@@ -93,7 +93,7 @@ All data is provided by the host; modules do not access storage or network.
 - Buckets/Retainers: Producer; facts include bucket balance and policy; emits overage charges.
 - Bundles: Transformer; enforces `bundle_billing_plans.custom_rate`, grouping, and labeling; can override allocation strategy.
 - Discounts: Transformers; threshold/cap/promotions applied against dimensions; emit negative lines or adjust nets.
-- Tax: Host‑side (V1) using current TaxService; modules set `is_taxable` and optional `tax_region_hint`.
+- Tax: V1 includes a Tax Transformer that consumes Tax Fact Packs and emits tax charges/breakdowns; modules set `is_taxable`/`tax_code`/`tax_region_hint` where relevant.
 
 ## Module Registry and Bindings
 
@@ -108,9 +108,8 @@ All data is provided by the host; modules do not access storage or network.
 - CLI for build/sign/publish and local dry‑run against fixtures.
 - Parity tests vs current engine before cutover; dual‑run with diffs; feature flags for selective rollout.
 
-## Out of Scope (V1)
+## Out of Scope
 
-- Tax calculation inside modules (can be added later via host imports).
 - Direct data access from modules (WASM remains pure compute).
 - Multi‑currency conversions (stay host‑side policy if needed).
 
@@ -227,4 +226,3 @@ Notes:
 - Process: Unions required packs, collapses overlapping field sets, enforces version compatibility, builds filters per pack
 - Output: Fact Plan (query checklist) with pack kinds, fields, filters, and estimated volumes
 - Failure modes: Missing pack support, incompatible version ranges, unknown scope fields → fast, actionable errors
-

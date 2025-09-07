@@ -153,11 +153,11 @@ Conventions used below:
 - Modules:
   - Transformer `bundle-grouping` → ensures charges are labeled/grouped with `dimensions.bundle_id`/`bundle_name`; may add a rollup line item
 
-## 10) Tax Handling (V1 Host-Side)
+## 10) Tax Handling (V1 Transformer)
 
-- Producers/Transformers set `is_taxable` and optional `tax_region_hint`.
-- Host applies tax via TaxService per line and persists.
-- Validator `taxable-lines-complete` (host or module): ensures taxable lines have necessary hints.
+- Producers/Transformers set `is_taxable` and optional `tax_region_hint`/`tax_code`.
+- Tax Transformer consumes Tax Fact Packs, emits tax charges and/or per-line breakdowns, and the host persists.
+- Validator `taxable-lines-complete` ensures taxable lines have necessary hints.
 
 ## 11) Multi-Currency (Optional)
 
