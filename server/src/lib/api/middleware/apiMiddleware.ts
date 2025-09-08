@@ -8,11 +8,14 @@ import { ZodSchema, ZodError } from 'zod';
 import { ApiKeyService } from '../../services/apiKeyService';
 import { hasPermission } from '../../auth/rbac';
 import { findUserById } from '../../actions/user-actions/userActions';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { runAsSystem } from '../services/SystemContext';
 
 export interface ApiContext {
   userId: string;
   tenant: string;
   user?: any;
+  kind?: 'system' | 'user';
 }
 
 export interface ApiRequest extends NextRequest {
@@ -91,6 +94,91 @@ export class BadRequestError extends Error implements ApiError {
     super(message);
     this.name = 'BadRequestError';
   }
+}
+
+/**
+ * API key authentication with NM Store support.
+ * - When `allowNmStore` is true and `x-api-key` equals `nm_store_api_key`,
+ *   requires `x-tenant-id` (when `requireTenantForNmStore` is true) and sets a system context.
+ * - Otherwise validates tenant-scoped API key and sets user context.
+ */
+export interface ApiKeyAuthOptions {
+  allowNmStore?: boolean;
+  requireTenantForNmStore?: boolean;
+}
+
+let CACHED_NM_STORE_KEY: string | null = null;
+let LAST_NM_STORE_FETCH = 0;
+const NM_STORE_CACHE_TTL_MS = 60_000; // 1 minute
+
+async function getNmStoreApiKey(): Promise<string | null> {
+  const now = Date.now();
+  if (CACHED_NM_STORE_KEY && now - LAST_NM_STORE_FETCH < NM_STORE_CACHE_TTL_MS) {
+    return CACHED_NM_STORE_KEY;
+  }
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const key = await secretProvider.getAppSecret('nm_store_api_key');
+    CACHED_NM_STORE_KEY = key || null;
+    LAST_NM_STORE_FETCH = now;
+    return CACHED_NM_STORE_KEY;
+  } catch {
+    return null;
+  }
+}
+
+export function withApiKeyAuth(options: ApiKeyAuthOptions = {}) {
+  const { allowNmStore = false, requireTenantForNmStore = true } = options;
+  return function(handler: (req: ApiRequest) => Promise<NextResponse>) {
+    return async (req: ApiRequest): Promise<NextResponse> => {
+      try {
+        const apiKey = req.headers.get('x-api-key');
+        if (!apiKey) {
+          throw new UnauthorizedError('API key required');
+        }
+
+        // NM Store global key path
+        if (allowNmStore) {
+          const nmKey = await getNmStoreApiKey();
+          if (nmKey && apiKey === nmKey) {
+            const tenantId = req.headers.get('x-tenant-id') || undefined;
+            if (requireTenantForNmStore && !tenantId) {
+              throw new BadRequestError('x-tenant-id header required for NM store key');
+            }
+            req.context = {
+              userId: '00000000-0000-0000-0000-000000000000',
+              tenant: tenantId as string,
+              user: null,
+              kind: 'system'
+            };
+            // Ensure system operations are allowed for downstream createSystemContext()
+            return await runAsSystem('withApiKeyAuth.system', async () => handler(req));
+          }
+        }
+
+        // Default tenant API key path
+        const keyRecord = await ApiKeyService.validateApiKey(apiKey);
+        if (!keyRecord) {
+          throw new UnauthorizedError('Invalid API key');
+        }
+        const user = await findUserById(keyRecord.user_id);
+        if (!user) {
+          throw new UnauthorizedError('User not found');
+        }
+
+        req.context = {
+          userId: keyRecord.user_id,
+          tenant: keyRecord.tenant,
+          user,
+          kind: 'user'
+        };
+
+        return await handler(req);
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  };
 }
 
 /**
