@@ -224,9 +224,9 @@ exports.up = async function(knex) {
       { tenant, resource: 'settings', action: 'update', msp: false, client: true, description: 'Update settings in client portal' },
       { tenant, resource: 'settings', action: 'delete', msp: false, client: true, description: 'Delete settings in client portal' },
       
-      { tenant, resource: 'documents', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
-      { tenant, resource: 'documents', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
-      { tenant, resource: 'documents', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
+      { tenant, resource: 'document', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
+      { tenant, resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
+      { tenant, resource: 'document', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
     ];
     
     // Insert all permissions
@@ -445,7 +445,7 @@ exports.up = async function(knex) {
         time_management: ['create', 'read', 'update', 'delete'],
         user: ['create', 'read', 'update', 'delete', 'reset_password'],
         settings: ['create', 'read', 'update', 'delete'],
-        documents: ['create', 'read', 'update']
+        document: ['create', 'read', 'update']
       };
       
       const clientAdminRolePerms = [];
@@ -481,7 +481,7 @@ exports.up = async function(knex) {
         time_management: ['read'],
         user: ['read'],
         settings: ['read'],
-        documents: ['create', 'read', 'update']
+        document: ['create', 'read', 'update']
       };
       
       const clientFinanceRolePerms = [];
@@ -514,7 +514,7 @@ exports.up = async function(knex) {
         project: ['read'],
         ticket: ['create', 'read', 'update'],
         time_management: ['read'],
-        documents: ['create', 'read', 'update']
+        document: ['create', 'read', 'update']
       };
       
       const clientUserRolePerms = [];

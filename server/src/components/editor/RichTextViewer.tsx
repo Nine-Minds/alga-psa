@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from '@blocknote/mantine';
 import '@blocknote/core/fonts/inter.css';
@@ -120,51 +120,70 @@ export default function RichTextViewer({
     return finalBlocks;
   })();
 
-  // A small inner component that creates the editor; we key this by content
-  function ViewerCore({ blocks }: { blocks: PartialBlock[] }) {
-    const editor = useCreateBlockNote({
-      initialContent: blocks,
-      // The editor is read-only by default in this component
-      domAttributes: {
-        editor: {
-          class: 'pointer-events-none', // Disable interactions with the editor
-        },
-      },
-    });
-    
-    return (
-      <BlockNoteView
-        editor={editor}
-        theme="light"
-        className="w-full min-w-0"
-        style={{
-          overflowWrap: 'break-word',
-          wordBreak: 'break-word',
-          minWidth: 0,
-          maxWidth: '100%'
-        }}
-      />
-    );
-  }
-
-  // Create a key that changes when content changes to force re-mount of editor
+  // Track content changes to determine if we need to remount
   const contentKey = useMemo(() => {
     try {
-      const key = JSON.stringify(parsedContent);
-      if (process.env.NODE_ENV !== 'production') console.log('[RichTextViewer] contentKey computed', {
-        keyHashLen: key.length,
-        blocks: Array.isArray(parsedContent) ? parsedContent.length : undefined
-      });
-      return key;
+      return JSON.stringify(parsedContent);
     } catch {
       return String(Date.now());
     }
   }, [parsedContent]);
 
+  // Use a ref to track if this is the first render
+  const isFirstRender = useRef(true);
+  const prevContentKey = useRef(contentKey);
+
+  // Only remount if content ACTUALLY changed (not on first render)
+  const shouldRemount = !isFirstRender.current && prevContentKey.current !== contentKey;
+  
+  useEffect(() => {
+    isFirstRender.current = false;
+    prevContentKey.current = contentKey;
+  }, [contentKey]);
+
+  // Create a stable component that only remounts when absolutely necessary
+  const ViewerCore = useMemo(() => {
+    return function ViewerCoreComponent({ blocks }: { blocks: PartialBlock[] }) {
+      const editor = useCreateBlockNote({
+        initialContent: blocks,
+        domAttributes: {
+          editor: {
+            class: 'pointer-events-none', // Disable interactions with the editor
+          },
+        },
+      });
+
+      // BlockNote editor cleanup is handled internally
+      // We don't need to explicitly destroy it
+      
+      return (
+        <BlockNoteView
+          editor={editor}
+          theme="light"
+          className="w-full min-w-0"
+          style={{
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
+            minWidth: 0,
+            maxWidth: '100%'
+          }}
+        />
+      );
+    };
+  }, [shouldRemount]); // Only recreate component when we need to force remount
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[RichTextViewer] Render', {
+      shouldRemount,
+      contentKeyLength: contentKey.length,
+      blocks: parsedContent.length
+    });
+  }
+
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
       <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
-        <ViewerCore key={contentKey} blocks={parsedContent} />
+        <ViewerCore key={shouldRemount ? contentKey : 'stable'} blocks={parsedContent} />
       </div>
     </div>
   );

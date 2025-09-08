@@ -16,6 +16,7 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [editorReady, setEditorReady] = useState(false);
 
   // Initialize the editor
   const editor = useEditor({
@@ -23,6 +24,17 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
       StarterKit,
     ],
     content: '<p></p>',
+    editorProps: {
+      attributes: {
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-2xl mx-auto focus:outline-none',
+      },
+    },
+    onCreate: () => {
+      setEditorReady(true);
+    },
+    onDestroy: () => {
+      setEditorReady(false);
+    },
   });
 
   // Load the document content when component mounts
@@ -36,7 +48,9 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
             const parsedContent = typeof content.block_data === 'string'
               ? JSON.parse(content.block_data)
               : content.block_data;
-            editor?.commands.setContent(parsedContent);
+            if (editor && !editor.isDestroyed) {
+              editor.commands.setContent(parsedContent);
+            }
           } catch (parseError) {
             console.error('Error parsing content:', parseError);
             setError('Failed to parse document content');
@@ -49,14 +63,14 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
       }
     };
 
-    if (editor) {
+    if (editor && !editor.isDestroyed) {
       loadContent();
     }
   }, [documentId, editor]);
 
   // Save the document content
   const handleSave = async () => {
-    if (!editor) return;
+    if (!editor || editor.isDestroyed) return;
 
     try {
       setIsSaving(true);
@@ -73,6 +87,15 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
       setIsSaving(false);
     }
   };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (editor && !editor.isDestroyed) {
+        editor.destroy();
+      }
+    };
+  }, [editor]);
 
   if (error) {
     return (
@@ -99,7 +122,13 @@ export function DocumentEditor({ documentId, userId }: DocumentEditorProps) {
           Loading...
         </div>
       ) : (
-        <EditorContent editor={editor} />
+        editor && editorReady && !editor.isDestroyed ? (
+          <EditorContent editor={editor} />
+        ) : (
+          <div className="flex justify-center items-center h-64">
+            Initializing editor...
+          </div>
+        )
       )}
     </Card>
   );

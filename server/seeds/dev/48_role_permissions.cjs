@@ -147,7 +147,7 @@ exports.seed = async function (knex) {
                 'time_management:create:client', 'time_management:read:client', 'time_management:update:client', 'time_management:delete:client',
                 'user:create:client', 'user:read:client', 'user:update:client', 'user:delete:client', 'user:reset_password:client',
                 'settings:create:client', 'settings:read:client', 'settings:update:client', 'settings:delete:client',
-                'documents:create:client', 'documents:read:client', 'documents:update:client'
+                'document:create:client', 'document:read:client', 'document:update:client'
             ];
             
             rolePermissionIds = clientAdminPermissions
@@ -165,7 +165,7 @@ exports.seed = async function (knex) {
                 'time_management:read:client',
                 'user:read:client',
                 'settings:read:client',
-                'documents:create:client', 'documents:read:client', 'documents:update:client'
+                'document:create:client', 'document:read:client', 'document:update:client'
             ];
             
             rolePermissionIds = clientFinancePermissions
@@ -180,7 +180,7 @@ exports.seed = async function (knex) {
                 'project:read:client',
                 'ticket:create:client', 'ticket:read:client', 'ticket:update:client',
                 'time_management:read:client',
-                'documents:create:client', 'documents:read:client', 'documents:update:client'
+                'document:create:client', 'document:read:client', 'document:update:client'
             ];
             
             rolePermissionIds = clientUserPermissions
