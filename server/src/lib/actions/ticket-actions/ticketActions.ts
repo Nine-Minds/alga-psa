@@ -518,7 +518,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         'p.priority_name',
         'c.channel_name',
         'cat.category_name',
-        'co.company_name',
+        'co.company_name as company_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
