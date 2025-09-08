@@ -229,7 +229,7 @@ export function WorkItemDrawer({
                                     scheduled_start: new Date(adHocData.scheduled_start || new Date()),
                                     scheduled_end: new Date(adHocData.scheduled_end || new Date()),
                                     status: 'SCHEDULED',
-                                    assigned_user_ids: workItem.users?.map(u => u.user_id) || [],
+                                    assigned_user_ids: workItem.users?.map(u => u.user_id) || [currentUser.user_id],
                                     created_at: new Date(),
                                     updated_at: new Date()
                                 }}
