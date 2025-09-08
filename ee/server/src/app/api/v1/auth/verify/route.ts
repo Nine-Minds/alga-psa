@@ -7,7 +7,7 @@ import {
 import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
 import { verifyPassword } from '@/utils/encryption/encryption';
 import { withAdminTransaction } from '@alga-psa/shared/db';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { withNmStoreApiKey } from '@/lib/middleware/withNmStoreApiKey';
 
 // Interface definitions
 interface AuthVerifyRequest {
@@ -32,29 +32,6 @@ interface AuthVerifyResponse {
     role: string;
   };
   error?: string;
-}
-
-// Get API secret at startup
-let API_SECRET: string | null = null;
-
-async function getApiSecret(): Promise<string> {
-  if (API_SECRET) return API_SECRET;
-  
-  const secretProvider = await getSecretProviderInstance();
-  const secret = await secretProvider.getAppSecret('nm_store_api_key');
-  if (!secret) {
-    throw new Error('API secret not found');
-  }
-  API_SECRET = secret;
-  return API_SECRET;
-}
-
-// Verify incoming API key
-async function verifyApiKey(requestApiKey: string | null): Promise<boolean> {
-  if (!requestApiKey) return false;
-  
-  const apiSecret = await getApiSecret();
-  return requestApiKey === apiSecret;
 }
 
 // Helper function to verify tenant credentials
@@ -137,28 +114,14 @@ async function verifyTenantCredentials(email: string, password: string) {
   );
 }
 
-export async function POST(req: NextRequest) {
+export const POST = withNmStoreApiKey(async (req: NextRequest) => {
   const startTime = Date.now();
   const clientIp = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
-  const apiKey = req.headers.get('x-api-key');
   
   // Use observability.timeOperation for automatic tracing, metrics, and logging
   return await observability.timeOperation(
     'auth.verify',
     async () => {
-      // Verify API key first
-      if (!await verifyApiKey(apiKey)) {
-        observabilityLogger.warn('Invalid API key attempt', {
-          clientIp,
-          endpoint: '/api/v1/auth/verify',
-        });
-        
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized' },
-          { status: 401 }
-        );
-      }
-      
       // Parse request body
       let body: AuthVerifyRequest;
       try {
@@ -271,4 +234,4 @@ export async function POST(req: NextRequest) {
       tenantId: undefined, // Will be set if auth succeeds
     }
   );
-}
+});
