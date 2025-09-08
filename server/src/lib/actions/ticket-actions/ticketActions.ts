@@ -518,6 +518,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         'p.priority_name',
         'c.channel_name',
         'cat.category_name',
+        'co.company_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
@@ -544,6 +545,10 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       .leftJoin('users as au', function() {
         this.on('t.assigned_to', 'au.user_id')
            .andOn('t.tenant', 'au.tenant')
+      })
+      .leftJoin('companies as co', function() {
+        this.on('t.company_id', 'co.company_id')
+           .andOn('t.tenant', 'co.tenant')
       })
       .where({
         't.tenant': tenant
@@ -607,6 +612,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           priority_name,
           channel_name,
           category_name,
+          company_name,
           entered_by_name,
           assigned_to_name,
           ...rest
@@ -622,6 +628,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           priority_name: priority_name || 'Unknown',
           channel_name: channel_name || 'Unknown',
           category_name: category_name || 'Unknown',
+          company_name: company_name || 'Unknown',
           entered_by_name: entered_by_name || 'Unknown',
           assigned_to_name: assigned_to_name || 'Unknown',
           ...convertDates(rest)
