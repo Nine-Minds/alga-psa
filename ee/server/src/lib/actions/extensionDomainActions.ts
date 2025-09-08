@@ -1,10 +1,9 @@
 'use server'
 
 import { createTenantKnex } from '@/lib/db';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import type { Knex } from 'knex';
-import { ExtensionRegistry } from '../../lib/extensions/registry';
-import { computeDomain, enqueueProvisioningWorkflow } from '../../lib/extensions/runtime/provision';
+import { computeDomain, enqueueProvisioningWorkflow } from '@ee/lib/extensions/runtime/provision';
 
 export interface InstallInfo {
   install_id: string;

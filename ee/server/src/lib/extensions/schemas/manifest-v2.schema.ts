@@ -13,9 +13,20 @@ const reverseDomainPattern = /^[a-z0-9]+(?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9]+(?:
 const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 
 // UI schema
+const uiHooksSchema = z
+  .object({
+    appMenu: z
+      .object({
+        label: z.string().min(1),
+      })
+      .optional(),
+  })
+  .catchall(z.unknown());
+
 const uiSchema = z.object({
   type: z.literal('iframe'),
   entry: z.string().min(1),
+  hooks: uiHooksSchema.optional(),
 });
 
 // API endpoint schema

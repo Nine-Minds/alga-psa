@@ -724,82 +724,13 @@ Implementation notes:
 - Execution Admin: test-run, health, metrics, and logs (scoped to tenant).
 - Event Subscriptions: list/update per tenant install.
 
-## EE Code Audit (current implementation)
+## Current Implementation
 
-The following summarizes the current EE extension implementation and where the unsafe patterns arise:
-
-- Initialization loads from local filesystem:
-  - File: `ee/server/src/lib/extensions/initialize.ts`
-  - Behavior: Computes `extensionsDir = path.join(process.cwd(), 'extensions')` and calls `loader.loadExtensions()`; any directory under `extensions/` is treated as an extension.
-
-- Loader reads manifests and rewrites paths to local extension files:
-  - File: `ee/server/src/lib/extensions/loader.ts`
-  - Behavior: Reads `<ext>/alga-extension.json`, rewrites `main`, `components[*].component`, and `api.endpoints[*].handler` to paths under `/extensions/<extName>/...`, then registers the extension for all tenants by enumerating `tenants` table (no per-tenant isolation on discovery).
-
-- Registry persists extension metadata and main entry point:
-  - File: `ee/server/src/lib/extensions/registry.ts`
-  - Behavior: `registerExtension()` stores `manifest` JSON and `main_entry_point` (from manifest) in `extensions` table; manages `extension_permissions` and per-tenant records but assumes extensions are available via the on-disk paths.
-
-- UI runtime dynamically imports extension JS from server endpoint:
-  - File: `ee/server/src/lib/extensions/ui/ExtensionRenderer.tsx`
-  - Behavior: In browser, uses `import(/* webpackIgnore */ componentUrl)` where `componentUrl = /api/extensions/${extensionId}/components/${componentPath}`. This implies an API that serves raw JS modules from the extension’s on-disk files.
-  - Note: Docs reference this endpoint (`/api/extensions/[extensionId]/components/[...path]`), though the implementation may live outside the visible tree in this workspace.
-
-- Installation accepts uploaded file as extension package:
-  - File: `ee/server/src/lib/actions/extensionActions.ts` (`installExtension`)
-  - Behavior: Currently a stub that would extract, validate, and “store the extension files” before registration. This confirms the design intent to place tenant-supplied code onto server disk for dynamic loading.
-
-- Storage and security:
-  - `ee/server/src/lib/extensions/storage/storageService.ts` implements tenant-scoped storage (DB + Redis) with prefixes and RLS assumptions. This is orthogonal to the code-execution issue.
-  - `ee/server/src/lib/extensions/security/propWhitelist.ts` constrains UI descriptor props but does not mitigate dynamic code execution.
-
-Key risks in the current EE approach:
-- In-process code import: Browser loads JS provided by tenants; server likely serves modules directly from tenant-uploaded files. Server could also import server-side handlers similarly (manifest `api.endpoints[*].handler`).
-- Shared process/host: Files are mounted in app’s runtime; any misuse in serving or importing can impact all tenants.
-- Cross-tenant registration: Loader currently registers new extensions for all tenants by default.
-- No provenance guarantees: No signed bundles; files are mutable and path-based.
-
-Conclusion: The audit corroborates the need to deprecate the on-disk, in-process code path in favor of signed artifacts and out-of-process execution.
-
-## Migration Plan
-
-Phase 0 – Pre-GA Launch Gates (since not deployed)
-- Do not enable any path that uploads or serves tenant JS into the app process.
-- Keep filesystem scanning of `extensions/` disabled in production configs; use only registry-driven, signed bundles when this feature is introduced.
-- Allow webhook-style integrations for demos only if needed; document they’ll migrate to Runner/Host API later.
-
-Note: These are planning gates rather than emergency mitigations, as the feature is not yet live.
-
-## Migration From Current EE Implementation
-
-Delta plan mapping current files to target approach:
-
-- `ee/server/src/lib/extensions/initialize.ts`
-  - Today: scans `process.cwd()/extensions` and bulk-loads all extension dirs.
-  - Target: remove filesystem scan; call `RegistrySync` to fetch extension installs for the current tenant from DB; resolve to bundle versions (content hash) stored in object storage.
-
-- `ee/server/src/lib/extensions/loader.ts`
-  - Today: reads `alga-extension.json`, rewrites paths to `/extensions/<name>/...`, registers for all tenants.
-  - Target: delete/replace with `BundleResolver` that takes `registry_id/version_id → content_hash` and returns immutable bundle descriptors; registration occurs per-tenant via install flow only.
-
-- `ee/server/src/lib/extensions/registry.ts`
-  - Today: stores `manifest`, `main_entry_point`, and permissions; per-tenant rows exist but discovery is global.
-  - Target: extend schema to include `extension_registry`, `extension_version`, `extension_bundle` with content hash + signature; `tenant_extension_install` holds granted capabilities and selected version. No global auto-registration.
-
-- `installExtension` (server action): `ee/server/src/lib/actions/extensionActions.ts`
-  - Today: accepts uploaded file and intends to extract/store files.
-  - Target: remove upload-to-disk; replace with “Install by Registry” flow selecting a signed version; for private dev, use CI publish to registry, not runtime upload.
-
-- Component serving (docs reference `/api/extensions/[extensionId]/components/[...path]`):
-  - Today: client uses `import(/* webpackIgnore */ url)` to load tenant JS modules from server.
-  - Target: deprecate raw JS module serving. Serve only sandboxed iframe apps via signed URLs from object storage/CDN; never dynamic-import tenant JS into the host app.
-
-- UI rendering (`ExtensionRenderer.tsx`):
-  - Today: dynamic import from API URL; descriptor mode is partially implemented.
-  - Target: remove host-side descriptor rendering and dynamic import; render iframe apps exclusively with the Client SDK bridge.
-
-- Storage/security services:
-  - Keep tenant-scoped storage with RLS; expose through Host API in runner, not directly from browser. Add optional at-rest encryption of sensitive values.
+- Initialization: No filesystem scanning. Extensions are managed via the v2 registry and per‑tenant installs.
+- Registry: Stores v2 manifest JSON and versioned bundle metadata. Tenant installs select a version and granted capabilities.
+- UI delivery: Iframe‑only via the Runner at ${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...], bootstrapped with the iframe bridge.
+- Gateway: All server calls go through /api/ext/[extensionId]/[...] (Gateway → Runner /v1/execute).
+- Storage/security: Tenant‑scoped storage services with capability‑scoped Host APIs. Bundles are signed and content‑addressed.
 
 ## Bundle & Manifest v2 (draft)
 

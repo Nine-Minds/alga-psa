@@ -26,12 +26,13 @@ Links:
 The Runner should use the same S3 settings as the server for consistent access and path semantics.
 
 Required environment variables:
-- STORAGE_ENDPOINT: S3/MinIO endpoint (e.g., http://localhost:9000 for MinIO).
-- STORAGE_BUCKET: Bucket name used to store bundles.
-- STORAGE_REGION: Region string; for MinIO use a placeholder like us-east-1 unless configured otherwise.
-- STORAGE_ACCESS_KEY: Access key.
-- STORAGE_SECRET_KEY: Secret key.
-- STORAGE_USE_PATH_STYLE: true to force path-style addressing for MinIO.
+- STORAGE_S3_ENDPOINT: S3/MinIO endpoint (e.g., http://localhost:9000 for MinIO).
+- STORAGE_S3_BUCKET: Bucket name used to store/read bundles.
+- STORAGE_S3_REGION: Region string; for MinIO use a placeholder like us-east-1 unless configured otherwise.
+- STORAGE_S3_ACCESS_KEY: Access key.
+- STORAGE_S3_SECRET_KEY: Secret key.
+- STORAGE_S3_FORCE_PATH_STYLE: true to force path-style addressing for MinIO.
+- STORAGE_S3_BUNDLE_BUCKET: optional override for the bundles bucket (if server publishes to a separate bucket).
 - STORAGE_TLS: Optional; set true if using HTTPS and the cert is trusted (otherwise provide appropriate trust settings).
 
 Runner-specific:

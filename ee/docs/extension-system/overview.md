@@ -56,6 +56,7 @@ Manifest v2 is the canonical specification for extensions:
 - capabilities: least-privilege host APIs requested (storage, http, secrets, etc.)
 - api.endpoints: declare HTTP entrypoints that the Gateway resolves and proxies to Runner
 - ui.iframe: iframe entry HTML and asset mapping; UI is served by Runner using content-addressed paths
+- ui.hooks: host integration points such as adding menu entries that launch a full-page iframe; designed to expand for tabs and named placeholders
 - precompiled and assets: bundle metadata including sha256 content hash and signatures
 
 See full schema: [manifest_schema.md](manifest_schema.md)

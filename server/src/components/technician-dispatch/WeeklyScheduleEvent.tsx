@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from 'server/src/components/ui/DropdownMenu';
+import { useIsCompactEvent } from 'server/src/hooks/useIsCompactEvent';
 
 interface WeeklyScheduleEventProps {
   event: IScheduleEntry;
@@ -41,6 +42,9 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const eventRef = useRef<HTMLDivElement>(null);
   const isNarrowRef = useRef(false);
+  
+  // Use the compact event hook
+  const { isCompact, compactClasses } = useIsCompactEvent(event, eventRef);
 
   const handleMouseLeave = () => {
     if (!isDropdownOpen) {
@@ -150,7 +154,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 text-xs overflow-hidden rounded-md ${bg} ${text}`}
+      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${bg} ${text}`}
       onMouseEnter={onMouseEnter}
       onMouseLeave={handleMouseLeave}
       title={tooltipTitle}
@@ -165,7 +169,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',
         margin: 0,
-        padding: '4px',
+        padding: compactClasses.padding,
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
         outline: 'none'
       }}
@@ -195,32 +199,33 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
       {/* Buttons container - only show if not a private event or user is creator */}
-      <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 200 }}>
+      {!isPrivateNonOwner && (
+      <div className={`flex justify-end ${compactClasses.buttonContainer}`} style={{ zIndex: 200 }}>
           {/* Show individual buttons if not narrow and not a private event or user is creator */}
-          {!isNarrow && !isPrivateNonOwner && (
-            <div className="flex gap-1">
+          {!isNarrow && (
+            <div className={`flex ${compactClasses.buttonGap}`}>
               <Button
                 id={`view-details-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 details-button"
+                className={`${compactClasses.button} details-button`}
                 onClick={handleViewDetails}
                 title="View Details"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <ExternalLink className="w-4 h-4 pointer-events-none" />
+                <ExternalLink className={`${compactClasses.button} pointer-events-none`} />
               </Button>
 
               <Button
                 id={`delete-entry-${event.entry_id}`}
                 variant="icon"
                 size="icon"
-                className="w-4 h-4 delete-button"
+                className={`${compactClasses.button} delete-button`}
                 onClick={handleDeleteClick}
                 title="Delete schedule entry"
                 onMouseDown={(e) => e.stopPropagation()}
               >
-                <Trash className="w-4 h-4 pointer-events-none" />
+                <Trash className={`${compactClasses.button} pointer-events-none`} />
               </Button>
             </div>
           )}
@@ -234,7 +239,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                     id={`more-options-${event.entry_id}`}
                     variant="icon"
                     size="icon"
-                    className="w-4 h-4 dropdown-trigger"
+                    className={`${compactClasses.button} dropdown-trigger`}
                     onMouseDown={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
@@ -244,7 +249,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                       e.preventDefault();
                     }}
                   >
-                    <MoreVertical className="w-4 h-4 pointer-events-none" />
+                    <MoreVertical className={`${compactClasses.button} pointer-events-none`} />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -280,14 +285,27 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
             </div>
           )}
         </div>
+      )}
 
       {/* Event content - show limited info for private events */}
-      <div className="font-semibold truncate">
-        {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
-      </div>
-      <div className="truncate text-xs">
-        {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
-      </div>
+      {isCompact ? (
+        // For short events, show text with minimal padding
+        <div className="flex items-center px-0.5 pb-0.5">
+          <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
+            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+          </div>
+        </div>
+      ) : (
+        // For normal events, show two lines
+        <>
+          <div className="font-semibold truncate">
+            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+          </div>
+          <div className="truncate text-xs">
+            {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
+          </div>
+        </>
+      )}
 
       {/* Confirmation Dialog for Delete */}
       <ConfirmationDialog

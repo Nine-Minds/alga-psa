@@ -1,4 +1,4 @@
-export { computeDomain } from '@alga-psa/shared/extensions/domain.js';
+export { computeDomain } from '@alga-psa/shared/extensions/domain';
 
 export async function enqueueProvisioningWorkflow(params: { tenantId: string; extensionId: string; installId?: string }) {
   // Best-effort Temporal client kickoff; falls back to no-op if client not available

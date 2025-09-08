@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { IWorkflowEvent } from './index.js';
-import { withTransaction } from '@alga-psa/shared/db';
+import { withTransaction } from '@shared/db/index.js';
 
 /**
  * Model for workflow_events table

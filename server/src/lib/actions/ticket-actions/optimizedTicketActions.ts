@@ -784,7 +784,8 @@ export async function getTicketFormOptions(user: IUser) {
       channels,
       categories,
       companies,
-      users
+      users,
+      tags
     ] = await Promise.all([
       trx('statuses')
         .where({
@@ -814,7 +815,13 @@ export async function getTicketFormOptions(user: IUser) {
 
       trx('users')
         .where({ tenant })
-        .orderBy('first_name', 'asc')
+        .orderBy('first_name', 'asc'),
+      
+      // Fetch all unique tags for tickets
+      trx('tag_definitions')
+        .distinct('tag_text')
+        .where({ tenant, tagged_type: 'ticket' })
+        .orderBy('tag_text', 'asc')
     ]);
 
     // Format options for dropdowns
@@ -868,7 +875,8 @@ export async function getTicketFormOptions(user: IUser) {
       agentOptions,
       categories,
       companies: companiesWithLogos, // Return companies with logos
-      users
+      users,
+      tags: tags.map((tag: any) => tag.tag_text) // Return unique tag texts
     };
     } catch (error) {
       console.error('Failed to fetch ticket form options:', error);

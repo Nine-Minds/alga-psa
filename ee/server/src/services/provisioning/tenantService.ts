@@ -1,4 +1,4 @@
-import { createTenantKnex } from '@/lib/db';
+import { getAdminConnection } from '@/lib/db/admin';
 import { CreateTenantInput, TenantResponse } from './types/tenant.schema';
 import { Knex } from 'knex';
 
