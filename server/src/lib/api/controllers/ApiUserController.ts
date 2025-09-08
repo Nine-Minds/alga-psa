@@ -30,6 +30,7 @@ import {
 import { 
   hasPermission 
 } from '../../auth/rbac';
+import { createSystemContext } from '../services/SystemContext';
 import {
   ApiRequest,
   UnauthorizedError,
@@ -38,7 +39,9 @@ import {
   ValidationError,
   createSuccessResponse,
   createPaginatedResponse,
-  handleApiError
+  handleApiError,
+  withApiKeyAuth,
+  withQueryValidation
 } from '../middleware/apiMiddleware';
 import { ZodError, z } from 'zod';
 
@@ -69,83 +72,29 @@ export class ApiUserController extends ApiBaseController {
    * Search users
    */
   search() {
-    return async (req: NextRequest): Promise<NextResponse> => {
-      try {
-        // Authenticate
-        const apiKey = req.headers.get('x-api-key');
-        
-        if (!apiKey) {
-          throw new UnauthorizedError('API key required');
-        }
-
-        // Extract tenant ID
-        let tenantId = req.headers.get('x-tenant-id');
-        let keyRecord;
-
-        if (tenantId) {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyForTenant(apiKey, tenantId);
-        } else {
-          keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-          if (keyRecord) {
-            tenantId = keyRecord.tenant;
-          }
-        }
-        
-        if (!keyRecord) {
-          throw new UnauthorizedError('Invalid API key');
-        }
-
-        // Get user
-        const user = await findUserByIdForApi(keyRecord.user_id, tenantId!);
-
-        if (!user) {
-          throw new UnauthorizedError('User not found');
-        }
-
-        // Create request with context
-        const apiRequest = req as ApiRequest;
-        apiRequest.context = {
-          userId: keyRecord.user_id,
-          tenant: keyRecord.tenant,
-          user
-        };
-
-        // Run within tenant context
-        return await runWithTenant(tenantId!, async () => {
-          // Check permissions
-          const knex = await getConnection(tenantId!);
-          const hasAccess = await hasPermission(user, 'user', 'read', knex);
-          if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read user');
-          }
-
-          // Validate query
-          let validatedQuery;
+    return withApiKeyAuth({ allowNmStore: true, requireTenantForNmStore: true })(
+      withQueryValidation(userSearchSchema)(
+        async (req: ApiRequest, validatedQuery: any): Promise<NextResponse> => {
           try {
-            const url = new URL(req.url);
-            const query: Record<string, any> = {};
-            url.searchParams.forEach((value, key) => {
-              query[key] = value;
+            const tenantId = req.context!.tenant;
+            return await runWithTenant(tenantId, async () => {
+              const serviceContext = req.context?.kind === 'system'
+                ? createSystemContext(tenantId)
+                : { userId: req.context!.userId, tenant: tenantId, user: req.context!.user };
+
+              const result = await this.userService.searchUsers(
+                validatedQuery,
+                serviceContext as any
+              );
+
+              return createSuccessResponse(result);
             });
-            validatedQuery = userSearchSchema.parse(query);
           } catch (error) {
-            if (error instanceof ZodError) {
-              throw new ValidationError('Query validation failed', error.errors);
-            }
-            throw error;
+            return handleApiError(error);
           }
-
-          const result = await this.userService.searchUsers(
-            validatedQuery,
-            apiRequest.context!
-          );
-
-          return createSuccessResponse(result);
-        });
-      } catch (error) {
-        return handleApiError(error);
-      }
-    };
+        }
+      )
+    );
   }
 
   /**
