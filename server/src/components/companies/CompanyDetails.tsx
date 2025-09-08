@@ -49,7 +49,7 @@ import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
-import { useToast } from 'server/src/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
@@ -189,7 +189,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
 
@@ -205,13 +204,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
-      toast({
-        title: "Refresh Failed",
-        description: "Could not fetch latest company data.",
-        variant: "destructive"
-      });
+      toast.error("Could not fetch latest company data.");
     }
-  }, [company?.company_id, toast]);
+  }, [company?.company_id]);
 
   // 2. Implement Initial Load Logic
   useEffect(() => {
@@ -413,18 +408,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
       setEditedCompany(updatedCompany);
       setHasUnsavedChanges(false);
-      toast({
-        title: "Success",
-        description: "Company details saved successfully.",
-        variant: "default"
-      });
+      toast.success("Company details saved successfully.");
     } catch (error) {
       console.error('Error saving company:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save company details. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save company details. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -514,18 +501,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       }
       
       setHasUnsavedNoteChanges(false);
-      toast({
-        title: "Success",
-        description: "Note saved successfully.",
-        variant: "default"
-      });
+      toast.success("Note saved successfully.");
     } catch (error) {
       console.error('Error saving note:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save note. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save note. Please try again.");
     }
   };
   
