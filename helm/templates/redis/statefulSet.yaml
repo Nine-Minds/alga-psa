@@ -1,4 +1,8 @@
 {{- if .Values.redis.enabled }}
+{{- $ns := include "sebastian.namespace" . -}}
+{{- $existing := (lookup "apps/v1" "StatefulSet" $ns "redis") -}}
+{{- $owned := and $existing (eq (get $existing.metadata.annotations "meta.helm.sh/release-name") .Release.Name) -}}
+{{- if or (not $existing) $owned }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -6,6 +10,8 @@ metadata:
   namespace: {{ include "sebastian.namespace" . }}
   labels:
     app: redis
+  annotations:
+    "helm.sh/resource-policy": keep
 spec:
   serviceName: redis
   replicas: 1
@@ -60,4 +66,5 @@ spec:
       {{- end }}
 
   
+{{- end }}
 {{- end }}
