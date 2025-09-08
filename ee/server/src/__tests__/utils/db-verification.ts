@@ -231,7 +231,7 @@ export async function getTenantStats(
     db('users').where('tenant', tenantId).count('* as count').first(),
     db('companies').where('tenant', tenantId).count('* as count').first(),
     db('roles').where('tenant', tenantId).count('* as count').first(),
-    db('tenant_email_settings').where('tenant_id', tenantId).first(),
+    db('tenant_email_settings').where('tenant', tenantId).first(),
   ]);
 
   return {
@@ -331,7 +331,7 @@ export async function verifyTenantCleanup(
     db('companies').where('tenant', tenantId),
     db('roles').where('tenant', tenantId),
     db('user_roles').where('tenant', tenantId),
-    db('tenant_email_settings').where('tenant_id', tenantId),
+    db('tenant_email_settings').where('tenant', tenantId),
     db('tenant_companies').where('tenant', tenantId),
     db('tenant_settings').where('tenant', tenantId),
   ]);
