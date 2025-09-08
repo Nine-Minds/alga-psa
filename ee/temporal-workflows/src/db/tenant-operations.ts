@@ -217,7 +217,7 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
       await trx('tenant_companies').where({ tenant: tenantId }).delete();
       
       // Delete tenant_email_settings (references tenant indirectly)
-      await trx('tenant_email_settings').where({ tenant_id: tenantId }).delete();
+      await trx('tenant_email_settings').where({ tenant: tenantId }).delete();
       
       // Delete tenant_settings (references tenant)
       await trx('tenant_settings').where({ tenant: tenantId }).delete();
