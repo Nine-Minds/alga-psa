@@ -64,6 +64,9 @@ export async function createInboundTicketDefaults(data: {
   const { knex, tenant } = await createTenantKnex();
   
   try {
+    // Normalize category/subcategory values to avoid sentinel strings
+    const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
+
     // Validate required defaults fields
     if (!data.channel_id || !data.status_id || !data.priority_id) {
       throw new Error('Channel, status, and priority are required');
@@ -81,8 +84,8 @@ export async function createInboundTicketDefaults(data: {
         priority_id: data.priority_id,
         company_id: data.company_id,
         entered_by: data.entered_by,
-        category_id: data.category_id,
-        subcategory_id: data.subcategory_id,
+        category_id: normalizeUuid(data.category_id),
+        subcategory_id: normalizeUuid(data.subcategory_id),
         location_id: data.location_id,
         is_active: data.is_active ?? true,
         created_at: knex.fn.now(),
@@ -142,6 +145,7 @@ export async function updateInboundTicketDefaults(
   const { knex, tenant } = await createTenantKnex();
   
   try {
+    const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
     // If updating defaults, validate required fields
     if (data.channel_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
       // Get current values to check if all required fields will be present after update
@@ -171,8 +175,8 @@ export async function updateInboundTicketDefaults(
     if (data.priority_id !== undefined) updateData.priority_id = data.priority_id;
     if (data.company_id !== undefined) updateData.company_id = data.company_id;
     if (data.entered_by !== undefined) updateData.entered_by = data.entered_by;
-    if (data.category_id !== undefined) updateData.category_id = data.category_id;
-    if (data.subcategory_id !== undefined) updateData.subcategory_id = data.subcategory_id;
+    if (data.category_id !== undefined) updateData.category_id = normalizeUuid(data.category_id);
+    if (data.subcategory_id !== undefined) updateData.subcategory_id = normalizeUuid(data.subcategory_id);
     if (data.location_id !== undefined) updateData.location_id = data.location_id;
     if (data.is_active !== undefined) updateData.is_active = data.is_active;
 
