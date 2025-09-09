@@ -42,7 +42,7 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
         if (!numberSettings) {
           // Initialize with default values for new settings
           const defaultSettings = {
-            prefix: entityType === 'TICKET' ? 'TK-' : 'INV-',
+            prefix: '',
             padding_length: 6,
             last_number: 0,
             initial_value: 1
@@ -67,7 +67,7 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
   const handleInputChange = (field: keyof NumberSettings, value: string) => {
     setFormState(prev => ({
       ...prev,
-      [field]: field === 'prefix' ? value : parseInt(value, 10)
+      [field]: field === 'prefix' ? value : parseInt(value, 10) || 0
     }));
   };
 
@@ -78,7 +78,10 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
       // Only include fields that have actually changed
       const changes: Partial<NumberSettings> = {};
       if (settings) {
-        if (formState.prefix !== settings.prefix) changes.prefix = formState.prefix;
+        // Handle prefix - explicitly include empty string to clear prefix
+        if (formState.prefix !== settings.prefix) {
+          changes.prefix = formState.prefix === '' ? '' : (formState.prefix || '');
+        }
         if (formState.padding_length !== settings.padding_length) changes.padding_length = formState.padding_length;
         if (formState.last_number !== settings.last_number) changes.last_number = formState.last_number;
         // Only include initial_value if it's being explicitly changed
@@ -121,10 +124,12 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
     : settings?.padding_length ?? 6;
 
   const prefix = isEditing
-    ? formState.prefix ?? (entityType === 'TICKET' ? 'TK-' : 'INV-')
-    : settings?.prefix ?? '';
+    ? (formState.prefix ?? '')
+    : (settings?.prefix ?? '');
 
-  const paddedNumber = nextNumber.toString().padStart(paddingLength, '0');
+  const paddedNumber = paddingLength > 0 
+    ? nextNumber.toString().padStart(paddingLength, '0')
+    : nextNumber.toString();
   const previewNumber = `${prefix}${paddedNumber}`;
 
   return (
@@ -145,10 +150,11 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
           <div className="flex space-x-2">
             <Input
               id={`${entityId}-prefix-input`}
-              value={isEditing ? formState.prefix : settings?.prefix ?? ''}
+              value={isEditing ? (formState.prefix ?? '') : (settings?.prefix ?? '')}
               onChange={(e) => handleInputChange('prefix', e.target.value)}
               disabled={!isEditing}
               className="w-32"
+              placeholder={entityType === 'TICKET' ? 'TK-' : 'INV-'}
             />
             {!isEditing && isAdmin && (
               <Button
@@ -161,11 +167,14 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
               </Button>
             )}
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Optional. Leave empty for no prefix or enter a custom prefix (e.g., "{entityType === 'TICKET' ? 'TK-' : 'INV-'}", "{entityType === 'TICKET' ? 'TICKET-' : 'INVOICE-'}")
+          </p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Padding Length
+            Minimum Digits
           </label>
           <div className="flex space-x-2">
             <Input
@@ -175,10 +184,13 @@ const NumberingSettings: React.FC<NumberingSettingsProps> = ({ entityType }) => 
               onChange={(e) => handleInputChange('padding_length', e.target.value)}
               disabled={!isEditing}
               className="w-32"
-              min={1}
+              min={0}
               max={10}
             />
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Minimum total digits. E.g., 6 makes "1" become "000001"
+          </p>
         </div>
 
         {settings?.initial_value === null && (

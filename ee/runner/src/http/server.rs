@@ -34,6 +34,7 @@ struct CoreState {
 struct RootState {
     core: CoreState,
     ext: crate::http::ext_ui::AppState,
+    api_key: Option<String>,
 }
 
 // Allow extracting CoreState from RootState
@@ -56,7 +57,25 @@ pub async fn run() -> anyhow::Result<()> {
         idempotency: Arc::new(Mutex::new(HashMap::new())),
     };
 
-    let registry = Arc::new(HttpRegistryClient::new()?);
+    // Load ALGA_AUTH_KEY from env or Vault at startup
+    let api_key = crate::secrets::load_alga_auth_key().await;
+    if api_key.is_none() {
+        let default_path = "/vault/secrets/alga_auth_key";
+        return Err(anyhow::anyhow!(
+            format!(
+                "ALGA_AUTH_KEY unavailable. Provide ALGA_AUTH_KEY or mount a file at ALGA_AUTH_KEY_FILE (default: {})",
+                default_path
+            )
+        ));
+    }
+
+    // Validate required registry base URL exists and parses
+    let reg_base = std::env::var("REGISTRY_BASE_URL")
+        .map_err(|_| anyhow::anyhow!("REGISTRY_BASE_URL not set"))?;
+    Url::parse(&reg_base)
+        .map_err(|e| anyhow::anyhow!("Invalid REGISTRY_BASE_URL: {}", e))?;
+
+    let registry = Arc::new(HttpRegistryClient::new(api_key.clone())?);
     let cache_root = cache_fs::ext_cache_root_from_env();
     let bundle_store_base = Url::parse(
         &std::env::var("BUNDLE_STORE_BASE").unwrap_or_else(|_| "http://localhost:9000/alga-ext/".into()),
@@ -70,7 +89,7 @@ pub async fn run() -> anyhow::Result<()> {
         max_file_bytes,
     };
 
-    let state = RootState { core, ext };
+    let state = RootState { core, ext, api_key };
 
     // Single router with routes for both APIs; state extracted via FromRef
     let app = Router::new()
@@ -205,7 +224,7 @@ struct LookupResp {
     content_hash: String,
 }
 
-async fn root_dispatch(headers: HeaderMap) -> Response {
+async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> Response {
     let host = headers
         .get(axum::http::header::HOST)
         .and_then(|v| v.to_str().ok())
@@ -251,8 +270,8 @@ async fn root_dispatch(headers: HeaderMap) -> Response {
     let mut rb = http.get(url.clone());
     // Temporary canary routing header for testing; remove after canary period
     rb = rb.header("x-canary", "robert");
-    match std::env::var("ALGA_AUTH_KEY") {
-        Ok(key) if !key.is_empty() => {
+    match rstate.api_key.as_ref() {
+        Some(key) if !key.is_empty() => {
             let prefix: String = key.chars().take(4).collect();
             let len = key.len();
             tracing::info!(key_len = len, key_prefix = %prefix, "ALGA_AUTH_KEY present; sending x-api-key header");

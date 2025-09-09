@@ -217,5 +217,5 @@ export const bottomMenuItems: MenuItem[] = [
       },
     ]
   },
-  { name: 'Support', icon: HelpCircle },
+  { name: 'Support', icon: HelpCircle, href: 'https://www.nineminds.com/support' },
 ];

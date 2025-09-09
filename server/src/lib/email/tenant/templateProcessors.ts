@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 
 export interface EmailTemplateContent {
   subject: string;

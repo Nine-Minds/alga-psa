@@ -42,7 +42,6 @@ import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/
 import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
-import { addClientTicketComment } from "server/src/lib/actions/client-portal-actions/client-tickets";
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
@@ -642,17 +641,19 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                 
                 return true;
             } else {
-                // For client portal, use addClientTicketComment with isInternal always false
-                if (ticket.ticket_id) {
-                    // Call the client portal specific action
-                    const success = await addClientTicketComment(
-                        ticket.ticket_id,
-                        JSON.stringify(newCommentContent),
-                        false, // isInternal is always false in client portal
-                        isResolution // Pass the isResolution flag
-                    );
+                // Use the regular createComment action for MSP portal
+                if (ticket.ticket_id && userId) {
+                    // Call the regular comment creation action
+                    const newComment = await createComment({
+                        ticket_id: ticket.ticket_id,
+                        note: JSON.stringify(newCommentContent),
+                        is_internal: isInternal,
+                        is_resolution: isResolution,
+                        user_id: userId,
+                        author_type: 'internal' // Will be overridden based on user type in the action
+                    });
                     
-                    if (success) {
+                    if (newComment) {
                         // Refresh comments after adding
                         const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
                         setConversations(updatedComments);

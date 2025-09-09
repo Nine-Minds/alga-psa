@@ -16,10 +16,10 @@ Prereqs:
 
 Steps:
 1) Pack the sample into a canonical tar.zst:
-   - node [pack.ts](ee/tools/ext-bundle/pack.ts:1) ee/extensions/samples/hello-world ./out/hello-world-bundle.tar.zst
+   - alga pack ee/extensions/samples/hello-world ./out/hello-world-bundle.tar.zst
    - This computes sha256 and writes a sidecar bundle.sha256 next to the bundle.
 2) (Optional) Sign placeholder:
-   - node [sign.ts](ee/tools/ext-bundle/sign.ts:1) ./out/hello-world-bundle.tar.zst --algorithm cosign
+   - alga sign ./out/hello-world-bundle.tar.zst --algorithm cosign
 3) Open the Install page:
    - Path: /msp/settings/extensions/install
    - Component for reference: [page.tsx](ee/server/src/app/msp/settings/extensions/install/page.tsx:1)
@@ -41,11 +41,11 @@ Steps:
 ## B) Install via CLI
 
 1) Pack:
-   - node [pack.ts](ee/tools/ext-bundle/pack.ts:1) ee/extensions/samples/hello-world ./out/hello-world-bundle.tar.zst
+   - alga pack ee/extensions/samples/hello-world ./out/hello-world-bundle.tar.zst
 2) (Optional) Sign:
-   - node [sign.ts](ee/tools/ext-bundle/sign.ts:1) ./out/hello-world-bundle.tar.zst --algorithm cosign
+   - alga sign ./out/hello-world-bundle.tar.zst --algorithm cosign
 3) Publish (requires local admin header env):
-   - ALGA_ADMIN_HEADER=true node [publish.ts](ee/tools/ext-bundle/publish.ts:1) --bundle ./out/hello-world-bundle.tar.zst --manifest ee/extensions/samples/hello-world/manifest.json
+   - ALGA_ADMIN_HEADER=true alga publish --bundle ./out/hello-world-bundle.tar.zst --manifest ee/extensions/samples/hello-world/manifest.json
 4) Verify output and check the Extensions list.
 
 ## Notes

@@ -57,7 +57,79 @@ main() {
     PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
-    NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs
+    
+    # For Enterprise Edition, we need to run migrations from a combined directory
+    if [ "${EDITION}" = "enterprise" ] || [ "${EDITION}" = "ee" ]; then
+        log "Setting up EE migrations..."
+        
+        # Create a combined migrations directory within /app/server
+        mkdir -p /app/server/combined-migrations
+        
+        # Copy base migrations first (these should run first)
+        cp /app/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
+        
+        # Copy EE migrations (these run after base migrations)
+        cp /app/ee/server/migrations/*.cjs /app/server/combined-migrations/ 2>/dev/null || true
+        
+        # Create a temporary knexfile in /app/server where node_modules exist
+        cat > /app/server/knexfile-ee.cjs << 'EOF'
+const fs = require('fs');
+const path = require('path');
+
+const DOCKER_SECRETS_PATH = '/run/secrets';
+const SECRETS_PATH = DOCKER_SECRETS_PATH;
+
+function getSecret(secretName, envVar, defaultValue = '') {
+  const secretPath = path.join(SECRETS_PATH, secretName);
+  try {
+    return fs.readFileSync(secretPath, 'utf8').trim();
+  } catch (error) {
+    if (process.env[envVar]) {
+      return process.env[envVar] || defaultValue;
+    }
+    return defaultValue;
+  }
+}
+
+module.exports = {
+  migration: {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'postgres',
+      port: process.env.DB_PORT || '5432',
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password: getSecret('postgres_password', 'DB_PASSWORD_ADMIN'),
+      database: process.env.DB_NAME_SERVER || 'server',
+    },
+    pool: {
+      min: 2,
+      max: 20,
+    },
+    migrations: {
+      directory: './combined-migrations'
+    }
+  }
+};
+EOF
+        
+        log "Running combined migrations for EE..."
+        cd /app/server && NODE_ENV=migration npx knex migrate:latest --knexfile knexfile-ee.cjs || {
+            log "ERROR: EE migrations failed"
+            exit 1
+        }
+        log "EE migrations completed!"
+        
+        # Clean up
+        rm -rf /app/server/combined-migrations
+        rm -f /app/server/knexfile-ee.cjs
+    else
+        # For CE, just run the base migrations
+        NODE_ENV=migration npx knex migrate:latest --knexfile /app/server/knexfile.cjs || {
+            log "ERROR: Migrations failed"
+            exit 1
+        }
+        log "Migrations completed!"
+    fi
 
     # Check if seeds need to be run
     if ! check_seeds_status; then

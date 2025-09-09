@@ -587,7 +587,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         .where({
           tenant,
           is_default: true,
-          item_type: 'ticket'
+          status_type: 'ticket'
         })
         .first();
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PartialBlock } from '@blocknote/core';
 import TextEditor from '../../editor/TextEditor';
 import RichTextViewer from '../../editor/RichTextViewer';
@@ -158,6 +158,36 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const authorFirstName = conversation.user_id ? userMap[conversation.user_id]?.first_name || '' : '';
   const authorLastName = conversation.user_id ? userMap[conversation.user_id]?.last_name || '' : '';
 
+  // Keep editor content in sync if this comment enters edit mode with updated data
+  useEffect(() => {
+    if (isEditing && currentComment?.comment_id === conversation.comment_id) {
+      try {
+        const parsed = JSON.parse(currentComment?.note || '');
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setEditedContent(parsed);
+        }
+      } catch {
+        setEditedContent([
+          {
+            type: "paragraph",
+            props: {
+              textAlignment: "left",
+              backgroundColor: "default",
+              textColor: "default"
+            },
+            content: [
+              {
+                type: "text",
+                text: currentComment?.note || '',
+                styles: {}
+              }
+            ]
+          }
+        ]);
+      }
+    }
+  }, [isEditing, currentComment?.comment_id, currentComment?.note, conversation.comment_id]);
+
 
   return (
     <div {...withDataAutomationId({ id: commentId })} className="rounded-lg p-2 mb-2 shadow-sm border border-gray-200 hover:border-gray-300 bg-white">
@@ -260,28 +290,41 @@ const CommentItem: React.FC<CommentItemProps> = ({
           {isEditing && currentComment?.comment_id === conversation.comment_id ? (
             editorContent
           ) : (
-              <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-1">
-                <RichTextViewer content={(() => {
-                  try {
-                    return JSON.parse(conversation.note || '[]');
-                  } catch (e) {
-                    // If parsing fails, return a simple paragraph with the text
-                    return [{
-                      type: "paragraph",
-                      props: {
-                        textAlignment: "left",
-                        backgroundColor: "default",
-                        textColor: "default"
-                      },
-                      content: [{
-                        type: "text",
-                        text: conversation.note || '',
-                        styles: {}
-                      }]
-                    }];
-                  }
-                })()} />
-              </div>
+            (() => {
+              let parsed: PartialBlock[] | string;
+              try {
+                parsed = JSON.parse(conversation.note || '[]');
+                if (!Array.isArray(parsed)) parsed = [];
+              } catch {
+                parsed = [{
+                  type: "paragraph",
+                  props: {
+                    textAlignment: "left",
+                    backgroundColor: "default",
+                    textColor: "default"
+                  },
+                  content: [{
+                    type: "text",
+                    text: conversation.note || '',
+                    styles: {}
+                  }]
+                }];
+              }
+              if (process.env.NODE_ENV !== 'production') console.log('[CommentItem] render viewer', {
+                comment_id: conversation.comment_id,
+                updated_at: conversation.updated_at,
+                noteLen: (conversation.note || '').length,
+                usingArray: Array.isArray(parsed),
+                blocks: Array.isArray(parsed) ? (parsed as PartialBlock[]).length : undefined,
+              });
+              return (
+                <div {...withDataAutomationId({ id: `${commentId}-content` })} className="prose max-w-none mt-1">
+                  <RichTextViewer 
+                    key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                    content={parsed as any} />
+                </div>
+              );
+            })()
           )}
         </div>
       </div>

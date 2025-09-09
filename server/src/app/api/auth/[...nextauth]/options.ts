@@ -7,7 +7,7 @@ import { authenticateUser } from "server/src/lib/actions/auth";
 import { getKeycloakToken } from "server/src/utils/keycloak";
 import { decodeToken } from "server/src/utils/tokenizer";
 import User from "server/src/lib/models/user";
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import "server/src/types/next-auth";
 import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
@@ -314,7 +314,8 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
         // }),
     ],
     pages: {
-        signIn: '/auth/signin',
+        signIn: '/auth/signin', // This will redirect to the appropriate page
+        signOut: '/auth/signin', // After sign out, go to the redirect page
     },
     session: {
         strategy: "jwt",
@@ -668,7 +669,8 @@ export const options: NextAuthOptions = {
         // }),
     ],
     pages: {
-        signIn: '/auth/signin',
+        signIn: '/auth/signin', // This will redirect to the appropriate page
+        signOut: '/auth/signin', // After sign out, go to the redirect page
     },
     session: {
         strategy: "jwt",

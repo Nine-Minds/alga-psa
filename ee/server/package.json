@@ -1,12 +1,10 @@
 {
   "name": "sebastian-ee",
-  "version": "0.1.0",
+  "version": "0.9.0",
   "private": true,
-  "workspaces": {
-    "nohoist": [
-      "*"
-    ]
-  },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",

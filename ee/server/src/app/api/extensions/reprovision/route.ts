@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { reprovisionExtension } from '../../../lib/actions/extensionDomainActions';
+import { reprovisionExtension } from '@ee/lib/actions/extensionDomainActions';
 
 export const dynamic = 'force-dynamic';
 

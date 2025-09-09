@@ -24,9 +24,15 @@ get_secret() {
 
 # Function to print version banner
 print_version_banner() {
-    version="0.8.0"
-    commit="a0b778e"
-    date="05-20-2025"
+    # Prefer env provided by Helm; fall back to package.json in the container
+    local pkg_version=""
+    if [ -f "/app/server/package.json" ]; then
+        pkg_version=$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]\+\)".*/\1/p' /app/server/package.json | head -n1)
+    fi
+
+    version="${APP_VERSION:-${pkg_version:-unknown}}"
+    commit="${APP_BUILD_SHA:-${GIT_SHA:-unknown}}"
+    date="$(date +'%Y-%m-%d')"
     author="NineMinds"
 
     # Function to print colored text
@@ -104,10 +110,10 @@ print_version_banner() {
                         *                                                  *
                         *               ALGA PSA NEXT.JS                   *
                         *                                                  *
-                        *               Version .: $version                   *
-                        *               Commit  .: $commit                  *
-                        *               Date    .: $date              *
-                        *               Author  .: $author               *
+                        *               Version .: $version               *
+                        *               Commit  .: $commit                *
+                        *               Date    .: $date                  *
+                        *               Author  .: $author                *
                         *                                                  *
                         ****************************************************
     "

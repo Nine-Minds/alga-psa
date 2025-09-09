@@ -1,5 +1,6 @@
 import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
+import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
 import { Suspense } from 'react';
 import TicketsLoading from './loading';
@@ -43,6 +44,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.channelFilterState = channelFilterState;
       }
     }
+    if (searchParams?.tags && typeof searchParams.tags === 'string') {
+      // Decode each tag to handle special characters that were encoded
+      filtersFromURL.tags = searchParams.tags.split(',').map(tag => decodeURIComponent(tag));
+    }
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
@@ -61,11 +66,15 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       companyId: initialFilters.companyId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       channelFilterState: initialFilters.channelFilterState || 'active',
-      showOpenOnly: (initialFilters.statusId === 'open') || false
+      showOpenOnly: (initialFilters.statusId === 'open') || false,
+      tags: initialFilters.tags || undefined
     };
 
     // Fetch consolidated data for the ticket list with initial filters
-    const consolidatedData = await getConsolidatedTicketListData(user, fetchFilters);
+    const [consolidatedData, displaySettings] = await Promise.all([
+      getConsolidatedTicketListData(user, fetchFilters),
+      getTicketingDisplaySettings()
+    ]);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
@@ -74,6 +83,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
             consolidatedData={consolidatedData} 
             currentUser={user}
             initialFilters={initialFilters}
+            displaySettings={displaySettings}
           />
         </Suspense>
       </div>

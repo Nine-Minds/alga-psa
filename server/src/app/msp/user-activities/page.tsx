@@ -16,7 +16,7 @@ export default function UserActivitiesPage() {
       try {
         const userData = await getCurrentUser();
         if (!userData) {
-          redirect('/auth/signin');
+          redirect('/auth/msp/signin');
         }
         setUser(userData);
       } catch (error) {

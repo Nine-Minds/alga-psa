@@ -211,7 +211,7 @@ const WelcomeDashboard = () => {
           </div>
           <div className="mt-4 md:mt-0">
             <Link
-              href="https://www.nineminds.com/resources"
+              href="https://www.nineminds.com/documentation"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-4 py-2 rounded-md text-sm font-medium text-white bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] transition-colors"

@@ -2,8 +2,8 @@
 
 import { Knex as KnexType } from 'knex';
 import { headers } from 'next/headers';
-import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant.js';
-import { getConnection } from './db.js'; // Use the tenant-scoped connection function
+import { getTenantForCurrentRequest, getTenantFromHeaders } from '../tenant';
+import { getConnection } from './db'; // Use the tenant-scoped connection function
 import { getKnexConfig } from './knexfile.js';
 import { AsyncLocalStorage } from 'async_hooks';
 import logger from '@alga-psa/shared/core/logger';

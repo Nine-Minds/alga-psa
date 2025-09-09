@@ -21,7 +21,7 @@ export function AgreementDetail({ agreementId }: AgreementDetailProps) {
           <p className="text-red-800">Agreement not found</p>
         </div>
         <button
-          onClick={() => router.push('/softwareone/agreements')}
+          onClick={() => router.push('/agreements')}
           className="mt-4 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
         >
           Back to Agreements
@@ -56,7 +56,7 @@ export function AgreementDetail({ agreementId }: AgreementDetailProps) {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push('/softwareone/agreements')}
+          onClick={() => router.push('/agreements')}
           className="text-blue-600 hover:text-blue-800 text-sm mb-4 flex items-center"
         >
           ← Back to Agreements

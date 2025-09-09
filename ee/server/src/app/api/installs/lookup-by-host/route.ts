@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { lookupByHost as lookupByHostAction } from '../../../../lib/actions/installDomainActions';
+import { lookupByHost as lookupByHostAction } from '@/lib/actions/installDomainActions';
 
 export const dynamic = 'force-dynamic';
 

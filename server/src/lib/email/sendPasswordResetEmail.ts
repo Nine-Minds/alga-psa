@@ -4,7 +4,7 @@ import { getSystemEmailService } from './index';
 import { DatabaseTemplateProcessor } from '../services/email/templateProcessors';
 import { getConnection } from '../db/db';
 import { runWithTenant } from '../db/index';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 
 interface SendPasswordResetEmailParams {
   email: string;

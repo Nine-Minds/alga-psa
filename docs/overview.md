@@ -155,7 +155,19 @@ This document provides a high-level architectural overview of the open-source MS
     - Efficient database indexing
     - Optimized assignment queries
 
-* **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled in `server/src/pages/api/auth/[...nextauth]/route.ts`.
+* **Security:** Implements security measures. RBAC and ABAC logic is under `server/src/lib/auth/`. Authentication is handled through NextAuth.js with multi-portal support:
+  * Authentication Routes:
+    - **MSP Portal**: `/auth/msp/signin` (purple theme, internal users)
+    - **Client Portal**: `/auth/client-portal/signin` (blue theme, client users)
+    - **Password Reset**: Portal-specific forgot-password pages, shared reset form at `/auth/password-reset/set-new-password`
+  * User Types:
+    - `internal`: MSP staff with full system access
+    - `client`: Client portal users with limited access
+  * Key Files:
+    - `server/src/app/api/auth/[...nextauth]/route.ts`: NextAuth configuration
+    - `server/src/app/auth/msp/signin/page.tsx`: MSP login page
+    - `server/src/app/auth/client-portal/signin/page.tsx`: Client portal login page
+    - `server/src/lib/actions/useRegister.tsx`: Registration and password reset logic
 
 * **Settings:** Configuration settings with advanced reference data management:
   * Core Components:
@@ -303,7 +315,10 @@ No code has been merged yet – this section serves as an architectural note so 
 
 * **Real-time Collaboration:** Hocuspocus integration setup in `server/src/lib/createHocuspocusProvider.tsx`.
 
-* **Authentication:** NextAuth.js configuration in `server/src/pages/api/auth/[...nextauth]/options.ts`.
+* **Authentication:** NextAuth.js configuration with multi-portal support:
+  * Main configuration: `server/src/app/api/auth/[...nextauth]/options.ts`
+  * Portal pages: `/auth/msp/*` for MSP users, `/auth/client-portal/*` for client users
+  * Shared components: `/auth/password-reset/*`, `/auth/check-email`, `/auth/verify-email`
 
 * **API:** API routes are located in `server/src/pages/api`.
 

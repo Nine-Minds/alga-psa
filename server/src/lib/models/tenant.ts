@@ -1,4 +1,4 @@
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import { ITenant } from '../../interfaces';
 import { getCurrentTenantId } from '../db';
 import { Knex } from 'knex';

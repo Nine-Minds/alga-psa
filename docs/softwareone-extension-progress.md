@@ -518,7 +518,6 @@ Stored verbatim JSON from SoftwareOne under storage.set('swone/raw/agreements', 
   "version": "0.1.0",
   "description": "Browse & bill SoftwareOne agreements inside Alga PSA",
   "minAppVersion": "1.5.0",
-  "tenantMode": "specific",
   "main": "dist/index.js",
   "permissions": {
     "api": [
@@ -2341,7 +2340,7 @@ Authorization: Bearer {api-token}
 
 ```
 /extensions/softwareone-ext/
-├── alga-extension.json              # Extension manifest
+├── manifest.json                    # v2 bundle manifest (runner/iframe)
 ├── package.json                     # Dependencies and scripts
 ├── tsconfig.json                    # TypeScript configuration
 ├── vite.config.ts                   # Build configuration
@@ -2358,7 +2357,7 @@ Authorization: Bearer {api-token}
 │       └── runSync.js
 │
 ├── src/
-│   ├── index.ts                     # Extension entry point
+│   ├── index.ts                     # Build entry (internal)
 │   │
 │   ├── api/                         # API Integration
 │   │   ├── softwareOneClient.ts    # Main API client

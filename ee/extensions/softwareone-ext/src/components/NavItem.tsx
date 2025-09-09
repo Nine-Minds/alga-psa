@@ -10,7 +10,7 @@ interface NavItemProps {
 }
 
 export const NavItem: React.FC<NavItemProps> = ({ 
-  path = '/softwareone/agreements',
+  path = '/agreements',
   displayName = 'SoftwareOne',
   label,
   isActive = false,

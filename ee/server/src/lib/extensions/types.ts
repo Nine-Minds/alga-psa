@@ -10,17 +10,16 @@ export interface ExtensionManifest {
   name: string;
   description?: string;
   version: string;
+  main?: string;
   author?: string | { name: string; email?: string };
   homepage?: string;
   repository?: string;
   license?: string;
-  main: string;
   components?: any[]; // Components can have various structures based on type
   permissions?: any; // Can be string[] or object with nested permissions
   requiredExtensions?: string[];
   settings?: ExtensionSettingDefinition[];
   assets?: string[];
-  tenantMode?: 'all' | 'specific';
   autoEnable?: boolean;
   minAppVersion?: string;
   api?: {
@@ -141,10 +140,15 @@ export type ExtensionComponentDefinition =
  */
 export interface ExtensionSettingDefinition {
   key: string;
-  type: 'string' | 'number' | 'boolean' | 'select' | 'multiselect';
+  type: 'string' | 'text' | 'number' | 'boolean' | 'select' | 'multiselect';
   label: string;
   description?: string;
+  // Historical/alternate default fields used by some UIs
   default?: any;
+  defaultValue?: any;
+  // Optional UI helpers
+  placeholder?: string;
+  category?: string;
   options?: Array<{
     label: string;
     value: string | number | boolean;
@@ -154,6 +158,9 @@ export interface ExtensionSettingDefinition {
   min?: number;
   max?: number;
 }
+
+// Convenience type used by client code
+export type ExtensionSettingType = ExtensionSettingDefinition['type'];
 
 /**
  * Database extension model
@@ -165,7 +172,6 @@ export interface Extension {
   description: string | null;
   version: string;
   manifest: ExtensionManifest;
-  main_entry_point: string | null;
   is_enabled: boolean;
   created_at: Date;
   updated_at: Date;

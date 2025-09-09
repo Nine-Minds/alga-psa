@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getSecret } from '../core/getSecret.js';
+import { getSecret } from '../core/getSecret';
 
 /**
  * Hash a password using PBKDF2 with a random salt

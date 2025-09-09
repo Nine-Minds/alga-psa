@@ -1,4 +1,4 @@
-import { useRouter } from 'next/navigation';
+// Note: legacy component retained for reference; prefer pages/AgreementsList
 import { dummyAgreements } from '../data/dummyAgreements';
 import { Agreement } from '../types/agreement';
 
@@ -6,7 +6,7 @@ export function AgreementsList() {
   const router = useRouter();
 
   const handleRowClick = (agreement: Agreement) => {
-    router.push(`/softwareone/agreement/${agreement.id}`);
+  router.push(`/agreement/${agreement.id}`);
   };
 
   const getStatusBadge = (status: Agreement['status']) => {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from "next-auth/jwt"
 import { JWT } from 'next-auth/jwt';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 interface CustomToken extends JWT {
   error?: string;
@@ -16,13 +16,23 @@ export async function authorizationMiddleware(req: NextRequest) {
   const token = await getToken({ req, secret: nextAuthSecret }) as CustomToken;
 
   if (!token) {
-    // No token found, redirect to sign in
-    return NextResponse.redirect(new URL('/auth/signin', req.url));
+    // No token found, redirect to appropriate sign in page
+    const isClientPortal = req.url.includes('/client-portal');
+    if (isClientPortal) {
+      return NextResponse.redirect(new URL('/auth/client-portal/signin', req.url));
+    } else {
+      return NextResponse.redirect(new URL('/auth/msp/signin', req.url));
+    }
   }
 
   if (token.error === "TokenValidationError") {
-    // Token validation failed, redirect to sign in
-    return NextResponse.redirect(new URL('/auth/signin', req.url));
+    // Token validation failed, redirect to appropriate sign in page
+    const isClientPortal = req.url.includes('/client-portal');
+    if (isClientPortal) {
+      return NextResponse.redirect(new URL('/auth/client-portal/signin', req.url));
+    } else {
+      return NextResponse.redirect(new URL('/auth/msp/signin', req.url));
+    }
   }
 
   // Set the tenant based on the user's token
@@ -40,7 +50,12 @@ export async function authorizationMiddleware(req: NextRequest) {
   } else {
     // Handle the case where tenant is not in the token
     console.error('Tenant information not found in the token');
-    return NextResponse.redirect(new URL('/auth/signin', req.url));
+    const isClientPortal = req.url.includes('/client-portal');
+    if (isClientPortal) {
+      return NextResponse.redirect(new URL('/auth/client-portal/signin', req.url));
+    } else {
+      return NextResponse.redirect(new URL('/auth/msp/signin', req.url));
+    }
   }
 }
 

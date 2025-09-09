@@ -10,6 +10,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import type { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { createApiKey, deactivateApiKey, listApiKeys } from 'server/src/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
+import { toast } from 'react-hot-toast';
 
 export interface ApiKey {
   api_key_id: string;
@@ -187,7 +188,14 @@ export default function ApiKeysSetup() {
             </div>
             <Button
               id="copy-api-key-button"
-              onClick={() => navigator.clipboard.writeText(newKeyValue)}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(newKeyValue);
+                  toast.success('API key copied to clipboard!');
+                } catch (error) {
+                  toast.error('Failed to copy API key to clipboard');
+                }
+              }}
               className="w-full"
             >
               Copy to Clipboard

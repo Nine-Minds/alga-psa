@@ -7,13 +7,14 @@
 
 import { withAdminTransaction } from '@alga-psa/shared/db';
 import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService.js';
+import logger from '@shared/core/logger';
 
 /**
  * Execute the cleanup job
  */
 export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; deletedCount: number }> {
   try {
-    console.log('Starting cleanup job for temporary workflow forms');
+    logger.info('Starting cleanup job for temporary workflow forms');
     
     // Use transaction for cleanup operations
     const result = await withAdminTransaction(async (trx) => {
@@ -26,14 +27,14 @@ export async function cleanupTemporaryFormsJob(): Promise<{ success: boolean; de
       return deletedCount;
     });
     
-    console.log(`Cleanup job completed successfully. Deleted ${result} temporary forms.`);
+    logger.info(`Cleanup job completed successfully. Deleted ${result} temporary forms.`);
     
     return {
       success: true,
       deletedCount: result
     };
   } catch (error) {
-    console.error('Error executing cleanup job for temporary workflow forms:', error);
+    logger.error('Error executing cleanup job for temporary workflow forms', error);
     
     return {
       success: false,
@@ -57,7 +58,7 @@ export async function scheduleCleanupTemporaryFormsJob(
     const scheduler = await initializeScheduler();
     
     if (!scheduler) {
-      console.warn('Scheduler not available, skipping scheduling of cleanupTemporaryFormsJob');
+      logger.error('Scheduler not available, skipping scheduling of cleanupTemporaryFormsJob');
       return null;
     }
     
@@ -67,11 +68,17 @@ export async function scheduleCleanupTemporaryFormsJob(
       cronExpression,
       { tenantId: 'system' } // System-wide job
     );
-    
-    console.log('Successfully scheduled cleanupTemporaryFormsJob with ID:', jobId);
-    return jobId;
+    if (jobId) {
+      logger.info(`Scheduled cleanupTemporaryFormsJob with ID ${jobId}`);
+      return jobId;
+    }
+    logger.info('cleanupTemporaryFormsJob already scheduled (singleton active)', {
+      returnedJobId: jobId,
+      cron: cronExpression
+    });
+    return null;
   } catch (error) {
-    console.error('Error scheduling cleanupTemporaryFormsJob:', error);
+    logger.error('Error scheduling cleanupTemporaryFormsJob', error);
     return null;
   }
 }

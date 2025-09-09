@@ -16,7 +16,7 @@ import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 
 interface ActionResult {
   success: boolean;
@@ -1070,12 +1070,18 @@ export async function uploadUserAvatar(
         return { success: false, error: 'Permission denied: Cannot modify user in different tenant.' };
     }
 
-    // Permission Check: User can update their own avatar OR an admin can update any avatar
+    // Permission Check: User can update their own avatar OR have user update permission
+    const isOwnAvatar = currentUser.user_id === userId;
     const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-    const canUpdate = currentUser.user_id === userId || isAdmin;
-
-    if (!canUpdate) {
-        return { success: false, error: 'Permission denied.' };
+    
+    // Always allow users to update their own avatar, regardless of permissions
+    if (isOwnAvatar) {
+        console.log(`[uploadUserAvatar] User ${currentUser.user_id} updating their own avatar`);
+    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
+        console.log(`[uploadUserAvatar] User ${currentUser.user_id} with admin/update permission updating avatar for user ${userId}`);
+    } else {
+        console.log(`[uploadUserAvatar] Permission denied: User ${currentUser.user_id} trying to update avatar for user ${userId}`);
+        return { success: false, error: 'Permission denied: You can only update your own avatar.' };
     }
 
     const file = formData.get('avatar') as File | null;
@@ -1161,12 +1167,18 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
         return { success: false, error: 'Permission denied: Cannot modify user in different tenant.' };
     }
 
-    // Permission Check: User can delete their own avatar OR an admin can delete any avatar
+    // Permission Check: User can delete their own avatar OR have user update permission
+    const isOwnAvatar = currentUser.user_id === userId;
     const isAdmin = currentUser.roles.some(role => role.role_name.toLowerCase() === 'admin');
-    const canDelete = currentUser.user_id === userId || isAdmin;
-
-    if (!canDelete) {
-        return { success: false, error: 'Permission denied.' };
+    
+    // Always allow users to delete their own avatar, regardless of permissions
+    if (isOwnAvatar) {
+        console.log(`[deleteUserAvatar] User ${currentUser.user_id} deleting their own avatar`);
+    } else if (isAdmin || await hasPermission(currentUser, 'user', 'update', knex)) {
+        console.log(`[deleteUserAvatar] User ${currentUser.user_id} with admin/update permission deleting avatar for user ${userId}`);
+    } else {
+        console.log(`[deleteUserAvatar] Permission denied: User ${currentUser.user_id} trying to delete avatar for user ${userId}`);
+        return { success: false, error: 'Permission denied: You can only delete your own avatar.' };
     }
 
     // Call the generic service function

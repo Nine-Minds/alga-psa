@@ -62,6 +62,7 @@ interface TicketConversationProps {
   onContentChange: (content: PartialBlock[]) => void;
   hideInternalTab?: boolean; // Optional prop to hide the Internal tab
   isSubmitting?: boolean; // Flag to indicate if a submission is in progress
+  overrides?: Record<string, { note?: string; updated_at?: string }>; // Optional local overrides by comment_id
 }
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
@@ -85,7 +86,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   onContentChange,
   hideInternalTab = false,
   isSubmitting = false,
+  overrides = {},
 }) => {
+  // Ensure we have a stable id for interactive element ids
+  const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
   const [reverseOrder, setReverseOrder] = useState(false);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
@@ -183,6 +187,16 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     fetchContactAvatarUrls();
   }, [conversations, ticket.tenant, userMap]);
 
+  // Log when conversations prop changes
+  useEffect(() => {
+    try {
+      if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation] conversations changed', {
+        count: conversations.length,
+        items: conversations.map(c => ({ id: c.comment_id, updated_at: c.updated_at, noteLen: (c.note || '').length }))
+      });
+    } catch {}
+  }, [conversations]);
+
   const getAuthorInfo = (conversation: IComment) => {
     if (conversation.user_id) {
       // The userMap should already have the updated avatar URLs from the useEffect above
@@ -195,24 +209,37 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     // Use the sorted comments based on the reverseOrder state
     const commentsToRender = reverseOrder ? [...comments].reverse() : comments;
     
-    return commentsToRender.map((conversation): JSX.Element => (
+    return commentsToRender.map((conversation): JSX.Element => {
+      const override = overrides[conversation.comment_id || ''];
+      const mergedConversation = override
+        ? { ...conversation, ...(override.note ? { note: override.note } : {}), ...(override.updated_at ? { updated_at: override.updated_at } : {}) }
+        : conversation;
+      const itemKey = `${conversation.comment_id}-${conversation.updated_at || ''}-${(conversation.note || '').length}`;
+      if (process.env.NODE_ENV !== 'production') console.log('[TicketConversation][renderComments] Rendering', {
+        key: itemKey,
+        comment_id: mergedConversation.comment_id,
+        updated_at: mergedConversation.updated_at,
+        noteLen: (mergedConversation.note || '').length,
+      });
+      return (
       <CommentItem
-        key={conversation.comment_id}
-        id={`${id}-comment-${conversation.comment_id}`}
-        conversation={conversation}
+        key={itemKey}
+        id={`${id}-comment-${mergedConversation.comment_id}`}
+        conversation={mergedConversation}
         user={getAuthorInfo(conversation)}
         currentUserId={currentUser?.id}
-        isEditing={isEditing && currentComment?.comment_id === conversation.comment_id}
+        isEditing={isEditing && currentComment?.comment_id === mergedConversation.comment_id}
         currentComment={currentComment}
         ticketId={ticket.ticket_id || ''}
         userMap={userMap}
         onContentChange={onContentChange}
         onSave={onSave}
         onClose={onClose}
-        onEdit={() => onEdit(conversation)}
+        onEdit={() => onEdit(mergedConversation)}
         onDelete={onDelete}
       />
-    ));
+    );
+    });
   };
 
   // Build tab content array based on hideInternalTab
@@ -285,7 +312,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <h2 className="text-xl font-bold">Comments</h2>
           {!showEditor && (
             <Button
-              id={`${id}-show-comment-editor-btn`}
+              id={`${compId}-show-comment-editor-btn`}
               onClick={handleAddCommentClick}
             >
               Add Comment
@@ -311,7 +338,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   {!hideInternalTab && (
                     <div className="flex items-center space-x-2">
                       <Switch
-                        id={`${id}-internal-toggle`}
+                        id={`${compId}-internal-toggle`}
                         checked={isInternalToggle}
                         onCheckedChange={setIsInternalToggle}
                       />
@@ -322,7 +349,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   )}
                   <div className="flex items-center space-x-2">
                     <Switch
-                      id={`${id}-resolution-toggle`}
+                      id={`${compId}-resolution-toggle`}
                       checked={isResolutionToggle}
                       onCheckedChange={setIsResolutionToggle}
                     />
@@ -333,7 +360,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 </div>
                 <Suspense fallback={<RichTextEditorSkeleton height="200px" title="Comment Editor" />}>
                   <TextEditor
-                    {...withDataAutomationId({ id: `${id}-editor` })}
+                    {...withDataAutomationId({ id: `${compId}-editor` })}
                     key={editorKey}
                     roomName={`ticket-${ticket.ticket_id}`}
                     initialContent={DEFAULT_BLOCK}
@@ -342,14 +369,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                 </Suspense>
                 <div className="flex justify-end space-x-2 mt-1">
                   <Button
-                    id={`${id}-add-comment-btn`}
+                    id={`${compId}-add-comment-btn`}
                     onClick={handleSubmitComment}
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? 'Adding...' : 'Add Comment'}
                   </Button>
                   <Button
-                    id={`${id}-cancel-comment-btn`}
+                    id={`${compId}-cancel-comment-btn`}
                     onClick={handleCancelComment}
                     variant="outline"
                     disabled={isSubmitting}
@@ -368,6 +395,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           onTabChange={onTabChange}
           extraContent={
             <button
+              id={`${compId}-toggle-order-btn`}
               onClick={toggleCommentOrder}
               className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent px-4 py-2 ml-auto"
             >

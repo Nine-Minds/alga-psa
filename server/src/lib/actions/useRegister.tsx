@@ -9,9 +9,7 @@ import { IUserRegister, IUserWithRoles, IRoleWithPermissions } from 'server/src/
 
 import { getInfoFromToken, createToken } from 'server/src/utils/tokenizer';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { getEmailService } from 'server/src/services/emailService';
-import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
-import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+import { getSystemEmailService } from 'server/src/lib/email';
 import logger from 'server/src/utils/logger';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
@@ -81,6 +79,33 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
   };
 }
 
+export async function getAccountInfoFromToken(token: string, portal: string) {
+  try {
+    const { errorType, userInfo } = await getInfoFromToken(token);
+    if (errorType || !userInfo) {
+      return null;
+    }
+    
+    // Get the user from database to get full name
+    let dbUser;
+    if (userInfo.user_type) {
+      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
+    } else {
+      dbUser = await User.findUserByEmail(userInfo.email);
+    }
+    
+    return {
+      name: dbUser ? `${dbUser.first_name || ''} ${dbUser.last_name || ''}`.trim() || dbUser.username : userInfo.username || 'User',
+      email: userInfo.email || '',
+      username: dbUser?.username || userInfo.username || userInfo.email || '',
+      accountType: portal === 'client' ? 'Client Portal User' : 'MSP User'
+    };
+  } catch (error) {
+    logger.error('Error getting account info from token:', error);
+    return null;
+  }
+}
+
 export async function setNewPassword(password: string, token: string): Promise<boolean> {
   const { errorType, userInfo } = await getInfoFromToken(token);
   if (errorType) {
@@ -89,48 +114,136 @@ export async function setNewPassword(password: string, token: string): Promise<b
   }
   if (userInfo && userInfo.email) {
     const hashedPassword = await hashPassword(password);
-    const dbUser = await User.findUserByEmail(userInfo.email);
+    
+    // If user_type is in the token, use it to find the correct user
+    let dbUser;
+    if (userInfo.user_type) {
+      dbUser = await User.findUserByEmailAndType(userInfo.email, userInfo.user_type as 'internal' | 'client');
+    } else {
+      // Fallback for old tokens without user_type
+      dbUser = await User.findUserByEmail(userInfo.email);
+    }
+    
     if (!dbUser) {
-      logger.error(`User [ ${userInfo.email} ] not found in the database`);
+      logger.error(`User [ ${userInfo.email} ] with type [ ${userInfo.user_type || 'any'} ] not found in the database`);
       return false;
     }
+    
+    // Update the password using the updatePassword function which doesn't require tenant context
     await User.updatePassword(userInfo.email, hashedPassword);
-    logger.info(`Password updated successfully for User [ ${userInfo.email} ]`);
+    logger.info(`Password updated successfully for User [ ${userInfo.email} ] type [ ${dbUser.user_type} ] id [ ${dbUser.user_id} ]`);
     return true;
   }
   return false;
 }
 
-export async function recoverPassword(email: string): Promise<boolean> {
-  logger.debug(`Checking if email [ ${email} ] exists`);
-  const userInfo = await User.findUserByEmail(email);
+export async function recoverPassword(email: string, portal: 'msp' | 'client' = 'msp'): Promise<boolean> {
+  logger.debug(`Checking if email [ ${email} ] exists for portal type: ${portal}`);
+  
+  // For MSP portal, look for 'internal' users; for client portal, look for 'client' users
+  const userType = portal === 'msp' ? 'internal' : 'client';
+  const userInfo = await User.findUserByEmailAndType(email, userType);
+  
   if (!userInfo) {
-    logger.error(`There is no email [ ${email} ] in the database`);
-    return false;
+    logger.debug(`No ${userType} user found with email [ ${email} ]`);
+    // For security, always return true to not reveal if user exists
+    // But don't actually send an email since there's no matching user
+    return true;
   }
 
-  const recoverToken = createToken({
-    username: '',
-    email: email,
-    password: '',
-    companyName: '',
-    user_type: 'client'
-  });
-
+  // Only proceed with email if we found a user of the correct type
   if (EMAIL_ENABLE) {
-    const recoverUrl = `${process.env.HOST}/auth/forgot_password/set_new_password?token=${recoverToken}`;
-    const emailService = await getEmailService();
-    const emailSent = await emailService.sendTemplatedEmail({
-      toEmail: email,
-      subject: 'Recover Password',
-      templateName: 'recover_password_email',
-      templateData: { recoverUrl, email, username: userInfo.username },
+    // For password reset, we only need the email in the token
+    // This makes the token much shorter
+    const recoverToken = await createToken({
+      username: '',
+      email: email,
+      password: '',
+      companyName: '',
+      user_type: userType  // Include the correct user type in token
     });
 
-    if (!emailSent) {
-      logger.error('Failed to send recover password email');
-      return false;
+    const resetLink = `${process.env.NEXT_PUBLIC_BASE_URL}/auth/password-reset/set-new-password?token=${recoverToken}&portal=${portal}`;
+    
+    // Use SystemEmailService for password reset (no tenant context needed)
+    const systemEmailService = await getSystemEmailService();
+    
+    // Get tenant's database connection to fetch the template
+    // For password reset, we'll use system templates or hardcoded template
+    const db = await getAdminConnection();
+    
+    // Try to get template from system_email_templates table
+    let templateHtml: string | null = null;
+    let templateSubject = 'Password Reset Request';
+    
+    try {
+      const template = await db('system_email_templates')
+        .select('html_content', 'subject')
+        .where({ name: 'password-reset' })
+        .first();
+      
+      if (template) {
+        templateHtml = template.html_content;
+        templateSubject = template.subject || templateSubject;
+      }
+    } catch (error) {
+      logger.debug('Could not fetch password-reset template from database, using default');
     }
+    
+    // Prepare template data
+    const templateData = {
+      email,
+      username: userInfo.username,
+      userName: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`.trim() || userInfo.username,
+      resetLink: resetLink,
+      expirationTime: '1 hour',
+      supportEmail: 'support@algapsa.com',
+      companyName: 'AlgaPSA',
+      currentYear: new Date().getFullYear()
+    };
+    
+    // If we have a template from the database, use it
+    if (templateHtml) {
+      // Process template variables
+      const processedHtml = Object.entries(templateData).reduce((html, [key, value]) => {
+        return html.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      }, templateHtml);
+      
+      const processedSubject = Object.entries(templateData).reduce((subject, [key, value]) => {
+        return subject.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+      }, templateSubject);
+      
+      // Create text version from HTML
+      const textContent = processedHtml
+        .replace(/<[^>]*>/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      
+      const emailResult = await systemEmailService.sendEmail({
+        to: email,
+        subject: processedSubject,
+        html: processedHtml,
+        text: textContent
+      });
+      
+      if (!emailResult.success) {
+        logger.error('Failed to send recover password email:', emailResult.error);
+        return false;
+      }
+    } else {
+      // Use built-in password reset method with default template
+      const emailResult = await systemEmailService.sendPasswordReset({
+        username: templateData.userName,
+        resetUrl: resetLink,
+        expirationTime: templateData.expirationTime
+      });
+      
+      if (!emailResult.success) {
+        logger.error('Failed to send recover password email:', emailResult.error);
+        return false;
+      }
+    }
+    
     logger.info(`Recover password email sent successfully for User [ ${email} ]`);
     return true;
   } else {
@@ -157,7 +270,7 @@ export async function registerUser({ username, email, password, companyName }: I
 
   const hashedPassword = await hashPassword(password);
 
-  const verificationToken = createToken({
+  const verificationToken = await createToken({
     username: username,
     email: email,
     password: hashedPassword,
@@ -166,17 +279,19 @@ export async function registerUser({ username, email, password, companyName }: I
   });
 
   if (VERIFY_EMAIL_ENABLED && EMAIL_ENABLE) {
-    const verificationUrl = `${process.env.HOST}/auth/verify_email?token=${verificationToken}`;
-    const emailService = await getEmailService();
-    const emailSent = await emailService.sendTemplatedEmail({
-      toEmail: email,
-      subject: 'Verify your email',
-      templateName: 'verify_email',
-      templateData: { verificationUrl, username },
+    const verificationUrl = `${process.env.HOST}/auth/verify-email?token=${verificationToken}`;
+    
+    // Use SystemEmailService for email verification
+    const systemEmailService = await getSystemEmailService();
+    const emailResult = await systemEmailService.sendEmailVerification({
+      email: email,
+      verificationUrl: verificationUrl,
+      companyName: companyName,
+      expirationTime: '24 hours'
     });
 
-    if (!emailSent) {
-      logger.error('Failed to send verification email');
+    if (!emailResult.success) {
+      logger.error('Failed to send verification email:', emailResult.error);
       return false;
     }
     logger.info(`Verification email sent successfully for User [ ${email} ]`);

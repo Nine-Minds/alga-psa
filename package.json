@@ -5,9 +5,12 @@
     "server",
     "ee/server",
     "services/workflow-worker",
-    "shared"
+    "shared",
+    "packages/*",
+    "sdk/*"
   ],
   "scripts": {
+    "install:ignore": "npm ci --ignore-scripts",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
@@ -20,6 +23,8 @@
     "start": "cd server && npm start",
     "build:shared": "cd shared && npm run build",
     "build:workflow-worker": "cd services/workflow-worker && npm run build",
+    "build:sdk": "npm -w sdk/alga-client-sdk run build",
+    "dev:sdk": "npm -w sdk/alga-client-sdk run dev",
     "start:workflow-worker": "cd services/workflow-worker && npm run start",
     "dev:workflow-worker": "cd services/workflow-worker && npm run dev",
     "create-tenant": "cd server && npm run create-tenant",
@@ -71,6 +76,8 @@
     "@types/react-dropzone": "^4.2.2",
     "@types/redis": "^4.0.10",
     "archiver": "^7.0.1",
+    "asc": "^2.1.5",
+    "assemblyscript": "^0.27.37",
     "axios": "^1.7.4",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",

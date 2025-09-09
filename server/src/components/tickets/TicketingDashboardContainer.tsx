@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
@@ -10,6 +10,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { IChannel } from 'server/src/interfaces';
+import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketingDashboardContainerProps {
   consolidatedData: {
@@ -21,18 +22,21 @@ interface TicketingDashboardContainerProps {
       categories: ITicketCategory[];
       companies: ICompany[];
       users: IUser[];
+      tags?: string[];
     };
     tickets: ITicketListItem[];
     nextCursor: string | null;
   };
   currentUser: IUser;
   initialFilters?: Partial<ITicketListFilters>;
+  displaySettings?: TicketingDisplaySettings;
 }
 
 export default function TicketingDashboardContainer({ 
   consolidatedData,
   currentUser,
-  initialFilters
+  initialFilters,
+  displaySettings
 }: TicketingDashboardContainerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [tickets, setTickets] = useState<ITicketListItem[]>(consolidatedData.tickets);
@@ -66,6 +70,11 @@ export default function TicketingDashboardContainer({
     if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
     if (filters.channelFilterState && filters.channelFilterState !== 'active') {
       params.set('channelFilterState', filters.channelFilterState);
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      // Encode each tag to handle special characters like commas
+      const encodedTags = filters.tags.map(tag => encodeURIComponent(tag));
+      params.set('tags', encodedTags.join(','));
     }
 
     // Update URL without causing a page refresh
@@ -149,12 +158,14 @@ export default function TicketingDashboardContainer({
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}
       initialCompanies={consolidatedData.options.companies}
+      initialTags={consolidatedData.options.tags || []}
       nextCursor={nextCursor}
       onLoadMore={handleLoadMore} 
       onFiltersChanged={handleFiltersChanged}
       initialFilterValues={activeFilters}
       isLoadingMore={isLoading}
       user={currentUser}
+      displaySettings={displaySettings}
     />
   );
 }

@@ -4,7 +4,7 @@ import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core';
 import { getActionRegistry } from '@alga-psa/shared/workflow/core';
 import { workflowConfig } from '../../config/workflowConfig';
 import { getCurrentUser } from './user-actions/userActions';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import { createTenantKnex } from '../db';
 import { getEventBus } from '../eventBus';
 import { EventCatalogModel } from '../../models/eventCatalog'; // Added import
