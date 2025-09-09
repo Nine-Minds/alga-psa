@@ -206,6 +206,8 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           channelOptions={ticketData.options.channel}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
+          initialCompanies={ticketData.companies}
+          initialLocations={ticketData.locations}
         />
       );
     } catch (error) {

@@ -157,6 +157,7 @@ export function WorkItemDrawer({
                                 priorityOptions={ticketData.options.priority}
                                 initialCategories={ticketData.categories}
                                 initialCompanies={ticketData.companies}
+                                initialLocations={ticketData.locations}
                                 initialAgentSchedules={ticketData.agentSchedules}
                                 initialUserMap={ticketData.userMap}
                                 initialAvailableAgents={ticketData.availableAgents}
