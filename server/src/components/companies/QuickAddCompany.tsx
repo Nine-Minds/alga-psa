@@ -39,7 +39,7 @@ import {
   validateContactName,
   validateStateProvince,
   validateIndustry,
-  type ValidationResult 
+  validateNotes
 } from 'server/src/lib/utils/clientFormValidation';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
@@ -225,6 +225,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       case 'contact_phone':
         error = validatePhoneNumber(value);
         break;
+      case 'notes':
+        error = validateNotes(value);
+        break;
     }
     
     setFieldErrors(prev => ({
@@ -255,7 +258,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       countryCode: locationData.country_code,
       contactName: contactData.full_name,
       contactEmail: contactData.email,
-      contactPhone: contactData.phone_number
+      contactPhone: contactData.phone_number,
+      notes: formData.notes
     });
     
     // Early return if validation fails - prevent async operations
@@ -332,17 +336,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }
   };
 
-  const clearErrorIfSubmitted = (fieldName?: string) => {
-    if (hasAttemptedSubmit) {
-      setValidationErrors([]);
-      if (fieldName) {
-        setFieldErrors(prev => ({
-          ...prev,
-          [fieldName]: ''
-        }));
-      }
-    }
-  };
 
   const handleCompanyChange = (field: string, value: string | boolean | null) => {
     setFormData(prev => {
@@ -802,11 +795,17 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   data-automation-id="notes"
                   value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
+                  onBlur={() => {
+                    validateField('notes', formData.notes || '');
+                  }}
                   placeholder="Add any initial notes (optional)"
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   rows={3}
                 />
+                {fieldErrors.notes && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
+                )}
               </div>
             </div>
           </div>

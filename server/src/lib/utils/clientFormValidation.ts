@@ -31,59 +31,77 @@ const FAKE_DOMAINS = [
   'test.test', 'example.org', 'sample.org', 'localhost', 'test.local'
 ];
 
-// Company name validation - business-appropriate rules
+// Company name validation - enterprise-level rules
 export function validateCompanyName(name: string): string | null {
   if (!name || !name.trim()) {
     return 'Company name is required';
   }
   
-  // Check for spaces-only input
-  if (name && name.trim() === '') {
-    return 'Company name cannot contain only spaces';
-  }
-  
   const trimmedName = name.trim();
   
+  // Enterprise rule: 2-256 characters
   if (trimmedName.length < 2) {
     return 'Company name must be at least 2 characters long';
   }
   
-  if (trimmedName.length > 150) {
-    return 'Company name must be less than 150 characters';
+  if (trimmedName.length > 256) {
+    return 'Company name must be 256 characters or less';
   }
   
   // Allow emojis if followed by actual meaningful name content
   const nameWithoutEmojis = trimmedName.replace(EMOJI_REGEX, '').trim();
   
-  if (nameWithoutEmojis.length < 2) {
-    return 'Company name must contain at least 2 meaningful characters';
+  // Cannot be made up of only special characters, spaces, or tabs
+  if (nameWithoutEmojis.length === 0) {
+    return 'Company name must contain meaningful characters';
   }
   
-  // Allow letters, numbers, spaces, hyphens, commas, periods - business appropriate
-  if (!/^[a-zA-Z0-9\s\-,\.&']+$/.test(nameWithoutEmojis)) {
+  // Single-character names are disallowed
+  if (nameWithoutEmojis.length === 1) {
+    return 'Company name must be at least 2 meaningful characters';
+  }
+  
+  // Block standalone abbreviations
+  const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'CO', 'COMPANY', 'CORPORATION'];
+  if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
+    return 'Company name cannot be just a business abbreviation';
+  }
+  
+  // No repeats of the same character 3+ times
+  if (/(.)\1{2,}/.test(nameWithoutEmojis)) {
+    return 'Company name cannot contain repeated characters';
+  }
+  
+  // Block domain extensions
+  if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
+    return 'Company name cannot end with a domain extension';
+  }
+  
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
+    return 'Company name must contain at least one letter or number';
+  }
+  
+  // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
+  if (!/^[\p{L}\p{N}\s\-,\.&'()]+$/u.test(nameWithoutEmojis)) {
     return 'Company name contains invalid characters';
-  }
-  
-  // Must contain at least one letter
-  if (!/[a-zA-Z]/.test(nameWithoutEmojis)) {
-    return 'Company name must contain at least one letter';
   }
   
   return null;
 }
 
-// Website URL validation - professional SaaS/CRM grade
+// Website URL validation - enterprise-level rules
 export function validateWebsiteUrl(url: string): string | null {
   if (!url || !url.trim()) {
     return null; // URL is optional
   }
   
-  // Check for spaces-only input
-  if (url && url.trim() === '') {
-    return 'Website URL cannot contain only spaces';
-  }
-  
   const trimmedUrl = url.trim();
+  
+  // Enterprise rule: Max length 256 characters
+  if (trimmedUrl.length > 256) {
+    return 'Website URL must be 256 characters or less';
+  }
   
   // Add protocol if missing
   let fullUrl = trimmedUrl;
@@ -421,128 +439,127 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
   return null;
 }
 
-// City validation - business standards
+// City validation - enterprise international support
 export function validateCityName(city: string): string | null {
   if (!city || !city.trim()) {
     return null; // City is optional
   }
   
-  // Check for spaces-only input
-  if (city && city.trim() === '') {
-    return 'City name cannot contain only spaces';
-  }
-  
   const trimmedCity = city.trim();
+  
+  // Enterprise rule: Max length 100 characters
+  if (trimmedCity.length > 100) {
+    return 'City name must be 100 characters or less';
+  }
   
   // No emojis
   if (EMOJI_REGEX.test(trimmedCity)) {
     return 'City name cannot contain emojis';
   }
   
-  if (trimmedCity.length < 2) {
-    return 'City name must be at least 2 characters long';
+  // Minimum 1 character (to support Ö, Å, Y, etc.)
+  if (trimmedCity.length < 1) {
+    return 'City name cannot be empty';
   }
   
-  // Must contain at least one letter
-  if (!/[a-zA-Z]/.test(trimmedCity)) {
+  // Must contain at least one letter or Unicode character
+  if (!/[\p{L}]/u.test(trimmedCity)) {
     return 'City name must contain letters';
   }
   
-  // Allow letters, spaces, hyphens, apostrophes, periods
-  if (!/^[a-zA-Z\s\-'\.]+$/.test(trimmedCity)) {
+  // Allow Unicode letters, spaces, hyphens, apostrophes, periods
+  if (!/^[\p{L}\s\-'\.]+$/u.test(trimmedCity)) {
     return 'City name contains invalid characters';
   }
   
   return null;
 }
 
-// Address validation - allow PO Box entries
+// Address validation - enterprise international support
 export function validateAddress(address: string): string | null {
   if (!address || !address.trim()) {
     return null; // Address is optional
   }
   
-  // Check for spaces-only input
-  if (address && address.trim() === '') {
-    return 'Address cannot contain only spaces';
-  }
-  
   const trimmedAddress = address.trim();
+  
+  // Enterprise rule: Max length 100 characters  
+  if (trimmedAddress.length > 100) {
+    return 'Address must be 100 characters or less';
+  }
   
   // No emojis
   if (EMOJI_REGEX.test(trimmedAddress)) {
     return 'Address cannot contain emojis';
   }
   
-  if (trimmedAddress.length < 5) {
-    return 'Address must be at least 5 characters long';
+  // Minimum 1 meaningful character (international support)
+  if (trimmedAddress.length < 1) {
+    return 'Address cannot be empty';
   }
   
-  // Allow PO Box format (letters only) or regular addresses (letters and numbers)
-  const isPOBox = /^(po|p\.o\.|post office)\s*box/i.test(trimmedAddress);
+  // Must contain at least one letter or Unicode character (international support)
+  if (!/[\p{L}]/u.test(trimmedAddress)) {
+    return 'Address must contain letters';
+  }
   
-  if (isPOBox) {
-    // PO Box just needs letters and numbers
-    if (!/[a-zA-Z]/.test(trimmedAddress)) {
-      return 'Please enter a valid PO Box address';
-    }
-  } else {
-    // Regular address needs both letters and numbers
-    if (!/[a-zA-Z]/.test(trimmedAddress) || !/\d/.test(trimmedAddress)) {
-      return 'Please enter a complete street address with number and name';
-    }
+  // Allow Unicode letters, numbers, spaces, and international address punctuation
+  // No requirement for both letters and numbers (international addresses vary)
+  if (!/^[\p{L}\p{N}\s\-,\.#\/'"()]+$/u.test(trimmedAddress)) {
+    return 'Address contains invalid characters';
   }
   
   return null;
 }
 
-// State/Province validation - business standards
+// State/Province validation - enterprise international support
 export function validateStateProvince(state: string): string | null {
   if (!state || !state.trim()) {
     return null; // State is optional
   }
   
-  // Check for spaces-only input
-  if (state && state.trim() === '') {
-    return 'State/Province cannot contain only spaces';
-  }
-  
   const trimmedState = state.trim();
+  
+  // Enterprise rule: Max length 100 characters
+  if (trimmedState.length > 100) {
+    return 'State/Province must be 100 characters or less';
+  }
   
   // No emojis
   if (EMOJI_REGEX.test(trimmedState)) {
     return 'State/Province cannot contain emojis';
   }
   
-  if (trimmedState.length < 2) {
-    return 'State/Province must be at least 2 characters long';
+  // Minimum 1 character (international support)
+  if (trimmedState.length < 1) {
+    return 'State/Province cannot be empty';
   }
   
-  // Must contain at least one letter
-  if (!/[a-zA-Z]/.test(trimmedState)) {
+  // Must contain at least one letter or Unicode character
+  if (!/[\p{L}]/u.test(trimmedState)) {
     return 'State/Province must contain letters';
   }
   
-  // Allow letters, spaces, hyphens, periods (CA, Ontario, etc.)
-  if (!/^[a-zA-Z\s\-\.]+$/.test(trimmedState)) {
+  // Allow Unicode letters, spaces, hyphens, periods
+  if (!/^[\p{L}\s\-\.]+$/u.test(trimmedState)) {
     return 'State/Province contains invalid characters';
   }
   
   return null;
 }
 
-// Industry validation - business-appropriate rules
+// Industry validation - enterprise international support
 export function validateIndustry(industry: string): string | null {
   if (!industry || !industry.trim()) {
     return null; // Industry is optional
   }
   
-  // Check for spaces-only input
-  if (industry && industry.trim() === '') {
-    return 'Industry cannot contain only spaces';
-  }
-  
   const trimmedIndustry = industry.trim();
+  
+  // Enterprise rule: Max length 100 characters
+  if (trimmedIndustry.length > 100) {
+    return 'Industry must be 100 characters or less';
+  }
   
   // No emojis
   if (EMOJI_REGEX.test(trimmedIndustry)) {
@@ -553,49 +570,73 @@ export function validateIndustry(industry: string): string | null {
     return 'Industry must be at least 2 characters long';
   }
   
-  // Must contain at least one letter
-  if (!/[a-zA-Z]/.test(trimmedIndustry)) {
+  // Must contain at least one letter or Unicode character
+  if (!/[\p{L}]/u.test(trimmedIndustry)) {
     return 'Industry must contain letters';
   }
   
-  // Allow business-appropriate characters: letters, spaces, hyphens, ampersands, slashes, commas
-  if (!/^[a-zA-Z\s\-&\/,]+$/.test(trimmedIndustry)) {
+  // Allow Unicode letters, spaces, hyphens, ampersands, slashes, commas
+  if (!/^[\p{L}\s\-&\/,]+$/u.test(trimmedIndustry)) {
     return 'Industry contains invalid characters';
   }
   
   return null;
 }
 
-// Contact name validation - business standards  
+// Contact name validation - enterprise-level rules  
 export function validateContactName(name: string): string | null {
   if (!name || !name.trim()) {
     return null; // Contact name is optional
   }
   
-  // Check for spaces-only input
-  if (name && name.trim() === '') {
-    return 'Contact name cannot contain only spaces';
-  }
-  
   const trimmedName = name.trim();
+  
+  // Enterprise rule: Max length 40 characters
+  if (trimmedName.length > 40) {
+    return 'Contact name must be 40 characters or less';
+  }
   
   // Allow emojis if followed by actual meaningful name content
   const nameWithoutEmojis = trimmedName.replace(EMOJI_REGEX, '').trim();
   
-  if (nameWithoutEmojis.length < 2) {
-    return 'Contact name must contain at least 2 meaningful characters';
+  if (nameWithoutEmojis.length === 0) {
+    return 'Contact name must contain meaningful characters';
   }
   
-  // Must contain at least one letter
-  if (!/[a-zA-Z]/.test(nameWithoutEmojis)) {
+  // Block placeholder or testing names
+  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary', 
+                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null', 'n/a'];
+  if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
+    return 'Please enter a real contact name';
+  }
+  
+  // Must contain at least one letter (Unicode supported)
+  if (!/[\p{L}]/u.test(nameWithoutEmojis)) {
     return 'Contact name must contain letters';
   }
   
-  // Allow letters, spaces, hyphens, apostrophes, periods
-  if (!/^[a-zA-Z\s\-'\.]+$/.test(nameWithoutEmojis)) {
+  // Allow Unicode letters, spaces, hyphens, apostrophes, periods
+  if (!/^[\p{L}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
     return 'Contact name contains invalid characters';
   }
   
+  return null;
+}
+
+// Notes validation - enterprise-level rules
+export function validateNotes(notes: string): string | null {
+  if (!notes || !notes.trim()) {
+    return null; // Notes are optional
+  }
+  
+  const trimmedNotes = notes.trim();
+  
+  // Enterprise rule: Max length 2000 characters
+  if (trimmedNotes.length > 2000) {
+    return 'Notes must be 2000 characters or less';
+  }
+  
+  // Allow emojis in notes - no restrictions on content
   return null;
 }
 
@@ -615,6 +656,7 @@ export function validateClientForm(formData: {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  notes?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
   
@@ -699,6 +741,13 @@ export function validateClientForm(formData: {
     const contactPhoneError = validatePhoneNumber(formData.contactPhone);
     if (contactPhoneError) {
       errors.contact_phone = contactPhoneError;
+    }
+  }
+  
+  if (formData.notes) {
+    const notesError = validateNotes(formData.notes);
+    if (notesError) {
+      errors.notes = notesError;
     }
   }
   
