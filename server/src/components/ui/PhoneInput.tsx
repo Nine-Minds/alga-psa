@@ -7,6 +7,7 @@ interface PhoneInputProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   countryCode?: string; // ISO country code (e.g., 'US', 'GB')
   phoneCode?: string; // Phone code (e.g., '+1', '+44')
   placeholder?: string;
@@ -21,6 +22,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   label,
   value,
   onChange,
+  onBlur,
   countryCode,
   phoneCode,
   placeholder,
@@ -98,6 +100,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         type="tel"
         value={displayValue}
         onChange={handleInputChange}
+        onBlur={onBlur}
         placeholder={getPlaceholderText()}
         disabled={disabled}
         className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"

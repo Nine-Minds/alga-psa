@@ -370,8 +370,13 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       return updatedState;
     });
     
-    // Real-time validation - always validate when user types
-    validateField(field, value as string);
+    // Clear errors when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
   const handleLocationChange = (field: keyof CreateLocationData, value: string | boolean | null) => {
@@ -380,7 +385,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       [field]: value
     }));
     
-    // Real-time validation for specific fields
+    // Clear errors when user starts typing
     const validationFieldMap: Record<string, string> = {
       'email': 'location_email',
       'phone': 'location_phone',
@@ -391,12 +396,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     };
     
     const validationField = validationFieldMap[field as string];
-    if (validationField) {
-      if (validationField === 'postal_code') {
-        validateField(validationField, value as string, { countryCode: locationData.country_code });
-      } else {
-        validateField(validationField, value as string);
-      }
+    if (validationField && fieldErrors[validationField]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [validationField]: ''
+      }));
     }
   };
 
@@ -406,7 +410,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       [field]: value
     }));
     
-    // Real-time validation for contact fields
+    // Clear errors when user starts typing
     const validationFieldMap: Record<string, string> = {
       'full_name': 'contact_name',
       'email': 'contact_email',
@@ -414,9 +418,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     };
     
     const validationField = validationFieldMap[field as string];
-    // Always call validateField for contact fields - it will handle when to show errors internally
-    if (validationField) {
-      validateField(validationField, value);
+    if (validationField && fieldErrors[validationField]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [validationField]: ''
+      }));
     }
   };
 
@@ -480,7 +486,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   value={formData.company_name}
                   onChange={(e) => {
                     handleCompanyChange('company_name', e.target.value);
-                    clearErrorIfSubmitted('company_name');
+                  }}
+                  onBlur={() => {
+                    validateField('company_name', formData.company_name);
                   }}
                   placeholder="Enter company name"
                   disabled={isSubmitting}
@@ -517,6 +525,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     data-automation-id="industry"
                     value={formData.properties?.industry || ''}
                     onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
+                    onBlur={() => {
+                      validateField('industry', formData.properties?.industry || '');
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -536,6 +547,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     data-automation-id="url"
                     value={formData.url}
                     onChange={(e) => handleCompanyChange('url', e.target.value)}
+                    onBlur={() => {
+                      validateField('url', formData.url);
+                    }}
                     placeholder="https://example.com"
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
@@ -577,6 +591,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   data-automation-id="address_line1"
                   value={locationData.address_line1}
                   onChange={(e) => handleLocationChange('address_line1', e.target.value)}
+                  onBlur={() => {
+                    validateField('address_line1', locationData.address_line1);
+                  }}
                   disabled={isSubmitting}
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.address_line1 ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -595,6 +612,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     data-automation-id="city"
                     value={locationData.city}
                     onChange={(e) => handleLocationChange('city', e.target.value)}
+                    onBlur={() => {
+                      validateField('city', locationData.city);
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.city ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -612,6 +632,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     data-automation-id="state_province"
                     value={locationData.state_province || ''}
                     onChange={(e) => handleLocationChange('state_province', e.target.value)}
+                    onBlur={() => {
+                      validateField('state_province', locationData.state_province || '');
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.state_province ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -629,6 +652,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     data-automation-id="company-postal-code"
                     value={locationData.postal_code || ''}
                     onChange={(e) => handleLocationChange('postal_code', e.target.value)}
+                    onBlur={() => {
+                      validateField('postal_code', locationData.postal_code || '', { countryCode: locationData.country_code });
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.postal_code ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -658,6 +684,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     label="Phone"
                     value={locationData.phone || ''}
                     onChange={(value) => handleLocationChange('phone', value)}
+                    onBlur={() => {
+                      validateField('location_phone', locationData.phone || '');
+                    }}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}
@@ -678,6 +707,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     type="email"
                     value={locationData.email || ''}
                     onChange={(e) => handleLocationChange('email', e.target.value)}
+                    onBlur={() => {
+                      validateField('location_email', locationData.email || '');
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.location_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -704,6 +736,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   data-automation-id="contact_name"
                   value={contactData.full_name}
                   onChange={(e) => handleContactChange('full_name', e.target.value)}
+                  onBlur={() => {
+                    validateField('contact_name', contactData.full_name);
+                  }}
                   disabled={isSubmitting}
                   className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -723,6 +758,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     type="email"
                     value={contactData.email}
                     onChange={(e) => handleContactChange('email', e.target.value)}
+                    onBlur={() => {
+                      validateField('contact_email', contactData.email);
+                    }}
                     disabled={isSubmitting}
                     className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
@@ -737,6 +775,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     label="Phone"
                     value={contactData.phone_number}
                     onChange={(value) => handleContactChange('phone_number', value)}
+                    onBlur={() => {
+                      validateField('contact_phone', contactData.phone_number);
+                    }}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     disabled={isSubmitting}

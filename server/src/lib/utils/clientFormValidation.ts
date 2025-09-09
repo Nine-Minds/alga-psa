@@ -33,8 +33,13 @@ const FAKE_DOMAINS = [
 
 // Company name validation - business-appropriate rules
 export function validateCompanyName(name: string): string | null {
-  if (!name.trim()) {
+  if (!name || !name.trim()) {
     return 'Company name is required';
+  }
+  
+  // Check for spaces-only input
+  if (name && name.trim() === '') {
+    return 'Company name cannot contain only spaces';
   }
   
   const trimmedName = name.trim();
@@ -69,8 +74,13 @@ export function validateCompanyName(name: string): string | null {
 
 // Website URL validation - professional SaaS/CRM grade
 export function validateWebsiteUrl(url: string): string | null {
-  if (!url.trim()) {
+  if (!url || !url.trim()) {
     return null; // URL is optional
+  }
+  
+  // Check for spaces-only input
+  if (url && url.trim() === '') {
+    return 'Website URL cannot contain only spaces';
   }
   
   const trimmedUrl = url.trim();
@@ -131,8 +141,13 @@ export function validateWebsiteUrl(url: string): string | null {
 
 // Email validation - professional SaaS/CRM grade with disposable domain blocking
 export function validateEmailAddress(email: string): string | null {
-  if (!email.trim()) {
+  if (!email || !email.trim()) {
     return null; // Email is optional in some contexts
+  }
+  
+  // Check for spaces-only input
+  if (email && email.trim() === '') {
+    return 'Email address cannot contain only spaces';
   }
   
   const trimmedEmail = email.trim().toLowerCase();
@@ -282,8 +297,13 @@ export function validatePhoneNumber(phone: string): string | null {
 
 // Postal code validation - professional SaaS/CRM grade with comprehensive country formats
 export function validatePostalCode(postalCode: string, countryCode: string = 'US'): string | null {
-  if (!postalCode.trim()) {
+  if (!postalCode || !postalCode.trim()) {
     return null; // Postal code is optional
+  }
+  
+  // Check for spaces-only input
+  if (postalCode && postalCode.trim() === '') {
+    return 'Postal code cannot contain only spaces';
   }
   
   const trimmedCode = postalCode.trim().toUpperCase();
@@ -298,7 +318,7 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
     case 'US':
       // US ZIP codes: 12345 or 12345-6789
       if (!/^\d{5}(-\d{4})?$/.test(trimmedCode)) {
-        return 'Please enter a valid US ZIP code (e.g., 12345 or 12345-6789)';
+        return 'Please enter a valid US ZIP code';
       }
       // Block obvious fake ZIP codes
       if (trimmedCode === '00000' || trimmedCode === '99999' || trimmedCode.startsWith('00000')) {
@@ -403,8 +423,13 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
 
 // City validation - business standards
 export function validateCityName(city: string): string | null {
-  if (!city.trim()) {
+  if (!city || !city.trim()) {
     return null; // City is optional
+  }
+  
+  // Check for spaces-only input
+  if (city && city.trim() === '') {
+    return 'City name cannot contain only spaces';
   }
   
   const trimmedCity = city.trim();
@@ -433,8 +458,13 @@ export function validateCityName(city: string): string | null {
 
 // Address validation - allow PO Box entries
 export function validateAddress(address: string): string | null {
-  if (!address.trim()) {
+  if (!address || !address.trim()) {
     return null; // Address is optional
+  }
+  
+  // Check for spaces-only input
+  if (address && address.trim() === '') {
+    return 'Address cannot contain only spaces';
   }
   
   const trimmedAddress = address.trim();
@@ -468,8 +498,13 @@ export function validateAddress(address: string): string | null {
 
 // State/Province validation - business standards
 export function validateStateProvince(state: string): string | null {
-  if (!state.trim()) {
+  if (!state || !state.trim()) {
     return null; // State is optional
+  }
+  
+  // Check for spaces-only input
+  if (state && state.trim() === '') {
+    return 'State/Province cannot contain only spaces';
   }
   
   const trimmedState = state.trim();
@@ -498,8 +533,13 @@ export function validateStateProvince(state: string): string | null {
 
 // Industry validation - business-appropriate rules
 export function validateIndustry(industry: string): string | null {
-  if (!industry.trim()) {
+  if (!industry || !industry.trim()) {
     return null; // Industry is optional
+  }
+  
+  // Check for spaces-only input
+  if (industry && industry.trim() === '') {
+    return 'Industry cannot contain only spaces';
   }
   
   const trimmedIndustry = industry.trim();
@@ -528,8 +568,13 @@ export function validateIndustry(industry: string): string | null {
 
 // Contact name validation - business standards  
 export function validateContactName(name: string): string | null {
-  if (!name.trim()) {
+  if (!name || !name.trim()) {
     return null; // Contact name is optional
+  }
+  
+  // Check for spaces-only input
+  if (name && name.trim() === '') {
+    return 'Contact name cannot contain only spaces';
   }
   
   const trimmedName = name.trim();

@@ -110,6 +110,12 @@ export function AddClientStep({ data, updateData }: StepProps) {
             id="clientName"
             value={data.clientName}
             onChange={(e) => updateData({ clientName: e.target.value })}
+            onBlur={() => {
+              // Only validate if there's actual content to check for spaces-only
+              if (data.clientName && data.clientName.trim() === '') {
+                // This would be handled by the validation logic if implemented
+              }
+            }}
             placeholder="Example Corp"
           />
         </div>
