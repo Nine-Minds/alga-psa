@@ -3,6 +3,27 @@ import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
 import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
+// Cache NM Store key to avoid fetching every request
+let NM_STORE_KEY_CACHE: string | null = null;
+let NM_STORE_KEY_LAST_FETCH = 0;
+const NM_STORE_KEY_TTL_MS = 60_000; // 1 minute
+
+async function getNmStoreKeyCached(): Promise<string | null> {
+  const now = Date.now();
+  if (NM_STORE_KEY_CACHE && now - NM_STORE_KEY_LAST_FETCH < NM_STORE_KEY_TTL_MS) {
+    return NM_STORE_KEY_CACHE;
+  }
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const key = await secretProvider.getAppSecret('nm_store_api_key');
+    NM_STORE_KEY_CACHE = key || null;
+    NM_STORE_KEY_LAST_FETCH = now;
+    return NM_STORE_KEY_CACHE;
+  } catch {
+    return null;
+  }
+}
+
 // Extend Express Request type to include Next.js-style properties
 interface AuthenticatedRequest extends Request {
   nextUrl?: { pathname: string };
@@ -141,27 +162,27 @@ export async function apiKeyAuthMiddleware(
     });
   }
 
-  // NM Store special-case: allow specific API paths to use the global key
+  // NM Store special-case: only check secret if path is allowed
   try {
-    const secretProvider = await getSecretProviderInstance();
-    const nmKey = await secretProvider.getAppSecret('nm_store_api_key');
     const path = req.path || '';
     const normalizedPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
-
     const isNmAllowedPath =
       normalizedPath === '/api/v1/users/search' ||
       normalizedPath === '/api/v1/auth/verify';
 
-    if (nmKey && apiKey === nmKey && isNmAllowedPath) {
-      // For user search we require tenant header
-      if (normalizedPath === '/api/v1/users/search') {
-        const tenantId = (req.headers['x-tenant-id'] as string) || '';
-        if (!tenantId) {
-          return res.status(400).json({ error: 'x-tenant-id header required for NM store key' });
+    if (isNmAllowedPath) {
+      const nmKey = await getNmStoreKeyCached();
+      if (nmKey && apiKey === nmKey) {
+        // For user search we require tenant header
+        if (normalizedPath === '/api/v1/users/search') {
+          const tenantId = (req.headers['x-tenant-id'] as string) || '';
+          if (!tenantId) {
+            return res.status(400).json({ error: 'x-tenant-id header required for NM store key' });
+          }
         }
+        // Bypass DB validation and continue to Next.js handlers
+        return next();
       }
-      // Bypass DB validation and continue to Next.js handlers
-      return next();
     }
   } catch (_) {
     // If secret provider fails, fall through to standard validation
