@@ -360,10 +360,13 @@ export function QuickAddTicket({
       if (selectedCategories.length > 0) {
         const category = categories.find(c => c.category_id === selectedCategories[0]);
         if (category) {
-          formData.append('category_id', category.category_id);
           if (category.parent_category) {
-            formData.append('subcategory_id', category.category_id);
+            // This is a subcategory - set parent as category and this as subcategory
             formData.append('category_id', category.parent_category);
+            formData.append('subcategory_id', category.category_id);
+          } else {
+            // This is a parent category - only set category_id
+            formData.append('category_id', category.category_id);
           }
         }
       }
