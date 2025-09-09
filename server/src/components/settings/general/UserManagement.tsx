@@ -50,6 +50,7 @@ const UserManagement = (): JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [contactValidationError, setContactValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -211,6 +212,12 @@ const fetchContacts = async (): Promise<void> => {
 
       if (portalType === 'client') {
         if (!newUser.password) {
+          // Check for validation errors before sending invitation
+          if (contactValidationError) {
+            toast.error('Please fix the validation errors before sending the invitation');
+            return;
+          }
+          
           if (selectedContactId) {
             try {
               const invitationResult = await sendPortalInvitation(selectedContactId);
@@ -507,6 +514,7 @@ const fetchContacts = async (): Promise<void> => {
                         value={selectedContactId || ''}
                         onValueChange={(cid) => {
                           setSelectedContactId(cid || null);
+                          setContactValidationError(null);
                           if (cid) {
                             const c = contacts.find((x) => x.contact_name_id === cid);
                             if (c) {
@@ -518,13 +526,25 @@ const fetchContacts = async (): Promise<void> => {
                                 email: c.email || '',
                                 companyId: c.company_id || ''
                               });
+                              
+                              // Check if contact has email when sending invitation
+                              if (!newUser.password && (!c.email || c.email.trim() === '')) {
+                                setContactValidationError(`Contact "${c.full_name}" is missing an email address. Please update the contact's email before sending an invitation.`);
+                              }
                             }
+                          } else {
+                            setContactValidationError(null);
                           }
                         }}
                         companyId={newUser.companyId || undefined}
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
+                      {contactValidationError && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-sm text-red-600">{contactValidationError}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div>
@@ -536,7 +556,13 @@ const fetchContacts = async (): Promise<void> => {
                         id="password"
                         type={showPassword ? "text" : "password"}
                         value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        onChange={(e) => {
+                          setNewUser({ ...newUser, password: e.target.value });
+                          // Clear validation error when password is entered
+                          if (e.target.value && contactValidationError) {
+                            setContactValidationError(null);
+                          }
+                        }}
                         className="pr-10"
                         placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
                         autoComplete="new-password"
@@ -568,6 +594,7 @@ const fetchContacts = async (): Promise<void> => {
                 <Button 
                   id={`submit-new-${portalType}-user-btn`} 
                   onClick={handleCreateUser}
+                  disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
                 >
                   {portalType === 'msp' ? 'Create User' : newUser.password ? 'Create User' : 'Send Portal Invitation'}
                 </Button>
