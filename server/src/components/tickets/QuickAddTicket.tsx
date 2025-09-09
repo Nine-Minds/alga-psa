@@ -147,6 +147,9 @@ export function QuickAddTicket({
           if (formData.contacts) {
             setContacts(formData.contacts);
           }
+        } else {
+          // No prefilled company, ensure isPrefilledCompany is false
+          setIsPrefilledCompany(false);
         }
 
         if (prefilledContact) {
@@ -169,33 +172,47 @@ export function QuickAddTicket({
 
   useEffect(() => {
     const fetchCompanyData = async () => {
-      if (companyId) {
-        try {
-          // Always fetch locations regardless of whether company is prefilled
-          const locationsData = await getCompanyLocations(companyId);
-          setLocations(locationsData || []);
-          
-          // Only fetch contacts if not prefilled (contacts are already loaded for prefilled companies)
-          if (!isPrefilledCompany) {
-            const contactsData = await getContactsByCompany(companyId, 'all');
-            setContacts(contactsData || []);
-          }
-        } catch (error) {
-          console.error('Error fetching company data:', error);
-          if (!isPrefilledCompany) {
-            setContacts([]);
-          }
-          setLocations([]);
-        }
-      } else {
+      if (!companyId) {
+        // Clear both contacts and locations when no company is selected
         setContacts([]);
         setLocations([]);
+        return;
+      }
+
+      console.log('Fetching company data for:', { companyId, isPrefilledCompany });
+
+      try {
+        // Fetch both locations and contacts (when needed) in parallel
+        const promises: Promise<any>[] = [
+          getCompanyLocations(companyId)
+        ];
+        
+        // Only fetch contacts if not prefilled (contacts are already loaded for prefilled companies)
+        if (!isPrefilledCompany) {
+          promises.push(getContactsByCompany(companyId, 'all'));
+        }
+        
+        const results = await Promise.all(promises);
+        const locationsData = results[0];
+        console.log('Fetched locations:', locationsData);
+        setLocations(locationsData || []);
+        
+        if (!isPrefilledCompany) {
+          const contactsData = results[1];
+          console.log('Fetched contacts:', contactsData);
+          setContacts(contactsData || []);
+        }
+      } catch (error) {
+        console.error('Error fetching company data:', error);
+        setLocations([]);
+        // Only clear contacts if we were trying to fetch them
+        if (!isPrefilledCompany) {
+          setContacts([]);
+        }
       }
     };
 
-    if (companyId) {
-      fetchCompanyData();
-    }
+    fetchCompanyData();
   }, [companyId, isPrefilledCompany]);
 
   useEffect(() => {
@@ -273,6 +290,9 @@ export function QuickAddTicket({
     setContactId(prefilledContact?.id || null);
     setLocationId(null);
     setLocations([]);
+    setContacts([]);
+    // Reset isPrefilledCompany - it will be set to true again if there's a prefilled company
+    setIsPrefilledCompany(false);
     if (prefilledCompany?.id) {
       const company = companies.find(c => c.company_id === prefilledCompany.id);
       setSelectedCompanyType(company?.client_type as 'company' | 'individual' || null);
@@ -354,7 +374,7 @@ export function QuickAddTicket({
       }
 
 
-      onTicketAdded(newTicket);
+      await onTicketAdded(newTicket);
       resetForm();
       onOpenChange(false);
     } catch (error) {
