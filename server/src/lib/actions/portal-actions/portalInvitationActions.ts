@@ -215,11 +215,16 @@ export async function createClientPortalUser(
         }
       }
       if (!targetRoleId) {
-        const roleName = contact?.is_client_admin ? 'Client Admin' : 'Client User';
+        // Use actual role names from seeds: "Admin" or "User"
+        const roleName = contact?.is_client_admin ? 'Admin' : 'User';
         const fallbackRole = await trx('roles')
           .where({ tenant, role_name: roleName, client: true })
           .first();
-        if (fallbackRole) targetRoleId = fallbackRole.role_id;
+        if (fallbackRole) {
+          targetRoleId = fallbackRole.role_id;
+        } else {
+          console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
+        }
       }
       if (targetRoleId) {
         await trx('user_roles').insert({ user_id: created.user_id, role_id: targetRoleId, tenant });
@@ -298,6 +303,17 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
 
     if (!contact) {
       return { success: false, error: 'Contact not found' };
+    }
+
+    // Validate contact has an email address
+    if (!contact.email || contact.email.trim() === '') {
+      return { success: false, error: 'Contact does not have an email address. Please add an email address to the contact before sending an invitation.' };
+    }
+
+    // Validate email format (requires at least 2 characters for TLD)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!emailRegex.test(contact.email.trim())) {
+      return { success: false, error: 'Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.' };
     }
 
     // Do not send invitations for contacts that already have a portal user
@@ -539,8 +555,8 @@ export async function completePortalSetup(
           .where({ tenant, contact_name_id: contact.contact_name_id })
           .first();
         
-        // Find the appropriate role
-        const roleName = fullContact?.is_client_admin ? 'Client Admin' : 'Client User';
+        // Find the appropriate role - use actual role names from seeds: "Admin" or "User"
+        const roleName = fullContact?.is_client_admin ? 'Admin' : 'User';
         const role = await knex('roles')
           .where({ tenant, role_name: roleName, client: true })
           .first();
@@ -552,6 +568,8 @@ export async function completePortalSetup(
             role_id: role.role_id,
             tenant
           });
+        } else {
+          console.warn(`Failed to find client role with name '${roleName}' for tenant ${tenant}`);
         }
       } catch (roleError) {
         console.warn('Failed to assign role to user:', roleError);
