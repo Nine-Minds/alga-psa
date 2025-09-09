@@ -22,6 +22,7 @@ import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
+import { validateBusinessName, validateBusinessEmail, ValidationResult } from 'server/src/lib/utils/validation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -50,6 +51,15 @@ const UserManagement = (): JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    first_name: string[];
+    last_name: string[];
+    email: string[];
+  }>({
+    first_name: [],
+    last_name: [],
+    email: []
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -86,6 +96,55 @@ const UserManagement = (): JSX.Element => {
       hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
     });
   }, [newUser.password]);
+
+  // Validation functions
+  const validateField = (fieldName: keyof typeof fieldErrors, value: string) => {
+    let validation: ValidationResult;
+    
+    switch (fieldName) {
+      case 'first_name':
+        validation = validateBusinessName(value, 'First name');
+        break;
+      case 'last_name':
+        validation = validateBusinessName(value, 'Last name');
+        break;
+      case 'email':
+        validation = validateBusinessEmail(value);
+        break;
+      default:
+        validation = { isValid: true, errors: [] };
+    }
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: validation.errors
+    }));
+    
+    return validation.isValid;
+  };
+
+  const validateAllFields = () => {
+    const firstNameValid = validateField('first_name', newUser.firstName);
+    const lastNameValid = validateField('last_name', newUser.lastName);
+    const emailValid = validateField('email', newUser.email);
+    
+    return firstNameValid && lastNameValid && emailValid;
+  };
+
+  const handleFieldChange = (fieldName: keyof typeof fieldErrors, value: string) => {
+    // Update the user state using the camelCase property names
+    const userFieldMap = {
+      first_name: 'firstName',
+      last_name: 'lastName', 
+      email: 'email'
+    } as const;
+    
+    const userField = userFieldMap[fieldName];
+    setNewUser(prev => ({ ...prev, [userField]: value }));
+    
+    // Validate the field in real-time
+    validateField(fieldName, value);
+  };
 
   const fetchLicenseUsage = async (): Promise<void> => {
     if (portalType === 'msp') {
@@ -195,6 +254,13 @@ const fetchContacts = async (): Promise<void> => {
       // Clear any previous errors
       setError(null);
       
+      // Validate all fields first
+      const fieldsValid = validateAllFields();
+      if (!fieldsValid) {
+        setError('Please fix the validation errors before continuing');
+        return;
+      }
+      
       // Validate required fields based on portal type
       if (portalType === 'msp') {
         if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
@@ -288,6 +354,12 @@ const fetchContacts = async (): Promise<void> => {
         role: roles.length > 0 ? roles[0].role_id : '',
         companyId: ''
       });
+      // Clear field errors
+      setFieldErrors({
+        first_name: [],
+        last_name: [],
+        email: []
+      });
     } catch (error: any) {
       console.error('Error creating user:', error);
       // Display specific error message if available
@@ -326,6 +398,11 @@ const fetchContacts = async (): Promise<void> => {
       companyId: ''
     });
     setError(null);
+    setFieldErrors({
+      first_name: [],
+      last_name: [],
+      email: []
+    });
   };
 
   const statusOptions = [
@@ -438,19 +515,21 @@ const fetchContacts = async (): Promise<void> => {
                 {/* Left column: manual details */}
                 <div className="space-y-2">
                   <div>
-                    <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="first-name">First Name <span className="text-red-500">*</span></Label>
                     <Input
-                      id="firstName"
+                      id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      errors={fieldErrors.first_name}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="last-name">Last Name <span className="text-red-500">*</span></Label>
                     <Input
-                      id="lastName"
+                      id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      errors={fieldErrors.last_name}
                     />
                   </div>
                   <div>
@@ -459,7 +538,8 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      errors={fieldErrors.email}
                     />
                   </div>
                   {portalType === 'client' && (
@@ -585,6 +665,11 @@ const fetchContacts = async (): Promise<void> => {
                       companyId: ''
                     });
                     setError(null);
+                    setFieldErrors({
+                      first_name: [],
+                      last_name: [],
+                      email: []
+                    });
                   }}
                 >
                   Cancel

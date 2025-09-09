@@ -477,11 +477,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Company Name *
                 </Label>
                 <Input
-                  id="company_name"
+                  id="company-name"
                   data-automation-id="company-name-input"
                   value={formData.company_name}
                   onChange={(e) => {
@@ -501,11 +501,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="client_type_select" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="client-type-select" className="block text-sm font-medium text-gray-700 mb-1">
                     Client Type
                   </Label>
                   <CustomSelect
-                    data-automation-id="client_type_select"
+                    id="client-type-select"
+                    data-automation-id="client-type-select"
                     options={[
                       { value: 'company', label: 'Company' },
                       { value: 'individual', label: 'Individual' }
@@ -560,11 +561,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="account_manager_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">
                     Account Manager
                   </Label>
                   <UserPicker
-                    data-automation-id="account_manager_picker"
+                    data-automation-id="account-manager-picker"
                     value={formData.account_manager_id || ''}
                     onValueChange={(value) => handleCompanyChange('account_manager_id', value)}
                     users={internalUsers}
@@ -583,12 +584,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="address_line1" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
                   Street Address
                 </Label>
                 <Input
-                  id="address_line1"
-                  data-automation-id="address_line1"
+                  id="address-line-1"
+                  data-automation-id="address-line-1"
                   value={locationData.address_line1}
                   onChange={(e) => handleLocationChange('address_line1', e.target.value)}
                   onBlur={() => {
@@ -624,12 +625,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="state_province" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
                     State
                   </Label>
                   <Input
-                    id="state_province"
-                    data-automation-id="state_province"
+                    id="state-province"
+                    data-automation-id="state-province"
                     value={locationData.state_province || ''}
                     onChange={(e) => handleLocationChange('state_province', e.target.value)}
                     onBlur={() => {
@@ -664,11 +665,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label className="block text-sm font-medium text-gray-700 mb-1">
                     Country
                   </Label>
                   <CountryPicker
-                    data-automation-id="country_picker"
+                    data-automation-id="country-picker"
                     value={locationData.country_code}
                     onValueChange={handleCountryChange}
                     countries={countries}
@@ -728,12 +729,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="contact_name" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Name
                 </Label>
                 <Input
-                  id="contact_name"
-                  data-automation-id="contact_name"
+                  id="contact-name"
+                  data-automation-id="contact-name"
                   value={contactData.full_name}
                   onChange={(e) => handleContactChange('full_name', e.target.value)}
                   onBlur={() => {
