@@ -81,30 +81,37 @@ function TreeSelect<T extends string>({
       console.error('TreeSelect: options is not an array', options);
       return;
     }
-    
-    if (value) {
-      setSelectedValue(value);
-      const result = findSelectedOptionWithPath(options, value);
-      if (result) {
-        // Expand all parent nodes
-        setExpandedItems(prev => {
-          const next = new Set(prev);
-          result.path.forEach((p: TreeSelectOption<T>): void => {
-            next.add(p.value);
-          });
-          return next;
-        });
 
-        // Build the path object
-        const pathObj: TreeSelectPath = {};
-        result.path.forEach((opt: TreeSelectOption<T>): void => {
-          pathObj[opt.type] = opt.value;
-        });
+    // If value is empty, clear selection and label
+    if (!value) {
+      setSelectedValue('');
+      setDisplayLabel('');
+      setExpandedItems(new Set());
+      return;
+    }
 
-        // Set display label to show the full path
-        const labels = result.path.map((p: TreeSelectOption<T>): string => p.label);
-        setDisplayLabel(labels.join(' > '));
-      }
+    // Otherwise, find and reflect the selected option
+    setSelectedValue(value);
+    const result = findSelectedOptionWithPath(options, value);
+    if (result) {
+      // Expand all parent nodes
+      setExpandedItems(prev => {
+        const next = new Set(prev);
+        result.path.forEach((p: TreeSelectOption<T>): void => {
+          next.add(p.value);
+        });
+        return next;
+      });
+
+      // Build the path object (not used directly here, but kept for parity)
+      const pathObj: TreeSelectPath = {};
+      result.path.forEach((opt: TreeSelectOption<T>): void => {
+        pathObj[opt.type] = opt.value;
+      });
+
+      // Set display label to show the full path
+      const labels = result.path.map((p: TreeSelectOption<T>): string => p.label);
+      setDisplayLabel(labels.join(' > '));
     }
   }, [value, options]);
 
