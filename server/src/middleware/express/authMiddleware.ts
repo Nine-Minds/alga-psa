@@ -141,6 +141,32 @@ export async function apiKeyAuthMiddleware(
     });
   }
 
+  // NM Store special-case: allow specific API paths to use the global key
+  try {
+    const secretProvider = await getSecretProviderInstance();
+    const nmKey = await secretProvider.getAppSecret('nm_store_api_key');
+    const path = req.path || '';
+    const normalizedPath = path.endsWith('/') && path.length > 1 ? path.slice(0, -1) : path;
+
+    const isNmAllowedPath =
+      normalizedPath === '/api/v1/users/search' ||
+      normalizedPath === '/api/v1/auth/verify';
+
+    if (nmKey && apiKey === nmKey && isNmAllowedPath) {
+      // For user search we require tenant header
+      if (normalizedPath === '/api/v1/users/search') {
+        const tenantId = (req.headers['x-tenant-id'] as string) || '';
+        if (!tenantId) {
+          return res.status(400).json({ error: 'x-tenant-id header required for NM store key' });
+        }
+      }
+      // Bypass DB validation and continue to Next.js handlers
+      return next();
+    }
+  } catch (_) {
+    // If secret provider fails, fall through to standard validation
+  }
+
   // Allowlist: accept ALGA_AUTH_KEY for specific internal endpoints used by Runner
   try {
     const path = req.path || '';
