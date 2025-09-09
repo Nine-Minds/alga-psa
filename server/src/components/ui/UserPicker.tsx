@@ -11,6 +11,7 @@ import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIC
 import { CommonActions } from '../../types/ui-reflection/actionBuilders';
 
 interface UserPickerProps {
+  id?: string;
   label?: string;
   value: string;
   onValueChange: (value: string) => void;
@@ -55,6 +56,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, classNa
 };
 
 const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({ 
+  id,
   label, 
   value, 
   onValueChange, 
@@ -304,6 +306,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       {/* Trigger Button */}
       <button
         ref={buttonRef}
+        id={id}
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}

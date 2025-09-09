@@ -554,10 +554,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Account Manager
                   </Label>
                   <UserPicker
+                    id="account-manager-picker"
                     data-automation-id="account-manager-picker"
                     value={formData.account_manager_id || ''}
                     onValueChange={(value) => handleCompanyChange('account_manager_id', value)}
@@ -658,10 +659,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 </div>
 
                 <div>
-                  <Label className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Country
                   </Label>
                   <CountryPicker
+                    id="country-picker"
                     data-automation-id="country-picker"
                     value={locationData.country_code}
                     onValueChange={handleCountryChange}
@@ -787,12 +789,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {/* Additional Settings */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="company-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
                   Notes
                 </Label>
                 <TextArea
-                  id="notes"
-                  data-automation-id="notes"
+                  id="company-notes-input"
+                  data-automation-id="company-notes-input"
                   value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
                   onBlur={() => {
@@ -814,7 +816,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <DialogFooter>
           <div className="flex justify-between mt-6 w-full">
             <Button
-              id="cancel-create-company-button"
+              id="cancel-dialog-btn"
               type="button"
               variant="ghost"
               disabled={isSubmitting}

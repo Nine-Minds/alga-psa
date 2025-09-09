@@ -10,6 +10,7 @@ interface Country {
 }
 
 interface CountryPickerProps {
+  id?: string;
   label?: string;
   value: string;
   onValueChange: (countryCode: string, countryName: string) => void;
@@ -22,6 +23,7 @@ interface CountryPickerProps {
 }
 
 const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({ 
+  id,
   label, 
   value, 
   onValueChange, 
@@ -164,6 +166,7 @@ const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({
       {/* Trigger Button */}
       <button
         ref={buttonRef}
+        id={id}
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}
