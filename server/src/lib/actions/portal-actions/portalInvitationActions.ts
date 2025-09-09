@@ -9,6 +9,7 @@ import { TenantEmailService } from '../../services/TenantEmailService';
 import { UserService } from '../../api/services/UserService';
 import { runAsSystem, createSystemContext } from '../../api/services/SystemContext';
 import { hasPermission } from '../../auth/rbac';
+import { validateEmail } from '../../api/schemas/common';
 
 export interface SendInvitationResult {
   success: boolean;
@@ -310,9 +311,8 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       return { success: false, error: 'Contact does not have an email address. Please add an email address to the contact before sending an invitation.' };
     }
 
-    // Validate email format (requires at least 2 characters for TLD)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-    if (!emailRegex.test(contact.email.trim())) {
+    // Validate email format using shared validator
+    if (!validateEmail(contact.email.trim())) {
       return { success: false, error: 'Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.' };
     }
 
