@@ -169,20 +169,25 @@ export function QuickAddTicket({
 
   useEffect(() => {
     const fetchCompanyData = async () => {
-      if (companyId && !isPrefilledCompany) {
+      if (companyId) {
         try {
-          const [contactsData, locationsData] = await Promise.all([
-            getContactsByCompany(companyId, 'all'),
-            getCompanyLocations(companyId)
-          ]);
-          setContacts(contactsData || []);
+          // Always fetch locations regardless of whether company is prefilled
+          const locationsData = await getCompanyLocations(companyId);
           setLocations(locationsData || []);
+          
+          // Only fetch contacts if not prefilled (contacts are already loaded for prefilled companies)
+          if (!isPrefilledCompany) {
+            const contactsData = await getContactsByCompany(companyId, 'all');
+            setContacts(contactsData || []);
+          }
         } catch (error) {
           console.error('Error fetching company data:', error);
-          setContacts([]);
+          if (!isPrefilledCompany) {
+            setContacts([]);
+          }
           setLocations([]);
         }
-      } else if (!isPrefilledCompany) {
+      } else {
         setContacts([]);
         setLocations([]);
       }
@@ -349,7 +354,7 @@ export function QuickAddTicket({
       }
 
 
-      await onTicketAdded(newTicket);
+      onTicketAdded(newTicket);
       resetForm();
       onOpenChange(false);
     } catch (error) {
@@ -367,14 +372,6 @@ export function QuickAddTicket({
     return true;
   });
 
-  const memoizedUserOptions = useMemo(
-    () =>
-      users.map((user) => ({
-        value: user.user_id,
-        label: user.first_name + ' ' + user.last_name,
-      })),
-    [users]
-  );
 
   const memoizedStatusOptions = useMemo(
     () =>
