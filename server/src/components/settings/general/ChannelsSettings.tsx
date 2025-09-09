@@ -297,7 +297,7 @@ const ChannelsSettings: React.FC = () => {
             id="add-channel-button"
             onClick={() => {
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: channels.length + 1, is_inactive: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"

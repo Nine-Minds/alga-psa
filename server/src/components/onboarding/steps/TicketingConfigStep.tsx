@@ -318,7 +318,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           });
         }
         
-        setImportedChannels(prev => [...prev, ...(result.imported as any[])]);
+        // Sort channels by display_order to maintain proper order
+        const allChannels = [...importedChannels, ...(result.imported as any[])].sort((a, b) => 
+          (a.display_order || 0) - (b.display_order || 0)
+        );
+        setImportedChannels(allChannels);
         
         // If we don't have a channel set yet, use the first imported
         if (!data.channelId) {
@@ -378,8 +382,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         // Update data with full category objects, not just names
         const existingCategoryIds = (data.categories as any[]).map((cat: any) => cat.category_id);
         const newCategories = importedCategoryObjects.filter((cat: any) => !existingCategoryIds.includes(cat.category_id));
+        
+        // Sort all categories by display_order to maintain proper order
+        const allCategories = [...data.categories, ...newCategories].sort((a, b) => {
+          // Parent categories first
+          if (!a.parent_category && b.parent_category) return -1;
+          if (a.parent_category && !b.parent_category) return 1;
+          
+          // Then by display order
+          return (a.display_order || 0) - (b.display_order || 0);
+        });
+        
         updateData({ 
-          categories: [...data.categories, ...newCategories]
+          categories: allCategories
         });
       }
       
@@ -426,10 +441,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           }
         }
         
-        setImportedStatuses(prev => [...prev, ...result.imported]);
+        // Sort statuses by order_number to maintain proper order
+        const allImportedStatuses = [...importedStatuses, ...result.imported].sort((a, b) => 
+          (a.order_number || 0) - (b.order_number || 0)
+        );
+        setImportedStatuses(allImportedStatuses);
+        
+        // Sort all statuses by order_number
+        const allStatuses = [...(data.statuses || []), ...result.imported].sort((a, b) => 
+          (a.order_number || 0) - (b.order_number || 0)
+        );
         updateData({ 
           statusesImported: true,
-          statuses: [...(data.statuses || []), ...result.imported]
+          statuses: allStatuses
         });
       }
       
@@ -456,10 +480,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Track imported priorities
       if (result.imported?.length > 0) {
-        setImportedPriorities(prev => [...prev, ...result.imported]);
-        // Pass full priority objects, not just names
+        // Sort priorities by order_number to maintain proper order
+        const allImportedPriorities = [...importedPriorities, ...result.imported].sort((a, b) => 
+          (a.order_number || 0) - (b.order_number || 0)
+        );
+        setImportedPriorities(allImportedPriorities);
+        
+        // Pass full priority objects, not just names, sorted by order
+        const allPriorities = [...data.priorities, ...result.imported].sort((a, b) => 
+          (a.order_number || 0) - (b.order_number || 0)
+        );
         updateData({ 
-          priorities: [...data.priorities, ...result.imported]
+          priorities: allPriorities
         });
       }
       
@@ -518,8 +550,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         display_order: displayOrder
       });
       
-      // Update wizard data with the created category
-      updateData({ categories: [...data.categories, createdCategory] });
+      // Update wizard data with the created category and sort by display_order
+      const allCategories = [...data.categories, createdCategory].sort((a, b) => {
+        // Parent categories first
+        if (!a.parent_category && b.parent_category) return -1;
+        if (a.parent_category && !b.parent_category) return 1;
+        
+        // Then by display order
+        return (a.display_order || 0) - (b.display_order || 0);
+      });
+      
+      updateData({ categories: allCategories });
       setImportedCategories(prev => [...prev, createdCategory.category_name]);
       
       // Reset form and close dialog
@@ -551,8 +592,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       
       // Calculate the next order number if not provided or if already in use
       let orderNumber = priorityForm.displayOrder;
-      const allPriorities = [...importedPriorities, ...data.priorities.filter(p => typeof p === 'object')];
-      const maxOrder = allPriorities.reduce((max, priority) => 
+      const existingPriorities = [...importedPriorities, ...data.priorities.filter(p => typeof p === 'object')];
+      const maxOrder = existingPriorities.reduce((max, priority) => 
         Math.max(max, priority.order_number || 0), 0
       );
       
@@ -560,7 +601,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         orderNumber = maxOrder + 1;
       } else {
         // Check if the provided order is already in use
-        const isOrderInUse = allPriorities.some(p => p.order_number === orderNumber);
+        const isOrderInUse = existingPriorities.some(p => p.order_number === orderNumber);
         if (isOrderInUse) {
           orderNumber = maxOrder + 1;
         }
@@ -576,11 +617,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         created_at: new Date()
       });
       
-      // Add full priority object to data
-      updateData({ priorities: [...data.priorities, createdPriority] });
+      // Add full priority object to data and sort by order_number
+      const allPriorities = [...data.priorities, createdPriority]
+        .filter(p => typeof p === 'object')
+        .sort((a, b) => (a.order_number || 0) - (b.order_number || 0));
+      updateData({ priorities: allPriorities });
       
-      // Also track for display
-      setImportedPriorities(prev => [...prev, createdPriority]);
+      // Also track for display, sorted by order_number
+      setImportedPriorities(prev => {
+        const allImported = [...prev, createdPriority].sort((a, b) => 
+          (a.order_number || 0) - (b.order_number || 0)
+        );
+        return allImported;
+      });
       
       // Reset form and close dialog
       setPriorityForm({ name: '', color: '#3b82f6', displayOrder: 0 });
@@ -1021,8 +1070,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           is_default: isDefault
                         });
                         
-                        // Add to imported channels list
-                        setImportedChannels(prev => [...prev, createdChannel]);
+                        // Add to imported channels list and sort by display_order
+                        setImportedChannels(prev => {
+                          const allChannels = [...prev, createdChannel].sort((a, b) => 
+                            (a.display_order || 0) - (b.display_order || 0)
+                          );
+                          return allChannels;
+                        });
                         
                         // Update wizard data if this is the first channel
                         if (!data.channelId) {
