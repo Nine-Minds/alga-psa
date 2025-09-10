@@ -12,6 +12,7 @@ import TemplateLibrary from 'server/src/components/automation-hub/TemplateLibrar
 import Workflows from 'server/src/components/automation-hub/Workflows';
 import EventsCatalog from 'server/src/components/automation-hub/EventsCatalog';
 import LogsHistory from 'server/src/components/automation-hub/LogsHistory';
+import FeatureFlagPageWrapper from '../FeatureFlagPageWrapper';
 
 export default function AutomationHub() {
   const router = useRouter();
@@ -48,15 +49,15 @@ export default function AutomationHub() {
   const tabs = [
     {
       label: 'Template Library',
-      content: <TemplateLibrary />,
+      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><TemplateLibrary /></FeatureFlagPageWrapper>
     },
     {
       label: 'Workflows',
-      content: <Workflows workflowId={workflowId} />,
+      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><Workflows workflowId={workflowId} /></FeatureFlagPageWrapper>
     },
     {
       label: 'Events Catalog',
-      content: <EventsCatalog />,
+      content: <FeatureFlagPageWrapper featureFlag="advanced-features-enabled"><EventsCatalog /></FeatureFlagPageWrapper>
     },
     {
       label: 'Logs & History',
