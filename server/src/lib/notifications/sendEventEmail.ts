@@ -34,7 +34,7 @@ function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string
 async function getTenantEmailSettings(tenantId: string, knex: any): Promise<TenantEmailSettings | null> {
   try {
     const settings = await knex('tenant_email_settings')
-      .where({ tenant_id: tenantId })
+      .where({ tenant: tenantId })
       .first();
     
     if (!settings) {

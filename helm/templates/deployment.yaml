@@ -101,7 +101,7 @@ spec:
           - name: NODE_ENV
             value: "{{ .Values.env }}"
           - name: HOST
-            value: "{{ .Values.host }}"
+            value: "{{ include "sebastian.resolveHost" . }}"
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
 
@@ -179,22 +179,20 @@ spec:
           - name: DB_NAME_SERVER
             value: "{{ .Values.config.db.server_database }}"
           - name: DB_PASSWORD_ADMIN
-            {{- if and .Values.config.db.server_password_admin_secret.name .Values.config.db.server_password_admin_secret.key }}
+            {{- with .Values.config.db.server_password_admin_secret }}
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.config.db.server_password_admin_secret.name | quote }}
-                key: {{ .Values.config.db.server_password_admin_secret.key | quote }}
-                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+                name: {{ .name | quote }}
+                key: {{ .key | quote }}
             {{- else }}
             value: {{ .Values.config.db.server_admin_password | quote }}
             {{- end }}
           - name: DB_PASSWORD_SERVER
-            {{- if and .Values.config.db.server_password_secret.name .Values.config.db.server_password_secret.key }}
+            {{- with .Values.config.db.server_password_secret }}
             valueFrom:
               secretKeyRef:
-                name: {{ .Values.config.db.server_password_secret.name | quote }}
-                key: {{ .Values.config.db.server_password_secret.key | quote }}
-                namespace: {{ .Values.config.db.server_password_admin_secret.namespace | quote }}
+                name: {{ .name | quote }}
+                key: {{ .key | quote }}
             {{- else }}
             value: {{ .Values.config.db.server_password | quote }}
             {{- end }}

@@ -91,7 +91,7 @@ export class TenantEmailService extends BaseEmailService {
   ): Promise<TenantEmailSettings | null> {
     try {
       const settings = await knex('tenant_email_settings')
-        .where({ tenant_id: tenantId })
+        .where({ tenant: tenantId })
         .first();
       
       if (!settings) {
