@@ -1870,11 +1870,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           order_number: orderNumber
                         });
                         
-                        // Add to imported statuses list
-                        setImportedStatuses(prev => [...prev, createdStatus]);
+                        // Add to imported statuses list, sorted by order_number
+                        setImportedStatuses(prev => {
+                          const allImported = [...prev, createdStatus].sort((a, b) => 
+                            (a.order_number || 0) - (b.order_number || 0)
+                          );
+                          return allImported;
+                        });
                         
-                        // Track all statuses in form data
-                        const allStatuses = [...importedStatuses, createdStatus];
+                        // Track all statuses in form data, sorted by order_number
+                        const allStatuses = [...importedStatuses, createdStatus].sort((a, b) => 
+                          (a.order_number || 0) - (b.order_number || 0)
+                        );
                         updateData({ statuses: allStatuses });
                         
                         // Reset and close
