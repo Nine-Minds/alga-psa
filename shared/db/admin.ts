@@ -21,6 +21,7 @@ export async function getAdminConnection() {
             adminConnection = null;
         }
     }
+    
 
     const environment = process.env.NODE_ENV || 'development';
     const dbPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
