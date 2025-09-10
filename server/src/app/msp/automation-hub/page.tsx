@@ -6,8 +6,6 @@ import FeatureFlagPageWrapper from "server/src/components/FeatureFlagPageWrapper
 
 export default function AutomationHubPage() {
   return (
-    <FeatureFlagPageWrapper featureFlag="advanced-features-enabled">
-      <AutomationHub />
-    </FeatureFlagPageWrapper>
+    <AutomationHub />
   );
 }

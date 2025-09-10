@@ -372,7 +372,7 @@ const fetchContacts = async (): Promise<void> => {
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">
-                MSP users: {licenseUsage.used} 
+                MSP users: {licenseUsage.used} During the pre-release please email support@nineminds.com to adjust.
                 {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licences used` : ' (No limit)'}
               </span>
             </div>
