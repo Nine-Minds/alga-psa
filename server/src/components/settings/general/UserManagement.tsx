@@ -9,7 +9,6 @@ import { addContact, getContactsByCompany, getAllContacts, getContactsEligibleFo
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
-import { createTenantKnex } from 'server/src/lib/db';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -19,10 +18,9 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
-import { validateBusinessName, validateBusinessEmail, ValidationResult } from 'server/src/lib/utils/validation';
+import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -100,28 +98,32 @@ const UserManagement = (): JSX.Element => {
 
   // Validation functions
   const validateField = (fieldName: keyof typeof fieldErrors, value: string) => {
-    let validation: ValidationResult;
+    let error: string | null = null;
+    let errors: string[] = [];
     
     switch (fieldName) {
       case 'first_name':
-        validation = validateBusinessName(value, 'First name');
+        error = validateContactName(value);
+        if (error) errors = [error];
         break;
       case 'last_name':
-        validation = validateBusinessName(value, 'Last name');
+        error = validateContactName(value);
+        if (error) errors = [error];
         break;
       case 'email':
-        validation = validateBusinessEmail(value);
+        error = validateEmailAddress(value);
+        if (error) errors = [error];
         break;
       default:
-        validation = { isValid: true, errors: [] };
+        errors = [];
     }
     
     setFieldErrors(prev => ({
       ...prev,
-      [fieldName]: validation.errors
+      [fieldName]: errors
     }));
     
-    return validation.isValid;
+    return errors.length === 0;
   };
 
   const validateAllFields = () => {
