@@ -4,7 +4,6 @@ import { getSecret } from '@shared/core/getSecret.js';
 import process from 'process';
 
 let adminConnection: any = null;
-
 export async function getAdminConnection() {
     const connectionId = Math.random().toString(36).substring(7);
     // console.log(`[getAdminConnection:${connectionId}] Called - adminConnection exists:`, !!adminConnection);
