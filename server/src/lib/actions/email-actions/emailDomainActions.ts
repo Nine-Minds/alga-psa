@@ -33,7 +33,7 @@ export async function getEmailDomains(): Promise<DomainStatus[]> {
 
   try {
     const domains = await knex('email_domains')
-      .where({ tenant_id: tenant })
+      .where({ tenant: tenant })
       .select('*')
       .orderBy('created_at', 'desc');
 

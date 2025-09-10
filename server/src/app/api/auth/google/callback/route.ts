@@ -241,9 +241,7 @@ export async function GET(request: NextRequest) {
                 if (tenant) qb.andWhere('tenant', tenant);
               })
               .update({
-                connection_status: 'connected',
                 status: 'connected',
-                connection_error_message: null,
                 updated_at: knex.fn.now(),
               });
             console.log(`🔗 Provider ${stateData.providerId} marked as connected`);
