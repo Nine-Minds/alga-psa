@@ -2,13 +2,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { TimeSheet } from './time-sheet/TimeSheet';
+import { useRouter } from 'next/navigation';
 import { TimePeriodList } from './TimePeriodList';
 import { SkeletonTimeSheet } from './SkeletonTimeSheet';
-import { ITimeSheetView, ITimePeriodWithStatusView, ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
+import { ITimePeriodWithStatusView } from 'server/src/interfaces/timeEntry.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { fetchTimePeriods, fetchOrCreateTimeSheet, saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
-import { useTeamAuth } from 'server/src/hooks/useTeamAuth';
+import { fetchTimePeriods, fetchOrCreateTimeSheet } from 'server/src/lib/actions/timeEntryActions';
 
 
 interface TimeTrackingProps {
@@ -17,8 +16,8 @@ interface TimeTrackingProps {
 }
 
 export default function TimeTracking({ currentUser, isManager }: TimeTrackingProps) {
+  const router = useRouter();
   const [timePeriods, setTimePeriods] = useState<ITimePeriodWithStatusView[]>([]);
-  const [selectedTimeSheet, setSelectedTimeSheet] = useState<ITimeSheetView | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -36,50 +35,14 @@ export default function TimeTracking({ currentUser, isManager }: TimeTrackingPro
   };
 
   const handleSelectTimePeriod = async (timePeriod: ITimePeriodWithStatusView) => {
-    const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, timePeriod.period_id);
-    setSelectedTimeSheet(timeSheet);
-  };
-
-  const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
     try {
-      console.log('Saving time entry:', timeEntry);
-      timeEntry.time_sheet_id = selectedTimeSheet?.id;
-      const savedTimeEntry = await saveTimeEntry(timeEntry);
-      console.log('Time entry saved successfully:', savedTimeEntry);
-
-      // Optionally, update the local state or refresh the time entries
-      // For example, you might want to refresh the entire time sheet
-      if (selectedTimeSheet) {
-        const updatedTimeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, selectedTimeSheet.period_id);
-        setSelectedTimeSheet(updatedTimeSheet);
-      }
-
-      // You can also add some user feedback here, like a toast notification
+      const timeSheet = await fetchOrCreateTimeSheet(currentUser.user_id, timePeriod.period_id);
+      // Navigate to the timesheet page with its ID
+      router.push(`/msp/time-entry/timesheet/${timeSheet.id}`);
     } catch (error) {
-      console.error('Error saving time entry:', error);
-      // Handle the error (e.g., show an error message to the user)
+      console.error('Error creating/fetching timesheet:', error);
     }
   };
-
-  const handleSubmitTimeSheet = async () => {
-    // Implement submit logic
-  };
-
-  const handleBack = () => {
-    setSelectedTimeSheet(null);
-  };
-
-  if (selectedTimeSheet) {
-    return (
-      <TimeSheet
-        timeSheet={selectedTimeSheet}
-        onSaveTimeEntry={handleSaveTimeEntry}
-        isManager={isManager}
-        onSubmitTimeSheet={handleSubmitTimeSheet}
-        onBack={handleBack}
-      />
-    );
-  }
 
   if (isLoading) {
     return <SkeletonTimeSheet />;

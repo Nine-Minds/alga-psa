@@ -151,6 +151,7 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
                 type="checkbox"
                 checked={selectedTimeSheets.includes(record.id)}
                 onChange={() => handleSelectTimeSheet(record.id)}
+                onClick={(e) => e.stopPropagation()}
                 disabled={
                   record.approval_status === 'CHANGES_REQUESTED' ||
                   record.approval_status === 'APPROVED'

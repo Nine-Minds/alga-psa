@@ -470,8 +470,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="client_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name *
+                <Label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Name *
                 </Label>
                 <Input
                   id="company-name"
