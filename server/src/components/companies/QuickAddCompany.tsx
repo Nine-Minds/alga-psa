@@ -331,12 +331,12 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {/* Company Details Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Company Details
+                Client Details
               </h3>
               
               <div>
                 <Label htmlFor="company_name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Company Name *
+                  Client Name *
                 </Label>
                 <Input
                   data-automation-id="company-name-input"
@@ -345,7 +345,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     handleCompanyChange('company_name', e.target.value);
                     clearErrorIfSubmitted();
                   }}
-                  placeholder="Enter company name"
+                  placeholder="Enter client name"
                   disabled={isSubmitting}
                   className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && !formData.company_name.trim() ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -417,7 +417,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {/* Company Location Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Company Location
+                Client Location
               </h3>
               
               <div>
