@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, FormFieldComponent } from '../../types/ui-reflection/types';
 import { Input } from './Input';
+import { Button } from './Button';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 
 interface Country {
@@ -10,6 +11,7 @@ interface Country {
 }
 
 interface CountryPickerProps {
+  id?: string;
   label?: string;
   value: string;
   onValueChange: (countryCode: string, countryName: string) => void;
@@ -22,6 +24,7 @@ interface CountryPickerProps {
 }
 
 const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({ 
+  id,
   label, 
   value, 
   onValueChange, 
@@ -162,13 +165,15 @@ const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({
       )}
       
       {/* Trigger Button */}
-      <button
+      <Button
+        {...pickerProps}
         ref={buttonRef}
+        id={id || pickerProps['data-automation-id'] || 'country-picker-button'}
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}
-        {...pickerProps}
-        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ${
+        variant="outline"
+        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[200px]'
         }`}
       >
@@ -181,7 +186,7 @@ const CountryPicker: React.FC<CountryPickerProps & AutomationProps> = ({
           <span className="truncate">{selectedCountryName}</span>
         </div>
         <ChevronDown className="w-4 h-4 text-gray-500" />
-      </button>
+      </Button>
       
       {/* Dropdown */}
       {isOpen && (

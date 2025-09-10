@@ -27,6 +27,20 @@ import CountryPicker from 'server/src/components/ui/CountryPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import toast from 'react-hot-toast';
 import ClientCreatedDialog from './ClientCreatedDialog';
+import { 
+  validateClientForm, 
+  validateCompanyName, 
+  validateWebsiteUrl, 
+  validateEmailAddress, 
+  validatePhoneNumber, 
+  validatePostalCode, 
+  validateCityName, 
+  validateAddress, 
+  validateContactName,
+  validateStateProvince,
+  validateIndustry,
+  validateNotes
+} from 'server/src/lib/utils/clientFormValidation';
 
 type CreateCompanyData = Omit<ICompany, "company_id" | "created_at" | "updated_at" | "notes_document_id" | "status" | "tenant" | "deleted_at">;
 
@@ -106,6 +120,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [showSuccess, setShowSuccess] = useState(false);
   const [createdCompany, setCreatedCompany] = useState<ICompany | null>(null);
   const router = useRouter();
@@ -151,24 +166,108 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       setError(null);
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
+      setFieldErrors({});
     }
   }, [open]);
 
+  // Real-time field validation function
+  const validateField = (fieldName: string, value: string, additionalData?: any) => {
+    let error: string | null = null;
+    
+    // If field is empty, only validate if it's a required field
+    if (!value || !value.trim()) {
+      // Only company name is required, all other fields are optional
+      if (fieldName === 'company_name') {
+        error = 'Company name is required';
+      }
+      // For optional fields, clear any existing errors when empty
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: ''
+      }));
+      return error;
+    }
+    
+    switch (fieldName) {
+      case 'company_name':
+        error = validateCompanyName(value);
+        break;
+      case 'url':
+        error = validateWebsiteUrl(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
+        break;
+      case 'location_email':
+        error = validateEmailAddress(value);
+        break;
+      case 'location_phone':
+        error = validatePhoneNumber(value);
+        break;
+      case 'postal_code':
+        error = validatePostalCode(value, additionalData?.countryCode);
+        break;
+      case 'city':
+        error = validateCityName(value);
+        break;
+      case 'state_province':
+        error = validateStateProvince(value);
+        break;
+      case 'address_line1':
+        error = validateAddress(value);
+        break;
+      case 'contact_name':
+        error = validateContactName(value);
+        break;
+      case 'contact_email':
+        error = validateEmailAddress(value);
+        break;
+      case 'contact_phone':
+        error = validatePhoneNumber(value);
+        break;
+      case 'notes':
+        error = validateNotes(value);
+        break;
+    }
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+    
+    return error;
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
 
     setHasAttemptedSubmit(true);
-    const errors: string[] = [];
     
-    // Validate required fields
-    if (!formData.company_name.trim()) {
-      errors.push('Company name');
-    }
+    // Comprehensive validation
+    const validationResult = validateClientForm({
+      companyName: formData.company_name,
+      websiteUrl: formData.url,
+      industry: formData.properties?.industry,
+      email: locationData.email,
+      phone: locationData.phone,
+      address: locationData.address_line1,
+      city: locationData.city,
+      stateProvince: locationData.state_province,
+      postalCode: locationData.postal_code,
+      countryCode: locationData.country_code,
+      contactName: contactData.full_name,
+      contactEmail: contactData.email,
+      contactPhone: contactData.phone_number,
+      notes: formData.notes
+    });
     
-    if (errors.length > 0) {
-      setValidationErrors(errors);
-      return;
+    // Early return if validation fails - prevent async operations
+    if (!validationResult.isValid) {
+      setFieldErrors(validationResult.errors);
+      const errorMessages = Object.values(validationResult.errors).filter(Boolean);
+      setValidationErrors(errorMessages);
+      return; // Stop here - don't proceed with async submit logic
     }
 
     setIsSubmitting(true);
@@ -237,11 +336,6 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }
   };
 
-  const clearErrorIfSubmitted = () => {
-    if (hasAttemptedSubmit) {
-      setValidationErrors([]);
-    }
-  };
 
   const handleCompanyChange = (field: string, value: string | boolean | null) => {
     setFormData(prev => {
@@ -268,6 +362,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       }
       return updatedState;
     });
+    
+    // Clear errors when user starts typing
+    if (fieldErrors[field]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }));
+    }
   };
 
   const handleLocationChange = (field: keyof CreateLocationData, value: string | boolean | null) => {
@@ -275,6 +377,24 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       ...prev,
       [field]: value
     }));
+    
+    // Clear errors when user starts typing
+    const validationFieldMap: Record<string, string> = {
+      'email': 'location_email',
+      'phone': 'location_phone',
+      'postal_code': 'postal_code',
+      'city': 'city',
+      'state_province': 'state_province',
+      'address_line1': 'address_line1'
+    };
+    
+    const validationField = validationFieldMap[field as string];
+    if (validationField && fieldErrors[validationField]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [validationField]: ''
+      }));
+    }
   };
 
   const handleContactChange = (field: keyof CreateContactData, value: string) => {
@@ -282,6 +402,21 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       ...prev,
       [field]: value
     }));
+    
+    // Clear errors when user starts typing
+    const validationFieldMap: Record<string, string> = {
+      'full_name': 'contact_name',
+      'email': 'contact_email',
+      'phone_number': 'contact_phone'
+    };
+    
+    const validationField = validationFieldMap[field as string];
+    if (validationField && fieldErrors[validationField]) {
+      setFieldErrors(prev => ({
+        ...prev,
+        [validationField]: ''
+      }));
+    }
   };
 
   const handleCountryChange = (countryCode: string, countryName: string) => {
@@ -309,7 +444,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <p className="font-medium mb-2">Please correct the following errors:</p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -339,25 +474,32 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   Client Name *
                 </Label>
                 <Input
+                  id="company-name"
                   data-automation-id="company-name-input"
                   value={formData.company_name}
                   onChange={(e) => {
                     handleCompanyChange('company_name', e.target.value);
-                    clearErrorIfSubmitted();
+                  }}
+                  onBlur={() => {
+                    validateField('company_name', formData.company_name);
                   }}
                   placeholder="Enter client name"
                   disabled={isSubmitting}
-                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${hasAttemptedSubmit && !formData.company_name.trim() ? 'border-red-500' : 'border-gray-300'}`}
+                  className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.company_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.company_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.company_name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="client_type_select" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="client-type-select" className="block text-sm font-medium text-gray-700 mb-1">
                     Client Type
                   </Label>
                   <CustomSelect
-                    data-automation-id="client_type_select"
+                    id="client-type-select"
+                    data-automation-id="client-type-select"
                     options={[
                       { value: 'company', label: 'Company' },
                       { value: 'individual', label: 'Individual' }
@@ -373,12 +515,19 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Industry
                   </Label>
                   <Input
+                    id="industry"
                     data-automation-id="industry"
                     value={formData.properties?.industry || ''}
                     onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
+                    onBlur={() => {
+                      validateField('industry', formData.properties?.industry || '');
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.industry ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.industry && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.industry}</p>
+                  )}
                 </div>
               </div>
 
@@ -388,21 +537,29 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     Website URL
                   </Label>
                   <Input
+                    id="url"
                     data-automation-id="url"
                     value={formData.url}
                     onChange={(e) => handleCompanyChange('url', e.target.value)}
+                    onBlur={() => {
+                      validateField('url', formData.url);
+                    }}
                     placeholder="https://example.com"
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.url ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.url && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.url}</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="account_manager_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Account Manager
                   </Label>
                   <UserPicker
-                    data-automation-id="account_manager_picker"
+                    id="account-manager-picker"
+                    data-automation-id="account-manager-picker"
                     value={formData.account_manager_id || ''}
                     onValueChange={(value) => handleCompanyChange('account_manager_id', value)}
                     users={internalUsers}
@@ -421,16 +578,23 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="address_line1" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
                   Street Address
                 </Label>
                 <Input
-                  data-automation-id="address_line1"
+                  id="address-line-1"
+                  data-automation-id="address-line-1"
                   value={locationData.address_line1}
                   onChange={(e) => handleLocationChange('address_line1', e.target.value)}
+                  onBlur={() => {
+                    validateField('address_line1', locationData.address_line1);
+                  }}
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.address_line1 ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.address_line1 && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.address_line1}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-3 gap-4">
@@ -439,46 +603,68 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     City
                   </Label>
                   <Input
+                    id="city"
                     data-automation-id="city"
                     value={locationData.city}
                     onChange={(e) => handleLocationChange('city', e.target.value)}
+                    onBlur={() => {
+                      validateField('city', locationData.city);
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.city ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.city && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.city}</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="state_province" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
                     State
                   </Label>
                   <Input
-                    data-automation-id="state_province"
+                    id="state-province"
+                    data-automation-id="state-province"
                     value={locationData.state_province || ''}
                     onChange={(e) => handleLocationChange('state_province', e.target.value)}
+                    onBlur={() => {
+                      validateField('state_province', locationData.state_province || '');
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.state_province ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.state_province && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.state_province}</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="postal_code" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
                     Zip Code
                   </Label>
                   <Input
-                    data-automation-id="postal_code"
+                    id="company-postal-code"
+                    data-automation-id="company-postal-code"
                     value={locationData.postal_code || ''}
                     onChange={(e) => handleLocationChange('postal_code', e.target.value)}
+                    onBlur={() => {
+                      validateField('postal_code', locationData.postal_code || '', { countryCode: locationData.country_code });
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.postal_code ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.postal_code && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.postal_code}</p>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="country_picker" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Country
                   </Label>
                   <CountryPicker
-                    data-automation-id="country_picker"
+                    id="country-picker"
+                    data-automation-id="country-picker"
                     value={locationData.country_code}
                     onValueChange={handleCountryChange}
                     countries={countries}
@@ -488,28 +674,44 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   />
                 </div>
 
-                <PhoneInput
-                  label="Phone"
-                  value={locationData.phone || ''}
-                  onChange={(value) => handleLocationChange('phone', value)}
-                  countryCode={locationData.country_code}
-                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
-                  disabled={isSubmitting}
-                  data-automation-id="location_phone"
-                />
+                <div>
+                  <PhoneInput
+                    id="company-location-phone"
+                    label="Phone"
+                    value={locationData.phone || ''}
+                    onChange={(value) => handleLocationChange('phone', value)}
+                    onBlur={() => {
+                      validateField('location_phone', locationData.phone || '');
+                    }}
+                    countryCode={locationData.country_code}
+                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    disabled={isSubmitting}
+                    data-automation-id="company-location-phone"
+                  />
+                  {fieldErrors.location_phone && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.location_phone}</p>
+                  )}
+                </div>
 
                 <div>
-                  <Label htmlFor="location_email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-location-email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </Label>
                   <Input
-                    data-automation-id="location_email"
+                    id="company-location-email"
+                    data-automation-id="company-location-email"
                     type="email"
                     value={locationData.email || ''}
                     onChange={(e) => handleLocationChange('email', e.target.value)}
+                    onBlur={() => {
+                      validateField('location_email', locationData.email || '');
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.location_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.location_email && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.location_email}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -522,60 +724,90 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               </h3>
               
               <div>
-                <Label htmlFor="contact_name" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
                   Name
                 </Label>
                 <Input
-                  data-automation-id="contact_name"
+                  id="contact-name"
+                  data-automation-id="contact-name"
                   value={contactData.full_name}
                   onChange={(e) => handleContactChange('full_name', e.target.value)}
+                  onBlur={() => {
+                    validateField('contact_name', contactData.full_name);
+                  }}
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
+                {fieldErrors.contact_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_name}</p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact_email" className="block text-sm font-medium text-gray-700 mb-1">
+                  <Label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </Label>
                   <Input
-                    data-automation-id="contact_email"
+                    id="company-contact-email"
+                    data-automation-id="company-contact-email"
                     type="email"
                     value={contactData.email}
                     onChange={(e) => handleContactChange('email', e.target.value)}
+                    onBlur={() => {
+                      validateField('contact_email', contactData.email);
+                    }}
                     disabled={isSubmitting}
-                    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    className={`w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.contact_email ? 'border-red-500' : 'border-gray-300'}`}
                   />
+                  {fieldErrors.contact_email && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_email}</p>
+                  )}
                 </div>
 
-                <PhoneInput
-                  label="Phone"
-                  value={contactData.phone_number}
-                  onChange={(value) => handleContactChange('phone_number', value)}
-                  countryCode={locationData.country_code}
-                  phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
-                  disabled={isSubmitting}
-                  data-automation-id="contact_phone"
-                />
+                <div>
+                  <PhoneInput
+                    id="company-contact-phone"
+                    label="Phone"
+                    value={contactData.phone_number}
+                    onChange={(value) => handleContactChange('phone_number', value)}
+                    onBlur={() => {
+                      validateField('contact_phone', contactData.phone_number);
+                    }}
+                    countryCode={locationData.country_code}
+                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    disabled={isSubmitting}
+                    data-automation-id="company-contact-phone"
+                  />
+                  {fieldErrors.contact_phone && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* Additional Settings */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="company-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
                   Notes
                 </Label>
                 <TextArea
-                  data-automation-id="notes"
+                  id="company-notes-input"
+                  data-automation-id="company-notes-input"
                   value={formData.notes || ''}
                   onChange={(e) => handleCompanyChange('notes', e.target.value)}
+                  onBlur={() => {
+                    validateField('notes', formData.notes || '');
+                  }}
                   placeholder="Add any initial notes (optional)"
                   disabled={isSubmitting}
-                  className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className={`w-full p-2 border rounded-md resize-none focus:outline-none focus:ring-2 ${fieldErrors.notes ? 'border-red-500' : 'border-gray-300'} ${fieldErrors.notes ? 'focus:ring-red-500' : 'focus:ring-purple-500'}`}
                   rows={3}
                 />
+                {fieldErrors.notes && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.notes}</p>
+                )}
               </div>
             </div>
           </div>
@@ -584,13 +816,14 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <DialogFooter>
           <div className="flex justify-between mt-6 w-full">
             <Button
-              id="cancel-quick-add-company-btn"
+              id="cancel-dialog-btn"
               type="button"
               variant="ghost"
               disabled={isSubmitting}
               onClick={() => {
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
+                setFieldErrors({});
                 onOpenChange(false);
               }}
             >
@@ -600,8 +833,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               id="create-company-btn"
               type="submit"
               form="quick-add-company-form"
-              disabled={isSubmitting}
-              className={!formData.company_name.trim() ? 'opacity-50' : ''}
+              disabled={isSubmitting || !formData.company_name.trim()}
+              className={(!formData.company_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </Button>
