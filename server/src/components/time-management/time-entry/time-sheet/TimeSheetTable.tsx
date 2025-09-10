@@ -3,7 +3,8 @@
 import React, { useState }  from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Button } from 'server/src/components/ui/Button';
-import { Trash } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Trash, Plus, Check, X } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.interfaces';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO } from 'date-fns';
@@ -27,6 +28,12 @@ interface TimeSheetTableProps {
     }) => void;
     onAddWorkItem: () => void;
     onWorkItemClick: (workItem: IExtendedWorkItem) => void;
+    onQuickAddTimeEntry?: (params: {
+        workItem: IExtendedWorkItem;
+        date: string;
+        durationInMinutes: number;
+        existingEntry?: ITimeEntryWithWorkItemString;
+    }) => Promise<void>;
 }
 
 
@@ -79,9 +86,12 @@ export function TimeSheetTable({
     onCellClick,
     onAddWorkItem,
     onWorkItemClick,
-    onDeleteWorkItem
+    onDeleteWorkItem,
+    onQuickAddTimeEntry
 }: TimeSheetTableProps): JSX.Element {
     const [selectedWorkItemToDelete, setSelectedWorkItemToDelete] = useState<string | null>(null);
+    const [hoveredCell, setHoveredCell] = useState<{ workItemId: string; date: string } | null>(null);
+    const [quickInputValues, setQuickInputValues] = useState<{ [key: string]: string }>({});
     
     // Register add work item button for automation
     const { automationIdProps: addWorkItemProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -142,8 +152,18 @@ export function TimeSheetTable({
             <table className="min-w-full divide-y divide-gray-200" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
                     <tr>
-                        <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 z-20 min-w-fit max-w-[15%] whitespace-nowrap truncate bg-gray-50">
-                            Work Item
+                        <th className="px-6 py-3 bg-gray-50 shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] sticky left-0 z-20 w-1/4 min-w-[250px] bg-gray-50">
+                            <div className="flex justify-start">
+                                <Button
+                                    {...addWorkItemProps}
+                                    variant="soft"
+                                    size="sm"
+                                    onClick={onAddWorkItem}
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add new work item
+                                </Button>
+                            </div>
                         </th>
                         {dates.map((date): JSX.Element => (
                             <th key={date.toLocaleDateString()} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
@@ -153,17 +173,6 @@ export function TimeSheetTable({
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                    <tr className="h-10 bg-primary-100">
-                        <td
-                            {...addWorkItemProps}
-                            colSpan={1}
-                            className="px-6 py-3 whitespace-nowrap text-xs text-gray-400 cursor-pointer relative shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 z-10 w-[25vw] truncate bg-primary-100"
-                            onClick={onAddWorkItem}
-                        >
-                            + Add new work item
-                        </td>
-                        <td colSpan={dates.length} className=""></td>
-                    </tr>
                     {Object.entries(workItemsByType).map(([type, workItems]): JSX.Element => (
                         <React.Fragment key={type}>
                             {workItems.map((workItem): JSX.Element => {
@@ -171,13 +180,13 @@ export function TimeSheetTable({
                                 return (
                                     <tr key={`${workItem.work_item_id}-${Math.random()}`}>
                                     <td 
-                                        className="px-6 py-4 pr-1 whitespace-nowrap text-sm font-medium text-gray-900 shadow-[4px_0_6px_rgba(0,0,0,0.1)] border-t border-b sticky left-0 z-10 bg-white min-w-fit max-w-[15%] truncate bg-white cursor-pointer hover:bg-white"
+                                        className="px-6 py-4 pr-1 text-sm font-medium text-gray-900 shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] border-t border-b sticky left-0 z-10 bg-white w-1/5 min-w-[250px] cursor-pointer hover:bg-gray-50"
                                         onClick={() => onWorkItemClick(workItem)}
                                         data-automation-id={`work-item-${workItem.work_item_id}`}
                                         data-automation-type="work-item-cell"
                                     >
                                         <div className="flex flex-col pr-8">
-                                            <span>
+                                            <span className="break-words whitespace-normal">
                                                 {workItem.type === 'ticket'
                                                     ? `${workItem.ticket_number} - ${workItem.title || workItem.name}`
                                                     : workItem.name
@@ -248,17 +257,28 @@ export function TimeSheetTable({
                                             ) as BillabilityPercentage;
 
                                             const colors = billabilityColorScheme[billabilityTier];
+                                            const cellKey = `${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`;
+                                            const isHovered = hoveredCell?.workItemId === workItem.work_item_id && 
+                                                            hoveredCell?.date === formatISO(date, { representation: 'date' });
 
                                             return (
                                                 <td
                                                     key={formatISO(date)}
-                                                    className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-colors relative min-h-[100px]"
+                                                    className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-all relative h-20 ${
+                                                        isHovered && isEditable ? 'bg-gray-50' : ''
+                                                    } hover:bg-gray-50`}
                                                     data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
                                                     data-automation-type="time-entry-cell"
+                                                    onMouseEnter={() => isEditable && setHoveredCell({ 
+                                                        workItemId: workItem.work_item_id, 
+                                                        date: formatISO(date, { representation: 'date' }) 
+                                                    })}
+                                                    onMouseLeave={() => setHoveredCell(null)}
                                                     onClick={() => {
                                                         if (!isEditable) return;
                                                         
-                                                        let startTime, endTime;
+                                                        let startTime: Date | undefined;
+                                                        let endTime: Date | undefined;
 
                                                         if (workItem.type === 'ad_hoc' && 
                                                             'scheduled_start' in workItem && 
@@ -295,7 +315,7 @@ export function TimeSheetTable({
                                                         });
                                                     }}
                                                 >
-                                                    {dayEntries.length > 0 && (
+                                                    {dayEntries.length > 0 ? (
                                                         <div
                                                             className="rounded-lg p-2 text-xs shadow-sm h-full w-full"
                                                             style={{
@@ -310,7 +330,200 @@ export function TimeSheetTable({
                                                                 <div className="text-gray-600">{`Billable: ${formatDuration(totalBillableDuration)}`}</div>
                                                             </div>
                                                         </div>
-                                                    )}
+                                                    ) : (
+                                                        <div className="h-full w-full">
+                                                            {/* Empty cell - click anywhere to open full dialog */}
+                                                            {isHovered && isEditable && (
+                                                                <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1 bg-white rounded shadow-sm border border-gray-200 px-1 py-1 z-10" 
+                                                                     onClick={(e) => e.stopPropagation()}>
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="H:MM"
+                                                                        className="!py-0.5 !px-1 !text-xs !border-gray-200 !min-h-0"
+                                                                        containerClassName="flex-1 !mb-0"
+                                                                        value={quickInputValues[cellKey] || ''}
+                                                                        onChange={(e) => {
+                                                                            const value = e.target.value;
+                                                                            
+                                                                            // Only allow digits, colon, and decimal point
+                                                                            const sanitized = value.replace(/[^0-9:.]/g, '');
+                                                                            
+                                                                            // Validate the format and reasonable limits
+                                                                            if (sanitized.includes(':')) {
+                                                                                // H:MM or HH:MM format - max 24:00
+                                                                                const parts = sanitized.split(':');
+                                                                                if (parts.length === 2) {
+                                                                                    const hours = parseInt(parts[0], 10) || 0;
+                                                                                    const minutes = parts[1].substring(0, 2); // Max 2 digits for minutes
+                                                                                    if (hours <= 24) {
+                                                                                        setQuickInputValues(prev => ({ 
+                                                                                            ...prev, 
+                                                                                            [cellKey]: `${hours}:${minutes}` 
+                                                                                        }));
+                                                                                    }
+                                                                                }
+                                                                            } else if (sanitized.includes('.')) {
+                                                                                // Decimal format (e.g., 1.5) - max 24.0
+                                                                                const decimal = parseFloat(sanitized);
+                                                                                if (!isNaN(decimal) && decimal <= 24 && decimal >= 0) {
+                                                                                    setQuickInputValues(prev => ({ 
+                                                                                        ...prev, 
+                                                                                        [cellKey]: sanitized.substring(0, 5) // Max 5 chars (XX.XX)
+                                                                                    }));
+                                                                                }
+                                                                            } else {
+                                                                                // Simple number format - max 24
+                                                                                const num = parseInt(sanitized, 10);
+                                                                                if (sanitized === '' || (!isNaN(num) && num <= 24)) {
+                                                                                    setQuickInputValues(prev => ({ 
+                                                                                        ...prev, 
+                                                                                        [cellKey]: sanitized.substring(0, 2) // Max 2 digits
+                                                                                    }));
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
+                                                                    onKeyDown={async (e) => {
+                                                                        if (e.key === 'Enter') {
+                                                                            e.stopPropagation();
+                                                                            e.preventDefault();
+                                                                            
+                                                                            const inputValue = quickInputValues[cellKey] || '';
+                                                                            let durationInMinutes = 0;
+                                                                            
+                                                                            // Parse various duration formats
+                                                                            // Format: H:MM or HH:MM (e.g., 1:30, 01:30)
+                                                                            const colonMatch = inputValue.match(/^(\d{1,2}):(\d{1,2})$/);
+                                                                            if (colonMatch) {
+                                                                                const hours = parseInt(colonMatch[1], 10);
+                                                                                const minutes = parseInt(colonMatch[2], 10);
+                                                                                durationInMinutes = hours * 60 + minutes;
+                                                                            }
+                                                                            // Format: simple number as hours (e.g., 8 for 8 hours)
+                                                                            else if (inputValue.match(/^(\d+\.?\d*)$/)) {
+                                                                                const hours = parseFloat(inputValue);
+                                                                                durationInMinutes = Math.round(hours * 60);
+                                                                            }
+                                                                            
+                                                                            if (durationInMinutes > 0 && onQuickAddTimeEntry) {
+                                                                                // Find any existing entry for this work item to copy settings from
+                                                                                const allEntriesForWorkItem = groupedTimeEntries[workItem.work_item_id] || [];
+                                                                                const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
+                                                                                
+                                                                                try {
+                                                                                    // Create the time entry directly without opening dialog
+                                                                                    await onQuickAddTimeEntry({
+                                                                                        workItem,
+                                                                                        date: formatISO(date),
+                                                                                        durationInMinutes,
+                                                                                        existingEntry
+                                                                                    });
+                                                                                    
+                                                                                    // Clear the input for this cell
+                                                                                    setQuickInputValues(prev => {
+                                                                                        const newValues = { ...prev };
+                                                                                        delete newValues[cellKey];
+                                                                                        return newValues;
+                                                                                    });
+                                                                                    setHoveredCell(null);
+                                                                                } catch (error) {
+                                                                                    console.error('Failed to create quick time entry:', error);
+                                                                                }
+                                                                            }
+                                                                        } else if (e.key === 'Escape') {
+                                                                            // Clear input on Escape
+                                                                            setQuickInputValues(prev => {
+                                                                                const newValues = { ...prev };
+                                                                                delete newValues[cellKey];
+                                                                                return newValues;
+                                                                            });
+                                                                            setHoveredCell(null);
+                                                                        }
+                                                                    }}
+                                                                    onBlur={() => {
+                                                                        // Clear input when focus is lost
+                                                                        setTimeout(() => {
+                                                                            setQuickInputValues(prev => {
+                                                                                const newValues = { ...prev };
+                                                                                delete newValues[cellKey];
+                                                                                return newValues;
+                                                                            });
+                                                                        }, 200);
+                                                                    }}
+                                                                        autoFocus
+                                                                    />
+                                                                    <Button
+                                                                        id="quick-save-time-entry"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="!h-6 !w-6 !p-0 text-green-600 hover:bg-green-50"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        const inputValue = quickInputValues[cellKey] || '';
+                                                                        let durationInMinutes = 0;
+                                                                        
+                                                                        // Parse various duration formats
+                                                                        const colonMatch = inputValue.match(/^(\d{1,2}):(\d{1,2})$/);
+                                                                        if (colonMatch) {
+                                                                            const hours = parseInt(colonMatch[1], 10);
+                                                                            const minutes = parseInt(colonMatch[2], 10);
+                                                                            durationInMinutes = hours * 60 + minutes;
+                                                                        }
+                                                                        else if (inputValue.match(/^(\d+\.?\d*)$/)) {
+                                                                            const hours = parseFloat(inputValue);
+                                                                            durationInMinutes = Math.round(hours * 60);
+                                                                        }
+                                                                        
+                                                                        if (durationInMinutes > 0 && onQuickAddTimeEntry) {
+                                                                            const allEntriesForWorkItem = groupedTimeEntries[workItem.work_item_id] || [];
+                                                                            const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
+                                                                            
+                                                                            try {
+                                                                                await onQuickAddTimeEntry({
+                                                                                    workItem,
+                                                                                    date: formatISO(date),
+                                                                                    durationInMinutes,
+                                                                                    existingEntry
+                                                                                });
+                                                                                
+                                                                                setQuickInputValues(prev => {
+                                                                                    const newValues = { ...prev };
+                                                                                    delete newValues[cellKey];
+                                                                                    return newValues;
+                                                                                });
+                                                                                setHoveredCell(null);
+                                                                            } catch (error) {
+                                                                                console.error('Failed to create quick time entry:', error);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                        title="Save time entry"
+                                                                    >
+                                                                        <Check className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        id="quick-cancel-time-entry"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="!h-6 !w-6 !p-0 text-gray-500 hover:bg-gray-100"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setQuickInputValues(prev => {
+                                                                            const newValues = { ...prev };
+                                                                            delete newValues[cellKey];
+                                                                            return newValues;
+                                                                        });
+                                                                        setHoveredCell(null);
+                                                                    }}
+                                                                        title="Cancel"
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        )
+                                                    }
                                                 </td>
                                             );
                                         })}
@@ -322,8 +535,8 @@ export function TimeSheetTable({
                 </tbody>
 
                 <tfoot>
-                    <tr className="shadow-[0px_-4px_6px_rgba(0,0,0,0.1)]">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r z-10 min-w-fit max-w-[15%] shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 bg-white">Total</td>
+                    <tr className="shadow-[0px_-4px_6px_rgba(var(--color-border-200),0.3)]">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r z-10 w-1/5 min-w-[250px] shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] sticky left-0 bg-white">Total</td>
                         {dates.map((date): JSX.Element => {
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
                                 .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());
