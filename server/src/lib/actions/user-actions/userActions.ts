@@ -9,7 +9,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from 'server/src/lib/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
-import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { hashPassword } from '@shared/utils/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
