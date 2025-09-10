@@ -3,7 +3,8 @@
 import React, { useState }  from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Button } from 'server/src/components/ui/Button';
-import { Trash, Plus } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Trash, Plus, Check, X } from 'lucide-react';
 import { ITimeEntryWithWorkItemString } from 'server/src/interfaces/timeEntry.interfaces';
 import { IExtendedWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { formatISO, parseISO } from 'date-fns';
@@ -151,17 +152,18 @@ export function TimeSheetTable({
             <table className="min-w-full divide-y divide-gray-200" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
                     <tr>
-                        <th className="px-6 py-3 bg-gray-50 shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 z-20 w-1/4 min-w-[250px] bg-gray-50">
-                            <Button
-                                {...addWorkItemProps}
-                                variant="soft"
-                                size="sm"
-                                onClick={onAddWorkItem}
-                                className="w-full justify-start"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add new work item
-                            </Button>
+                        <th className="px-6 py-3 bg-gray-50 shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] sticky left-0 z-20 w-1/4 min-w-[250px] bg-gray-50">
+                            <div className="flex justify-start">
+                                <Button
+                                    {...addWorkItemProps}
+                                    variant="soft"
+                                    size="sm"
+                                    onClick={onAddWorkItem}
+                                >
+                                    <Plus className="h-4 w-4 mr-2" />
+                                    Add new work item
+                                </Button>
+                            </div>
                         </th>
                         {dates.map((date): JSX.Element => (
                             <th key={date.toLocaleDateString()} className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-r">
@@ -178,7 +180,7 @@ export function TimeSheetTable({
                                 return (
                                     <tr key={`${workItem.work_item_id}-${Math.random()}`}>
                                     <td 
-                                        className="px-6 py-4 pr-1 text-sm font-medium text-gray-900 shadow-[4px_0_6px_rgba(0,0,0,0.1)] border-t border-b sticky left-0 z-10 bg-white w-1/4 min-w-[250px] cursor-pointer hover:bg-gray-50"
+                                        className="px-6 py-4 pr-1 text-sm font-medium text-gray-900 shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] border-t border-b sticky left-0 z-10 bg-white w-1/5 min-w-[250px] cursor-pointer hover:bg-gray-50"
                                         onClick={() => onWorkItemClick(workItem)}
                                         data-automation-id={`work-item-${workItem.work_item_id}`}
                                         data-automation-type="work-item-cell"
@@ -262,8 +264,8 @@ export function TimeSheetTable({
                                             return (
                                                 <td
                                                     key={formatISO(date)}
-                                                    className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-all relative min-h-[100px] ${
-                                                        isHovered && isEditable ? 'bg-gray-50 shadow-inner' : ''
+                                                    className={`px-6 py-4 whitespace-nowrap text-sm text-gray-500 cursor-pointer border transition-all relative h-20 ${
+                                                        isHovered && isEditable ? 'bg-gray-50' : ''
                                                     } hover:bg-gray-50`}
                                                     data-automation-id={`time-cell-${workItem.work_item_id}-${formatISO(date, { representation: 'date' })}`}
                                                     data-automation-type="time-entry-cell"
@@ -275,7 +277,8 @@ export function TimeSheetTable({
                                                     onClick={() => {
                                                         if (!isEditable) return;
                                                         
-                                                        let startTime, endTime;
+                                                        let startTime: Date | undefined;
+                                                        let endTime: Date | undefined;
 
                                                         if (workItem.type === 'ad_hoc' && 
                                                             'scheduled_start' in workItem && 
@@ -328,18 +331,58 @@ export function TimeSheetTable({
                                                             </div>
                                                         </div>
                                                     ) : (
-                                                        isHovered && isEditable && (
-                                                            <div className="flex items-center justify-center h-full">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Hours"
-                                                                    className="w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-primary-500"
-                                                                    value={quickInputValues[cellKey] || ''}
-                                                                    onChange={(e) => {
-                                                                        const value = e.target.value;
-                                                                        setQuickInputValues(prev => ({ ...prev, [cellKey]: value }));
-                                                                    }}
-                                                                    onClick={(e) => e.stopPropagation()}
+                                                        <div className="h-full w-full">
+                                                            {/* Empty cell - click anywhere to open full dialog */}
+                                                            {isHovered && isEditable && (
+                                                                <div className="absolute bottom-2 left-2 right-2 flex items-center gap-1 bg-white rounded shadow-sm border border-gray-200 px-1 py-1 z-10" 
+                                                                     onClick={(e) => e.stopPropagation()}>
+                                                                    <Input
+                                                                        type="text"
+                                                                        placeholder="H:MM"
+                                                                        className="!py-0.5 !px-1 !text-xs !border-gray-200 !min-h-0"
+                                                                        containerClassName="flex-1 !mb-0"
+                                                                        value={quickInputValues[cellKey] || ''}
+                                                                        onChange={(e) => {
+                                                                            const value = e.target.value;
+                                                                            
+                                                                            // Only allow digits, colon, and decimal point
+                                                                            const sanitized = value.replace(/[^0-9:.]/g, '');
+                                                                            
+                                                                            // Validate the format and reasonable limits
+                                                                            if (sanitized.includes(':')) {
+                                                                                // H:MM or HH:MM format - max 24:00
+                                                                                const parts = sanitized.split(':');
+                                                                                if (parts.length === 2) {
+                                                                                    const hours = parseInt(parts[0], 10) || 0;
+                                                                                    const minutes = parts[1].substring(0, 2); // Max 2 digits for minutes
+                                                                                    if (hours <= 24) {
+                                                                                        setQuickInputValues(prev => ({ 
+                                                                                            ...prev, 
+                                                                                            [cellKey]: `${hours}:${minutes}` 
+                                                                                        }));
+                                                                                    }
+                                                                                }
+                                                                            } else if (sanitized.includes('.')) {
+                                                                                // Decimal format (e.g., 1.5) - max 24.0
+                                                                                const decimal = parseFloat(sanitized);
+                                                                                if (!isNaN(decimal) && decimal <= 24 && decimal >= 0) {
+                                                                                    setQuickInputValues(prev => ({ 
+                                                                                        ...prev, 
+                                                                                        [cellKey]: sanitized.substring(0, 5) // Max 5 chars (XX.XX)
+                                                                                    }));
+                                                                                }
+                                                                            } else {
+                                                                                // Simple number format - max 24
+                                                                                const num = parseInt(sanitized, 10);
+                                                                                if (sanitized === '' || (!isNaN(num) && num <= 24)) {
+                                                                                    setQuickInputValues(prev => ({ 
+                                                                                        ...prev, 
+                                                                                        [cellKey]: sanitized.substring(0, 2) // Max 2 digits
+                                                                                    }));
+                                                                                }
+                                                                            }
+                                                                        }}
+                                                                        onClick={(e) => e.stopPropagation()}
                                                                     onKeyDown={async (e) => {
                                                                         if (e.key === 'Enter') {
                                                                             e.stopPropagation();
@@ -407,11 +450,80 @@ export function TimeSheetTable({
                                                                             });
                                                                         }, 200);
                                                                     }}
-                                                                    autoFocus
-                                                                />
-                                                            </div>
+                                                                        autoFocus
+                                                                    />
+                                                                    <Button
+                                                                        id="quick-save-time-entry"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="!h-6 !w-6 !p-0 text-green-600 hover:bg-green-50"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        const inputValue = quickInputValues[cellKey] || '';
+                                                                        let durationInMinutes = 0;
+                                                                        
+                                                                        // Parse various duration formats
+                                                                        const colonMatch = inputValue.match(/^(\d{1,2}):(\d{1,2})$/);
+                                                                        if (colonMatch) {
+                                                                            const hours = parseInt(colonMatch[1], 10);
+                                                                            const minutes = parseInt(colonMatch[2], 10);
+                                                                            durationInMinutes = hours * 60 + minutes;
+                                                                        }
+                                                                        else if (inputValue.match(/^(\d+\.?\d*)$/)) {
+                                                                            const hours = parseFloat(inputValue);
+                                                                            durationInMinutes = Math.round(hours * 60);
+                                                                        }
+                                                                        
+                                                                        if (durationInMinutes > 0 && onQuickAddTimeEntry) {
+                                                                            const allEntriesForWorkItem = groupedTimeEntries[workItem.work_item_id] || [];
+                                                                            const existingEntry = allEntriesForWorkItem.length > 0 ? allEntriesForWorkItem[0] : undefined;
+                                                                            
+                                                                            try {
+                                                                                await onQuickAddTimeEntry({
+                                                                                    workItem,
+                                                                                    date: formatISO(date),
+                                                                                    durationInMinutes,
+                                                                                    existingEntry
+                                                                                });
+                                                                                
+                                                                                setQuickInputValues(prev => {
+                                                                                    const newValues = { ...prev };
+                                                                                    delete newValues[cellKey];
+                                                                                    return newValues;
+                                                                                });
+                                                                                setHoveredCell(null);
+                                                                            } catch (error) {
+                                                                                console.error('Failed to create quick time entry:', error);
+                                                                            }
+                                                                        }
+                                                                    }}
+                                                                        title="Save time entry"
+                                                                    >
+                                                                        <Check className="h-3 w-3" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        id="quick-cancel-time-entry"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="!h-6 !w-6 !p-0 text-gray-500 hover:bg-gray-100"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setQuickInputValues(prev => {
+                                                                            const newValues = { ...prev };
+                                                                            delete newValues[cellKey];
+                                                                            return newValues;
+                                                                        });
+                                                                        setHoveredCell(null);
+                                                                    }}
+                                                                        title="Cancel"
+                                                                    >
+                                                                        <X className="h-3 w-3" />
+                                                                    </Button>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         )
-                                                    )}
+                                                    }
                                                 </td>
                                             );
                                         })}
@@ -423,8 +535,8 @@ export function TimeSheetTable({
                 </tbody>
 
                 <tfoot>
-                    <tr className="shadow-[0px_-4px_6px_rgba(0,0,0,0.1)]">
-                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r z-10 w-1/4 min-w-[250px] shadow-[4px_0_6px_rgba(0,0,0,0.1)] sticky left-0 bg-white">Total</td>
+                    <tr className="shadow-[0px_-4px_6px_rgba(var(--color-border-200),0.3)]">
+                        <td className="px-6 py-4 text-sm font-medium text-gray-900 border-r z-10 w-1/5 min-w-[250px] shadow-[4px_0_6px_rgba(var(--color-border-200),0.3)] sticky left-0 bg-white">Total</td>
                         {dates.map((date): JSX.Element => {
                             const entriesForDate = Object.values(groupedTimeEntries).flat()
                                 .filter((entry) => parseISO(entry.start_time).toDateString() === date.toDateString());

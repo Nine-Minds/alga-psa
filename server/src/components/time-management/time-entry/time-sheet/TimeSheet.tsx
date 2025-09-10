@@ -238,8 +238,9 @@ export function TimeSheet({
             created_at: formatISO(new Date()),
             updated_at: formatISO(new Date()),
             time_sheet_id: timeSheet.id,
-            service_id: existingEntry?.service_id || '',
-            tax_region: existingEntry?.tax_region || ''
+            service_id: existingEntry?.service_id || undefined,  // Use undefined instead of empty string
+            tax_region: existingEntry?.tax_region || undefined,  // Use undefined instead of empty string
+            billing_plan_id: existingEntry?.billing_plan_id || undefined  // Also handle billing_plan_id
         };
         
         await handleSaveTimeEntry(timeEntry);
