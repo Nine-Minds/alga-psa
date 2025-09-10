@@ -6,17 +6,18 @@ import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/con
 import { Button } from 'server/src/components/ui/Button';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Eye, ExternalLink, MoreVertical } from 'lucide-react';
+import { Eye, ExternalLink, MoreVertical, Pen } from 'lucide-react';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { useDrawer } from "server/src/context/DrawerContext";
-import ContactDetailsView from './ContactDetailsView';
+import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import QuickAddContact from 'server/src/components/contacts/QuickAddContact';
+import { useRouter } from 'next/navigation';
 
 interface CompanyContactsListProps {
   companyId: string;
@@ -31,7 +32,9 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [changesSavedInDrawer, setChangesSavedInDrawer] = useState(false);
   const { openDrawer } = useDrawer();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchContacts = async () => {
@@ -63,28 +66,39 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
     fetchUser();
   }, [companyId]);
 
-  const handleViewDetails = async (contact: IContact) => {
+  const handleContactClick = (contact: IContact) => {
+    // Open quick view drawer (same behavior as dropdown quick view)
+    handleQuickView(contact);
+  };
+
+  const handleQuickView = async (contact: IContact) => {
     if (!currentUser) return;
 
+    const handleChangesSaved = () => {
+      setChangesSavedInDrawer(true);
+    };
+
+    const handleDrawerClose = () => {
+      if (changesSavedInDrawer) {
+        // Refresh contacts list
+        getContactsByCompany(companyId, 'active').then(setContacts);
+        setChangesSavedInDrawer(false);
+      }
+    };
+
     try {
-      // Set loading state for this specific contact
       setDocumentLoading(prev => ({
         ...prev,
         [contact.contact_name_id]: true
       }));
 
-      // Check if we already have documents for this contact
       const existingDocuments = documents[contact.contact_name_id];
       
-      // Only fetch documents if we don't have them already
       if (!existingDocuments || existingDocuments.length === 0) {
-        // Fetch documents for this contact
         const response = await getDocumentsByEntity(contact.contact_name_id, 'contact');
         
-        // Update documents state with the fetched documents
         setDocuments(prev => {
           const newDocuments = { ...prev };
-          // Handle both array and paginated response formats
           newDocuments[contact.contact_name_id] = Array.isArray(response)
             ? response
             : response.documents || [];
@@ -93,26 +107,19 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
       }
 
       openDrawer(
-        <ContactDetailsView
-          initialContact={contact}
+        <ContactDetails
+          contact={contact}
           companies={companies}
           documents={documents[contact.contact_name_id] || []}
           userId={currentUser}
           isInDrawer={true}
+          quickView={true}
           onDocumentCreated={async () => {
-            // Refresh documents after a new one is created
             try {
-              setDocumentLoading(prev => ({
-                ...prev,
-                [contact.contact_name_id]: true
-              }));
-              
               const updatedResponse = await getDocumentsByEntity(contact.contact_name_id, 'contact');
               
-              // Update documents state with the refreshed documents
               setDocuments(prev => {
                 const newDocuments = { ...prev };
-                // Handle both array and paginated response formats
                 newDocuments[contact.contact_name_id] = Array.isArray(updatedResponse)
                   ? updatedResponse
                   : updatedResponse.documents || [];
@@ -120,19 +127,16 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
               });
             } catch (err) {
               console.error('Error refreshing documents:', err);
-            } finally {
-              setDocumentLoading(prev => ({
-                ...prev,
-                [contact.contact_name_id]: false
-              }));
             }
           }}
-        />
+          onChangesSaved={handleChangesSaved}
+        />,
+        undefined, // onMount
+        handleDrawerClose // onClose
       );
     } catch (error) {
       console.error('Error fetching contact documents:', error);
     } finally {
-      // Clear loading state
       setDocumentLoading(prev => ({
         ...prev,
         [contact.contact_name_id]: false
@@ -141,25 +145,8 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
   };
 
   const handleEditContact = (contact: IContact) => {
-    if (!currentUser) return;
-
-    openDrawer(
-      <ContactDetailsEdit
-        initialContact={contact}
-        companies={companies}
-        isInDrawer={true}
-        onSave={(updatedContact) => {
-          setContacts(prev =>
-            prev.map(c =>
-              c.contact_name_id === updatedContact.contact_name_id ? updatedContact : c
-            )
-          );
-
-          setTimeout(() => handleViewDetails(updatedContact), 0);
-        }}
-        onCancel={() => handleViewDetails(contact)}
-      />
-    );
+    // Navigate directly to the contact page for editing
+    router.push(`/msp/contacts/${contact.contact_name_id}`);
   };
 
 
@@ -180,11 +167,11 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
           <div
             role="button"
             tabIndex={0}
-            onClick={() => handleViewDetails(record)}
+            onClick={() => handleContactClick(record)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                handleViewDetails(record);
+                handleContactClick(record);
               }
             }}
             className="text-blue-600 hover:underline cursor-pointer"
@@ -230,17 +217,17 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
           >
             <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
-              onSelect={() => handleViewDetails(record)}
+              onSelect={() => handleQuickView(record)}
             >
-              <Eye size={14} className="mr-2" />
-              View
+              <ExternalLink size={14} className="mr-2" />
+              Quick View
             </DropdownMenu.Item>
             <DropdownMenu.Item
               className="px-2 py-1 text-sm cursor-pointer hover:bg-gray-100 flex items-center rounded"
               onSelect={() => handleEditContact(record)}
             >
-              <ExternalLink size={14} className="mr-2" />
-              Quick Edit
+              <Pen size={14} className="mr-2" />
+              Edit
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Root>
@@ -303,7 +290,6 @@ const CompanyContactsList: React.FC<CompanyContactsListProps> = ({ companyId, co
         data={contacts}
         columns={columns}
         pagination={true}
-        onRowClick={(row: IContact) => handleViewDetails(row)}
       />
       <QuickAddContact
         isOpen={isQuickAddContactOpen}
