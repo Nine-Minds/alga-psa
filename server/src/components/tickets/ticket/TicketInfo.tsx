@@ -14,7 +14,7 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
+import { getTicketCategories, getTicketCategoriesByChannel } from 'server/src/lib/actions/ticketCategoryActions';
 import { Pencil, Check } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
@@ -102,18 +102,28 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }]
       }]);
     }
+  }, [ticket, conversations]);
 
+  // Separate useEffect for fetching categories based on channel
+  useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const fetchedCategories = await getTicketCategories();
-        setCategories(fetchedCategories);
+        if (ticket.channel_id) {
+          // Fetch categories for the specific channel
+          const fetchedCategories = await getTicketCategoriesByChannel(ticket.channel_id);
+          setCategories(fetchedCategories);
+        } else {
+          // If no channel, fetch all categories
+          const fetchedCategories = await getTicketCategories();
+          setCategories(fetchedCategories);
+        }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
       }
     };
 
     fetchCategories();
-  }, [ticket, conversations]);
+  }, [ticket.channel_id]); // Re-fetch when channel changes
 
   useEffect(() => {
     setTitleValue(ticket.title);
@@ -134,11 +144,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       e.preventDefault();
       handleTitleSubmit();
     }
-  };
-
-  const getCategoryChannel = (categoryId: string): string | undefined => {
-    const category = categories.find(c => c.category_id === categoryId);
-    return category?.channel_id;
   };
 
   const handleCategoryChange = (categoryIds: string[]) => {
@@ -164,9 +169,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       onSelectChange('subcategory_id', null);
     }
 
-    if (selectedCategory.channel_id && selectedCategory.channel_id !== ticket.channel_id) {
-      onSelectChange('channel_id', selectedCategory.channel_id);
-    }
+    // Don't automatically change the channel - categories are now filtered by current channel
+    // This prevents unwanted channel switches when selecting categories
   };
 
   const getSelectedCategoryId = () => {
@@ -274,7 +278,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <CustomSelect
                 value={ticket.channel_id || ''}
                 options={channelOptions}
-                onValueChange={(value) => onSelectChange('channel_id', value)}
+                onValueChange={(value) => {
+                  onSelectChange('channel_id', value);
+                  // Clear categories when channel changes
+                  onSelectChange('category_id', null);
+                  onSelectChange('subcategory_id', null);
+                }}
                 customStyles={customStyles}
                 className="!w-fit"
               />
