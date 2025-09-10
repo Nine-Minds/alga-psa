@@ -41,6 +41,20 @@
       "properties": {
         "type": { "type": "string", "enum": ["iframe"] },
         "entry": { "type": "string", "minLength": 1 },
+        "hooks": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "appMenu": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["label"],
+              "properties": {
+                "label": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
         "routes": {
           "type": "array",
           "items": {

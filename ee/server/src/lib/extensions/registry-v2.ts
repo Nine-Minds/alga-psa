@@ -327,6 +327,14 @@ export interface CreateExtensionVersionInput {
   version: string;                  // manifest.version
   contentHash: string;              // sha256 hex (no prefix)
   runtime: string;                  // manifest.runtime
+  ui?: {                            // sanitized UI subset for storage
+    type: 'iframe';
+    entry: string;
+    hooks?: {
+      appMenu?: { label: string };
+      [key: string]: unknown;
+    };
+  };
   uiEntry?: string;                 // sanitized UI entry if present
   endpoints: Array<{ method: string; path: string; handler: string }>;
   capabilities: string[];
@@ -354,6 +362,15 @@ export interface ExtensionVersionRecord {
   version: string;
   contentHash: string;
   runtime: string;
+  // Optional full UI payload as stored in DB (if present)
+  ui?: {
+    type: 'iframe';
+    entry: string;
+    hooks?: {
+      appMenu?: { label: string };
+      [key: string]: unknown;
+    };
+  };
   uiEntry?: string;
   endpoints: Array<{ method: string; path: string; handler: string }>;
   capabilities: string[];
@@ -466,6 +483,13 @@ export async function createExtensionVersion(input: CreateExtensionVersionInput)
   const endpoints = normalizeEndpoints(input.endpoints || []);
   const capabilities = normalizeCapabilities(input.capabilities);
   const uiEntry = input.uiEntry ? String(input.uiEntry).trim() || undefined : undefined;
+  const ui = input.ui
+    ? {
+        type: 'iframe' as const,
+        entry: String(input.ui.entry).trim(),
+        hooks: input.ui.hooks && typeof input.ui.hooks === 'object' ? input.ui.hooks : undefined,
+      }
+    : undefined;
   const signature = input.signature
     ? {
         required: !!input.signature.required,
@@ -490,6 +514,7 @@ export async function createExtensionVersion(input: CreateExtensionVersionInput)
     version,
     contentHash,
     runtime,
+    ui,
     uiEntry,
     endpoints,
     capabilities,
@@ -517,6 +542,11 @@ export interface UpsertVersionFromManifestInput {
   manifest: ManifestV2;
   contentHash: string;
   parsed: {
+    ui?: {
+      type: 'iframe';
+      entry: string;
+      hooks?: { appMenu?: { label: string }; [key: string]: unknown };
+    };
     uiEntry?: string;
     endpoints: ManifestEndpoint[];
     runtime: string;
@@ -567,6 +597,7 @@ export async function upsertVersionFromManifest(
     version: manifest.version,
     contentHash,
     runtime: parsed.runtime,
+    ui: parsed.ui,
     uiEntry: parsed.uiEntry,
     endpoints: normalizeEndpoints(parsed.endpoints as Array<{ method: string; path: string; handler: string }>),
     capabilities: normalizeCapabilities(parsed.capabilities),

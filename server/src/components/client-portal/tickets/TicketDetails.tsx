@@ -52,9 +52,13 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
+  // Force remount of TicketConversation when needed
+  const [conversationVersion, setConversationVersion] = useState(0);
+  // Local overrides for comments to ensure immediate UI reflection
+  const [commentOverrides, setCommentOverrides] = useState<Record<string, { note?: string; updated_at?: string }>>({});
   const [statusOptions, setStatusOptions] = useState<IStatus[]>([]);
   const [ticketToUpdateStatus, setTicketToUpdateStatus] = useState<{ ticketId: string; newStatusId: string; currentStatusName: string; newStatusName: string; } | null>(null);
-  const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{
+  const [newCommentContent, setNewCommentContent] = useState<PartialBlock[]>([{ 
     type: "paragraph",
     props: {
       textAlignment: "left",
@@ -67,6 +71,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       styles: {}
     }]
   }]);
+  // No component-level pending state needed; we’ll keep optimistic data within the save handler scope
 
   useEffect(() => {
     const loadTicketDetails = async () => {
@@ -193,13 +198,100 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
         }
       }
       
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Attempting save', {
+        comment_id: currentComment.comment_id,
+        hasNote: !!updates.note,
+        noteLen: updates.note ? updates.note.length : 0,
+      });
       await updateClientTicketComment(currentComment.comment_id, updates);
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Save succeeded');
+
+      // Prepare an optimistic version of the updated comment for immediate UI update and later merge
+      const optimisticUpdatedAt = new Date().toISOString();
+      const optimisticCommentId = currentComment.comment_id;
+      const optimisticNote = updates.note;
+
+      // Optimistically update the local ticket state so the UI reflects changes immediately
+      setTicket(prev => {
+        if (!prev) return prev;
+        const updatedConversations = (prev.conversations || []).map(conv => {
+          if (conv.comment_id === optimisticCommentId) {
+            if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][optimistic] Updating local state', {
+              comment_id: conv.comment_id,
+              prevUpdatedAt: conv.updated_at,
+              nextUpdatedAt: optimisticUpdatedAt,
+              prevNoteLen: (conv.note || '').length,
+              nextNoteLen: (updates.note || conv.note || '').length,
+            });
+            return {
+              ...conv,
+              ...updates,
+              updated_at: optimisticUpdatedAt,
+            } as IComment;
+          }
+          return conv;
+        });
+        return { ...prev, conversations: updatedConversations } as TicketWithDetails;
+      });
+
+      // Set override to guarantee immediate child render with latest note
+      setCommentOverrides(prev => ({
+        ...prev,
+        [optimisticCommentId]: { note: optimisticNote, updated_at: optimisticUpdatedAt }
+      }));
+
+      // Force remount of the conversation list to avoid any stale subtrees
+      setConversationVersion(v => v + 1);
       setIsEditing(false);
       setCurrentComment(null);
-      
-      // Refresh ticket details to get updated comment
+
+      // Refresh ticket details to get the authoritative updated comment
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetching ticket details');
       const details = await getClientTicketDetails(ticketId);
-      setTicket(details);
+      const detailsWithExtras = details as TicketWithDetails;
+      const fetchedConv = (detailsWithExtras.conversations || []).find(c => c.comment_id === optimisticCommentId);
+      if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][handleSave] Refetch result for edited comment', {
+        comment_id: optimisticCommentId,
+        fetchedUpdatedAt: fetchedConv?.updated_at,
+        fetchedNoteLen: (fetchedConv?.note || '').length,
+      });
+      // Merge: prefer our optimistic update if it’s newer than fetched data
+      setTicket(() => {
+        const merged = { ...detailsWithExtras } as TicketWithDetails;
+        merged.conversations = (detailsWithExtras.conversations || []).map(conv => {
+          if (conv.comment_id === optimisticCommentId) {
+            const fetchedTime = conv.updated_at ? new Date(conv.updated_at).getTime() : 0;
+            const optimisticTime = new Date(optimisticUpdatedAt).getTime();
+            if (optimisticTime > fetchedTime) {
+              if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][merge] Keeping optimistic version', {
+                optimisticUpdatedAt,
+                fetchedUpdatedAt: conv.updated_at,
+                fetchedNoteLen: (conv.note || '').length,
+                optimisticNoteLen: (optimisticNote || '').length,
+              });
+              return {
+                ...conv,
+                note: optimisticNote ?? conv.note,
+                updated_at: optimisticUpdatedAt,
+              } as IComment;
+            } else {
+              if (process.env.NODE_ENV !== 'production') console.log('[ClientPortal][merge] Keeping fetched version', {
+                optimisticUpdatedAt,
+                fetchedUpdatedAt: conv.updated_at,
+              });
+            }
+          }
+          return conv;
+        });
+        return merged;
+      });
+
+      // Clear override after refetch resolution
+      setCommentOverrides(prev => {
+        const next = { ...prev };
+        delete next[optimisticCommentId];
+        return next;
+      });
     } catch (error) {
       console.error('Failed to update comment:', error);
       setError('Failed to update comment');
@@ -361,6 +453,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
               {ticket.conversations && (
                 <TicketConversation
+                  key={`conv-${conversationVersion}`}
                   ticket={ticket}
                   conversations={ticket.conversations}
                   documents={ticket.documents || []}
@@ -383,6 +476,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                   onClose={handleClose}
                   onDelete={handleDelete}
                   onContentChange={handleContentChange}
+                  overrides={commentOverrides}
                 />
               )}
               

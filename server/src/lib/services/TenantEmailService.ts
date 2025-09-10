@@ -7,7 +7,7 @@ import {
   EmailAddress,
   IEmailProvider
 } from '../../types/email.types';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import { 
   ITemplateProcessor
 } from './email/templateProcessors';

@@ -1186,7 +1186,7 @@ class ScheduleEntry {
           switch (deleteType) {
             case IEditScope.SINGLE:
               if (virtualTimestamp) {
-                // Add the date to exceptions
+                // Add the date to exceptions for virtual instances
                 const exceptionDate = new Date(virtualTimestamp);
                 exceptionDate.setUTCHours(0, 0, 0, 0);
                 const updatedPattern = {
@@ -1205,12 +1205,78 @@ class ScheduleEntry {
                   await trx.commit();
                 }
                 return true;
+              } else {
+                // For master entry deletion in SINGLE mode, we need to:
+                // 1. Find the next occurrence after the master
+                // 2. Create a new master starting from that occurrence 
+                // 3. Add the original master date to exceptions
+                // 4. Delete the original master
+                
+                // First, let's generate occurrences to find the next one
+                const { generateOccurrences } = require('../utils/recurrenceUtils');
+                const now = new Date();
+                const futureDate = new Date(now);
+                futureDate.setFullYear(futureDate.getFullYear() + 1); // Look ahead 1 year
+                
+                const occurrences = generateOccurrences({
+                  ...originalEntry,
+                  recurrence_pattern: originalPattern
+                }, originalEntry.scheduled_start, futureDate);
+                
+                // Find the first occurrence after the master's start date
+                const masterStartTime = new Date(originalEntry.scheduled_start).getTime();
+                const nextOccurrence = occurrences.find(occ => occ.getTime() > masterStartTime);
+                
+                if (nextOccurrence) {
+                  // Create a new master entry starting from the next occurrence
+                  const newMasterId = uuidv4();
+                  const duration = new Date(originalEntry.scheduled_end).getTime() - new Date(originalEntry.scheduled_start).getTime();
+                  
+                  // Add the original master date to exceptions
+                  const exceptionDate = new Date(originalEntry.scheduled_start);
+                  exceptionDate.setUTCHours(0, 0, 0, 0);
+                  
+                  const newPattern = {
+                    ...originalPattern,
+                    startDate: nextOccurrence,
+                    exceptions: [...(originalPattern.exceptions || []), exceptionDate]
+                  };
+                  
+                  await trx('schedule_entries').insert({
+                    entry_id: newMasterId,
+                    title: originalEntry.title,
+                    scheduled_start: nextOccurrence,
+                    scheduled_end: new Date(nextOccurrence.getTime() + duration),
+                    notes: originalEntry.notes,
+                    status: originalEntry.status,
+                    work_item_id: originalEntry.work_item_id,
+                    work_item_type: originalEntry.work_item_type,
+                    tenant,
+                    recurrence_pattern: JSON.stringify(newPattern),
+                    is_recurring: true,
+                    is_private: originalEntry.is_private
+                  });
+                  
+                  // Copy assignees to new master
+                  const assignedUserIds = await this.getAssignedUserIds(trx, tenant, [masterEntryId]);
+                  await this.updateAssignees(trx, tenant, newMasterId, assignedUserIds[masterEntryId] || []);
+                }
+                
+                // Delete the original master entry
+                await trx('schedule_entries')
+                  .where('schedule_entries.tenant', tenant)
+                  .andWhere('entry_id', masterEntryId)
+                  .del();
+
+                if (!isTransaction) {
+                  await trx.commit();
+                }
+                return true;
               }
-              break;
 
             case IEditScope.FUTURE:
               if (virtualTimestamp) {
-                // Update end date to the day before
+                // Update end date to the day before for virtual instances
                 const endDate = new Date(virtualTimestamp);
                 endDate.setDate(endDate.getDate() - 1);
                 endDate.setHours(23, 59, 59, 999);
@@ -1232,8 +1298,19 @@ class ScheduleEntry {
                   await trx.commit();
                 }
                 return true;
+              } else {
+                // For master entry deletion in FUTURE mode, delete the entire recurring series
+                // This is equivalent to "All events" since we're deleting from the first occurrence
+                await trx('schedule_entries')
+                  .where('schedule_entries.tenant', tenant)
+                  .andWhere('entry_id', masterEntryId)
+                  .del();
+
+                if (!isTransaction) {
+                  await trx.commit();
+                }
+                return true;
               }
-              break;
 
             case IEditScope.ALL:
               // Delete the entire entry

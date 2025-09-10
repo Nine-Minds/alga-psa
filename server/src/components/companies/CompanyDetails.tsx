@@ -49,7 +49,7 @@ import { FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { createBlockDocument, updateBlockContent, getBlockContent } from 'server/src/lib/actions/document-actions/documentBlockContentActions';
 import { getDocument, getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
 import ClientBillingDashboard from '../billing-dashboard/ClientBillingDashboard';
-import { useToast } from 'server/src/hooks/use-toast';
+import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
@@ -162,6 +162,11 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [interactions, setInteractions] = useState<IInteraction[]>([]);
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [internalUsers, setInternalUsers] = useState<IUserWithRoles[]>([]);
+  
+  // Update editedCompany when company prop changes
+  useEffect(() => {
+    setEditedCompany(company);
+  }, [company]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isDocumentSelectorOpen, setIsDocumentSelectorOpen] = useState(false);
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
@@ -176,6 +181,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     priorityOptions: SelectOption[];
     channelOptions: IChannel[];
     categories: ITicketCategory[];
+    tags?: string[];
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
@@ -183,7 +189,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
 
@@ -199,13 +204,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       }
     } catch (error) {
       console.error('Error refreshing company data:', error);
-      toast({
-        title: "Refresh Failed",
-        description: "Could not fetch latest company data.",
-        variant: "destructive"
-      });
+      toast.error("Could not fetch latest company data.");
     }
-  }, [company?.company_id, toast]);
+  }, [company?.company_id]);
 
   // 2. Implement Initial Load Logic
   useEffect(() => {
@@ -262,7 +263,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
           channelOptions: options.channelOptions,
-          categories: options.categories
+          categories: options.categories,
+          tags: options.tags
         });
       } catch (error) {
         console.error('Error fetching ticket form options:', error);
@@ -406,18 +408,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
       setEditedCompany(updatedCompany);
       setHasUnsavedChanges(false);
-      toast({
-        title: "Success",
-        description: "Company details saved successfully.",
-        variant: "default"
-      });
+      toast.success("Company details saved successfully.");
     } catch (error) {
       console.error('Error saving company:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save company details. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save company details. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -507,18 +501,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       }
       
       setHasUnsavedNoteChanges(false);
-      toast({
-        title: "Success",
-        description: "Note saved successfully.",
-        variant: "default"
-      });
+      toast.success("Note saved successfully.");
     } catch (error) {
       console.error('Error saving note:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save note. Please try again.",
-        variant: "destructive"
-      });
+      toast.error("Failed to save note. Please try again.");
     }
   };
   
@@ -686,6 +672,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
+              initialTags={ticketFormOptions.tags || []}
             />
           ) : (
             <div className="flex justify-center items-center h-32">
@@ -963,7 +950,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       <div>
         <CustomTabs
           tabs={quickView ? [tabContent[0]] : tabContent}
-          defaultTab={findTabLabel(searchParams?.get('tab'))}
+          // In quick view we only render the Details tab. Force default to Details
+          // to avoid a mismatch with the current page's ?tab= query (e.g. "Tickets").
+          defaultTab={quickView ? 'Details' : findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
         />
 

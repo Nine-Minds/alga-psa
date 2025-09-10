@@ -307,9 +307,35 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
       });
     };
     
-    const handleResizeEnd = () => {
+    const handleResizeEnd = (finalEvent: MouseEvent) => {
       document.removeEventListener('mousemove', handleResizeMove);
       document.removeEventListener('mouseup', handleResizeEnd);
+      
+      // Calculate final position and save
+      const deltaY = finalEvent.clientY - startY;
+      const deltaMinutes = Math.round(deltaY / 20) * 15;
+      
+      let finalStart = new Date(initialStart);
+      let finalEnd = new Date(initialEnd);
+      
+      if (direction === 'top') {
+        finalStart = new Date(initialStart.getTime() + deltaMinutes * 60000);
+        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
+          return; // Don't save if too short
+        }
+      } else {
+        finalEnd = new Date(initialEnd.getTime() + deltaMinutes * 60000);
+        if (finalEnd.getTime() - finalStart.getTime() < 15 * 60000) {
+          return; // Don't save if too short
+        }
+      }
+      
+      // Call onEventResize with final values to persist the change
+      onEventResize?.({
+        event,
+        start: finalStart,
+        end: finalEnd
+      });
     };
     
     document.addEventListener('mousemove', handleResizeMove);

@@ -3,7 +3,8 @@
   "packages": [
     "nodejs_22@latest",
     "gh@2.72.0",
-    "nodejs_21@latest"
+    "nodejs_21@latest",
+    "nodejs@latest"
   ],
   "shell": {
     "init_hook": [

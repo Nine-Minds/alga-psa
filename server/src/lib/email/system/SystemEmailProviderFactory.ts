@@ -1,4 +1,4 @@
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 import { IEmailProvider, EmailProviderConfig } from '../../../types/email.types.js';
 import { SMTPEmailProvider } from '../../../services/email/providers/SMTPEmailProvider.js';
 import { ResendEmailProvider } from '../../../services/email/providers/ResendEmailProvider.js';

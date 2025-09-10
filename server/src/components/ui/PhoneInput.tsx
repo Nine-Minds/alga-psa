@@ -3,9 +3,11 @@ import { Input } from './Input';
 import { Label } from './Label';
 
 interface PhoneInputProps {
+  id?: string;
   label?: string;
   value: string;
   onChange: (value: string) => void;
+  onBlur?: () => void;
   countryCode?: string; // ISO country code (e.g., 'US', 'GB')
   phoneCode?: string; // Phone code (e.g., '+1', '+44')
   placeholder?: string;
@@ -16,9 +18,11 @@ interface PhoneInputProps {
 }
 
 export const PhoneInput: React.FC<PhoneInputProps> = ({
+  id,
   label,
   value,
   onChange,
+  onBlur,
   countryCode,
   phoneCode,
   placeholder,
@@ -83,7 +87,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     <div className={className}>
       {label && (
         <Label 
-          htmlFor={dataAutomationId} 
+          htmlFor={id || dataAutomationId} 
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           {label}
@@ -91,11 +95,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         </Label>
       )}
       <Input
-        id={dataAutomationId}
+        id={id || dataAutomationId}
         data-automation-id={dataAutomationId}
         type="tel"
         value={displayValue}
         onChange={handleInputChange}
+        onBlur={onBlur}
         placeholder={getPlaceholderText()}
         disabled={disabled}
         className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"

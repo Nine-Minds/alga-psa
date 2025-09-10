@@ -13,6 +13,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { Extension } from '../../../lib/extensions/types';
 import { ChevronLeftIcon, InfoIcon, SettingsIcon, PackageIcon, ShieldIcon, AlertCircleIcon, CheckCircleIcon, XCircleIcon } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 // Fallback to console for logging in EE components
 import { fetchExtensionById, toggleExtension, uninstallExtension } from '../../../lib/actions/extensionActions';
 import { ExtensionPermissions } from './ExtensionPermissions';
@@ -29,14 +30,14 @@ export default function ExtensionDetails() {
   const [extension, setExtension] = useState<Extension | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [installInfo, setInstallInfo] = useState<{ domain: string | null; status: any } | null>(null);
+  type RunnerStatus = { state?: string } | null;
+  const [installInfo, setInstallInfo] = useState<{ domain: string | null; status: RunnerStatus } | null>(null);
   
   // Register with Alga's UI automation system
   const { automationIdProps } = useAutomationIdAndRegister<ContainerComponent>({
     id: `extension-details-${extensionId}`,
     type: 'container',
-    label: 'Extension Details',
-    variant: 'default'
+    label: 'Extension Details'
   });
   
   // Fetch extension details
@@ -48,7 +49,16 @@ export default function ExtensionDetails() {
         setLoading(false);
         if (foundExtension) {
           const info = await getInstallInfo(extensionId).catch(() => null);
-          if (info) setInstallInfo({ domain: info.runner_domain || null, status: info.runner_status });
+          if (info) {
+            const domain = typeof info.runner_domain === 'string' ? info.runner_domain : null;
+            const rawStatus: unknown = info.runner_status;
+            let status: RunnerStatus = null;
+            if (rawStatus && typeof rawStatus === 'object') {
+              const maybe = rawStatus as { state?: unknown };
+              status = typeof maybe.state === 'string' ? { state: maybe.state } : {};
+            }
+            setInstallInfo({ domain, status });
+          }
         }
       } catch (err) {
         console.error('Failed to fetch extension details', { extensionId, error: err });
@@ -57,7 +67,7 @@ export default function ExtensionDetails() {
       }
     };
     
-    fetchExtensionDetails();
+    void fetchExtensionDetails();
   }, [extensionId]);
   
   // Handle toggling extension
@@ -67,19 +77,19 @@ export default function ExtensionDetails() {
     try {
       const result = await toggleExtension(extensionId);
       if (!result.success) {
-        alert(result.message);
+        toast.error(result.message || 'Failed to update extension state');
         return;
       }
       
       // Update local state
       setExtension(prevExtension => 
-        prevExtension ? { ...prevExtension, isEnabled: !prevExtension.isEnabled } : null
+        prevExtension ? { ...prevExtension, is_enabled: !prevExtension.is_enabled } : null
       );
       
-      console.info(`Extension ${extension.isEnabled ? 'disabled' : 'enabled'}`, { extensionId });
+      console.info(`Extension ${extension.is_enabled ? 'disabled' : 'enabled'}`, { extensionId });
     } catch (err) {
       console.error('Failed to toggle extension', { extensionId, error: err });
-      alert(`Failed to ${extension.isEnabled ? 'disable' : 'enable'} extension`);
+      toast.error(`Failed to ${extension.is_enabled ? 'disable' : 'enable'} extension`);
     }
   };
 
@@ -87,8 +97,8 @@ export default function ExtensionDetails() {
     try {
       const result = await reprovisionExtension(extensionId);
       setInstallInfo({ domain: result.domain || null, status: { state: 'provisioning' } });
-    } catch (e) {
-      alert('Failed to reprovision');
+    } catch (_e) {
+      toast.error('Failed to reprovision');
     }
   };
   
@@ -101,17 +111,18 @@ export default function ExtensionDetails() {
     try {
       const result = await uninstallExtension(extensionId);
       if (!result.success) {
-        alert(result.message);
+        toast.error(result.message || 'Failed to remove extension');
         return;
       }
       
       console.info('Extension removed', { extensionId });
+      toast.success('Extension removed');
       
       // Navigate back to extensions list
       router.push('/msp/settings/extensions');
     } catch (err) {
       console.error('Failed to remove extension', { extensionId, error: err });
-      alert('Failed to remove extension');
+      toast.error('Failed to remove extension');
     }
   };
   
@@ -130,15 +141,15 @@ export default function ExtensionDetails() {
             <h1 className="text-2xl font-semibold text-gray-900">
               {loading ? 'Extension Details' : extension?.name || 'Extension Not Found'}
             </h1>
-            {extension && (
-              <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                extension.isEnabled 
+              {extension && (
+                <span className={`ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                extension.is_enabled 
                   ? 'bg-green-100 text-green-800' 
                   : 'bg-gray-100 text-gray-800'
-              }`}>
-                {extension.isEnabled ? 'Enabled' : 'Disabled'}
-              </span>
-            )}
+                }`}>
+                {extension.is_enabled ? 'Enabled' : 'Disabled'}
+                </span>
+              )}
           </div>
           
           {extension && (
@@ -153,15 +164,15 @@ export default function ExtensionDetails() {
               </Link>
               
               <button
-                onClick={handleToggleExtension}
+                onClick={() => { void handleToggleExtension(); }}
                 className={`inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white ${
-                  extension.isEnabled
+                  extension.is_enabled
                     ? 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500'
                     : 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
                 } focus:outline-none focus:ring-2 focus:ring-offset-2`}
                 data-automation-id="toggle-extension-button"
               >
-                {extension.isEnabled ? (
+                {extension.is_enabled ? (
                   <>
                     <XCircleIcon className="h-4 w-4 mr-1.5" />
                     Disable
@@ -175,7 +186,7 @@ export default function ExtensionDetails() {
               </button>
               
               <button
-                onClick={handleRemoveExtension}
+                onClick={() => { void handleRemoveExtension(); }}
                 className="inline-flex items-center px-3 py-1.5 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 data-automation-id="remove-extension-button"
               >
@@ -235,7 +246,7 @@ export default function ExtensionDetails() {
                             Open
                           </a>
                           <button
-                            onClick={() => navigator.clipboard.writeText(`https://${installInfo.domain}`)}
+                            onClick={() => { void navigator.clipboard.writeText(`https://${installInfo.domain}`); }}
                             className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
                           >
                             Copy
@@ -243,7 +254,7 @@ export default function ExtensionDetails() {
                         </>
                       ) : (
                         <button
-                          onClick={handleReprovision}
+                          onClick={() => { void handleReprovision(); }}
                           className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200"
                         >
                           Provision
@@ -264,7 +275,11 @@ export default function ExtensionDetails() {
                     
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Author</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{extension.author || 'Unknown'}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        {typeof extension.manifest.author === 'string' 
+                          ? extension.manifest.author 
+                          : (extension.manifest.author?.name || 'Unknown')}
+                      </dd>
                     </div>
                     
                     {extension.manifest.homepage && (
@@ -292,12 +307,12 @@ export default function ExtensionDetails() {
                     
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Installed Date</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{extension.createdAt.toLocaleDateString()}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{extension.created_at.toLocaleDateString()}</dd>
                     </div>
                     
                     <div>
                       <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{extension.updatedAt.toLocaleDateString()}</dd>
+                      <dd className="mt-1 text-sm text-gray-900">{extension.updated_at.toLocaleDateString()}</dd>
                     </div>
                   </dl>
                 </div>
@@ -330,7 +345,7 @@ export default function ExtensionDetails() {
                   </div>
                 </div>
                 <div className="p-6">
-                  {extension.manifest.components && extension.manifest.components.length > 0 ? (
+                  {Array.isArray(extension.manifest.components) && extension.manifest.components.length > 0 ? (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
@@ -350,22 +365,22 @@ export default function ExtensionDetails() {
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {extension.manifest.components.map((component, index) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {component.type}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {component.id}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {component.entryPoint}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {component.mountPoint || '-'}
-                              </td>
-                            </tr>
-                          ))}
+                          {(
+                            extension.manifest.components as Array<Record<string, unknown>>
+                          ).map((component, index) => {
+                            const type = typeof (component as any).type === 'string' ? ((component as any).type as string) : '-';
+                            const id = typeof (component as any).id === 'string' ? ((component as any).id as string) : '-';
+                            const entryPoint = typeof (component as any).entryPoint === 'string' ? ((component as any).entryPoint as string) : '-';
+                            const mountPoint = typeof (component as any).mountPoint === 'string' ? ((component as any).mountPoint as string) : '-';
+                            return (
+                              <tr key={index}>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{type}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{id}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{entryPoint}</td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{mountPoint}</td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -387,7 +402,7 @@ export default function ExtensionDetails() {
                     <h3 className="text-sm font-medium text-blue-800">Extension Information</h3>
                     <div className="mt-2 text-sm text-blue-700">
                       <p>
-                        This extension was installed on {extension.createdAt.toLocaleDateString()} and last updated on {extension.updatedAt.toLocaleDateString()}.
+                        This extension was installed on {extension.created_at.toLocaleDateString()} and last updated on {extension.updated_at.toLocaleDateString()}.
                       </p>
                       <p className="mt-2">
                         Enabling or disabling the extension may require a page refresh for changes to take effect.

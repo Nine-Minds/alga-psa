@@ -2,15 +2,16 @@ import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 import {
   getRedisStreamClient,
-  RedisStreamClient
-} from '@alga-psa/shared/workflow/streams/index.js';
-import { WorkflowEventBase, WorkflowEventBaseSchema } from '@alga-psa/shared/workflow/streams/index.js';
-import { TypeScriptWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
+  RedisStreamClient,
+  WorkflowEventBase,
+  WorkflowEventBaseSchema
+} from '@shared/workflow/streams/index.js';
+import { TypeScriptWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { createClient } from 'redis';
-import logger from '@alga-psa/shared/core/logger.js';
-import { getSecret } from '@alga-psa/shared/core/index.js';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
-import { withAdminTransaction } from '@alga-psa/shared/db/index.js';
+import logger from '@shared/core/logger.js';
+import { getSecret } from '@shared/core/index.js';
+import { getAdminConnection } from '@shared/db/admin.js';
+import { withAdminTransaction } from '@shared/db/index.js';
 import { Knex } from 'knex';
 
 // TODO: These utilities would need to be properly implemented or moved

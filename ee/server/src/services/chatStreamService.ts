@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { HuggingFaceChatModel } from '../models/HuggingFaceChatModel';
 import { AnthropicChatModel } from '../models/AnthropicChatModel';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 
 interface StreamRequestBody {
   inputs: any[];

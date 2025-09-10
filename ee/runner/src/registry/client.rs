@@ -23,7 +23,7 @@ pub struct HttpRegistryClient {
 }
 
 impl HttpRegistryClient {
-    pub fn new() -> Result<Self> {
+    pub fn new(api_key: Option<String>) -> Result<Self> {
         let strict = std::env::var("EXT_STATIC_STRICT_VALIDATION")
             .map(|v| v.trim().eq_ignore_ascii_case("true"))
             .unwrap_or(true);
@@ -38,9 +38,11 @@ impl HttpRegistryClient {
         let http = reqwest::Client::builder().build()?;
 
         // Optional API key auth for registry requests
-        let api_key = std::env::var("ALGA_AUTH_KEY").ok().and_then(|s| {
-            let t = s.trim().to_string();
-            if t.is_empty() { None } else { Some(t) }
+        let api_key = api_key.or_else(|| {
+            std::env::var("ALGA_AUTH_KEY").ok().and_then(|s| {
+                let t = s.trim().to_string();
+                if t.is_empty() { None } else { Some(t) }
+            })
         });
 
         if let Some(ref k) = api_key {

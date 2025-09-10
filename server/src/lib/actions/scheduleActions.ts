@@ -257,10 +257,14 @@ export async function deleteScheduleEntry(entry_id: string, deleteType: IEditSco
     const userPermissions = await getCurrentUserPermissions();
     const canUpdateGlobally = userPermissions.includes('user_schedule:update');
 
+    // Parse entry ID to get master entry ID (for virtual entries)
+    const isVirtualId = entry_id.includes('_');
+    const masterEntryId = isVirtualId ? entry_id.split('_')[0] : entry_id;
+
     // Fetch the existing entry first to check permissions
     const { knex: db } = await createTenantKnex();
     const existingEntry = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await ScheduleEntry.get(trx, entry_id);
+      return await ScheduleEntry.get(trx, masterEntryId);
     });
     if (!existingEntry) {
       // If entry doesn't exist, deletion is technically successful (idempotent)

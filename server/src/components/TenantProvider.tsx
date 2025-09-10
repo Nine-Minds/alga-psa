@@ -2,12 +2,12 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 
-const TenantContext = createContext<string | null>(null);
+const TenantContext = createContext<string | null | undefined>(null);
 
 export const useTenant = () => useContext(TenantContext);
 
 interface TenantProviderProps {
-  tenant: string | null;
+  tenant?: string | null;
   children: ReactNode;
 }
 

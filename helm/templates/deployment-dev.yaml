@@ -113,6 +113,14 @@ spec:
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
+          - name: APP_VERSION
+            value: "{{ .Values.version }}"
+          - name: NEXT_PUBLIC_APP_VERSION
+            value: "{{ .Values.version }}"
+          - name: APP_BUILD_SHA
+            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
+          - name: NEXT_PUBLIC_APP_BUILD_SHA
+            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
           - name: APP_NAME
             value: "{{ .Values.nameOverride }}-dev"
           - name: APP_ENV

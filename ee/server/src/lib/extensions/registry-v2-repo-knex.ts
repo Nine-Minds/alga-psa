@@ -140,7 +140,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
         runtime: input.runtime,
         main_entry: input.uiEntry || 'main',
         api_endpoints: JSON.stringify(input.endpoints ?? []),
-        ui: input.uiEntry ? JSON.stringify({ entry: input.uiEntry }) : null,
+        ui: input.ui ? JSON.stringify(input.ui) : (input.uiEntry ? JSON.stringify({ entry: input.uiEntry }) : null),
         capabilities: JSON.stringify(input.capabilities ?? []),
       };
       const vCols = ['id', 'registry_id', 'version', 'runtime', 'main_entry', 'api_endpoints', 'ui', 'capabilities', 'created_at'] as const;
@@ -166,6 +166,7 @@ export function registerRegistryV2KnexRepo(knex: Knex) {
         version: v.version,
         contentHash: contentHashHex,
         runtime: v.runtime,
+        ui: typeof v.ui === 'string' ? JSON.parse(v.ui) : v.ui ?? undefined,
         uiEntry: input.uiEntry,
         endpoints: Array.isArray(v.api_endpoints) ? v.api_endpoints : JSON.parse(v.api_endpoints || '[]'),
         capabilities: Array.isArray(v.capabilities) ? v.capabilities : JSON.parse(v.capabilities || '[]'),

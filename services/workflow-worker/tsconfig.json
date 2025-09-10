@@ -7,12 +7,10 @@
     "noEmit": false,
     "noEmitOnError": false,
     "moduleResolution": "nodenext",
-    "baseUrl": ".",
+    "baseUrl": "../..",
     "paths": {
-      "@shared/*": ["../../shared/*"],
-      "@shared": ["../../shared"],
-      "@alga-psa/shared/*": ["../../shared/*"],
-      "@alga-psa/shared": ["../../shared"]
+      "@shared/*": ["shared/*"],
+      "@shared": ["shared"]
     },
     "rootDir": "../.."
   },

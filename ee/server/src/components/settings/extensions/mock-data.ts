@@ -1,4 +1,4 @@
-import { Extension, ExtensionManifest } from '@/lib/extensions/types';
+import { Extension } from '@/lib/extensions/types';
 
 // Mock extension data for UI development
 export const mockExtensionData: Extension[] = [
@@ -7,11 +7,10 @@ export const mockExtensionData: Extension[] = [
     name: 'Customer Dashboard',
     description: 'Enhanced customer dashboard with additional analytics and insights',
     version: '1.0.0',
-    author: 'Nine Minds',
-    isEnabled: true,
-    createdAt: new Date('2025-05-01T00:00:00Z'),
-    updatedAt: new Date('2025-05-10T00:00:00Z'),
-    tenantId: 'tenant-001',
+    is_enabled: true,
+    created_at: new Date('2025-05-01T00:00:00Z'),
+    updated_at: new Date('2025-05-10T00:00:00Z'),
+    tenant_id: 'tenant-001',
     manifest: {
       name: 'customer-dashboard',
       description: 'Enhanced customer dashboard with additional analytics and insights',
@@ -93,11 +92,10 @@ export const mockExtensionData: Extension[] = [
     name: 'Reporting Pack',
     description: 'Additional reporting templates and export options',
     version: '1.2.3',
-    author: 'Alga Integrations',
-    isEnabled: true,
-    createdAt: new Date('2025-04-15T00:00:00Z'),
-    updatedAt: new Date('2025-05-05T00:00:00Z'),
-    tenantId: 'tenant-001',
+    is_enabled: true,
+    created_at: new Date('2025-04-15T00:00:00Z'),
+    updated_at: new Date('2025-05-05T00:00:00Z'),
+    tenant_id: 'tenant-001',
     manifest: {
       name: 'reporting-pack',
       description: 'Additional reporting templates and export options',
@@ -172,11 +170,10 @@ export const mockExtensionData: Extension[] = [
     name: 'QuickBooks Pro Sync',
     description: 'Enhanced QuickBooks integration with advanced mapping and reconciliation',
     version: '2.0.1',
-    author: 'Accounting Solutions Ltd',
-    isEnabled: false,
-    createdAt: new Date('2025-03-20T00:00:00Z'),
-    updatedAt: new Date('2025-04-20T00:00:00Z'),
-    tenantId: 'tenant-001',
+    is_enabled: false,
+    created_at: new Date('2025-03-20T00:00:00Z'),
+    updated_at: new Date('2025-04-20T00:00:00Z'),
+    tenant_id: 'tenant-001',
     manifest: {
       name: 'quickbooks-pro-sync',
       description: 'Enhanced QuickBooks integration with advanced mapping and reconciliation',

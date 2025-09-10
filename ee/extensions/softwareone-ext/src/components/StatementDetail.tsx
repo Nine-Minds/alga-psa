@@ -22,7 +22,7 @@ export function StatementDetail({ statementId }: StatementDetailProps) {
           <p className="text-red-800">Statement not found</p>
         </div>
         <button
-          onClick={() => router.push('/softwareone/statements')}
+          onClick={() => router.push('/statements')}
           className="mt-4 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
         >
           Back to Statements
@@ -75,7 +75,7 @@ export function StatementDetail({ statementId }: StatementDetailProps) {
       {/* Header */}
       <div className="mb-6">
         <button
-          onClick={() => router.push('/softwareone/statements')}
+          onClick={() => router.push('/statements')}
           className="text-blue-600 hover:text-blue-800 text-sm mb-4 flex items-center"
         >
           ← Back to Statements

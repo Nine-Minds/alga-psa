@@ -469,6 +469,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                 documents={[]}
                 contacts={[]}
                 isInDrawer={true}
+                quickView={true}
               />
             )}
             onKeyDown={(e) => {
@@ -480,6 +481,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
                     documents={[]}
                     contacts={[]}
                     isInDrawer={true}
+                    quickView={true}
                   />
                 );
               }

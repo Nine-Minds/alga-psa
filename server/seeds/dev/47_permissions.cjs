@@ -186,9 +186,9 @@ exports.seed = async function(knex) {
         { resource: 'settings', action: 'update', msp: false, client: true, description: 'Update settings in client portal' },
         { resource: 'settings', action: 'delete', msp: false, client: true, description: 'Delete settings in client portal' },
         
-        { resource: 'documents', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
-        { resource: 'documents', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
-        { resource: 'documents', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
+        { resource: 'document', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
+        { resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
+        { resource: 'document', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
     ];
 
     // Process each tenant

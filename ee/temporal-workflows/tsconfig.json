@@ -15,9 +15,9 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "baseUrl": ".",
+    "baseUrl": "../..",
     "paths": {
-      "@alga-psa/shared/*": ["../../shared/*"]
+      "@shared/*": ["shared/*"]
     }
   },
   "include": [

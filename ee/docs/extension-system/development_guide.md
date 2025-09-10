@@ -5,12 +5,7 @@ This guide describes how to build Enterprise Edition (v2) extensions for Alga PS
 - UI is rendered exclusively in sandboxed iframes
 - Bundles are signed and content-addressed (sha256:...) and validated by the Registry
 
-Core rules:
-- All HTTP calls use the Gateway route: `/api/ext/[extensionId]/[...path]`, which proxies to Runner `POST /v1/execute`
-- UI assets are served by the Runner only at `${RUNNER_PUBLIC_BASE}/ext-ui/{extensionId}/{content_hash}/[...]`
-- Iframe src is constructed by [buildExtUiSrc()](ee/server/src/lib/extensions/ui/iframeBridge.ts:38) and initialized via [bootstrapIframe()](ee/server/src/lib/extensions/ui/iframeBridge.ts:45)
-
-Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
+ Core rules: See “Correctness Rules” in the README for the canonical list. Reference gateway scaffold: [ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts](ee/server/src/app/api/ext/%5BextensionId%5D/%5B...path%5D/route.ts)
 
 ## Prerequisites
 

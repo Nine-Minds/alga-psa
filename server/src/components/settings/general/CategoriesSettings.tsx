@@ -119,9 +119,32 @@ const CategoriesSettings: React.FC = () => {
       await deleteCategory(deleteDialog.categoryId);
       toast.success('Category deleted successfully');
       await fetchCategories();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to delete category');
+      // Extract the actual error message from Next.js server action error
+      let errorMessage = 'Failed to delete category';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // Make the message more user-friendly
+      if (errorMessage.includes('ticket') && errorMessage.includes('using this category')) {
+        // Extract the ticket count from the message if present
+        const match = errorMessage.match(/(\d+) ticket/);
+        if (match) {
+          const count = parseInt(match[1]);
+          errorMessage = `Cannot delete this category because ${count} ticket${count === 1 ? ' is' : 's are'} currently using it. Please reassign or delete ${count === 1 ? 'that ticket' : 'those tickets'} first.`;
+        } else {
+          errorMessage = 'Cannot delete this category because it is currently assigned to one or more tickets. Please reassign or delete those tickets first.';
+        }
+      } else if (errorMessage.includes('has subcategories')) {
+        errorMessage = 'Cannot delete this category because it has subcategories. Please delete all subcategories first.';
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setDeleteDialog({ isOpen: false, categoryId: '', categoryName: '' });
     }
@@ -379,12 +402,8 @@ const CategoriesSettings: React.FC = () => {
             id="add-category-button"
             onClick={() => {
               setEditingCategory(null);
-              // Calculate next display order for parent categories
-              const parentCategories = categories.filter(cat => !cat.parent_category);
-              const nextOrder = parentCategories.length > 0 
-                ? Math.max(...parentCategories.map(cat => cat.display_order || 0)) + 1 
-                : 1;
-              setFormData({ category_name: '', display_order: nextOrder, channel_id: '', parent_category: '' });
+              // Start with empty form - order will be calculated based on parent selection
+              setFormData({ category_name: '', display_order: 0, channel_id: '', parent_category: '' });
               setShowAddEditDialog(true);
               setError(null);
             }} 
@@ -454,24 +473,8 @@ const CategoriesSettings: React.FC = () => {
                 <CustomSelect
                   value={formData.parent_category || 'none'}
                   onValueChange={(value) => {
-                    // Update display order based on parent selection
-                    let nextOrder = 1;
                     const actualValue = value === 'none' ? '' : value;
-                    
-                    if (actualValue) {
-                      // For subcategories, calculate next order within parent
-                      const siblingCategories = categories.filter(cat => cat.parent_category === actualValue);
-                      nextOrder = siblingCategories.length > 0 
-                        ? Math.max(...siblingCategories.map(cat => cat.display_order || 0)) + 1 
-                        : 1;
-                    } else {
-                      // For parent categories
-                      const parentCategories = categories.filter(cat => !cat.parent_category);
-                      nextOrder = parentCategories.length > 0 
-                        ? Math.max(...parentCategories.map(cat => cat.display_order || 0)) + 1 
-                        : 1;
-                    }
-                    setFormData({ ...formData, parent_category: actualValue, display_order: nextOrder });
+                    setFormData({ ...formData, parent_category: actualValue });
                   }}
                   options={[
                     { value: 'none', label: 'None (Top-level category)' },

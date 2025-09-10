@@ -1,4 +1,4 @@
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { logger } from '@alga-psa/shared/core';
 
 /**

@@ -399,14 +399,31 @@ export async function deleteCategory(categoryId: string): Promise<void> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // Check if category is in use by tickets
+      // Check if category has subcategories
+      const hasSubcategories = await trx('categories')
+        .where({
+          tenant,
+          parent_category: categoryId
+        })
+        .first();
+
+      if (hasSubcategories) {
+        throw new Error('Cannot delete category that has subcategories');
+      }
+
+      // Check if category is in use by tickets (both as category_id and subcategory_id)
       const ticketsCount = await trx('tickets')
-        .where({ category_id: categoryId, tenant })
+        .where({ tenant })
+        .where(function() {
+          this.where('category_id', categoryId)
+              .orWhere('subcategory_id', categoryId);
+        })
         .count('* as count')
         .first();
       
       if (ticketsCount && Number(ticketsCount.count) > 0) {
-        throw new Error('Cannot delete category: tickets are using this category');
+        const count = Number(ticketsCount.count);
+        throw new Error(`Cannot delete category: ${count} ticket${count === 1 ? ' is' : 's are'} using this category`);
       }
 
       const deletedCount = await trx('categories')

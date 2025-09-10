@@ -1,7 +1,7 @@
 import { OpenAIClient } from './openai-client';
 import { CustomOpenAIClient } from './custom-openai-client';
 import { LLMClient } from './types';
-import { getSecretProviderInstance } from '../../../../../shared/core/secretProvider.js';
+import { getSecretProviderInstance } from '../../../../../shared/core/secretProvider';
 
 export type LLMProvider = 'openai' | 'custom-openai';
 

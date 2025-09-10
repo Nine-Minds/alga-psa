@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/lib/extensions/**/*.ts",
+    "src/lib/extensions/**/*.tsx",
+    "src/lib/actions/extMenuActions.ts",
+    "src/lib/actions/extBundleActions.ts",
+    "src/lib/actions/extRegistryV2Actions.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/**/*.spec.ts",
+    "src/**/*.spec.tsx",
+    "src/**/*.playwright.test.ts",
+    "src/__tests__/**"
+  ]
+}
+

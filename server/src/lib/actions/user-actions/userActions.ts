@@ -16,7 +16,7 @@ import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
 import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/EntityImageService';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
-import logger from '@alga-psa/shared/core/logger.js';
+import logger from '@alga-psa/shared/core/logger';
 
 interface ActionResult {
   success: boolean;

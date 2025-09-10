@@ -1,7 +1,7 @@
 import { WorkflowWorker, WorkflowWorkerConfig, WorkerHealth } from './workflowWorker.js';
-import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
-import { getActionRegistry } from '@alga-psa/shared/workflow/core/index.js';
-import logger from '@alga-psa/shared/core/logger.js';
+import { getWorkflowRuntime, TypeScriptWorkflowRuntime } from '@shared/workflow/core/index.js';
+import { getActionRegistry } from '@shared/workflow/core/index.js';
+import logger from '@shared/core/logger.js';
 import os from 'os';
 
 /**
