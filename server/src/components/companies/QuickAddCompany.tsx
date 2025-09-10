@@ -466,11 +466,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {/* Company Details Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Company Details
+                Client Details
               </h3>
               
               <div>
-                <Label htmlFor="company-name" className="block text-sm font-medium text-gray-700 mb-1">
+                <Label htmlFor="client_name" className="block text-sm font-medium text-gray-700 mb-1">
                   Company Name *
                 </Label>
                 <Input
@@ -483,7 +483,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                   onBlur={() => {
                     validateField('company_name', formData.company_name);
                   }}
-                  placeholder="Enter company name"
+                  placeholder="Enter client name"
                   disabled={isSubmitting}
                   className={`w-full text-lg font-semibold p-2 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 ${fieldErrors.company_name ? 'border-red-500' : 'border-gray-300'}`}
                 />
@@ -574,7 +574,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             {/* Company Location Section */}
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">
-                Company Location
+                Client Location
               </h3>
               
               <div>
