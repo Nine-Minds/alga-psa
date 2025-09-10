@@ -529,8 +529,15 @@ const fetchContacts = async (): Promise<void> => {
                       id="first-name"
                       value={newUser.firstName}
                       onChange={(e) => handleFieldChange('first_name', e.target.value)}
-                      errors={fieldErrors.first_name}
+                      className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.first_name.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.first_name.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="last-name">Last Name <span className="text-red-500">*</span></Label>
@@ -538,8 +545,15 @@ const fetchContacts = async (): Promise<void> => {
                       id="last-name"
                       value={newUser.lastName}
                       onChange={(e) => handleFieldChange('last_name', e.target.value)}
-                      errors={fieldErrors.last_name}
+                      className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.last_name.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.last_name.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
@@ -548,8 +562,15 @@ const fetchContacts = async (): Promise<void> => {
                       type="email"
                       value={newUser.email}
                       onChange={(e) => handleFieldChange('email', e.target.value)}
-                      errors={fieldErrors.email}
+                      className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.email.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.email.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {portalType === 'client' && (
                     <div>
