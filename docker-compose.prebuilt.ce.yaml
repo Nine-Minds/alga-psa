@@ -37,6 +37,8 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
     volumes:
+      # Persist user-uploaded documents and generated files
+      - files_data:/data/files
       - type: bind
         source: ./secrets/db_password_server
         target: /run/secrets/db_password_server
@@ -157,6 +159,9 @@ services:
     extends:
       file: docker-compose.base.yaml
       service: postgres
+    volumes:
+      # Persist Postgres data across restarts/upgrades
+      - postgres_data:/var/lib/postgresql/data
     environment:
       POSTGRES_DB: server
       VERSION: ${VERSION}
@@ -179,3 +184,8 @@ networks:
   app-network:
     name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
+
+volumes:
+  # Named volumes for production-like persistence
+  postgres_data:
+  files_data:
