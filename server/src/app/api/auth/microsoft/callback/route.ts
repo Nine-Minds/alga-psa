@@ -248,13 +248,18 @@ export async function GET(request: NextRequest) {
                   || 'http://localhost:3000';
                 const webhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
+                // Determine folder to monitor from saved config (first folder if multiple)
+                const folderToMonitor = Array.isArray(msConfig.folder_filters)
+                  ? (msConfig.folder_filters[0] || 'Inbox')
+                  : (() => { try { const parsed = JSON.parse(msConfig.folder_filters || '[]'); return parsed[0] || 'Inbox'; } catch { return 'Inbox'; } })();
+
                 const providerConfig: any = {
                   id: provider.id,
                   tenant: provider.tenant,
                   name: provider.provider_name || provider.mailbox,
                   provider_type: 'microsoft',
                   mailbox: provider.mailbox,
-                  folder_to_monitor: 'Inbox',
+                  folder_to_monitor: folderToMonitor,
                   active: provider.is_active,
                   webhook_notification_url: webhookUrl,
                   // Persisted and looked up via microsoft vendor config

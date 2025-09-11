@@ -213,10 +213,34 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
       // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
       const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
+
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
+
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${this.config.folder_to_monitor}')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -454,10 +478,32 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
       const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('Inbox')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -470,27 +516,174 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
-      const subscriptionId = response.data.id;
-
-      this.log('info', `Webhook subscription created: ${subscriptionId}`);
       
-      return {
-        success: true,
-        subscriptionId
-      };
-    } catch (error: any) {
-      // Let base adapter enrich the error with axios response details
-      const enriched = this.handleError(error, 'initializeWebhook');
-      this.log('error', 'Failed to initialize webhook', {
+      // Update config with subscription ID
+      this.config.webhook_subscription_id = response.data.id;
+      this.config.webhook_expires_at = response.data.expirationDateTime;
+
+      // Persist webhook details only in microsoft vendor config
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({
+            webhook_subscription_id: response.data.id,
+            webhook_expires_at: response.data.expirationDateTime,
+            webhook_verification_token: this.config.webhook_verification_token || null,
+            updated_at: new Date().toISOString(),
+          });
+      } catch (dbErr: any) {
+        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
+      }
+
+      this.log('info', `Webhook subscription created: ${response.data.id}`);
+    } catch (error) {
+      // Enrich/log details (status, request-id, body) before throwing
+      const enriched = this.handleError(error, 'registerWebhookSubscription');
+      this.log('error', 'Subscription creation failed', {
         message: enriched.message,
-        status: (enriched as any).status,
-        code: (enriched as any).code,
-        requestId: (enriched as any).requestId,
+        context: 'registerWebhookSubscription',
       });
-      return {
-        success: false,
-        error: enriched.message
-      };
+      throw enriched;
     }
   }
+
+  /**
+   * Renew webhook subscription before expiration
+   */
+  async renewWebhookSubscription(): Promise<void> {
+    try {
+      if (!this.config.webhook_subscription_id) {
+        throw new Error('No webhook subscription to renew');
+      }
+
+      const newExpiry = new Date(Date.now() + (3 * 24 * 60 * 60 * 1000)).toISOString();
+      
+      await this.httpClient.patch(`/subscriptions/${this.config.webhook_subscription_id}`, {
+        expirationDateTime: newExpiry,
+      });
+
+      this.config.webhook_expires_at = newExpiry;
+      this.config.last_subscription_renewal = new Date().toISOString();
+
+      // Persist renewal
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({ webhook_expires_at: newExpiry, updated_at: new Date().toISOString() });
+      } catch (dbErr: any) {
+        this.log('warn', `Failed to persist webhook renewal: ${dbErr?.message}`);
+      }
+
+      this.log('info', `Webhook subscription renewed until ${newExpiry}`);
+    } catch (error) {
+      throw this.handleError(error, 'renewWebhookSubscription');
+    }
+  }
+
+  /**
+   * Process webhook notification from Microsoft Graph
+   */
+  async processWebhookNotification(payload: any): Promise<string[]> {
+    try {
+      const messageIds: string[] = [];
+
+      if (payload.value && Array.isArray(payload.value)) {
+        for (const notification of payload.value) {
+          if (notification.changeType === 'created' && notification.resourceData) {
+            messageIds.push(notification.resourceData.id);
+          }
+        }
+      }
+
+      this.log('info', `Processed webhook notification with ${messageIds.length} messages`);
+      return messageIds;
+    } catch (error) {
+      throw this.handleError(error, 'processWebhookNotification');
+    }
+  }
+
+  /**
+   * Mark a message as read
+   */
+  async markMessageProcessed(messageId: string): Promise<void> {
+    try {
+      await this.httpClient.patch(`/me/messages/${messageId}`, {
+        isRead: true,
+      });
+
+      this.log('info', `Marked message ${messageId} as read`);
+    } catch (error) {
+      this.log('warn', `Failed to mark message as read: ${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Get detailed message information
+   */
+  async getMessageDetails(messageId: string): Promise<EmailMessageDetails> {
+    try {
+      const response = await this.httpClient.get(`/me/messages/${messageId}`, {
+        params: {
+          $expand: 'attachments',
+          $select:
+            'internetMessageHeaders,receivedDateTime,subject,body,bodyPreview,from,toRecipients,ccRecipients,conversationId',
+        },
+        headers: {
+          Prefer: 'outlook.body-content-type="text"',
+        },
+      });
+
+      const message = response.data;
+
+      return {
+        id: message.id,
+        provider: 'microsoft',
+        providerId: this.config.id,
+        receivedAt: message.receivedDateTime,
+        from: {
+          email: message.from?.emailAddress?.address || '',
+          name: message.from?.emailAddress?.name,
+        },
+        to: message.toRecipients?.map((recipient: any) => ({
+          email: recipient.emailAddress?.address || '',
+          name: recipient.emailAddress?.name,
+        })) || [],
+        cc: message.ccRecipients?.map((recipient: any) => ({
+          email: recipient.emailAddress?.address || '',
+          name: recipient.emailAddress?.name,
+        })),
+        subject: message.subject || '',
+        body: {
+          text: message.body?.content || '',
+          html: message.body?.contentType === 'html' ? message.body?.content : undefined,
+        },
+        attachments: message.attachments?.map((attachment: any) => ({
+          id: attachment.id,
+          name: attachment.name,
+          contentType: attachment.contentType,
+          size: attachment.size,
+          contentId: attachment.contentId,
+        })),
+        threadId: message.conversationId,
+        references: message.internetMessageHeaders?.find((h: any) => h.name === 'References')?.value?.split(' '),
+        inReplyTo: message.internetMessageHeaders?.find((h: any) => h.name === 'In-Reply-To')?.value,
+        tenant: this.config.tenant,
+        headers: message.internetMessageHeaders?.reduce((acc: any, header: any) => {
+          acc[header.name] = header.value;
+          return acc;
+        }, {}),
+        messageSize: message.bodyPreview?.length,
+        importance: message.importance,
+        sensitivity: message.sensitivity,
+      };
+    } catch (error) {
+      throw this.handleError(error, 'getMessageDetails');
+    }
+  }
+
+
 }
