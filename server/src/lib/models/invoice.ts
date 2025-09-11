@@ -5,7 +5,6 @@ import { getCurrentTenantId } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 // Remove direct import from renderer types
 import { Temporal } from '@js-temporal/polyfill';
-import { getAdminConnection } from '../db/admin';
 import { getCompanyLogoUrl } from '../utils/avatarUtils'; // Added Import
 
 export default class Invoice {

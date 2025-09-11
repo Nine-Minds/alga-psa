@@ -2,11 +2,10 @@
 
 import dynamic from 'next/dynamic';
 
-// Dynamically load the extension install component from EE with fallback
+// Dynamically load the extension install component via @ee alias.
+// In CE builds, @ee maps to src/empty; in EE builds, it maps to ee/server/src.
 const DynamicInstallExtensionComponent = dynamic(
-  () => import('@ee/components/settings/extensions/InstallExtensionSimple').catch(() => 
-    import('../../../../../empty/components/settings/extensions/InstallExtensionSimple')
-  ),
+  () => import('@ee/components/settings/extensions/InstallExtensionSimple'),
   {
     ssr: false,
     loading: () => (

@@ -29,6 +29,7 @@
       "@shared/core/*": ["../shared/core/*"],
       "@shared/types": ["../shared/types"],
       "@shared/types/*": ["../shared/types/*"],
+      // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": ["src/empty"],
       "@ee/*": ["src/empty/*"]
     }

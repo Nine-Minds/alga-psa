@@ -51,6 +51,7 @@ const SettingsPage = (): JSX.Element =>  {
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+  console.log("*** SettingsPage Render - tabParam:", tabParam, " | isBillingEnabled:", isBillingEnabled, " | isAdvancedFeaturesEnabled:", isAdvancedFeaturesEnabled, " | isEEAvailable:", isEEAvailable);
   // Dynamically load the Extensions (Manage) component only if EE is available
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),

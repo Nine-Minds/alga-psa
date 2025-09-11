@@ -1,6 +1,12 @@
 import dynamic from 'next/dynamic';
 import type { ComponentType } from 'react';
 
+// Debug: signal when the EE loader module is actually loaded and from where
+try {
+  // eslint-disable-next-line no-console
+  console.info('[EE] Loaded ExtensionComponentLoader from ee/server/src/lib/extensions/ExtensionComponentLoader.tsx');
+} catch {}
+
 // Define the props type for the Extensions component
 export type ExtensionsProps = {};
 
@@ -26,6 +32,9 @@ export const DynamicInstallExtensionComponent = dynamic<ExtensionsProps>(
 // Function to check if EE extensions are available
 export const isExtensionsAvailable = (): boolean => {
   try {
+    // Lightweight runtime signal to verify resolution
+    // eslint-disable-next-line no-console
+    console.info('[EE] isExtensionsAvailable() called');
     // This will be true if the webpack alias resolves to the actual EE component
     return typeof DynamicExtensionsComponent !== 'undefined';
   } catch {
