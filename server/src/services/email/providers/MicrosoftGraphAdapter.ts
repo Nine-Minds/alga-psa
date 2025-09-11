@@ -516,14 +516,15 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       this.log('info', `Webhook subscription created: ${response.data.id}`);
+      return { success: true, subscriptionId: response.data.id };
     } catch (error) {
-      // Enrich/log details (status, request-id, body) before throwing
-      const enriched = this.handleError(error, 'registerWebhookSubscription');
+      // Enrich/log details (status, request-id, body) and return structured error
+      const enriched = this.handleError(error, 'initializeWebhook');
       this.log('error', 'Subscription creation failed', {
         message: enriched.message,
-        context: 'registerWebhookSubscription',
+        context: 'initializeWebhook',
       });
-      throw enriched;
+      return { success: false, error: enriched.message };
     }
   }
 
