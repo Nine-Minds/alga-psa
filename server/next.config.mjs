@@ -169,8 +169,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
-    },
-    instrumentationHook: true
+    }
   },
   // Skip static optimization for error pages
   generateBuildId: async () => {
