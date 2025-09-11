@@ -472,12 +472,16 @@ export async function resolveInboundTicketDefaults(
       }
 
       const provider = await trx('email_providers')
-        .select('inbound_ticket_defaults_id')
+        .select('id', 'tenant', 'inbound_ticket_defaults_id')
         .where({ id: providerId, tenant })
         .first();
 
-      if (!provider || !provider.inbound_ticket_defaults_id) {
-        console.warn(`No inbound_ticket_defaults_id set for provider ${providerId} in tenant ${tenant}`);
+      if (!provider) {
+        console.warn(`resolveInboundTicketDefaults: provider ${providerId} not found in tenant ${tenant}`);
+        return null;
+      }
+      if (!provider.inbound_ticket_defaults_id) {
+        console.warn(`resolveInboundTicketDefaults: provider ${providerId} has no inbound_ticket_defaults_id set (tenant ${tenant})`);
         return null;
       }
 
@@ -496,8 +500,17 @@ export async function resolveInboundTicketDefaults(
         .first();
 
       if (!defaults) {
-        console.warn(`No default inbound ticket settings found for tenant ${tenant}`);
-        return null;
+        console.warn(`resolveInboundTicketDefaults: defaults not found or inactive for id ${provider.inbound_ticket_defaults_id} (tenant ${tenant}). Attempting tenant-level fallback.`);
+        const fallback = await trx('inbound_ticket_defaults')
+          .where({ tenant, is_active: true })
+          .orderBy('updated_at', 'desc')
+          .select('channel_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
+          .first();
+        if (!fallback) {
+          console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
+          return null;
+        }
+        defaults = fallback;
       }
 
       console.log(`Retrieved inbound ticket defaults:`, defaults);
