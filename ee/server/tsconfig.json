@@ -4,19 +4,56 @@
     "outDir": "dist",
     "noImplicitAny": false,
     "paths": {
-      "@/*": ["server/src/*", "ee/server/src/*"],
-      "@ee/*": ["ee/server/src/*"],
-      "@shared": ["shared"],
-      "@shared/*": ["shared/*"],  
-      "@alga-psa/shared": ["shared"],
-      "@alga-psa/shared/*": ["shared/*"],          
-    }
+      "@/*": [
+        "server/src/*"
+      ],
+      "@ee": [
+        "ee/server/src"
+      ],
+      "@ee/*": [
+        "ee/server/src/*"
+      ],
+      "@shared": [
+        "shared"
+      ],
+      "@shared/*": [
+        "shared/*"
+      ],
+      "@alga-psa/shared": [
+        "shared"
+      ],
+      "@alga-psa/shared/*": [
+        "shared/*"
+      ]
+    },
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "./src/**/*.ts",
-    "./src/**/*.tsx",    
+    "ee/server/src/**/*.ts",
+    "ee/server/src/**/*.tsx",
+    "server/src/**/*.ts",
+    "server/src/**/*.tsx",
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

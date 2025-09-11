@@ -6,7 +6,7 @@ import { getServerSession } from "next-auth/next";
 import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/options';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@shared/utils/encryption';

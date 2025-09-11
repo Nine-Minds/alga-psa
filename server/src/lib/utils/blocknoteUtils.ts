@@ -552,16 +552,23 @@ export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string
           break;
         case 'table':
           flushListBuffer();
-          const tableContent = block.content as { type: 'tableContent', rows: Array<{ cells: Array<PartialBlock[]> }> };
-          if (!tableContent || !tableContent.rows) {
-             output.push('<!-- Invalid table structure -->');
-             break;
+          // BlockNote table content typing differs from our PartialBlock[][] shape.
+          // Accept unknown, validate, then treat cells as arrays of inline content.
+          const rawTable = block.content as unknown;
+          const tableContent = (rawTable && typeof rawTable === 'object' && (rawTable as any).rows)
+            ? (rawTable as { rows: Array<{ cells: any[] }> })
+            : null;
+          if (!tableContent || !Array.isArray(tableContent.rows)) {
+            output.push('<!-- Invalid table structure -->');
+            break;
           }
           let tableHTML = '<table><tbody>';
-          tableContent.rows.forEach(row => {
+          tableContent.rows.forEach((row) => {
             tableHTML += '<tr>';
-            row.cells.forEach(cellContent => {
-              tableHTML += `<td>${extractStyledTextToHTML(cellContent as any[])}</td>`;
+            const cells = Array.isArray(row?.cells) ? row.cells : [];
+            cells.forEach((cellContent) => {
+              const inlineArray = Array.isArray(cellContent) ? cellContent : [];
+              tableHTML += `<td>${extractStyledTextToHTML(inlineArray as any[])}</td>`;
             });
             tableHTML += '</tr>';
           });
@@ -580,18 +587,19 @@ export function convertBlockNoteToHTML(blocks: Block[] | PartialBlock[] | string
           break;
         default:
           flushListBuffer();
-          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${block.type}`);
-          if (block.content && Array.isArray(block.content)) {
-             content = extractStyledTextToHTML(block.content as any[]);
+          const anyBlock = block as any;
+          console.log(`[BlockNoteUtils] HTML Conversion: Unknown block type: ${anyBlock?.type}`);
+          if (anyBlock?.content && Array.isArray(anyBlock.content)) {
+             content = extractStyledTextToHTML(anyBlock.content as any[]);
              output.push(`<div${styleAttribute}>${content}</div>`);
-          } else if (block.content && typeof block.content === 'string') {
-             const escapedContent = block.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
+          } else if (anyBlock?.content && typeof anyBlock.content === 'string') {
+             const escapedContent = anyBlock.content.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>');
              output.push(`<div${styleAttribute}>${escapedContent}</div>`);
           } else {
-             output.push(`<!-- Unsupported block type: ${block.type} -->`);
+             output.push(`<!-- Unsupported block type: ${String(anyBlock?.type)} -->`);
           }
-          if (block.children && (block.children as any[]).length > 0) {
-            processBlocksRecursive(block.children as Block[], currentLevel + 1);
+          if (anyBlock?.children && (anyBlock.children as any[]).length > 0) {
+            processBlocksRecursive(anyBlock.children as Block[], currentLevel + 1);
           }
           break;
       }

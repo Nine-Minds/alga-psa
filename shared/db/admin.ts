@@ -1,10 +1,10 @@
-import Knex from 'knex';
-import knexfile from './knexfile.js';
+import knex, { Knex } from 'knex';
+import knexfile from '@shared/db/knexfile.js';
 import { getSecret } from '@shared/core/getSecret.js';
 import process from 'process';
 
-let adminConnection: any = null;
-export async function getAdminConnection() {
+let adminConnection: Knex | null = null;
+export async function getAdminConnection(): Promise<Knex> {
     const connectionId = Math.random().toString(36).substring(7);
     // console.log(`[getAdminConnection:${connectionId}] Called - adminConnection exists:`, !!adminConnection);
     
@@ -57,7 +57,7 @@ export async function getAdminConnection() {
     //     }
     // });
 
-    adminConnection = Knex(config);
+    adminConnection = knex(config);
     // console.log(`[getAdminConnection:${connectionId}] Created new Knex instance, testing connection...`);
     
     try {
@@ -71,7 +71,7 @@ export async function getAdminConnection() {
     return adminConnection;
 }
 
-export async function destroyAdminConnection() {
+export async function destroyAdminConnection(): Promise<void> {
     if (adminConnection) {
         await adminConnection.destroy();
         adminConnection = null;

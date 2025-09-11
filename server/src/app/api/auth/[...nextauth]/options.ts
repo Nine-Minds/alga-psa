@@ -12,7 +12,6 @@ import "server/src/types/next-auth";
 import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-// import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
 
@@ -108,7 +107,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                 userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
-                const { getAdminConnection } = await import("server/src/lib/db/admin");
+                const { getAdminConnection } = await import("@shared/db/admin");
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -456,7 +455,7 @@ export const options: NextAuthOptions = {
                 userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
-                const { getAdminConnection } = await import("server/src/lib/db/admin");
+                const { getAdminConnection } = await import("@shared/db/admin");
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
