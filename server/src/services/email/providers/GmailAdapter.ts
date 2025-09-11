@@ -222,9 +222,25 @@ This indicates a problem with the OAuth token saving process.`;
       await this.ensureValidToken();
 
       // Determine label filters (user-defined label names only)
-      const requestedFilters: string[] = Array.isArray(vendorConfig.label_filters)
+      let requestedFilters: string[] = Array.isArray(vendorConfig.label_filters)
         ? (vendorConfig.label_filters as string[]).map((s: string) => s?.trim()).filter(Boolean)
         : [];
+      // If not present on the in-memory config, attempt to load from DB
+      if (requestedFilters.length === 0) {
+        try {
+          const knex = await getAdminConnection();
+          const rec: any = await knex('google_email_provider_config')
+            .select('label_filters')
+            .where('email_provider_id', this.config.id)
+            .first();
+          const fromDb = Array.isArray(rec?.label_filters)
+            ? rec.label_filters
+            : (() => { try { return JSON.parse(rec?.label_filters || '[]'); } catch { return []; } })();
+          requestedFilters = (Array.isArray(fromDb) ? fromDb : []).map((s: string) => s?.trim()).filter(Boolean);
+        } catch (e: any) {
+          this.log('warn', 'Unable to load label_filters from DB; proceeding without label filters', e);
+        }
+      }
 
       // Deduplicate while preserving order
       const uniqueFilters = Array.from(new Set(requestedFilters));
