@@ -213,10 +213,34 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
       // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
       const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
+
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
+
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${this.config.folder_to_monitor}')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -454,11 +478,32 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
       const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
-      const folder = this.config.folder_to_monitor || 'Inbox';
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${folder}')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
