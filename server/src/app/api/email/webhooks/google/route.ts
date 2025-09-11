@@ -261,8 +261,8 @@ export async function POST(request: NextRequest) {
             await trx('email_providers')
               .where('id', provider.id)
               .update({
-                connection_status: 'error',
-                connection_error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
+                status: 'error',
+                error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
               });
           } catch (updateErr) {
             console.warn('Failed to update provider connection_status after OAuth error:', updateErr);
