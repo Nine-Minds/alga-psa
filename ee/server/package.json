@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon",
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "next lint",

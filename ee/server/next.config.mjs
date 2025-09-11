@@ -15,6 +15,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  productionBrowserSourceMaps: false,
   reactStrictMode: true,
   webpack: (config, { isServer }) => {
     // Speed up builds
