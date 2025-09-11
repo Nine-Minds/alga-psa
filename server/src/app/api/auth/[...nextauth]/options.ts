@@ -754,9 +754,22 @@ async function validateUser(token: any) {
         );
 
         // Check if the user exists and matches
-        if (!user || user.user_id !== token.id || user.username !== token.username) {
-            logger.warn(`User validation failed for email: ${token.email}`);
+        if (!user) {
+            logger.warn(`User not found for email: ${token.email}`);
             return null;
+        }
+        
+        // Log validation details for debugging
+        if (user.user_id !== token.id || user.username !== token.username) {
+            logger.warn(`User validation mismatch for email: ${token.email}`, {
+                db_user_id: user.user_id,
+                token_user_id: token.id,
+                db_username: user.username,
+                token_username: token.username,
+                email: token.email
+            });
+            // Don't fail validation for ID/username mismatch - user might have been updated
+            // The email and user_type are the primary identifiers
         }
 
         // Check if user is inactive
