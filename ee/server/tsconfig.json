@@ -4,7 +4,7 @@
     "outDir": "dist",
     "noImplicitAny": false,
     "paths": {
-      "@/*": ["./src/*", "server/src/*", "ee/server/src/*"],
+      "@/*": ["server/src/*", "ee/server/src/*"],
       "@ee/*": ["ee/server/src/*"],
       "@shared": ["shared"],
       "@shared/*": ["shared/*"],  
@@ -15,7 +15,8 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    ".next/types/**/*.ts"
+    "./src/**/*.ts",
+    "./src/**/*.tsx",    
   ],
   "exclude": [
     "node_modules",
