@@ -8,6 +8,10 @@ const nextConfig = {
     // Allow importing code from outside this directory (monorepo OSS server code)
     externalDir: true,
   },
+  images: {
+    // Avoid requiring the native `sharp` binary locally
+    unoptimized: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -31,6 +35,8 @@ const nextConfig = {
         // Hard-pin common EE import paths used by CE SettingsPage
         '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
         '@ee/components': path.join(__dirname, 'src/components'),
+        // Stub native sharp during local dev to avoid platform build issues
+        sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },
       modules: [
         ...(config.resolve?.modules || ['node_modules']),
