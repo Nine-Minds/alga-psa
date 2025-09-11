@@ -5,7 +5,7 @@ import { Knex } from 'knex';
 import { JobService } from 'server/src/services/job.service';
 import { JobStatus } from 'server/src/types/job';
 import { createTenantKnex } from 'server/src/lib/db';
-import { withAdminTransaction } from '../db/admin';
+import { withAdminTransaction } from '@shared/db/index';
 
 export interface JobMetrics {
   total: number;

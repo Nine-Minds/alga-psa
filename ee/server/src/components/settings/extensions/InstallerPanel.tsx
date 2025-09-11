@@ -223,7 +223,7 @@ export default function InstallerPanel() {
       buttons.push(
         <Link
           key="manage"
-          href="/msp/settings?tab=extensions"
+          href="/msp/settings/extensions"
           className="inline-flex items-center justify-center px-3 py-2 text-sm rounded-md bg-primary-600 text-white hover:bg-primary-700"
         >
           Manage Extensions
