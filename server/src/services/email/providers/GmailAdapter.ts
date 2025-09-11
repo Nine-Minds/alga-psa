@@ -221,17 +221,46 @@ This indicates a problem with the OAuth token saving process.`;
       // Load credentials and ensure valid token
       await this.ensureValidToken();
 
-      // Enable Gmail push notifications
+      // Determine label filters (user-defined label names only)
+      const requestedFilters: string[] = Array.isArray(vendorConfig.label_filters)
+        ? (vendorConfig.label_filters as string[]).map((s: string) => s?.trim()).filter(Boolean)
+        : [];
+
+      // Deduplicate while preserving order
+      const uniqueFilters = Array.from(new Set(requestedFilters));
+
+      // Resolve user label names to IDs (no special-casing of system labels)
+      let effectiveLabelIds: string[] = [];
+      if (uniqueFilters.length > 0) {
+        try {
+          const labelsResp = await this.gmail.users.labels.list({ userId: 'me' });
+          const allLabels: Array<{ id?: string; name?: string }> = (labelsResp.data.labels as any) || [];
+          effectiveLabelIds = uniqueFilters.map(f => allLabels.find(l => l.name === f)?.id).filter((id): id is string => !!id);
+          const missing = uniqueFilters.filter(f => !allLabels.find(l => l.name === f)?.id);
+          if (missing.length > 0) {
+            this.log('warn', `Some Gmail label filters were not found and will be ignored`, { missing });
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve Gmail labels; proceeding without label filters: ${e?.message || e}`);
+          effectiveLabelIds = [];
+        }
+      }
+
+      // Build watch request; include label filters only when provided
+      const watchBody: any = {
+        topicName: `projects/${projectId}/topics/${topicName}`,
+      };
+      if (effectiveLabelIds.length > 0) {
+        watchBody.labelIds = effectiveLabelIds;
+        watchBody.labelFilterBehavior = 'include';
+      }
       const response = await this.gmail.users.watch({
         userId: 'me',
-        requestBody: {
-          topicName: `projects/${projectId}/topics/${topicName}`,
-          labelIds: ['INBOX'],
-          labelFilterBehavior: 'include'
-        }
+        requestBody: watchBody
       });
 
       console.log('✅ Gmail watch response:', response.data);
+      this.log('info', 'Gmail watch configured', { labelFilters: uniqueFilters, effectiveLabelIds });
 
       // Store the history ID for tracking changes in provider config
       if (!this.config.provider_config) {
