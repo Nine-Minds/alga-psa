@@ -350,7 +350,10 @@ spec:
           - name: ALGORITHM
             value: "{{ .Values.crypto.algorithm }}"
           - name: ALGA_AUTH_KEY
-            value: "{{ .Values.crypto.alga_auth_key }}"
+            valueFrom:
+              secretKeyRef:
+                name: alga-psa-shared
+                key: ALGA_AUTH_KEY
           - name: SECRET_KEY
             value: "{{ .Values.crypto.secret_key }}"
             
