@@ -1,7 +1,6 @@
 'use server'
 
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
-import { options } from '../../app/api/auth/[...nextauth]/options';
 import { createTenantKnex } from 'server/src/lib/db';
 import { BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
 import { createCompanyBillingCycles } from "../billing/createBillingCycles";
@@ -14,7 +13,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
 export async function getBillingCycle(companyId: string): Promise<BillingCycleType> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -37,7 +36,7 @@ export async function updateBillingCycle(
   companyId: string,
   billingCycle: BillingCycleType,
 ): Promise<void> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -61,7 +60,7 @@ export async function canCreateNextBillingCycle(companyId: string): Promise<{
   isEarly: boolean;
   periodEndDate?: string;
 }> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -118,7 +117,7 @@ export async function createNextBillingCycle(
   companyId: string,
   effectiveDate?: string
 ): Promise<BillingCycleCreationResult> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -147,7 +146,7 @@ export async function createNextBillingCycle(
 
 // function for rollback (deactivate cycle, delete invoice)
 export async function removeBillingCycle(cycleId: string): Promise<void> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -214,7 +213,7 @@ export async function removeBillingCycle(cycleId: string): Promise<void> {
 
 // function for hard delete (delete cycle and invoice)
 export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -279,7 +278,7 @@ export async function getInvoicedBillingCycles(): Promise<(ICompanyBillingCycle 
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
 })[]> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -315,7 +314,7 @@ export async function getInvoicedBillingCycles(): Promise<(ICompanyBillingCycle 
 }
 
 export async function getAllBillingCycles(): Promise<{ [companyId: string]: BillingCycleType }> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

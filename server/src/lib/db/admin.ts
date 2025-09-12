@@ -2,7 +2,15 @@ import Knex, { Knex as KnexType } from 'knex';
 import knexfile from './knexfile';
 import { getSecret } from '../utils/getSecret';
 
+// Singleton admin connection instance
+let adminConnectionInstance: KnexType | null = null;
+
 export async function getAdminConnection() {
+    // Return existing connection if available
+    if (adminConnectionInstance) {
+        return adminConnectionInstance;
+    }
+
     const environment = process.env.NODE_ENV || 'development';
     const dbPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
     const config = {
@@ -13,11 +21,26 @@ export async function getAdminConnection() {
             user: process.env.DB_USER_ADMIN,
             password: dbPassword,
             database: process.env.DB_NAME_SERVER
+        },
+        pool: {
+            min: 1,
+            max: 10,
+            idleTimeoutMillis: 30000
         }
     };
     console.log('Creating admin database connection');
 
-    return Knex(config);
+    adminConnectionInstance = Knex(config);
+    return adminConnectionInstance;
+}
+
+// Clean up function for graceful shutdown
+export async function closeAdminConnection() {
+    if (adminConnectionInstance) {
+        await adminConnectionInstance.destroy();
+        adminConnectionInstance = null;
+        console.log('Admin database connection closed');
+    }
 }
 
 /**
@@ -40,10 +63,6 @@ export async function withAdminTransaction<T>(
   
   // Otherwise, get admin connection and create transaction
   const adminDb = await getAdminConnection();
-  try {
-    return await adminDb.transaction(callback);
-  } finally {
-    // Destroy the connection after use to prevent connection leaks
-    await adminDb.destroy();
-  }
+  // Don't destroy the singleton connection - just use it for the transaction
+  return await adminDb.transaction(callback);
 }

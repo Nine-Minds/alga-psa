@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useId } from 'react';
 import { signOut } from "next-auth/react";
 import Link from 'next/link';
 import { ExitIcon, ChevronRightIcon, HomeIcon, PersonIcon, RocketIcon } from '@radix-ui/react-icons';
@@ -56,6 +56,7 @@ const Header: React.FC<HeaderProps> = ({
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
+  const dropdownId = useId();
   const isDevelopment = process.env.NODE_ENV === 'development';
   console.log('Environment:', process.env.NODE_ENV, 'isDevelopment:', isDevelopment);
   
@@ -146,7 +147,7 @@ const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center">
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>
-            <button className="relative" aria-label="User menu">
+            <button id={`user-menu-${dropdownId}`} className="relative" aria-label="User menu">
               {userData?.user_type === 'client' ? (
                 <ContactAvatar
                   contactId={userData?.contact_id || ''}

@@ -71,6 +71,7 @@ export const ReflectedDropdownMenu: React.FC<ReflectedDropdownMenuProps> = ({
   return (
     <DropdownMenu open={open} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger 
+        asChild
         {...triggerProps}
         {...dropdownTriggerProps}
       >

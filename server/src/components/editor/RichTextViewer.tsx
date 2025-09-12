@@ -144,6 +144,11 @@ export default function RichTextViewer({
   // Create a stable component that only remounts when absolutely necessary
   const ViewerCore = useMemo(() => {
     return function ViewerCoreComponent({ blocks }: { blocks: PartialBlock[] }) {
+      // Check if we're in the browser environment
+      if (typeof window === 'undefined' || typeof document === 'undefined') {
+        return <div>Loading...</div>;
+      }
+
       const editor = useCreateBlockNote({
         initialContent: blocks,
         domAttributes: {

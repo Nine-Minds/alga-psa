@@ -876,7 +876,7 @@ export async function getTicketFormOptions(user: IUser) {
       categories,
       companies: companiesWithLogos, // Return companies with logos
       users,
-      tags: tags.map((tag: any) => tag.tag_text) // Return unique tag texts
+      tags: Array.isArray(tags) ? tags.map((tag: any) => tag.tag_text) : [] // Return unique tag texts
     };
     } catch (error) {
       console.error('Failed to fetch ticket form options:', error);

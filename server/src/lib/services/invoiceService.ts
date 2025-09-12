@@ -1,7 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getServerSession } from 'server/src/lib/auth-compat';
-import { options } from 'server/src/app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
@@ -33,7 +32,7 @@ interface InvoiceContext {
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

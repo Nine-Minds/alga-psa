@@ -8,7 +8,7 @@ import AssetDashboard from 'server/src/components/assets/AssetDashboard';
 import { getConnection } from 'server/src/lib/db/db';
 
 export default async function AssetsPage() {
-  const session = await getServerSession();
+  const session = await auth();
   if (!session?.user) {
     redirect('/auth/msp/signin');
   }

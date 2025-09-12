@@ -5,7 +5,6 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
@@ -47,7 +46,7 @@ interface ManualItemsUpdate {
 
 export async function finalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -260,7 +259,7 @@ export async function finalizeInvoiceWithKnex(
 
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -321,7 +320,7 @@ export async function updateInvoiceManualItems(
     throw new Error('No tenant found');
   }
 
-  const session = await getServerSession(options);
+  const session = await auth();
   const billingEngine = new BillingEngine();
 
   console.log('[updateInvoiceManualItems] session:', session);
@@ -625,7 +624,7 @@ export async function addManualItemsToInvoice(
   if (!tenant) {
     throw new Error('No tenant found');
   }
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

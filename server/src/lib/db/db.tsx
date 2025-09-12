@@ -1,4 +1,4 @@
-import Knex, { Knex as KnexType } from 'knex';
+import Knex, { Knex as KnexType } from './knex-turbopack';
 import { getKnexConfig } from './knexfile';
 import { AsyncLocalStorage } from 'async_hooks';
 import logger from '@alga-psa/shared/core/logger';

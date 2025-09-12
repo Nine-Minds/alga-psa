@@ -9,6 +9,7 @@ import { getTicketAttributes } from 'server/src/lib/actions/policyActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Knex } from 'knex';
 import { deleteEntityTags } from '../../utils/tagCleanup';
 import { 
@@ -769,15 +770,21 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
   }
 }
 
-export async function getScheduledHoursForTicket(ticketId: string, user: IUser): Promise<IAgentSchedule[]> {
+export async function getScheduledHoursForTicket(ticketId: string): Promise<IAgentSchedule[]> {
   try {
+    // Get the current user from the session
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+    
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant not found');
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'ticket', 'read', trx)) {
+      if (!await hasPermission(currentUser, 'ticket', 'read', trx)) {
         throw new Error('Permission denied: Cannot view ticket schedule');
       }
 
@@ -874,6 +881,10 @@ export async function getScheduledHoursForTicket(ticketId: string, user: IUser):
     return result;
   } catch (error) {
     console.error('Error fetching scheduled hours:', error);
+    // Provide more detailed error information
+    if (error instanceof Error) {
+      throw new Error(`Failed to fetch scheduled hours: ${error.message}`);
+    }
     throw new Error('Failed to fetch scheduled hours');
   }
 }

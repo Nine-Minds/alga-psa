@@ -71,9 +71,9 @@ export default function TicketingDashboardContainer({
     if (filters.channelFilterState && filters.channelFilterState !== 'active') {
       params.set('channelFilterState', filters.channelFilterState);
     }
-    if (filters.tags && filters.tags.length > 0) {
+    if (filters.tags && Array.isArray(filters.tags) && filters.tags.length > 0) {
       // Encode each tag to handle special characters like commas
-      const encodedTags = filters.tags.map(tag => encodeURIComponent(tag));
+      const encodedTags = filters.tags.map(tag => encodeURIComponent(String(tag)));
       params.set('tags', encodedTags.join(','));
     }
 

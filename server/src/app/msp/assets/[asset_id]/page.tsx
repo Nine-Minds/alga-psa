@@ -14,7 +14,7 @@ interface Props {
 
 export default async function AssetPage({ params }: Props) {
   const resolvedParams = await params;
-  const session = await getServerSession();
+  const session = await auth();
   if (!session?.user) {
     redirect('/auth/msp/signin');
   }

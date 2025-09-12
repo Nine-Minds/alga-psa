@@ -435,10 +435,14 @@ function getAllDescendants(dict: ComponentDict, id: string): string[] {
     
     // Check for circular reference
     if (visited.has(current)) {
-      console.error(
-        `Circular reference detected: Component ${current} has already been processed. ` +
-        `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
-      );
+      // This can happen with complex UI structures and is handled gracefully
+      // Only log in development mode to avoid cluttering production logs
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(
+          `Circular reference detected: Component ${current} has already been processed. ` +
+          `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
+        );
+      }
       continue;
   }
 
@@ -452,11 +456,13 @@ function getAllDescendants(dict: ComponentDict, id: string): string[] {
   }
 
   if (maxIterations <= 0 && stack.length > 0) {
-    console.error(
-      'Maximum iterations exceeded while gathering descendants. ' +
-      'This indicates either a very deep component tree or a circular reference. ' +
-      `Processed components: ${Array.from(visited).join(' -> ')}`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        'Maximum iterations exceeded while gathering descendants. ' +
+        'This indicates either a very deep component tree or a circular reference. ' +
+        `Processed components: ${Array.from(visited).join(' -> ')}`
+      );
+    }
 }
 
   return result;

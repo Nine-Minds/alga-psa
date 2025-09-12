@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown } from 'lucide-react';
 import { DayPicker } from 'react-day-picker';
-import type { SelectSingleEventHandler } from 'react-day-picker';
 import { cn } from 'server/src/lib/utils';
 import { format } from 'date-fns';
 
@@ -91,24 +90,6 @@ function Calendar({
   mode = 'single',
   ...props
 }: CalendarProps) {
-  const CustomWeekdays = () => {
-    const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-    return (
-      <thead>
-        <tr>
-          {weekdays.map((weekday, index) => (
-            <th 
-              key={index}
-              className="text-xs font-medium text-gray-500 text-center font-normal p-1"
-              scope="col"
-            >
-              {weekday}
-            </th>
-          ))}
-        </tr>
-      </thead>
-    );
-  };
   const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
   const fromDate = props.fromDate || new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 //  const toDate = props.toDate || new Date(2050, 11, 31);
@@ -146,14 +127,16 @@ function Calendar({
         className={cn('p-3 select-none', className)}
         classNames={{
           months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
-          month: 'space-y-4',
+          month: 'space-y-2',
           caption: 'hidden',
           caption_label: 'hidden',
           nav: 'hidden',
           table: 'w-full border-collapse',
-          row: '',
+          head_row: 'grid grid-cols-7',
+          head_cell: 'text-gray-500 rounded-md font-normal text-[0.8rem] text-center',
+          row: 'grid grid-cols-7 mt-2',
           cell: cn(
-            'text-center text-sm relative p-0',
+            'relative h-9 text-center text-sm p-0',
             '[&:has([aria-selected])]:bg-purple-50',
             'first:[&:has([aria-selected])]:rounded-l-md',
             'last:[&:has([aria-selected])]:rounded-r-md',
@@ -179,15 +162,12 @@ function Calendar({
         }}
         mode={mode}
         selected={selected}
-        onSelect={onSelect as SelectSingleEventHandler}
+        onSelect={onSelect}
         month={monthYear}
         onMonthChange={setMonthYear}
         modifiers={{ today: new Date() }}
         modifiersStyles={{
           today: { fontWeight: 'bold', color: 'rgb(var(--color-primary-600))' }
-        }}
-        components={{
-          Weekdays: CustomWeekdays,
         }}
         footer={
           <div className="mt-3 flex justify-center">

@@ -567,6 +567,18 @@ export async function downloadDocument(documentIdOrFileId: string) {
         headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
         headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
         headers.set('Content-Length', buffer.length.toString());
+        
+        // Add cache control headers for images to enable browser caching
+        const isImage = metadata.mime_type?.startsWith('image/');
+        if (isImage) {
+            // Cache images for 7 days, but revalidate after 1 day
+            headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            // Add ETag for conditional requests
+            headers.set('ETag', `"${document.file_id}"`);
+        } else {
+            // For non-images, use no-cache to ensure fresh content
+            headers.set('Cache-Control', 'no-cache');
+        }
 
         return new Response(buffer as any, {
             status: 200,

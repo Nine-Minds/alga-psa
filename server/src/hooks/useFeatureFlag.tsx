@@ -48,8 +48,30 @@ export function useFeatureFlag(
         const userId = options.userId || session?.user?.id;
         const distinctId = userId || 'anonymous';
 
+        // Wait a bit for PostHog to be ready if just initialized
+        if (posthog.isFeatureEnabled === undefined) {
+          console.warn(`[FeatureFlag] PostHog not ready yet for ${flagKey}`);
+          setTimeout(() => checkFlag(), 100);
+          return;
+        }
+
         // Get feature flag value from PostHog
         const flagValue = posthog.isFeatureEnabled(flagKey);
+        
+        // Also get all active flags to debug
+        const allFlags = posthog.getFeatureFlags ? posthog.getFeatureFlags() : {};
+        
+        // Debug logging in development
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[FeatureFlag] ${flagKey}:`, {
+            flagValue,
+            userId,
+            distinctId,
+            tenant: session?.user?.tenant,
+            allActiveFlags: allFlags,
+            session: session?.user
+          });
+        }
         
         // PostHog React SDK returns boolean directly
         setEnabled(!!flagValue);
@@ -62,14 +84,22 @@ export function useFeatureFlag(
       }
     };
 
-    checkFlag();
+    // Add a small delay to ensure PostHog has identified the user
+    const timeoutId = setTimeout(() => {
+      checkFlag();
+    }, 200);
 
     // Set up polling if requested
     if (options.pollInterval && options.pollInterval > 0) {
       const interval = setInterval(checkFlag, options.pollInterval);
-      return () => clearInterval(interval);
+      return () => {
+        clearTimeout(timeoutId);
+        clearInterval(interval);
+      };
     }
-  }, [posthog, flagKey, session?.user?.id, options.userId, options.pollInterval]);
+    
+    return () => clearTimeout(timeoutId);
+  }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval]);
 
   return { enabled, loading, error };
 }

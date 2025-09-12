@@ -2,8 +2,6 @@ import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-act
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
-import { Suspense } from 'react';
-import TicketsLoading from './loading';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 
 interface TicketsPageProps {
@@ -47,9 +45,16 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
         filtersFromURL.channelFilterState = channelFilterState;
       }
     }
-    if (params?.tags && typeof params.tags === 'string') {
+    if (params?.tags) {
       // Decode each tag to handle special characters that were encoded
-      filtersFromURL.tags = params.tags.split(',').map(tag => decodeURIComponent(tag));
+      if (typeof params.tags === 'string') {
+        filtersFromURL.tags = params.tags.split(',').map(tag => decodeURIComponent(tag));
+      } else if (Array.isArray(params.tags)) {
+        // Handle case where tags might already be an array
+        filtersFromURL.tags = params.tags.map(tag => 
+          typeof tag === 'string' ? decodeURIComponent(tag) : String(tag)
+        );
+      }
     }
 
     // Apply defaults for missing parameters
@@ -81,14 +86,12 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
-        <Suspense fallback={<TicketsLoading />}>
-          <TicketingDashboardContainer 
-            consolidatedData={consolidatedData} 
-            currentUser={user}
-            initialFilters={initialFilters}
-            displaySettings={displaySettings}
-          />
-        </Suspense>
+        <TicketingDashboardContainer 
+          consolidatedData={consolidatedData} 
+          currentUser={user}
+          initialFilters={initialFilters}
+          displaySettings={displaySettings}
+        />
       </div>
     );
   } catch (error) {

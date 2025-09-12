@@ -2,14 +2,13 @@
 
 import { withTransaction } from '@alga-psa/shared/db';
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import { TextNoneIcon } from '@radix-ui/react-icons';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
 export async function getServiceCategories() {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -29,7 +28,7 @@ export async function getServiceCategories() {
 }
 
 export async function createServiceCategory(categoryName: string, description?: string) {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -77,7 +76,7 @@ export async function createServiceCategory(categoryName: string, description?: 
 }
 
 export async function deleteServiceCategory(categoryId: string) {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -120,7 +119,7 @@ export async function deleteServiceCategory(categoryId: string) {
 }
 
 export async function updateServiceCategory(categoryId: string, categoryData: Partial<IServiceCategory>) {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

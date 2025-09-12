@@ -53,9 +53,7 @@ async function MainContent({ children }: { children: React.ReactNode }) {
                 components: []
               }}
             >
-              <div className="min-h-screen bg-background font-sans antialiased">
-                {children}
-              </div>
+              {children}
             </ClientUIStateProvider>
           </DynamicExtensionProvider>
         </Theme>

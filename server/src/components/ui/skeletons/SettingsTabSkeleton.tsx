@@ -132,7 +132,7 @@ const SettingsTabSkeleton: React.FC<SettingsTabSkeletonProps> = ({
                 <div className="h-6 bg-gray-200 rounded w-40"></div>
               </CardTitle>
               <CardDescription>
-                <div className="h-4 bg-gray-200 rounded w-64 mt-2"></div>
+                <span className="block h-4 bg-gray-200 rounded w-64 mt-2"></span>
               </CardDescription>
             </div>
             <div className="h-9 bg-gray-200 rounded w-24"></div>

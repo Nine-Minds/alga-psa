@@ -177,7 +177,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
       
       try {
         // Use the server action to get scheduled hours
-        const schedules = await getScheduledHoursForTicket(ticket.ticket_id, { user_id: userId } as any);
+        const schedules = await getScheduledHoursForTicket(ticket.ticket_id);
         setAgentSchedules(schedules);
       } catch (error) {
         console.error('Error fetching scheduled hours:', error);

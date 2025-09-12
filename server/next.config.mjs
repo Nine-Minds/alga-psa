@@ -11,24 +11,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
-    resolveAlias: {
-      // Mock out database drivers we don't use
-      'better-sqlite3': 'empty-module',
-      'sqlite3': 'empty-module',
-      'mysql': 'empty-module',
-      'mysql2': 'empty-module',
-      'oracledb': 'empty-module',
-      'tedious': 'empty-module',
-      'pg-native': 'empty-module',
-    }
+    // Database driver stubs are now in node_modules to prevent Turbopack errors
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  reactStrictMode: true,
-  transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
+  reactStrictMode: false, // Disabled to prevent double rendering in development
+  transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine', '@emoji-mart/data'],
   // Rewrites required for PostHog
   async rewrites() {
     return [

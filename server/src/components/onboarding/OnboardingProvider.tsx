@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import { getTenantSettings } from '@/lib/actions/tenant-settings-actions/tenantSettingsActions';
@@ -15,17 +15,23 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const pathname = usePathname();
   // Start with false to avoid hydration mismatch - will check onboarding status after mount
   const [loading, setLoading] = useState(false);
-  const [hasChecked, setHasChecked] = useState(false);
+  // Use ref to track if we've checked to avoid state updates
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user && !hasChecked) {
+    // Only check once when authenticated and haven't checked yet
+    if (status === 'authenticated' && session?.user && !hasCheckedRef.current) {
+      // Skip check if already on onboarding page
+      if (pathname === '/msp/onboarding') {
+        hasCheckedRef.current = true;
+        return;
+      }
+      
+      hasCheckedRef.current = true;
       setLoading(true);
       checkOnboardingStatus();
-      setHasChecked(true);
-    } else if (status === 'unauthenticated') {
-      setLoading(false);
     }
-  }, [status, session, hasChecked]);
+  }, [status]); // Remove session and pathname to reduce re-renders
 
   const checkOnboardingStatus = async () => {
     try {
