@@ -71,7 +71,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.className}>
-      <body className={`${inter.className} light`}>
+      <body className={`${inter.className} light`} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>
           <Toaster position="top-right" />

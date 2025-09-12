@@ -44,7 +44,9 @@ const nextConfig = {
     config.resolve = {
       ...config.resolve,
       extensionAlias: {
-        '.js': ['.js', '.ts', '.tsx']
+        '.js': ['.ts', '.tsx', '.js'],
+        '.mjs': ['.mts', '.mjs'],
+        '.jsx': ['.tsx', '.jsx']
       },
       alias: {
         ...config.resolve.alias,
@@ -170,6 +172,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     }
+  },
+  turbopack: {
+    root: '/Users/natalliabukhtsik/Desktop/Desktop/projects/alga-psa/server'
   },
   // Skip static optimization for error pages
   generateBuildId: async () => {

@@ -352,12 +352,14 @@ export async function findTagsByEntityIds(entityIds: string[], entityType: Tagge
 }
 
 export async function getAllTags(): Promise<ITag[]> {
-  const { knex: db } = await createTenantKnex();
   try {
+    const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       const tenant = await getCurrentTenantId();
       if (!tenant) {
-        throw new Error('Tenant context is required for tag operations');
+        // Return empty array when no tenant context (e.g., during initial client render)
+        console.warn('No tenant context available for getAllTags - returning empty array');
+        return [];
       }
       
       // Join mappings with definitions to create ITag structure
@@ -387,11 +389,16 @@ export async function getAllTags(): Promise<ITag[]> {
 }
 
 export async function findAllTagsByType(entityType: TaggedEntityType): Promise<ITag[]> {
-  const { knex: db } = await createTenantKnex();
   try {
+    const { knex: db } = await createTenantKnex();
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const tenant = await getCurrentTenantId();
+      if (!tenant) {
+        console.warn(`No tenant context available for findAllTagsByType(${entityType}) - returning empty array`);
+        return [];
+      }
+      
       const definitions = await TagDefinition.getAllByType(trx, entityType);
-      const tenant = await getCurrentTenantId() || '';
       
       // Convert to ITag format (use definition ID as tag_id since these are unique)
       return definitions.map(def => ({

@@ -16,6 +16,8 @@ interface TagPermissions {
 
 interface TagContextType {
   tags: ITag[];
+  tagsLoaded: boolean;
+  isLoading: boolean;
   updateTagColor: (tagId: string, backgroundColor: string | null, textColor: string | null) => Promise<void>;
   updateTagText: (tagId: string, newTagText: string) => Promise<void>;
   deleteAllTagsByText: (tagText: string, taggedType: TaggedEntityType) => Promise<void>;
@@ -31,6 +33,8 @@ const TagContext = createContext<TagContextType | undefined>(undefined);
 export const TagProvider = ({ children }: { children: ReactNode }) => {
   const [tags, setTags] = useState<ITag[]>([]);
   const [permissions, setPermissions] = useState<Record<TaggedEntityType, TagPermissions>>({} as Record<TaggedEntityType, TagPermissions>);
+  const [tagsLoaded, setTagsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const lastFetchRef = useRef<number>(0);
   const pendingPermissions = useRef<Record<string, Promise<TagPermissions> | null>>({});
   const permissionsRef = useRef<Record<TaggedEntityType, TagPermissions>>({} as Record<TaggedEntityType, TagPermissions>);
@@ -49,13 +53,18 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     }
     lastFetchRef.current = now;
     
-    const allTags = await getAllTags();
-    setTags(allTags);
+    setIsLoading(true);
+    try {
+      const allTags = await getAllTags();
+      setTags(allTags);
+      setTagsLoaded(true);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    refetchTagsStable();
-  }, [refetchTagsStable]);
+  // Don't fetch tags on mount - wait for components to request them
+  // This prevents unnecessary tag loading on pages that don't need tags
 
   const handleUpdateTagColor = useCallback(async (tagId: string, backgroundColor: string | null, textColor: string | null) => {
     setTags(currentTags => {
@@ -168,7 +177,9 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
   const removeTag = useCallback((tagId: string) => setTags(current => current.filter(t => t.tag_id !== tagId)), []);
 
   const contextValue = useMemo(() => ({
-    tags, 
+    tags,
+    tagsLoaded,
+    isLoading,
     updateTagColor: handleUpdateTagColor, 
     updateTagText: handleUpdateTagText,
     deleteAllTagsByText: handleDeleteAllTagsByText,
@@ -177,7 +188,7 @@ export const TagProvider = ({ children }: { children: ReactNode }) => {
     refetchTags: refetchTagsStable,
     permissions,
     getPermissions
-  }), [tags, handleUpdateTagColor, handleUpdateTagText, handleDeleteAllTagsByText, addTag, removeTag, refetchTagsStable, getPermissions]);
+  }), [tags, tagsLoaded, isLoading, handleUpdateTagColor, handleUpdateTagText, handleDeleteAllTagsByText, addTag, removeTag, refetchTagsStable, permissions, getPermissions]);
 
   return (
     <TagContext.Provider value={contextValue}>
@@ -191,5 +202,14 @@ export const useTags = () => {
   if (context === undefined) {
     throw new Error('useTags must be used within a TagProvider');
   }
+  
+  // Lazy load tags on first access
+  useEffect(() => {
+    // Only fetch if not already loaded and not currently loading
+    if (!context.tagsLoaded && !context.isLoading) {
+      context.refetchTags();
+    }
+  }, [context]);
+  
   return context;
 };

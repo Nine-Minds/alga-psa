@@ -124,12 +124,21 @@ export function UIStateProvider({ children, initialPageState }: {
   // Initialize and manage Socket.IO connection
   useEffect(() => {
     const initializeSocket = () => {
+      // Check if AI backend is enabled via environment variable
+      const aiBackendEnabled = process.env.NEXT_PUBLIC_AI_BACKEND_ENABLED === 'true';
+      
+      if (!aiBackendEnabled) {
+        console.log('🔌 [UI-STATE] AI Backend disabled - skipping Socket.IO connection');
+        return;
+      }
+      
       if (socketRef.current?.connected) {
         return; // Reuse existing connection
       }
 
       if (!socketRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
-        socketRef.current = io('http://localhost:4000', {
+        const aiBackendUrl = process.env.NEXT_PUBLIC_AI_BACKEND_URL || 'http://localhost:4000';
+        socketRef.current = io(aiBackendUrl, {
           transports: ['websocket'],
           reconnection: true,
           reconnectionDelay: Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 5000), // Exponential backoff
