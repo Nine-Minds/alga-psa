@@ -6,6 +6,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { DateTimePickerComponent } from 'server/src/types/ui-reflection/types';
 import { Calendar } from 'server/src/components/ui/Calendar';
 import { cn } from 'server/src/lib/utils';
+import 'server/src/styles/calendar.css';
 
 export interface DateTimePickerProps {
   value?: Date;
@@ -158,7 +159,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
               file:border-0 file:bg-transparent file:text-sm file:font-medium 
               placeholder:text-gray-500
               hover:border-gray-400
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2 
               disabled:cursor-not-allowed disabled:opacity-50
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -171,118 +172,110 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-[480px] p-0 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
+              className="calendar-popover-content datetime-picker-container"
               align="center"
               side="bottom"
               sideOffset={4}
               avoidCollisions={true}
             >
-              <div className="flex flex-row">
-                <div className="w-[280px]">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    defaultMonth={value}
-                    fromDate={minDate}
-                    toDate={maxDate}
-                  />
-                </div>
+              <div className="datetime-picker-calendar">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  defaultMonth={value}
+                  fromDate={minDate}
+                  toDate={maxDate}
+                />
+              </div>
 
-                <div className="border-l border-gray-200 p-2 w-[200px]">
-                  <div className="flex items-start justify-between gap-2">
-                    
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Hour</label>
-                      <div
-                        ref={hourListRef}
-                        className="h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-                        onWheel={(e) => {
-                          // Standard scrolling behavior
-                          const container = e.currentTarget;
-                          const scrollAmount = e.deltaY;
-                          container.scrollTop += scrollAmount;
-                        }}
-                      >
-                        {hours.map((hour) => (
-                          <button
-                            key={hour}
-                            data-value={hour}
-                            onClick={() => {
-                              setSelectedHour(hour);
-                              handleTimeChange(hour, selectedMinute, period);
-                            }}
-                            className={cn(
-                              'w-full px-2 py-1 text-left text-sm rounded-md text-center',
-                              selectedHour === hour
-                                ? 'bg-purple-100 text-purple-900'
-                                : 'hover:bg-gray-100'
-                            )}
-                          >
-                            {hour}
-                          </button>
-                        ))}
-                      </div>
+              <div className="datetime-picker-time">
+                <div className="flex items-start justify-between gap-2">
+                  
+                  <div className="datetime-picker-time-section flex-1">
+                    <label className="datetime-picker-time-label">Hour</label>
+                    <div
+                      ref={hourListRef}
+                      className="datetime-picker-time-scroll"
+                      onWheel={(e) => {
+                        // Standard scrolling behavior
+                        const container = e.currentTarget;
+                        const scrollAmount = e.deltaY;
+                        container.scrollTop += scrollAmount;
+                      }}
+                    >
+                      {hours.map((hour) => (
+                        <button
+                          key={hour}
+                          data-value={hour}
+                          onClick={() => {
+                            setSelectedHour(hour);
+                            handleTimeChange(hour, selectedMinute, period);
+                          }}
+                          className={cn(
+                            'datetime-picker-time-option',
+                            selectedHour === hour && 'selected'
+                          )}
+                        >
+                          {hour}
+                        </button>
+                      ))}
                     </div>
-
-                    <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Minute</label>
-                      <div 
-                        ref={minuteListRef}
-                        className="h-[240px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
-                        onWheel={(e) => {
-                          // Standard scrolling behavior
-                          const container = e.currentTarget;
-                          const scrollAmount = e.deltaY;
-                          container.scrollTop += scrollAmount;
-                        }}
-                      >
-                        {minutes.map((minute) => (
-                          <button
-                            key={minute}
-                            data-value={minute}
-                            onClick={() => {
-                              setSelectedMinute(minute);
-                              handleTimeChange(selectedHour, minute, period);
-                            }}
-                            className={cn(
-                              'w-full px-2 py-1 text-left text-sm rounded-md text-center',
-                              selectedMinute === minute
-                                ? 'bg-purple-100 text-purple-900'
-                                : 'hover:bg-gray-100'
-                            )}
-                          >
-                            {minute}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {timeFormat === '12h' && (
-                      <div className="w-16">
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Period</label>
-                        <div>
-                          {(['AM', 'PM'] as const).map((p) => (
-                            <button
-                              key={p}
-                              onClick={() => {
-                                setPeriod(p);
-                                handleTimeChange(selectedHour, selectedMinute, p);
-                              }}
-                              className={cn(
-                                'w-full px-2 py-1 text-left text-sm rounded-md text-center',
-                                period === p
-                                  ? 'bg-purple-100 text-purple-900'
-                                  : 'hover:bg-gray-100'
-                              )}
-                            >
-                              {p}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
+
+                  <div className="datetime-picker-time-section flex-1">
+                    <label className="datetime-picker-time-label">Minute</label>
+                    <div 
+                      ref={minuteListRef}
+                      className="datetime-picker-time-scroll"
+                      onWheel={(e) => {
+                        // Standard scrolling behavior
+                        const container = e.currentTarget;
+                        const scrollAmount = e.deltaY;
+                        container.scrollTop += scrollAmount;
+                      }}
+                    >
+                      {minutes.map((minute) => (
+                        <button
+                          key={minute}
+                          data-value={minute}
+                          onClick={() => {
+                            setSelectedMinute(minute);
+                            handleTimeChange(selectedHour, minute, period);
+                          }}
+                          className={cn(
+                            'datetime-picker-time-option',
+                            selectedMinute === minute && 'selected'
+                          )}
+                        >
+                          {minute}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {timeFormat === '12h' && (
+                    <div className="datetime-picker-time-section w-16">
+                      <label className="datetime-picker-time-label">Period</label>
+                      <div className="datetime-picker-period-buttons">
+                        {(['AM', 'PM'] as const).map((p) => (
+                          <button
+                            key={p}
+                            onClick={() => {
+                              setPeriod(p);
+                              handleTimeChange(selectedHour, selectedMinute, p);
+                            }}
+                            className={cn(
+                              'datetime-picker-period-button',
+                              period === p && 'selected'
+                            )}
+                          >
+                            {p}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </Popover.Content>

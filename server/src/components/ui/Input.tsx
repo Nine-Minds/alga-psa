@@ -128,7 +128,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
             inputRef.current = element;
             handleRef(element);
           }}
-          className={`w-full px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder:text-gray-400 ${className}`}
+          className={`w-full px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent placeholder:text-gray-400 ${className}`}
           value={value}
           disabled={disabled}
           required={required}

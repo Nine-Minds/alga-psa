@@ -1,0 +1,493 @@
+/* Unified Calendar Styles */
+
+/* Base Calendar Container Styles */
+.calendar-container {
+  position: relative;
+  background: white;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+  width: fit-content;
+  min-width: 280px;
+}
+
+/* React Day Picker Calendar Styles */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: var(--calendar-accent);
+  --rdp-background-color: var(--calendar-accent-light);
+  --rdp-accent-color-dark: var(--brand-primary-200);
+  --rdp-disabled-color: var(--calendar-text-disabled);
+  --rdp-outline: 2px solid var(--calendar-focus-ring);
+  --rdp-outline-selected: 2px solid var(--brand-primary-200);
+  margin: 0;
+  padding: 0.75rem;
+  width: 100%;
+  min-width: 280px;
+}
+
+.rdp-months {
+  display: block;
+  width: 100%;
+}
+
+.rdp-month {
+  width: 100%;
+}
+
+.rdp-caption {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 0.5rem;
+  margin-bottom: 0.75rem;
+  width: 100%;
+}
+
+/* Hide the default DayPicker caption and nav */
+.rdp-caption-hidden {
+  display: none !important;
+}
+
+.rdp-nav-hidden {
+  display: none !important;
+}
+
+.rdp-caption_label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgb(17, 24, 39);
+}
+
+.rdp-nav {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.rdp-nav_button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rdp-nav_button:hover:not(:disabled) {
+  background-color: var(--calendar-accent-lighter);
+  border-color: var(--calendar-hover-border);
+}
+
+.rdp-nav_button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rdp-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-spacing: 0;
+  table-layout: fixed;
+}
+
+.rdp-head {
+  width: 100%;
+}
+
+/* Override DayPicker default styles to ensure proper grid */
+.rdp table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+}
+
+.rdp thead tr,
+.rdp tbody tr {
+  display: grid !important;
+  grid-template-columns: repeat(7, 1fr) !important;
+  gap: 2px !important;
+  width: 100% !important;
+}
+
+.rdp th,
+.rdp td {
+  padding: 0 !important;
+  text-align: center !important;
+  width: 100% !important;
+}
+
+.rdp th {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--calendar-text-secondary);
+  padding: 0.25rem 0 !important;
+  margin-bottom: 0.5rem;
+}
+
+
+.rdp-tbody {
+  display: block;
+  width: 100%;
+}
+
+
+.rdp-day {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  padding: 0;
+  font-size: 0.875rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  color: var(--calendar-text-primary);
+  font-weight: 400;
+}
+
+.rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
+  background-color: var(--calendar-hover-bg);
+  border-color: var(--calendar-hover-border);
+}
+
+.rdp-day_selected {
+  background-color: var(--calendar-selected-bg);
+  color: white;
+  font-weight: 600;
+  border-color: var(--calendar-selected-bg);
+}
+
+.rdp-day_selected:hover {
+  background-color: var(--calendar-selected-hover);
+  border-color: var(--calendar-selected-hover);
+}
+
+.rdp-day_today {
+  font-weight: 700;
+  color: var(--calendar-today-color);
+  position: relative;
+}
+
+.rdp-day_today::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: var(--calendar-today-color);
+  border-radius: 50%;
+}
+
+.rdp-day_outside {
+  color: rgb(156, 163, 175);
+  opacity: 0.5;
+}
+
+.rdp .rdp-day_disabled {
+  color: var(--calendar-text-disabled);
+  cursor: not-allowed;
+}
+
+.rdp-day_disabled:hover {
+  background-color: transparent;
+}
+
+/* Month/Year Dropdown Styles */
+.calendar-month-year-select {
+  position: relative;
+  display: inline-block;
+}
+
+.calendar-month-year-button {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+  background: white;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-month-year-button:hover {
+  background-color: var(--calendar-accent-lighter);
+  border-color: var(--calendar-hover-border);
+}
+
+.calendar-month-year-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 0.25rem;
+  min-width: 12rem;
+  max-height: 15rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: white;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(209, 213, 219) transparent;
+}
+
+.calendar-month-year-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.calendar-month-year-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.calendar-month-year-dropdown::-webkit-scrollbar-thumb {
+  background-color: rgb(209, 213, 219);
+  border-radius: 3px;
+}
+
+.calendar-month-year-dropdown::-webkit-scrollbar-thumb:hover {
+  background-color: rgb(156, 163, 175);
+}
+
+.calendar-month-year-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-size: 0.875rem;
+  color: rgb(17, 24, 39);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.calendar-month-year-option:hover {
+  background-color: var(--calendar-hover-bg);
+}
+
+.calendar-month-year-option.selected {
+  background-color: var(--calendar-accent-light);
+  color: var(--calendar-accent);
+  font-weight: 500;
+}
+
+/* Today Button Styles */
+.calendar-today-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 1rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(75, 85, 99);
+  background: white;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.calendar-today-button:hover {
+  background-color: var(--calendar-accent-lighter);
+  border-color: var(--calendar-hover-border);
+  color: var(--brand-primary-200);
+}
+
+.calendar-today-button:focus-visible {
+  outline: 2px solid var(--calendar-focus-ring);
+  outline-offset: 2px;
+}
+
+/* DateTimePicker Specific Styles */
+.datetime-picker-container {
+  display: flex;
+  background: white;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1);
+  max-width: 30rem;
+  width: fit-content;
+  min-width: 480px;
+}
+
+.datetime-picker-calendar {
+  flex: 1 1 280px;
+  border-right: 1px solid rgb(229, 231, 235);
+}
+
+.datetime-picker-time {
+  flex: 0 0 200px; /* Slightly wider to ensure AM/PM buttons fit */
+  padding: 1rem;
+  background: rgb(249, 250, 251);
+  overflow: visible;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.datetime-picker-time-section {
+  margin-bottom: 0.75rem; /* Slightly reduced spacing */
+}
+
+.datetime-picker-time-section.w-16 {
+  width: 4rem;
+  flex-shrink: 0;
+}
+
+.datetime-picker-time-label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-size: 0.6875rem; /* Slightly smaller */
+  font-weight: 600;
+  color: var(--calendar-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.datetime-picker-time-scroll {
+  height: 12rem; /* Reduced height to accommodate vertical AM/PM */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(209, 213, 219) transparent;
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  background: white;
+}
+
+.datetime-picker-time-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.datetime-picker-time-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.datetime-picker-time-scroll::-webkit-scrollbar-thumb {
+  background-color: rgb(209, 213, 219);
+  border-radius: 3px;
+}
+
+.datetime-picker-time-option {
+  display: block;
+  width: 100%;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgb(17, 24, 39);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.datetime-picker-time-option:hover {
+  background-color: rgb(243, 244, 246);
+}
+
+.datetime-picker-time-option.selected {
+  background-color: var(--calendar-accent-light);
+  color: var(--calendar-accent);
+  font-weight: 600;
+}
+
+.datetime-picker-period-buttons {
+  display: flex;
+  flex-direction: column; /* Stack vertically */
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  width: 100%;
+}
+
+.datetime-picker-period-button {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  background: white;
+  color: var(--calendar-text-primary);
+  border: 1px solid rgb(229, 231, 235);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  opacity: 1;
+  visibility: visible;
+}
+
+.datetime-picker-period-button:not(.selected) {
+  background: white;
+  color: rgb(107, 114, 128);
+}
+
+.datetime-picker-period-button:hover:not(.selected) {
+  background-color: var(--calendar-hover-bg);
+  border-color: var(--calendar-hover-border);
+}
+
+.datetime-picker-period-button:hover {
+  background-color: rgb(243, 244, 246);
+  border-color: rgb(209, 213, 219);
+}
+
+.datetime-picker-period-button.selected {
+  background-color: var(--calendar-selected-bg);
+  border-color: var(--calendar-selected-bg);
+  color: white;
+  font-weight: 600;
+}
+
+/* Fix for Popover positioning */
+[data-radix-popper-content-wrapper] {
+  z-index: 50 !important;
+}
+
+/* Ensure proper stacking context and no clipping */
+.calendar-popover-content {
+  z-index: 9999;
+  position: relative;
+  overflow: visible !important;
+}
+
+/* Ensure DateTimePicker popover doesn't clip content */
+[data-radix-popper-content-wrapper] .datetime-picker-container {
+  overflow: visible !important;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 640px) {
+  .rdp {
+    --rdp-cell-size: 36px;
+    padding: 0.5rem;
+  }
+  
+  .datetime-picker-container {
+    flex-direction: column;
+    max-width: 100%;
+  }
+  
+  .datetime-picker-calendar {
+    border-right: none;
+    border-bottom: 1px solid rgb(229, 231, 235);
+  }
+  
+  .datetime-picker-time {
+    flex: 1 1 auto;
+  }
+}
