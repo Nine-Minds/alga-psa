@@ -1,5 +1,5 @@
 // server/src/lib/tenant.ts
-import { getServerSession } from 'next-auth/next';
+import { auth } from '../app/api/auth/[...nextauth]/auth';
 import { options } from '../app/api/auth/[...nextauth]/options';
 import { headers } from 'next/headers';
 
@@ -10,7 +10,7 @@ export async function getTenantForCurrentRequest(fallbackTenant?: string): Promi
             return headerValues.get('x-tenant-id') as string;
         }
 
-        const session = await getServerSession(options);
+        const session = await auth();
         if (session?.user?.tenant) {
             return session.user.tenant;
         }

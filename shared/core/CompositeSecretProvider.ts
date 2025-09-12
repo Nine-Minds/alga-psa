@@ -1,5 +1,5 @@
-import { ISecretProvider } from './ISecretProvider.js';
-import logger from './logger.js';
+import { ISecretProvider } from './ISecretProvider';
+import logger from './logger';
 
 /**
  * Composite secret provider that implements a read chain and write delegation pattern.

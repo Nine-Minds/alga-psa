@@ -1,10 +1,10 @@
 /// <reference types="node" />
-import { ISecretProvider } from './ISecretProvider.js';
-import { FileSystemSecretProvider } from './FileSystemSecretProvider.js';
-import { EnvSecretProvider } from './EnvSecretProvider.js';
-import { CompositeSecretProvider } from './CompositeSecretProvider.js';
-import logger from './logger.js';
-import { loadVaultSecretProvider } from './vaultLoader.js';
+import { ISecretProvider } from './ISecretProvider';
+import { FileSystemSecretProvider } from './FileSystemSecretProvider';
+import { EnvSecretProvider } from './EnvSecretProvider';
+import { CompositeSecretProvider } from './CompositeSecretProvider';
+import logger from './logger';
+import { loadVaultSecretProvider } from './vaultLoader';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {

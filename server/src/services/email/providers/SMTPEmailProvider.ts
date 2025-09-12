@@ -12,7 +12,7 @@ import {
   EmailProviderError,
   EmailAddress,
   EmailAttachment
-} from '../../../types/email.types.js';
+} from '../../../types/email.types';
 
 interface SMTPConfig {
   host: string;

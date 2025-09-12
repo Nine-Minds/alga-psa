@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
 import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { Knex } from 'knex';
 import { createTenantKnex } from '../../lib/db';
 

@@ -8,7 +8,7 @@ import {
   ITimePeriodWithStatusView,
   TimeSheetStatus
 } from 'server/src/interfaces/timeEntry.interfaces';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { validateData } from 'server/src/lib/utils/validation';

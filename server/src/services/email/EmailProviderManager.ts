@@ -11,7 +11,7 @@ import {
   TenantEmailSettings,
   EmailProviderError,
   EmailProviderConfig
-} from '../../types/email.types.js';
+} from '../../types/email.types';
 
 export class EmailProviderManager implements IEmailProviderManager {
   private providers: Map<string, IEmailProvider> = new Map();
@@ -196,11 +196,11 @@ export class EmailProviderManager implements IEmailProviderManager {
     // Dynamic provider creation based on type
     switch (config.providerType) {
       case 'smtp':
-        const { SMTPEmailProvider } = await import('./providers/SMTPEmailProvider.js');
+        const { SMTPEmailProvider } = await import('./providers/SMTPEmailProvider');
         return new SMTPEmailProvider(config.providerId);
       
       case 'resend':
-        const { ResendEmailProvider } = await import('./providers/ResendEmailProvider.js');
+        const { ResendEmailProvider } = await import('./providers/ResendEmailProvider');
         return new ResendEmailProvider(config.providerId);
       
       default:

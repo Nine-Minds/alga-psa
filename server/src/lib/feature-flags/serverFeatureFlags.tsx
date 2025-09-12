@@ -1,5 +1,5 @@
 import { featureFlags, FeatureFlagContext } from './featureFlags';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'server/src/lib/auth-compat';
 import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
 import { cache } from 'react';
 import React from 'react';

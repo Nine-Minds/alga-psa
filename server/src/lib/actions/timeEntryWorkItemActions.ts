@@ -3,7 +3,7 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';

@@ -3,7 +3,7 @@
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from 'server/src/lib/db';
 import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';

@@ -3,7 +3,7 @@
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "../../../app/api/auth/[...nextauth]/options";
 import { ICompanyBillingPlan } from '../../../interfaces/billing.interfaces';
 import { Temporal } from '@js-temporal/polyfill';

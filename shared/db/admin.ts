@@ -1,6 +1,6 @@
 import Knex from 'knex';
-import knexfile from './knexfile.js';
-import { getSecret } from '@shared/core/getSecret.js';
+import knexfile from './knexfile';
+import { getSecret } from '@shared/core/getSecret';
 import process from 'process';
 
 let adminConnection: any = null;

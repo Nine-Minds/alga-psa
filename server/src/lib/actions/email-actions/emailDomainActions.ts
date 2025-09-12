@@ -6,8 +6,8 @@
 
 import { createTenantKnex } from '../../db';
 import { getCurrentUser } from '../user-actions/userActions';
-import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime.js';
-import { getActionRegistry } from '@shared/workflow/core/index.js';
+import { getWorkflowRuntime } from '@shared/workflow/core/workflowRuntime';
+import { getActionRegistry } from '@shared/workflow/core/index';
 
 interface DomainStatus {
   domain: string;

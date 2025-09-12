@@ -1,6 +1,6 @@
 import ManagerApprovalDashboard from 'server/src/components/time-management/approvals/ManagerApprovalDashboard';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';

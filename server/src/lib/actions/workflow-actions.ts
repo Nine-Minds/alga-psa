@@ -5,7 +5,7 @@ import { WorkflowExecutionModel, WorkflowEventModel, WorkflowActionResultModel }
 import type { IWorkflowExecution, IWorkflowEvent, IWorkflowActionResult } from '@alga-psa/shared/workflow/persistence';
 import { getWorkflowRuntime, getActionRegistry } from '@alga-psa/shared/workflow/core';
 import type { WorkflowDefinition, WorkflowMetadata } from '@alga-psa/shared/workflow/core';
-import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit.js';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 
 /**
  * Workflow metrics interface

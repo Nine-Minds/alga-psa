@@ -10,7 +10,7 @@ import {
   IUpdateWorkflowTrigger,
   IWorkflowEventMapping,
   ICreateWorkflowEventMapping
-} from '@alga-psa/shared/workflow/types/eventCatalog.js';
+} from '@alga-psa/shared/workflow/types/eventCatalog';
 
 /**
  * Get all workflow triggers for a tenant

@@ -5,9 +5,9 @@
  */
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import FormDefinitionModel from '../persistence/formDefinitionModel.js';
-import FormSchemaModel from '../persistence/formSchemaModel.js';
-import { getFormValidationService } from './formValidationService.js';
+import FormDefinitionModel from '../persistence/formDefinitionModel';
+import FormSchemaModel from '../persistence/formSchemaModel';
+import { getFormValidationService } from './formValidationService';
 import {
   IFormDefinition,
   IFormSchema,
@@ -17,7 +17,7 @@ import {
   FormSearchParams,
   FormValidationResult,
   FormWithSchema
-} from '../persistence/formRegistryInterfaces.js';
+} from '../persistence/formRegistryInterfaces';
 
 export class FormRegistry {
   /**

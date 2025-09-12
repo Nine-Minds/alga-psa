@@ -104,7 +104,7 @@ if (result.error) {
 
 // This script runs before Next.js starts and validates environment variables
 try {
-  await import('../config/envConfig.js');
+  await import('../config/envConfig');
 } catch (error: any) {
   // Only print the error message, not the stack trace
   if (error.message) {

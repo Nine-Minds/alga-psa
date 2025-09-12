@@ -94,16 +94,19 @@ function Calendar({
   const CustomWeekdays = () => {
     const weekdays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
     return (
-      <div className="grid grid-cols-7 mb-1">
-        {weekdays.map((weekday, index) => (
-          <div 
-            key={index}
-            className="text-xs font-medium text-gray-500 text-center"
-          >
-            {weekday}
-          </div>
-        ))}
-      </div>
+      <thead>
+        <tr>
+          {weekdays.map((weekday, index) => (
+            <th 
+              key={index}
+              className="text-xs font-medium text-gray-500 text-center font-normal p-1"
+              scope="col"
+            >
+              {weekday}
+            </th>
+          ))}
+        </tr>
+      </thead>
     );
   };
   const [monthYear, setMonthYear] = React.useState<Date>(selected || new Date());
@@ -148,9 +151,9 @@ function Calendar({
           caption_label: 'hidden',
           nav: 'hidden',
           table: 'w-full border-collapse',
-          row: 'grid grid-cols-7',
+          row: '',
           cell: cn(
-            'text-center text-sm relative py-0.5',
+            'text-center text-sm relative p-0',
             '[&:has([aria-selected])]:bg-purple-50',
             'first:[&:has([aria-selected])]:rounded-l-md',
             'last:[&:has([aria-selected])]:rounded-r-md',

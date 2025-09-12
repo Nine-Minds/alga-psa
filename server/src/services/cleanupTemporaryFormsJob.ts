@@ -6,7 +6,7 @@
  */
 
 import { withAdminTransaction } from '@alga-psa/shared/db';
-import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService.js';
+import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import logger from '@shared/core/logger';
 
 /**

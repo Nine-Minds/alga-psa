@@ -13,15 +13,19 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
-  const [loading, setLoading] = useState(true);
+  // Start with false to avoid hydration mismatch - will check onboarding status after mount
+  const [loading, setLoading] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
+    if (status === 'authenticated' && session?.user && !hasChecked) {
+      setLoading(true);
       checkOnboardingStatus();
+      setHasChecked(true);
     } else if (status === 'unauthenticated') {
       setLoading(false);
     }
-  }, [status, session]);
+  }, [status, session, hasChecked]);
 
   const checkOnboardingStatus = async () => {
     try {

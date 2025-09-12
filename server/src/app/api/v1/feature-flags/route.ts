@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from '../../../../lib/auth-compat';
 import { options } from '../../../api/auth/[...nextauth]/options';
 import { featureFlags } from '../../../../lib/feature-flags/featureFlags';
 import { z } from 'zod';

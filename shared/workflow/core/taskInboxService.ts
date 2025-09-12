@@ -1,10 +1,10 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import WorkflowTaskModel, { IWorkflowTask, WorkflowTaskStatus } from '../persistence/workflowTaskModel.js';
-import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInterfaces.js';
-import { getWorkflowRuntime } from './workflowRuntime.js';
-import { getFormRegistry } from './formRegistry.js';
-import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry.js';
+import WorkflowTaskModel, { IWorkflowTask, WorkflowTaskStatus } from '../persistence/workflowTaskModel';
+import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInterfaces';
+import { getWorkflowRuntime } from './workflowRuntime';
+import { getFormRegistry } from './formRegistry';
+import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry';
 
 /**
  * Extended context for workflow actions with additional properties needed for task creation
@@ -453,7 +453,7 @@ export class TaskInboxService {
   ): Promise<{ success: boolean; taskId: string | null; error?: string }> {
     try {
       // Get database connection
-      const { getAdminConnection } = await import('@shared/db/admin.js');
+      const { getAdminConnection } = await import('@shared/db/admin');
       const knex = await getAdminConnection();
       
       // Create the task with inline form
@@ -517,7 +517,7 @@ export class TaskInboxService {
           const taskInboxService = new TaskInboxService();
           
           // Get database connection
-          const { getAdminConnection } = await import('@shared/db/admin.js');
+          const { getAdminConnection } = await import('@shared/db/admin');
           const knex = await getAdminConnection();
           
           // Validate and normalize inputs
@@ -654,7 +654,7 @@ export class TaskInboxService {
           // Step 2: Wait for the task completion event
           try {
             // Get database connection for querying task status
-            const { getAdminConnection } = await import('@shared/db/admin.js');
+            const { getAdminConnection } = await import('@shared/db/admin');
             const knex = await getAdminConnection();
 
             const taskCompletedEventName = TaskEventNames.taskCompleted(taskId);
@@ -734,7 +734,7 @@ export class TaskInboxService {
           const taskInboxService = new TaskInboxService();
           
           // Get database connection
-          const { getAdminConnection } = await import('@shared/db/admin.js');
+          const { getAdminConnection } = await import('@shared/db/admin');
           const knex = await getAdminConnection();
           
           // Clean up temporary forms

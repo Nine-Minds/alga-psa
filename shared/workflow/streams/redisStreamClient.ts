@@ -1,13 +1,13 @@
 import { createClient } from 'redis';
 import type { RedisClientType, RedisClientOptions } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '@shared/core/logger.js';
-import { getSecret } from '../../core/getSecret.js';
+import logger from '@shared/core/logger';
+import { getSecret } from '../../core/getSecret';
 import { 
   WorkflowEventBase, 
   RedisStreamMessage,
   parseStreamEvent
-} from './workflowEventSchema.js';
+} from './workflowEventSchema';
 
 /**
  * Configuration options for the Redis Stream client

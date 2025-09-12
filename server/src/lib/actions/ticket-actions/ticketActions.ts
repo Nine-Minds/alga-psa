@@ -29,7 +29,7 @@ import {
 } from '../../../lib/eventBus/events';
 import { analytics } from '../../analytics/posthog';
 import { AnalyticsEvents } from '../../analytics/events';
-import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel.js';
+import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
 

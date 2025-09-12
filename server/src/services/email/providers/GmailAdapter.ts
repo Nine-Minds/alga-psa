@@ -4,7 +4,7 @@ import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/em
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 import { google } from 'googleapis';
 import { OAuth2Client } from 'google-auth-library';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 /**
  * Gmail API adapter for email processing

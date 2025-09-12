@@ -6,7 +6,7 @@ import { Knex } from 'knex';
 import CompanyPlanBundle from 'server/src/lib/models/companyPlanBundle';
 import { ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "../../../app/api/auth/[...nextauth]/options";
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';

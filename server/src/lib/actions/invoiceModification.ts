@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
@@ -17,7 +17,7 @@ import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/s
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
-// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
+// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@alga-psa/shared/workflow/streams'; // For type safety
 import { EventSubmissionOptions } from '@alga-psa/shared/workflow/core'; // Import type directly via package export

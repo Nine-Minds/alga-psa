@@ -4,7 +4,7 @@
 import PlanBundle from 'server/src/lib/models/planBundle';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "../../app/api/auth/[...nextauth]/options";
 
 /**

@@ -1,5 +1,5 @@
 import { WorkflowAnalysis, WorkflowComponent } from '../types/astTypes';
-import ELK from 'elkjs/lib/elk.bundled.js';
+import ELK from 'elkjs/lib/elk.bundled';
 
 /**
  * Node type for React Flow

@@ -1,6 +1,6 @@
 'use server'
 
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from '../../app/api/auth/[...nextauth]/options';
 import { createTenantKnex } from 'server/src/lib/db';
 import { BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';

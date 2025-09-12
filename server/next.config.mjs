@@ -9,6 +9,19 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 
 const nextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname, '..'),  // Point to the actual project root
+    resolveAlias: {
+      // Mock out database drivers we don't use
+      'better-sqlite3': 'empty-module',
+      'sqlite3': 'empty-module',
+      'mysql': 'empty-module',
+      'mysql2': 'empty-module',
+      'oracledb': 'empty-module',
+      'tedious': 'empty-module',
+      'pg-native': 'empty-module',
+    }
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
@@ -44,7 +57,7 @@ const nextConfig = {
     config.resolve = {
       ...config.resolve,
       extensionAlias: {
-        '.js': ['.ts', '.tsx', '.js'],
+        '.js': ['.ts', '.tsx', '.js', '.jsx'],
         '.mjs': ['.mts', '.mjs'],
         '.jsx': ['.tsx', '.jsx']
       },
@@ -81,10 +94,9 @@ const nextConfig = {
       'tedious'
     ];
 
-    // For server-side builds, externalize ts-morph to prevent bundling issues
-    if (isServer) {
-      config.externals.push('ts-morph');
-    }
+    // Externalize ts-morph for both client and server to prevent bundling issues
+    // ts-morph is a huge library that shouldn't be bundled
+    config.externals.push('ts-morph');
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
@@ -172,9 +184,6 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     }
-  },
-  turbopack: {
-    root: '/Users/natalliabukhtsik/Desktop/Desktop/projects/alga-psa/server'
   },
   // Skip static optimization for error pages
   generateBuildId: async () => {
