@@ -104,15 +104,10 @@ export default function Register() {
   const handleGoogleSignIn = async (e: React.MouseEvent<HTMLButtonElement>) => {
     try {
       e.preventDefault();
-      const result = await signIn('google');
-      if (result?.error) {
-        console.error('Sign-in error:', result.error);
-        // Handle error (e.g., show error message to user)
-    } else {
-        console.log('Sign-up successful, redirecting...');
-        console.log(result);
-        //router.push('/msp');
-    }
+      // In Next Auth v5, signIn triggers a redirect and doesn't return a result
+      await signIn('google');
+      // If we reach here, sign-in was initiated successfully
+      console.log('Sign-up initiated, redirecting...');
     } catch (error) {
       console.error('Unexpected error during sign-in:', error);
       // Handle unexpected errors

@@ -1,7 +1,7 @@
 import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
-import { NextAuthOptions } from "next-auth";
+import type { NextAuthConfig } from "next-auth";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import { authenticateUser } from "server/src/lib/actions/auth";
 import { getKeycloakToken } from "server/src/utils/keycloak";
@@ -54,7 +54,7 @@ async function getOAuthSecrets() {
 }
 
 // Build NextAuth options dynamically with secrets
-export async function buildAuthOptions(): Promise<NextAuthOptions> {
+export async function buildAuthOptions(): Promise<NextAuthConfig> {
     const secrets = await getOAuthSecrets();
     
     // Get NextAuth secret from provider
@@ -127,7 +127,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                     console.log('Attempting to authenticate user:', credentials.email);
                     console.log('user type', credentials.userType);
                     console.log('next auth secret', process.env.NEXTAUTH_SECRET);
-                    const user = await authenticateUser(credentials.email, credentials.password, credentials.userType);
+                    const user = await authenticateUser(credentials.email as string, credentials.password as string, credentials.userType as string);
                     if (!user) {
                         console.log('Authentication failed: No user returned');
                         return null;
@@ -185,7 +185,7 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
                             return null;
                         }
                         console.log('Verifying 2FA code');
-                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
+                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                         console.log('2FA verification result:', { isValid: isValid2FA });
                         if (!isValid2FA) {
                             console.log('2FA verification failed: Invalid code');
@@ -392,9 +392,9 @@ export async function buildAuthOptions(): Promise<NextAuthOptions> {
 }
 
 // For backward compatibility, create a cached instance
-let cachedOptions: NextAuthOptions | null = null;
+let cachedOptions: NextAuthConfig | null = null;
 
-export async function getAuthOptions(): Promise<NextAuthOptions> {
+export async function getAuthOptions(): Promise<NextAuthConfig> {
     if (!cachedOptions) {
         cachedOptions = await buildAuthOptions();
     }
@@ -402,7 +402,7 @@ export async function getAuthOptions(): Promise<NextAuthOptions> {
 }
 
 // Synchronous fallback that uses environment variables
-export const options: NextAuthOptions = {
+export const options: NextAuthConfig = {
     secret: process.env.NEXTAUTH_SECRET,
     providers: [
         GoogleProvider({
@@ -473,7 +473,7 @@ export const options: NextAuthOptions = {
                     }
 
                     console.log('Attempting to authenticate user:', credentials.email);
-                    const user = await authenticateUser(credentials.email, credentials.password, credentials.userType);
+                    const user = await authenticateUser(credentials.email as string, credentials.password as string, credentials.userType as string);
                     if (!user) {
                         console.log('Authentication failed: No user returned');
                         return null;
@@ -531,7 +531,7 @@ export const options: NextAuthOptions = {
                             return null;
                         }
                         console.log('Verifying 2FA code');
-                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode, user.two_factor_secret);
+                        const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                         console.log('2FA verification result:', { isValid: isValid2FA });
                         if (!isValid2FA) {
                             console.log('2FA verification failed: Invalid code');

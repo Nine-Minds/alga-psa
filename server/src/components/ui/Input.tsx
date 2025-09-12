@@ -1,6 +1,5 @@
 import React, { InputHTMLAttributes, forwardRef, useEffect, useRef, useCallback } from 'react';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
-import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 

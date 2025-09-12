@@ -58,9 +58,6 @@ export function useFeatureFlag(
         // Get feature flag value from PostHog
         const flagValue = posthog.isFeatureEnabled(flagKey);
         
-        // Also get all active flags to debug
-        const allFlags = posthog.getFeatureFlags ? posthog.getFeatureFlags() : {};
-        
         // Debug logging in development
         if (process.env.NODE_ENV === 'development') {
           console.log(`[FeatureFlag] ${flagKey}:`, {
@@ -68,7 +65,6 @@ export function useFeatureFlag(
             userId,
             distinctId,
             tenant: session?.user?.tenant,
-            allActiveFlags: allFlags,
             session: session?.user
           });
         }
