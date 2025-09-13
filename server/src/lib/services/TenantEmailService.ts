@@ -12,6 +12,8 @@ import {
   ITemplateProcessor
 } from './email/templateProcessors';
 import { BaseEmailService, BaseEmailParams, EmailSendResult } from '../email/BaseEmailService';
+import { SystemEmailProviderFactory } from '../email/system/SystemEmailProviderFactory';
+import { isEnterprise } from '../features';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -57,21 +59,41 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
+    // Initialize tenant-specific provider manager on first use
     if (!this.providerManager) {
       const { knex } = await createTenantKnex();
       const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
-      
-      if (!settings) {
-        logger.warn(`[${this.getServiceName()}] No email settings found`);
+
+      if (settings) {
+        this.providerManager = new EmailProviderManager();
+        await this.providerManager.initialize(settings);
+      } else {
+        logger.warn(`[${this.getServiceName()}] No tenant email settings found`);
+      }
+    }
+
+    // If we have a tenant provider available, use it
+    if (this.providerManager) {
+      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+      if (providers.length > 0) {
+        return providers[0];
+      }
+    }
+
+    // Fallback: In EE hosted, use system email provider
+    if (isEnterprise) {
+      logger.info(`[${this.getServiceName()}] Falling back to SystemEmailProvider (EE)`);
+      try {
+        const systemProvider = await SystemEmailProviderFactory.createProvider();
+        return systemProvider;
+      } catch (err) {
+        logger.error(`[${this.getServiceName()}] Failed to create SystemEmailProvider:`, err);
         return null;
       }
-      
-      this.providerManager = new EmailProviderManager();
-      await this.providerManager.initialize(settings);
     }
-    
-    const providers = await this.providerManager.getAvailableProviders(this.tenantId);
-    return providers.length > 0 ? providers[0] : null;
+
+    // Otherwise, no provider available
+    return null;
   }
 
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {

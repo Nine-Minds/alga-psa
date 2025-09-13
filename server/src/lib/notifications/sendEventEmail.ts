@@ -1,7 +1,8 @@
 import { getConnection } from '../db/db';
-import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
-import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+// Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/shared/core/logger';
+import { TenantEmailService } from '../services/TenantEmailService';
+import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -11,67 +12,8 @@ export interface SendEmailParams {
   context: Record<string, unknown>;
 }
 
-/**
- * Send an email using the email service
- * @param params Email parameters
- */
-
-function flattenObject(obj: Record<string, unknown>, prefix = ''): Record<string, unknown> {
-  return Object.entries(obj).reduce((acc: Record<string, unknown>, [key, value]) => {
-    const newKey = prefix ? `${prefix}.${key}` : key;
-    if (value && typeof value === 'object' && !Array.isArray(value)) {
-      Object.assign(acc, flattenObject(value as Record<string, unknown>, newKey));
-    } else {
-      acc[newKey] = value;
-    }
-    return acc;
-  }, {});
-}
-
-/**
- * Get tenant email settings from database
- */
-async function getTenantEmailSettings(tenantId: string, knex: any): Promise<TenantEmailSettings | null> {
-  try {
-    const settings = await knex('tenant_email_settings')
-      .where({ tenant: tenantId })
-      .first();
-    
-    if (!settings) {
-      logger.warn(`[SendEventEmail] No email settings found for tenant ${tenantId}`);
-      return null;
-    }
-    
-    // Log the tenant settings (mask sensitive data)
-    logger.info(`[SendEventEmail] Retrieved tenant email settings:`, {
-      tenantId,
-      emailProvider: settings.email_provider,
-      defaultFromDomain: settings.default_from_domain,
-      providerConfigsCount: (settings.provider_configs || []).length,
-      trackingEnabled: settings.tracking_enabled,
-      maxDailyEmails: settings.max_daily_emails
-    });
-    
-    // Log provider configurations (with masked API keys)
-    const enabledProviders = (settings.provider_configs || []).filter((c: any) => c.isEnabled);
-    logger.debug(`[SendEventEmail] Found ${enabledProviders.length} enabled email provider(s)`);
-    
-    return {
-      tenantId,
-      defaultFromDomain: settings.default_from_domain,
-      customDomains: settings.custom_domains || [],
-      emailProvider: settings.email_provider,
-      providerConfigs: settings.provider_configs || [],
-      trackingEnabled: settings.tracking_enabled,
-      maxDailyEmails: settings.max_daily_emails,
-      createdAt: new Date(settings.created_at || new Date()),
-      updatedAt: new Date(settings.updated_at || new Date())
-    };
-  } catch (error) {
-    logger.error(`[SendEventEmail] Error fetching tenant email settings:`, error);
-    return null;
-  }
-}
+//
+// Template lookup and sending are handled below using DatabaseTemplateProcessor
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
   try {
@@ -172,21 +114,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       subject: emailSubject
     });
 
-    // Get tenant email settings and initialize provider manager
-    const tenantSettings = await getTenantEmailSettings(params.tenantId, knex);
-    
-    if (!tenantSettings) {
-      throw new Error(`No email settings configured for tenant ${params.tenantId}`);
-    }
-    
-    const emailProviderManager = new EmailProviderManager();
-    await emailProviderManager.initialize(tenantSettings);
-    
-    logger.info('[SendEventEmail] Using EmailProviderManager with settings:', {
-      tenantId: params.tenantId,
-      provider: tenantSettings.emailProvider,
-      enabledConfigs: tenantSettings.providerConfigs.filter(c => c.isEnabled).length
-    });
+    // Build template content below and send via TenantEmailService
 
     // Replace template variables with context values in both HTML and subject
     let html = templateContent;
@@ -212,40 +140,20 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 
-    // Create email message for provider manager
-    const emailMessage: EmailMessage = {
-      from: { email: tenantSettings.providerConfigs.find(c => c.isEnabled)?.config?.from || 'noreply@example.com' },
-      to: [{ email: params.to }],
-      subject: subject,
-      html,
-      text
-    };
-
-    // Log right before sending email
-    logger.info('[SendEventEmail] About to send email via EmailProviderManager:', {
+    // Send via TenantEmailService (handles tenant provider and EE fallback)
+    const service = TenantEmailService.getInstance(params.tenantId);
+    const processor = new StaticTemplateProcessor(subject, html, text);
+    const result = await service.sendEmail({
       to: params.to,
-      subject: subject,
-      htmlLength: html.length,
-      textLength: text.length,
-      provider: tenantSettings.emailProvider
-    });
-
-    // Send email using the provider manager
-    const result = await emailProviderManager.sendEmail(emailMessage, params.tenantId);
-
-    logger.info('[SendEventEmail] Email send result:', {
-      success: result.success,
-      to: params.to,
-      subject: subject,
-      providerId: result.providerId,
-      providerType: result.providerType
+      tenantId: params.tenantId,
+      templateProcessor: processor
     });
 
     if (!result.success) {
       throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
     }
 
-    logger.info('[SendEventEmail] Email sent successfully:', {
+    logger.info('[SendEventEmail] Email sent successfully via TenantEmailService:', {
       to: params.to,
       subject: subject,
       tenantId: params.tenantId,
