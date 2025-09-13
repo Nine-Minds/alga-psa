@@ -13,7 +13,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Label } from "server/src/components/ui/Label";
 import { Input } from "server/src/components/ui/Input";
-import { DateRangePicker } from "server/src/components/ui/DateRangePicker";
+import { StringDateRangePicker } from "server/src/components/ui/DateRangePicker";
 import { ActivityFilters, ActivityType } from "server/src/interfaces/activity.interfaces";
 import { ISO8601String } from '@alga-psa/shared/types';
 import CustomSelect from "server/src/components/ui/CustomSelect";
@@ -123,7 +123,7 @@ export function ScheduleSectionFiltersDialog({
           {/* Date Range */}
           <div className="space-y-1">
             <Label htmlFor="schedule-date-range" className="text-base font-semibold">Date Range</Label>
-            <DateRangePicker
+            <StringDateRangePicker
               value={{
                 from: localFilters.dateRangeStart ? localFilters.dateRangeStart.split('T')[0] : '',
                 to: localFilters.dateRangeEnd ? localFilters.dateRangeEnd.split('T')[0] : '',
