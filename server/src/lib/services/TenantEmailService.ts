@@ -1,5 +1,4 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '../db';
 import { getConnection } from '../db/db';
 import { EmailProviderManager } from '../../services/email/EmailProviderManager';
 import { 
@@ -61,7 +60,7 @@ export class TenantEmailService extends BaseEmailService {
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
     // Initialize tenant-specific provider manager on first use
     if (!this.providerManager) {
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(this.tenantId);
       const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
 
       if (settings) {
@@ -100,8 +99,17 @@ export class TenantEmailService extends BaseEmailService {
     if (params?.from) {
       return params.from as EmailAddress | string;
     }
-    // Default from address will be handled by the provider
-    return { email: 'noreply@localhost', name: 'Portal Notifications' };
+    // Prefer system-configured from if available
+    const envFrom = process.env.EMAIL_FROM;
+    const envFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
+    if (envFrom) {
+      // If EMAIL_FROM already includes a name, use it as-is
+      // Otherwise, wrap with a default friendly name
+      const hasAngleBrackets = /<[^>]+>/.test(envFrom);
+      return hasAngleBrackets ? envFrom : `${envFromName} <${envFrom}>`;
+    }
+    // Safe default (may be rejected by providers if domain unverified)
+    return 'Portal Notifications <noreply@example.com>';
   }
   /**
    * Get tenant email settings from database
@@ -169,7 +177,7 @@ export class TenantEmailService extends BaseEmailService {
    */
   static async validateEmailSettings(tenantId: string): Promise<EmailSettingsValidation> {
     try {
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(tenantId);
       const settings = await this.getTenantEmailSettings(tenantId, knex);
       
       if (!settings) {

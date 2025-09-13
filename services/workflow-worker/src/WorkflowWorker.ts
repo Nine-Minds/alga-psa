@@ -9,7 +9,7 @@ import {
 import { TypeScriptWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { createClient } from 'redis';
 import logger from '@shared/core/logger.js';
-import { getSecret } from '@shared/core/index.js';
+import { getSecret } from '@shared/core/getSecret.js';
 import { getAdminConnection } from '@shared/db/admin.js';
 import { withAdminTransaction } from '@shared/db/index.js';
 import { Knex } from 'knex';

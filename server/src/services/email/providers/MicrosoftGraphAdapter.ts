@@ -516,6 +516,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       this.log('info', `Webhook subscription created: ${response.data.id}`);
+
+      // Return success with subscription id
+      return { success: true, subscriptionId: response.data.id };
     } catch (error) {
       // Enrich/log details (status, request-id, body) before throwing
       const enriched = this.handleError(error, 'registerWebhookSubscription');
@@ -523,7 +526,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         message: enriched.message,
         context: 'registerWebhookSubscription',
       });
-      throw enriched;
+      // Return error info instead of throwing to satisfy return type
+      return { success: false, error: enriched.message };
     }
   }
 
