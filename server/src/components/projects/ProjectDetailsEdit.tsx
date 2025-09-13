@@ -10,6 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
@@ -163,19 +164,10 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
-    // Convert date strings to Date objects for date fields
-    if (name === 'start_date' || name === 'end_date') {
-      setProject(prev => ({
-        ...prev,
-        [name]: value ? new Date(value) : null,
-      }));
-    } else {
-      setProject(prev => ({
-        ...prev,
-        [name]: value,
-      }));
-    }
+    setProject(prev => ({
+      ...prev,
+      [name]: value,
+    }));
     setHasChanges(true);
     clearErrorIfSubmitted();
   };
@@ -295,30 +287,40 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="start_date" className="block text-sm font-medium text-gray-700 mb-1">
                 Start Date
               </label>
-              <Input
-                type="date"
+              <DatePicker
                 id="start_date"
-                name="start_date"
-                value={project.start_date ? new Date(project.start_date).toISOString().split('T')[0] : ''}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-purple-500 focus:outline-none"
+                value={project.start_date ? new Date(project.start_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    start_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select start date"
               />
             </div>
 
             <div>
-              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="end_date" className="block text-sm font-medium text-gray-700 mb-1">
                 End Date
               </label>
-              <Input
-                type="date"
+              <DatePicker
                 id="end_date"
-                name="end_date"
-                value={project.end_date ? new Date(project.end_date).toISOString().split('T')[0] : ''}
-                onChange={handleInputChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-purple-500 focus:outline-none"
+                value={project.end_date ? new Date(project.end_date) : undefined}
+                onChange={(date) => {
+                  setProject(prev => ({
+                    ...prev,
+                    end_date: date || null,
+                  }));
+                  setHasChanges(true);
+                  clearErrorIfSubmitted();
+                }}
+                placeholder="Select end date"
               />
             </div>
           </div>

@@ -12,7 +12,7 @@ import { Button } from '../ui/Button';
 import { ExternalLink, Pencil } from 'lucide-react';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
-import CustomTabs from 'server/src/components/ui/CustomTabs';
+import { DatePicker } from 'server/src/components/ui/DatePicker';import CustomTabs from 'server/src/components/ui/CustomTabs';
 import BackNav from 'server/src/components/ui/BackNav';
 import InteractionsFeed from '../interactions/InteractionsFeed';
 import { useDrawer } from "server/src/context/DrawerContext";
@@ -96,23 +96,29 @@ const DateDetailItem: React.FC<{
   value: string | null;
   onEdit: (value: string) => void;
 }> = ({ label, value, onEdit }) => {
-  const [localValue, setLocalValue] = useState(value ? value.split('T')[0] : '');
+  const [localValue, setLocalValue] = useState<Date | undefined>(
+    value ? new Date(value.split('T')[0]) : undefined
+  );
 
-  const handleBlur = () => {
-    if (localValue !== (value ? value.split('T')[0] : '')) {
-      onEdit(localValue);
+  const handleChange = (date: Date | undefined) => {
+    setLocalValue(date);
+    if (date) {
+      const dateString = date.toISOString().split('T')[0];
+      if (dateString !== (value ? value.split('T')[0] : '')) {
+        onEdit(dateString);
+      }
+    } else if (value) {
+      onEdit('');
     }
   };
   
   return (
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
-      <Input
-        type="date"
+      <DatePicker
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        onChange={handleChange}
+        placeholder="Select date"
       />
     </div>
   );
