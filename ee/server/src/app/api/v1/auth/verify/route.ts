@@ -7,7 +7,7 @@ import {
 import { observability, observabilityLogger, observabilityMetrics } from '@/lib/observability';
 import { verifyPassword } from '@/utils/encryption/encryption';
 import { withAdminTransaction } from '@alga-psa/shared/db';
-import { withNmStoreApiKey } from '@/lib/middleware/withNmStoreApiKey';
+import { withNmStoreApiKey } from '@ee/lib/middleware/withNmStoreApiKey';
 
 // Interface definitions
 interface AuthVerifyRequest {

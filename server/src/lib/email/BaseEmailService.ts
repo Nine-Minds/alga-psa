@@ -137,6 +137,11 @@ export abstract class BaseEmailService {
 
       // Get from address
       const from = this.convertToProviderAddress(this.getFromAddress(params));
+      // Log resolved From for visibility (email + name)
+      logger.info(`[${this.getServiceName()}] Using From address:`, {
+        email: from.email,
+        name: from.name || null
+      });
       
       // Convert to provider email message format
       const emailMessage: ProviderEmailMessage = {

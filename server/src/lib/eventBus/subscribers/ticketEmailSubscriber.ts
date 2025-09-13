@@ -11,7 +11,6 @@ import {
 } from '../events';
 import { sendEventEmail } from '../../notifications/sendEventEmail';
 import logger from '@shared/core/logger';
-import { createTenantKnex } from '../../db';
 import { getConnection } from '../../db/db';
 import { getSecret } from '../../utils/getSecret';
 
@@ -116,7 +115,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
   
   try {
     console.log('[EmailSubscriber] Creating database connection');
-    const { knex: db } = await createTenantKnex();
+    const db = await getConnection(tenantId);
     
     // Get ticket details
     console.log('[EmailSubscriber] Fetching ticket details:', { ticketId: payload.ticketId });
@@ -236,7 +235,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       tenantId,
       ticketId: payload.ticketId
     });
-    const { knex: db } = await createTenantKnex();
+    const db = await getConnection(tenantId);
     
     console.log('[EmailSubscriber] Fetching ticket details from database:', {
       ticketId: payload.ticketId,
@@ -488,7 +487,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   const { tenantId } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const db = await getConnection(tenantId);
     
     // Get ticket details with assigned user, company and contact emails
     const ticket = await db('tickets as t')
@@ -607,7 +606,7 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { tenantId } = payload;
   
   try {
-    const { knex: db } = await createTenantKnex();
+    const db = await getConnection(tenantId);
     
     // Get ticket details
     const ticket = await db('tickets as t')

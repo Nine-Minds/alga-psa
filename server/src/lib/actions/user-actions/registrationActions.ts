@@ -1,6 +1,6 @@
 'use server'
 
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';

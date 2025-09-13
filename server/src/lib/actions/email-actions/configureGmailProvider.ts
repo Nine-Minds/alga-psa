@@ -155,6 +155,16 @@ export async function configureGmailProvider({
             pubsub_topic_name: pubsubNames.topicName,
             pubsub_subscription_name: pubsubNames.subscriptionName,
             client_id: googleConfig.client_id || undefined,
+            label_filters: Array.isArray((googleConfig as any).label_filters)
+              ? (googleConfig as any).label_filters
+              : (() => {
+                  try {
+                    const parsed = JSON.parse((googleConfig as any).label_filters || '[]');
+                    return Array.isArray(parsed) ? parsed : [];
+                  } catch {
+                    return [];
+                  }
+                })(),
             access_token: googleConfig.access_token || undefined,
             refresh_token: googleConfig.refresh_token || undefined,
             token_expires_at: googleConfig.token_expires_at || undefined,

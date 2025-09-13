@@ -265,12 +265,19 @@ function ExtensionsTable({
     {
       title: 'Version',
       dataIndex: ['manifest','version'],
-      width: '40px'
+      width: '40px',
+      render: (value) => (
+        <span className="text-sm text-gray-900">{String(value ?? '—')}</span>
+      )
     },
     {
       title: 'Author',
       dataIndex: ['manifest','author'],
-      width: '40px'
+      width: '40px',
+      render: (value) => {
+        const label = typeof value === 'string' ? value : (value?.name ?? '—');
+        return <span className="text-sm text-gray-900">{label}</span>;
+      }
     },
     {
       title: 'Domain',
