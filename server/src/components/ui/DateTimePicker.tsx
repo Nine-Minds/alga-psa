@@ -190,9 +190,9 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
               </div>
 
               <div className="datetime-picker-time">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start justify-between gap-2 w-full">
                   
-                  <div className="datetime-picker-time-section flex-1">
+                  <div className="datetime-picker-time-section" style={{ flex: 1 }}>
                     <label className="datetime-picker-time-label">Hour</label>
                     <div
                       ref={hourListRef}
@@ -223,7 +223,7 @@ export const DateTimePicker = React.forwardRef<HTMLDivElement, DateTimePickerPro
                     </div>
                   </div>
 
-                  <div className="datetime-picker-time-section flex-1">
+                  <div className="datetime-picker-time-section" style={{ flex: 1 }}>
                     <label className="datetime-picker-time-label">Minute</label>
                     <div 
                       ref={minuteListRef}

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronDown } from 'lucide-rea
 import { DayPicker } from 'react-day-picker';
 import { cn } from 'server/src/lib/utils';
 import { format } from 'date-fns';
+// Import default styles first, then our overrides
 import 'react-day-picker/dist/style.css';
 import 'server/src/styles/calendar.css';
 

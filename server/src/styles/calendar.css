@@ -1,10 +1,42 @@
 /* Unified Calendar Styles */
 
+/* Override ALL react-day-picker default colors */
+.rdp-root,
+.rdp,
+[class*="rdp"] {
+  --rdp-accent: rgb(var(--color-primary-500)) !important;
+  --rdp-accent-color: rgb(var(--color-primary-500)) !important;
+  --rdp-background-color: rgb(var(--color-primary-500)) !important;
+  --rdp-selected-color: rgb(var(--color-primary-500)) !important;
+}
+
+/* Calendar Color Palette - Using established brand colors */
+:root {
+  /* Primary purple colors from globals.css */
+  --calendar-accent: rgb(var(--color-primary-500));
+  --calendar-accent-hover: rgb(var(--color-primary-400));
+  --calendar-accent-light: rgba(var(--color-primary-500), 0.15);
+  --calendar-accent-lighter: rgba(var(--color-primary-500), 0.08);
+  --calendar-selected-bg: rgb(var(--color-primary-500));
+  --calendar-selected-hover: rgb(var(--color-primary-600));
+  --calendar-today-color: rgb(var(--color-primary-500));
+  --calendar-hover-bg: rgba(var(--color-primary-500), 0.1);
+  --calendar-hover-border: rgb(var(--color-primary-700));
+  --calendar-focus-ring: rgb(var(--color-primary-500));
+  
+  /* Text and border colors */
+  --calendar-text-primary: rgb(var(--color-text-800));
+  --calendar-text-secondary: rgb(var(--color-text-500));
+  --calendar-text-disabled: rgb(var(--color-text-300));
+  --calendar-border: rgb(var(--color-border-300));
+  --calendar-border-hover: rgb(var(--color-primary-700));
+}
+
 /* Base Calendar Container Styles */
 .calendar-container {
   position: relative;
   background: white;
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
   width: fit-content;
@@ -14,12 +46,14 @@
 /* React Day Picker Calendar Styles */
 .rdp {
   --rdp-cell-size: 40px;
-  --rdp-accent-color: var(--calendar-accent);
-  --rdp-background-color: var(--calendar-accent-light);
-  --rdp-accent-color-dark: var(--brand-primary-200);
+  --rdp-accent-color: rgb(var(--color-primary-500));
+  --rdp-background-color: rgb(var(--color-primary-500));
+  --rdp-accent-color-dark: rgb(var(--color-primary-600));
   --rdp-disabled-color: var(--calendar-text-disabled);
-  --rdp-outline: 2px solid var(--calendar-focus-ring);
-  --rdp-outline-selected: 2px solid var(--brand-primary-200);
+  --rdp-outline: 2px solid rgb(var(--color-primary-500));
+  --rdp-outline-selected: 2px solid rgb(var(--color-primary-500));
+  --rdp-selected-color: rgb(var(--color-primary-500));
+  --rdp-selected-color-dark: rgb(var(--color-primary-600));
   margin: 0;
   padding: 0.75rem;
   width: 100%;
@@ -56,7 +90,7 @@
 .rdp-caption_label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgb(17, 24, 39);
+  color: rgb(var(--color-text-900));
 }
 
 .rdp-nav {
@@ -72,7 +106,7 @@
   height: 2rem;
   padding: 0;
   background: transparent;
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -108,24 +142,30 @@
 .rdp thead tr,
 .rdp tbody tr {
   display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
-  gap: 2px !important;
+  grid-template-columns: repeat(7, 2.5rem) !important; /* Fixed width columns */
+  gap: 4px !important; /* Slightly more gap for visual separation */
   width: 100% !important;
+  justify-content: center !important; /* Center the grid */
 }
 
 .rdp th,
 .rdp td {
   padding: 0 !important;
   text-align: center !important;
-  width: 100% !important;
+  width: 2.5rem !important; /* Fixed width matching button size */
+  height: 2.5rem !important; /* Fixed height for square cells */
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .rdp th {
   font-size: 0.75rem;
   font-weight: 500;
   color: var(--calendar-text-secondary);
-  padding: 0.25rem 0 !important;
-  margin-bottom: 0.5rem;
+  height: auto !important; /* Allow header cells to be smaller */
+  min-height: 1.5rem !important;
+  margin-bottom: 0.25rem;
 }
 
 
@@ -139,56 +179,91 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
   padding: 0;
   font-size: 0.875rem;
-  border-radius: 0.375rem;
+  border-radius: 0.5rem;
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
   transition: all 0.2s;
   color: var(--calendar-text-primary);
   font-weight: 400;
+  aspect-ratio: 1 / 1;
 }
 
 .rdp-day:hover:not(.rdp-day_disabled):not(.rdp-day_selected) {
-  background-color: var(--calendar-hover-bg);
-  border-color: var(--calendar-hover-border);
+  background-color: rgba(var(--color-primary-500), 0.25) !important;
+  border-color: rgb(var(--color-primary-500)) !important;
+  cursor: pointer;
 }
 
-.rdp-day_selected {
-  background-color: var(--calendar-selected-bg);
-  color: white;
-  font-weight: 600;
-  border-color: var(--calendar-selected-bg);
+.rdp-day_selected,
+.rdp .rdp-day_selected,
+.rdp button.rdp-day_selected,
+.rdp-day[aria-selected="true"] {
+  background-color: rgb(var(--color-primary-500)) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border-color: rgb(var(--color-primary-500)) !important;
 }
 
 .rdp-day_selected:hover {
-  background-color: var(--calendar-selected-hover);
-  border-color: var(--calendar-selected-hover);
+  background-color: rgb(var(--color-primary-600)) !important;
+  border-color: rgb(var(--color-primary-600)) !important;
 }
 
 .rdp-day_today {
   font-weight: 700;
-  color: var(--calendar-today-color);
+  background-color: rgba(var(--color-primary-500), 0.15) !important;
+  color: rgb(var(--color-primary-500)) !important;
+  border: 2px solid rgb(var(--color-primary-500)) !important;
   position: relative;
 }
 
+/* Dot indicator removed - using border instead */
 .rdp-day_today::after {
-  content: '';
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 4px;
-  height: 4px;
-  background-color: var(--calendar-today-color);
-  border-radius: 50%;
+  display: none;
 }
 
+/* When today is also selected */
+.rdp-day_today.rdp-day_selected {
+  background-color: rgb(var(--color-primary-500)) !important;
+  color: white !important;
+  border: 2px solid rgb(var(--color-primary-500)) !important;
+}
+
+/* Force selected and today styles with maximum specificity */
+.calendar-container .rdp button[aria-selected="true"],
+.calendar-container .rdp .rdp-day[aria-selected="true"],
+.calendar-container [aria-selected="true"],
+button[aria-selected="true"].rdp-day {
+  background-color: rgb(var(--color-primary-500)) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0.5rem !important;
+  font-weight: 600 !important;
+  position: relative !important;
+  width: 2.5rem !important;
+  height: 2.5rem !important;
+  min-width: 2.5rem !important;
+  min-height: 2.5rem !important;
+}
+
+/* Remove any circles or extra shapes on selected */
+.calendar-container .rdp button[aria-selected="true"]::before,
+.calendar-container .rdp button[aria-selected="true"]::after,
+.rdp-day_selected::before,
+.rdp-day_selected::after {
+  display: none !important;
+}
+
+
 .rdp-day_outside {
-  color: rgb(156, 163, 175);
+  color: rgb(var(--color-text-400));
   opacity: 0.5;
 }
 
@@ -214,9 +289,9 @@
   padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgb(17, 24, 39);
+  color: rgb(var(--color-text-900));
   background: white;
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -238,11 +313,11 @@
   overflow-y: auto;
   overflow-x: hidden;
   background: white;
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   scrollbar-width: thin;
-  scrollbar-color: rgb(209, 213, 219) transparent;
+  scrollbar-color: rgb(var(--color-border-300)) transparent;
 }
 
 .calendar-month-year-dropdown::-webkit-scrollbar {
@@ -254,12 +329,12 @@
 }
 
 .calendar-month-year-dropdown::-webkit-scrollbar-thumb {
-  background-color: rgb(209, 213, 219);
+  background-color: rgb(var(--color-border-300));
   border-radius: 3px;
 }
 
 .calendar-month-year-dropdown::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(156, 163, 175);
+  background-color: rgb(var(--color-border-400));
 }
 
 .calendar-month-year-option {
@@ -268,7 +343,7 @@
   padding: 0.5rem 0.75rem;
   text-align: left;
   font-size: 0.875rem;
-  color: rgb(17, 24, 39);
+  color: rgb(var(--color-text-900));
   background: transparent;
   border: none;
   cursor: pointer;
@@ -295,9 +370,9 @@
   margin-top: 0.75rem;
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgb(75, 85, 99);
+  color: rgb(var(--color-text-600));
   background: white;
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -306,7 +381,7 @@
 .calendar-today-button:hover {
   background-color: var(--calendar-accent-lighter);
   border-color: var(--calendar-hover-border);
-  color: var(--brand-primary-200);
+  color: rgb(var(--color-primary-200));
 }
 
 .calendar-today-button:focus-visible {
@@ -328,25 +403,35 @@
 
 .datetime-picker-calendar {
   flex: 1 1 280px;
-  border-right: 1px solid rgb(229, 231, 235);
+  border-right: 1px solid rgb(var(--color-border-200));
 }
 
 .datetime-picker-time {
   flex: 0 0 200px; /* Slightly wider to ensure AM/PM buttons fit */
   padding: 1rem;
-  background: rgb(249, 250, 251);
+  background: rgb(var(--color-border-50));
   overflow: visible;
   display: flex;
-  gap: 0.5rem;
+  flex-direction: column;
+  height: 100%;
+}
+
+.datetime-picker-time > .flex {
+  flex: 1;
+  display: flex;
+  height: 100%;
 }
 
 .datetime-picker-time-section {
-  margin-bottom: 0.75rem; /* Slightly reduced spacing */
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .datetime-picker-time-section.w-16 {
   width: 4rem;
   flex-shrink: 0;
+  flex-grow: 0;
 }
 
 .datetime-picker-time-label {
@@ -361,12 +446,14 @@
 }
 
 .datetime-picker-time-scroll {
-  height: 12rem; /* Reduced height to accommodate vertical AM/PM */
+  height: calc(100% - 2rem); /* Full height minus label and margins */
+  max-height: 20rem; /* Match approximate calendar height */
+  min-height: 15rem; /* Ensure minimum usable height */
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
-  scrollbar-color: rgb(209, 213, 219) transparent;
-  border: 1px solid rgb(229, 231, 235);
+  scrollbar-color: rgb(var(--color-border-300)) transparent;
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   background: white;
 }
@@ -380,7 +467,7 @@
 }
 
 .datetime-picker-time-scroll::-webkit-scrollbar-thumb {
-  background-color: rgb(209, 213, 219);
+  background-color: rgb(var(--color-border-300));
   border-radius: 3px;
 }
 
@@ -390,7 +477,7 @@
   padding: 0.5rem;
   text-align: center;
   font-size: 0.875rem;
-  color: rgb(17, 24, 39);
+  color: rgb(var(--color-text-900));
   background: transparent;
   border: none;
   cursor: pointer;
@@ -398,12 +485,12 @@
 }
 
 .datetime-picker-time-option:hover {
-  background-color: rgb(243, 244, 246);
+  background-color: rgb(var(--color-border-100));
 }
 
 .datetime-picker-time-option.selected {
-  background-color: var(--calendar-accent-light);
-  color: var(--calendar-accent);
+  background-color: rgba(var(--color-primary-500), 0.2);
+  color: rgb(var(--color-primary-500));
   font-weight: 600;
 }
 
@@ -411,8 +498,8 @@
   display: flex;
   flex-direction: column; /* Stack vertically */
   gap: 0.25rem;
-  margin-top: 0.5rem;
   width: 100%;
+  height: auto;
 }
 
 .datetime-picker-period-button {
@@ -423,7 +510,7 @@
   text-align: center;
   background: white;
   color: var(--calendar-text-primary);
-  border: 1px solid rgb(229, 231, 235);
+  border: 1px solid rgb(var(--color-border-200));
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s;
@@ -433,7 +520,7 @@
 
 .datetime-picker-period-button:not(.selected) {
   background: white;
-  color: rgb(107, 114, 128);
+  color: rgb(var(--color-text-500));
 }
 
 .datetime-picker-period-button:hover:not(.selected) {
@@ -442,13 +529,13 @@
 }
 
 .datetime-picker-period-button:hover {
-  background-color: rgb(243, 244, 246);
-  border-color: rgb(209, 213, 219);
+  background-color: rgb(var(--color-border-100));
+  border-color: rgb(var(--color-border-300));
 }
 
 .datetime-picker-period-button.selected {
-  background-color: var(--calendar-selected-bg);
-  border-color: var(--calendar-selected-bg);
+  background-color: rgb(var(--color-primary-500));
+  border-color: rgb(var(--color-primary-500));
   color: white;
   font-weight: 600;
 }
@@ -484,7 +571,7 @@
   
   .datetime-picker-calendar {
     border-right: none;
-    border-bottom: 1px solid rgb(229, 231, 235);
+    border-bottom: 1px solid rgb(var(--color-border-200));
   }
   
   .datetime-picker-time {

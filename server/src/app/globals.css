@@ -143,23 +143,6 @@ body,
     --color-secondary-800: 179 243 251;
     --color-secondary-900: 217 249 253;
 
-    /* Calendar-specific color mappings using primary colors */
-    --calendar-accent: rgb(var(--color-primary-500));
-    --calendar-accent-hover: rgb(var(--color-primary-400));
-    --calendar-accent-light: rgba(var(--color-primary-500), 0.1);
-    --calendar-accent-lighter: rgba(var(--color-primary-500), 0.05);
-    --calendar-selected-bg: rgb(var(--color-primary-500));
-    --calendar-selected-hover: rgb(var(--color-primary-400));
-    --calendar-today-color: rgb(var(--color-primary-500));
-    --calendar-hover-bg: rgba(var(--color-primary-500), 0.08);
-    --calendar-hover-border: rgb(var(--color-primary-700));
-    --calendar-focus-ring: rgb(var(--color-primary-500));
-    --calendar-text-primary: rgb(var(--color-text-100));
-    --calendar-text-secondary: rgb(var(--color-text-400));
-    --calendar-text-disabled: rgb(var(--color-text-600));
-    --calendar-border: rgb(var(--color-border-600));
-    --calendar-border-hover: rgb(var(--color-primary-700)); /* primary-700 */
-
     /* Orange (#ff9c30) */
     --color-accent-50: 153 94 28;
     --color-accent-100: 179 109 33;
