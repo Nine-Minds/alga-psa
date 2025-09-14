@@ -13,6 +13,7 @@ import { useUserPreference } from 'server/src/hooks/useUserPreference';
 export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Use the custom hook for sidebar preference
   const { value: sidebarCollapsed, setValue: setSidebarCollapsed } = useUserPreference<boolean>(
@@ -24,8 +25,8 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
     }
   );
 
-  // Convert collapsed state to open state for component compatibility
-  const sidebarOpen = !sidebarCollapsed;
+  // Prevent hydration mismatch by using default value until mounted
+  const sidebarOpen = mounted ? !sidebarCollapsed : false;
   const setSidebarOpen = (open: boolean | ((prev: boolean) => boolean)) => {
     if (typeof open === 'function') {
       setSidebarCollapsed(prev => !open(!prev));
@@ -45,6 +46,10 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   const [auth_token, setAuthToken] = useState('');
   const [isTitleLocked] = useState(false);
 
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

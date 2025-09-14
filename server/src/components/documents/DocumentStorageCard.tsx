@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -179,6 +179,7 @@ export interface DocumentStorageCardProps {
     showDisassociate?: boolean;
     onClick?: () => void;
     isContentDocument?: boolean;
+    forceRefresh?: number; // Timestamp to trigger preview refresh
 }
 
 // Lazy loading queue to prevent too many concurrent preview generations
@@ -221,7 +222,7 @@ class PreviewLoadingQueue {
 // Singleton instance of the queue
 const previewQueue = new PreviewLoadingQueue();
 
-export default function DocumentStorageCard({
+function DocumentStorageCardComponent({
     id,
     document,
     onDelete,
@@ -229,7 +230,8 @@ export default function DocumentStorageCard({
     hideActions = false,
     showDisassociate = false,
     onClick,
-    isContentDocument = false
+    isContentDocument = false,
+    forceRefresh
 }: DocumentStorageCardProps): JSX.Element {
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
@@ -254,6 +256,7 @@ export default function DocumentStorageCard({
             setIsLoading(false);
             return;
         }
+
 
         // Add to queue to prevent overloading
         previewQueue.add(async () => {
@@ -304,7 +307,23 @@ export default function DocumentStorageCard({
         if (isInView && !hasLoadedPreview && !isLoading) {
             loadPreview();
         }
-    }, [isInView, hasLoadedPreview, document.document_id, document.file_id]);
+        // Only depend on isInView and hasLoadedPreview to prevent unnecessary reloads
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isInView, hasLoadedPreview]);
+
+    // Force refresh preview when forceRefresh prop changes for THIS document
+    useEffect(() => {
+        if (forceRefresh && forceRefresh > 0 && hasLoadedPreview && isInView) {
+            // Clear existing preview and reload
+            setPreviewContent({});
+            setHasLoadedPreview(false);
+            // Add small delay to ensure cache is cleared
+            setTimeout(() => {
+                loadPreview();
+            }, 100);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [forceRefresh]);
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -316,7 +335,7 @@ export default function DocumentStorageCard({
         
         try {
             setIsLoading(true);
-            await onDelete(document);
+            onDelete(document);
         } catch (error) {
             console.error('Error deleting document:', error);
         } finally {
@@ -335,7 +354,7 @@ export default function DocumentStorageCard({
         
         try {
             setIsLoading(true);
-            await onDisassociate(document);
+            onDisassociate(document);
         } catch (error) {
             console.error('Error disassociating document:', error);
         } finally {
@@ -694,5 +713,21 @@ export default function DocumentStorageCard({
         )}
         </>
     );
-
 }
+
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render if document, forceRefresh, or callback props change
+const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextProps) => {
+    return (
+        prevProps.document.document_id === nextProps.document.document_id &&
+        prevProps.forceRefresh === nextProps.forceRefresh &&
+        prevProps.onDelete === nextProps.onDelete &&
+        prevProps.onDisassociate === nextProps.onDisassociate &&
+        prevProps.onClick === nextProps.onClick &&
+        prevProps.hideActions === nextProps.hideActions &&
+        prevProps.showDisassociate === nextProps.showDisassociate &&
+        prevProps.isContentDocument === nextProps.isContentDocument
+    );
+});
+
+export default DocumentStorageCard;
