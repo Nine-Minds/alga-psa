@@ -1,5 +1,5 @@
 import { isEnterprise } from './features';
-import { parsePolicy } from './auth/ee';
+import { parsePolicy } from '@alga-psa/product-auth-ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger } from '@alga-psa/shared/core';
@@ -35,7 +35,7 @@ export async function initializeApp() {
   try {
     // Load environment configuration
     config();
-    
+
     // Validate secret uniqueness first (must succeed)
     try {
       await validateSecretUniqueness();
@@ -44,7 +44,7 @@ export async function initializeApp() {
       logger.error('Secret uniqueness validation failed:', error);
       throw error; // Cannot continue with conflicting secrets
     }
-    
+
     // Validate critical configuration (must succeed)
     try {
       await validateRequiredConfiguration();
@@ -56,7 +56,7 @@ export async function initializeApp() {
 
     let secretProvider: ISecretProvider = await getSecretProviderInstance();
     let nextAuthSecret: string | undefined = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
-    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;    
+    process.env.NEXTAUTH_SECRET = nextAuthSecret || process.env.NEXTAUTH_SECRET;
 
     // Validate database connectivity (critical - must succeed)
     try {
@@ -66,7 +66,7 @@ export async function initializeApp() {
       logger.error('Database connectivity validation failed:', error);
       throw error; // Cannot continue without database
     }
-    
+
     // Run general environment validation
     validateEnv();
 
@@ -157,10 +157,10 @@ export async function initializeApp() {
 
     // Initialize enterprise features
     if (isEnterprise) {
-      
+
       // Initialize extensions
        try {
-         const { initializeExtensions } = await import('@ee/lib/extensions/initialize');
+         const { initializeExtensions } = await import('@alga-psa/product-extension-initialization');
          await initializeExtensions();
          logger.info('Extension system initialized');
       } catch (error) {
@@ -236,9 +236,9 @@ function logConfiguration() {
   });
 
   // Email Configuration
-  const emailProviderType = process.env.EMAIL_PROVIDER_TYPE || 
+  const emailProviderType = process.env.EMAIL_PROVIDER_TYPE ||
     (process.env.RESEND_API_KEY ? 'resend' : 'smtp');
-  
+
   logger.info('Email Configuration:', {
     EMAIL_ENABLE: process.env.EMAIL_ENABLE,
     EMAIL_PROVIDER_TYPE: emailProviderType,
@@ -262,7 +262,7 @@ async function initializeJobScheduler(storageService: StorageService) {
   // Initialize job scheduler and register jobs
   const jobService = await JobService.create();
   const jobScheduler: IJobScheduler = await JobScheduler.getInstance(jobService, storageService);
-  
+
   // Register invoice zip handler once during initialization
   const invoiceZipHandler = new InvoiceZipJobHandler(jobService, storageService);
   jobScheduler.registerGenericJobHandler<InvoiceZipJobData>(

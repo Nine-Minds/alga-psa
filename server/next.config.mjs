@@ -7,6 +7,8 @@ import webpack from 'webpack';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Determine if this is an EE build
+const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
@@ -35,6 +37,35 @@ const nextConfig = {
       'knex/lib/dialects/oracledb': emptyShim,
       'knex/lib/dialects/oracledb/index.js': emptyShim,
       'knex/lib/dialects/oracledb/utils.js': emptyShim,
+
+      // Product feature aliasing - point stable import paths to OSS or EE implementations
+      '@product/extensions/entry': isEE
+        ? '@product/extensions/ee/entry'
+        : '@product/extensions/oss/entry',
+      '@product/settings-extensions/entry': isEE
+        ? '@product/settings-extensions/ee/entry'
+        : '@product/settings-extensions/oss/entry',
+      '@product/chat/entry': isEE
+        ? '@product/chat/ee/entry'
+        : '@product/chat/oss/entry',
+      '@product/email-providers/entry': isEE
+        ? '@product/email-providers/ee/entry'
+        : '@product/email-providers/oss/entry',
+      '@product/workflows/entry': isEE
+        ? '@product/workflows/ee/entry'
+        : '@product/workflows/oss/entry',
+      '@product/billing/entry': isEE
+        ? '@product/billing/ee/entry'
+        : '@product/billing/oss/entry',
+      '@product/auth-ee/entry': isEE
+        ? '@product/auth-ee/ee/entry'
+        : '@product/auth-ee/oss/entry',
+      '@product/extension-actions/entry': isEE
+        ? '@product/extension-actions/ee/entry'
+        : '@product/extension-actions/oss/entry',
+      '@product/extension-initialization/entry': isEE
+        ? '@product/extension-initialization/ee/entry'
+        : '@product/extension-initialization/oss/entry',
     },
   },
   eslint: {
@@ -43,7 +74,23 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   reactStrictMode: false, // Disabled to prevent double rendering in development
-  transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine', '@emoji-mart/data'],
+  transpilePackages: [
+    '@blocknote/core',
+    '@blocknote/react',
+    '@blocknote/mantine',
+    '@emoji-mart/data',
+    // Product feature packages
+    '@product/extensions',
+    '@product/settings-extensions',
+    '@product/chat',
+    '@product/email-providers',
+    '@product/workflows',
+    '@product/billing',
+    // New aliasing packages
+    '@alga-psa/product-extension-actions',
+    '@alga-psa/product-auth-ee',
+    '@alga-psa/product-extension-initialization'
+  ],
   // Rewrites required for PostHog
   async rewrites() {
     return [
@@ -86,7 +133,18 @@ const nextConfig = {
         // This ensures CE builds don't fail when code references ee/server/src directly
         'ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
           ? path.join(__dirname, '../ee/server/src')
-          : path.join(__dirname, 'src/empty')
+          : path.join(__dirname, 'src/empty'),
+
+        // Product package aliases - point to the packages directory
+        '@product/extensions': path.join(__dirname, '../packages/product-extensions'),
+        '@product/settings-extensions': path.join(__dirname, '../packages/product-settings-extensions'),
+        '@product/chat': path.join(__dirname, '../packages/product-chat'),
+        '@product/email-providers': path.join(__dirname, '../packages/product-email-providers'),
+        '@product/workflows': path.join(__dirname, '../packages/product-workflows'),
+        '@product/billing': path.join(__dirname, '../packages/product-billing'),
+        '@alga-psa/product-extension-actions': path.join(__dirname, '../packages/product-extension-actions'),
+        '@alga-psa/product-auth-ee': path.join(__dirname, '../packages/product-auth-ee'),
+        '@alga-psa/product-extension-initialization': path.join(__dirname, '../packages/product-extension-initialization')
       },
       modules: [
         ...config.resolve.modules || ['node_modules'],

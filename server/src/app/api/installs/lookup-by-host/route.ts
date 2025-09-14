@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { lookupByHost } from '@ee/lib/actions/installDomainActions';
+import { lookupByHost } from '@alga-psa/product-extension-actions';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -17,4 +17,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'server_error' }, { status: 500 });
   }
 }
-

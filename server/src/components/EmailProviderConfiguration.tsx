@@ -10,16 +10,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/Button';
 import { Alert, AlertDescription } from './ui/Alert';
 import { Plus, Settings, Trash2, CheckCircle, Clock } from 'lucide-react';
-import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
+import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
 import { EmailProviderList } from './EmailProviderList';
-import { GmailProviderForm } from '@ee/components/GmailProviderForm';
 import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { DrawerProvider, useDrawer } from 'server/src/context/DrawerContext';
-import { 
-  getEmailProviders, 
-  deleteEmailProvider, 
-  testEmailProviderConnection 
+import {
+  getEmailProviders,
+  deleteEmailProvider,
+  testEmailProviderConnection
 } from '../lib/actions/email-actions/emailProviderActions';
 import { getCurrentUser } from '../lib/actions/user-actions/userActions';
 
@@ -131,7 +130,7 @@ function EmailProviderConfigurationContent({
     try {
       setLoading(true);
       setError(null);
-      
+
       const data = await getEmailProviders();
       setProviders(data.providers || []);
     } catch (err: any) {
@@ -151,11 +150,11 @@ function EmailProviderConfigurationContent({
   const handleProviderDeleted = async (providerId: string) => {
     try {
       await deleteEmailProvider(providerId);
-      
+
       setProviders(prev => prev.filter(p => p.id !== providerId));
-      
+
       // No inline selector; wizard handles starting setup
-      
+
       onProviderDeleted?.(providerId);
     } catch (err: any) {
       setError(err.message);
@@ -165,9 +164,9 @@ function EmailProviderConfigurationContent({
   const handleTestConnection = async (provider: EmailProvider) => {
     try {
       setError(null);
-      
+
       const result = await testEmailProviderConnection(provider.id);
-      
+
       if (result.success) {
         // Update provider status
         const updatedProvider = { ...provider, status: 'connected' as const };
@@ -183,7 +182,7 @@ function EmailProviderConfigurationContent({
   const handleRefreshWatchSubscription = async (provider: EmailProvider) => {
     try {
       setError(null);
-      
+
       const response = await fetch('/api/email/refresh-watch', {
         method: 'POST',
         headers: {
@@ -191,9 +190,9 @@ function EmailProviderConfigurationContent({
         },
         body: JSON.stringify({ providerId: provider.id }),
       });
-      
+
       const result = await response.json();
-      
+
       if (response.ok && result.success) {
         // Refresh the providers list to show updated status
         await loadProviders();
@@ -262,7 +261,7 @@ function EmailProviderConfigurationContent({
               Configure email providers to receive and process inbound emails as tickets
             </p>
           </div>
-          <Button 
+          <Button
             id="add-provider-btn"
             onClick={() => setWizardOpen(true)}
           >

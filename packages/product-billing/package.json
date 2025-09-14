@@ -1,0 +1,11 @@
+{
+  "name": "@product/billing",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    "./ee/entry": "./ee/entry.js",
+    "./oss/entry": "./oss/entry.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

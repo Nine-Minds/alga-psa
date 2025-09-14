@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
-import { ChatStreamService } from '@ee/services/chatStreamService';
+import { ChatStreamService } from '@product/chat/entry';
 
 // export const runtime = 'edge'; // Temporarily disabled
 

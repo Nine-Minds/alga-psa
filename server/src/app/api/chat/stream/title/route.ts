@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ChatStreamService } from '@ee/services/chatStreamService';
+import { ChatStreamService } from '@product/chat/entry';
 
 // This is needed for streaming responses
 export const dynamic = 'force-dynamic';

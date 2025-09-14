@@ -1,0 +1,13 @@
+{
+  "name": "@product/extension-initialization",
+  "version": "0.1.0",
+  "description": "Extension initialization for Alga PSA - EE/OSS conditional exports",
+  "main": "index.js",
+  "type": "module",
+  "exports": {
+    "./ee/entry": "./ee/entry.js",
+    "./oss/entry": "./oss/entry.js"
+  },
+  "dependencies": {},
+  "peerDependencies": {}
+}

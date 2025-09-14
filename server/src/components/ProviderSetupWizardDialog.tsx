@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from './ui/Dialog';
 import { Button } from './ui/Button';
 import { EmailProviderSelector } from './EmailProviderSelector';
-import { MicrosoftProviderForm } from '@ee/components/MicrosoftProviderForm';
-import { GmailProviderForm } from '@ee/components/GmailProviderForm';
+import { MicrosoftProviderForm, GmailProviderForm } from '@product/email-providers/entry';
 import type { EmailProvider } from './EmailProviderConfiguration';
 
 interface ProviderSetupWizardDialogProps {
@@ -48,7 +47,7 @@ export function ProviderSetupWizardDialog({ isOpen, onClose, onComplete, tenant 
   };
 
   return (
-    <Dialog isOpen={isOpen} onClose={handleClose} title={step === 'select' ? 'Choose Email Provider' : `${providerType === 'google' ? 'Gmail' : 'Microsoft 365'} Configuration`}> 
+    <Dialog isOpen={isOpen} onClose={handleClose} title={step === 'select' ? 'Choose Email Provider' : `${providerType === 'google' ? 'Gmail' : 'Microsoft 365'} Configuration`}>
       <DialogContent>
         {step === 'select' && (
           <EmailProviderSelector onProviderSelected={handleProviderSelected} hideHeader />

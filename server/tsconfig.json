@@ -30,7 +30,13 @@
       "@shared/types": ["../shared/types"],
       "@shared/types/*": ["../shared/types/*"],
       "@ee": ["src/empty"],
-      "@ee/*": ["src/empty/*"]
+      "@ee/*": ["src/empty/*"],
+      "@product/chat/*": ["../packages/product-chat/*"],
+      "@product/workflows/*": ["../packages/product-workflows/*"],
+      "@product/extensions/*": ["../packages/product-extensions/*"],
+      "@product/settings-extensions/*": ["../packages/product-settings-extensions/*"],
+      "@product/email-providers/*": ["../packages/product-email-providers/*"],
+      "@product/billing/*": ["../packages/product-billing/*"]
     }
   },
   "include": [
