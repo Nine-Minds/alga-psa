@@ -113,6 +113,11 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
           updated_at: new Date()
         });
     });
+
+    // Invalidate the preview cache for this document if it exists
+    const cache = CacheFactory.getPreviewCache(tenant);
+    await cache.delete(documentId);
+    console.log(`[updateDocument] Invalidated preview cache for document ${documentId}`);
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
