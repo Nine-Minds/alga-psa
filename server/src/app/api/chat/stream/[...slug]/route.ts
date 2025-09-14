@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 import { NextRequest } from 'next/server';
-import { ChatStreamService } from '@product/chat/entry';
+// EE-only runtime import when available; CE returns 404
 
 // export const runtime = 'edge'; // Temporarily disabled
 
@@ -30,7 +30,11 @@ export async function POST(
     });
   }
 
-  // The full path will be available in resolvedParams.slug as an array
-  // For example, ['v1', 'chat', 'completions'] for /api/chat/stream/v1/chat/completions
-  return await ChatStreamService.handleChatStream(req);
+  // Not available in CE; EE app handles streaming.
+  return new Response('Chat streaming is only available in Enterprise Edition', {
+    status: 404,
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
 }

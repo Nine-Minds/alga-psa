@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "exports": {
-    "./ee/entry": "./ee/entry.js",
-    "./oss/entry": "./oss/entry.js"
+    "./ee/entry": "./ee/entry.ts",
+    "./oss/entry": "./oss/entry.ts"
   },
   "dependencies": {},
   "peerDependencies": {}

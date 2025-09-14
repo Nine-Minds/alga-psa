@@ -1,5 +1,1 @@
-import ExtensionSettings from '@/components/settings/extensions/ExtensionSettings';
-
-export default function ExtensionSettingsPage() {
-  return <ExtensionSettings />;
-}
+export { default, metadata } from '@product/extensions/pages/settings';

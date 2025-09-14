@@ -6,12 +6,34 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
+const isEE = process.env.EDITION === 'ee';
+
 const nextConfig = {
+  transpilePackages: [
+    '@product/extensions',
+    '@product/extensions-pages',
+  ],
   turbopack: {
     // Alias optional DB drivers we don't use to an empty shim for Turbopack
     resolveAlias: {
       // Aliases for paths
       '@': './src',
+      // Map EE pseudo-namespace to local src to allow bundling
+      '@ee/*': './src/*',
+      // Feature swap: Extensions route entry
+      '@product/extensions/entry': isEE
+        ? '../packages/product-extensions/ee/entry'
+        : '../packages/product-extensions/oss/entry',
+      // Feature swap: Extensions pages under Settings
+      '@product/extensions/pages/list': isEE
+        ? '../packages/product-extensions-pages/ee/list'
+        : '../packages/product-extensions-pages/oss/list',
+      '@product/extensions/pages/details': isEE
+        ? '../packages/product-extensions-pages/ee/details'
+        : '../packages/product-extensions-pages/oss/details',
+      '@product/extensions/pages/settings': isEE
+        ? '../packages/product-extensions-pages/ee/settings'
+        : '../packages/product-extensions-pages/oss/settings',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -38,6 +60,21 @@ const nextConfig = {
       alias: {
         ...config.resolve?.alias,
         '@': path.join(__dirname, 'src'),
+        // Match Turbopack EE aliasing behavior
+        '@ee': path.join(__dirname, 'src'),
+        // Feature swap aliases (Webpack)
+        '@product/extensions/entry': isEE
+          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+        '@product/extensions/pages/list': isEE
+          ? path.join(__dirname, '../packages/product-extensions-pages/ee/list.tsx')
+          : path.join(__dirname, '../packages/product-extensions-pages/oss/list.tsx'),
+        '@product/extensions/pages/details': isEE
+          ? path.join(__dirname, '../packages/product-extensions-pages/ee/details.tsx')
+          : path.join(__dirname, '../packages/product-extensions-pages/oss/details.tsx'),
+        '@product/extensions/pages/settings': isEE
+          ? path.join(__dirname, '../packages/product-extensions-pages/ee/settings.tsx')
+          : path.join(__dirname, '../packages/product-extensions-pages/oss/settings.tsx'),
       },
       modules: [
         ...(config.resolve?.modules || ['node_modules']),

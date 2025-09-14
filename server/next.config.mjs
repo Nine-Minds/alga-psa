@@ -18,6 +18,8 @@ const nextConfig = {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
     // Alias optional DB drivers we don't use to an empty shim for Turbopack
     resolveAlias: {
+      // Base app alias
+      '@': './src',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -47,7 +49,7 @@ const nextConfig = {
         : '@product/settings-extensions/oss/entry',
       '@product/chat/entry': isEE
         ? '@product/chat/ee/entry'
-        : '@product/chat/oss/entry',
+        : './src/services/chatStreamService',
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',
@@ -60,12 +62,22 @@ const nextConfig = {
       '@product/auth-ee/entry': isEE
         ? '@product/auth-ee/ee/entry'
         : '@product/auth-ee/oss/entry',
+      '@product/extension-actions': isEE
+        ? '@product/extension-actions/ee'
+        : '@product/extension-actions/oss',        
       '@product/extension-actions/entry': isEE
         ? '@product/extension-actions/ee/entry'
         : '@product/extension-actions/oss/entry',
       '@product/extension-initialization/entry': isEE
         ? '@product/extension-initialization/ee/entry'
         : '@product/extension-initialization/oss/entry',
+      // Map stable specifiers to relative sources so Turbopack can resolve them
+      '@alga-psa/product-extension-initialization': isEE
+        ? '../ee/server/src/lib/extensions/initialize'
+        : '../packages/product-extension-initialization/oss/entry',
+      '@alga-psa/product-extension-actions': isEE
+        ? '../packages/product-extension-actions/ee/entry'
+        : '../packages/product-extension-actions/oss/entry',
     },
   },
   eslint: {
@@ -79,12 +91,10 @@ const nextConfig = {
     '@blocknote/react',
     '@blocknote/mantine',
     '@emoji-mart/data',
-    // Product feature packages
+    // Product feature packages (only those needed in this app)
     '@product/extensions',
     '@product/settings-extensions',
-    '@product/chat',
     '@product/email-providers',
-    '@product/workflows',
     '@product/billing',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
@@ -126,7 +136,7 @@ const nextConfig = {
       alias: {
         ...config.resolve.alias,
         '@': path.join(__dirname, 'src'),
-        '@ee': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+        '@ee': isEE
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
         // Also map deep EE paths used without the @ee alias to CE stubs
@@ -135,16 +145,28 @@ const nextConfig = {
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'),
 
-        // Product package aliases - point to the packages directory
-        '@product/extensions': path.join(__dirname, '../packages/product-extensions'),
-        '@product/settings-extensions': path.join(__dirname, '../packages/product-settings-extensions'),
-        '@product/chat': path.join(__dirname, '../packages/product-chat'),
-        '@product/email-providers': path.join(__dirname, '../packages/product-email-providers'),
-        '@product/workflows': path.join(__dirname, '../packages/product-workflows'),
-        '@product/billing': path.join(__dirname, '../packages/product-billing'),
-        '@alga-psa/product-extension-actions': path.join(__dirname, '../packages/product-extension-actions'),
+        // Avoid base-prefix aliases that can shadow more specific '/entry' aliases
+        // Feature swap aliases for Webpack (point directly to ts/tsx files)
+        '@product/extensions/entry': isEE
+          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+        '@product/settings-extensions/entry': isEE
+          ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+        '@product/email-providers/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/workflows/entry': isEE
+          ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
+          : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+        // Point stable specifiers to exact entry files to avoid conditional exports in package index
+        '@alga-psa/product-extension-initialization': isEE
+          ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
+          : path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
+        '@alga-psa/product-extension-actions': isEE
+          ? path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
         '@alga-psa/product-auth-ee': path.join(__dirname, '../packages/product-auth-ee'),
-        '@alga-psa/product-extension-initialization': path.join(__dirname, '../packages/product-extension-initialization')
       },
       modules: [
         ...config.resolve.modules || ['node_modules'],

@@ -1,8 +1,37 @@
-// EE implementation for Extensions feature
-// This exports the actual EE extensions page component
+import Link from 'next/link';
+import ExtensionIframe from './ExtensionIframe';
+import { getInstallInfo } from '@ee/lib/actions/extensionDomainActions';
 
-// Export the EE extensions page with both default export and metadata
-export { default, metadata } from '../../../ee/ee/server/src/app/msp/extensions/[id]/page.js';
+export const metadata = { title: 'Extension' };
 
-// Re-export for named imports if needed
-export { default as ExtensionPage, metadata as ExtensionPageMetadata } from '../../../ee/ee/server/src/app/msp/extensions/[id]/page.js';
+export default async function Page({ params }: { params: { id: string } }) {
+  const id = params.id;
+  let domain: string | null = null;
+  let error: string | null = null;
+  try {
+    const info = await getInstallInfo(id);
+    domain = info?.runner_domain ?? null;
+  } catch (e: unknown) {
+    error = 'Failed to load extension runtime info';
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-600">{error}</div>;
+  }
+
+  if (!domain) {
+    return (
+      <div className="p-6 space-y-2">
+        <div className="text-gray-800 font-medium">Extension runtime domain not available.</div>
+        <div className="text-gray-600 text-sm">Reprovision the extension from Settings → Extensions → select extension → Provision.</div>
+        <Link href={`/msp/settings/extensions/${encodeURIComponent(id)}`} className="text-primary-600 hover:underline text-sm">Go to extension details</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full w-full">
+      <ExtensionIframe domain={domain!} />
+    </div>
+  );
+}

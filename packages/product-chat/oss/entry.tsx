@@ -1,7 +1,7 @@
 import React from 'react';
 
-// OSS stub implementation for Chat/AI features
-export { ChatStreamService } from '../../../server/src/empty/services/chatStreamService';
+// OSS implementation uses the CE chat stream service
+export { ChatStreamService } from '@/services/chatStreamService';
 export const ChatPage = () => {
   return (
     <div className="flex items-center justify-center h-64">

@@ -3,7 +3,7 @@
 
 export { default as ExtensionSettings } from '../../../ee/server/src/components/settings/extensions/ExtensionSettings';
 export { default as ExtensionDetailsModal } from '../../../ee/server/src/components/settings/extensions/ExtensionDetailsModal';
-export { default as ExtensionPermissions } from '../../../ee/server/src/components/settings/extensions/ExtensionPermissions';
+export { ExtensionPermissions } from '../../../ee/server/src/components/settings/extensions/ExtensionPermissions';
 export { default as Extensions } from '../../../ee/server/src/components/settings/extensions/Extensions';
 export { default as InstallerPanel } from '../../../ee/server/src/components/settings/extensions/InstallerPanel';
 export { default as ExtensionDetails } from '../../../ee/server/src/components/settings/extensions/ExtensionDetails';

@@ -2,7 +2,7 @@
 // This will import the actual implementation from the ee/ directory
 
 // Chat service exports
-export { ChatStreamService } from '../../../ee/server/src/services/chatStreamService';
+export { ChatStreamService } from '../../ee/server/src/services/chatStreamService';
 
 // Component exports (when available)
 // export { default as ChatPage } from '../../../ee/server/src/app/msp/chat/page';
@@ -10,16 +10,16 @@ export { ChatStreamService } from '../../../ee/server/src/services/chatStreamSer
 // export { MessageComponent as Message } from '../../../ee/server/src/components/message/Message';
 
 // For now, placeholder dynamic imports for components
-export const ChatPage = () => import('../../../ee/server/src/app/msp/chat/page.js');
-export const ChatComponent = () => import('../../../ee/server/src/components/chat/Chat.js');
-export const MessageComponent = () => import('../../../ee/server/src/components/message/Message.js');
+export const ChatPage = () => import('../../ee/server/src/app/msp/chat/page.js');
+export const ChatComponent = () => import('../../ee/server/src/components/chat/Chat.js');
+export const MessageComponent = () => import('../../ee/server/src/components/message/Message.js');
 
 // Default export
 const chat = {
-  ChatStreamService: () => import('../../../ee/server/src/services/chatStreamService').then(mod => mod.ChatStreamService),
-  ChatPage: () => import('../../../ee/server/src/app/msp/chat/page.js'),
-  ChatComponent: () => import('../../../ee/server/src/components/chat/Chat.js'),
-  MessageComponent: () => import('../../../ee/server/src/components/message/Message.js'),
+  ChatStreamService: () => import('../../ee/server/src/services/chatStreamService').then(mod => mod.ChatStreamService),
+  ChatPage: () => import('../../ee/server/src/app/msp/chat/page.js'),
+  ChatComponent: () => import('../../ee/server/src/components/chat/Chat.js'),
+  MessageComponent: () => import('../../ee/server/src/components/message/Message.js'),
 };
 
 export default chat;

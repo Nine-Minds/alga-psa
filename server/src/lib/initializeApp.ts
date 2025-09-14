@@ -1,5 +1,4 @@
 import { isEnterprise } from './features';
-import { parsePolicy } from '@alga-psa/product-auth-ee';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger } from '@alga-psa/shared/core';
