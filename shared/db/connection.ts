@@ -1,5 +1,5 @@
 import Knex, { Knex as KnexType } from 'knex';
-import { getSecretProviderInstance } from '@shared/core/index';
+import { getSecretProviderInstance } from '@shared/core/secretProvider';
 
 // Create a map to store Knex instances
 const knexInstances: Map<string, KnexType> = new Map();

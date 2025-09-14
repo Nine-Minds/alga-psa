@@ -9,22 +9,21 @@ const emptyShim = './src/empty/shims/empty.ts';
 const isEE = process.env.EDITION === 'ee';
 
 const nextConfig = {
+  // Transpile shared product packages used by EE server
   transpilePackages: [
     '@product/extensions',
     '@product/extensions-pages',
   ],
+  // Turbopack-specific aliases
   turbopack: {
-    // Alias optional DB drivers we don't use to an empty shim for Turbopack
     resolveAlias: {
-      // Aliases for paths
       '@': './src',
-      // Map EE pseudo-namespace to local src to allow bundling
+      // EE source alias
       '@ee/*': './src/*',
-      // Feature swap: Extensions route entry
+      // Feature swap: product pages and entries
       '@product/extensions/entry': isEE
         ? '../packages/product-extensions/ee/entry'
         : '../packages/product-extensions/oss/entry',
-      // Feature swap: Extensions pages under Settings
       '@product/extensions/pages/list': isEE
         ? '../packages/product-extensions-pages/ee/list'
         : '../packages/product-extensions-pages/oss/list',
@@ -43,9 +42,16 @@ const nextConfig = {
       'tedious': emptyShim,
     },
   },
+  experimental: {
+    externalDir: true,
+  },
+  images: {
+    unoptimized: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
+  productionBrowserSourceMaps: false,
   reactStrictMode: true,
   webpack: (config, { isServer }) => {
     // NOTE: This webpack config is kept for fallback compatibility when Turbopack isn't used
@@ -57,11 +63,17 @@ const nextConfig = {
     // Helpful aliases and module resolution
     config.resolve = {
       ...config.resolve,
+      // Allow .js imports to resolve to TS sources in the monorepo
+      extensionAlias: {
+        '.js': ['.js', '.ts', '.tsx'],
+      },
       alias: {
         ...config.resolve?.alias,
         '@': path.join(__dirname, 'src'),
-        // Match Turbopack EE aliasing behavior
+        // Ensure EE imports resolve to this package's src (EE edition)
         '@ee': path.join(__dirname, 'src'),
+        '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
+        '@ee/components': path.join(__dirname, 'src/components'),
         // Feature swap aliases (Webpack)
         '@product/extensions/entry': isEE
           ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
@@ -75,6 +87,8 @@ const nextConfig = {
         '@product/extensions/pages/settings': isEE
           ? path.join(__dirname, '../packages/product-extensions-pages/ee/settings.tsx')
           : path.join(__dirname, '../packages/product-extensions-pages/oss/settings.tsx'),
+        // Stub native sharp during local dev to avoid platform build issues
+        sharp: path.join(__dirname, 'src/empty/sharp.ts'),
       },
       modules: [
         ...(config.resolve?.modules || ['node_modules']),

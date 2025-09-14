@@ -13,6 +13,46 @@ const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION ===
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
+// Optional verbose module resolution logging (enable with LOG_MODULE_RESOLUTION=1)
+class LogModuleResolutionPlugin {
+  apply(compiler) {
+    compiler.hooks.normalModuleFactory.tap('LogModuleResolutionPlugin', (nmf) => {
+      nmf.hooks.beforeResolve.tap('LogModuleResolutionPlugin', (data) => {
+        try {
+          if (!data) return;
+          const req = data.request || '';
+          if (req.startsWith('@ee') || req.includes('ee/server/src')) {
+            // Minimal, structured log for clarity during iteration
+            console.log('[resolve:before]', {
+              request: req,
+              issuer: data.contextInfo?.issuer,
+              context: data.context,
+            });
+          }
+        } catch {}
+      });
+      nmf.hooks.afterResolve.tap('LogModuleResolutionPlugin', (result) => {
+        try {
+          if (!result) return;
+          const req = result.createData?.request || result.request || result.rawRequest || '';
+          const res = result.resource || '';
+          const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/server/src/empty/');
+          if (!hit) return;
+          const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/server/src/empty/') ? 'CE-stub' : 'unknown');
+          console.log('[resolve:after]', {
+            request: req,
+            resource: res,
+            mappedTo,
+            context: result.context,
+            issuer: result.createData?.issuer || result.contextInfo?.issuer,
+            descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
+          });
+        } catch {}
+      });
+    });
+  }
+}
+
 const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
@@ -126,6 +166,13 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
+    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
+      cwd: process.cwd(),
+      dirname: __dirname,
+      LOG_MODULE_RESOLUTION: process.env.LOG_MODULE_RESOLUTION,
+    });
+
     config.resolve = {
       ...config.resolve,
       extensionAlias: {
@@ -141,7 +188,7 @@ const nextConfig = {
           : path.join(__dirname, 'src/empty'), // Point to empty implementations for CE builds
         // Also map deep EE paths used without the @ee alias to CE stubs
         // This ensures CE builds don't fail when code references ee/server/src directly
-        'ee/server/src': process.env.NEXT_PUBLIC_EDITION === 'enterprise'
+        'ee/server/src': isEE
           ? path.join(__dirname, '../ee/server/src')
           : path.join(__dirname, 'src/empty'),
 
@@ -177,6 +224,22 @@ const nextConfig = {
         'querystring': require.resolve('querystring-es3'),
       }
     };
+
+    // In EE mode, also alias any absolute CE-stub path prefix to EE source root
+    if (isEE) {
+      const ceEmptyAbs = path.join(__dirname, 'src', 'empty');
+      const eeSrcAbs = path.join(__dirname, '../ee/server/src');
+      config.resolve.alias[ceEmptyAbs] = eeSrcAbs;
+    }
+
+    console.log('[next.config] aliases', {
+      at: __dirname,
+      '@': config.resolve.alias['@'],
+      '@ee': config.resolve.alias['@ee'],
+      'ee/server/src': config.resolve.alias['ee/server/src'],
+      ceEmptyAbs: isEE ? path.join(__dirname, 'src', 'empty') : undefined,
+      eeSrcAbs: isEE ? path.join(__dirname, '../ee/server/src') : undefined,
+    });
 
     // Exclude database dialects we don't use and heavy dev dependencies
     config.externals = [
@@ -263,7 +326,7 @@ const nextConfig = {
     // In CE builds, replace any deep import of the EE S3 provider with the CE stub.
     // This also catches relative paths like ../../../ee/server/src/lib/storage/providers/S3StorageProvider
     // and @ee alias imports like @ee/lib/storage/providers/S3StorageProvider
-    if (process.env.NEXT_PUBLIC_EDITION !== 'enterprise') {
+    if (!isEE) {
       config.plugins = config.plugins || [];
       config.plugins.push(
         new webpack.NormalModuleReplacementPlugin(
@@ -272,6 +335,75 @@ const nextConfig = {
         )
       );
     }
+    
+    // In enterprise builds, remap any CE-stub absolute paths to their EE equivalents.
+    // This ensures tsconfig path mapping that points to src/empty is overridden at webpack stage.
+    if (isEE) {
+      const ceEmptyPrefix = path.join(__dirname, 'src', 'empty') + path.sep;
+      const ceEmptyRegex = new RegExp(ceEmptyPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+      const eeSrcRoot = path.join(__dirname, '../ee/server/src') + path.sep;
+      config.plugins = config.plugins || [];
+      config.plugins.push(new webpack.NormalModuleReplacementPlugin(/.*/, (resource) => {
+        try {
+          const req = resource.request || '';
+          if (ceEmptyRegex.test(req)) {
+            const rel = req.substring(ceEmptyPrefix.length);
+            const mapped = path.join(eeSrcRoot, rel);
+            if (process.env.LOG_MODULE_RESOLUTION === '1') {
+              console.log('[replace:EE]', { from: req, to: mapped });
+            }
+            resource.request = mapped;
+          }
+        } catch {}
+      }));
+    }
+
+  // Conditionally enable verbose resolution logging for EE/CE module paths
+  if (process.env.LOG_MODULE_RESOLUTION === '1') {
+      config.plugins = config.plugins || [];
+      config.plugins.push(new LogModuleResolutionPlugin());
+
+      // Also tap the resolver directly to capture final resolved paths
+      class LogResolverPlugin {
+        apply(compiler) {
+          try {
+            compiler.resolverFactory.hooks.resolver.for('normal').tap('LogResolverPlugin', (resolver) => {
+              resolver.hooks.resolve.tapAsync('LogResolverPlugin', (request, ctx, done) => {
+                try {
+                  const req = request.request || '';
+                  if (req.startsWith('@ee') || req.includes('ee/server/src')) {
+                    console.log('[resolver:resolve]', {
+                      request: req,
+                      path: request.path,
+                      context: request.context?.issuer || ctx.issuer,
+                    });
+                  }
+                } catch {}
+                done();
+              });
+              resolver.hooks.result.tap('LogResolverPlugin', (result) => {
+                try {
+                  if (!result) return;
+                  const resPath = result.path || '';
+                  const req = result.request || '';
+                  const hit = req?.startsWith?.('@ee') || req?.includes?.('ee/server/src') || resPath.includes('/ee/server/src/') || resPath.includes('/server/src/empty/');
+                  if (!hit) return;
+                  console.log('[resolver:result]', {
+                    request: req,
+                    resolvedPath: resPath,
+                    mappedTo: resPath.includes('/ee/server/src/') ? 'EE' : (resPath.includes('/server/src/empty/') ? 'CE-stub' : 'unknown'),
+                  });
+                } catch {}
+              });
+            });
+            console.log('[next.config] LogModuleResolutionPlugin enabled');
+          } catch (e) {
+            console.log('[next.config] Failed to enable LogResolverPlugin', e?.message);
+          }
+        }
+      }
+      config.plugins.push(new LogResolverPlugin());
+  }
 
     return config;
   },

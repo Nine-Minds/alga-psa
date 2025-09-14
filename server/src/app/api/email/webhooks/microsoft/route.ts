@@ -119,7 +119,8 @@ export async function POST(request: NextRequest) {
             trx.raw('mc.token_expires_at as mc_token_expires_at'),
             trx.raw('mc.webhook_subscription_id as mc_webhook_subscription_id'),
             trx.raw('mc.webhook_expires_at as mc_webhook_expires_at'),
-            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token')
+            trx.raw('mc.webhook_verification_token as mc_webhook_verification_token'),
+            trx.raw('mc.folder_filters as mc_folder_filters')
           );
 
         if (!row) {
@@ -153,13 +154,19 @@ export async function POST(request: NextRequest) {
           const baseUrl = process.env.NGROK_URL || process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXTAUTH_URL || 'http://localhost:3000';
           const derivedWebhookUrl = `${baseUrl}/api/email/webhooks/microsoft`;
 
+          // Determine folder to monitor from saved config (first folder if multiple)
+          const ff = (row as any).mc_folder_filters;
+          const folderToMonitor = Array.isArray(ff)
+            ? (ff[0] || 'Inbox')
+            : (() => { try { const parsed = JSON.parse(ff || '[]'); return parsed[0] || 'Inbox'; } catch { return 'Inbox'; } })();
+
           const providerConfig: EmailProviderConfig = {
             id: row.id,
             tenant: row.tenant,
             name: row.provider_name || row.mailbox,
             provider_type: 'microsoft',
             mailbox: row.mailbox,
-            folder_to_monitor: 'Inbox',
+            folder_to_monitor: folderToMonitor,
             active: row.is_active,
             webhook_notification_url: (row as any).webhook_notification_url || derivedWebhookUrl,
             webhook_subscription_id: row.mc_webhook_subscription_id,

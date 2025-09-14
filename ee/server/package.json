@@ -3,7 +3,7 @@
   "version": "0.9.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon",
     "build": "next build",
     "start": "next start --port 3000",
     "lint": "next lint",
@@ -26,7 +26,7 @@
     "next": "^15.5.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
-    "sharp": "^0.33.5",
+    "sharp": "^0.34.3",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

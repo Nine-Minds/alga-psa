@@ -12,8 +12,8 @@ import CustomSelect from '@/components/ui/CustomSelect';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
-import { fetchExtensionById, getExtensionSettings, updateExtensionSettings, resetExtensionSettings } from '../../../lib/actions/extensionActions';
-import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '@/lib/extensions/types';
+import { fetchExtensionById, getExtensionSettings, updateExtensionSettings, resetExtensionSettings } from '@ee/lib/actions/extensionActions';
+import { Extension, ExtensionSettingDefinition, ExtensionSettingType } from '@ee/lib/extensions/types';
 
 // Local helper to attach automation IDs consistently (data attribute only)
 const automationId = (id: string) => ({ 'data-automation-id': id });

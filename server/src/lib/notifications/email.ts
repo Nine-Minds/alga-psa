@@ -29,6 +29,8 @@ import {
 } from '../models/notification';
 import { EmailProviderManager } from 'server/src/services/email/EmailProviderManager';
 import { TenantEmailSettings, EmailMessage } from 'server/src/types/email.types';
+import { TenantEmailService } from '../services/TenantEmailService';
+import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
 import { getConnection } from '../db/db';
 export class EmailNotificationService implements NotificationService {
   /**
@@ -308,27 +310,14 @@ export class EmailNotificationService implements NotificationService {
       const compiledSubject = await this.compileTemplate(template.subject, params.data);
       const compiledBody = await this.compileTemplate(template.html_content || '', params.data);
       
-      // Get tenant email settings and initialize provider manager
-      const tenantSettings = await this.getTenantEmailSettings(params.tenant);
-      
-      if (!tenantSettings) {
-        throw new Error(`No email settings configured for tenant ${params.tenant}`);
-      }
-      
-      const emailProviderManager = new EmailProviderManager();
-      await emailProviderManager.initialize(tenantSettings);
-
-      // Create email message
-      const emailMessage: EmailMessage = {
-        from: { email: `noreply@${tenantSettings.defaultFromDomain || 'localhost'}` },
-        to: [{ email: params.emailAddress }],
-        subject: compiledSubject,
-        html: compiledBody,
-        text: compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim()
-      };
-
-      // Send email using provider manager
-      const result = await emailProviderManager.sendEmail(emailMessage, params.tenant);
+      // Use TenantEmailService which internally handles EE-hosted fallback
+      const service = TenantEmailService.getInstance(params.tenant);
+      const processor = new StaticTemplateProcessor(compiledSubject, compiledBody, compiledBody.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim());
+      const result = await service.sendEmail({
+        to: params.emailAddress,
+        tenantId: params.tenant,
+        templateProcessor: processor
+      });
       const success = result.success;
 
       // Log result
@@ -339,11 +328,11 @@ export class EmailNotificationService implements NotificationService {
         email_address: params.emailAddress,
         subject: compiledSubject,
         status: success ? 'sent' : 'failed',
-        error_message: success ? null : 'Email service failed to send'
+        error_message: success ? null : (result.error || 'Email service failed to send')
       });
 
       if (!success) {
-        throw new Error('Failed to send email');
+        throw new Error(result.error || 'Failed to send email');
       }
       
     } catch (error) {

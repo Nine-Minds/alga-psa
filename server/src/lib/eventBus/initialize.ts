@@ -2,7 +2,7 @@ import { initializeEmailNotificationConsumer } from './consumers/emailNotificati
 import { registerAllSubscribers } from './subscribers';
 import logger from '@shared/core/logger';
 import { getConnection } from '../db/db';
-import { getAdminConnection } from '../db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 
 // Store cleanup functions at module scope for access by cleanupEventBus
 let cleanupFunctions: Array<() => Promise<void>> = [];

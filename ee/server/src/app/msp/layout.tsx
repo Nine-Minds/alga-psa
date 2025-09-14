@@ -2,6 +2,7 @@
 import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { TenantProvider } from "@/components/TenantProvider";
+import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUIStateProvider";
 
 /**
  * MSP Layout for Enterprise Edition
@@ -20,9 +21,13 @@ export default function MspLayout({
   return (
     <AppSessionProvider>
       <TenantProvider>
-        <DefaultLayout>
-          {children}
-        </DefaultLayout>
+        <ClientUIStateProvider
+          initialPageState={{ id: 'ee-msp', title: 'EE MSP', components: [] }}
+        >
+          <DefaultLayout>
+            {children}
+          </DefaultLayout>
+        </ClientUIStateProvider>
       </TenantProvider>
     </AppSessionProvider>
   );

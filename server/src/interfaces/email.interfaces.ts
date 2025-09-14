@@ -41,6 +41,10 @@ export interface EmailProviderConfig {
     history_id?: string;
     watch_expiration?: string;
     customScopes?: string[];
+    // Gmail-specific processing configuration
+    label_filters?: string[]; // names of labels to include (user-defined)
+    auto_process_emails?: boolean;
+    max_emails_per_sync?: number;
   };
   created_at: string; // ISO date
   updated_at: string; // ISO date

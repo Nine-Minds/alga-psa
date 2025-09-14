@@ -106,7 +106,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
-                const { getAdminConnection } = await import("server/src/lib/db/admin");
+                const { getAdminConnection } = await import("@shared/db/admin");
                 const logger = (await import('@alga-psa/shared/core/logger')).default;
                 const { authenticateUser } = await import('server/src/lib/actions/auth');
                 console.log('==== Starting Credentials OAuth Authorization ====');
@@ -435,7 +435,7 @@ export const options: NextAuthConfig = {
                 userType: { label: "User Type", type: "text" },
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
-                const { getAdminConnection } = await import("server/src/lib/db/admin");
+                const { getAdminConnection } = await import("@shared/db/admin");
                 const { authenticateUser } = await import('server/src/lib/actions/auth');
                 const logger = { info: (..._a:any[])=>{}, warn: (..._a:any[])=>{}, debug: (..._a:any[])=>{}, trace: (..._a:any[])=>{}, error: (..._a:any[])=>{} };
                 console.log('==== Starting Credentials OAuth Authorization ====');

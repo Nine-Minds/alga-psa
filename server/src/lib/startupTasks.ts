@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
-import { withAdminTransaction } from './db/admin'; // Use admin connection for non-tenant access
+import { withAdminTransaction } from '@shared/db/index'; // Use admin connection for non-tenant access
 import { compileStandardTemplate } from './actions/invoiceTemplates'; // Import the standard compiler
 
 /**
