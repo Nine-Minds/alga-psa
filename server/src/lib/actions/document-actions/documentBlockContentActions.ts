@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Document from '../../models/document';
 import DocumentAssociation from '../../models/document-association';
 import { getCurrentUser } from '../user-actions/userActions';
+import { CacheFactory } from '../../cache/CacheFactory';
 
 interface BlockContentInput {
   block_data: any; // JSON data from block editor
@@ -171,6 +172,11 @@ export async function updateBlockContent(
             updated_at: trx.fn.now(),
             edited_by: input.user_id
           });
+
+        // Invalidate the preview cache for this document
+        const cache = CacheFactory.getPreviewCache(tenant);
+        await cache.delete(documentId);
+        console.log(`[updateBlockContent] Invalidated preview cache for document ${documentId}`);
 
         return updatedContent;
       } else {

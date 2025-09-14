@@ -38,7 +38,7 @@
     "@aws-sdk/s3-request-presigner": "^3.864.0",
     "@blocknote/core": "^0.22.0",
     "@blocknote/mantine": "^0.22.0",
-    "@blocknote/react": "^0.8.5",
+    "@blocknote/react": "^0.22.0",
     "@hello-pangea/dnd": "^16.6.0",
     "@hocuspocus/provider": "^2.13.5",
     "@huggingface/inference": "^2.8.0",
