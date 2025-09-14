@@ -1,6 +1,4 @@
 // server/src/lib/tenant.ts
-import { auth } from '../app/api/auth/[...nextauth]/auth';
-import { options } from '../app/api/auth/[...nextauth]/options';
 import { headers } from 'next/headers';
 
 export async function getTenantForCurrentRequest(fallbackTenant?: string): Promise<string | null> {
@@ -10,6 +8,7 @@ export async function getTenantForCurrentRequest(fallbackTenant?: string): Promi
             return headerValues.get('x-tenant-id') as string;
         }
 
+        const { auth } = await import('../app/api/auth/[...nextauth]/edge-auth');
         const session = await auth();
         if (session?.user?.tenant) {
             return session.user.tenant;

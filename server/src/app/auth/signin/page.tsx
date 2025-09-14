@@ -1,32 +1,25 @@
-"use client";
-import { useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { redirect } from 'next/navigation';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 
-export default function SignIn() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  
-  useEffect(() => {
-    // Get the callback URL to determine which portal to redirect to
-    const callbackUrl = searchParams?.get('callbackUrl') || '';
-    const queryString = searchParams?.toString();
-    
-    // Redirect to the appropriate login page based on the callback URL
-    if (callbackUrl.includes('/client-portal')) {
-      // Redirect to client portal login
-      router.replace(`/auth/client-portal/signin${queryString ? `?${queryString}` : ''}`);
-    } else {
-      // Default to MSP login for all other cases
-      router.replace(`/auth/msp/signin${queryString ? `?${queryString}` : ''}`);
-    }
-  }, [searchParams, router]);
-  
-  // Show a loading state while redirecting
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="text-center">
-        <p className="text-gray-600">Redirecting to login...</p>
-      </div>
-    </div>
-  );
+export default async function SignIn({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '';
+
+  const session = await auth();
+  if (session?.user) {
+    redirect(callbackUrl || '/msp/dashboard');
+  }
+
+  const query = new URLSearchParams();
+  if (callbackUrl) query.set('callbackUrl', callbackUrl);
+
+  if (callbackUrl.includes('/client-portal')) {
+    redirect(`/auth/client-portal/signin${query.toString() ? `?${query.toString()}` : ''}`);
+  } else {
+    redirect(`/auth/msp/signin${query.toString() ? `?${query.toString()}` : ''}`);
+  }
 }

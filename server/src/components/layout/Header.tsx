@@ -83,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({
   }, []);
 
   const handleSignOut = () => {
-    signOut({ callbackUrl: '/' });
+    signOut({ callbackUrl: '/auth/signin', redirect: true });
     console.log('Signing out...');
   };
 

@@ -62,19 +62,17 @@ export async function cleanupConnections(): Promise<void> {
 }
 
 // Cleanup connections on process exit
-process.on('exit', async () => {
-  await cleanupConnections();
-});
+// process.on('exit', async () => {
+//   await cleanupConnections();
+// });
 
 // Cleanup connections on unhandled rejections and exceptions
-process.on('unhandledRejection', async (reason, promise) => {
-  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  await cleanupConnections();
-  process.exit(1);
-});
+// process.on('unhandledRejection', async (reason, promise) => {
+//   console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+//   await cleanupConnections();
+// });
 
-process.on('uncaughtException', async (error) => {
-  console.error('Uncaught Exception:', error);
-  await cleanupConnections();
-  process.exit(1);
-});
+// process.on('uncaughtException', async (error) => {
+//   console.error('Uncaught Exception:', error);
+//   await cleanupConnections();
+// });

@@ -1,22 +1,20 @@
 import { Knex } from 'knex';
 import { setTypeParser } from 'pg-types';
-import dotenv from 'dotenv';
-import fs from 'fs';
-import path from 'path';
-import process
- from 'process';
- import { validate as uuidValidate } from 'uuid';
+// Avoid importing Node-only modules in Edge runtime
+// Use dynamic import for dotenv only in Node test environments
+import { validate as uuidValidate } from 'uuid';
 
 type Function = (err: Error | null, connection: Knex.Client) => void;
 
 // Load test environment variables if we're in a test environment
-if (process.env.NODE_ENV === 'test') {
-  const result = dotenv.config({
-    path: '.env.localtest'
-  });
-  if (result.parsed?.DB_NAME_SERVER) {
-    process.env.DB_NAME_SERVER = result.parsed.DB_NAME_SERVER;
-  }
+if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
+  try {
+    const dotenv = await import('dotenv');
+    const result = dotenv.config({ path: '.env.localtest' });
+    if (result.parsed?.DB_NAME_SERVER) {
+      (process.env as any).DB_NAME_SERVER = result.parsed.DB_NAME_SERVER;
+    }
+  } catch {}
 }
 
 setTypeParser(20, parseFloat);
@@ -29,11 +27,11 @@ const getPostgresPassword = async () => await getSecret('postgres_password', 'DB
 
 // Special connection config for postgres user (needed for job scheduler)
 export const getPostgresConnection = async () => ({
-  host: process.env.DB_HOST || 'localhost',
-  port: Number(process.env.DB_PORT) || 5432,
-  user: process.env.DB_USER_ADMIN || 'postgres',
+  host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
+  port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
+  user: (typeof process !== 'undefined' && process.env?.DB_USER_ADMIN) || 'postgres',
   password: await getPostgresPassword(),
-  database: process.env.DB_NAME_SERVER || 'server'
+  database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
 } satisfies Knex.PgConnectionConfig);
 
 interface CustomKnexConfig extends Knex.Config {
@@ -55,11 +53,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
   development: {
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      user: process.env.DB_USER_SERVER || 'app_user',
+      host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
+      port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
+      user: (typeof process !== 'undefined' && process.env?.DB_USER_SERVER) || 'app_user',
       password: await getDbPassword(),
-      database: process.env.DB_NAME_SERVER || 'server'
+      database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {
       min: 0,
@@ -73,11 +71,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
   test: {
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      user: process.env.DB_USER_ADMIN || 'postgres',
+      host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
+      port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
+      user: (typeof process !== 'undefined' && process.env?.DB_USER_ADMIN) || 'postgres',
       password: await getPostgresPassword(),
-      database: process.env.DB_NAME_SERVER || 'server'
+      database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {
       min: 0,
@@ -91,11 +89,11 @@ const baseConfig: Record<string, CustomKnexConfig> = {
   production: {
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
+      host: (typeof process !== 'undefined' && process.env?.DB_HOST) || 'localhost',
+      port: Number((typeof process !== 'undefined' && process.env?.DB_PORT) || 5432),
       user: 'app_user',
       password: await getDbPassword(),
-      database: process.env.DB_NAME_SERVER || 'server'
+      database: (typeof process !== 'undefined' && process.env?.DB_NAME_SERVER) || 'server'
     },
     pool: {
       min: 0,
@@ -136,7 +134,7 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
     throw new Error('Invalid tenant ID format');
   }
 
-  const env = process.env.APP_ENV || 'development';
+  const env = (typeof process !== 'undefined' && process.env?.APP_ENV) || 'development';
   const config = await getKnexConfig(env);
   
   return {

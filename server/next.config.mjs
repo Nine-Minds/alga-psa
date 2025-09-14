@@ -8,10 +8,34 @@ const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 
+// Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
+const emptyShim = './src/empty/shims/empty.ts';
+
 const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
-    // Database driver stubs are now in node_modules to prevent Turbopack errors
+    // Alias optional DB drivers we don't use to an empty shim for Turbopack
+    resolveAlias: {
+      // Native DB drivers not used
+      'better-sqlite3': emptyShim,
+      'sqlite3': emptyShim,
+      'mysql': emptyShim,
+      'mysql2': emptyShim,
+      'oracledb': emptyShim,
+      'tedious': emptyShim,
+      // Knex dialect modules we don't use; alias directly to avoid cascading requires
+      'knex/lib/dialects/sqlite3': emptyShim,
+      'knex/lib/dialects/sqlite3/index.js': emptyShim,
+      'knex/lib/dialects/mysql': emptyShim,
+      'knex/lib/dialects/mysql/index.js': emptyShim,
+      'knex/lib/dialects/mysql2': emptyShim,
+      'knex/lib/dialects/mysql2/index.js': emptyShim,
+      'knex/lib/dialects/mssql': emptyShim,
+      'knex/lib/dialects/mssql/index.js': emptyShim,
+      'knex/lib/dialects/oracledb': emptyShim,
+      'knex/lib/dialects/oracledb/index.js': emptyShim,
+      'knex/lib/dialects/oracledb/utils.js': emptyShim,
+    },
   },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
@@ -39,7 +63,7 @@ const nextConfig = {
   },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Enable webpack cache for faster builds
     config.cache = true;
 
@@ -172,6 +196,28 @@ const nextConfig = {
     return config;
   },
   experimental: {
+    // Duplicate aliases under experimental.turbo for compatibility across Next versions
+    turbo: {
+      resolveAlias: {
+        'better-sqlite3': emptyShim,
+        'sqlite3': emptyShim,
+        'mysql': emptyShim,
+        'mysql2': emptyShim,
+        'oracledb': emptyShim,
+        'tedious': emptyShim,
+        'knex/lib/dialects/sqlite3': emptyShim,
+        'knex/lib/dialects/sqlite3/index.js': emptyShim,
+        'knex/lib/dialects/mysql': emptyShim,
+        'knex/lib/dialects/mysql/index.js': emptyShim,
+        'knex/lib/dialects/mysql2': emptyShim,
+        'knex/lib/dialects/mysql2/index.js': emptyShim,
+        'knex/lib/dialects/mssql': emptyShim,
+        'knex/lib/dialects/mssql/index.js': emptyShim,
+        'knex/lib/dialects/oracledb': emptyShim,
+        'knex/lib/dialects/oracledb/index.js': emptyShim,
+        'knex/lib/dialects/oracledb/utils.js': emptyShim,
+      },
+    },
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     }

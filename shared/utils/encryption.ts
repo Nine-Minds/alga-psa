@@ -1,5 +1,51 @@
-import crypto from 'crypto';
 import { getSecret } from '../core/getSecret';
+
+// Utility: encode string to Uint8Array
+const te = new TextEncoder();
+
+function toHex(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let hex = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const h = bytes[i].toString(16).padStart(2, '0');
+    hex += h;
+  }
+  return hex;
+}
+
+function randomHex(byteLength: number): string {
+  const arr = new Uint8Array(byteLength);
+  globalThis.crypto.getRandomValues(arr);
+  return toHex(arr.buffer);
+}
+
+async function pbkdf2Hex(password: string, salt: string, iterations: number, keyLength: number, digest: string): Promise<string> {
+  // Map Node digest names to WebCrypto ones
+  const algo = digest.toUpperCase() === 'SHA512' || digest.toUpperCase() === 'SHA-512' ? 'SHA-512'
+             : digest.toUpperCase() === 'SHA256' || digest.toUpperCase() === 'SHA-256' ? 'SHA-256'
+             : 'SHA-512';
+
+  const keyMaterial = await globalThis.crypto.subtle.importKey(
+    'raw',
+    te.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits']
+  );
+
+  const bits = await globalThis.crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      hash: algo,
+      iterations,
+      salt: te.encode(salt),
+    },
+    keyMaterial,
+    keyLength * 8
+  );
+
+  return toHex(bits);
+}
 
 /**
  * Hash a password using PBKDF2 with a random salt
@@ -17,8 +63,8 @@ export async function hashPassword(password: string): Promise<string> {
   const keyLength = Number(process.env.KEY_LENGTH) || 64;
   const digest = process.env.ALGORITHM || 'sha512';
 
-  const salt = crypto.randomBytes(saltBytes).toString('hex');
-  const hash = crypto.pbkdf2Sync(password, key + salt, iterations, keyLength, digest).toString('hex');
+  const salt = randomHex(saltBytes);
+  const hash = await pbkdf2Hex(password, key + salt, iterations, keyLength, digest);
   return `${salt}:${hash}`;
 }
 
@@ -33,7 +79,7 @@ export async function verifyPassword(password: string, storedHash: string): Prom
   if (!key) {
     throw new Error('Failed to retrieve the encryption key from the secret provider');
   }
-    
+
   const iterations = Number(process.env.ITERATIONS) || 10000;
   const keyLength = Number(process.env.KEY_LENGTH) || 64;
   const digest = process.env.ALGORITHM || 'sha512';
@@ -44,17 +90,11 @@ export async function verifyPassword(password: string, storedHash: string): Prom
 
   try {
     const [salt, originalHash] = storedHash.split(':');
+    if (!salt || !originalHash) return false;
 
-    if (!salt || !originalHash) {
-      return false;
-    }
-
-    const hash = crypto.pbkdf2Sync(password, key + salt, iterations, keyLength, digest).toString('hex');
-    
-    // Compare the computed hash with the original hash
+    const hash = await pbkdf2Hex(password, key + salt, iterations, keyLength, digest);
     return hash === originalHash;
   } catch (error) {
-    // Log error without exposing sensitive details
     if (process.env.NODE_ENV === 'development') {
       console.error('Error during password verification');
     }
@@ -69,8 +109,11 @@ export async function verifyPassword(password: string, storedHash: string): Prom
  */
 export function generateSecurePassword(length: number = 16): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  return Array.from(
-    { length }, 
-    () => chars[Math.floor(Math.random() * chars.length)]
-  ).join('');
+  const buf = new Uint8Array(length);
+  globalThis.crypto.getRandomValues(buf);
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += chars[buf[i] % chars.length];
+  }
+  return out;
 }

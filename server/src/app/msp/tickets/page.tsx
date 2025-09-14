@@ -12,7 +12,11 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      throw new Error('User not found');
+      // In dev, redirect unauthenticated users to login
+      // This avoids rendering a 200 with an error message
+      // and matches expected NextAuth behavior
+      const { redirect } = await import('next/navigation');
+      redirect('/auth/signin?callbackUrl=%2Fmsp%2Ftickets');
     }
 
     // Await searchParams as required in Next.js 15

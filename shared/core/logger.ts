@@ -81,7 +81,7 @@ const jsonFormat = winston.format.combine(
     const file = getCallerInfo();
     info['meta'] = JSON.stringify({ ...meta});
     info['timestamp'] = timestamp;
-    info['pid'] = process.pid;
+    //info['pid'] = process?.pid ? process?.pid : 'unavailable';
     info['file'] = file;
 
     return info;
@@ -105,7 +105,7 @@ const prettyFormat = winston.format.combine(
       logMessage += ` [${meta.label}]`;
     }
     
-    logMessage += ` [PID:${process.pid}]`;
+    // logMessage += ` [PID:${process.pid}]`;
     
     if (meta.filename && meta.line) {
       logMessage += ` [${meta.filename}:${meta.line}]`;

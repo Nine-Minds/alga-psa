@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+// Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { Toaster } from 'react-hot-toast';
 import { getCurrentTenant } from "../lib/actions/tenantActions";
 import { TenantProvider } from "../components/TenantProvider";
@@ -69,6 +70,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.className}>
+      <head>
+        <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
+        <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
+      </head>
       <body className={`${inter.className} light`} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>

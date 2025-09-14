@@ -2,16 +2,8 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import KeycloakProvider from "next-auth/providers/keycloak";
 import GoogleProvider from "next-auth/providers/google";
 import type { NextAuthConfig } from "next-auth";
-import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
-import { authenticateUser } from "server/src/lib/actions/auth";
-import { getKeycloakToken } from "server/src/utils/keycloak";
-import { decodeToken } from "server/src/utils/tokenizer";
-import User from "server/src/lib/models/user";
-import logger from '@alga-psa/shared/core/logger';
 import "server/src/types/next-auth";
-import { analytics } from "server/src/lib/analytics/posthog";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
 // import { getAdminConnection } from "server/src/lib/db/admin";
 
 const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
@@ -32,6 +24,7 @@ interface ExtendedUser {
 
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
+    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
     const secretProvider = await getSecretProviderInstance();
     
     const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
@@ -58,16 +51,20 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     const secrets = await getOAuthSecrets();
     
     // Get NextAuth secret from provider
+    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
     const secretProvider = await getSecretProviderInstance();
     const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
     
     return {
+    trustHost: true,
     secret: nextAuthSecret,
     providers: [
         GoogleProvider({
             clientId: secrets.googleClientId,
             clientSecret: secrets.googleClientSecret,
             profile: async (profile): Promise<ExtendedUser> => {
+                const logger = (await import('@alga-psa/shared/core/logger')).default;
+                const User = (await import('server/src/lib/models/user')).default;
                 logger.info("Starting Google OAuth")
                 const user = await User.findUserByEmail(profile.email);
                 if (!user || !user.user_id) {
@@ -79,10 +76,11 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 if (user.is_inactive) {
                     logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
                     // Track failed Google login due to inactive account
-                    analytics.capture('login_failed', {
-                        reason: 'inactive_account',
-                        provider: 'google',
-                    });
+                    // const { analytics } = await import('server/src/lib/analytics/posthog');
+                    // analytics.capture('login_failed', {
+                    //     reason: 'inactive_account',
+                    //     provider: 'google',
+                    // });
                     throw new Error("User not found");
                 }
                 
@@ -109,6 +107,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             },
             async authorize(credentials): Promise<ExtendedUser | null> {
                 const { getAdminConnection } = await import("server/src/lib/db/admin");
+                const logger = (await import('@alga-psa/shared/core/logger')).default;
+                const { authenticateUser } = await import('server/src/lib/actions/auth');
                 console.log('==== Starting Credentials OAuth Authorization ====');
                 console.log('Received credentials:', {
                     email: credentials?.email,
@@ -185,6 +185,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             return null;
                         }
                         console.log('Verifying 2FA code');
+                        const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
                         const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                         console.log('2FA verification result:', { isValid: isValid2FA });
                         if (!isValid2FA) {
@@ -231,7 +232,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             clientId: secrets.keycloakClientId,
             clientSecret: secrets.keycloakClientSecret,
             issuer: `${secrets.keycloakUrl}/realms/${secrets.keycloakRealm}`,
-            profile(profile): ExtendedUser {
+            profile: async (profile): Promise<ExtendedUser> => {
+                const logger = (await import('@alga-psa/shared/core/logger')).default;
                 logger.info("Starting Keycloak OAuth")
                 return {
                     id: profile.sub,
@@ -324,13 +326,14 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     callbacks: {
         async signIn({ user, account, profile }) {
             // Track successful login
-            const extendedUser = user as ExtendedUser;
-            analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
-                provider: account?.provider || 'credentials',
-                user_type: extendedUser.user_type,
-                has_two_factor: false, // We'd need to check this from the user object
-                login_method: account?.provider || 'email',
-            }, extendedUser.id);
+            // const extendedUser = user as ExtendedUser;
+            // const { analytics } = await import('server/src/lib/analytics/posthog');
+            // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
+            //     provider: account?.provider || 'credentials',
+            //     user_type: extendedUser.user_type,
+            //     has_two_factor: false, // We'd need to check this from the user object
+            //     login_method: account?.provider || 'email',
+            // }, extendedUser.id);
             
             return true; // Allow sign in
         },
@@ -370,6 +373,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 return { expires: "0" };
             }
 
+            const logger = (await import('@alga-psa/shared/core/logger')).default;
             logger.debug("Session Token:", token);
             if (token && session.user) {
                 const user = session.user as ExtendedUser;
@@ -403,6 +407,7 @@ export async function getAuthOptions(): Promise<NextAuthConfig> {
 
 // Synchronous fallback that uses environment variables
 export const options: NextAuthConfig = {
+    trustHost: true,
     secret: process.env.NEXTAUTH_SECRET,
     providers: [
         GoogleProvider({
@@ -531,6 +536,7 @@ export const options: NextAuthConfig = {
                             return null;
                         }
                         console.log('Verifying 2FA code');
+                        const { verifyAuthenticator } = await import('server/src/utils/authenticator/authenticator');
                         const isValid2FA = await verifyAuthenticator(credentials.twoFactorCode as string, user.two_factor_secret);
                         console.log('2FA verification result:', { isValid: isValid2FA });
                         if (!isValid2FA) {
@@ -679,13 +685,14 @@ export const options: NextAuthConfig = {
     callbacks: {
         async signIn({ user, account, profile }) {
             // Track successful login
-            const extendedUser = user as ExtendedUser;
-            analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
-                provider: account?.provider || 'credentials',
-                user_type: extendedUser.user_type,
-                has_two_factor: false, // We'd need to check this from the user object
-                login_method: account?.provider || 'email',
-            }, extendedUser.id);
+            // const extendedUser = user as ExtendedUser;
+            // const { analytics } = await import('server/src/lib/analytics/posthog');
+            // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
+            //     provider: account?.provider || 'credentials',
+            //     user_type: extendedUser.user_type,
+            //     has_two_factor: false, // We'd need to check this from the user object
+            //     login_method: account?.provider || 'email',
+            // }, extendedUser.id);
             
             return true; // Allow sign in
         },
@@ -725,6 +732,7 @@ export const options: NextAuthConfig = {
                 return { expires: "0" };
             }
 
+            const logger = (await import('@alga-psa/shared/core/logger')).default;
             logger.debug("Session Token:", token);
             if (token && session.user) {
                 const user = session.user as ExtendedUser;
@@ -748,6 +756,8 @@ export const options: NextAuthConfig = {
 async function validateUser(token: any) {
     try {
         // Fetch the user from the database using email and user_type (lowercase for consistency)
+        const User = (await import('server/src/lib/models/user')).default;
+        const logger = (await import('@alga-psa/shared/core/logger')).default;
         const user = await User.findUserByEmailAndType(
           token.email.toLowerCase(),
           (token.user_type === 'client' || token.user_type === 'internal') ? token.user_type : 'internal'
@@ -788,6 +798,7 @@ async function validateUser(token: any) {
 
         return user;
     } catch (error) {
+        const logger = (await import('@alga-psa/shared/core/logger')).default;
         logger.error("Error validating user:", error);
         return null;
     }
