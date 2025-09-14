@@ -22,7 +22,7 @@
     "build:enterprise:turbo": "NEXT_PUBLIC_EDITION=enterprise next build --turbo",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
     "analyze": "ANALYZE=true next build",
-    "start": "node scripts/start.js",
+    "start": "next start",
     "start:next": "next start",
     "start:express": "tsx index.ts",
     "lint": "next lint",
