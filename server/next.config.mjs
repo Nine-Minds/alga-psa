@@ -196,28 +196,6 @@ const nextConfig = {
     return config;
   },
   experimental: {
-    // Duplicate aliases under experimental.turbo for compatibility across Next versions
-    turbo: {
-      resolveAlias: {
-        'better-sqlite3': emptyShim,
-        'sqlite3': emptyShim,
-        'mysql': emptyShim,
-        'mysql2': emptyShim,
-        'oracledb': emptyShim,
-        'tedious': emptyShim,
-        'knex/lib/dialects/sqlite3': emptyShim,
-        'knex/lib/dialects/sqlite3/index.js': emptyShim,
-        'knex/lib/dialects/mysql': emptyShim,
-        'knex/lib/dialects/mysql/index.js': emptyShim,
-        'knex/lib/dialects/mysql2': emptyShim,
-        'knex/lib/dialects/mysql2/index.js': emptyShim,
-        'knex/lib/dialects/mssql': emptyShim,
-        'knex/lib/dialects/mssql/index.js': emptyShim,
-        'knex/lib/dialects/oracledb': emptyShim,
-        'knex/lib/dialects/oracledb/index.js': emptyShim,
-        'knex/lib/dialects/oracledb/utils.js': emptyShim,
-      },
-    },
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
     }

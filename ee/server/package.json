@@ -29,6 +29,7 @@
     "next": "^15.5.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
+    "sharp": "^0.33.5",
     "uuid": "^11.0.5"
   },
   "devDependencies": {

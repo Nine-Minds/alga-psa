@@ -84,7 +84,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Fetch consolidated data for the ticket list with initial filters
     const [consolidatedData, displaySettings] = await Promise.all([
-      getConsolidatedTicketListData(user, fetchFilters),
+      getConsolidatedTicketListData(user!, fetchFilters),
       getTicketingDisplaySettings()
     ]);
 
@@ -92,7 +92,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       <div id="tickets-page-container" className="bg-gray-100">
         <TicketingDashboardContainer 
           consolidatedData={consolidatedData} 
-          currentUser={user}
+          currentUser={user!}
           initialFilters={initialFilters}
           displaySettings={displaySettings}
         />

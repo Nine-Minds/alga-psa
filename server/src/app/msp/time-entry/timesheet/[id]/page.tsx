@@ -4,11 +4,7 @@ import { getTeams } from 'server/src/lib/actions/team-actions/teamActions';
 import { fetchTimeSheet } from 'server/src/lib/actions/timeSheetActions';
 import TimeSheetClient from './TimeSheetClient';
 
-interface PageProps {
-  params: { id: string };
-}
-
-export default async function TimeSheetPage({ params }: PageProps) {
+export default async function TimeSheetPage({ params }: any) {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     return notFound();

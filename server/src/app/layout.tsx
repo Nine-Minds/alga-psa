@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { Toaster } from 'react-hot-toast';
@@ -12,7 +11,8 @@ import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvi
 import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
 import { PostHogProvider } from "../components/PostHogProvider";
 
-const inter = Inter({ subsets: ["latin"] });
+// Removed Google Fonts to avoid network fetch during build
+const inter = { className: "" } as const;
 
 export const dynamic = 'force-dynamic';
 //export const revalidate = false;
@@ -69,12 +69,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.className}>
+    <html lang="en">
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
       </head>
-      <body className={`${inter.className} light`} suppressHydrationWarning>
+      <body className={`light`} suppressHydrationWarning>
         <PostHogProvider>
            <MainContent>{children}</MainContent>
           <Toaster position="top-right" />
