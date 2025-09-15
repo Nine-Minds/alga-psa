@@ -310,6 +310,7 @@ No code has been merged yet – this section serves as an architectural note so 
   * PostgreSQL database schema defined in the `server/migrations` folder.
   * Knex.js configurations are in `server/knexfile.cjs` and `server/src/lib/db/knexfile.tsx`.
   * EE-specific migrations are located in `ee/server/migrations/`.
+  * Local EE migrations (dev workstations): use the temp-dir overlay runner documented in `docs/migrations/local-ee-migrations.md`.
 
 * **Caching:** `server/src/lib/cache` directory contains the caching implementation.
 

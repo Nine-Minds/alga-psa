@@ -48,7 +48,8 @@
     "workflow-worker:build": "tsc --project tsconfig.json --outDir dist src/bin/workflow-worker.ts",
     "workflow-worker:start": "node dist/bin/workflow-worker.js",
     "create-tenant": "tsx scripts/create-tenant.ts",
-    "rollback-tenant": "tsx scripts/rollback-tenant.ts"
+    "rollback-tenant": "tsx scripts/rollback-tenant.ts",
+    "migrate:ee": "node scripts/run-ee-migrations.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",

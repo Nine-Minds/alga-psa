@@ -231,6 +231,14 @@ Run migrations with the migration environment (env) flag.
 
 Every query should filter on the tenant column (including joins) to ensure compatibility with citusdb.
 
+## Local EE migrations
+- Do not physically copy EE migrations into `server/migrations/` locally.
+- Use the temp-dir overlay runner which points Knex at a merged directory via `MIGRATIONS_DIR`.
+- Commands:
+  - From repo root: `npm -w server run migrate:ee`
+  - From `server/`: `npm run migrate:ee`
+- Details and rollback guidance: see `docs/migrations/local-ee-migrations.md`.
+
 ## JSON/JSONB Column Handling with Knex
 
 When working with PostgreSQL JSON and JSONB columns in Knex.js, follow these guidelines:
