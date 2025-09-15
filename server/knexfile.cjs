@@ -98,7 +98,8 @@ const migrationConfig = {
     max: 20,
   },
   migrations: {
-    directory: "./migrations"
+    directory: process.env.MIGRATIONS_DIR || "./migrations",
+    loadExtensions: ['.cjs', '.js']
   },
   seeds: {
     directory: "./seeds/dev",
