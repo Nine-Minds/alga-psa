@@ -6,8 +6,7 @@ import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
-import { getServerSession } from 'next-auth';
-import { options } from 'server/src/app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { z } from 'zod';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
@@ -23,7 +22,7 @@ const clientTicketSchema = z.object({
 
 export async function getClientTickets(status: string): Promise<ITicketListItem[]> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -147,7 +146,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
 
 export async function getClientTicketDetails(ticketId: string): Promise<ITicket> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -312,7 +311,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
 
 export async function addClientTicketComment(ticketId: string, content: string, isInternal: boolean = false, isResolution: boolean = false): Promise<boolean> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -365,7 +364,7 @@ export async function addClientTicketComment(ticketId: string, content: string, 
 
 export async function updateClientTicketComment(commentId: string, updates: Partial<IComment>): Promise<void> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -431,7 +430,7 @@ export async function updateClientTicketComment(commentId: string, updates: Part
 
 export async function updateTicketStatus(ticketId: string, newStatusId: string): Promise<void> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -486,7 +485,7 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
 
 export async function deleteClientTicketComment(commentId: string): Promise<void> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -536,7 +535,7 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
 
 export async function createClientTicket(data: FormData): Promise<ITicket> {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }

@@ -2,9 +2,6 @@
   "name": "sebastian-ee",
   "version": "0.9.0",
   "private": true,
-  "workspaces": [
-    "packages/*"
-  ],
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon",
     "build": "next build",
@@ -26,7 +23,7 @@
     "@temporalio/client": "^1.12.3",
     "gm": "^1.25.0",
     "lucide-react": "^0.475.0",
-    "next": "^14.0.0",
+    "next": "^15.5.3",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "sharp": "^0.34.3",

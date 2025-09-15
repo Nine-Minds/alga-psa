@@ -2,7 +2,7 @@
 
 import { UIComponent, ComponentAction } from './types';
 import { useRegisterChild } from './useRegisterChild';
-import { useContext, useRef, useMemo } from 'react';
+import { useContext, useRef, useMemo, useId } from 'react';
 import { ReflectionParentContext } from './ReflectionParentContext';
 import { CommonActions } from './actionBuilders';
 
@@ -154,18 +154,16 @@ export function useAutomationIdAndRegister<T extends UIComponent>(
     component.label = undefined;
   }
 
+  // Generate a stable React ID for this component instance
+  const reactId = useId();
+  
   // Generate a unique registration ID for tracking this specific registration
   const registrationId = useRef(generateRegistrationId());
   // Get parent ID from context
   const parentId = useContext(ReflectionParentContext);
 
-  // Use override ID if provided, otherwise format component ID
-  const finalId = overrideId || formatComponentId(
-    component.id, 
-    parentId, 
-    component.type,
-    registrationId.current
-  );
+  // Use override ID if provided, otherwise use stable React ID-based format
+  const finalId = overrideId || component.id || (parentId ? `${parentId}-${component.type}-${reactId}` : `${component.type}-${reactId}`);
 
   // Handle backward compatibility: if boolean is passed, treat as empty actions
   const actions: ActionConfig = typeof actionsOrShouldRegister === 'boolean' ? [] : actionsOrShouldRegister;

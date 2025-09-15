@@ -15,8 +15,8 @@ export const PolicyManagement = async () => {
 // Re-export other EE policy functionality
 export const parsePolicy = async (policyString: string): Promise<IPolicy> => {
   if (isEnterprise) {
-    // const { parsePolicy } = await import('@ee/lib/auth');
-    // return parsePolicy(policyString);
+    const { parsePolicy } = await import('@alga-psa/product-auth-ee');
+    return parsePolicy(policyString);
   }
   throw new Error('Policy parsing is an Enterprise Edition feature');
 };

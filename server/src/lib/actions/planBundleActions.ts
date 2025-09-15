@@ -4,14 +4,13 @@
 import PlanBundle from 'server/src/lib/models/planBundle';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getServerSession } from "next-auth/next";
-import { options } from "../../app/api/auth/[...nextauth]/options";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 
 /**
  * Get all plan bundles
  */
 export async function getPlanBundles(): Promise<IPlanBundle[]> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -37,7 +36,7 @@ export async function getPlanBundles(): Promise<IPlanBundle[]> {
  * Get a specific plan bundle by ID
  */
 export async function getPlanBundleById(bundleId: string): Promise<IPlanBundle | null> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -65,7 +64,7 @@ export async function getPlanBundleById(bundleId: string): Promise<IPlanBundle |
 export async function createPlanBundle(
   bundleData: Omit<IPlanBundle, 'bundle_id' | 'tenant' | 'created_at' | 'updated_at'>
 ): Promise<IPlanBundle> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -96,7 +95,7 @@ export async function updatePlanBundle(
   bundleId: string,
   updateData: Partial<IPlanBundle>
 ): Promise<IPlanBundle> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -124,7 +123,7 @@ export async function updatePlanBundle(
  * Delete a plan bundle
  */
 export async function deletePlanBundle(bundleId: string): Promise<void> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -158,7 +157,7 @@ export async function deletePlanBundle(bundleId: string): Promise<void> {
  * Get all billing plans in a bundle
  */
 export async function getBundlePlans(bundleId: string): Promise<any[]> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

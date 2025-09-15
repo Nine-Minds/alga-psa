@@ -5,7 +5,7 @@
  */
 
 import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@shared/workflow/core/index.js';
-import logger from '@shared/core/logger.js';
+import { logger } from '@shared/core/index.js';
 import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
 import axios from 'axios'; // For QBO API calls
 import { getSecretProviderInstance } from '@shared/core/index.js';

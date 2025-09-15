@@ -1,8 +1,7 @@
 'use server';
 
 import { createTenantKnex } from '../db';
-import { getServerSession } from 'next-auth';
-import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { Knex } from 'knex';
 import { withTransaction } from '@alga-psa/shared/db';
 
@@ -134,7 +133,7 @@ const determineServiceStatus = (startDate: string, endDate: string | null): Serv
 };
 
 export async function getCompanyProfile(): Promise<CompanyProfile> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   
   const { knex } = await createTenantKnex();
@@ -221,7 +220,7 @@ export async function getCompanyProfile(): Promise<CompanyProfile> {
 }
 
 export async function updateCompanyProfile(profile: CompanyProfile): Promise<{ success: boolean }> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -247,7 +246,7 @@ export async function updateCompanyProfile(profile: CompanyProfile): Promise<{ s
 }
 
 export async function getPaymentMethods(): Promise<PaymentMethod[]> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -279,7 +278,7 @@ export async function addPaymentMethod(data: {
   token: string;
   setDefault: boolean;
 }): Promise<{ success: boolean }> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -319,7 +318,7 @@ export async function addPaymentMethod(data: {
 }
 
 export async function removePaymentMethod(id: string): Promise<{ success: boolean }> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -342,7 +341,7 @@ export async function removePaymentMethod(id: string): Promise<{ success: boolea
 }
 
 export async function setDefaultPaymentMethod(id: string): Promise<{ success: boolean }> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -391,7 +390,7 @@ async function processPaymentToken(token: string) {
 }
 
 export async function getInvoices(): Promise<Invoice[]> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -435,7 +434,7 @@ export async function getInvoices(): Promise<Invoice[]> {
 }
 
 export async function getBillingCycles(): Promise<BillingCycle[]> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -466,7 +465,7 @@ export async function getBillingCycles(): Promise<BillingCycle[]> {
 }
 
 export async function getActiveServices(): Promise<Service[]> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -675,7 +674,7 @@ export interface ServicePlan {
 }
 
 export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan[]> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 
@@ -739,7 +738,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
 }
 
 export async function upgradeService(serviceId: string, planId: string): Promise<{ success: boolean }> {
-  const session = await getServerSession(authOptions);
+  const session = await auth();
   if (!session?.user) throw new Error('Not authenticated');
   if (!session.user.companyId) throw new Error('No company associated with user');
 

@@ -5,7 +5,7 @@
 
 import { getWorkflowRuntime } from '@shared/workflow/core/index.js';
 import { registerExampleWorkflows } from '@shared/workflow/index.js';
-import logger from '@shared/core/logger.js';
+import { logger } from '@shared/core/index.js';
 import { registerWorkflowActions } from '@shared/workflow/index.js';
 
 // Track initialization state

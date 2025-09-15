@@ -4,7 +4,8 @@ export const metadata = {
   title: 'Extensions (EE only)'
 };
 
-export default function Page({ params }: { params: { id: string } }) {
+// Relax props typing to satisfy Next page constraints in build
+export default function Page({ params }: any) {
   return (
     <div className="p-6">
       <h1 className="text-xl font-semibold">Extension Not Available</h1>

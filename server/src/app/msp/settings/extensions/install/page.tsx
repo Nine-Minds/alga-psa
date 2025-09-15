@@ -2,10 +2,9 @@
 
 import dynamic from 'next/dynamic';
 
-// Dynamically load the extension install component via @ee alias.
-// In CE builds, @ee maps to src/empty; in EE builds, it maps to ee/server/src.
+// Dynamically load the extension install component using the stable package path
 const DynamicInstallExtensionComponent = dynamic(
-  () => import('@ee/components/settings/extensions/InstallExtensionSimple'),
+  () => import('@product/settings-extensions/entry').then(mod => mod.InstallExtensionSimple),
   {
     ssr: false,
     loading: () => (

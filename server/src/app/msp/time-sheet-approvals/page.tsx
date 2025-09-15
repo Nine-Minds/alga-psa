@@ -1,14 +1,13 @@
 import ManagerApprovalDashboard from 'server/src/components/time-management/approvals/ManagerApprovalDashboard';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
-import { getServerSession } from "next-auth/next";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Users } from 'lucide-react';
 
 export default async function TimeSheetApprovalsPage() {
-  const session = await getServerSession(options);
+  const session = await auth();
   console.log('session', session);
   const currentUserId = session?.user.id;
   

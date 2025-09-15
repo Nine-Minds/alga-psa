@@ -5,7 +5,6 @@ import { ChevronRightIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { menuItems as defaultMenuItems, bottomMenuItems as defaultBottomMenuItems, MenuItem } from '../../config/menuConfig';
-import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -110,10 +109,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <ReflectionContainer id="main-sidebar" label="Main Navigation">
-      <aside 
-        className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}
-      >
+    <aside 
+      data-automation-id="main-sidebar"
+      className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}
+    >
       <a 
         href="/msp/dashboard" 
         className="p-4 flex items-center space-x-2 hover:bg-[#2a2b32] cursor-pointer"
@@ -226,8 +225,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <ChevronRightIcon className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'transform rotate-180' : ''}`} />
       </Button>
-      </aside>
-    </ReflectionContainer>
+    </aside>
   );
 };
 

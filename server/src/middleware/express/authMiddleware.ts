@@ -79,7 +79,8 @@ async function getNextAuthToken(expressReq: Request, secret: string): Promise<an
     // Decode the JWT token directly
     const decoded = await decode({
       token: sessionToken,
-      secret: secret
+      secret: secret,
+      salt: 'authjs.session-token'
     });
     
     return decoded;

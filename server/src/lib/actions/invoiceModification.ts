@@ -4,8 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
-import { getServerSession } from "next-auth/next";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
@@ -17,7 +16,7 @@ import { persistInvoiceItems, persistManualInvoiceItems } from 'server/src/lib/s
 import Invoice from 'server/src/lib/models/invoice'; // Needed for getFullInvoiceById
 import { v4 as uuidv4 } from 'uuid';
 import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core'; // Import runtime getter via package export
-// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js'; // No longer directly used here
+// import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient'; // No longer directly used here
 import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@alga-psa/shared/workflow/streams'; // For type safety
 import { EventSubmissionOptions } from '@alga-psa/shared/workflow/core'; // Import type directly via package export
@@ -47,7 +46,7 @@ interface ManualItemsUpdate {
 
 export async function finalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -260,7 +259,7 @@ export async function finalizeInvoiceWithKnex(
 
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -321,7 +320,7 @@ export async function updateInvoiceManualItems(
     throw new Error('No tenant found');
   }
 
-  const session = await getServerSession(options);
+  const session = await auth();
   const billingEngine = new BillingEngine();
 
   console.log('[updateInvoiceManualItems] session:', session);
@@ -625,7 +624,7 @@ export async function addManualItemsToInvoice(
   if (!tenant) {
     throw new Error('No tenant found');
   }
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

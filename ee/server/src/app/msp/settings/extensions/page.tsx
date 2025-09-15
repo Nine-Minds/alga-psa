@@ -1,5 +1,1 @@
-import Extensions from '@ee/components/settings/extensions/Extensions';
-
-export default function ExtensionsPage() {
-  return <Extensions />;
-}
+export { default, metadata } from '@product/extensions/pages/list';

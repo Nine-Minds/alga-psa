@@ -7,6 +7,11 @@ import webpack from 'webpack';
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Determine if this is an EE build
+const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+// Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
+const emptyShim = './src/empty/shims/empty.ts';
 
 // Optional verbose module resolution logging (enable with LOG_MODULE_RESOLUTION=1)
 class LogModuleResolutionPlugin {
@@ -49,13 +54,93 @@ class LogModuleResolutionPlugin {
 }
 
 const nextConfig = {
+  turbopack: {
+    root: path.resolve(__dirname, '..'),  // Point to the actual project root
+    // Alias optional DB drivers we don't use to an empty shim for Turbopack
+    resolveAlias: {
+      // Base app alias
+      '@': './src',
+      // Native DB drivers not used
+      'better-sqlite3': emptyShim,
+      'sqlite3': emptyShim,
+      'mysql': emptyShim,
+      'mysql2': emptyShim,
+      'oracledb': emptyShim,
+      'tedious': emptyShim,
+      // Knex dialect modules we don't use; alias directly to avoid cascading requires
+      'knex/lib/dialects/sqlite3': emptyShim,
+      'knex/lib/dialects/sqlite3/index.js': emptyShim,
+      'knex/lib/dialects/mysql': emptyShim,
+      'knex/lib/dialects/mysql/index.js': emptyShim,
+      'knex/lib/dialects/mysql2': emptyShim,
+      'knex/lib/dialects/mysql2/index.js': emptyShim,
+      'knex/lib/dialects/mssql': emptyShim,
+      'knex/lib/dialects/mssql/index.js': emptyShim,
+      'knex/lib/dialects/oracledb': emptyShim,
+      'knex/lib/dialects/oracledb/index.js': emptyShim,
+      'knex/lib/dialects/oracledb/utils.js': emptyShim,
+
+      // Product feature aliasing - point stable import paths to OSS or EE implementations
+      '@product/extensions/entry': isEE
+        ? '@product/extensions/ee/entry'
+        : '@product/extensions/oss/entry',
+      '@product/settings-extensions/entry': isEE
+        ? '@product/settings-extensions/ee/entry'
+        : '@product/settings-extensions/oss/entry',
+      '@product/chat/entry': isEE
+        ? '@product/chat/ee/entry'
+        : './src/services/chatStreamService',
+      '@product/email-providers/entry': isEE
+        ? '@product/email-providers/ee/entry'
+        : '@product/email-providers/oss/entry',
+      '@product/workflows/entry': isEE
+        ? '@product/workflows/ee/entry'
+        : '@product/workflows/oss/entry',
+      '@product/billing/entry': isEE
+        ? '@product/billing/ee/entry'
+        : '@product/billing/oss/entry',
+      '@product/auth-ee/entry': isEE
+        ? '@product/auth-ee/ee/entry'
+        : '@product/auth-ee/oss/entry',
+      '@product/extension-actions': isEE
+        ? '@product/extension-actions/ee'
+        : '@product/extension-actions/oss',        
+      '@product/extension-actions/entry': isEE
+        ? '@product/extension-actions/ee/entry'
+        : '@product/extension-actions/oss/entry',
+      '@product/extension-initialization/entry': isEE
+        ? '@product/extension-initialization/ee/entry'
+        : '@product/extension-initialization/oss/entry',
+      // Map stable specifiers to relative sources so Turbopack can resolve them
+      '@alga-psa/product-extension-initialization': isEE
+        ? '../ee/server/src/lib/extensions/initialize'
+        : '../packages/product-extension-initialization/oss/entry',
+      '@alga-psa/product-extension-actions': isEE
+        ? '../packages/product-extension-actions/ee/entry'
+        : '../packages/product-extension-actions/oss/entry',
+    },
+  },
   eslint: {
     // Warning: This allows production builds to successfully complete even if
     // your project has ESLint errors.
     ignoreDuringBuilds: true,
   },
-  reactStrictMode: true,
-  transpilePackages: ['@blocknote/core', '@blocknote/react', '@blocknote/mantine'],
+  reactStrictMode: false, // Disabled to prevent double rendering in development
+  transpilePackages: [
+    '@blocknote/core',
+    '@blocknote/react',
+    '@blocknote/mantine',
+    '@emoji-mart/data',
+    // Product feature packages (only those needed in this app)
+    '@product/extensions',
+    '@product/settings-extensions',
+    '@product/email-providers',
+    '@product/billing',
+    // New aliasing packages
+    '@alga-psa/product-extension-actions',
+    '@alga-psa/product-auth-ee',
+    '@alga-psa/product-extension-initialization'
+  ],
   // Rewrites required for PostHog
   async rewrites() {
     return [
@@ -75,7 +160,7 @@ const nextConfig = {
   },
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
     // Enable webpack cache for faster builds
     config.cache = true;
 
@@ -91,7 +176,9 @@ const nextConfig = {
     config.resolve = {
       ...config.resolve,
       extensionAlias: {
-        '.js': ['.js', '.ts', '.tsx']
+        '.js': ['.ts', '.tsx', '.js', '.jsx'],
+        '.mjs': ['.mts', '.mjs'],
+        '.jsx': ['.tsx', '.jsx']
       },
       alias: {
         ...config.resolve.alias,
@@ -103,7 +190,30 @@ const nextConfig = {
         // This ensures CE builds don't fail when code references ee/server/src directly
         'ee/server/src': isEE
           ? path.join(__dirname, '../ee/server/src')
-          : path.join(__dirname, 'src/empty')
+          : path.join(__dirname, 'src/empty'),
+
+        // Avoid base-prefix aliases that can shadow more specific '/entry' aliases
+        // Feature swap aliases for Webpack (point directly to ts/tsx files)
+        '@product/extensions/entry': isEE
+          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+        '@product/settings-extensions/entry': isEE
+          ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+        '@product/email-providers/entry': isEE
+          ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/workflows/entry': isEE
+          ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
+          : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+        // Point stable specifiers to exact entry files to avoid conditional exports in package index
+        '@alga-psa/product-extension-initialization': isEE
+          ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
+          : path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
+        '@alga-psa/product-extension-actions': isEE
+          ? path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
+        '@alga-psa/product-auth-ee': path.join(__dirname, '../packages/product-auth-ee'),
       },
       modules: [
         ...config.resolve.modules || ['node_modules'],
@@ -142,10 +252,9 @@ const nextConfig = {
       'tedious'
     ];
 
-    // For server-side builds, externalize ts-morph to prevent bundling issues
-    if (isServer) {
-      config.externals.push('ts-morph');
-    }
+    // Externalize ts-morph for both client and server to prevent bundling issues
+    // ts-morph is a huge library that shouldn't be bundled
+    config.externals.push('ts-morph');
 
     // Rule to handle .wasm files as assets
     config.module.rules.push({
@@ -301,8 +410,7 @@ const nextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: '5mb', // Increase limit for WASM uploads
-    },
-    instrumentationHook: true
+    }
   },
   // Skip static optimization for error pages
   generateBuildId: async () => {

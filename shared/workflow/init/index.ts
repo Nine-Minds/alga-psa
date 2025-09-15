@@ -1,5 +1,5 @@
 import { getActionRegistry, getWorkflowRuntime } from '@shared/workflow/core/index.js';
-import logger from '@shared/core/logger.js';
+import { logger } from '@shared/core/index.js';
 
 export * from './serverInit.js';
 

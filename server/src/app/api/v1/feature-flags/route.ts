@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { options } from '../../../api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { featureFlags } from '../../../../lib/feature-flags/featureFlags';
 import { z } from 'zod';
 
@@ -21,7 +20,7 @@ const featureFlagRequestSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -86,7 +85,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(options);
+    const session = await auth();
     if (!session) {
       return NextResponse.json(
         { error: 'Unauthorized' },

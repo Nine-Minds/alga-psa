@@ -3,14 +3,13 @@
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex } from 'server/src/lib/db';
 import { determineDefaultBillingPlan } from 'server/src/lib/utils/planDisambiguation';
-import { getServerSession } from "next-auth/next";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from 'server/src/interfaces/usage.interfaces';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from 'server/src/lib/services/bucketUsageService'; // Import bucket service functions
 
 export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsageRecord> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -100,7 +99,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
 }
 
 export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsageRecord> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -212,7 +211,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
 }
 
 export async function deleteUsageRecord(usageId: string): Promise<void> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -286,7 +285,7 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
 }
 
 export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageRecord[]> {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -334,7 +333,7 @@ interface Company {
 }
 
 export async function getCompanies() {
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

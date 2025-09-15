@@ -53,7 +53,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
       }
       
       // Import WorkflowRegistrationModel
-      const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel.js')).default;
+      const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel')).default;
       
       // Try to get the workflow registration and its current version's code
       const registrationWithVersion = await knex('workflow_registrations as reg')
@@ -78,7 +78,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
         console.log(`Found workflow registration and current version for "${definitionId}" in tenant database`);
 
         // Convert the stored definition to a WorkflowDefinition
-        const { deserializeWorkflowDefinition } = await import('@alga-psa/shared/workflow/core/workflowDefinition.js');
+        const { deserializeWorkflowDefinition } = await import('@alga-psa/shared/workflow/core/workflowDefinition');
 
         try {
           // Create a serialized definition from the database record
@@ -129,7 +129,7 @@ export async function getWorkflowDefinition(definitionId: string): Promise<any> 
           console.log(`Found workflow registration and current version for "${definitionId}" in system database`);
 
           // Convert the stored definition to a WorkflowDefinition
-          const { deserializeWorkflowDefinition } = await import('@alga-psa/shared/workflow/core/workflowDefinition.js');
+          const { deserializeWorkflowDefinition } = await import('@alga-psa/shared/workflow/core/workflowDefinition');
 
           try {
             // Create a serialized definition from the database record
@@ -482,7 +482,7 @@ export async function getWorkflowDSLContent(definitionId: string): Promise<strin
         }
         
         // Import WorkflowRegistrationModel
-        const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel.js')).default;
+        const WorkflowRegistrationModel = (await import('@alga-psa/shared/workflow/persistence/workflowRegistrationModel')).default;
         
         // Try to get the workflow registration and its current version's code
         const registrationWithVersion = await knex('workflow_registrations as reg')

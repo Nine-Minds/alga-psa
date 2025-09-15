@@ -6,8 +6,8 @@
  * for use with server actions like the workflow editor
  */
 
-import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions.js';
-import logger from '@shared/core/logger.js';
+import { registerWorkflowActions } from '@shared/workflow/init/registerWorkflowActions';
+import logger from '@shared/core/logger';
 
 // Track initialization state
 let initialized = false;

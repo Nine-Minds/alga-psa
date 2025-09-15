@@ -157,8 +157,9 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{id} - Get billing plan details
    */
   getById() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       const url = new URL(req.url);
       
       // Parse service options from query parameters
@@ -169,7 +170,7 @@ export class ApiBillingPlanController {
         includeCompanies: url.searchParams.get('include_companies') === 'true'
       };
       
-      const plan = await this.billingPlanService.getByIdWithOptions(params.id, context, serviceOptions);
+      const plan = await this.billingPlanService.getByIdWithOptions(params.id, requestContext, serviceOptions);
       
       if (!plan) {
         return createErrorResponse('Billing plan not found', 404);
@@ -217,9 +218,10 @@ export class ApiBillingPlanController {
    * PUT /api/v2/billing-plans/{id} - Update billing plan
    */
   update() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = updateBillingPlanSchema.safeParse(data);
@@ -227,7 +229,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.billingPlanService.update(params.id, validation.data, context);
+      const plan = await this.billingPlanService.update(params.id, validation.data, requestContext);
       
       const response = createApiResponse({
         data: {
@@ -244,10 +246,11 @@ export class ApiBillingPlanController {
    * DELETE /api/v2/billing-plans/{id} - Delete billing plan
    */
   delete() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      await this.billingPlanService.delete(params.id, context);
+      await this.billingPlanService.delete(params.id, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
@@ -257,10 +260,11 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{id}/services - Get plan services
    */
   getPlanServices() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      const services = await this.billingPlanService.getPlanServices(params.id, context);
+      const services = await this.billingPlanService.getPlanServices(params.id, requestContext);
       
       const response = createApiResponse({
         data: services,
@@ -279,9 +283,10 @@ export class ApiBillingPlanController {
    * POST /api/v2/billing-plans/{id}/services - Add service to plan
    */
   addServiceToPlan() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = addServiceToPlanSchema.safeParse(data);
@@ -289,7 +294,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const serviceConfig = await this.billingPlanService.addServiceToPlan(params.id, validation.data, context);
+      const serviceConfig = await this.billingPlanService.addServiceToPlan(params.id, validation.data, requestContext);
       
       const response = createApiResponse({ data: serviceConfig }, 201);
       return NextResponse.json(response);
@@ -300,9 +305,10 @@ export class ApiBillingPlanController {
    * PUT /api/v2/billing-plans/{planId}/services/{serviceId} - Update service in plan
    */
   updatePlanService() {
-    return async (req: NextRequest, params: { planId: string; serviceId: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ planId: string; serviceId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = updatePlanServiceSchema.safeParse(data);
@@ -310,7 +316,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const serviceConfig = await this.billingPlanService.updatePlanService(params.planId, params.serviceId, validation.data, context);
+      const serviceConfig = await this.billingPlanService.updatePlanService(params.planId, params.serviceId, validation.data, requestContext);
       
       const response = createApiResponse({ data: serviceConfig });
       return NextResponse.json(response);
@@ -321,10 +327,11 @@ export class ApiBillingPlanController {
    * DELETE /api/v2/billing-plans/{planId}/services/{serviceId} - Remove service from plan
    */
   removeServiceFromPlan() {
-    return async (req: NextRequest, params: { planId: string; serviceId: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ planId: string; serviceId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      await this.billingPlanService.removeServiceFromPlan(params.planId, params.serviceId, context);
+      await this.billingPlanService.removeServiceFromPlan(params.planId, params.serviceId, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
@@ -334,10 +341,11 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{id}/fixed-config - Get fixed plan configuration
    */
   getFixedPlanConfig() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      const config = await this.billingPlanService.getFixedPlanConfig(params.id, context);
+      const config = await this.billingPlanService.getFixedPlanConfig(params.id, requestContext);
       
       if (!config) {
         return createErrorResponse('Fixed plan configuration not found', 404);
@@ -352,9 +360,10 @@ export class ApiBillingPlanController {
    * PUT /api/v2/billing-plans/{id}/fixed-config - Update fixed plan configuration
    */
   upsertFixedPlanConfig() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = createFixedPlanConfigSchema.safeParse(data);
@@ -362,7 +371,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const config = await this.billingPlanService.upsertFixedPlanConfig(params.id, validation.data, context);
+      const config = await this.billingPlanService.upsertFixedPlanConfig(params.id, validation.data, requestContext);
       
       const response = createApiResponse({ data: config });
       return NextResponse.json(response);
@@ -373,10 +382,11 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{planId}/services/{serviceId}/config - Get combined configuration
    */
   getCombinedFixedPlanConfig() {
-    return async (req: NextRequest, params: { planId: string; serviceId: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ planId: string; serviceId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      const config = await this.billingPlanService.getCombinedFixedPlanConfig(params.planId, params.serviceId, context);
+      const config = await this.billingPlanService.getCombinedFixedPlanConfig(params.planId, params.serviceId, requestContext);
       
       const response = createApiResponse({ data: config });
       return NextResponse.json(response);
@@ -387,9 +397,10 @@ export class ApiBillingPlanController {
    * PUT /api/v2/billing-plans/{id}/activation - Activate/deactivate plan
    */
   setPlanActivation() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = planActivationSchema.safeParse(data);
@@ -397,7 +408,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.billingPlanService.setPlanActivation(params.id, validation.data, context);
+      const plan = await this.billingPlanService.setPlanActivation(params.id, validation.data, requestContext);
       
       const response = createApiResponse({ data: plan });
       return NextResponse.json(response);
@@ -408,9 +419,10 @@ export class ApiBillingPlanController {
    * POST /api/v2/billing-plans/{id}/copy - Copy existing plan
    */
   copyPlan() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = copyBillingPlanSchema.safeParse(data);
@@ -418,7 +430,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const newPlan = await this.billingPlanService.copyPlan(validation.data, context);
+      const newPlan = await this.billingPlanService.copyPlan(validation.data, requestContext);
       
       const response = createApiResponse({
         data: {
@@ -435,10 +447,11 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{id}/analytics - Get plan analytics
    */
   getPlanAnalytics() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      const analytics = await this.billingPlanService.getPlanAnalytics(params.id, context);
+      const analytics = await this.billingPlanService.getPlanAnalytics(params.id, requestContext);
       
       const response = createApiResponse({ data: analytics });
       return NextResponse.json(response);
@@ -449,14 +462,15 @@ export class ApiBillingPlanController {
    * GET /api/v2/billing-plans/{id}/usage-metrics - Get usage metrics
    */
   getUsageMetrics() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       const url = new URL(req.url);
       
       const periodStart = new Date(url.searchParams.get('period_start') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString());
       const periodEnd = new Date(url.searchParams.get('period_end') || new Date().toISOString());
 
-      const metrics = await this.billingPlanService.getUsageMetrics(params.id, periodStart, periodEnd, context);
+      const metrics = await this.billingPlanService.getUsageMetrics(params.id, periodStart, periodEnd, requestContext);
       
       const response = createApiResponse({ data: metrics });
       return NextResponse.json(response);
@@ -532,9 +546,10 @@ export class ApiBillingPlanController {
    * POST /api/v2/plan-bundles/{bundleId}/plans - Add plan to bundle
    */
   addPlanToBundle() {
-    return async (req: NextRequest, params: { bundleId: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ bundleId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = addPlanToBundleSchema.safeParse(data);
@@ -546,7 +561,7 @@ export class ApiBillingPlanController {
         params.bundleId, 
         validation.data.plan_id, 
         validation.data.custom_rate, 
-        context
+        requestContext
       );
       
       const response = createApiResponse({ data: bundlePlan }, 201);
@@ -558,10 +573,11 @@ export class ApiBillingPlanController {
    * DELETE /api/v2/plan-bundles/{bundleId}/plans/{planId} - Remove plan from bundle
    */
   removePlanFromBundle() {
-    return async (req: NextRequest, params: { bundleId: string; planId: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ bundleId: string; planId: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      await this.billingPlanService.removePlanFromBundle(params.bundleId, params.planId, context);
+      await this.billingPlanService.removePlanFromBundle(params.bundleId, params.planId, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
@@ -636,10 +652,11 @@ export class ApiBillingPlanController {
    * DELETE /api/v2/company-billing-plans/{id} - Unassign plan from company
    */
   unassignPlanFromCompany() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
-      const context = requireRequestContext(req);
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
+      const requestContext = requireRequestContext(req);
       
-      await this.billingPlanService.unassignPlanFromCompany(params.id, context);
+      await this.billingPlanService.unassignPlanFromCompany(params.id, requestContext);
       
       return NextResponse.json(createApiResponse(null, 204));
     };
@@ -670,9 +687,10 @@ export class ApiBillingPlanController {
    * POST /api/v2/plan-templates/{id}/create-plan - Create plan from template
    */
   createFromTemplate() {
-    return async (req: NextRequest, params: { id: string }): Promise<NextResponse> => {
+    return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
+      const params = await context.params;
       const data = await req.json();
-      const context = requireRequestContext(req);
+      const requestContext = requireRequestContext(req);
       
       // Validate request body
       const validation = createPlanFromTemplateSchema.safeParse(data);
@@ -680,7 +698,7 @@ export class ApiBillingPlanController {
         return createErrorResponse('Invalid request data', 400, 'VALIDATION_ERROR', validation.error.errors);
       }
 
-      const plan = await this.billingPlanService.createFromTemplate(validation.data, context);
+      const plan = await this.billingPlanService.createFromTemplate(validation.data, requestContext);
       
       const response = createApiResponse({
         data: {

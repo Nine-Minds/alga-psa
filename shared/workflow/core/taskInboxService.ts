@@ -5,6 +5,7 @@ import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInte
 import { getWorkflowRuntime } from './workflowRuntime.js';
 import { getFormRegistry } from './formRegistry.js';
 import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry.js';
+import type { TaskDetails } from '../persistence/taskInboxInterfaces.js';
 
 /**
  * Extended context for workflow actions with additional properties needed for task creation

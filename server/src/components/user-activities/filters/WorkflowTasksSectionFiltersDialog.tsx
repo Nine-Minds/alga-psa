@@ -13,7 +13,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Checkbox } from "server/src/components/ui/Checkbox";
 import { Label } from "server/src/components/ui/Label";
 import { Input } from "server/src/components/ui/Input";
-import { DateRangePicker } from "server/src/components/ui/DateRangePicker";
+import { StringDateRangePicker } from "server/src/components/ui/DateRangePicker";
 import { ActivityFilters, ActivityPriority } from "server/src/interfaces/activity.interfaces";
 import { DateRange } from 'react-day-picker';
 import { ISO8601String } from '@alga-psa/shared/types';
@@ -189,7 +189,7 @@ export function WorkflowTasksSectionFiltersDialog({
           {/* Due Date Range */}
           <div className="space-y-1">
             <Label htmlFor="workflow-task-due-date-range" className="text-base font-semibold">Due Date Range</Label>
-            <DateRangePicker
+            <StringDateRangePicker
               value={{
                 from: localFilters.dueDateStart ? localFilters.dueDateStart.split('T')[0] : '',
                 to: localFilters.dueDateEnd ? localFilters.dueDateEnd.split('T')[0] : '',

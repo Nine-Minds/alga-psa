@@ -223,14 +223,19 @@ jobs:
           sleep 5
         shell: bash
 
-      - name: Start setup service
+      - name: Start setup service (Ubuntu build override)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting setup service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d setup
+          docker-compose -p alga-e2e-test \
+            -f docker-compose.base.yaml \
+            -f docker-compose.ce.yaml \
+            -f docker-compose.prod.yaml \
+            -f docker-compose.setup-ubuntu.override.yaml \
+            up --build -d setup
         shell: bash
 
-      - name: Wait for Setup service to complete
+      - name: Wait for Setup service to complete (Ubuntu build override)
         if: steps.install_docker_compose.outcome == 'success'
         id: wait_for_setup
         run: |
@@ -239,10 +244,10 @@ jobs:
           ATTEMPT_NUM=1
           
           # Get the container ID before the loop, it might be gone after exit
-          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test ps -q setup)
+          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps -q setup)
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
-            docker-compose -p alga-e2e-test logs setup
+            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
             echo "::set-output name=status::failure"
             exit 1
           fi
@@ -250,7 +255,7 @@ jobs:
 
           while [ $ATTEMPT_NUM -le $MAX_ATTEMPTS ]; do
             # Check if the setup container is still running
-            if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
+            if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
               # Container has exited, check its exit code using the stored ID
               echo "Setup container (ID: $SETUP_CONTAINER_ID) is no longer 'Up'. Checking exit code."
               # Use the stored SETUP_CONTAINER_ID
@@ -276,18 +281,18 @@ jobs:
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
-                docker-compose -p alga-e2e-test logs setup
+                docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
                 echo "::set-output name=status::failure"
                 exit 1
               fi
             fi
 
             # Check logs for completion message as a secondary check (optional, primary is exit code)
-            if docker-compose -p alga-e2e-test logs setup | grep -q "Setup completed!"; then
+            if docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup | grep -q "Setup completed!"; then
                echo "Setup completion message found in logs. Waiting a bit for container to exit."
                sleep 5 # Give it a moment to exit gracefully
                # Re-check exit status using the stored ID
-                if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
+                if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
                     # Use the stored SETUP_CONTAINER_ID
                     INSPECT_OUTPUT_LOG_CHECK=$(docker inspect -f '{{.State.ExitCode}}' "$SETUP_CONTAINER_ID" 2>/dev/null)
                     SETUP_EXIT_CODE_LOG_CHECK=$(echo "$INSPECT_OUTPUT_LOG_CHECK" | awk '{print $1}')

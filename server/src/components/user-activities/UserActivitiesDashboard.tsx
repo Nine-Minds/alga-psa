@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect, useMemo } from 'react';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { ScheduleSection } from './ScheduleSection';
@@ -25,8 +27,7 @@ export function UserActivitiesDashboard() {
   // Use the custom hook for view mode preference
   const { 
     value: viewMode, 
-    setValue: setViewModePreference,
-    isLoading: isViewModeLoading 
+    setValue: setViewModePreference
   } = useUserPreference<UserActivitiesViewMode>(
     'activitiesDashboardViewMode',
     {
@@ -129,13 +130,7 @@ export function UserActivitiesDashboard() {
             </div>
           </div>
 
-          {isViewModeLoading ? (
-            <div className="flex justify-center items-center h-40">
-              <p className="text-gray-500">Loading user preferences...</p>
-            </div>
-          ) : (
-            viewMode === 'cards' ? cardViewContent : tableViewContent
-          )}
+          {viewMode === 'cards' ? cardViewContent : tableViewContent}
         </div>
       </ActivityDrawerProvider>
     </DrawerProvider>

@@ -11,7 +11,7 @@ import { createS3BundleStore } from "../storage/bundles/s3-bundle-store";
 import { isValidSha256Hash, objectKeyFor, normalizeBasePrefix } from "../storage/bundles/types";
 import { Readable } from "node:stream";
 import { getS3Client, getBundleBucket } from "../storage/s3-client";
-import { createTenantKnex } from '@/lib/db';
+import { createTenantKnex } from '@/lib/db/index';
 import { HeadBucketCommand } from "@aws-sdk/client-s3";
 import {
   hashSha256Stream,
@@ -29,16 +29,18 @@ import {
 import { upsertVersionFromManifest } from "../extensions/registry-v2";
 import { ensureRegistryV2KnexRepo } from "../extensions/registry-v2-repo-knex";
 import type { Knex } from "knex";
+import { getAdminConnection } from '@/lib/db/admin';
+// import { createTenantKnex } from '@/lib/db/index';
+
+//
 // Prefer a global/admin knex since registry tables are global
 async function getAdminKnex(): Promise<Knex> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const db = require('../../../server/src/lib/db/index.ts');
-    if (db?.getAdminConnection) return await db.getAdminConnection();
+    return await getAdminConnection();
   } catch {}
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { createTenantKnex } = require('@/lib/db');
+    // const { createTenantKnex } = require('@/lib/db');
     const out = await createTenantKnex();
     return out.knex as Knex;
   } catch (e) {

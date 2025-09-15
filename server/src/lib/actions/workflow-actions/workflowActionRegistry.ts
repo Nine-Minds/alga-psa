@@ -1,7 +1,7 @@
 'use server';
 
-import { getActionRegistry } from '@shared/workflow/core/actionRegistry.js';
-import { ActionDefinition, ActionParameterDefinition } from '@shared/workflow/core/actionRegistry.js';
+import { getActionRegistry } from '@shared/workflow/core/actionRegistry';
+import { ActionDefinition, ActionParameterDefinition } from '@shared/workflow/core/actionRegistry';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { initializeServerWorkflowActions } from './initializeWorkflows';
 

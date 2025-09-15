@@ -1,6 +1,5 @@
 import { featureFlags, FeatureFlagContext } from './featureFlags';
-import { getServerSession } from 'next-auth/next';
-import { options as authOptions } from '../../app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { cache } from 'react';
 import React from 'react';
 
@@ -14,7 +13,7 @@ export const checkFeatureFlag = cache(async (
 ): Promise<boolean> => {
   try {
     // Get session for user context
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     const fullContext: FeatureFlagContext = {
       userId: session?.user?.id,
@@ -37,7 +36,7 @@ export const getFeatureFlagVariant = cache(async (
   context?: Partial<FeatureFlagContext>
 ): Promise<string | null> => {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     const fullContext: FeatureFlagContext = {
       userId: session?.user?.id,

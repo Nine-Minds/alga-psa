@@ -17,7 +17,7 @@ import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel.
 import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel.js';
 import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel.js';
 import WorkflowRegistrationModel from '@shared/workflow/persistence/workflowRegistrationModel.js';
-import logger from '@shared/core/logger.js';
+import { logger } from '@shared/core/index.js';
 
 // No configuration needed - all events are processed asynchronously
 

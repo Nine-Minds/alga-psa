@@ -20,7 +20,7 @@ import {
 } from 'server/src/interfaces/invoice.interfaces';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { getServerSession } from "next-auth/next";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { options } from "server/src/app/api/auth/[...nextauth]/options";
 import Invoice from 'server/src/lib/models/invoice';
 import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';

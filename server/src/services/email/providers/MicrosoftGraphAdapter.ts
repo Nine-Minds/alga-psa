@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 /**
  * Microsoft Graph API adapter for email processing

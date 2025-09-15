@@ -3,7 +3,7 @@
  * This adapter bridges the shared TicketModel with the server's event publishing system
  */
 
-import { IEventPublisher } from '@alga-psa/shared/models/ticketModel.js';
+import { IEventPublisher } from '@alga-psa/shared/models/ticketModel';
 import { getEventBus } from '../eventBus';
 
 export class ServerEventPublisher implements IEventPublisher {

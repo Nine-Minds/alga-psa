@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
-import { publishEvent } from '@alga-psa/shared/events/publisher.js';
+import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { randomBytes } from 'crypto';
 import { MicrosoftGraphAdapter } from '@/services/email/providers/MicrosoftGraphAdapter';
 import type { EmailProviderConfig } from '@/interfaces/email.interfaces';

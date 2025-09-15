@@ -264,7 +264,7 @@ export class WorkflowEventSourcing {
           snapshotVersion
         }
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`[WorkflowEventSourcing] Error replaying events for execution ${executionId}:`, error);
       throw error;
     }

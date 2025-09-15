@@ -9,8 +9,7 @@ import {
   ITimeEntryWithWorkItem,
 } from 'server/src/interfaces/timeEntry.interfaces';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { getServerSession } from "next-auth/next";
-import { options } from "server/src/app/api/auth/[...nextauth]/options";
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -220,7 +219,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
   const {knex: db, tenant} = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
 
   if (!tenant) {
     throw new Error("Tenant not found");
@@ -764,7 +763,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
   }
 
   const {knex: db, tenant} = await createTenantKnex();
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
   }

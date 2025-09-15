@@ -167,7 +167,7 @@ export async function validateSecretUniqueness(): Promise<void> {
     // Check if Vault provider is configured
     if (process.env.VAULT_ADDR && process.env.VAULT_TOKEN) {
       try {
-        const { loadVaultSecretProvider } = await import('@alga-psa/shared/core/vaultLoader.js');
+        const { loadVaultSecretProvider } = await import('@alga-psa/shared/core/vaultLoader');
         const vaultProvider = await loadVaultSecretProvider();
         const vaultValue = await vaultProvider.getAppSecret(secretName);
         if (vaultValue && vaultValue.trim() !== '') {

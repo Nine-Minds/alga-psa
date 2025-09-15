@@ -14,9 +14,10 @@ import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gate
  */
 export async function GET(
   req: NextRequest,
-  ctx: { params: { extensionId: string; contentHash: string; path?: string[] } }
+  ctx: { params: Promise<{ extensionId: string; contentHash: string; path?: string[] }> }
 ) {
-  const { extensionId, contentHash } = ctx.params;
+  const resolvedParams = await ctx.params;
+  const { extensionId, contentHash } = resolvedParams;
 
   const mode = (process.env.EXT_UI_HOST_MODE || 'rust').toLowerCase();
   const runnerBase = process.env.RUNNER_PUBLIC_BASE || '';
@@ -36,7 +37,7 @@ export async function GET(
       if (redirectCompat && runnerBase) {
         // Build target URL preserving path and query string
         const incoming = new URL(req.url);
-        const subpath = (ctx.params.path || []).join('/');
+        const subpath = (resolvedParams.path || []).join('/');
         const suffix = `/ext-ui/${encodeURIComponent(extensionId)}/${encodeURIComponent(
           contentHash
         )}/${subpath}`;
@@ -103,7 +104,7 @@ export async function GET(
 
   // Serve from local cache path with immutable caching behavior handled by serveFrom()
   const dir = await ensureUiCached(contentHash);
-  const subpath = '/' + (ctx.params.path || []).join('/');
+  const subpath = '/' + (resolvedParams.path || []).join('/');
   console.info(JSON.stringify({ ...logCtx, action: 'legacy_serve', subpath }));
   return serveFrom(req, dir, subpath);
 }

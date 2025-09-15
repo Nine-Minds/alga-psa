@@ -120,7 +120,10 @@ export default function ProjectDetail({
       if (!project.project_id) return;
       
       try {
-        const tags = await findTagsByEntityId(project.project_id, 'project');
+        const tags = await findTagsByEntityId(project.project_id, 'project').catch((error) => {
+          console.warn('Failed to fetch project tags, continuing without tags:', error);
+          return [];
+        });
         
         setProjectTags(tags);
         
@@ -255,7 +258,11 @@ export default function ProjectDetail({
       
       try {
         const taskIds = projectTasks.map(task => task.task_id);
-        const tags = await findTagsByEntityIds(taskIds, 'project_task');
+        // Add error handling for the server action call
+        const tags = await findTagsByEntityIds(taskIds, 'project_task').catch((error) => {
+          console.warn('Failed to fetch task tags, continuing without tags:', error);
+          return [];
+        });
         
         // Group tags by task
         const tagsByTask: Record<string, ITag[]> = {};

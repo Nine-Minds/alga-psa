@@ -1,1 +1,1 @@
-export { default, metadata } from '@ee/app/msp/extensions/[id]/page';
+export { default, metadata } from '@product/extensions/entry';

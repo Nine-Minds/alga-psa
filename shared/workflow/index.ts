@@ -10,7 +10,8 @@ export * from './init/index.js';
 // Re-export stream handling
 export * from './streams/index.js';
 
-export { default as logger } from '@shared/core/logger.js';
+// Re-export logger from shared core package index
+export { logger } from '@shared/core/index.js';
 
 // Re-export utilities
 export * from './utils/index.js';

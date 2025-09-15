@@ -51,9 +51,9 @@ export async function getEntityImageUrl(
         console.debug(`[getEntityImageUrl] Found document association for ${entityType} ${entityId}:`, association);
       }
       
-      // Get the file_id from the documents table within the same transaction
+      // Get the file_id and updated_at from the documents table within the same transaction
       const documentRecord = await trx('documents')
-        .select('file_id')
+        .select('file_id', 'updated_at')
         .where({
           document_id: association.document_id,
           tenant
@@ -70,20 +70,22 @@ export async function getEntityImageUrl(
         console.debug(`[getEntityImageUrl] Found file_id ${documentRecord.file_id} for document ${association.document_id}`);
       }
       
-      return documentRecord.file_id;
+      return { file_id: documentRecord.file_id, updated_at: documentRecord.updated_at };
     });
 
-    // If no file_id was found, return null
-    if (!result) {
+    // If no result was found, return null
+    if (!result || !result.file_id) {
       return null;
     }
 
     // Use the existing getImageUrl function to get the URL
     // This function manages its own transaction internally
-    const imageUrl = await getImageUrlInternal(result);
+    const imageUrl = await getImageUrlInternal(result.file_id);
     
     if (imageUrl) {
-      const timestamp = Date.now();
+      // Add the document's updated_at timestamp for cache busting
+      // This ensures the URL changes only when the document is actually updated
+      const timestamp = result.updated_at ? new Date(result.updated_at).getTime() : 0;
       const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
       if (process.env.NODE_ENV === 'development') {
         console.debug(`Generated image URL for ${entityType} ${entityId}: ${urlWithTimestamp}`);
@@ -179,25 +181,26 @@ export async function getEntityImageUrlsBatch(
       return result;
     }
 
-    // Get all documents in one query
+    // Get all documents in one query, including updated_at for cache busting
     const documentIds = associations.map(a => a.document_id);
     const documents = await knex('documents')
-      .select('document_id', 'file_id')
+      .select('document_id', 'file_id', 'updated_at')
       .whereIn('document_id', documentIds)
       .andWhere({ tenant });
 
     // Create maps for quick lookup
-    const docToFileMap = new Map(documents.map(d => [d.document_id, d.file_id]));
+    const docToFileMap = new Map(documents.map(d => [d.document_id, { file_id: d.file_id, updated_at: d.updated_at }]));
     const entityToDocMap = new Map(associations.map(a => [a.entity_id, a.document_id]));
 
     // Process each entity
     for (const [entityId, documentId] of entityToDocMap) {
-      const fileId = docToFileMap.get(documentId);
-      if (fileId) {
+      const docInfo = docToFileMap.get(documentId);
+      if (docInfo?.file_id) {
         try {
-          const imageUrl = await getImageUrlInternal(fileId);
+          const imageUrl = await getImageUrlInternal(docInfo.file_id);
           if (imageUrl) {
-            const timestamp = Date.now();
+            // Add the document's updated_at timestamp for cache busting
+            const timestamp = docInfo.updated_at ? new Date(docInfo.updated_at).getTime() : 0;
             const urlWithTimestamp = `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}t=${timestamp}`;
             result.set(entityId, urlWithTimestamp);
           }

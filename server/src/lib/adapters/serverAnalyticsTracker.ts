@@ -3,7 +3,7 @@
  * This adapter bridges the shared TicketModel with the server's analytics system
  */
 
-import { IAnalyticsTracker } from '@alga-psa/shared/models/ticketModel.js';
+import { IAnalyticsTracker } from '@alga-psa/shared/models/ticketModel';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 import { featureAdoptionTracker } from '../analytics/featureAdoption';
