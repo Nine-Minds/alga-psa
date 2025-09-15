@@ -6,8 +6,14 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
-// Common emoji regex pattern used across validation functions
-const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
+// Comprehensive emoji regex pattern - professional SaaS grade (Microsoft/Salesforce standard)
+const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA70}-\u{1FAFF}]|[\u{1F004}]|[\u{1F0CF}]|[\u{1F170}-\u{1F251}]/gu;
+
+// Helper function to check if content has meaningful characters (Microsoft/Salesforce approach)
+const hasNonEmojiContent = (text: string): boolean => {
+  const withoutEmojis = text.replace(EMOJI_REGEX, '').trim();
+  return withoutEmojis.length > 0 && /[\p{L}\p{N}]/u.test(withoutEmojis);
+};
 
 // Professional validation lists - what real SaaS/CRM platforms use
 const VALID_TLDS = [
@@ -67,10 +73,7 @@ export function validateCompanyName(name: string): string | null {
     return 'Company name cannot be just a business abbreviation';
   }
   
-  // No repeats of the same character 3+ times
-  if (/(.)\1{2,}/.test(nameWithoutEmojis)) {
-    return 'Company name cannot contain repeated characters';
-  }
+  // Professional SaaS approach: Allow repeated characters (Mississippi Steel, PayPal, etc. are valid)
   
   // Block domain extensions
   if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
@@ -553,38 +556,35 @@ export function validateStateProvince(state: string): string | null {
   return null;
 }
 
-// Industry validation - enterprise international support
+// Industry validation - professional SaaS international support (Microsoft/Salesforce standard)
 export function validateIndustry(industry: string): string | null {
   if (!industry || !industry.trim()) {
     return null; // Industry is optional
   }
-  
+
   const trimmedIndustry = industry.trim();
-  
+
   // Enterprise rule: Max length 100 characters
   if (trimmedIndustry.length > 100) {
     return 'Industry must be 100 characters or less';
   }
-  
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedIndustry)) {
-    return 'Industry cannot contain emojis';
-  }
-  
+
   if (trimmedIndustry.length < 2) {
     return 'Industry must be at least 2 characters long';
   }
-  
-  // Must contain at least one letter or Unicode character
-  if (!/[\p{L}]/u.test(trimmedIndustry)) {
-    return 'Industry must contain letters';
+
+  // Professional SaaS approach: Allow emojis but require meaningful content
+  if (!hasNonEmojiContent(trimmedIndustry)) {
+    return 'Industry must contain meaningful text (letters or numbers)';
   }
-  
-  // Allow Unicode letters, spaces, hyphens, ampersands, slashes, commas
-  if (!/^[\p{L}\s\-&\/,]+$/u.test(trimmedIndustry)) {
-    return 'Industry contains invalid characters';
+
+  // Allow Unicode letters, numbers, spaces, common punctuation, and emojis
+  // Remove emojis temporarily to check base characters
+  const withoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '');
+  if (!/^[\p{L}\p{N}\s\-&\/,\.\(\)\+\%\#]*$/u.test(withoutEmojis)) {
+    return 'Industry contains unsupported characters';
   }
-  
+
   return null;
 }
 

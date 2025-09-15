@@ -5,30 +5,69 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { StepProps } from '../types';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 
 export function ClientContactStep({ data, updateData }: StepProps) {
   const hasClientInfo = !!(data.clientName || data.clientEmail || data.clientPhone || data.clientUrl || data.clientId);
   const isContactCreated = !!data.contactId;
+  const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
+  const [roleError, setRoleError] = useState<string | null>(null);
+  const [hasInteractedWithName, setHasInteractedWithName] = useState(false);
   const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
+  const [hasInteractedWithRole, setHasInteractedWithRole] = useState(false);
 
-  // Email validation
+  // Contact name validation - enterprise grade
   useEffect(() => {
-    if (!hasInteractedWithEmail || !data.contactEmail) {
+    if (!hasInteractedWithName) {
+      setNameError(null);
+      return;
+    }
+
+    const error = validateContactName(data.contactName || '');
+    setNameError(error);
+  }, [data.contactName, hasInteractedWithName]);
+
+  // Email validation - enterprise grade
+  useEffect(() => {
+    if (!hasInteractedWithEmail) {
       setEmailError(null);
       return;
     }
 
-    const email = data.contactEmail.trim();
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
-      } else {
-        setEmailError(null);
+    // Immediate check for spaces-only input
+    if (data.contactEmail && data.contactEmail.trim() === '') {
+      setEmailError('Email address cannot contain only spaces');
+      return;
+    }
+
+    const error = validateEmailAddress(data.contactEmail || '');
+    setEmailError(error);
+  }, [data.contactEmail, hasInteractedWithEmail]);
+
+  // Role validation - basic professional validation
+  useEffect(() => {
+    if (!hasInteractedWithRole) {
+      setRoleError(null);
+      return;
+    }
+
+    if (data.contactRole && data.contactRole.trim() === '') {
+      setRoleError('Role cannot contain only spaces');
+      return;
+    }
+
+    // Basic validation for role/title field
+    if (data.contactRole && data.contactRole.trim().length > 0) {
+      const trimmedRole = data.contactRole.trim();
+      if (trimmedRole.length > 100) {
+        setRoleError('Role must be 100 characters or less');
+        return;
       }
     }
-  }, [data.contactEmail, hasInteractedWithEmail]);
+
+    setRoleError(null);
+  }, [data.contactRole, hasInteractedWithRole]);
 
   if (!hasClientInfo) {
     return (
@@ -69,10 +108,24 @@ export function ClientContactStep({ data, updateData }: StepProps) {
           <Label htmlFor="contactName">Contact Name</Label>
           <Input
             id="contactName"
-            value={data.contactName}
-            onChange={(e) => updateData({ contactName: e.target.value })}
+            value={data.contactName || ''}
+            onChange={(e) => {
+              updateData({ contactName: e.target.value });
+              if (!hasInteractedWithName && e.target.value) {
+                setHasInteractedWithName(true);
+              }
+            }}
+            onBlur={() => setHasInteractedWithName(true)}
             placeholder="John Smith"
+            className={nameError ? 'border-red-500' : ''}
+            aria-describedby="name-error"
           />
+          {nameError && (
+            <div id="name-error" className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{nameError}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -80,7 +133,7 @@ export function ClientContactStep({ data, updateData }: StepProps) {
           <Input
             id="contactEmail"
             type="email"
-            value={data.contactEmail}
+            value={data.contactEmail || ''}
             onChange={(e) => {
               updateData({ contactEmail: e.target.value });
               if (!hasInteractedWithEmail && e.target.value) {
@@ -104,10 +157,24 @@ export function ClientContactStep({ data, updateData }: StepProps) {
           <Label htmlFor="contactRole">Role/Title</Label>
           <Input
             id="contactRole"
-            value={data.contactRole}
-            onChange={(e) => updateData({ contactRole: e.target.value })}
+            value={data.contactRole || ''}
+            onChange={(e) => {
+              updateData({ contactRole: e.target.value });
+              if (!hasInteractedWithRole && e.target.value) {
+                setHasInteractedWithRole(true);
+              }
+            }}
+            onBlur={() => setHasInteractedWithRole(true)}
             placeholder="IT Manager"
+            className={roleError ? 'border-red-500' : ''}
+            aria-describedby="role-error"
           />
+          {roleError && (
+            <div id="role-error" className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{roleError}</span>
+            </div>
+          )}
         </div>
       </div>
 

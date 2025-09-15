@@ -6,6 +6,7 @@ import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
 import { useState, useEffect } from 'react';
 import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
+import { validateCompanyName, validateEmailAddress, validatePhoneNumber, validateAddress } from "server/src/lib/utils/clientFormValidation";
 
 interface ValidationErrors {
   name?: string;
@@ -47,35 +48,36 @@ export default function ProfileSection() {
     const errors: ValidationErrors = {};
     let isValid = true;
 
-    // Required fields
-    if (!profile.name.trim()) {
-      errors.name = 'Company name is required';
+    // Required fields - enterprise validation
+    const nameError = validateCompanyName(profile.name);
+    if (nameError) {
+      errors.name = nameError;
       isValid = false;
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!profile.email.trim()) {
-      errors.email = 'Email is required';
-      isValid = false;
-    } else if (!emailRegex.test(profile.email)) {
-      errors.email = 'Please enter a valid email address';
+    // Email validation - enterprise grade
+    const emailError = validateEmailAddress(profile.email);
+    if (emailError) {
+      errors.email = emailError;
       isValid = false;
     }
 
-    // Phone validation (optional but must be valid if provided)
-    if (profile.phone) {
-      const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-      if (!phoneRegex.test(profile.phone)) {
-        errors.phone = 'Please enter a valid phone number';
+    // Phone validation - enterprise grade (optional but must be valid if provided)
+    if (profile.phone && profile.phone.trim()) {
+      const phoneError = validatePhoneNumber(profile.phone);
+      if (phoneError) {
+        errors.phone = phoneError;
         isValid = false;
       }
     }
 
-    // Address validation (optional but must be non-empty if provided)
-    if (profile.address && !profile.address.trim()) {
-      errors.address = 'Address cannot be empty if provided';
-      isValid = false;
+    // Address validation - enterprise grade (optional but must be valid if provided)
+    if (profile.address && profile.address.trim()) {
+      const addressError = validateAddress(profile.address);
+      if (addressError) {
+        errors.address = addressError;
+        isValid = false;
+      }
     }
 
     setValidationErrors(errors);
