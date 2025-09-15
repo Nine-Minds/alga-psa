@@ -245,67 +245,72 @@ export function validatePhoneNumber(phone: string): string | null {
     return null; // Don't show error until user types more
   }
   
-  // Remove formatting to count actual digits
-  const digitsOnly = trimmedPhone.replace(/[\s\-\(\)\+\.]/g, '');
-  
+  // Extract Unicode digits (supports international number systems)
+  const unicodeDigits = trimmedPhone.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+  const digitCount = unicodeDigits.length;
+
   // If only 1-3 digits (like just country code), don't show error yet
-  if (digitsOnly.length < 4) {
+  if (digitCount < 4) {
     return null; // Wait for more input
   }
-  
-  // No emojis or letters
+
+  // No emojis
   if (EMOJI_REGEX.test(trimmedPhone)) {
     return 'Phone number cannot contain emojis';
   }
-  
-  // Allow only digits with formatting (spaces, dashes, parentheses)
-  if (!/^\+?[\d\s\-\(\)\.]+$/.test(trimmedPhone)) {
+
+  // Allow Unicode digits with international formatting
+  if (!/^[\+\p{N}\s\-\(\)\.]+$/u.test(trimmedPhone)) {
     return 'Phone number can only contain numbers and formatting characters';
   }
-  
-  // Must be 7-15 digits (international standard) - but only after user has typed enough
-  if (digitsOnly.length >= 4 && digitsOnly.length < 7) {
+
+  // Must be 7-15 digits (ITU-T E.164 international standard)
+  if (digitCount >= 4 && digitCount < 7) {
     return 'Please enter a complete phone number';
   }
-  
-  if (digitsOnly.length > 15) {
+
+  if (digitCount > 15) {
     return 'Phone number is too long';
   }
-  
+
   // Only validate patterns if we have a reasonable length
-  if (digitsOnly.length >= 7) {
+  if (digitCount >= 7) {
+    const unicodeDigitString = unicodeDigits.join('');
+
     // Reject obvious fakes - same digits repeated
-    if (/^(\d)\1+$/.test(digitsOnly)) {
+    if (/^(.)\1+$/u.test(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Reject sequential patterns (like professional platforms do)
+
+    // Reject sequential patterns (supports Unicode digits)
     const isSequential = (str: string): boolean => {
       for (let i = 0; i < str.length - 2; i++) {
         const current = parseInt(str[i]);
         const next1 = parseInt(str[i + 1]);
         const next2 = parseInt(str[i + 2]);
-        
+
         // Check for ascending sequence (123, 234, etc.)
-        if (next1 === current + 1 && next2 === current + 2) {
-          return true;
-        }
-        
-        // Check for descending sequence (321, 210, etc.)
-        if (next1 === current - 1 && next2 === current - 2) {
-          return true;
+        if (!isNaN(current) && !isNaN(next1) && !isNaN(next2)) {
+          if (next1 === current + 1 && next2 === current + 2) {
+            return true;
+          }
+
+          // Check for descending sequence (321, 210, etc.)
+          if (next1 === current - 1 && next2 === current - 2) {
+            return true;
+          }
         }
       }
       return false;
     };
-    
-    if (isSequential(digitsOnly)) {
+
+    if (isSequential(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Block common test numbers
+
+    // Block common test numbers (convert to regular digits for comparison)
     const testNumbers = ['1234567890', '0123456789', '1111111111', '0000000000', '5555555555'];
-    if (testNumbers.includes(digitsOnly)) {
+    if (testNumbers.includes(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
   }
@@ -336,11 +341,11 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
     case 'US':
       // US ZIP codes: 12345 or 12345-6789
       if (!/^\d{5}(-\d{4})?$/.test(trimmedCode)) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
       }
       // Block obvious fake ZIP codes
       if (trimmedCode === '00000' || trimmedCode === '99999' || trimmedCode.startsWith('00000')) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code';
       }
       break;
       
