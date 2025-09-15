@@ -4,7 +4,9 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
-import { getSecretProviderInstance } from '@alga-psa/shared/core';
+// Use a direct path to the shared secret provider implementation to avoid relying on package exports
+// during CI/setup where the shared package may not be built yet.
+import { getSecretProviderInstance } from '../../shared/core/secretProvider.js';
 
 // Enable long stack traces for async operations
 Error.stackTraceLimit = 50;
