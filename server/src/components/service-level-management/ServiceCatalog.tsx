@@ -175,7 +175,7 @@ export function ServiceCatalog() {
                   <span className="text-gray-600">SLA Targets:</span>
                   <div className="text-right">
                     {service.availability_target && (
-                      <div>Uptime: {(service.availability_target * 100).toFixed(2)}%</div>
+                      <div>Uptime: {((service.availability_target || 0) * 100).toFixed(2)}%</div>
                     )}
                     {service.response_time_target && (
                       <div>Response: {service.response_time_target}ms</div>
@@ -238,7 +238,7 @@ export function ServiceCatalog() {
         </div>
       )}
 
-      {services.length === 0 && !loading && (
+      {Array.isArray(services) && services.length === 0 && !loading && (
         <div className="text-center py-12">
           <div className="text-gray-400 mb-4">
             <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -266,24 +266,24 @@ export function ServiceCatalog() {
         <h3 className="text-lg font-medium text-gray-900 mb-4">Service Statistics</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-2xl font-bold text-blue-600">{services.length}</div>
+            <div className="text-2xl font-bold text-blue-600">{Array.isArray(services) ? services.length : 0}</div>
             <div className="text-sm text-gray-600">Total Services</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-green-600">
-              {services.filter(s => s.status === 'active').length}
+              {Array.isArray(services) ? services.filter(s => s.status === 'active').length : 0}
             </div>
             <div className="text-sm text-gray-600">Active Services</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-red-600">
-              {services.filter(s => s.business_criticality === 'critical').length}
+              {Array.isArray(services) ? services.filter(s => s.business_criticality === 'critical').length : 0}
             </div>
             <div className="text-sm text-gray-600">Critical Services</div>
           </div>
           <div>
             <div className="text-2xl font-bold text-purple-600">
-              {services.filter(s => s.dependencies && s.dependencies.length > 0).length}
+              {Array.isArray(services) ? services.filter(s => s.dependencies && s.dependencies.length > 0).length : 0}
             </div>
             <div className="text-sm text-gray-600">With Dependencies</div>
           </div>

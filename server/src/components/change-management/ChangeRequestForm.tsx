@@ -58,8 +58,8 @@ export function ChangeRequestForm({
     defaultValues: {
       change_type: (initialData?.change_type as 'standard' | 'normal' | 'emergency') || 'normal',
       priority: (initialData as any)?.priority || 3,
-      business_impact: (initialData as any)?.business_impact as 'low' | 'medium' | 'high' || 'medium',
-      technical_impact: (initialData as any)?.technical_impact as 'low' | 'medium' | 'high' || 'medium',
+      business_impact: (['low', 'medium', 'high'].includes((initialData as any)?.business_impact) ? (initialData as any)?.business_impact : 'medium') as 'low' | 'medium' | 'high',
+      technical_impact: (['low', 'medium', 'high'].includes((initialData as any)?.technical_impact) ? (initialData as any)?.technical_impact : 'medium') as 'low' | 'medium' | 'high',
       estimated_duration: (initialData as any)?.estimated_duration || 2,
       affected_services: (initialData as any)?.affected_services || [],
       dependencies: (initialData as any)?.dependencies || [],
@@ -121,13 +121,15 @@ export function ChangeRequestForm({
       const formData = watch();
       
       // Simplified risk assessment logic
+      const technicalRisk = calculateTechnicalRisk(formData);
+      const businessRisk = calculateBusinessRisk(formData);
+      const overallRisk = calculateOverallRisk(technicalRisk, businessRisk) as 'low' | 'medium' | 'high';
+
       const assessment = {
-        technicalRisk: calculateTechnicalRisk(formData),
-        businessRisk: calculateBusinessRisk(formData),
-        overallRisk: 'medium' as const
+        technicalRisk,
+        businessRisk,
+        overallRisk
       };
-      
-      assessment.overallRisk = calculateOverallRisk(assessment.technicalRisk, assessment.businessRisk);
       setRiskAssessment(assessment);
       
       // Auto-update priority based on risk
@@ -195,7 +197,7 @@ export function ChangeRequestForm({
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(handleFormSubmit as any)} className="space-y-6">
         {/* Basic Information */}
         <div className="bg-gray-50 p-4 rounded-lg">
           <h3 className="text-lg font-semibold mb-4">Basic Information</h3>

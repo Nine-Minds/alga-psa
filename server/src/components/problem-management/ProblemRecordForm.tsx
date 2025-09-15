@@ -345,7 +345,7 @@ export function ProblemRecordForm({
                 control={control}
                 render={({ field: { onChange, value } }) => (
                   <div className="space-y-2">
-                    {availableServices.map((service) => (
+                    {availableServices && availableServices.map((service) => (
                       <label key={service} className="flex items-center">
                         <input
                           type="checkbox"

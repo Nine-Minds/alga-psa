@@ -88,7 +88,7 @@ export function CMDBDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total CIs</p>
-                <p className="text-2xl font-bold text-gray-900">{metrics.inventory.total_cis}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.inventory?.total_cis || 0}</p>
               </div>
             </div>
           </div>
@@ -102,7 +102,7 @@ export function CMDBDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Relationships</p>
-                <p className="text-2xl font-bold text-gray-900">{metrics.relationships.total_relationships}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.relationships?.total_relationships || 0}</p>
               </div>
             </div>
           </div>
@@ -116,7 +116,7 @@ export function CMDBDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Data Quality</p>
-                <p className="text-2xl font-bold text-gray-900">{metrics.quality.completeness_score}%</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.quality?.completeness_score || 0}%</p>
               </div>
             </div>
           </div>
@@ -130,7 +130,7 @@ export function CMDBDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Orphaned CIs</p>
-                <p className="text-2xl font-bold text-gray-900">{metrics.relationships.orphaned_cis}</p>
+                <p className="text-2xl font-bold text-gray-900">{metrics.relationships?.orphaned_cis || 0}</p>
               </div>
             </div>
           </div>
@@ -146,14 +146,14 @@ export function CMDBDashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-3">
-                {metrics && Object.entries(metrics.inventory.by_type).map(([type, count]) => (
+                {metrics && metrics.inventory && Object.entries(metrics.inventory.by_type).map(([type, count]) => (
                   <div key={type} className="flex justify-between items-center">
                     <span className="text-sm text-gray-700 capitalize">{type.replace('_', ' ')}</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-32 bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-blue-500 h-2 rounded-full"
-                          style={{ width: `${(count / metrics.inventory.total_cis) * 100}%` }}
+                          style={{ width: `${(count / (metrics.inventory?.total_cis || 1)) * 100}%` }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-900 w-8 text-right">{count}</span>
@@ -170,7 +170,7 @@ export function CMDBDashboard() {
             </div>
             <div className="p-6">
               <div className="space-y-3">
-                {metrics && Object.entries(metrics.inventory.by_status).map(([status, count]) => (
+                {metrics && metrics.inventory && Object.entries(metrics.inventory.by_status).map(([status, count]) => (
                   <div key={status} className="flex justify-between items-center">
                     <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(status)}`}>
                       {status.replace('_', ' ')}
@@ -179,7 +179,7 @@ export function CMDBDashboard() {
                       <div className="w-32 bg-gray-200 rounded-full h-2">
                         <div 
                           className="bg-green-500 h-2 rounded-full"
-                          style={{ width: `${(count / metrics.inventory.total_cis) * 100}%` }}
+                          style={{ width: `${(count / (metrics.inventory?.total_cis || 1)) * 100}%` }}
                         ></div>
                       </div>
                       <span className="text-sm font-medium text-gray-900 w-8 text-right">{count}</span>

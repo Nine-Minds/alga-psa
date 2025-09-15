@@ -545,15 +545,15 @@ export class ServiceCatalogService {
     try {
       // Check for duplicate service codes within tenant
       if (serviceData.service_code && serviceData.tenant) {
-        const existingService = await this.knex('services')
+        let existingServiceQuery = this.knex('services')
           .where('tenant', serviceData.tenant)
           .where('service_code', serviceData.service_code);
 
         if (serviceData.service_id) {
-          existingService.whereNot('service_id', serviceData.service_id);
+          existingServiceQuery = existingServiceQuery.whereNot('service_id', serviceData.service_id);
         }
 
-        const duplicate = await existingService.first();
+        const duplicate = await existingServiceQuery.first();
         if (duplicate) {
           violations.push(`Service code '${serviceData.service_code}' already exists`);
         }

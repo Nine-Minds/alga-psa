@@ -101,8 +101,8 @@ export function ChangeCalendar({
     return end;
   };
 
-  const getDaysInCalendar = () => {
-    const days = [];
+  const getDaysInCalendar = (): Date[] => {
+    const days: Date[] = [];
     const start = getCalendarStartDate();
     const end = getCalendarEndDate();
     
@@ -116,7 +116,7 @@ export function ChangeCalendar({
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
+    return (events || []).filter(event => {
       const eventDate = new Date(event.start);
       return eventDate.toDateString() === date.toDateString();
     });
@@ -282,7 +282,7 @@ export function ChangeCalendar({
             ))}
 
             {/* Calendar days */}
-            {getDaysInCalendar().map(date => {
+            {getDaysInCalendar().map((date: Date) => {
               const dayEvents = getEventsForDate(date);
               const isCurrentDay = isToday(date);
               const isSelectedDay = isSelected(date);
