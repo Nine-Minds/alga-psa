@@ -6,7 +6,8 @@ import fs from 'fs';
 import path from 'path';
 // Use a direct path to the shared secret provider implementation to avoid relying on package exports
 // during CI/setup where the shared package may not be built yet.
-import { getSecretProviderInstance } from '../../shared/core/secretProvider.js';
+// Do NOT statically import shared code here. This script runs before the monorepo is built in CI.
+// We'll attempt dynamic imports, but always fall back to env vars or Docker secrets files.
 
 // Enable long stack traces for async operations
 Error.stackTraceLimit = 50;
@@ -18,24 +19,55 @@ const LOCAL_SECRETS_PATH = '../secrets';
 const SECRETS_PATH = fs.existsSync(DOCKER_SECRETS_PATH) ? DOCKER_SECRETS_PATH : LOCAL_SECRETS_PATH;
 
 async function getSecret(secretName, envVar, defaultValue = '') {
+  // 1) Try dynamic import of shared secret provider (package path first, then monorepo path)
   try {
-    const secretProvider = await getSecretProviderInstance();
-    const secret = await secretProvider.getAppSecret(secretName);
-    if (secret) {
-      console.log(`Successfully read secret '${secretName}' from secret provider`);
-      return secret;
+    let spiFactory = null;
+    try {
+      const mod = await import('@alga-psa/shared/core');
+      spiFactory = mod?.getSecretProviderInstance;
+    } catch {}
+    if (!spiFactory) {
+      try {
+        const mod2 = await import('../../shared/core/secretProvider.js');
+        spiFactory = mod2?.getSecretProviderInstance;
+      } catch {}
+    }
+    if (typeof spiFactory === 'function') {
+      const secretProvider = await spiFactory();
+      const secret = await secretProvider.getAppSecret(secretName);
+      if (secret) {
+        console.log(`Successfully read secret '${secretName}' from secret provider`);
+        return secret;
+      }
     }
   } catch (error) {
-    console.warn(`Failed to read secret '${secretName}' from secret provider:`, error.message);
+    console.warn(`Failed to read secret '${secretName}' from secret provider:`, error?.message || String(error));
   }
-  
-  // Fallback to environment variable
+
+  // 2) Try Docker/Kubernetes secrets files
+  try {
+    const candidates = [
+      path.join(SECRETS_PATH, secretName),
+      path.join(SECRETS_PATH, envVar),
+    ];
+    for (const p of candidates) {
+      if (fs.existsSync(p)) {
+        const v = fs.readFileSync(p, 'utf8').trim();
+        if (v) {
+          console.warn(`Using value from secrets file '${p}' for '${secretName}'`);
+          return v;
+        }
+      }
+    }
+  } catch {}
+
+  // 3) Fallback to environment variable
   if (process.env[envVar]) {
     console.warn(`Using ${envVar} environment variable instead of secret provider`);
     return process.env[envVar] || defaultValue;
   }
-  
-  console.warn(`Neither secret provider nor ${envVar} environment variable found, using default value`);
+
+  console.warn(`Neither secret provider, secrets file, nor ${envVar} environment variable found, using default value`);
   return defaultValue;
 }
 
