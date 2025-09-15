@@ -15,6 +15,12 @@ interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'id'> {
   className?: string;
   /** Additional class names for the container div */
   containerClassName?: string;
+  /** Error message to display */
+  error?: string;
+  /** Array of error messages to display */
+  errors?: string[];
+  /** Whether the field has an error state */
+  hasError?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
@@ -28,6 +34,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
     value, 
     disabled, 
     onChange,
+    error,
+    errors,
+    hasError,
     "data-automation-type": dataAutomationType = 'input',
     "data-automation-id": dataAutomationId,
     ...props 
@@ -115,10 +124,13 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
       }
     };
 
+    const displayErrors = errors || (error ? [error] : []);
+    const hasErrorState = hasError || displayErrors.length > 0;
+    
     return (
       <div className={containerClassName !== undefined ? containerClassName : "mb-0"}>
         {label && (
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className={`block text-sm font-medium mb-1 ${hasErrorState ? 'text-red-700' : 'text-gray-700'}`}>
             {label}
           </label>
         )}
@@ -128,7 +140,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
             inputRef.current = element;
             handleRef(element);
           }}
-          className={`w-full px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent placeholder:text-gray-400 ${className}`}
+          className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 ${
+            hasErrorState 
+              ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50' 
+              : 'border-[rgb(var(--color-border-400))] focus:ring-purple-500 focus:border-transparent'
+          } ${className}`}
           value={value}
           disabled={disabled}
           required={required}
@@ -137,6 +153,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
           onCompositionEnd={handleCompositionEnd}
           {...props}
         />
+        {displayErrors.length > 0 && (
+          <div className="mt-1">
+            {displayErrors.map((errorMsg, index) => (
+              <p key={index} className="text-sm text-red-600">
+                {errorMsg}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
     );
   }
