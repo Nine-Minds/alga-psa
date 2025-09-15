@@ -148,7 +148,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     manualSorting = false,
     sortBy,
     sortDirection,
-    onSortChange
+    onSortChange,
+    rowClassName
   } = props;
   
   // Reference to the table container for measuring available width
@@ -496,6 +497,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               {table.getPaginationRowModel().rows.map((row, rowIndex): JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
+                const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
                 return (
                   <tr
                     key={`row_${rowId}`}
@@ -503,6 +505,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     className={`
                     ${rowIndex % 2 === 0 ? 'bg-gray-50' : 'bg-white'}
                     hover:bg-blue-50 transition-colors cursor-pointer
+                    ${extraRowClass}
                   `}
                   >
                     {row.getVisibleCells().map((cell, cellIndex): JSX.Element => {
