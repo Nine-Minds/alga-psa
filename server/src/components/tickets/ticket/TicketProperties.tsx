@@ -27,6 +27,7 @@ import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/li
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
 import { utcToLocal, formatDateTime, getUserTimeZone } from 'server/src/lib/utils/dateTimeUtils';
 import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
+import { ItilFields } from '../ItilFields';
 
 interface TicketPropertiesProps {
   id?: string;
@@ -69,6 +70,7 @@ interface TicketPropertiesProps {
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  onItilFieldChange?: (field: string, value: any) => void;
 }
 
 // Helper function to format location display
@@ -139,6 +141,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   tags = [],
   allTagTexts = [],
   onTagsChange,
+  onItilFieldChange,
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -739,6 +742,25 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* ITIL Classification Section */}
+      <div className={`${styles['card']} p-6 space-y-4`}>
+        <h2 className={`${styles['panel-header']}`}>ITIL Classification</h2>
+        <ItilFields
+          values={{
+            itil_impact: ticket.itil_impact,
+            itil_urgency: ticket.itil_urgency,
+            itil_category: ticket.itil_category,
+            itil_subcategory: ticket.itil_subcategory,
+            resolution_code: ticket.resolution_code,
+            root_cause: ticket.root_cause,
+            workaround: ticket.workaround
+          }}
+          onChange={onItilFieldChange || (() => {})}
+          readOnly={!onItilFieldChange}
+          showResolutionFields={ticket.closed_at !== null}
+        />
       </div>
 
     </div>
