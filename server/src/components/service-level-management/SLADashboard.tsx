@@ -93,15 +93,15 @@ export function SLADashboard() {
     switch (metric.metric_type) {
       case 'response_time':
       case 'resolution_time':
-        return `${metric.average_value}ms`;
+        return `${metric.average_value || 0}ms`;
       case 'availability':
       case 'customer_satisfaction':
-        return `${(metric.average_value * 100).toFixed(2)}%`;
+        return `${((metric.average_value || 0) * 100).toFixed(2)}%`;
       case 'incident_count':
       case 'change_success_rate':
-        return metric.average_value.toString();
+        return (metric.average_value || 0).toString();
       default:
-        return metric.average_value.toString();
+        return (metric.average_value || 0).toString();
     }
   };
 
@@ -151,7 +151,7 @@ export function SLADashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total SLAs</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total_slas}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total_slas || 0}</p>
               </div>
             </div>
           </div>
@@ -165,7 +165,7 @@ export function SLADashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Active SLAs</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.active_slas}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.active_slas || 0}</p>
               </div>
             </div>
           </div>
@@ -179,7 +179,7 @@ export function SLADashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Breached SLAs</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.breached_slas}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.breached_slas || 0}</p>
               </div>
             </div>
           </div>
@@ -188,15 +188,15 @@ export function SLADashboard() {
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  stats.avg_compliance >= 99 ? 'bg-green-500' :
-                  stats.avg_compliance >= 95 ? 'bg-yellow-500' : 'bg-red-500'
+                  (stats.avg_compliance || 0) >= 99 ? 'bg-green-500' :
+                  (stats.avg_compliance || 0) >= 95 ? 'bg-yellow-500' : 'bg-red-500'
                 }`}>
                   <span className="text-white text-sm font-medium">%</span>
                 </div>
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avg Compliance</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.avg_compliance.toFixed(1)}%</p>
+                <p className="text-2xl font-bold text-gray-900">{(stats.avg_compliance || 0).toFixed(1)}%</p>
               </div>
             </div>
           </div>
@@ -204,13 +204,13 @@ export function SLADashboard() {
       )}
 
       {/* SLA Performance Grid */}
-      {stats && Object.keys(stats.sla_performance).length > 0 && (
+      {stats && stats.sla_performance && Object.keys(stats.sla_performance).length > 0 && (
         <div className="bg-white rounded-lg shadow border mb-6">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-medium text-gray-900">SLA Performance Overview</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-            {stats && Object.entries(stats.sla_performance).map(([slaId, performance]) => (
+            {stats && stats.sla_performance && Object.entries(stats.sla_performance).map(([slaId, performance]) => (
               <div key={slaId} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start mb-3">
                   <h4 className="font-medium text-gray-900 truncate">{performance.name}</h4>
@@ -222,8 +222,8 @@ export function SLADashboard() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-gray-600">Compliance</span>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded ${getComplianceColor(performance.compliance_percentage)}`}>
-                      {performance.compliance_percentage.toFixed(1)}%
+                    <span className={`px-2 py-1 text-xs font-semibold rounded ${getComplianceColor(performance.compliance_percentage || 0)}`}>
+                      {(performance.compliance_percentage || 0).toFixed(1)}%
                     </span>
                   </div>
                   

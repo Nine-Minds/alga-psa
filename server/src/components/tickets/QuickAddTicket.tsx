@@ -26,6 +26,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { ItilFields } from './ItilFields';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
@@ -108,6 +109,15 @@ export function QuickAddTicket({
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
   const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+
+  // ITIL-specific state
+  const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
+  const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
+  const [itilCategory, setItilCategory] = useState<string>('');
+  const [itilSubcategory, setItilSubcategory] = useState<string>('');
+  const [resolutionCode, setResolutionCode] = useState<string>('');
+  const [rootCause, setRootCause] = useState<string>('');
+  const [workaround, setWorkaround] = useState<string>('');
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -300,6 +310,14 @@ export function QuickAddTicket({
       setSelectedCompanyType(null);
     }
     setSelectedCategories([]);
+    // Reset ITIL fields
+    setItilImpact(undefined);
+    setItilUrgency(undefined);
+    setItilCategory('');
+    setItilSubcategory('');
+    setResolutionCode('');
+    setRootCause('');
+    setWorkaround('');
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -369,6 +387,29 @@ export function QuickAddTicket({
             formData.append('category_id', category.category_id);
           }
         }
+      }
+
+      // Add ITIL fields if provided
+      if (itilImpact) {
+        formData.append('itil_impact', itilImpact.toString());
+      }
+      if (itilUrgency) {
+        formData.append('itil_urgency', itilUrgency.toString());
+      }
+      if (itilCategory) {
+        formData.append('itil_category', itilCategory);
+      }
+      if (itilSubcategory) {
+        formData.append('itil_subcategory', itilSubcategory);
+      }
+      if (resolutionCode) {
+        formData.append('resolution_code', resolutionCode);
+      }
+      if (rootCause) {
+        formData.append('root_cause', rootCause);
+      }
+      if (workaround) {
+        formData.append('workaround', workaround);
       }
 
       const newTicket = await addTicket(formData, user);

@@ -352,7 +352,27 @@ export class SLAMonitoringService {
         'services.service_name'
       );
 
-      const slaDetails = [];
+      const slaDetails: Array<{
+        slaId: string;
+        slaName: string;
+        serviceName: string;
+        compliance: number;
+        availability: {
+          actual: number;
+          target: number;
+          compliant: boolean;
+        };
+        responseTime: {
+          actual: number;
+          target: number;
+          compliant: boolean;
+        };
+        resolutionTime: {
+          compliant: boolean;
+          breaches: number;
+        };
+        breaches: ISLABreach[];
+      }> = [];
       let totalBreaches = 0;
       let compliantCount = 0;
 

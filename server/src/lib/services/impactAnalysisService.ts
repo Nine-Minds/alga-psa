@@ -1,6 +1,6 @@
 import { IImpactAnalysis, IConfigurationItem, ICIRelationship } from '../../interfaces/cmdb.interfaces';
 import { IChangeRequest } from '../../interfaces/change.interfaces';
-import knex from '../db';
+import { knex } from '../db';
 import { CMDBService } from './cmdbService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,7 +8,7 @@ export class ImpactAnalysisService {
   private cmdbService: CMDBService;
 
   constructor() {
-    this.cmdbService = new CMDBService();
+    this.cmdbService = new CMDBService(knex);
   }
 
   async analyzeChangeImpact(
@@ -23,7 +23,7 @@ export class ImpactAnalysisService {
     
     const analysis: IImpactAnalysis = {
       analysis_id: uuidv4(),
-      tenant: changeRequest.tenant,
+      tenant: changeRequest.tenant || '',
       trigger_type: 'change_request',
       trigger_id: changeRequestId,
       source_ci_ids: sourceCIIds,
@@ -54,7 +54,7 @@ export class ImpactAnalysisService {
           sourceCIId,
           analysisDirection,
           maxDepth,
-          changeRequest.tenant
+          changeRequest.tenant || ''
         );
         
         for (const impactedCI of impactedCIs) {
@@ -173,13 +173,13 @@ export class ImpactAnalysisService {
     const impactedCIs: any[] = [];
     
     let relationshipsQuery = knex('ci_relationships as cr')
-      .join('configuration_items as ci', function() {
+      .join('configuration_items as ci', function(this: any) {
         this.on('ci.ci_id', 'cr.target_ci_id')
             .orOn('ci.ci_id', 'cr.source_ci_id');
       })
       .where('cr.tenant', tenant)
       .where('cr.status', 'active')
-      .where(function() {
+      .where(function(this: any) {
         if (direction === 'downstream' || direction === 'both') {
           this.where('cr.source_ci_id', sourceCIId);
         }
@@ -397,7 +397,12 @@ export class ImpactAnalysisService {
   }
 
   private async generateRecommendations(analysis: IImpactAnalysis, changeRequest: IChangeRequest): Promise<void> {
-    const recommendations = [];
+    const recommendations: Array<{
+      type: 'preparation' | 'communication' | 'mitigation';
+      priority: 'high' | 'medium' | 'low';
+      description: string;
+      actions: string[];
+    }> = [];
     
     if (analysis.critical_impact_count > 0) {
       recommendations.push({
@@ -458,7 +463,12 @@ export class ImpactAnalysisService {
   }
 
   private async generateIncidentRecommendations(analysis: IImpactAnalysis, incident: any): Promise<void> {
-    const recommendations = [];
+    const recommendations: Array<{
+      type: 'preparation' | 'communication' | 'mitigation';
+      priority: 'high' | 'medium' | 'low';
+      description: string;
+      actions: string[];
+    }> = [];
     
     if (analysis.critical_impact_count > 0) {
       recommendations.push({
@@ -559,7 +569,7 @@ export class ImpactAnalysisService {
       .where('trigger_id', trigger_id)
       .orderBy('analysis_date', 'desc');
 
-    return results.map(result => ({
+    return results.map((result: any) => ({
       ...result,
       source_ci_ids: JSON.parse(result.source_ci_ids),
       impacted_cis: JSON.parse(result.impacted_cis),

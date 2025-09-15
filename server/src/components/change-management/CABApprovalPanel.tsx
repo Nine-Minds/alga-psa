@@ -328,7 +328,7 @@ export function CABApprovalPanel({
         <h3 className="text-lg font-medium text-gray-900 mb-4">CAB Members</h3>
         
         <div className="space-y-3">
-          {meeting.members.map(member => (
+          {meeting.members && meeting.members.map(member => (
             <div key={member.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="text-lg">

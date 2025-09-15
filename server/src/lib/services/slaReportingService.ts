@@ -365,7 +365,11 @@ export class SLAReportingService {
         .where('status', 'live')
         .select('*');
 
-      const scorecards = [];
+      const scorecards: Array<{
+        serviceId: string;
+        serviceName: string;
+        scorecard: any;
+      }> = [];
 
       for (const service of services) {
         const scorecard = await this.calculateServiceScorecard(service.service_id, timeframe);

@@ -178,7 +178,7 @@ export function ProblemDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Problems</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.total_problems}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.total_problems || 0}</p>
               </div>
             </div>
           </div>
@@ -192,7 +192,7 @@ export function ProblemDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Resolved</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.by_status.resolved || 0}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.by_status?.resolved || 0}</p>
               </div>
             </div>
           </div>
@@ -206,7 +206,7 @@ export function ProblemDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Avg Resolution Time</p>
-                <p className="text-2xl font-bold text-gray-900">{formatDuration(stats.avg_resolution_time)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatDuration(stats.avg_resolution_time || 0)}</p>
               </div>
             </div>
           </div>
@@ -220,7 +220,7 @@ export function ProblemDashboard() {
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">KEDB Articles</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.kedb_articles_created}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.kedb_articles_created || 0}</p>
               </div>
             </div>
           </div>
@@ -343,10 +343,10 @@ export function ProblemDashboard() {
                     <td className="px-6 py-4">
                       <div>
                         <div className="text-sm font-medium text-gray-900">
-                          {problem.problem_summary}
+                          {problem.title}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {problem.problem_category} - {problem.problem_subcategory}
+                          {problem.category_id} - {problem.subcategory_id}
                         </div>
                       </div>
                     </td>
@@ -360,13 +360,13 @@ export function ProblemDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(problem.priority)}`}>
-                        P{problem.priority}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(problem.priority_id)}`}>
+                        P{problem.priority_id}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(problem.status)}`}>
-                        {problem.status.replace('_', ' ')}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(problem.status_id)}`}>
+                        {problem.status_id.replace('_', ' ')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

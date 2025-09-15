@@ -38,7 +38,12 @@ export default function ChangesPage() {
       case 'calendar':
         return <ChangeCalendar tenant="" />;
       case 'approvals':
-        return <CABApprovalPanel changeRequest={null} currentUserId="" userRole="" />;
+        return (
+          <div className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Change Approval Board</h2>
+            <p className="text-gray-600">Select a change request to review approvals.</p>
+          </div>
+        );
       default:
         return (
           <div className="p-6">

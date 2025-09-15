@@ -298,7 +298,7 @@ export class ProblemIncidentService {
           })
           .limit(5);
 
-        potentialProblems.push(...categoryProblems.map(p => ({
+        potentialProblems.push(...categoryProblems.map((p: any) => ({
           ...p,
           match_reason: 'Same category',
           confidence: 0.7
@@ -330,7 +330,7 @@ export class ProblemIncidentService {
           })
           .limit(5);
 
-        potentialProblems.push(...keywordProblems.map(p => ({
+        potentialProblems.push(...keywordProblems.map((p: any) => ({
           ...p,
           match_reason: 'Similar keywords',
           confidence: 0.6
@@ -370,10 +370,10 @@ export class ProblemIncidentService {
       }
 
       // Remove duplicates and sort by confidence
-      const uniqueProblems = potentialProblems.reduce((acc, current) => {
-        const existing = acc.find(p => p.problem_id === current.problem_id);
+      const uniqueProblems = potentialProblems.reduce((acc: any[], current: any) => {
+        const existing = acc.find((p: any) => p.problem_id === current.problem_id);
         if (!existing || current.confidence > existing.confidence) {
-          return [...acc.filter(p => p.problem_id !== current.problem_id), current];
+          return [...acc.filter((p: any) => p.problem_id !== current.problem_id), current];
         }
         return acc;
       }, [] as any[]);
