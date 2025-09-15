@@ -33,7 +33,14 @@ import {
   UserCircle,
   Shield,
   HelpCircle,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Search,
+  GitBranch,
+  Target,
+  Database,
+  Network,
+  AlertTriangle,
+  RefreshCw
 } from 'lucide-react';
 
 export interface MenuItem {
@@ -187,6 +194,37 @@ export const menuItems: MenuItem[] = [
         name: 'Logs & History',
         icon: Clock,
         href: '/msp/automation-hub?tab=logs-history'
+      }
+    ]
+  },
+  {
+    name: 'ITIL Management',
+    icon: Target,
+    subItems: [
+      {
+        name: 'Problem Management',
+        icon: AlertTriangle,
+        href: '/msp/itil/problems'
+      },
+      {
+        name: 'Change Management',
+        icon: RefreshCw,
+        href: '/msp/itil/changes'
+      },
+      {
+        name: 'Service Level Management',
+        icon: BarChart3,
+        href: '/msp/itil/service-levels'
+      },
+      {
+        name: 'Configuration Management',
+        icon: Database,
+        href: '/msp/itil/cmdb'
+      },
+      {
+        name: 'Service Catalog',
+        icon: Package,
+        href: '/msp/itil/service-catalog'
       }
     ]
   },

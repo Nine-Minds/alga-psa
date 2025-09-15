@@ -26,6 +26,21 @@ export interface ITicket extends TenantEntity, ITaggable {
   priority_id: string;
   estimated_hours?: number;
   location?: ICompanyLocation; // For populated location data
+  // ITIL-specific fields
+  itil_impact?: number; // 1-5 scale (1 = High, 5 = Low)
+  itil_urgency?: number; // 1-5 scale (1 = High, 5 = Low)
+  itil_category?: string; // ITIL incident category
+  itil_subcategory?: string; // ITIL incident subcategory
+  resolution_code?: string; // How the incident was resolved
+  root_cause?: string; // Root cause analysis
+  workaround?: string; // Temporary workaround if any
+  related_problem_id?: string; // Link to related problem record
+  sla_target?: string; // Target resolution time based on SLA
+  sla_breach?: boolean; // Whether SLA was breached
+  escalated?: boolean; // Whether ticket was escalated
+  escalation_level?: number; // Current escalation level (1-3)
+  escalated_at?: string | null; // When escalation occurred
+  escalated_by?: string | null; // Who escalated the ticket
 }
 
 export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'channel_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {

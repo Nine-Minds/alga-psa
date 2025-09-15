@@ -12,6 +12,16 @@ export const ticketFormSchema = z.object({
     description: z.string(),
     category_id: z.string().uuid().nullable(),
     subcategory_id: z.string().uuid().nullable(),
+    // ITIL-specific fields
+    itil_impact: z.number().int().min(1).max(5).optional(),
+    itil_urgency: z.number().int().min(1).max(5).optional(),
+    itil_category: z.string().optional(),
+    itil_subcategory: z.string().optional(),
+    resolution_code: z.string().optional(),
+    root_cause: z.string().optional(),
+    workaround: z.string().optional(),
+    related_problem_id: z.string().uuid().nullable().optional(),
+    sla_target: z.string().optional(),
 });
 
 export const createTicketFromAssetSchema = z.object({
@@ -43,7 +53,22 @@ export const ticketSchema = z.object({
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
     attributes: z.record(z.unknown()).nullable(),
-    priority_id: z.string().uuid()
+    priority_id: z.string().uuid(),
+    // ITIL-specific fields
+    itil_impact: z.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+    itil_category: z.string().nullable().optional(),
+    itil_subcategory: z.string().nullable().optional(),
+    resolution_code: z.string().nullable().optional(),
+    root_cause: z.string().nullable().optional(),
+    workaround: z.string().nullable().optional(),
+    related_problem_id: z.string().uuid().nullable().optional(),
+    sla_target: z.string().nullable().optional(),
+    sla_breach: z.boolean().nullable().optional(),
+    escalated: z.boolean().nullable().optional(),
+    escalation_level: z.number().int().min(1).max(3).nullable().optional(),
+    escalated_at: z.string().nullable().optional(),
+    escalated_by: z.string().uuid().nullable().optional()
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
