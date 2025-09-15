@@ -66,7 +66,7 @@ interface TicketDetailsProps {
     initialTicket: ITicket & { tenant: string | undefined };
     onClose?: () => void; // Callback when user wants to close the ticket screen
     isInDrawer?: boolean;
-    
+
     // Pre-fetched data props
     initialComments?: IComment[];
     initialDocuments?: any[];
@@ -86,7 +86,10 @@ interface TicketDetailsProps {
     initialCompanies?: ICompany[];
     initialLocations?: ICompanyLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
-    
+
+    // Current user (for drawer usage)
+    currentUser?: IUser | null;
+
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean) => Promise<void>;
@@ -118,6 +121,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialCompanies = [],
     initialLocations = [],
     initialAgentSchedules = [],
+    // Current user (for drawer usage)
+    currentUser,
     // Optimized handlers
     onTicketUpdate,
     onAddComment,
@@ -125,7 +130,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     isSubmitting = false
 }) => {
     const { data: session } = useSession();
-    const userId = session?.user?.id;
+    // Use passed currentUser if available (for drawer), otherwise fallback to session
+    const userId = currentUser?.user_id || session?.user?.id;
     const tenant = initialTicket.tenant;
     if (!tenant) {
         throw new Error('tenant is not defined');
@@ -1230,7 +1236,12 @@ const handleClose = () => {
                                     conversations={conversations}
                                     documents={documents}
                                     userMap={userMap}
-                                    currentUser={session?.user}
+                                    currentUser={currentUser ? {
+                                        id: currentUser.user_id,
+                                        name: `${currentUser.first_name} ${currentUser.last_name}`,
+                                        email: currentUser.email,
+                                        avatarUrl: null
+                                    } : session?.user}
                                     activeTab={activeTab}
                                     isEditing={isEditing}
                                     currentComment={currentComment}

@@ -82,6 +82,7 @@ export function ActivityDetailViewerDrawer({
                 initialCompanies={ticketData.companies}
                 initialLocations={ticketData.locations}
                 initialAgentSchedules={ticketData.agentSchedules}
+                currentUser={currentUser}
                 initialUserMap={ticketData.userMap}
                 initialAvailableAgents={ticketData.availableAgents}
                 onClose={onClose}

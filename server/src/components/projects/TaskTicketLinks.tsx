@@ -383,8 +383,8 @@ export default function TaskTicketLinks({
       }
 
       openDrawer(
-        <TicketDetails 
-          isInDrawer={true} 
+        <TicketDetails
+          isInDrawer={true}
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
           initialChannel={ticketData.channel}
@@ -401,6 +401,7 @@ export default function TaskTicketLinks({
           initialAgentSchedules={ticketData.agentSchedules}
           initialUserMap={ticketData.userMap}
           initialAvailableAgents={ticketData.availableAgents}
+          currentUser={user}
         />
       );
     } catch (error) {
