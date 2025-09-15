@@ -1,9 +1,9 @@
 /// <reference types="node" />
-import { ISecretProvider } from './ISecretProvider';
+import { ISecretProvider } from './ISecretProvider.js';
 // Dynamic import Node-only providers to keep Edge runtime clean
-import { EnvSecretProvider } from './EnvSecretProvider';
-import { CompositeSecretProvider } from './CompositeSecretProvider';
-import logger from './logger';
+import { EnvSecretProvider } from './EnvSecretProvider.js';
+import { CompositeSecretProvider } from './CompositeSecretProvider.js';
+import logger from './logger.js';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
@@ -42,7 +42,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
     
     case 'filesystem':
       if (!filesystemProviderInstance) {
-        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
+        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider.js');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;
@@ -51,7 +51,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
-          const { loadVaultSecretProvider } = await import('./vaultLoader');
+          const { loadVaultSecretProvider } = await import('./vaultLoader.js');
           vaultProviderInstance = await loadVaultSecretProvider();
           logger.info('Using VaultSecretProvider for Node.js runtime');
         } catch (error) {

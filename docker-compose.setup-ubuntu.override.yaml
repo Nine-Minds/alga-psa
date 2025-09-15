@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   setup:
     build:
@@ -53,4 +51,3 @@ services:
       - postgres_password
       - db_password_server
     entrypoint: ["/app/setup/entrypoint.sh"]
-
