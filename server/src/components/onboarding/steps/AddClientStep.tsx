@@ -5,82 +5,100 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { StepProps } from '../types';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { validateCompanyName, validateEmailAddress, validateWebsiteUrl, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
 
 export function AddClientStep({ data, updateData }: StepProps) {
   const isClientCreated = !!data.clientId;
+  const [nameError, setNameError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [hasInteractedWithName, setHasInteractedWithName] = useState(false);
   const [hasInteractedWithEmail, setHasInteractedWithEmail] = useState(false);
   const [hasInteractedWithUrl, setHasInteractedWithUrl] = useState(false);
   const [hasInteractedWithPhone, setHasInteractedWithPhone] = useState(false);
 
-  // Email validation
+  // Company name validation - enterprise grade
   useEffect(() => {
-    if (!hasInteractedWithEmail || !data.clientEmail) {
+    if (!hasInteractedWithName) {
+      setNameError(null);
+      return;
+    }
+
+    const error = validateCompanyName(data.clientName || '');
+    setNameError(error);
+  }, [data.clientName, hasInteractedWithName]);
+
+  // Email validation - enterprise grade
+  useEffect(() => {
+    if (!hasInteractedWithEmail) {
       setEmailError(null);
       return;
     }
 
-    const email = data.clientEmail.trim();
-    if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        setEmailError('Please enter a valid email address');
-      } else {
-        setEmailError(null);
-      }
+    // Immediate check for spaces-only input
+    if (data.clientEmail && data.clientEmail.trim() === '') {
+      setEmailError('Email address cannot contain only spaces');
+      return;
     }
+
+    const error = validateEmailAddress(data.clientEmail || '');
+    setEmailError(error);
   }, [data.clientEmail, hasInteractedWithEmail]);
 
-  // URL validation - simplified
+  // URL validation - enterprise grade
   useEffect(() => {
-    if (!hasInteractedWithUrl || !data.clientUrl) {
+    if (!hasInteractedWithUrl) {
       setUrlError(null);
       return;
     }
 
-    const url = data.clientUrl.trim();
-    if (url) {
-      // Simple validation: must contain a dot and look like a domain
-      // Accepts: example.com, www.example.com, https://example.com, subdomain.example.co.uk
-      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,})([\/\w \.-]*)*\/?$/i;
-      
-      if (!url.includes('.')) {
-        setUrlError('Please enter a valid website (e.g., example.com)');
-      } else if (!urlPattern.test(url)) {
-        setUrlError('Please enter a valid website format');
-      } else {
-        setUrlError(null);
-      }
-    }
+    const error = validateWebsiteUrl(data.clientUrl || '');
+    setUrlError(error);
   }, [data.clientUrl, hasInteractedWithUrl]);
 
-  // Phone validation - light validation
+  // Phone validation - enterprise grade
   useEffect(() => {
-    if (!hasInteractedWithPhone || !data.clientPhone) {
+    if (!hasInteractedWithPhone) {
       setPhoneError(null);
       return;
     }
 
-    const phone = data.clientPhone.trim();
-    if (phone) {
-      // Remove common formatting characters but keep letters and numbers
-      const cleanedPhone = phone.replace(/[\s\-\(\)\+\.]/g, '');
-      
-      // Check length (7-20 characters to accommodate letters)
-      if (cleanedPhone.length < 7) {
-        setPhoneError('Phone number seems too short');
-      } else if (cleanedPhone.length > 20) {
-        setPhoneError('Phone number seems too long');
-      } else if (!/^[a-zA-Z0-9]+$/.test(cleanedPhone)) {
-        // Only allow letters and numbers after removing formatting
-        setPhoneError('Phone number contains invalid characters');
-      } else {
-        setPhoneError(null);
-      }
-    }
+    const error = validatePhoneNumber(data.clientPhone || '');
+    setPhoneError(error);
   }, [data.clientPhone, hasInteractedWithPhone]);
+
+  // Check if form is valid for submit button
+  const isFormValid = (): boolean => {
+    // Company name is required
+    if (!data.clientName || !data.clientName.trim()) {
+      return false;
+    }
+
+    // Check for validation errors
+    if (nameError || emailError || urlError || phoneError) {
+      return false;
+    }
+
+    // Validate all fields that have content
+    if (data.clientName && validateCompanyName(data.clientName)) {
+      return false;
+    }
+
+    if (data.clientEmail && validateEmailAddress(data.clientEmail)) {
+      return false;
+    }
+
+    if (data.clientUrl && validateWebsiteUrl(data.clientUrl)) {
+      return false;
+    }
+
+    if (data.clientPhone && validatePhoneNumber(data.clientPhone)) {
+      return false;
+    }
+
+    return true;
+  };
 
   return (
     <div className="space-y-6">
@@ -105,19 +123,27 @@ export function AddClientStep({ data, updateData }: StepProps) {
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="clientName">Client Name</Label>
+          <Label htmlFor="clientName">Client Name *</Label>
           <Input
             id="clientName"
-            value={data.clientName}
-            onChange={(e) => updateData({ clientName: e.target.value })}
-            onBlur={() => {
-              // Only validate if there's actual content to check for spaces-only
-              if (data.clientName && data.clientName.trim() === '') {
-                // This would be handled by the validation logic if implemented
+            value={data.clientName || ''}
+            onChange={(e) => {
+              updateData({ clientName: e.target.value });
+              if (!hasInteractedWithName && e.target.value) {
+                setHasInteractedWithName(true);
               }
             }}
+            onBlur={() => setHasInteractedWithName(true)}
             placeholder="Example Corp"
+            className={nameError ? 'border-red-500' : ''}
+            aria-describedby="name-error"
           />
+          {nameError && (
+            <div id="name-error" className="flex items-center gap-1.5 text-sm text-red-600">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{nameError}</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -125,7 +151,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
           <Input
             id="clientEmail"
             type="email"
-            value={data.clientEmail}
+            value={data.clientEmail || ''}
             onChange={(e) => {
               updateData({ clientEmail: e.target.value });
               if (!hasInteractedWithEmail && e.target.value) {
@@ -149,7 +175,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
           <Label htmlFor="clientPhone">Phone Number</Label>
           <Input
             id="clientPhone"
-            value={data.clientPhone}
+            value={data.clientPhone || ''}
             onChange={(e) => {
               updateData({ clientPhone: e.target.value });
               if (!hasInteractedWithPhone && e.target.value) {
@@ -173,7 +199,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
           <Label htmlFor="clientUrl">Website</Label>
           <Input
             id="clientUrl"
-            value={data.clientUrl}
+            value={data.clientUrl || ''}
             onChange={(e) => {
               updateData({ clientUrl: e.target.value });
               if (!hasInteractedWithUrl && e.target.value) {
@@ -201,6 +227,9 @@ export function AddClientStep({ data, updateData }: StepProps) {
           </p>
           <p className="text-sm text-blue-800">
             <span className="font-semibold">Optional:</span> You can skip this step and add clients later from your dashboard.
+          </p>
+          <p className="text-sm text-blue-600 mt-2">
+            <span className="font-semibold">Form Status:</span> {isFormValid() ? 'Ready to submit' : 'Please complete required fields with valid data'}
           </p>
         </div>
       )}

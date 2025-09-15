@@ -714,7 +714,11 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     id="industry"
                     data-automation-id="industry"
                     value={formData.properties?.industry || ''}
-                    onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
+                    onChange={(e) => {
+                      handleCompanyChange('properties.industry', e.target.value);
+                      // Professional SaaS approach: Clear errors while typing, don't show new ones
+                      setFieldErrors(prev => ({ ...prev, industry: '' }));
+                    }}
                     onBlur={() => {
                       validateField('industry', formData.properties?.industry || '');
                     }}
