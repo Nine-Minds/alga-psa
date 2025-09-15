@@ -10,6 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 import { usePostHog } from 'posthog-js/react';
+import { validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export default function RegisterForm() {
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const router = useRouter();
   const posthog = usePostHog();
   const journeyStartTime = useRef<number>(Date.now());
@@ -189,6 +191,18 @@ export default function RegisterForm() {
             onChange={(e) => {
               setEmail(e.target.value);
               clearErrorIfSubmitted();
+              // Clear error when user starts typing
+              if (fieldErrors.email) {
+                setFieldErrors(prev => ({ ...prev, email: '' }));
+              }
+              // Immediately validate if user enters only spaces
+              if (/^\s+$/.test(e.target.value)) {
+                setFieldErrors(prev => ({ ...prev, email: 'Email address cannot contain only spaces' }));
+              }
+            }}
+            onBlur={() => {
+              const error = validateEmailAddress(email);
+              setFieldErrors(prev => ({ ...prev, email: error || '' }));
             }}
             onFocus={() => {
               posthog?.capture('registration_field_focused', {

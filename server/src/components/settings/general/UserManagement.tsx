@@ -528,7 +528,13 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('first_name', e.target.value);
+                        // Immediately validate if user enters only spaces
+                        if (/^\s+$/.test(e.target.value)) {
+                          setFieldErrors(prev => ({ ...prev, first_name: ['First name cannot contain only spaces'] }));
+                        }
+                      }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.first_name.length > 0 && (
@@ -544,7 +550,13 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('last_name', e.target.value);
+                        // Immediately validate if user enters only spaces
+                        if (/^\s+$/.test(e.target.value)) {
+                          setFieldErrors(prev => ({ ...prev, last_name: ['Last name cannot contain only spaces'] }));
+                        }
+                      }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.last_name.length > 0 && (
@@ -561,7 +573,13 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('email', e.target.value);
+                        // Immediately validate if user enters only spaces
+                        if (/^\s+$/.test(e.target.value)) {
+                          setFieldErrors(prev => ({ ...prev, email: ['Email address cannot contain only spaces'] }));
+                        }
+                      }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.email.length > 0 && (
