@@ -10,7 +10,7 @@ exports.up = function(knex) {
 
     // Services table - Core service catalog
     .createTable('services', function(table) {
-      table.uuid('service_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('service_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Basic service information
@@ -61,7 +61,7 @@ exports.up = function(knex) {
 
     // Service Level Agreements table
     .createTable('service_level_agreements', function(table) {
-      table.uuid('sla_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('sla_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.string('sla_name', 255).notNullable();
       table.uuid('service_id').notNullable();
@@ -116,7 +116,7 @@ exports.up = function(knex) {
 
     // Service Level Objectives table
     .createTable('service_level_objectives', function(table) {
-      table.uuid('slo_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('slo_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.uuid('sla_id').notNullable();
       table.uuid('service_id').notNullable();
@@ -161,7 +161,7 @@ exports.up = function(knex) {
 
     // Service Performance Records table
     .createTable('service_performance_records', function(table) {
-      table.uuid('record_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('record_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.uuid('service_id').notNullable();
       table.uuid('sla_id');
@@ -230,7 +230,7 @@ exports.up = function(knex) {
 
     // Customer Satisfaction Surveys table
     .createTable('customer_satisfaction_surveys', function(table) {
-      table.uuid('survey_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('survey_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Survey details
@@ -272,7 +272,7 @@ exports.up = function(knex) {
 
     // Customer Satisfaction Responses table
     .createTable('customer_satisfaction_responses', function(table) {
-      table.uuid('response_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('response_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.uuid('survey_id').notNullable();
       
@@ -313,7 +313,7 @@ exports.up = function(knex) {
 
     // Service Reports table
     .createTable('service_reports', function(table) {
-      table.uuid('report_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('report_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Report configuration
@@ -353,7 +353,7 @@ exports.up = function(knex) {
 
     // Service Dependencies table
     .createTable('service_dependencies', function(table) {
-      table.uuid('dependency_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('dependency_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.uuid('service_id').notNullable(); // Dependent service
       table.uuid('depends_on_service_id').notNullable(); // Service being depended on

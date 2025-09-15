@@ -10,7 +10,7 @@ exports.up = function(knex) {
 
     // CI Types table - Define different types of Configuration Items
     .createTable('ci_types', function(table) {
-      table.uuid('ci_type_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('ci_type_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Type definition
@@ -53,7 +53,7 @@ exports.up = function(knex) {
 
     // Configuration Items table - Core CMDB entity
     .createTable('configuration_items', function(table) {
-      table.uuid('ci_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('ci_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Basic CI information
@@ -124,7 +124,7 @@ exports.up = function(knex) {
 
     // CI Relationships table - Defines relationships between CIs
     .createTable('ci_relationships', function(table) {
-      table.uuid('relationship_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('relationship_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Relationship definition
@@ -170,7 +170,7 @@ exports.up = function(knex) {
 
     // Discovery Rules table - Defines automated discovery configurations
     .createTable('discovery_rules', function(table) {
-      table.uuid('rule_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('rule_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Rule definition
@@ -216,7 +216,7 @@ exports.up = function(knex) {
 
     // Discovery Results table - Results of discovery rule executions
     .createTable('discovery_results', function(table) {
-      table.uuid('result_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('result_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       table.uuid('rule_id').notNullable();
       
@@ -256,7 +256,7 @@ exports.up = function(knex) {
 
     // Impact Analysis table - Results of change impact analysis
     .createTable('impact_analysis', function(table) {
-      table.uuid('analysis_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('analysis_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Analysis context
@@ -305,7 +305,7 @@ exports.up = function(knex) {
 
     // CMDB Audit Log table - Track all changes to CMDB data
     .createTable('cmdb_audit_log', function(table) {
-      table.uuid('audit_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('audit_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Audit context
@@ -346,7 +346,7 @@ exports.up = function(knex) {
 
     // CMDB Reports table - Configuration management reports
     .createTable('cmdb_reports', function(table) {
-      table.uuid('report_id').primary().defaultTo(knex.raw('uuid_generate_v4()'));
+      table.uuid('report_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
       table.uuid('tenant').notNullable();
       
       // Report configuration
