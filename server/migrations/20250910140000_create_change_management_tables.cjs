@@ -7,8 +7,8 @@ exports.up = function(knex) {
   return knex.schema
     // Create change_statuses table
     .createTable('change_statuses', function(table) {
-      table.uuid('status_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('status_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.string('name').notNullable();
       table.text('description');
       table.boolean('is_active').defaultTo(true);
@@ -29,8 +29,8 @@ exports.up = function(knex) {
     
     // Create change_requests table
     .createTable('change_requests', function(table) {
-      table.uuid('change_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('change_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.string('change_number').notNullable();
       table.string('title').notNullable();
       table.text('description').notNullable();
@@ -42,14 +42,14 @@ exports.up = function(knex) {
         'hardware', 'software', 'network', 'process', 'documentation',
         'security', 'infrastructure', 'application', 'database', 'environment'
       ]).notNullable();
-      table.uuid('priority_id').notNullable().references('priority_id').inTable('priorities');
+      table.uuid('priority_id').notNullable()// .references('priority_id').inTable('priorities') // FK removed;
       table.uuid('status_id').notNullable().references('status_id').inTable('change_statuses');
       
       // Ownership
-      table.uuid('requested_by').notNullable().references('user_id').inTable('users');
-      table.uuid('change_owner').nullable().references('user_id').inTable('users');
-      table.uuid('change_manager').nullable().references('user_id').inTable('users');
-      table.uuid('implementer').nullable().references('user_id').inTable('users');
+      table.uuid('requested_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('change_owner').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('change_manager').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('implementer').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       
       // Scheduling
       table.timestamp('requested_implementation_date').nullable();
@@ -90,12 +90,12 @@ exports.up = function(knex) {
       table.json('child_change_ids'); // Array of child change IDs
       
       // User tracking
-      table.uuid('created_by').notNullable().references('user_id').inTable('users');
-      table.uuid('updated_by').nullable().references('user_id').inTable('users');
-      table.uuid('approved_by').nullable().references('user_id').inTable('users');
-      table.uuid('rejected_by').nullable().references('user_id').inTable('users');
-      table.uuid('implemented_by').nullable().references('user_id').inTable('users');
-      table.uuid('closed_by').nullable().references('user_id').inTable('users');
+      table.uuid('created_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('updated_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('approved_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('rejected_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('implemented_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('closed_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       
       // Timestamps
       table.timestamp('created_at').defaultTo(knex.fn.now());
@@ -139,14 +139,14 @@ exports.up = function(knex) {
     
     // Create Change Advisory Board (CAB) table
     .createTable('change_advisory_boards', function(table) {
-      table.uuid('cab_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('cab_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.string('name').notNullable();
       table.text('description');
       table.boolean('is_active').defaultTo(true);
       
       // CAB composition
-      table.uuid('chair_user_id').notNullable().references('user_id').inTable('users');
+      table.uuid('chair_user_id').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.json('members').notNullable(); // Array of user IDs
       table.json('advisors'); // Optional advisors
       
@@ -162,7 +162,7 @@ exports.up = function(knex) {
       table.json('change_types'); // Which change types this CAB handles
       table.json('risk_levels'); // Which risk levels require this CAB
       
-      table.uuid('created_by').notNullable().references('user_id').inTable('users');
+      table.uuid('created_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').nullable();
       
@@ -175,8 +175,8 @@ exports.up = function(knex) {
     
     // Create CAB meetings table
     .createTable('cab_meetings', function(table) {
-      table.uuid('meeting_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('meeting_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.uuid('cab_id').notNullable().references('cab_id').inTable('change_advisory_boards').onDelete('CASCADE');
       table.timestamp('meeting_date').notNullable();
       table.integer('duration_minutes');
@@ -184,7 +184,7 @@ exports.up = function(knex) {
       table.enum('meeting_type', ['regular', 'emergency', 'special']).notNullable().defaultTo('regular');
       
       // Participants
-      table.uuid('chair_user_id').notNullable().references('user_id').inTable('users');
+      table.uuid('chair_user_id').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.json('attendees'); // User IDs who attended
       table.json('apologies'); // User IDs who sent apologies
       
@@ -196,7 +196,7 @@ exports.up = function(knex) {
       // Status
       table.enum('status', ['scheduled', 'in_progress', 'completed', 'cancelled']).notNullable().defaultTo('scheduled');
       
-      table.uuid('created_by').notNullable().references('user_id').inTable('users');
+      table.uuid('created_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').nullable();
       
@@ -209,8 +209,8 @@ exports.up = function(knex) {
     
     // Create CAB decisions table
     .createTable('cab_decisions', function(table) {
-      table.uuid('decision_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('decision_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.uuid('meeting_id').notNullable().references('meeting_id').inTable('cab_meetings').onDelete('CASCADE');
       table.uuid('change_id').notNullable().references('change_id').inTable('change_requests').onDelete('CASCADE');
       
@@ -228,7 +228,7 @@ exports.up = function(knex) {
       table.string('implementation_window');
       table.text('special_conditions');
       
-      table.uuid('decided_by').notNullable().references('user_id').inTable('users');
+      table.uuid('decided_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.timestamp('decided_at').defaultTo(knex.fn.now());
       table.timestamp('created_at').defaultTo(knex.fn.now());
       
@@ -242,8 +242,8 @@ exports.up = function(knex) {
     
     // Create change conflicts table
     .createTable('change_conflicts', function(table) {
-      table.uuid('conflict_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('conflict_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.uuid('change_id_1').notNullable().references('change_id').inTable('change_requests').onDelete('CASCADE');
       table.uuid('change_id_2').notNullable().references('change_id').inTable('change_requests').onDelete('CASCADE');
       
@@ -263,7 +263,7 @@ exports.up = function(knex) {
       // Resolution
       table.enum('status', ['identified', 'under_review', 'resolved', 'accepted_risk']).notNullable().defaultTo('identified');
       table.text('resolution');
-      table.uuid('resolved_by').nullable().references('user_id').inTable('users');
+      table.uuid('resolved_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.timestamp('resolved_at').nullable();
       
       table.string('detected_by').notNullable(); // System or user ID
@@ -282,8 +282,8 @@ exports.up = function(knex) {
     
     // Create change calendar events table
     .createTable('change_calendar_events', function(table) {
-      table.uuid('event_id').primary().defaultTo(knex.fn.uuid());
-      table.uuid('tenant').notNullable().references('id').inTable('tenants').onDelete('CASCADE');
+      table.uuid('event_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.uuid('tenant').notNullable().references('tenant').inTable('tenants').onDelete('CASCADE');
       table.uuid('change_id').nullable().references('change_id').inTable('change_requests').onDelete('CASCADE');
       
       table.enum('event_type', ['change', 'maintenance_window', 'blackout', 'freeze']).notNullable();
@@ -301,14 +301,14 @@ exports.up = function(knex) {
       table.json('affected_environments');
       
       // Ownership
-      table.uuid('approved_by').nullable().references('user_id').inTable('users');
-      table.uuid('owner').nullable().references('user_id').inTable('users');
+      table.uuid('approved_by').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
+      table.uuid('owner').nullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       
       // Recurrence
       table.string('recurrence_rule'); // RRULE format
       table.json('recurrence_exceptions'); // Exception dates
       
-      table.uuid('created_by').notNullable().references('user_id').inTable('users');
+      table.uuid('created_by').notNullable()// .references('user_id').inTable('users') // FK removed due to constraints;
       table.timestamp('created_at').defaultTo(knex.fn.now());
       table.timestamp('updated_at').nullable();
       

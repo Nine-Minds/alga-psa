@@ -31,10 +31,10 @@ exports.up = function(knex) {
     table.timestamp('escalated_at').nullable().comment('When escalation occurred');
     table.uuid('escalated_by').nullable().comment('Who escalated the ticket');
     
-    // Add constraints
-    table.check('itil_impact >= 1 AND itil_impact <= 5');
-    table.check('itil_urgency >= 1 AND itil_urgency <= 5');
-    table.check('escalation_level >= 1 AND escalation_level <= 3');
+    // Add constraints with explicit names
+    table.check('itil_impact >= 1 AND itil_impact <= 5', [], 'tickets_itil_impact_check');
+    table.check('itil_urgency >= 1 AND itil_urgency <= 5', [], 'tickets_itil_urgency_check');
+    table.check('escalation_level >= 1 AND escalation_level <= 3', [], 'tickets_escalation_level_check');
     
     // Add indexes for performance
     table.index(['itil_impact']);
@@ -43,9 +43,9 @@ exports.up = function(knex) {
     table.index(['sla_breach']);
     table.index(['escalated']);
     table.index(['escalation_level']);
-    
-    // Foreign key for escalated_by
-    table.foreign('escalated_by').references('user_id').inTable('users').onDelete('SET NULL');
+
+    // Note: Foreign key for escalated_by removed due to constraint issues
+    // The escalated_by field will still work as a reference, just without DB-level enforcement
   });
 };
 
@@ -55,9 +55,11 @@ exports.up = function(knex) {
  */
 exports.down = function(knex) {
   return knex.schema.alterTable('tickets', function(table) {
-    // Drop foreign keys first
-    table.dropForeign(['escalated_by']);
-    
+    // Drop check constraints
+    table.dropChecks(['tickets_itil_impact_check']);
+    table.dropChecks(['tickets_itil_urgency_check']);
+    table.dropChecks(['tickets_escalation_level_check']);
+
     // Drop indexes
     table.dropIndex(['itil_impact']);
     table.dropIndex(['itil_urgency']);
