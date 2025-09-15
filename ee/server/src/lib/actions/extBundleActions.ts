@@ -29,7 +29,7 @@ import {
 import { upsertVersionFromManifest } from "../extensions/registry-v2";
 import { ensureRegistryV2KnexRepo } from "../extensions/registry-v2-repo-knex";
 import type { Knex } from "knex";
-import { getAdminConnection } from '@/lib/db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 // import { createTenantKnex } from '@/lib/db/index';
 
 //

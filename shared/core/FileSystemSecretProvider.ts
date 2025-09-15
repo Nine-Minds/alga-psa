@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ISecretProvider } from './ISecretProvider.js';
+import { ISecretProvider } from './ISecretProvider';
 
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';

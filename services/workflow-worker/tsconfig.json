@@ -1,18 +1,19 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
+    "module": "ESNext",
     "target": "es2022",
     "outDir": "dist",
     "noEmit": false,
     "noEmitOnError": false,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "baseUrl": "../..",
     "paths": {
       "@shared/*": ["shared/*"],
       "@shared": ["shared"]
     },
-    "rootDir": "../.."
+    "rootDir": "../..",
+    "skipLibCheck": true
   },
   "ts-node": {
     "esm": true,

@@ -1,4 +1,4 @@
-import { logger } from '@shared/core/index.js';
+import { logger } from '@shared/core';
 
 // Re-export the shared logger
 export default logger;
