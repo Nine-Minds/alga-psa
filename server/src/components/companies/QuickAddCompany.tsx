@@ -553,70 +553,70 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       return false;
     }
 
-    // Validate all fields real-time without showing errors
-    const companyNameError = validateField('company_name', formData.company_name, undefined, false);
+    // Use client validation functions directly for silent validation
+    const companyNameError = validateCompanyName(formData.company_name);
     if (companyNameError) return false;
 
     // Optional field validations - only if they have content
     if (formData.url && formData.url.trim()) {
-      const urlError = validateField('url', formData.url, undefined, false);
+      const urlError = validateWebsiteUrl(formData.url);
       if (urlError) return false;
     }
 
     if (formData.properties?.industry && formData.properties.industry.trim()) {
-      const industryError = validateField('industry', formData.properties.industry, undefined, false);
+      const industryError = validateIndustry(formData.properties.industry);
       if (industryError) return false;
     }
 
     // Location validations - only if they have content
     if (locationData.email && locationData.email.trim()) {
-      const emailError = validateField('location_email', locationData.email, undefined, false);
+      const emailError = validateEmailAddress(locationData.email);
       if (emailError) return false;
     }
 
     if (locationData.phone && locationData.phone.trim()) {
-      const phoneError = validateField('location_phone', locationData.phone, undefined, false);
+      const phoneError = validatePhoneNumber(locationData.phone);
       if (phoneError) return false;
     }
 
     if (locationData.postal_code && locationData.postal_code.trim()) {
-      const postalError = validateField('postal_code', locationData.postal_code, { countryCode: locationData.country_code }, false);
+      const postalError = validatePostalCode(locationData.postal_code, locationData.country_code);
       if (postalError) return false;
     }
 
     if (locationData.city && locationData.city.trim()) {
-      const cityError = validateField('city', locationData.city, undefined, false);
+      const cityError = validateCity(locationData.city);
       if (cityError) return false;
     }
 
     if (locationData.state_province && locationData.state_province.trim()) {
-      const stateError = validateField('state_province', locationData.state_province, undefined, false);
+      const stateError = validateStateProvince(locationData.state_province);
       if (stateError) return false;
     }
 
     if (locationData.address_line1 && locationData.address_line1.trim()) {
-      const addressError = validateField('address_line1', locationData.address_line1, undefined, false);
+      const addressError = validateAddressLine(locationData.address_line1);
       if (addressError) return false;
     }
 
     // Contact validations - only if they have content
     if (contactData.full_name && contactData.full_name.trim()) {
-      const nameError = validateField('contact_name', contactData.full_name, undefined, false);
+      const nameError = validateContactName(contactData.full_name);
       if (nameError) return false;
     }
 
     if (contactData.email && contactData.email.trim()) {
-      const contactEmailError = validateField('contact_email', contactData.email, undefined, false);
+      const contactEmailError = validateEmailAddress(contactData.email);
       if (contactEmailError) return false;
     }
 
     if (contactData.phone_number && contactData.phone_number.trim()) {
-      const contactPhoneError = validateField('contact_phone', contactData.phone_number, undefined, false);
+      const contactPhoneError = validatePhoneNumber(contactData.phone_number);
       if (contactPhoneError) return false;
     }
 
     if (contactData.notes && contactData.notes.trim()) {
-      const notesError = validateField('notes', contactData.notes, undefined, false);
+      const notesError = validateNotes(contactData.notes);
       if (notesError) return false;
     }
 
@@ -1063,8 +1063,8 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               id="create-company-btn"
               type="submit"
               form="quick-add-company-form"
-              disabled={isSubmitting || !formData.company_name.trim()}
-              className={(!formData.company_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
+              disabled={isSubmitting || !isFormValid()}
+              className={(!isFormValid()) ? 'opacity-50 cursor-not-allowed' : ''}
             >
               {isSubmitting ? 'Creating...' : 'Create Client'}
             </Button>

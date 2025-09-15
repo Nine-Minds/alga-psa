@@ -239,6 +239,46 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     return error;
   };
 
+  // Comprehensive form validation check for submit button state
+  const isFormValid = () => {
+    // Required fields
+    if (!fullName || !fullName.trim()) {
+      return false;
+    }
+    if (!email || !email.trim()) {
+      return false;
+    }
+
+    // Check for any existing field errors
+    if (Object.values(fieldErrors).some(error => error && error.trim() !== '')) {
+      return false;
+    }
+
+    // Use client validation functions directly for silent validation
+    const nameError = validateContactName(fullName);
+    if (nameError) return false;
+
+    const emailError = validateEmailAddress(email);
+    if (emailError) return false;
+
+    // Optional field validations - only if they have content
+    if (role && role.trim()) {
+      const roleError = validateContactRole(role);
+      if (roleError) return false;
+    }
+
+    if (phoneNumber && phoneNumber.trim()) {
+      // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+      const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+      if (!countryCodeOnlyPattern.test(phoneNumber.trim())) {
+        const phoneError = validatePhoneNumber(phoneNumber);
+        if (phoneError) return false;
+      }
+    }
+
+    return true;
+  };
+
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -559,10 +599,10 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               id="quick-add-contact-submit"
               type="button"
               onClick={handleSubmit}
-              disabled={false}
-              className={!fullName.trim() || !email.trim() || Object.values(fieldErrors).some(error => error) ? 'opacity-50' : ''}
+              disabled={isSubmitting || !isFormValid()}
+              className={(!isFormValid()) ? 'opacity-50 cursor-not-allowed' : ''}
             >
-              Add Contact
+              {isSubmitting ? 'Adding...' : 'Add Contact'}
             </Button>
           </DialogFooter>
         </form>
