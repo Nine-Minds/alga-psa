@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { WorkflowEventProcessingStatus } from '../streams/workflowEventSchema.js';
+import { WorkflowEventProcessingStatus } from '../streams/workflowEventSchema';
 
 /**
  * Interface for workflow_event_processing table

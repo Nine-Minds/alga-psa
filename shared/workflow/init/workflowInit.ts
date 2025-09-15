@@ -1,5 +1,5 @@
 import { getActionRegistry } from '../core/actionRegistry';
-import { getWorkflowRuntime } from '../core/workflowRuntime.js';
+import { getWorkflowRuntime } from '../core/workflowRuntime';
 import logger from '@shared/core/logger';
 
 /**

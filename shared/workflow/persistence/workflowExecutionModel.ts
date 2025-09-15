@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { IWorkflowExecution } from './index.js';
+import { IWorkflowExecution } from './index';
 
 /**
  * Model for workflow_executions table

@@ -1,6 +1,6 @@
 import knex, { Knex } from 'knex';
-import knexfile from './knexfile.js';
-import { getSecret } from '@shared/core/index.js';
+import knexfile from './knexfile';
+import { getSecret } from '@shared/core';
 
 let adminConnection: Knex | null = null;
 export async function getAdminConnection(): Promise<Knex> {
