@@ -113,6 +113,11 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
           updated_at: new Date()
         });
     });
+
+    // Invalidate the preview cache for this document if it exists
+    const cache = CacheFactory.getPreviewCache(tenant);
+    await cache.delete(documentId);
+    console.log(`[updateDocument] Invalidated preview cache for document ${documentId}`);
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
@@ -473,25 +478,36 @@ export async function getDocumentPreview(
       }
       
       // Try to download the file to get metadata
-      const downloadResult = await StorageService.downloadFile(identifier);
-      if (!downloadResult) {
-        console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
-        throw new Error(`File not found in storage for ID: ${identifier}`);
+      try {
+        const downloadResult = await StorageService.downloadFile(identifier);
+        if (!downloadResult) {
+          console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
+          return {
+            success: false,
+            error: 'File not found in storage'
+          };
+        }
+
+        // Create a temporary document object with file metadata
+        document = {
+          document_id: identifier,
+          document_name: downloadResult.metadata.original_name || 'Unknown',
+          type_id: null,
+          user_id: '',
+          order_number: 0,
+          created_by: '',
+          tenant,
+          file_id: identifier,
+          mime_type: downloadResult.metadata.mime_type,
+          type_name: downloadResult.metadata.mime_type
+        };
+      } catch (storageError) {
+        console.error(`[getDocumentPreview] Storage error for ID ${identifier}:`, storageError);
+        return {
+          success: false,
+          error: 'File not found or inaccessible'
+        };
       }
-      
-      // Create a temporary document object with file metadata
-      document = {
-        document_id: identifier,
-        document_name: downloadResult.metadata.original_name || 'Unknown',
-        type_id: null,
-        user_id: '',
-        order_number: 0,
-        created_by: '',
-        tenant,
-        file_id: identifier,
-        mime_type: downloadResult.metadata.mime_type,
-        type_name: downloadResult.metadata.mime_type
-      };
     }
 
     // Use the document handler registry to get the appropriate handler
