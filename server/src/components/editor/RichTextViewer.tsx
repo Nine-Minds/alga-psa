@@ -135,34 +135,48 @@ export default function RichTextViewer({
 
   // Only remount if content ACTUALLY changed (not on first render)
   const shouldRemount = !isFirstRender.current && prevContentKey.current !== contentKey;
-  
+
   useEffect(() => {
     isFirstRender.current = false;
     prevContentKey.current = contentKey;
   }, [contentKey]);
 
-  // Create a stable component that only remounts when absolutely necessary
-  const ViewerCore = useMemo(() => {
-    return function ViewerCoreComponent({ blocks }: { blocks: PartialBlock[] }) {
-      // Check if we're in the browser environment
-      if (typeof window === 'undefined' || typeof document === 'undefined') {
-        return <div>Loading...</div>;
-      }
+  // Create the editor at the top level with the parsed content
+  const editor = useCreateBlockNote({
+    initialContent: parsedContent,
+    domAttributes: {
+      editor: {
+        class: 'pointer-events-none', // Disable interactions with the editor
+      },
+    },
+  });
 
-      const editor = useCreateBlockNote({
-        initialContent: blocks,
-        domAttributes: {
-          editor: {
-            class: 'pointer-events-none', // Disable interactions with the editor
-          },
-        },
-      });
+  // Update the editor content when parsedContent changes
+  useEffect(() => {
+    if (editor && parsedContent) {
+      // Replace the editor's content with the new blocks
+      editor.replaceBlocks(editor.document, parsedContent);
+    }
+  }, [contentKey, editor, parsedContent]);
 
-      // BlockNote editor cleanup is handled internally
-      // We don't need to explicitly destroy it
-      
-      return (
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[RichTextViewer] Render', {
+      shouldRemount,
+      contentKeyLength: contentKey.length,
+      blocks: parsedContent.length
+    });
+  }
+
+  // Check if we're in the browser environment
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
+      <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
         <BlockNoteView
+          key={shouldRemount ? contentKey : 'stable'}
           editor={editor}
           theme="light"
           className="w-full min-w-0"
@@ -173,22 +187,6 @@ export default function RichTextViewer({
             maxWidth: '100%'
           }}
         />
-      );
-    };
-  }, [shouldRemount]); // Only recreate component when we need to force remount
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[RichTextViewer] Render', {
-      shouldRemount,
-      contentKeyLength: contentKey.length,
-      blocks: parsedContent.length
-    });
-  }
-
-  return (
-    <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>
-      <div className="w-full bg-white rounded-lg overflow-auto min-w-0">
-        <ViewerCore key={shouldRemount ? contentKey : 'stable'} blocks={parsedContent} />
       </div>
     </div>
   );
