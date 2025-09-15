@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useId } from 'react';
 import { ChevronDown } from 'lucide-react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
@@ -51,6 +51,10 @@ const CustomSelect: React.FC<CustomSelectProps & AutomationProps> = ({
   allowClear = false, // Added default value
   ...props
 }): JSX.Element => {
+  // Generate a stable ID for this select instance
+  const generatedId = useId();
+  const selectId = id || generatedId;
+  
   // Register with UI reflection system if id is provided
   // Memoize the mapped options to prevent recreating on every render
   const mappedOptions = useMemo(() => options.map((opt): { value: string; label: string } => ({

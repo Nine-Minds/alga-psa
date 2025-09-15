@@ -1,4 +1,9 @@
-{{- if not .Values.hostedEnv.enabled }}
+{{- $hp := .Values.hocuspocus }}
+{{- if and (not .Values.hostedEnv.enabled) (or (not (hasKey $hp "enabled")) $hp.enabled) }}
+{{- $ns := include "sebastian.namespace" . -}}
+{{- $existing := (lookup "apps/v1" "Deployment" $ns "hocuspocus") -}}
+{{- $owned := and $existing (eq (get $existing.metadata.annotations "meta.helm.sh/release-name") .Release.Name) -}}
+{{- if or (not $existing) $owned }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,6 +11,8 @@ metadata:
   namespace: {{ include "sebastian.namespace" . }}
   labels:
     {{- include "sebastian.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
 spec:
   replicas: {{ .Values.hocuspocus.replicaCount }}
   selector:
@@ -132,4 +139,5 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+{{- end }}
 {{- end }}

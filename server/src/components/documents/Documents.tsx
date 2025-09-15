@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { BlockNoteEditor, PartialBlock } from '@blocknote/core';
 import { IDocument, DocumentFilters } from 'server/src/interfaces/document.interface';
 import DocumentStorageCard from './DocumentStorageCard';
@@ -94,6 +94,8 @@ const Documents = ({
   const editorRef = useRef<BlockNoteEditor | null>(null);
   const [isEditModeInDrawer, setIsEditModeInDrawer] = useState(false);
   const [drawerError, setDrawerError] = useState<string | null>(null);
+  const [editedDocumentId, setEditedDocumentId] = useState<string | null>(null);
+  const [refreshTimestamp, setRefreshTimestamp] = useState<number>(0);
 
   useEffect(() => {
     if (initialDocuments && initialDocuments.length > 0) {
@@ -162,7 +164,7 @@ const Documents = ({
     setHasContentChanged(true);
   };
 
-  const handleDelete = async (document: IDocument) => {
+  const handleDelete = useCallback(async (document: IDocument) => {
     try {
       await deleteDocument(document.document_id, userId);
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
@@ -173,9 +175,9 @@ const Documents = ({
       console.error('Error deleting document:', error);
       setError('Failed to delete document');
     }
-  };
+  }, [userId, onDocumentCreated]);
 
-  const handleDisassociate = async (document: IDocument) => {
+  const handleDisassociate = useCallback(async (document: IDocument) => {
     if (!entityId || !entityType) return;
 
     try {
@@ -188,7 +190,7 @@ const Documents = ({
       console.error('Error disassociating document:', error);
       setError('Failed to remove document association');
     }
-  };
+  }, [entityId, entityType, onDocumentCreated]);
 
   const handleSaveNewDocument = async () => {
     try {
@@ -207,11 +209,12 @@ const Documents = ({
         entityType
       });
 
-      // Refresh documents list
+      // For new documents, we need to refresh the list
       if (entityId && entityType) {
         fetchDocuments(currentPage, searchTermFromParent);
       }
 
+      // Call the parent callback for new documents
       if (onDocumentCreated) {
         await onDocumentCreated();
       }
@@ -246,14 +249,12 @@ const Documents = ({
         });
       }
 
-      // Refresh documents list
-      if (entityId && entityType) {
-        fetchDocuments(currentPage, searchTermFromParent);
-      }
+      // Trigger preview refresh for only the edited document
+      setEditedDocumentId(selectedDocument.document_id);
+      setRefreshTimestamp(Date.now());
 
-      if (onDocumentCreated) {
-        await onDocumentCreated();
-      }
+      // Don't call onDocumentCreated (which refetches all documents)
+      // We only need to refresh the preview, not reload all documents
 
       setHasContentChanged(false);
       setIsDrawerOpen(false);
@@ -304,6 +305,67 @@ const Documents = ({
   const gridColumnsClass = gridColumns === 4
     ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
     : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+
+  // Use refs to store click handlers to avoid recreating them
+  const clickHandlersRef = useRef<Map<string, () => void>>(new Map());
+
+  const getOrCreateClickHandler = (document: IDocument) => {
+    const key = document.document_id;
+    if (!clickHandlersRef.current.has(key)) {
+      clickHandlersRef.current.set(key, () => {
+        setSelectedDocument(document);
+        setDocumentName(document.document_name);
+        setIsCreatingNew(false);
+        const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
+        setIsEditModeInDrawer(isEditableContentDoc);
+        setIsDrawerOpen(true);
+      });
+    }
+    return clickHandlersRef.current.get(key)!;
+  };
+
+  // Similarly for delete and disassociate handlers
+  const deleteHandlersRef = useRef<Map<string, () => void>>(new Map());
+  const disassociateHandlersRef = useRef<Map<string, () => void>>(new Map());
+
+  const getOrCreateDeleteHandler = (document: IDocument) => {
+    const key = document.document_id;
+    if (!deleteHandlersRef.current.has(key)) {
+      deleteHandlersRef.current.set(key, () => handleDelete(document));
+    }
+    return deleteHandlersRef.current.get(key)!;
+  };
+
+  const getOrCreateDisassociateHandler = (document: IDocument) => {
+    if (!entityId || !entityType) return undefined;
+    const key = document.document_id;
+    if (!disassociateHandlersRef.current.has(key)) {
+      disassociateHandlersRef.current.set(key, () => handleDisassociate(document));
+    }
+    return disassociateHandlersRef.current.get(key)!;
+  };
+
+  // Render document cards - let React handle the re-renders with memo
+  const renderDocumentCards = () => {
+    return documentsToDisplay.map((document) => {
+      const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
+
+      return (
+        <div key={document.document_id} className="h-full">
+          <DocumentStorageCard
+            id={`${id}-document-${document.document_id}`}
+            document={document}
+            onDelete={getOrCreateDeleteHandler(document)}
+            onDisassociate={getOrCreateDisassociateHandler(document)}
+            showDisassociate={Boolean(entityId && entityType)}
+            forceRefresh={editedDocumentId === document.document_id ? refreshTimestamp : undefined}
+            onClick={getOrCreateClickHandler(document)}
+            isContentDocument={!document.file_id}
+          />
+        </div>
+      );
+    });
+  };
 
   return (
     <ReflectionContainer id={id} label="Documents">
@@ -394,26 +456,7 @@ const Documents = ({
           <DocumentsGridSkeleton gridColumns={gridColumns} />
         ) : documentsToDisplay.length > 0 ? (
           <div className={`grid ${gridColumnsClass} gap-4`}>
-            {documentsToDisplay.map((document) => (
-              <div key={document.document_id} className="h-full">
-                <DocumentStorageCard
-                  id={`${id}-document-${document.document_id}`}
-                  document={document}
-                  onDelete={() => handleDelete(document)}
-                  onDisassociate={entityId && entityType ? () => handleDisassociate(document) : undefined}
-                  showDisassociate={Boolean(entityId && entityType)}
-                  onClick={() => {
-                    setSelectedDocument(document);
-                    setDocumentName(document.document_name);
-                    setIsCreatingNew(false);
-                    const isEditableContentDoc = (!document.file_id && (document.type_name === 'text/plain' || document.type_name === 'text/markdown' || !document.type_name));
-                    setIsEditModeInDrawer(isEditableContentDoc);
-                    setIsDrawerOpen(true);
-                  }}
-                  isContentDocument={!document.file_id}
-                />
-              </div>
-            ))}
+            {renderDocumentCards()}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-md">

@@ -53,6 +53,10 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
           className={`fixed inset-y-0 right-0 w-fit max-w-[60vw] bg-white shadow-lg focus:outline-none overflow-y-auto transform transition-all duration-300 ease-in-out data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full data-[state=closed]:opacity-0 data-[state=open]:opacity-100 ${drawerVariant === 'document' ? 'ticket-document-drawer' : ''} ${isInDrawer ? 'z-[61]' : 'z-50'}`}
           onCloseAutoFocus={(e) => e.preventDefault()}
         >
+          {/* Visually hidden title for accessibility */}
+          <Dialog.Title className="sr-only">
+            Dialog Content
+          </Dialog.Title>
           <AppSessionProvider>
             <Theme>
               <div className="p-6">

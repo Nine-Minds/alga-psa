@@ -27,7 +27,7 @@ import {
 import {
   IEventCatalogEntry,
   IWorkflowEventAttachment
-} from '@alga-psa/shared/workflow/types/eventCatalog.js';
+} from '@alga-psa/shared/workflow/types/eventCatalog';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import EventTriggerDialog from 'server/src/components/events-catalog/EventTriggerDialog';
 

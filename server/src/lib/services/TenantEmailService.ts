@@ -1,5 +1,4 @@
 import { Knex } from 'knex';
-import { createTenantKnex } from '../db';
 import { getConnection } from '../db/db';
 import { EmailProviderManager } from '../../services/email/EmailProviderManager';
 import { 
@@ -12,6 +11,8 @@ import {
   ITemplateProcessor
 } from './email/templateProcessors';
 import { BaseEmailService, BaseEmailParams, EmailSendResult } from '../email/BaseEmailService';
+import { SystemEmailProviderFactory } from '../email/system/SystemEmailProviderFactory';
+import { isEnterprise } from '../features';
 
 export interface SendEmailParams {
   tenantId: string;
@@ -57,29 +58,58 @@ export class TenantEmailService extends BaseEmailService {
   }
 
   protected async getEmailProvider(): Promise<IEmailProvider | null> {
+    // Initialize tenant-specific provider manager on first use
     if (!this.providerManager) {
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(this.tenantId);
       const settings = await TenantEmailService.getTenantEmailSettings(this.tenantId, knex);
-      
-      if (!settings) {
-        logger.warn(`[${this.getServiceName()}] No email settings found`);
+
+      if (settings) {
+        this.providerManager = new EmailProviderManager();
+        await this.providerManager.initialize(settings);
+      } else {
+        logger.warn(`[${this.getServiceName()}] No tenant email settings found`);
+      }
+    }
+
+    // If we have a tenant provider available, use it
+    if (this.providerManager) {
+      const providers = await this.providerManager.getAvailableProviders(this.tenantId);
+      if (providers.length > 0) {
+        return providers[0];
+      }
+    }
+
+    // Fallback: In EE hosted, use system email provider
+    if (isEnterprise) {
+      logger.info(`[${this.getServiceName()}] Falling back to SystemEmailProvider (EE)`);
+      try {
+        const systemProvider = await SystemEmailProviderFactory.createProvider();
+        return systemProvider;
+      } catch (err) {
+        logger.error(`[${this.getServiceName()}] Failed to create SystemEmailProvider:`, err);
         return null;
       }
-      
-      this.providerManager = new EmailProviderManager();
-      await this.providerManager.initialize(settings);
     }
-    
-    const providers = await this.providerManager.getAvailableProviders(this.tenantId);
-    return providers.length > 0 ? providers[0] : null;
+
+    // Otherwise, no provider available
+    return null;
   }
 
   protected getFromAddress(params?: BaseEmailParams): EmailAddress | string {
     if (params?.from) {
       return params.from as EmailAddress | string;
     }
-    // Default from address will be handled by the provider
-    return { email: 'noreply@localhost', name: 'Portal Notifications' };
+    // Prefer system-configured from if available
+    const envFrom = process.env.EMAIL_FROM;
+    const envFromName = process.env.EMAIL_FROM_NAME || 'Portal Notifications';
+    if (envFrom) {
+      // If EMAIL_FROM already includes a name, use it as-is
+      // Otherwise, wrap with a default friendly name
+      const hasAngleBrackets = /<[^>]+>/.test(envFrom);
+      return hasAngleBrackets ? envFrom : `${envFromName} <${envFrom}>`;
+    }
+    // Safe default (may be rejected by providers if domain unverified)
+    return 'Portal Notifications <noreply@example.com>';
   }
   /**
    * Get tenant email settings from database
@@ -91,7 +121,7 @@ export class TenantEmailService extends BaseEmailService {
   ): Promise<TenantEmailSettings | null> {
     try {
       const settings = await knex('tenant_email_settings')
-        .where({ tenant_id: tenantId })
+        .where({ tenant: tenantId })
         .first();
       
       if (!settings) {
@@ -147,7 +177,7 @@ export class TenantEmailService extends BaseEmailService {
    */
   static async validateEmailSettings(tenantId: string): Promise<EmailSettingsValidation> {
     try {
-      const { knex } = await createTenantKnex();
+      const knex = await getConnection(tenantId);
       const settings = await this.getTenantEmailSettings(tenantId, knex);
       
       if (!settings) {

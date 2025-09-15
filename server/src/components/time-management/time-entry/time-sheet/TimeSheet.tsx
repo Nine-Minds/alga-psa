@@ -193,6 +193,59 @@ export function TimeSheet({
         loadData();
     }, [timeSheet.id, initialWorkItem, initialDateObj, initialDuration]);
 
+    const handleQuickAddTimeEntry = async (params: {
+        workItem: IExtendedWorkItem;
+        date: string;
+        durationInMinutes: number;
+        existingEntry?: ITimeEntryWithWorkItemString;
+    }) => {
+        const { workItem, date, durationInMinutes, existingEntry } = params;
+        
+        // Set start time to 8 AM on the selected date
+        const startTime = parseISO(date);
+        startTime.setHours(8, 0, 0, 0);
+        
+        // Calculate end time based on duration
+        const endTime = new Date(startTime.getTime() + durationInMinutes * 60 * 1000);
+        
+        // Get entries for this date to check for overlaps
+        const entriesForDate = (groupedTimeEntries[workItem.work_item_id] || [])
+            .filter(entry => parseISO(entry.start_time).toDateString() === startTime.toDateString());
+        
+        // If there are existing entries for this date, start after the last one
+        if (entriesForDate.length > 0) {
+            const sortedEntries = [...entriesForDate].sort((a, b) => 
+                parseISO(b.end_time).getTime() - parseISO(a.end_time).getTime()
+            );
+            const lastEndTime = parseISO(sortedEntries[0].end_time);
+            startTime.setTime(lastEndTime.getTime());
+            endTime.setTime(startTime.getTime() + durationInMinutes * 60 * 1000);
+        }
+        
+        // Create the time entry, copying settings from existing entry if available
+        const timeEntry: ITimeEntry = {
+            entry_id: '',
+            work_item_id: workItem.work_item_id,
+            user_id: timeSheet.user_id,
+            start_time: formatISO(startTime),
+            end_time: formatISO(endTime),
+            billable_duration: existingEntry ? 
+                (existingEntry.billable_duration > 0 ? durationInMinutes : 0) : 
+                durationInMinutes, // Default to billable if no existing entry
+            work_item_type: workItem.type,
+            notes: existingEntry?.notes || '',
+            approval_status: 'DRAFT' as TimeSheetStatus,
+            created_at: formatISO(new Date()),
+            updated_at: formatISO(new Date()),
+            time_sheet_id: timeSheet.id,
+            service_id: existingEntry?.service_id || undefined,  // Use undefined instead of empty string
+            tax_region: existingEntry?.tax_region || undefined,  // Use undefined instead of empty string
+            billing_plan_id: existingEntry?.billing_plan_id || undefined  // Also handle billing_plan_id
+        };
+        
+        await handleSaveTimeEntry(timeEntry);
+    };
+
     const handleSaveTimeEntry = async (timeEntry: ITimeEntry) => {
         try {
             // Ensure timeEntry has all required fields
@@ -462,6 +515,7 @@ export function TimeSheet({
                 isEditable={isEditable}
                 onCellClick={setSelectedCell}
                 onAddWorkItem={() => setIsAddWorkItemDialogOpen(true)}
+                onQuickAddTimeEntry={handleQuickAddTimeEntry}
             onWorkItemClick={(workItem: IExtendedWorkItem) => {
                 openDrawer(
                     <WorkItemDrawer

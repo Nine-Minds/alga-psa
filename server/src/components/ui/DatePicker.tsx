@@ -5,6 +5,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { DatePickerComponent } from 'server/src/types/ui-reflection/types';
 import { Calendar } from 'server/src/components/ui/Calendar';
+import 'server/src/styles/calendar.css';
 
 export interface DatePickerProps {
   value?: Date;
@@ -59,7 +60,7 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
               file:border-0 file:bg-transparent file:text-sm file:font-medium 
               placeholder:text-gray-500
               hover:border-gray-400
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-500))] focus-visible:ring-offset-2 
               disabled:cursor-not-allowed disabled:opacity-50
               ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
             `}
@@ -85,11 +86,11 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
 
           <Popover.Portal>
             <Popover.Content
-              className="z-50 w-auto p-0 mt-1 bg-white border border-gray-200 rounded-md shadow-lg animate-in fade-in-0 zoom-in-95"
+              className="calendar-popover-content calendar-container"
               align="start"
               sideOffset={4}
             >
-              <div className="overflow-hidden">
+              <div>
                 <Calendar
                   mode="single"
                   selected={value}

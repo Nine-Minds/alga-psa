@@ -2,51 +2,63 @@ import { getConsolidatedTicketListData } from 'server/src/lib/actions/ticket-act
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 import TicketingDashboardContainer from 'server/src/components/tickets/TicketingDashboardContainer';
-import { Suspense } from 'react';
-import TicketsLoading from './loading';
 import { ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
 
 interface TicketsPageProps {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export default async function TicketsPage({ searchParams }: TicketsPageProps) {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      throw new Error('User not found');
+      // In dev, redirect unauthenticated users to login
+      // This avoids rendering a 200 with an error message
+      // and matches expected NextAuth behavior
+      const { redirect } = await import('next/navigation');
+      redirect('/auth/signin?callbackUrl=%2Fmsp%2Ftickets');
     }
+
+    // Await searchParams as required in Next.js 15
+    const params = await searchParams;
 
     // Parse search parameters into filter values
     const filtersFromURL: Partial<ITicketListFilters> = {};
     
-    if (searchParams?.channelId && typeof searchParams.channelId === 'string') {
-      filtersFromURL.channelId = searchParams.channelId;
+    if (params?.channelId && typeof params.channelId === 'string') {
+      filtersFromURL.channelId = params.channelId;
     }
-    if (searchParams?.companyId && typeof searchParams.companyId === 'string') {
-      filtersFromURL.companyId = searchParams.companyId;
+    if (params?.companyId && typeof params.companyId === 'string') {
+      filtersFromURL.companyId = params.companyId;
     }
-    if (searchParams?.statusId && typeof searchParams.statusId === 'string') {
-      filtersFromURL.statusId = searchParams.statusId;
+    if (params?.statusId && typeof params.statusId === 'string') {
+      filtersFromURL.statusId = params.statusId;
     }
-    if (searchParams?.priorityId && typeof searchParams.priorityId === 'string') {
-      filtersFromURL.priorityId = searchParams.priorityId;
+    if (params?.priorityId && typeof params.priorityId === 'string') {
+      filtersFromURL.priorityId = params.priorityId;
     }
-    if (searchParams?.categoryId && typeof searchParams.categoryId === 'string') {
-      filtersFromURL.categoryId = searchParams.categoryId;
+    if (params?.categoryId && typeof params.categoryId === 'string') {
+      filtersFromURL.categoryId = params.categoryId;
     }
-    if (searchParams?.searchQuery && typeof searchParams.searchQuery === 'string') {
-      filtersFromURL.searchQuery = searchParams.searchQuery;
+    if (params?.searchQuery && typeof params.searchQuery === 'string') {
+      filtersFromURL.searchQuery = params.searchQuery;
     }
-    if (searchParams?.channelFilterState && typeof searchParams.channelFilterState === 'string') {
-      const channelFilterState = searchParams.channelFilterState;
+    if (params?.channelFilterState && typeof params.channelFilterState === 'string') {
+      const channelFilterState = params.channelFilterState;
       if (channelFilterState === 'active' || channelFilterState === 'inactive' || channelFilterState === 'all') {
         filtersFromURL.channelFilterState = channelFilterState;
       }
     }
-    if (searchParams?.tags && typeof searchParams.tags === 'string') {
+    if (params?.tags) {
       // Decode each tag to handle special characters that were encoded
-      filtersFromURL.tags = searchParams.tags.split(',').map(tag => decodeURIComponent(tag));
+      if (typeof params.tags === 'string') {
+        filtersFromURL.tags = params.tags.split(',').map(tag => decodeURIComponent(tag));
+      } else if (Array.isArray(params.tags)) {
+        // Handle case where tags might already be an array
+        filtersFromURL.tags = params.tags.map(tag => 
+          typeof tag === 'string' ? decodeURIComponent(tag) : String(tag)
+        );
+      }
     }
 
     // Apply defaults for missing parameters
@@ -72,20 +84,18 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Fetch consolidated data for the ticket list with initial filters
     const [consolidatedData, displaySettings] = await Promise.all([
-      getConsolidatedTicketListData(user, fetchFilters),
+      getConsolidatedTicketListData(user!, fetchFilters),
       getTicketingDisplaySettings()
     ]);
 
     return (
       <div id="tickets-page-container" className="bg-gray-100">
-        <Suspense fallback={<TicketsLoading />}>
-          <TicketingDashboardContainer 
-            consolidatedData={consolidatedData} 
-            currentUser={user}
-            initialFilters={initialFilters}
-            displaySettings={displaySettings}
-          />
-        </Suspense>
+        <TicketingDashboardContainer 
+          consolidatedData={consolidatedData} 
+          currentUser={user!}
+          initialFilters={initialFilters}
+          displaySettings={displaySettings}
+        />
       </div>
     );
   } catch (error) {

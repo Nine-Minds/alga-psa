@@ -2,7 +2,7 @@
 
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission, checkMultiplePermissions, PermissionCheck, PermissionResult } from 'server/src/lib/auth/rbac';
-import logger from 'server/src/utils/logger.js'
+import logger from 'server/src/utils/logger'
 
 export async function checkCurrentUserPermission(
   resource: string,

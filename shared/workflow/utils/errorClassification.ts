@@ -1,6 +1,6 @@
-import logger from './logger.js';
-import { LockError, LockErrorType } from './distributedLock.js';
-import { TransactionError, TransactionErrorType } from './distributedTransaction.js';
+import logger from './logger';
+import { LockError, LockErrorType } from './distributedLock';
+import { TransactionError, TransactionErrorType } from './distributedTransaction';
 
 /**
  * Error categories for workflow processing

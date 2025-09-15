@@ -9,7 +9,6 @@ import { addContact, getContactsByCompany, getAllContacts, getContactsEligibleFo
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
-import { createTenantKnex } from 'server/src/lib/db';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
@@ -19,9 +18,9 @@ import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewSwitcher';
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
+import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -50,6 +49,16 @@ const UserManagement = (): JSX.Element => {
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{
+    first_name: string[];
+    last_name: string[];
+    email: string[];
+  }>({
+    first_name: [],
+    last_name: [],
+    email: []
+  });
+  const [contactValidationError, setContactValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -86,6 +95,59 @@ const UserManagement = (): JSX.Element => {
       hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
     });
   }, [newUser.password]);
+
+  // Validation functions
+  const validateField = (fieldName: keyof typeof fieldErrors, value: string) => {
+    let error: string | null = null;
+    let errors: string[] = [];
+    
+    switch (fieldName) {
+      case 'first_name':
+        error = validateContactName(value);
+        if (error) errors = [error];
+        break;
+      case 'last_name':
+        error = validateContactName(value);
+        if (error) errors = [error];
+        break;
+      case 'email':
+        error = validateEmailAddress(value);
+        if (error) errors = [error];
+        break;
+      default:
+        errors = [];
+    }
+    
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: errors
+    }));
+    
+    return errors.length === 0;
+  };
+
+  const validateAllFields = () => {
+    const firstNameValid = validateField('first_name', newUser.firstName);
+    const lastNameValid = validateField('last_name', newUser.lastName);
+    const emailValid = validateField('email', newUser.email);
+    
+    return firstNameValid && lastNameValid && emailValid;
+  };
+
+  const handleFieldChange = (fieldName: keyof typeof fieldErrors, value: string) => {
+    // Update the user state using the camelCase property names
+    const userFieldMap = {
+      first_name: 'firstName',
+      last_name: 'lastName', 
+      email: 'email'
+    } as const;
+    
+    const userField = userFieldMap[fieldName];
+    setNewUser(prev => ({ ...prev, [userField]: value }));
+    
+    // Validate the field in real-time
+    validateField(fieldName, value);
+  };
 
   const fetchLicenseUsage = async (): Promise<void> => {
     if (portalType === 'msp') {
@@ -195,6 +257,13 @@ const fetchContacts = async (): Promise<void> => {
       // Clear any previous errors
       setError(null);
       
+      // Validate all fields first
+      const fieldsValid = validateAllFields();
+      if (!fieldsValid) {
+        setError('Please fix the validation errors before continuing');
+        return;
+      }
+      
       // Validate required fields based on portal type
       if (portalType === 'msp') {
         if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
@@ -211,6 +280,12 @@ const fetchContacts = async (): Promise<void> => {
 
       if (portalType === 'client') {
         if (!newUser.password) {
+          // Check for validation errors before sending invitation
+          if (contactValidationError) {
+            toast.error('Please fix the validation errors before sending the invitation');
+            return;
+          }
+          
           if (selectedContactId) {
             try {
               const invitationResult = await sendPortalInvitation(selectedContactId);
@@ -288,6 +363,12 @@ const fetchContacts = async (): Promise<void> => {
         role: roles.length > 0 ? roles[0].role_id : '',
         companyId: ''
       });
+      // Clear field errors
+      setFieldErrors({
+        first_name: [],
+        last_name: [],
+        email: []
+      });
     } catch (error: any) {
       console.error('Error creating user:', error);
       // Display specific error message if available
@@ -326,6 +407,11 @@ const fetchContacts = async (): Promise<void> => {
       companyId: ''
     });
     setError(null);
+    setFieldErrors({
+      first_name: [],
+      last_name: [],
+      email: []
+    });
   };
 
   const statusOptions = [
@@ -365,7 +451,7 @@ const fetchContacts = async (): Promise<void> => {
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">
-                MSP users: {licenseUsage.used} 
+                MSP users: {licenseUsage.used} During the pre-release please email support@nineminds.com to adjust.
                 {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licences used` : ' (No limit)'}
               </span>
             </div>
@@ -438,20 +524,36 @@ const fetchContacts = async (): Promise<void> => {
                 {/* Left column: manual details */}
                 <div className="space-y-2">
                   <div>
-                    <Label htmlFor="firstName">First Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="first-name">First Name <span className="text-red-500">*</span></Label>
                     <Input
-                      id="firstName"
+                      id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => setNewUser({ ...newUser, firstName: e.target.value })}
+                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.first_name.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.first_name.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
-                    <Label htmlFor="lastName">Last Name <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="last-name">Last Name <span className="text-red-500">*</span></Label>
                     <Input
-                      id="lastName"
+                      id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => setNewUser({ ...newUser, lastName: e.target.value })}
+                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.last_name.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.last_name.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div>
                     <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
@@ -459,8 +561,16 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
+                    {fieldErrors.email.length > 0 && (
+                      <div className="text-sm text-red-600 mt-1">
+                        {fieldErrors.email.map((error, idx) => (
+                          <p key={idx}>{error}</p>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   {portalType === 'client' && (
                     <div>
@@ -507,6 +617,7 @@ const fetchContacts = async (): Promise<void> => {
                         value={selectedContactId || ''}
                         onValueChange={(cid) => {
                           setSelectedContactId(cid || null);
+                          setContactValidationError(null);
                           if (cid) {
                             const c = contacts.find((x) => x.contact_name_id === cid);
                             if (c) {
@@ -518,13 +629,25 @@ const fetchContacts = async (): Promise<void> => {
                                 email: c.email || '',
                                 companyId: c.company_id || ''
                               });
+                              
+                              // Check if contact has email when sending invitation
+                              if (!newUser.password && (!c.email || c.email.trim() === '')) {
+                                setContactValidationError(`Contact "${c.full_name}" is missing an email address. Please update the contact's email before sending an invitation.`);
+                              }
                             }
+                          } else {
+                            setContactValidationError(null);
                           }
                         }}
                         companyId={newUser.companyId || undefined}
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
+                      {contactValidationError && (
+                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+                          <p className="text-sm text-red-600">{contactValidationError}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div>
@@ -536,7 +659,13 @@ const fetchContacts = async (): Promise<void> => {
                         id="password"
                         type={showPassword ? "text" : "password"}
                         value={newUser.password}
-                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        onChange={(e) => {
+                          setNewUser({ ...newUser, password: e.target.value });
+                          // Clear validation error when password is entered
+                          if (e.target.value && contactValidationError) {
+                            setContactValidationError(null);
+                          }
+                        }}
                         className="pr-10"
                         placeholder={portalType === 'client' ? 'Leave blank to send invitation' : 'Enter password'}
                         autoComplete="new-password"
@@ -568,6 +697,7 @@ const fetchContacts = async (): Promise<void> => {
                 <Button 
                   id={`submit-new-${portalType}-user-btn`} 
                   onClick={handleCreateUser}
+                  disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
                 >
                   {portalType === 'msp' ? 'Create User' : newUser.password ? 'Create User' : 'Send Portal Invitation'}
                 </Button>
@@ -585,6 +715,11 @@ const fetchContacts = async (): Promise<void> => {
                       companyId: ''
                     });
                     setError(null);
+                    setFieldErrors({
+                      first_name: [],
+                      last_name: [],
+                      email: []
+                    });
                   }}
                 >
                   Cancel

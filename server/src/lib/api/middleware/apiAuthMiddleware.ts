@@ -9,7 +9,6 @@ import { findUserById } from '../../actions/user-actions/userActions';
 import { runWithTenant } from '../../db';
 import { 
   ApiRequest, 
-  ApiContext,
   UnauthorizedError,
   handleApiError 
 } from './apiMiddleware';

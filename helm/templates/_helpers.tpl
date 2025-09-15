@@ -54,3 +54,26 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/* Resolve the correct namespace for the resource.
      Returns a trimmed single-line string to avoid newline emission in include sites. */}}
 {{- define "sebastian.namespace" -}}{{- if .Values.devEnv.enabled -}}{{- .Values.devEnv.namespace -}}{{- else if .Values.hostedEnv.enabled -}}{{- .Values.hostedEnv.namespace -}}{{- else -}}{{- .Values.namespace -}}{{- end -}}{{- end }}
+
+{{/* Derive deployment color from release name */}}
+{{- define "sebastian.color" -}}
+{{- $rn := .Release.Name -}}
+{{- if hasSuffix "-blue" $rn -}}blue{{- else if hasSuffix "-green" $rn -}}green{{- else -}}{{- "" -}}{{- end -}}
+{{- end }}
+
+{{/* Resolve host for app:
+     - If release is colored (-blue/-green) and .Values.domainSuffix is set -> <color>.<domainSuffix>
+     - Else if .Values.host is set -> .Values.host
+     - Else fallback to .Values.domainSuffix (may be empty) */}}
+{{- define "sebastian.resolveHost" -}}
+{{- $host := default "" .Values.host -}}
+{{- $suffix := default "" .Values.domainSuffix -}}
+{{- $color := include "sebastian.color" . -}}
+{{- if and $color (ne $color "") (ne $suffix "") -}}
+{{- printf "%s.%s" $color $suffix -}}
+{{- else if ne $host "" -}}
+{{- $host -}}
+{{- else -}}
+{{- $suffix -}}
+{{- end -}}
+{{- end }}

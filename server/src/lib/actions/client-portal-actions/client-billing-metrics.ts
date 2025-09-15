@@ -4,8 +4,7 @@ import { z } from 'zod';
 import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
-import { getServerSession } from 'next-auth';
-import { options } from 'server/src/app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { 
   IService, 
@@ -64,7 +63,7 @@ export async function getClientHoursByService(
   const { startDate, endDate, groupByServiceType } = validationResult.data;
 
   // Get session and verify authentication
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
@@ -228,7 +227,7 @@ export async function getClientUsageMetrics(
   const { startDate, endDate } = validationResult.data;
 
   // Get session and verify authentication
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }
@@ -337,7 +336,7 @@ export interface ClientBucketUsageResult {
  */
 export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]> {
   // Get session and verify authentication
-  const session = await getServerSession(options);
+  const session = await auth();
   if (!session?.user) {
     throw new Error('Not authenticated');
   }

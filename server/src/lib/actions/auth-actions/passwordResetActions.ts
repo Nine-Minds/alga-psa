@@ -1,7 +1,7 @@
 'use server'
 
 import { createTenantKnex, runWithTenant } from '../../db';
-import { getAdminConnection } from '../../db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 import { PasswordResetService } from '../../services/PasswordResetService';
 import { sendPasswordResetEmail } from '../../email/sendPasswordResetEmail';
 import { getSystemEmailService } from '../../email';

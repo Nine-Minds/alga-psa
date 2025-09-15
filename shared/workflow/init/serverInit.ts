@@ -3,10 +3,10 @@
  * This file should only be imported in server components or server actions
  */
 
-import { getWorkflowRuntime } from '@shared/workflow/core/index.js';
-import { registerExampleWorkflows } from '@shared/workflow/index.js';
-import logger from '@shared/core/logger.js';
-import { registerWorkflowActions } from '@shared/workflow/index.js';
+import { getWorkflowRuntime } from '@shared/workflow/core/index';
+import { registerExampleWorkflows } from '@shared/workflow/index';
+import { logger } from '@shared/core';
+import { registerWorkflowActions } from '@shared/workflow/index';
 
 // Track initialization state
 let initialized = false;

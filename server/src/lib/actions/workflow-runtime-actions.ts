@@ -6,8 +6,8 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import logger from '@alga-psa/shared/core/logger';
-import WorkflowRegistrationModel, { WorkflowRegistration, WorkflowRegistrationWithSystemFlag } from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel.js'; // Import the new type
-import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core/workflowRuntime.js';
+import WorkflowRegistrationModel, { WorkflowRegistration, WorkflowRegistrationWithSystemFlag } from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel'; // Import the new type
+import { getWorkflowRuntime } from '@alga-psa/shared/workflow/core/workflowRuntime';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

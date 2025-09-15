@@ -113,6 +113,11 @@ export async function updateDocument(documentId: string, data: Partial<IDocument
           updated_at: new Date()
         });
     });
+
+    // Invalidate the preview cache for this document if it exists
+    const cache = CacheFactory.getPreviewCache(tenant);
+    await cache.delete(documentId);
+    console.log(`[updateDocument] Invalidated preview cache for document ${documentId}`);
   } catch (error) {
     console.error(error);
     throw new Error("Failed to update the document");
@@ -473,25 +478,36 @@ export async function getDocumentPreview(
       }
       
       // Try to download the file to get metadata
-      const downloadResult = await StorageService.downloadFile(identifier);
-      if (!downloadResult) {
-        console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
-        throw new Error(`File not found in storage for ID: ${identifier}`);
+      try {
+        const downloadResult = await StorageService.downloadFile(identifier);
+        if (!downloadResult) {
+          console.error(`[getDocumentPreview] File not found in storage for ID: ${identifier}`);
+          return {
+            success: false,
+            error: 'File not found in storage'
+          };
+        }
+
+        // Create a temporary document object with file metadata
+        document = {
+          document_id: identifier,
+          document_name: downloadResult.metadata.original_name || 'Unknown',
+          type_id: null,
+          user_id: '',
+          order_number: 0,
+          created_by: '',
+          tenant,
+          file_id: identifier,
+          mime_type: downloadResult.metadata.mime_type,
+          type_name: downloadResult.metadata.mime_type
+        };
+      } catch (storageError) {
+        console.error(`[getDocumentPreview] Storage error for ID ${identifier}:`, storageError);
+        return {
+          success: false,
+          error: 'File not found or inaccessible'
+        };
       }
-      
-      // Create a temporary document object with file metadata
-      document = {
-        document_id: identifier,
-        document_name: downloadResult.metadata.original_name || 'Unknown',
-        type_id: null,
-        user_id: '',
-        order_number: 0,
-        created_by: '',
-        tenant,
-        file_id: identifier,
-        mime_type: downloadResult.metadata.mime_type,
-        type_name: downloadResult.metadata.mime_type
-      };
     }
 
     // Use the document handler registry to get the appropriate handler
@@ -567,6 +583,18 @@ export async function downloadDocument(documentIdOrFileId: string) {
         headers.set('Content-Type', metadata.mime_type || 'application/octet-stream');
         headers.set('Content-Disposition', `attachment; filename="${document.document_name}"`);
         headers.set('Content-Length', buffer.length.toString());
+        
+        // Add cache control headers for images to enable browser caching
+        const isImage = metadata.mime_type?.startsWith('image/');
+        if (isImage) {
+            // Cache images for 7 days, but revalidate after 1 day
+            headers.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+            // Add ETag for conditional requests
+            headers.set('ETag', `"${document.file_id}"`);
+        } else {
+            // For non-images, use no-cache to ensure fresh content
+            headers.set('Cache-Control', 'no-cache');
+        }
 
         return new Response(buffer as any, {
             status: 200,

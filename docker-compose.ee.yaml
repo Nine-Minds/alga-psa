@@ -8,7 +8,7 @@ services:
     container_name: ${APP_NAME:-sebastian}_server_ee
     build:
       context: .
-      dockerfile: ee/server/Dockerfile
+      dockerfile: ee/server/Dockerfile.build
     environment:
       EDITION: enterprise
       DB_NAME: server

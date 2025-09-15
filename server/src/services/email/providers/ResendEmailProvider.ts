@@ -14,7 +14,7 @@ import {
   EmailAttachment,
   DomainVerificationResult,
   DnsRecord
-} from '../../../types/email.types.js';
+} from '../../../types/email.types';
 
 interface ResendConfig {
   apiKey: string;

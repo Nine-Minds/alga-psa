@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { publishEvent } from '@alga-psa/shared/events/publisher.js';
+import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 
 // Test endpoint to verify webhook and event publishing

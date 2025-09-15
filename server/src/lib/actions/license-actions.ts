@@ -1,7 +1,6 @@
 'use server';
 
-import { getServerSession } from "next-auth/next";
-import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/options';
+import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
 
 /**
@@ -14,7 +13,7 @@ export async function getLicenseUsageAction(): Promise<{
   error?: string 
 }> {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     
     if (!session?.user?.tenant) {
       return { 

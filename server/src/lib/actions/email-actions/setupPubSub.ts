@@ -83,6 +83,42 @@ export async function setupPubSub(request: SetupPubSubRequest) {
       }
     }
 
+    // Ensure Gmail can publish test messages to the topic
+    try {
+      console.log('🔐 Ensuring Gmail push service has publisher role on topic');
+      const getPolicyResp = await pubsub.projects.topics.getIamPolicy({
+        resource: topicPath,
+      } as any);
+
+      const policy = getPolicyResp.data || ({} as any);
+      const bindings = Array.isArray(policy.bindings) ? policy.bindings : [];
+      const member = 'serviceAccount:gmail-api-push@system.gserviceaccount.com';
+      const role = 'roles/pubsub.publisher';
+
+      const existing = bindings.find((b: any) => b.role === role);
+      if (existing) {
+        if (!existing.members) existing.members = [];
+        if (!existing.members.includes(member)) {
+          existing.members.push(member);
+        }
+      } else {
+        bindings.push({ role, members: [member] });
+      }
+
+      await pubsub.projects.topics.setIamPolicy({
+        resource: topicPath,
+        requestBody: {
+          policy: {
+            bindings,
+            etag: policy.etag,
+          }
+        }
+      } as any);
+      console.log('✅ Gmail publisher role ensured on topic');
+    } catch (iamErr) {
+      console.warn('⚠️ Failed to ensure Gmail publisher role on topic. Gmail watch may fail.', iamErr);
+    }
+
     // Create subscription if it doesn't exist
     const subscriptionPath = `projects/${request.projectId}/subscriptions/${request.subscriptionName}`;
     console.log(`🔔 Checking if subscription exists: ${subscriptionPath}`);

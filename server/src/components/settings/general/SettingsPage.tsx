@@ -51,18 +51,18 @@ const SettingsPage = (): JSX.Element =>  {
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-  // Dynamically load the Extensions (Manage) component only if EE is available
+  // Dynamically load the Extensions (Manage) component using stable package paths
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
-    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicExtensionsComponent),
+    import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
     {
       loading: () => <div className="text-center py-8 text-gray-500">Loading extensions...</div>,
       ssr: false
     }
   ) : () => <div className="text-center py-8 text-gray-500">Extensions not available in this edition</div>;
 
-  // Dynamically load the new Installer (Server Actions) via EE loader boundary, to avoid direct app imports here
+  // Dynamically load the new Installer using stable package paths
   const DynamicInstallComponent = isEEAvailable ? dynamic(() =>
-    import('@ee/lib/extensions/ExtensionComponentLoader').then(mod => mod.DynamicInstallExtensionComponent as any),
+    import('@product/settings-extensions/entry').then(mod => mod.DynamicInstallExtensionComponent as any),
     {
       loading: () => <div className="text-center py-8 text-gray-500">Loading installer...</div>,
       ssr: false
@@ -219,7 +219,7 @@ const SettingsPage = (): JSX.Element =>  {
         <div className="space-y-6">
           {/* QuickBooks Online Integration */}
           <QboIntegrationSettings />
-          
+
           {/* Inbound Email Integration */}
           <Card>
             <CardHeader>
@@ -294,7 +294,7 @@ const SettingsPage = (): JSX.Element =>  {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
-      <CustomTabs 
+      <CustomTabs
         tabs={tabContent}
         defaultTab={activeTab}
         onTabChange={(tab) => {

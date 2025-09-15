@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { listAppMenuItemsForTenant, type AppMenuItem } from '@ee/lib/actions/extMenuActions';
+import { listAppMenuItemsForTenant, type AppMenuItem } from '@alga-psa/product-extension-actions';
 
 
 interface DynamicNavigationSlotProps {

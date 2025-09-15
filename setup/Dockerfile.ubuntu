@@ -1,0 +1,70 @@
+FROM ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_VERSION=22 \
+    PATH=/usr/local/bin:/usr/bin:/bin
+
+WORKDIR /app
+
+# 1) Base OS deps and Postgres client
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
+    postgresql-client \
+    sqlite3 \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2) Install Node.js (NodeSource) – default to current active LTS (22)
+RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_VERSION}.x | bash - \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/* \
+    && node --version && npm --version
+
+# 3) Copy minimal workspace manifests first for better layer caching
+COPY package.json package-lock.json tsconfig.base.json ./
+COPY shared/package.json ./shared/
+COPY server/package.json ./server/
+
+# 4) Install root workspaces (will create node_modules and workspace links)
+#    Use npm ci if lockfile is present
+RUN npm ci --workspaces || npm install --workspaces
+
+# 5) Build the shared package so dist/* is available for setup scripts
+COPY shared/ ./shared/
+WORKDIR /app/shared
+RUN npm run build
+
+# 6) Bring in server setup artifacts needed at runtime
+WORKDIR /app
+COPY server/setup/create_database.js ./server/setup/
+COPY server/knexfile.cjs ./server/
+COPY server/migrations ./server/migrations
+COPY server/seeds ./server/seeds
+COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/assemblyscript
+
+# 7) Install CLI tools used by entrypoint
+RUN npm install -g knex
+
+# 8) Setup dir and entrypoint
+WORKDIR /app/setup
+COPY setup/entrypoint.sh ./
+COPY setup/config.ini ./config.ini
+RUN chmod +x ./entrypoint.sh \
+    && npm init -y \
+    && npm install pg-boss \
+    && node -e "const fs=require('fs');const pkg=require('./package.json');pkg.type='module';fs.writeFileSync('package.json',JSON.stringify(pkg,null,2))"
+
+# 9) Environment defaults expected by scripts (can be overridden)
+ENV APP_ENV=development \
+    NODE_ENV=development \
+    DB_NAME_SERVER=server \
+    DB_USER_SERVER=app_user \
+    DB_USER_ADMIN=postgres \
+    DB_HOST=postgres \
+    DB_PORT=5432
+
+ENTRYPOINT ["./entrypoint.sh"]
+

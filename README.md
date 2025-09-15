@@ -62,6 +62,8 @@ For detailed setup instructions, please refer to our [Complete Setup Guide](docs
 - Security setup
 - Verification steps
 
+Note: For production-like persistence, both CE and EE prebuilt compose files define named volumes for the database (`postgres_data`) and uploaded documents (`files_data`). These volumes are created automatically and ensure data survives container restarts and upgrades. See the Production section in the setup guide for backup/restore examples.
+
 ## Documentation
 
 ### Setup & Configuration

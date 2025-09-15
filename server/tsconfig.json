@@ -29,8 +29,15 @@
       "@shared/core/*": ["../shared/core/*"],
       "@shared/types": ["../shared/types"],
       "@shared/types/*": ["../shared/types/*"],
+      // CE-first: use stubs by default; EE runs are overridden by webpack
       "@ee": ["src/empty"],
-      "@ee/*": ["src/empty/*"]
+      "@ee/*": ["src/empty/*"],
+      "@product/chat/entry": ["src/services/chatStreamService"],
+      "@product/workflows/entry": ["src/empty/components/flow/DnDFlow"],
+      "@product/extensions/*": ["../packages/product-extensions/*"],
+      "@product/settings-extensions/*": ["../packages/product-settings-extensions/*"],
+      "@product/email-providers/*": ["../packages/product-email-providers/*"],
+      "@product/billing/*": ["../packages/product-billing/*"]
     }
   },
   "include": [

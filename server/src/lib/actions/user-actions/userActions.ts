@@ -2,14 +2,13 @@
 
 import User from 'server/src/lib/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from 'server/src/interfaces/auth.interfaces';
-import { getServerSession } from "next-auth/next";
-import { options as authOptions } from 'server/src/app/api/auth/[...nextauth]/options';
+import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 import { withAdminTransaction, withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
-import { hashPassword } from 'server/src/utils/encryption/encryption';
+import { hashPassword } from '@shared/utils/encryption';
 import Tenant from 'server/src/lib/models/tenant';
 import UserPreferences from 'server/src/lib/models/userPreferences';
 import { getUserAvatarUrl } from 'server/src/lib/utils/avatarUtils';
@@ -207,7 +206,7 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
     logger.debug('Getting current user from session');
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user) {
       logger.debug('No user found in session');

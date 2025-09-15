@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 import { withTransaction } from '@alga-psa/shared/db';
-import { publishEvent } from '@alga-psa/shared/events/publisher.js';
+import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
 import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
@@ -91,16 +91,44 @@ export async function POST(request: NextRequest) {
     console.log('🔍 Payload data extracted for processing:', payloadData);
 
     await withTransaction(knex, async (trx) => {
-      // Look up provider by email address
-      console.log(`🔍 Looking up Gmail provider for email: ${notification.emailAddress}`);
-      const provider = await trx('email_providers')
-        .where('mailbox', notification.emailAddress)
-        .where('provider_type', 'google')
-        .where('is_active', true)
-        .first();
+      // Prefer mapping by Pub/Sub subscription name (robust for aliases)
+      const subscriptionName = payloadData.subscription?.split('/').pop();
+      console.log(`🔔 Subscription name extracted: ${subscriptionName}`);
+
+      let provider = null as any;
+      if (subscriptionName) {
+        try {
+          const cfg = await trx('google_email_provider_config')
+            .select('email_provider_id')
+            .where('pubsub_subscription_name', subscriptionName)
+            .first();
+          if (cfg?.email_provider_id) {
+            provider = await trx('email_providers')
+              .where('id', cfg.email_provider_id)
+              .andWhere('provider_type', 'google')
+              .andWhere('is_active', true)
+              .first();
+            if (provider) {
+              console.log(`✅ Mapped provider via subscription ${subscriptionName}: ${provider.id}`);
+            }
+          }
+        } catch (mapErr: any) {
+          console.warn('⚠️ Failed subscription→provider mapping, will fallback to email lookup:', mapErr?.message || mapErr);
+        }
+      }
+
+      // Fallback: look up provider by email address (owner address in Gmail notification)
+      if (!provider) {
+        console.log(`🔍 Looking up Gmail provider by address: ${notification.emailAddress}`);
+        provider = await trx('email_providers')
+          .where('mailbox', notification.emailAddress)
+          .andWhere('provider_type', 'google')
+          .andWhere('is_active', true)
+          .first();
+      }
 
       if (!provider) {
-        console.error(`❌ Active Gmail provider not found for email: ${notification.emailAddress}`);
+        console.error(`❌ Active Gmail provider not found (subscription=${subscriptionName} email=${notification.emailAddress})`);
         return;
       }
 
@@ -120,10 +148,6 @@ export async function POST(request: NextRequest) {
         hasConfig: !!googleConfig,
         pubsubSubscriptionName: googleConfig.pubsub_subscription_name
       });
-
-      // Extract subscription name from payload
-      const subscriptionName = payloadData.subscription?.split('/').pop();
-      console.log(`🔔 Subscription name extracted: ${subscriptionName}`);
 
       // Validate subscription (optional but recommended)
       if (subscriptionName && googleConfig.pubsub_subscription_name !== subscriptionName) {
@@ -261,8 +285,8 @@ export async function POST(request: NextRequest) {
             await trx('email_providers')
               .where('id', provider.id)
               .update({
-                connection_status: 'error',
-                connection_error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
+                status: 'error',
+                error_message: 'Gmail requires re-authorization (invalid_grant/invalid_rapt). Visit settings to reconnect.'
               });
           } catch (updateErr) {
             console.warn('Failed to update provider connection_status after OAuth error:', updateErr);

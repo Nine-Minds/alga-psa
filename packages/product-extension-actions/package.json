@@ -1,0 +1,15 @@
+{
+  "name": "@product/extension-actions",
+  "version": "0.1.0",
+  "description": "Extension actions for Alga PSA - EE/OSS conditional exports",
+  "main": "index.js",
+  "type": "module",
+  "exports": {
+    "./ee/entry": "./ee/entry.ts",
+    "./oss/entry": "./oss/entry.ts",
+    "./installDomainActions": "./index.ts",
+    "./extMenuActions": "./index.ts"
+  },
+  "dependencies": {},
+  "peerDependencies": {}
+}

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getAdminConnection } from './admin.js';
+import { getAdminConnection } from './admin';
 
 /**
  * Execute a function within a transaction

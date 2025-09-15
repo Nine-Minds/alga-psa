@@ -2,11 +2,9 @@
 
 import dynamic from 'next/dynamic';
 
-// Dynamically load the extension install component from EE with fallback
+// Dynamically load the extension install component using the stable package path
 const DynamicInstallExtensionComponent = dynamic(
-  () => import('@ee/components/settings/extensions/InstallExtensionSimple').catch(() => 
-    import('../../../../../empty/components/settings/extensions/InstallExtensionSimple')
-  ),
+  () => import('@product/settings-extensions/entry').then(mod => mod.InstallExtensionSimple),
   {
     ssr: false,
     loading: () => (

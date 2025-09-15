@@ -272,7 +272,7 @@ export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> 
     await trx('users').where('tenant', tenantId).del();
     await trx('roles').where('tenant', tenantId).del();
     await trx('tenant_companies').where('tenant', tenantId).del();
-    await trx('tenant_email_settings').where('tenant_id', tenantId).del();
+    await trx('tenant_email_settings').where('tenant', tenantId).del();
     await trx('companies').where('tenant', tenantId).del();
     await trx('tenants').where('tenant', tenantId).del();
   });

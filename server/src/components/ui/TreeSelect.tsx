@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as RadixSelect from '@radix-ui/react-select';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { AutomationProps } from '../../types/ui-reflection/types';
+import { Button } from './Button';
 
 export interface TreeSelectOption<T extends string = string> {
   label: string;
@@ -81,30 +82,37 @@ function TreeSelect<T extends string>({
       console.error('TreeSelect: options is not an array', options);
       return;
     }
-    
-    if (value) {
-      setSelectedValue(value);
-      const result = findSelectedOptionWithPath(options, value);
-      if (result) {
-        // Expand all parent nodes
-        setExpandedItems(prev => {
-          const next = new Set(prev);
-          result.path.forEach((p: TreeSelectOption<T>): void => {
-            next.add(p.value);
-          });
-          return next;
-        });
 
-        // Build the path object
-        const pathObj: TreeSelectPath = {};
-        result.path.forEach((opt: TreeSelectOption<T>): void => {
-          pathObj[opt.type] = opt.value;
-        });
+    // If value is empty, clear selection and label
+    if (!value) {
+      setSelectedValue('');
+      setDisplayLabel('');
+      setExpandedItems(new Set());
+      return;
+    }
 
-        // Set display label to show the full path
-        const labels = result.path.map((p: TreeSelectOption<T>): string => p.label);
-        setDisplayLabel(labels.join(' > '));
-      }
+    // Otherwise, find and reflect the selected option
+    setSelectedValue(value);
+    const result = findSelectedOptionWithPath(options, value);
+    if (result) {
+      // Expand all parent nodes
+      setExpandedItems(prev => {
+        const next = new Set(prev);
+        result.path.forEach((p: TreeSelectOption<T>): void => {
+          next.add(p.value);
+        });
+        return next;
+      });
+
+      // Build the path object (not used directly here, but kept for parity)
+      const pathObj: TreeSelectPath = {};
+      result.path.forEach((opt: TreeSelectOption<T>): void => {
+        pathObj[opt.type] = opt.value;
+      });
+
+      // Set display label to show the full path
+      const labels = result.path.map((p: TreeSelectOption<T>): string => p.label);
+      setDisplayLabel(labels.join(' > '));
     }
   }, [value, options]);
 
@@ -210,10 +218,13 @@ function TreeSelect<T extends string>({
             {(multiSelect || showExclude) && (
               <div className="flex items-center gap-1 ml-2">
                 {multiSelect && (
-                  <button
+                  <Button
+                    id={`include-${option.value}`}
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     className={`
-                      p-1 rounded hover:bg-gray-200 transition-colors
+                      p-1 h-auto min-h-0
                       ${option.selected ? 'text-purple-500' : 'text-gray-400'}
                     `}
                     onClick={(e) => {
@@ -225,14 +236,17 @@ function TreeSelect<T extends string>({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                  </button>
+                  </Button>
                 )}
                 {showExclude && (
                   <div onClick={(e) => e.stopPropagation()}>
-                    <button
+                    <Button
+                      id={`exclude-${option.value}`}
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       className={`
-                        p-1 rounded hover:bg-gray-200 transition-colors
+                        p-1 h-auto min-h-0
                         ${option.excluded ? 'text-red-500' : 'text-gray-400'}
                       `}
                       onClick={(e) => {
@@ -245,7 +259,7 @@ function TreeSelect<T extends string>({
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                       </svg>
-                    </button>
+                    </Button>
                   </div>
                 )}
               </div>
@@ -296,13 +310,17 @@ function TreeSelect<T extends string>({
             </RadixSelect.Value>
             <div className="flex items-center gap-2">
               {showReset && hasSelections && (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="p-1 hover:bg-gray-100 rounded-full"
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleReset(e);
+                  }}
+                  className="p-1 hover:bg-gray-100 rounded-full cursor-pointer"
+                  role="button"
+                  aria-label="Clear selection"
                 >
                   <X className="w-4 h-4 text-gray-500" />
-                </button>
+                </div>
               )}
               <RadixSelect.Icon>
                 <ChevronDown className="w-4 h-4 text-gray-500" />

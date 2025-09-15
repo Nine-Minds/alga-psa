@@ -1,0 +1,21 @@
+{
+  "watch": [
+    "../../server/src",
+    "../../server/index.ts",
+    "../../server/next.config.mjs",
+    "./src"
+  ],
+  "ext": "ts,tsx,js,mjs,json",
+  "ignore": [
+    "**/node_modules/**",
+    "../../server/.next/**",
+    "../../server/dist/**"
+  ],
+  "env": {
+    "NODE_ENV": "development",
+    "NODE_OPTIONS": "--max-old-space-size=8192",
+    "NEXT_PUBLIC_EDITION": "enterprise"
+  },
+  "exec": "sh -lc 'cd ../../server && tsx index.ts'"
+}
+

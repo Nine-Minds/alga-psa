@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validate } from '@ee/lib/actions/installDomainActions';
+import { validate } from '@alga-psa/product-extension-actions';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -15,4 +15,3 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ valid: false }, { status: 200 });
   }
 }
-

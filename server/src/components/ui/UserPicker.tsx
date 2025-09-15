@@ -6,11 +6,13 @@ import { ChevronDown, Search } from 'lucide-react';
 import { AutomationProps, ButtonComponent, ContainerComponent } from '../../types/ui-reflection/types';
 import { getUserAvatarUrlsBatchAction } from 'server/src/lib/actions/avatar-actions';
 import { Input } from './Input';
+import { Button } from './Button';
 import { useAutomationIdAndRegister } from '../../types/ui-reflection/useAutomationIdAndRegister';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { CommonActions } from '../../types/ui-reflection/actionBuilders';
 
 interface UserPickerProps {
+  id?: string;
   label?: string;
   value: string;
   onValueChange: (value: string) => void;
@@ -55,6 +57,7 @@ const OptionButton: React.FC<OptionButtonProps> = ({ id, label, onClick, classNa
 };
 
 const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({ 
+  id,
   label, 
   value, 
   onValueChange, 
@@ -302,14 +305,16 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
       )}
       
       {/* Trigger Button */}
-      <button
+      <Button
+        {...pickerProps}
         ref={buttonRef}
+        id={id || pickerProps['data-automation-id'] || 'user-picker-button'}
         type="button"
         onClick={toggleDropdown}
         disabled={disabled}
-        {...pickerProps}
+        variant="outline"
         data-automation-type={dataAutomationType}
-        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium transition-colors bg-white cursor-pointer border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none ${
+        className={`inline-flex items-center justify-between rounded-lg p-2 h-10 text-sm font-medium ${
           buttonWidth === 'full' ? 'w-full' : 'w-fit min-w-[150px]'
         }`}
       >
@@ -325,7 +330,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
           <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
         </div>
         <ChevronDown className="w-4 h-4 text-gray-500" />
-      </button>
+      </Button>
       
       {/* Dropdown - Using absolute positioning relative to the parent container */}
       {isOpen && (

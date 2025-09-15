@@ -1,0 +1,12 @@
+{
+  "name": "@product/auth-ee",
+  "version": "0.1.0",
+  "description": "Enterprise auth features for Alga PSA - EE/OSS conditional exports",
+  "type": "module",
+  "exports": {
+    "./ee/entry": "./ee/entry.ts",
+    "./oss/entry": "./oss/entry.tsx"
+  },
+  "dependencies": {},
+  "peerDependencies": {}
+}

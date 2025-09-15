@@ -1,10 +1,9 @@
 /// <reference types="node" />
-import { ISecretProvider } from './ISecretProvider.js';
-import { FileSystemSecretProvider } from './FileSystemSecretProvider.js';
-import { EnvSecretProvider } from './EnvSecretProvider.js';
-import { CompositeSecretProvider } from './CompositeSecretProvider.js';
-import logger from './logger.js';
-import { loadVaultSecretProvider } from './vaultLoader.js';
+import { ISecretProvider } from './ISecretProvider';
+// Dynamic import Node-only providers to keep Edge runtime clean
+import { EnvSecretProvider } from './EnvSecretProvider';
+import { CompositeSecretProvider } from './CompositeSecretProvider';
+import logger from './logger';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
@@ -16,7 +15,7 @@ let secretProviderInstance: ISecretProvider | null = null;
 
 // Cached concrete provider instances for composite provider
 let envProviderInstance: EnvSecretProvider | null = null;
-let filesystemProviderInstance: FileSystemSecretProvider | null = null;
+let filesystemProviderInstance: any | null = null;
 let vaultProviderInstance: ISecretProvider | null = null;
 
 /**
@@ -43,6 +42,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
     
     case 'filesystem':
       if (!filesystemProviderInstance) {
+        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;
@@ -51,6 +51,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
+          const { loadVaultSecretProvider } = await import('./vaultLoader');
           vaultProviderInstance = await loadVaultSecretProvider();
           logger.info('Using VaultSecretProvider for Node.js runtime');
         } catch (error) {
@@ -113,7 +114,7 @@ function validateProviderConfiguration(readChain: string[], writeProvider: strin
  * @throws Error if configuration is invalid
  */
 async function buildSecretProviders(): Promise<CompositeSecretProvider> {
-  const readChainEnv = getEnvVar('SECRET_READ_CHAIN') || 'env,filesystem';
+  const readChainEnv = getEnvVar('SECRET_READ_CHAIN') || 'env';
   const writeProviderEnv = getEnvVar('SECRET_WRITE_PROVIDER') || 'filesystem';
 
   const readChain = readChainEnv.split(',').map(s => s.trim()).filter(s => s.length > 0);
@@ -166,12 +167,11 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
       secretProviderInstance = await buildSecretProviders();
     } else {
       // Legacy mode: always default to sensible composite behavior (env,filesystem)
-      logger.info('Initializing secret provider (legacy mode with composite fallback). Using env,filesystem chain');
+      logger.info('Initializing secret provider (legacy mode with composite fallback). Using env-only chain for Edge safety');
       const readProviders = await Promise.all([
-        getProviderInstance('env'),
-        getProviderInstance('filesystem')
+        getProviderInstance('env')
       ]);
-      const writeProvider = await getProviderInstance('filesystem');
+      const writeProvider = await getProviderInstance('env');
       secretProviderInstance = new CompositeSecretProvider(readProviders, writeProvider);
     }
 

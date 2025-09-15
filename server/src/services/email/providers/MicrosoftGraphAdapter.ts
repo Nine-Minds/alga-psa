@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/email.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from '@alga-psa/shared/db/admin';
 
 /**
  * Microsoft Graph API adapter for email processing
@@ -213,10 +213,34 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Microsoft Graph limit for Outlook message subscriptions is 4230 minutes (~70.5 hours)
       // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
       const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
+
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
+
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${this.config.folder_to_monitor}')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -298,28 +322,6 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('info', `Webhook subscription renewed until ${newExpiry}`);
     } catch (error) {
       throw this.handleError(error, 'renewWebhookSubscription');
-    }
-  }
-
-  /**
-   * Process webhook notification from Microsoft Graph
-   */
-  async processWebhookNotification(payload: any): Promise<string[]> {
-    try {
-      const messageIds: string[] = [];
-
-      if (payload.value && Array.isArray(payload.value)) {
-        for (const notification of payload.value) {
-          if (notification.changeType === 'created' && notification.resourceData) {
-            messageIds.push(notification.resourceData.id);
-          }
-        }
-      }
-
-      this.log('info', `Processed webhook notification with ${messageIds.length} messages`);
-      return messageIds;
-    } catch (error) {
-      throw this.handleError(error, 'processWebhookNotification');
     }
   }
 
@@ -454,10 +456,32 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
       const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
+      // Resolve folder segment: well-known name or ID for custom folder
+      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+      const wellKnown = new Set([
+        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
+        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
+      ]);
+      let folderSegment = desiredFolder;
+      if (!wellKnown.has(desiredFolder)) {
+        try {
+          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
+          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
+          if (match?.id) {
+            folderSegment = match.id;
+          } else {
+            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
+            folderSegment = 'Inbox';
+          }
+        } catch (e: any) {
+          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
+          folderSegment = 'Inbox';
+        }
+      }
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('Inbox')/messages`,
+        resource: `/me/mailFolders('${folderSegment}')/messages`,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -470,27 +494,62 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
-      const subscriptionId = response.data.id;
-
-      this.log('info', `Webhook subscription created: ${subscriptionId}`);
       
-      return {
-        success: true,
-        subscriptionId
-      };
-    } catch (error: any) {
-      // Let base adapter enrich the error with axios response details
-      const enriched = this.handleError(error, 'initializeWebhook');
-      this.log('error', 'Failed to initialize webhook', {
+      // Update config with subscription ID
+      this.config.webhook_subscription_id = response.data.id;
+      this.config.webhook_expires_at = response.data.expirationDateTime;
+
+      // Persist webhook details only in microsoft vendor config
+      try {
+        const knex = await getAdminConnection();
+        await knex('microsoft_email_provider_config')
+          .where('email_provider_id', this.config.id)
+          .andWhere('tenant', this.config.tenant)
+          .update({
+            webhook_subscription_id: response.data.id,
+            webhook_expires_at: response.data.expirationDateTime,
+            webhook_verification_token: this.config.webhook_verification_token || null,
+            updated_at: new Date().toISOString(),
+          });
+      } catch (dbErr: any) {
+        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
+      }
+
+      this.log('info', `Webhook subscription created: ${response.data.id}`);
+
+      // Return success with subscription id
+      return { success: true, subscriptionId: response.data.id };
+    } catch (error) {
+      // Enrich/log details (status, request-id, body) before throwing
+      const enriched = this.handleError(error, 'registerWebhookSubscription');
+      this.log('error', 'Subscription creation failed', {
         message: enriched.message,
-        status: (enriched as any).status,
-        code: (enriched as any).code,
-        requestId: (enriched as any).requestId,
+        context: 'registerWebhookSubscription',
       });
-      return {
-        success: false,
-        error: enriched.message
-      };
+      // Return error info instead of throwing to satisfy return type
+      return { success: false, error: enriched.message };
+    }
+  }
+
+  /**
+   * Process webhook notification from Microsoft Graph
+   */
+  async processWebhookNotification(payload: any): Promise<string[]> {
+    try {
+      const messageIds: string[] = [];
+
+      if (payload.value && Array.isArray(payload.value)) {
+        for (const notification of payload.value) {
+          if (notification.changeType === 'created' && notification.resourceData) {
+            messageIds.push(notification.resourceData.id);
+          }
+        }
+      }
+
+      this.log('info', `Processed webhook notification with ${messageIds.length} messages`);
+      return messageIds;
+    } catch (error) {
+      throw this.handleError(error, 'processWebhookNotification');
     }
   }
 }

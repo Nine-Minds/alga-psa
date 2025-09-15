@@ -124,12 +124,21 @@ export function UIStateProvider({ children, initialPageState }: {
   // Initialize and manage Socket.IO connection
   useEffect(() => {
     const initializeSocket = () => {
+      // Check if AI backend is enabled via environment variable
+      const aiBackendEnabled = process.env.NEXT_PUBLIC_AI_BACKEND_ENABLED === 'true';
+      
+      if (!aiBackendEnabled) {
+        console.log('🔌 [UI-STATE] AI Backend disabled - skipping Socket.IO connection');
+        return;
+      }
+      
       if (socketRef.current?.connected) {
         return; // Reuse existing connection
       }
 
       if (!socketRef.current && reconnectAttemptsRef.current < maxReconnectAttempts) {
-        socketRef.current = io('http://localhost:4000', {
+        const aiBackendUrl = process.env.NEXT_PUBLIC_AI_BACKEND_URL || 'http://localhost:4000';
+        socketRef.current = io(aiBackendUrl, {
           transports: ['websocket'],
           reconnection: true,
           reconnectionDelay: Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 5000), // Exponential backoff
@@ -426,10 +435,14 @@ function getAllDescendants(dict: ComponentDict, id: string): string[] {
     
     // Check for circular reference
     if (visited.has(current)) {
-      console.error(
-        `Circular reference detected: Component ${current} has already been processed. ` +
-        `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
-      );
+      // This can happen with complex UI structures and is handled gracefully
+      // Only log in development mode to avoid cluttering production logs
+      if (process.env.NODE_ENV === 'development') {
+        console.debug(
+          `Circular reference detected: Component ${current} has already been processed. ` +
+          `Current path: ${Array.from(visited).join(' -> ')} -> ${current}`
+        );
+      }
       continue;
   }
 
@@ -443,11 +456,13 @@ function getAllDescendants(dict: ComponentDict, id: string): string[] {
   }
 
   if (maxIterations <= 0 && stack.length > 0) {
-    console.error(
-      'Maximum iterations exceeded while gathering descendants. ' +
-      'This indicates either a very deep component tree or a circular reference. ' +
-      `Processed components: ${Array.from(visited).join(' -> ')}`
-    );
+    if (process.env.NODE_ENV === 'development') {
+      console.warn(
+        'Maximum iterations exceeded while gathering descendants. ' +
+        'This indicates either a very deep component tree or a circular reference. ' +
+        `Processed components: ${Array.from(visited).join(' -> ')}`
+      );
+    }
 }
 
   return result;

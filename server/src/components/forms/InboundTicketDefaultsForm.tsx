@@ -367,7 +367,8 @@ export function InboundTicketDefaultsForm({
               })()}
               onSelect={(categoryIds) => {
                 const selectedId = categoryIds[0] || '';
-                if (!selectedId) {
+                // Treat both "Clear Selection" and "No Category" as no category
+                if (!selectedId || selectedId === 'no-category') {
                   handleDefaultChange('category_id', '');
                   handleDefaultChange('subcategory_id', '');
                   return;

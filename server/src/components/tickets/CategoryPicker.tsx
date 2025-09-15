@@ -109,16 +109,16 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
     }
 
     if (value === 'no-category') {
-      // Handle "No Category" selection
+      // Selecting "No Category" should reset the selection entirely
       if (excluded) {
-        // Toggle exclusion of "No Category"
+        // Toggle exclusion of "No Category" if exclusion UI is used
         const newExcluded = excludedCategories.includes(value)
           ? excludedCategories.filter(id => id !== value)
           : [...excludedCategories, value];
         onSelect(selectedCategories, newExcluded);
       } else {
-        // Select "No Category"
-        onSelect([value], []);
+        // Reset selection
+        onSelect([], []);
       }
       return;
     }

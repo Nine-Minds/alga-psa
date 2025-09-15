@@ -4,11 +4,11 @@
  * from both the server and the workflow-worker
  */
 
-import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@shared/workflow/core/index.js';
-import logger from '@shared/core/logger.js';
-import { getTaskInboxService } from '@shared/workflow/core/taskInboxService.js';
+import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@shared/workflow/core/index';
+import { logger } from '@shared/core';
+import { getTaskInboxService } from '@shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
-import { getSecretProviderInstance } from '@shared/core/index.js';
+import { getSecretProviderInstance } from '@shared/core';
 
 // --- Mock Secret Retrieval ---
 
@@ -120,11 +120,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry.js');
+        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
         
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Register the form
@@ -167,11 +167,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry.js');
+        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
         
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Get the form
@@ -234,11 +234,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry.js');
+        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
         
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Create new version
@@ -282,7 +282,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`Looking up user with email: ${params.email}`);
         
         // Get database connection
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Find user by email - case insensitive search
@@ -342,7 +342,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`Looking up role with name: ${params.roleName}`);
         
         // Get database connection
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Find role by name - case insensitive search
@@ -468,7 +468,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_invoice called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const invoice = await knex('invoices')
@@ -512,7 +512,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
       logger.info(`${logPrefix} get_invoice_items called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const items = await knex('invoice_items')
@@ -539,7 +539,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const company = await knex('companies')
@@ -575,7 +575,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company_default_location called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const location = await knex('company_locations')
@@ -627,7 +627,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company_locations called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const locations = await knex('company_locations')
@@ -672,7 +672,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] lookup_qbo_item_id called for algaProductId: ${params.algaProductId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const mapping = await knex('tenant_external_entity_mappings')
@@ -714,8 +714,8 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] trigger_workflow called for name: ${params.name}, tenant: ${context.tenant}, correlationId: ${params.correlationId}`, { input: params.input });
       try {
-        const { getWorkflowRuntime } = await import('@shared/workflow/core/workflowRuntime.js');
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getWorkflowRuntime } = await import('@shared/workflow/core/workflowRuntime');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         // Determine if the target workflow is system_managed or tenant-specific.
@@ -1261,7 +1261,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       logger.info(`${logPrefix} update_company_qbo_details called for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
 
         const mappingData = {
@@ -1325,7 +1325,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
 
         const mapping = await knex('tenant_external_entity_mappings')
@@ -1387,7 +1387,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
 
         // Create timestamp for both created_at and updated_at
@@ -1552,7 +1552,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       // Removed status from log as it's no longer a direct parameter for this action's core responsibility
       logger.info(`[ACTION] update_invoice_qbo_details called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const updateData: Record<string, any> = {};
@@ -1788,7 +1788,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import from shared workflow actions module
-        const { findContactByEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { findContactByEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const contact = await findContactByEmail(params.email, context.tenant);
         
         return {
@@ -1818,7 +1818,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createOrFindContact } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { createOrFindContact } = await import('@shared/workflow/actions/emailWorkflowActions');
         const result = await createOrFindContact({
           email: params.email,
           name: params.name,
@@ -1854,7 +1854,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { findTicketByEmailThread } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { findTicketByEmailThread } = await import('@shared/workflow/actions/emailWorkflowActions');
         const ticket = await findTicketByEmailThread(params, context.tenant);
         
         return {
@@ -1893,7 +1893,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createTicketFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { createTicketFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const result = await createTicketFromEmail({
           title: params.title,
           description: params.description,
@@ -1935,7 +1935,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { resolveInboundTicketDefaults } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { resolveInboundTicketDefaults } = await import('@shared/workflow/actions/emailWorkflowActions');
         const defaults = await resolveInboundTicketDefaults(params.tenant, params.providerId);
         
         return defaults;
@@ -1959,7 +1959,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createCommentFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { createCommentFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const commentId = await createCommentFromEmail({
           ticket_id: params.ticket_id,
           content: params.content,
@@ -1998,7 +1998,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { processEmailAttachment } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { processEmailAttachment } = await import('@shared/workflow/actions/emailWorkflowActions');
         // Note: tenant is already in params for this action
         const result = await processEmailAttachment({
           emailId: params.emailId,
@@ -2038,7 +2038,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createCompanyFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { createCompanyFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const result = await createCompanyFromEmail({
           company_name: params.company_name,
           email: params.email,
@@ -2066,7 +2066,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [{ name: 'companyId', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getCompanyByIdForEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { getCompanyByIdForEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const company = await getCompanyByIdForEmail(params.companyId, context.tenant);
         
         return {
@@ -2092,7 +2092,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the database connection
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         let channel = await knex('channels')
@@ -2146,7 +2146,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createChannelFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { createChannelFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
         const result = await createChannelFromEmail({
           channel_name: params.channel_name,
           description: params.description,
@@ -2178,7 +2178,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         const query = knex('statuses')
@@ -2232,7 +2232,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [{ name: 'name', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@shared/db/admin.js');
+        const { getAdminConnection } = await import('@shared/db/admin');
         const knex = await getAdminConnection();
         
         let priority = await knex('priorities')
@@ -2279,7 +2279,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { saveEmailClientAssociation } = await import('@shared/workflow/actions/emailWorkflowActions.js');
+        const { saveEmailClientAssociation } = await import('@shared/workflow/actions/emailWorkflowActions');
         const result = await saveEmailClientAssociation({
           email: params.email,
           company_id: params.company_id,

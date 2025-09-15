@@ -1,5 +1,1 @@
-import ExtensionDetails from '@/components/settings/extensions/ExtensionDetails';
-
-export default function ExtensionDetailsPage() {
-  return <ExtensionDetails />;
-}
+export { default, metadata } from '@product/extensions/pages/details';

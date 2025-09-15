@@ -5,6 +5,7 @@ import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset, Server
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { useRouter } from 'next/navigation';
@@ -907,30 +908,36 @@ export default function AssetForm({ assetId }: AssetFormProps) {
               </div>
 
               <div>
-                <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                <label htmlFor="purchase_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   Purchase Date
                 </label>
-                <Input
+                <DatePicker
                   id="purchase_date"
-                  name="purchase_date"
-                  type="date"
-                  value={formData.purchase_date}
-                  onChange={handleInputChange}
-                  className="mt-1"
+                  value={formData.purchase_date ? new Date(formData.purchase_date) : undefined}
+                  onChange={(date) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      purchase_date: date ? date.toISOString().split('T')[0] : ''
+                    }));
+                  }}
+                  placeholder="Select purchase date"
                 />
               </div>
 
               <div>
-                <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))]">
+                <label htmlFor="warranty_end_date" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   Warranty End Date
                 </label>
-                <Input
+                <DatePicker
                   id="warranty_end_date"
-                  name="warranty_end_date"
-                  type="date"
-                  value={formData.warranty_end_date}
-                  onChange={handleInputChange}
-                  className="mt-1"
+                  value={formData.warranty_end_date ? new Date(formData.warranty_end_date) : undefined}
+                  onChange={(date) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      warranty_end_date: date ? date.toISOString().split('T')[0] : ''
+                    }));
+                  }}
+                  placeholder="Select warranty end date"
                 />
               </div>
             </div>

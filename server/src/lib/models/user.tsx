@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import logger from '@alga-psa/shared/core/logger';
 import { IUser, IRole, IUserRole, IUserWithRoles, IRoleWithPermissions, IPermission } from 'server/src/interfaces/auth.interfaces';
 import { getConnection } from 'server/src/lib/db/db';
-import { getAdminConnection } from 'server/src/lib/db/admin';
+import { getAdminConnection } from '@shared/db/admin';
 import { getCurrentTenantId } from 'server/src/lib/db';
 import { hashPassword, verifyPassword } from 'server/src/utils/encryption/encryption';
 

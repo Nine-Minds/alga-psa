@@ -4,10 +4,11 @@ import { getTenantFromAuth, assertAccess } from 'server/src/lib/extensions/gatew
 import { getTenantInstall, resolveVersion } from 'server/src/lib/extensions/gateway/registry';
 import { filterRequestHeaders, filterResponseHeaders } from 'server/src/lib/extensions/gateway/headers';
 
-async function handle(req: NextRequest, ctx: { params: { extensionId: string; path?: string[] } }) {
-  const { extensionId } = ctx.params;
+async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: string; path?: string[] }> }) {
+  const resolvedParams = await ctx.params;
+  const { extensionId } = resolvedParams;
   const method = req.method.toUpperCase();
-  const path = '/' + (ctx.params.path || []).join('/');
+  const path = '/' + (resolvedParams.path || []).join('/');
 
   try {
     const tenantId = await getTenantFromAuth(req);

@@ -119,6 +119,77 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
+## Production Setup (Persistent Storage)
+
+For production-like deployments, persist both your database and uploaded documents to named Docker volumes. This keeps data safe across container restarts and image updates.
+
+- Database volume: `postgres_data` (mounted at `/var/lib/postgresql/data`)
+- Documents/files volume: `files_data` (mounted at `/data/files`)
+
+The CE prebuilt compose now includes these volumes by default. When you run the compose command above, Docker will automatically create and attach them.
+
+Recommended environment config for storage (explicit):
+```bash
+# server/.env
+STORAGE_DEFAULT_PROVIDER=local
+STORAGE_LOCAL_BASE_PATH=/data/files
+```
+
+Verify volumes:
+```bash
+docker volume ls | grep -E "postgres_data|files_data"
+```
+
+### Backups
+
+- Postgres (logical backup using pg_dump — recommended):
+  ```bash
+  # Replace container name if customized
+  PGPASSWORD=$(cat secrets/postgres_password) \
+  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
+    pg_dump -U postgres -d server -Fc -f /tmp/pg_backup.dump
+
+  # Copy backup out of the container
+  docker cp $(docker compose ps -q postgres):/tmp/pg_backup.dump ./pg_backup_$(date +%F).dump
+  ```
+
+- Postgres (quick snapshot of the data volume — use when DB is stopped):
+  ```bash
+  docker compose stop server pgbouncer postgres
+  docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data -v "$PWD":/backup alpine \
+    tar czf /backup/postgres_volume_$(date +%F).tar.gz -C /var/lib/postgresql/data .
+  docker compose start postgres pgbouncer server
+  ```
+
+- Files/documents volume:
+  ```bash
+  docker run --rm -v <project>_files_data:/data/files -v "$PWD":/backup alpine \
+    tar czf /backup/files_volume_$(date +%F).tar.gz -C /data/files .
+  ```
+
+Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgres_data`). If you customized `APP_NAME` or use `-p` with compose, check with `docker volume ls` and substitute accordingly.
+
+### Restores (brief)
+
+- Postgres (pg_restore):
+  ```bash
+  # Create empty DB if needed, then restore
+  PGPASSWORD=$(cat secrets/postgres_password) \
+  docker cp ./pg_backup.dump $(docker compose ps -q postgres):/tmp/pg_backup.dump
+  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
+    pg_restore -U postgres -d server --clean --if-exists /tmp/pg_backup.dump
+  ```
+
+- Files/documents volume:
+  ```bash
+  docker run --rm -v <project>_files_data:/data/files -v "$PWD":/backup alpine \
+    sh -c "rm -rf /data/files/* && tar xzf /backup/files_volume.tgz -C /data/files"
+  ```
+
+### Notes
+
+- The application’s local storage provider writes to `/data/files` inside the server container. Using the named volume `files_data` ensures persistence without managing host permissions.
+
 ## Service Initialization
 
 The entrypoint scripts will automatically:
