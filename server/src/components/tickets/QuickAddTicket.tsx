@@ -27,6 +27,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { ItilFields } from './ItilFields';
+import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
@@ -118,6 +119,18 @@ export function QuickAddTicket({
   const [resolutionCode, setResolutionCode] = useState<string>('');
   const [rootCause, setRootCause] = useState<string>('');
   const [workaround, setWorkaround] = useState<string>('');
+
+  // Calculate ITIL priority when impact and urgency are set
+  const calculatedItilPriority = useMemo(() => {
+    if (itilImpact && itilUrgency) {
+      try {
+        return calculateItilPriority(itilImpact, itilUrgency);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [itilImpact, itilUrgency]);
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -287,6 +300,53 @@ export function QuickAddTicket({
     setChannelId(newChannelId);
     setSelectedCategories([]);
     clearErrorIfSubmitted();
+  };
+
+  const handleItilFieldChange = (field: string, value: any) => {
+    switch (field) {
+      case 'itil_impact':
+        setItilImpact(value);
+        break;
+      case 'itil_urgency':
+        setItilUrgency(value);
+        break;
+      case 'itil_category':
+        setItilCategory(value);
+        break;
+      case 'itil_subcategory':
+        setItilSubcategory(value);
+        break;
+      case 'resolution_code':
+        setResolutionCode(value);
+        break;
+      case 'root_cause':
+        setRootCause(value);
+        break;
+      case 'workaround':
+        setWorkaround(value);
+        break;
+    }
+    clearErrorIfSubmitted();
+  };
+
+  const applyItilPriorityToTicketPriority = () => {
+    if (calculatedItilPriority && priorities.length > 0) {
+      // Try to map ITIL priority (1-5) to existing ticket priorities
+      // Find a priority that matches or is closest to the ITIL priority level
+      const sortedPriorities = [...priorities].sort((a, b) => a.order_number - b.order_number);
+
+      let selectedPriority = sortedPriorities[0]; // Default to first priority
+
+      if (calculatedItilPriority <= sortedPriorities.length) {
+        selectedPriority = sortedPriorities[calculatedItilPriority - 1];
+      } else {
+        // If calculated priority exceeds available priorities, use the last one
+        selectedPriority = sortedPriorities[sortedPriorities.length - 1];
+      }
+
+      setPriorityId(selectedPriority.priority_id);
+      clearErrorIfSubmitted();
+    }
   };
 
   const resetForm = () => {
@@ -630,6 +690,56 @@ export function QuickAddTicket({
                     placeholder="Select Priority *"
                     className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
                   />
+
+                  {/* ITIL Priority Integration Helper */}
+                  {calculatedItilPriority && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-sm text-blue-800 font-medium">
+                            ITIL Calculated Priority:
+                          </span>
+                          <span className={`px-2 py-1 rounded text-sm font-semibold ${
+                            calculatedItilPriority === 1 ? 'bg-red-100 text-red-800' :
+                            calculatedItilPriority === 2 ? 'bg-orange-100 text-orange-800' :
+                            calculatedItilPriority === 3 ? 'bg-yellow-100 text-yellow-800' :
+                            calculatedItilPriority === 4 ? 'bg-blue-100 text-blue-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {ItilLabels.priority[calculatedItilPriority]}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={applyItilPriorityToTicketPriority}
+                          className="text-xs"
+                        >
+                          Apply to Priority
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ITIL Fields Section */}
+                  <div className="border-t pt-4">
+                    <h3 className="text-sm font-medium mb-4 text-gray-700">ITIL Classification (Optional)</h3>
+                    <ItilFields
+                      values={{
+                        itil_impact: itilImpact,
+                        itil_urgency: itilUrgency,
+                        itil_category: itilCategory,
+                        itil_subcategory: itilSubcategory,
+                        resolution_code: resolutionCode,
+                        root_cause: rootCause,
+                        workaround: workaround
+                      }}
+                      onChange={handleItilFieldChange}
+                      readOnly={false}
+                      showResolutionFields={false}
+                    />
+                  </div>
 
                   <DialogFooter>
                     <Button

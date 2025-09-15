@@ -1013,6 +1013,33 @@ const handleClose = () => {
         }
     };
 
+    const handleItilFieldChange = async (field: string, value: any) => {
+        try {
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            // Create update object with the specific ITIL field
+            const updateData: any = {};
+            updateData[field] = value;
+
+            await updateTicket(ticket.ticket_id!, updateData, user);
+
+            // Update local ticket state to reflect the change
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                [field]: value
+            }));
+
+            toast.success(`ITIL ${field.replace('_', ' ')} updated successfully`);
+        } catch (error) {
+            console.error('Error updating ITIL field:', error);
+            toast.error(`Failed to update ITIL ${field.replace('_', ' ')}`);
+        }
+    };
+
     const handleCompanyChange = async (newCompanyId: string) => {
         try {
             const user = await getCurrentUser();
@@ -1310,6 +1337,7 @@ const handleClose = () => {
                                 tags={tags}
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
+                                onItilFieldChange={handleItilFieldChange}
                             />
                         </Suspense>
                         
