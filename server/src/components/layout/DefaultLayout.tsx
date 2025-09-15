@@ -7,22 +7,80 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { clientCookies } from 'server/src/lib/utils/cookies';
 
+interface DefaultLayoutProps {
+  children: React.ReactNode;
+  initialSidebarCollapsed?: boolean;
+}
 
-export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function DefaultLayout({ children, initialSidebarCollapsed }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
 
-  // Use the custom hook for sidebar preference
-  const { value: sidebarCollapsed, setValue: setSidebarCollapsed } = useUserPreference<boolean>(
-    'sidebar_collapsed',
-    {
-      defaultValue: false,
-      localStorageKey: 'sidebar_collapsed',
-      debounceMs: 300 // Faster feedback for UI preferences
+  // Always start with default state during SSR to avoid hydration mismatch
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isHidden, setIsHidden] = useState(true); // Hide sidebar until we know the preference
+
+  // Load the actual preference after mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Get the actual preference
+    let preferredState = false;
+
+    const cookieValue = clientCookies.get('sidebar_collapsed');
+    const localValue = localStorage.getItem('sidebar_collapsed');
+
+    if (cookieValue !== undefined) {
+      // Use cookie value
+      preferredState = cookieValue === 'true';
+    } else if (localValue !== null) {
+      // Migrate from localStorage to cookie
+      preferredState = localValue === 'true';
+      clientCookies.set('sidebar_collapsed', String(preferredState), {
+        expires: 365,
+        sameSite: 'lax',
+        path: '/'
+      });
     }
-  );
+
+    // Update state without transition
+    setSidebarCollapsedState(preferredState);
+
+    // Show sidebar and enable transitions after next frame
+    requestAnimationFrame(() => {
+      setIsHidden(false);
+      requestAnimationFrame(() => {
+        setIsInitialLoad(false);
+      });
+    });
+  }, []);
+
+  const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarCollapsedState(prev => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+
+      // Save to cookie (can be read on server)
+      clientCookies.set('sidebar_collapsed', String(newValue), {
+        expires: 365,
+        sameSite: 'lax',
+        path: '/'
+      });
+
+      // Also save to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('sidebar_collapsed', String(newValue));
+        } catch (e) {
+          console.error('Failed to save to localStorage:', e);
+        }
+      }
+
+      return newValue;
+    });
+  };
 
   // Convert collapsed state to open state for component compatibility
   const sidebarOpen = !sidebarCollapsed;
@@ -88,7 +146,13 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   return (
     <DrawerProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100">
-        <SidebarWithFeatureFlags sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div style={{ opacity: isHidden ? 0 : 1, pointerEvents: isHidden ? 'none' : 'auto' }}>
+          <SidebarWithFeatureFlags
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            disableTransition={isInitialLoad}
+          />
+        </div>
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header
             sidebarOpen={sidebarOpen}

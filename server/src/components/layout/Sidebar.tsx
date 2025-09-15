@@ -18,13 +18,15 @@ interface SidebarProps {
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
   menuItems?: MenuItem[];
   bottomMenuItems?: MenuItem[];
+  disableTransition?: boolean;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ 
-  sidebarOpen, 
+const Sidebar: React.FC<SidebarProps> = ({
+  sidebarOpen,
   setSidebarOpen,
   menuItems = defaultMenuItems,
-  bottomMenuItems = defaultBottomMenuItems
+  bottomMenuItems = defaultBottomMenuItems,
+  disableTransition = false
 }): JSX.Element => {
   const appVersion = getAppVersion();
   const pathname = usePathname();
@@ -109,12 +111,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside 
+    <aside
       data-automation-id="main-sidebar"
-      className={`bg-[#1e1f25] text-white h-screen flex flex-col relative transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-16'}`}
+      className={`bg-[#1e1f25] text-white h-screen flex flex-col relative ${
+        disableTransition ? '' : 'transition-all duration-300 ease-in-out'
+      } ${sidebarOpen ? 'w-64' : 'w-16'}`}
+      style={{ width: sidebarOpen ? '16rem' : '4rem' }}
     >
-      <a 
-        href="/msp/dashboard" 
+      <a
+        href="/msp/dashboard"
         className="p-4 flex items-center space-x-2 hover:bg-[#2a2b32] cursor-pointer"
         aria-label="Go to dashboard"
         id="logo-home-link"
@@ -128,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             className="w-full h-full object-cover"
           />
         </div>
-        {sidebarOpen && <span className="text-xl font-semibold truncate">AlgaPSA</span>}
+        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>AlgaPSA</span>
       </a>
 
       {/* Temporarily hide the search bar since it is non-functional */}

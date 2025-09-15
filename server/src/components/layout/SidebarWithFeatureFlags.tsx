@@ -8,6 +8,7 @@ import { menuItems as originalMenuItems, bottomMenuItems, MenuItem } from '../..
 interface SidebarWithFeatureFlagsProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  disableTransition?: boolean;
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
