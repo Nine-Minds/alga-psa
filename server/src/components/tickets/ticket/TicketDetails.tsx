@@ -623,6 +623,16 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     isInternal,
                     isResolution
                 );
+
+                // Refresh comments to ensure immediate UI update
+                if (ticket.ticket_id) {
+                    try {
+                        const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+                        setConversations(updatedComments);
+                    } catch (e) {
+                        console.error('Failed to refresh comments after add:', e);
+                    }
+                }
                 
                 // Reset the comment input
                 setNewCommentContent([{
