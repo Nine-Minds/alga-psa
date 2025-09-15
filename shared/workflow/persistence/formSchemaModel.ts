@@ -2,7 +2,7 @@
  * Form Schema Model
  */
 import { Knex } from 'knex';
-import { IFormSchema } from './formRegistryInterfaces';
+import { IFormSchema } from './formRegistryInterfaces.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export default class FormSchemaModel {

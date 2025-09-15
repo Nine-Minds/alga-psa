@@ -1,6 +1,6 @@
-export { RedisStreamClient, getRedisStreamClient } from './redisStreamClient';
-export * from './workflowEventSchema';
+export { RedisStreamClient, getRedisStreamClient } from './redisStreamClient.js';
+export * from './workflowEventSchema.js';
 
 // Export event types from eventBusSchema
-export type { EventType } from './eventBusSchema';
-export { EventTypeEnum } from './eventBusSchema';
+export type { EventType } from './eventBusSchema.js';
+export { EventTypeEnum } from './eventBusSchema.js';

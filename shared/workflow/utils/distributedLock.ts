@@ -1,5 +1,5 @@
-import { getRedisStreamClient } from '../streams/redisStreamClient';
-import logger from '@shared/core/logger';
+import { getRedisStreamClient } from '../streams/redisStreamClient.js';
+import { logger } from '@shared/core/index.js';
 
 /**
  * Error types for distributed lock operations

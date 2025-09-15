@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import logger from '@shared/core/logger';
+import { logger } from '@shared/core/index.js';
 
 /**
  * Interface for a workflow registration

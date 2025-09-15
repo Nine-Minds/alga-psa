@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Knex } from 'knex';
-import logger from '@shared/core/logger';
-import { acquireDistributedLock, releaseDistributedLock, LockError, LockErrorType } from './distributedLock';
+import { logger } from '@shared/core/index.js';
+import { acquireDistributedLock, releaseDistributedLock, LockError, LockErrorType } from './distributedLock.js';
 
 /**
  * Error types for distributed transaction operations

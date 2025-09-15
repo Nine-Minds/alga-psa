@@ -1,7 +1,7 @@
-import { WorkflowEvent } from './workflowContext';
-import { WorkflowEventModel } from '../persistence/index';
-import { WorkflowSnapshotModel } from '../persistence/index';
-import { IWorkflowEvent } from '../persistence/index';
+import { WorkflowEvent } from './workflowContext.js';
+import { WorkflowEventModel } from '../persistence/index.js';
+import { WorkflowSnapshotModel } from '../persistence/index.js';
+import { IWorkflowEvent } from '../persistence/index.js';
 import { Knex } from 'knex';
 
 // Create a simple logger if @shared/core is not available
@@ -264,7 +264,7 @@ export class WorkflowEventSourcing {
           snapshotVersion
         }
       };
-    } catch (error) {
+    } catch (error: unknown) {
       logger.error(`[WorkflowEventSourcing] Error replaying events for execution ${executionId}:`, error);
       throw error;
     }

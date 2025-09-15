@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { IWorkflowEvent } from '../persistence/index';
+import { IWorkflowEvent } from '../persistence/index.js';
 
 /**
  * Zod schema for workflow events in Redis Streams

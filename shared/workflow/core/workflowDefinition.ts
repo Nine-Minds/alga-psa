@@ -1,5 +1,5 @@
-import { WorkflowFunction } from './workflowContext';
-import logger from '@shared/core/logger';
+import { WorkflowFunction } from './workflowContext.js';
+import { logger } from '@shared/core/index.js';
 // Ensure TypeScript loads correctly under ESM <-> CJS interop
 // When importing a CommonJS module (TypeScript) from ESM, the exports land on `default`
 // so `import * as ts` would yield `ts.default.ScriptTarget`. Normalize here.

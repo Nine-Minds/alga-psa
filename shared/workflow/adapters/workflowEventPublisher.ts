@@ -5,7 +5,7 @@
  * with workflow action registry or external event systems
  */
 
-import { IEventPublisher } from '../../models/ticketModel';
+import { IEventPublisher } from '../../models/ticketModel.js';
 
 export class WorkflowEventPublisher implements IEventPublisher {
   async publishTicketCreated(data: {

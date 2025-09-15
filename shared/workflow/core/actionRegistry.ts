@@ -131,11 +131,11 @@ export class ActionRegistry {
     let knex: any;
     try {
       // Import models here to avoid circular dependencies
-      const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel');
+      const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel.js');
       
       // Create Knex instance - assuming we can get it from a connection pool or similar
       // This would typically be passed in the context or obtained from a service locator
-      const { getAdminConnection } = await import('@shared/db/admin');
+      const { getAdminConnection } = await import('@shared/db/admin.js');
       knex = await getAdminConnection();
       
       // Create action result record (pre-execution)
