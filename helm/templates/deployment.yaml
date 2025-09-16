@@ -381,6 +381,12 @@ spec:
           - name: NEXTAUTH_SESSION_EXPIRES
             value: "{{ .Values.auth.nextauth_session_expires }}"
 
+          # ----------- EXTENSIONS ----------------
+          {{- with .Values.config.extensions.domainRoot }}
+          - name: EXT_DOMAIN_ROOT
+            value: "{{ . }}"
+          {{- end }}
+
           # ----------- GOOGLE AUTH ----------------
           {{- if .Values.google_auth.enabled }}
           - name: GOOGLE_OAUTH_CLIENT_ID
