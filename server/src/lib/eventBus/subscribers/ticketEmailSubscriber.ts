@@ -193,7 +193,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       to: primaryEmail,
       subject: `Ticket Created: ${ticket.title}`,
       template: 'ticket-created',
-      context: emailContext
+      context: emailContext,
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
     });
 
     // Send to assigned user if different from primary recipient
@@ -203,7 +207,11 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         to: ticket.assigned_to_email,
         subject: `Ticket Created: ${ticket.title}`,
         template: 'ticket-created',
-        context: emailContext
+        context: emailContext,
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        }
       });
     }
 
@@ -317,7 +325,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       to: primaryEmail,
       subject: `Ticket Updated: ${ticket.title}`,
       template: 'ticket-updated',
-      context: emailContext
+      context: emailContext,
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
     });
 
     // Send to assigned user if different from primary recipient
@@ -327,7 +339,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         to: ticket.assigned_to_email,
         subject: `Ticket Updated: ${ticket.title}`,
         template: 'ticket-updated',
-        context: emailContext
+        context: emailContext,
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        }
       });
     }
 
@@ -351,7 +367,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           to: resource.email,
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
-          context: emailContext
+          context: emailContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          }
         });
       }
     }
@@ -431,6 +451,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
               .then(user => user ? `${user.first_name} ${user.last_name}` : 'System'),
             url: `/tickets/${ticket.ticket_number}`
           }
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
         }
       });
     }
@@ -467,6 +491,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
                 .then(user => user ? `${user.first_name} ${user.last_name}` : 'System'),
               url: `/tickets/${ticket.ticket_number}`
             }
+          },
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
           }
         });
       }
@@ -549,6 +577,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             url: `/tickets/${ticket.ticket_number}`
           },
           comment: payload.comment
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
         }
       });
     }
@@ -567,6 +600,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             url: `/tickets/${ticket.ticket_number}`
           },
           comment: payload.comment
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
         }
       });
     }
@@ -586,6 +624,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               url: `/tickets/${ticket.ticket_number}`
             },
             comment: payload.comment
+          },
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: ticket.email_metadata?.threadId
           }
         });
       }
@@ -658,7 +701,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       to: ticket.company_email,
       subject: `Ticket Closed: ${ticket.title}`,
       template: 'ticket-closed',
-      context: emailContext
+      context: emailContext,
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
     });
 
     // Get and notify all additional resources
@@ -681,7 +728,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           to: resource.email,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
-          context: emailContext
+          context: emailContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          }
         });
       }
     }

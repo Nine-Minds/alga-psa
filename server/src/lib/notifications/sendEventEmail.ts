@@ -1,8 +1,19 @@
+import { randomUUID } from 'node:crypto';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/shared/core/logger';
 import { TenantEmailService } from '../services/TenantEmailService';
 import { StaticTemplateProcessor } from '../email/tenant/templateProcessors';
+
+const REPLY_BANNER_TEXT = '--- Please reply above this line ---';
+
+interface ReplyMarkerPayload {
+  token: string;
+  ticketId?: string;
+  projectId?: string;
+  commentId?: string;
+  threadId?: string;
+}
 
 export interface SendEmailParams {
   tenantId: string;
@@ -10,6 +21,95 @@ export interface SendEmailParams {
   subject: string;
   template: string;
   context: Record<string, unknown>;
+  replyContext?: {
+    ticketId?: string;
+    projectId?: string;
+    commentId?: string;
+    threadId?: string;
+    conversationToken?: string;
+  };
+}
+
+function applyReplyMarkers(
+  html: string,
+  text: string,
+  payload: ReplyMarkerPayload
+): { html: string; text: string } {
+  const attrs = [
+    `data-alga-reply-token="${payload.token}"`,
+    payload.ticketId ? `data-alga-ticket-id="${payload.ticketId}"` : null,
+    payload.projectId ? `data-alga-project-id="${payload.projectId}"` : null,
+    payload.commentId ? `data-alga-comment-id="${payload.commentId}"` : null,
+    payload.threadId ? `data-alga-thread-id="${payload.threadId}"` : null
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const hiddenToken = `<div ${attrs} style="display:none;max-height:0;overflow:hidden;">ALGA-REPLY-TOKEN</div>`;
+  const hiddenBoundary = `<div data-alga-reply-boundary="true" style="display:none;max-height:0;overflow:hidden;">${REPLY_BANNER_TEXT}</div>`;
+  const visibleBanner = `<p style="margin:0 0 12px 0;color:#666;text-transform:uppercase;font-size:12px;letter-spacing:0.08em;">${REPLY_BANNER_TEXT}</p>`;
+
+  const augmentedHtml = `${hiddenToken}${hiddenBoundary}${visibleBanner}${html}`;
+
+  const footerLines = [`[ALGA-REPLY-TOKEN ${payload.token}${payload.ticketId ? ` ticketId=${payload.ticketId}` : ''}${payload.projectId ? ` projectId=${payload.projectId}` : ''}${payload.commentId ? ` commentId=${payload.commentId}` : ''}${payload.threadId ? ` threadId=${payload.threadId}` : ''}]`];
+  if (payload.ticketId) {
+    footerLines.push(`ALGA-TICKET-ID:${payload.ticketId}`);
+  }
+  if (payload.projectId) {
+    footerLines.push(`ALGA-PROJECT-ID:${payload.projectId}`);
+  }
+  if (payload.commentId) {
+    footerLines.push(`ALGA-COMMENT-ID:${payload.commentId}`);
+  }
+  if (payload.threadId) {
+    footerLines.push(`ALGA-THREAD-ID:${payload.threadId}`);
+  }
+
+  const augmentedText = `${REPLY_BANNER_TEXT}\n\n${text}\n\n${footerLines.join('\n')}`;
+
+  return {
+    html: augmentedHtml,
+    text: augmentedText,
+  };
+}
+
+async function persistReplyToken(
+  knex: any,
+  tenantId: string,
+  payload: ReplyMarkerPayload,
+  metadata: { template: string; subject: string; recipient: string }
+): Promise<void> {
+  try {
+    const tableExists = await knex.schema.hasTable('email_reply_tokens');
+    if (!tableExists) {
+      return;
+    }
+
+    const record: Record<string, any> = {
+      tenant: tenantId,
+      token: payload.token,
+      ticket_id: payload.ticketId || null,
+      project_id: payload.projectId || null,
+      comment_id: payload.commentId || null,
+      metadata: JSON.stringify({ ...metadata, threadId: payload.threadId }),
+      template: metadata.template,
+      recipient_email: metadata.recipient,
+      entity_type: payload.projectId ? 'project' : 'ticket',
+    };
+
+    await knex('email_reply_tokens')
+      .insert(record)
+      .onConflict(['tenant', 'token'])
+      .ignore();
+  } catch (error) {
+    logger.warn('[SendEventEmail] Failed to persist email reply token', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      tenantId,
+      ticketId: payload.ticketId,
+      projectId: payload.projectId,
+      commentId: payload.commentId
+    });
+  }
 }
 
 //
@@ -138,7 +238,22 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       finalSubject: subject
     });
 
-    const text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+    let text = html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+    let replyPayload: ReplyMarkerPayload | null = null;
+    if (params.replyContext?.ticketId || params.replyContext?.projectId) {
+      replyPayload = {
+        token: params.replyContext.conversationToken || randomUUID(),
+        ticketId: params.replyContext.ticketId,
+        projectId: params.replyContext.projectId,
+        commentId: params.replyContext.commentId,
+        threadId: params.replyContext.threadId,
+      };
+
+      const augmented = applyReplyMarkers(html, text, replyPayload);
+      html = augmented.html;
+      text = augmented.text;
+    }
 
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
@@ -154,6 +269,14 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
     if (!result.success) {
       throw new Error(`Failed to send email: ${result.error || 'Unknown error'}`);
+    }
+
+    if (replyPayload) {
+      await persistReplyToken(knex, params.tenantId, replyPayload, {
+        template: params.template,
+        subject,
+        recipient: params.to,
+      });
     }
 
     logger.info('[SendEventEmail] Email sent successfully via TenantEmailService:', {

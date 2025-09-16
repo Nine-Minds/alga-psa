@@ -373,6 +373,13 @@ export async function initializeEmailNotificationConsumer(tenantId: string) {
                     status: event.payload.status,
                     url: `/tickets/${event.payload.ticketNumber || event.payload.ticketId}`
                   }
+                },
+                replyContext: event.eventType.startsWith('PROJECT_') ? {
+                  projectId: event.payload.projectId
+                } : {
+                  ticketId: event.payload.ticketId,
+                  commentId: event.payload.comment?.id,
+                  threadId: event.payload.threadId
                 }
               });
 

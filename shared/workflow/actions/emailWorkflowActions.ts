@@ -620,11 +620,54 @@ export async function createCommentFromEmail(
         is_internal: false,
         is_resolution: false,
         author_type: commentData.author_type as any || 'system',
-        author_id: commentData.author_id
+        author_id: commentData.author_id,
+        metadata: commentData.metadata
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
       return result.comment_id;
     });
+}
+
+export async function parseEmailReplyBody(
+  body: {
+    text?: string;
+    html?: string;
+  },
+  config?: Record<string, any>
+): Promise<any> {
+  const module = await import('../../../server/src/lib/email/replyParser');
+  const parseEmailReply = module.parseEmailReply as (input: { text: string; html?: string }, cfg?: Record<string, any>) => any;
+  return parseEmailReply({
+    text: body?.text || '',
+    html: body?.html || undefined,
+  }, config);
+}
+
+export async function findTicketByReplyToken(
+  token: string,
+  tenant: string
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string } | null> {
+  if (!token) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@shared/db/index');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const record = await trx('email_reply_tokens')
+      .where({ tenant, token })
+      .first();
+
+    if (!record) {
+      return null;
+    }
+
+    return {
+      ticketId: record.ticket_id || undefined,
+      commentId: record.comment_id || undefined,
+      projectId: record.project_id || undefined,
+    };
+  });
 }
 
 /**
