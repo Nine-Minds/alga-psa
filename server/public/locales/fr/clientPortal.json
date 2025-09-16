@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord"
+  },
+  "welcome": {
+    "title": "Bienvenue sur le Portail Client",
+    "subtitle": "Accédez à vos tickets, factures et informations de projet"
+  },
+  "tickets": {
+    "title": "Tickets de Support",
+    "createNew": "Créer un nouveau ticket",
+    "viewAll": "Voir tous les tickets",
+    "myTickets": "Mes tickets",
+    "status": {
+      "open": "Ouvert",
+      "inProgress": "En cours",
+      "resolved": "Résolu",
+      "closed": "Fermé"
+    },
+    "priority": {
+      "low": "Faible",
+      "medium": "Moyen",
+      "high": "Élevé",
+      "urgent": "Urgent"
+    },
+    "fields": {
+      "subject": "Objet",
+      "description": "Description",
+      "priority": "Priorité",
+      "category": "Catégorie",
+      "attachments": "Pièces jointes",
+      "createdAt": "Créé le",
+      "updatedAt": "Dernière mise à jour",
+      "assignedTo": "Assigné à"
+    }
+  },
+  "invoices": {
+    "title": "Factures",
+    "viewAll": "Voir toutes les factures",
+    "unpaid": "Non payées",
+    "paid": "Payées",
+    "overdue": "En retard",
+    "dueDate": "Date d'échéance",
+    "amount": "Montant",
+    "status": "Statut",
+    "download": "Télécharger le PDF",
+    "payNow": "Payer maintenant",
+    "paymentHistory": "Historique des paiements"
+  },
+  "projects": {
+    "title": "Projets",
+    "active": "Projets actifs",
+    "completed": "Projets terminés",
+    "timeline": "Chronologie",
+    "milestones": "Jalons",
+    "tasks": "Tâches",
+    "documents": "Documents",
+    "team": "Membres de l'équipe"
+  },
+  "profile": {
+    "title": "Mon Profil",
+    "contactInfo": "Informations de contact",
+    "companyInfo": "Informations de l'entreprise",
+    "preferences": "Préférences",
+    "changePassword": "Changer le mot de passe",
+    "twoFactorAuth": "Authentification à deux facteurs",
+    "notificationSettings": "Paramètres de notification"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAsRead": "Marquer comme lu",
+    "markAllAsRead": "Tout marquer comme lu",
+    "noNotifications": "Aucune nouvelle notification",
+    "settings": "Paramètres de notification"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "nav": {
+    "dashboard": "Dashboard"
+  },
+  "welcome": {
+    "title": "Welcome to Client Portal",
+    "subtitle": "Access your tickets, invoices, and project information"
+  },
+  "tickets": {
+    "title": "Support Tickets",
+    "createNew": "Create New Ticket",
+    "viewAll": "View All Tickets",
+    "myTickets": "My Tickets",
+    "status": {
+      "open": "Open",
+      "inProgress": "In Progress",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "fields": {
+      "subject": "Subject",
+      "description": "Description",
+      "priority": "Priority",
+      "category": "Category",
+      "attachments": "Attachments",
+      "createdAt": "Created",
+      "updatedAt": "Last Updated",
+      "assignedTo": "Assigned To"
+    }
+  },
+  "invoices": {
+    "title": "Invoices",
+    "viewAll": "View All Invoices",
+    "unpaid": "Unpaid",
+    "paid": "Paid",
+    "overdue": "Overdue",
+    "dueDate": "Due Date",
+    "amount": "Amount",
+    "status": "Status",
+    "download": "Download PDF",
+    "payNow": "Pay Now",
+    "paymentHistory": "Payment History"
+  },
+  "projects": {
+    "title": "Projects",
+    "active": "Active Projects",
+    "completed": "Completed Projects",
+    "timeline": "Timeline",
+    "milestones": "Milestones",
+    "tasks": "Tasks",
+    "documents": "Documents",
+    "team": "Team Members"
+  },
+  "profile": {
+    "title": "My Profile",
+    "contactInfo": "Contact Information",
+    "companyInfo": "Company Information",
+    "preferences": "Preferences",
+    "changePassword": "Change Password",
+    "twoFactorAuth": "Two-Factor Authentication",
+    "notificationSettings": "Notification Settings"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAsRead": "Mark as read",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No new notifications",
+    "settings": "Notification Settings"
+  }
+}

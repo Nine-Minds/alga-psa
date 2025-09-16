@@ -1,6 +1,7 @@
 "use client";
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider"; 
+import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
+import { I18nWrapper } from "../../components/I18nWrapper";
 
 export default function Layout({
   children,
@@ -9,9 +10,11 @@ export default function Layout({
 }>) {
   return (
     <AppSessionProvider>
-      <ClientPortalLayout>
-        {children}
-      </ClientPortalLayout>
+      <I18nWrapper portal="client">
+        <ClientPortalLayout>
+          {children}
+        </ClientPortalLayout>
+      </I18nWrapper>
     </AppSessionProvider>
   );
 }

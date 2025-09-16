@@ -20,6 +20,9 @@ import PasswordChangeForm from 'server/src/components/settings/general/PasswordC
 import { toast } from 'react-hot-toast';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { LanguagePreference } from 'server/src/components/ui/LanguagePreference';
+import { SupportedLocale } from '@/lib/i18n/config';
+import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
 
 export function ClientProfile() {
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -35,6 +38,7 @@ export function ClientProfile() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [timezone, setTimezone] = useState('');
+  const [language, setLanguage] = useState<SupportedLocale>('en');
 
   useEffect(() => {
     const init = async () => {
@@ -51,7 +55,13 @@ export function ClientProfile() {
         setEmail(currentUser.email || '');
         setPhone(currentUser.phone || '');
         setTimezone(currentUser.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone);
-              
+
+        // Get user's language preference
+        const userLocale = await getUserLocaleAction();
+        if (userLocale) {
+          setLanguage(userLocale);
+        }
+
         // If this is a client user with a linked contact, get the contact avatar URL
         if (currentUser.user_type === 'client' && currentUser.contact_id) {
           const contactAvatar = await getContactAvatarUrlAction(currentUser.contact_id, currentUser.tenant);
@@ -257,6 +267,13 @@ export function ClientProfile() {
                 onValueChange={setTimezone}
               />
             </div>
+            <LanguagePreference
+              value={language}
+              onChange={async (locale) => {
+                setLanguage(locale);
+                await updateUserLocaleAction(locale);
+              }}
+            />
           </CardContent>
         </Card>
       ),

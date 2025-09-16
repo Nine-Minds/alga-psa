@@ -1,0 +1,82 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "clients": "Clients",
+    "projects": "Projects",
+    "billing": "Billing",
+    "reports": "Reports",
+    "settings": "Settings",
+    "profile": "Profile",
+    "logout": "Logout",
+    "help": "Help"
+  },
+  "actions": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "download": "Download",
+    "upload": "Upload",
+    "refresh": "Refresh",
+    "close": "Close"
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "success": "Success",
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Information",
+    "pending": "Pending",
+    "active": "Active",
+    "inactive": "Inactive",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  },
+  "messages": {
+    "welcome": "Welcome",
+    "confirmDelete": "Are you sure you want to delete this item?",
+    "saveSuccess": "Changes saved successfully",
+    "saveError": "Failed to save changes",
+    "loadError": "Failed to load data",
+    "noData": "No data available",
+    "required": "This field is required",
+    "invalidEmail": "Invalid email address",
+    "invalidPassword": "Invalid password",
+    "passwordMismatch": "Passwords do not match"
+  },
+  "time": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "tomorrow": "Tomorrow",
+    "thisWeek": "This Week",
+    "lastWeek": "Last Week",
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "thisYear": "This Year",
+    "lastYear": "Last Year",
+    "seconds": "seconds",
+    "minutes": "minutes",
+    "hours": "hours",
+    "days": "days",
+    "weeks": "weeks",
+    "months": "months",
+    "years": "years"
+  },
+  "language": {
+    "selectLanguage": "Select Language",
+    "changeLanguage": "Change Language",
+    "currentLanguage": "Current Language"
+  }
+}

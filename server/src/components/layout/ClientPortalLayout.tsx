@@ -12,6 +12,7 @@ import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -24,6 +25,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
+  const { t } = useTranslation('clientPortal');
   
 
   const handleSignOut = () => {
@@ -83,23 +85,23 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                 </Link>
               </div>
               <div className="ml-10 flex items-baseline space-x-4">
-                <Link 
-                  href="/client-portal/dashboard" 
+                <Link
+                  href="/client-portal/dashboard"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Dashboard
+                  {t('nav.dashboard', 'Dashboard')}
                 </Link>
-                <Link 
-                  href="/client-portal/tickets" 
+                <Link
+                  href="/client-portal/tickets"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Support Tickets
+                  {t('tickets.title', 'Support Tickets')}
                 </Link>
-                <Link 
-                  href="/client-portal/projects" 
+                <Link
+                  href="/client-portal/projects"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Projects
+                  {t('projects.title', 'Projects')}
                 </Link>
                 {hasBillingAccess && (
                   <Link 

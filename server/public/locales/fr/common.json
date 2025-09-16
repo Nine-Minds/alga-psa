@@ -1,0 +1,82 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "tickets": "Tickets",
+    "clients": "Clients",
+    "projects": "Projets",
+    "billing": "Facturation",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "logout": "Déconnexion",
+    "help": "Aide"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "submit": "Soumettre",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Téléverser",
+    "refresh": "Actualiser",
+    "close": "Fermer"
+  },
+  "status": {
+    "loading": "Chargement...",
+    "saving": "Enregistrement...",
+    "success": "Succès",
+    "error": "Erreur",
+    "warning": "Avertissement",
+    "info": "Information",
+    "pending": "En attente",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "messages": {
+    "welcome": "Bienvenue",
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément?",
+    "saveSuccess": "Modifications enregistrées avec succès",
+    "saveError": "Échec de l'enregistrement des modifications",
+    "loadError": "Échec du chargement des données",
+    "noData": "Aucune donnée disponible",
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "Adresse e-mail invalide",
+    "invalidPassword": "Mot de passe invalide",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "lastWeek": "La semaine dernière",
+    "thisMonth": "Ce mois",
+    "lastMonth": "Le mois dernier",
+    "thisYear": "Cette année",
+    "lastYear": "L'année dernière",
+    "seconds": "secondes",
+    "minutes": "minutes",
+    "hours": "heures",
+    "days": "jours",
+    "weeks": "semaines",
+    "months": "mois",
+    "years": "années"
+  },
+  "language": {
+    "selectLanguage": "Sélectionner la langue",
+    "changeLanguage": "Changer de langue",
+    "currentLanguage": "Langue actuelle"
+  }
+}
