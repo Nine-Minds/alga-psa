@@ -59,6 +59,18 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
 
   // Transform categories into TreeSelect format
   const treeOptions = useMemo((): TreeSelectOption<CategoryType>[] => {
+    // Ensure categories is an array - if it's not, return empty array
+    if (!Array.isArray(categories)) {
+      console.error('CategoryPicker: categories prop is not an array:', categories);
+      return [{
+        label: 'No Category',
+        value: 'no-category',
+        type: 'parent' as CategoryType,
+        selected: selectedCategories.includes('no-category'),
+        excluded: excludedCategories.includes('no-category'),
+      }];
+    }
+
     // First, separate parents and children
     const parentCategories = categories.filter(c => !c.parent_category);
     const childrenMap = new Map<string, ITicketCategory[]>();
