@@ -10,6 +10,7 @@
 import * as winston from 'winston';
 import { trace, context } from '@opentelemetry/api';
 import logger from './simple-logger';
+import { getAppVersion } from '../utils/version';
 
 /**
  * Winston format that adds OpenTelemetry trace context to log entries
@@ -212,7 +213,7 @@ export class ObservabilityLogger {
       ...meta,
       timestamp: new Date().toISOString(),
       service_name: 'alga-psa',
-      service_version: process.env.npm_package_version || '1.0.0',
+      service_version: getAppVersion(),
       node_env: process.env.NODE_ENV || 'development',
     };
   }

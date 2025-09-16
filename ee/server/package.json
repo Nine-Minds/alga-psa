@@ -1,6 +1,5 @@
 {
   "name": "sebastian-ee",
-  "version": "0.9.0",
   "private": true,
   "workspaces": [
     "packages/*"

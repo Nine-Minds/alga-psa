@@ -2,6 +2,7 @@ import { PostHog } from 'posthog-node';
 import crypto from 'crypto';
 import os from 'os';
 import { posthogConfig, isPostHogEnabled } from '../../config/posthog.config';
+import { getAppVersion } from '../utils/version';
 
 export class UsageAnalytics {
   private client: PostHog | null = null;
@@ -48,7 +49,7 @@ export class UsageAnalytics {
       properties: {
         ...properties,
         user_ids_anonymized: this.anonymizeUserIds,
-        app_version: process.env.npm_package_version || process.env.APP_VERSION,
+        app_version: getAppVersion(),
         environment: process.env.NODE_ENV,
       },
     });
