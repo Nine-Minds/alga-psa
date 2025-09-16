@@ -1,11 +1,6 @@
-import { initializeEmailNotificationConsumer } from './consumers/emailNotificationConsumer';
 import { registerAllSubscribers } from './subscribers';
 import logger from '@shared/core/logger';
-import { getConnection } from '../db/db';
-import { getAdminConnection } from '@shared/db/admin';
-
-// Store cleanup functions at module scope for access by cleanupEventBus
-let cleanupFunctions: Array<() => Promise<void>> = [];
+import { getEventBus } from './index';
 
 export async function initializeEventBus(): Promise<void> {
   try {
@@ -14,18 +9,8 @@ export async function initializeEventBus(): Promise<void> {
     // Register all subscribers
     await registerAllSubscribers();
 
-    // Get all tenants
-    const systemDb = await getAdminConnection();
-    const tenants = await systemDb('tenants')
-      .select('tenant');
-
-    // Initialize email notification consumer for each tenant
-    cleanupFunctions = await Promise.all(
-      tenants.map(async (tenantRecord): Promise<() => Promise<void>> => {
-        logger.info(`Initializing email notification consumer for tenant: ${tenantRecord.tenant}`);
-        return initializeEmailNotificationConsumer(tenantRecord.tenant);
-      })
-    );
+    // Ensure event bus is initialized so subscriber handlers are registered
+    await getEventBus().initialize();
 
     // Register SIGTERM handler for graceful shutdown
     process.on('SIGTERM', () => cleanupEventBus());
@@ -38,9 +23,8 @@ export async function initializeEventBus(): Promise<void> {
 
 export async function cleanupEventBus(): Promise<void> {
   try {
-    logger.info('Shutting down email notification consumers');
-    await Promise.all(cleanupFunctions.map((cleanup): Promise<void> => cleanup()));
-    cleanupFunctions = []; // Clear the array after cleanup
+    logger.info('Shutting down event bus subscribers');
+    // Currently no long-lived subscriber resources to dispose.
     logger.info('Event bus cleanup completed successfully');
   } catch (error) {
     logger.error('Failed to cleanup event bus:', error);

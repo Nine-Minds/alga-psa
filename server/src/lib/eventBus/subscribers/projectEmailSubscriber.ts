@@ -128,7 +128,7 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       .where('p.tenant', tenant!)
       .select(
         'p.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'c.company_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
@@ -139,6 +139,12 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
       .leftJoin('companies as c', function() {
         this.on('c.company_id', '=', 'p.company_id')
             .andOn('c.tenant', '=', 'p.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 'p.company_id')
+            .andOn('dcl.tenant', '=', 'p.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('statuses as s', function() {
         this.on('s.status_id', '=', 'p.status')
@@ -298,7 +304,7 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       .where('p.tenant', tenant!)
       .select(
         'p.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'c.company_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
@@ -309,6 +315,12 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
       .leftJoin('companies as c', function() {
         this.on('c.company_id', '=', 'p.company_id')
             .andOn('c.tenant', '=', 'p.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 'p.company_id')
+            .andOn('dcl.tenant', '=', 'p.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('statuses as s', function() {
         this.on('s.status_id', '=', 'p.status')
@@ -481,7 +493,7 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
     const query = db('projects as p')
       .select(
         'p.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'c.company_name',
         's.name as status_name',
         'u.first_name as manager_first_name',
@@ -492,6 +504,12 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
       .leftJoin('companies as c', function() {
         this.on('c.company_id', '=', 'p.company_id')
             .andOn('c.tenant', '=', 'p.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 'p.company_id')
+            .andOn('dcl.tenant', '=', 'p.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('statuses as s', function() {
         this.on('s.status_id', '=', 'p.status')
@@ -636,7 +654,7 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       .select(
         'p.*',
         'c.company_name',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'u.email as user_email',
         'u.first_name as user_first_name',
         'u.last_name as user_last_name',
@@ -646,6 +664,12 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
       .leftJoin('companies as c', function() {
         this.on('c.company_id', '=', 'p.company_id')
             .andOn('c.tenant', '=', 'p.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 'p.company_id')
+            .andOn('dcl.tenant', '=', 'p.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('users as u', function() {
         this.on('u.user_id', '=', assignedTo)
