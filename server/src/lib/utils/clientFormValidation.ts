@@ -86,7 +86,7 @@ export function validateCompanyName(name: string): string | null {
   }
   
   // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
-  if (!/^[\p{L}\p{N}\s\-,\.&'()]+$/u.test(nameWithoutEmojis)) {
+  if (!/^[\p{L}\p{N}\s\-,.&'()]+$/u.test(nameWithoutEmojis)) {
     return 'Company name contains invalid characters';
   }
   
@@ -207,7 +207,7 @@ export function validateEmailAddress(email: string): string | null {
   }
   
   // Block obviously fake patterns
-  if (/^[0-9\.]+$/.test(domain) || // All numbers like 1.1
+  if (/^[0-9.]+$/.test(domain) || // All numbers like 1.1
       domain === '1.com' ||
       domain === '1.1' ||
       domain.length < 4) {
@@ -249,7 +249,7 @@ export function validatePhoneNumber(phone: string): string | null {
   }
   
   // Extract Unicode digits (supports international number systems)
-  const unicodeDigits = trimmedPhone.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+  const unicodeDigits = trimmedPhone.replace(/[\s\-()\\+.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
   const digitCount = unicodeDigits.length;
 
   // If only 1-3 digits (like just country code), don't show error yet
@@ -263,7 +263,7 @@ export function validatePhoneNumber(phone: string): string | null {
   }
 
   // Allow Unicode digits with international formatting
-  if (!/^[\+\p{N}\s\-\(\)\.]+$/u.test(trimmedPhone)) {
+  if (!/^[+\p{N}\s\-.()]+$/u.test(trimmedPhone)) {
     return 'Phone number can only contain numbers and formatting characters';
   }
 
@@ -476,7 +476,7 @@ export function validateCityName(city: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\s\-'\.]+$/u.test(trimmedCity)) {
+  if (!/^[\p{L}\s\-'.]+$/u.test(trimmedCity)) {
     return 'City name contains invalid characters';
   }
   
@@ -513,7 +513,7 @@ export function validateAddress(address: string): string | null {
   
   // Allow Unicode letters, numbers, spaces, and international address punctuation
   // No requirement for both letters and numbers (international addresses vary)
-  if (!/^[\p{L}\p{N}\s\-,\.#\/'"()]+$/u.test(trimmedAddress)) {
+  if (!/^[\p{L}\p{N}\s\-,.#/'"()]+$/u.test(trimmedAddress)) {
     return 'Address contains invalid characters';
   }
   
@@ -549,7 +549,7 @@ export function validateStateProvince(state: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, periods
-  if (!/^[\p{L}\s\-\.]+$/u.test(trimmedState)) {
+  if (!/^[\p{L}\s\-.]+$/u.test(trimmedState)) {
     return 'State/Province contains invalid characters';
   }
   
@@ -581,7 +581,7 @@ export function validateIndustry(industry: string): string | null {
   // Allow Unicode letters, numbers, spaces, common punctuation, and emojis
   // Remove emojis temporarily to check base characters
   const withoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '');
-  if (!/^[\p{L}\p{N}\s\-&\/,\.\(\)\+\%\#]*$/u.test(withoutEmojis)) {
+  if (!/^[\p{L}\p{N}\s\-&/,.()%#]*$/u.test(withoutEmojis)) {
     return 'Industry contains unsupported characters';
   }
 
@@ -621,7 +621,7 @@ export function validateContactName(name: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
+  if (!/^[\p{L}\s\-'.]+$/u.test(nameWithoutEmojis)) {
     return 'Contact name contains invalid characters';
   }
   

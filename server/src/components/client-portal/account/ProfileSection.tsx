@@ -4,6 +4,7 @@ import { Card } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
+import { PhoneInput } from "server/src/components/ui/PhoneInput";
 import { useState, useEffect } from 'react';
 import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
 import { validateCompanyName, validateEmailAddress, validatePhoneNumber, validateAddress } from "server/src/lib/utils/clientFormValidation";
@@ -22,6 +23,17 @@ export default function ProfileSection() {
     phone: '',
     address: '',
     notes: ''
+  });
+  const [phoneCountryCode, setPhoneCountryCode] = useState(() => {
+    // Default country detection for phone input
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+      return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+    } catch (e) {
+      return 'US';
+    }
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -187,16 +199,17 @@ export default function ProfileSection() {
             <label htmlFor="phone" className="block text-sm font-medium mb-1">
               Phone Number
             </label>
-            <Input
-              id="phone"
+            <PhoneInput
               value={profile.phone}
-              onChange={(e) => {
-                setProfile(prev => ({ ...prev, phone: e.target.value }));
+              onChange={(value) => {
+                setProfile(prev => ({ ...prev, phone: value }));
                 if (validationErrors.phone) {
                   setValidationErrors(prev => ({ ...prev, phone: undefined }));
                 }
               }}
-              className={validationErrors.phone ? 'border-red-500' : ''}
+              countryCode={phoneCountryCode}
+              onCountryChange={(countryCode) => setPhoneCountryCode(countryCode)}
+              error={!!validationErrors.phone}
             />
             {validationErrors.phone && (
               <p className="mt-1 text-sm text-red-500">{validationErrors.phone}</p>
