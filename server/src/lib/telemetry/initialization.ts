@@ -28,6 +28,7 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import { getAppVersion } from '../utils/version';
 import { SpanProcessor, Span, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { isUsageStatsEnabled } from '../../config/telemetry';
 import logger from '../../utils/logger';
@@ -153,11 +154,11 @@ export async function initializeTelemetry(): Promise<void> {
     // Create resource with service information
     const resource = resourceFromAttributes({
       [SemanticResourceAttributes.SERVICE_NAME]: 'alga-psa',
-      [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
+      [SemanticResourceAttributes.SERVICE_VERSION]: getAppVersion(),
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
       [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV,
       'deployment.id': process.env.DEPLOYMENT_ID || 'unknown',
-      'app.version': process.env.APP_VERSION || '1.0.0',
+      'app.version': getAppVersion(),
       environment: process.env.NODE_ENV || 'development',
     });
 
@@ -251,7 +252,7 @@ export async function initializeTelemetry(): Promise<void> {
       endpoint,
       deploymentId: process.env.DEPLOYMENT_ID || 'unknown',
       serviceName: 'alga-psa',
-      serviceVersion: process.env.npm_package_version || '1.0.0',
+      serviceVersion: getAppVersion(),
       samplingRate: 0.1,
       environment: process.env.NODE_ENV,
       piiSanitization: true,

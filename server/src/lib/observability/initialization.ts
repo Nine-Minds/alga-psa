@@ -14,6 +14,7 @@ import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import logger from './simple-logger';
+import { getAppVersion } from '../utils/version';
 
 let observabilityInitialized = false;
 let sdk: NodeSDK | null = null;
@@ -73,7 +74,7 @@ export async function initializeTelemetry(): Promise<void> {
     // Create resource with service information
     const resource = resourceFromAttributes({
       [SemanticResourceAttributes.SERVICE_NAME]: 'alga-psa',
-      [SemanticResourceAttributes.SERVICE_VERSION]: process.env.npm_package_version || '1.0.0',
+      [SemanticResourceAttributes.SERVICE_VERSION]: getAppVersion(),
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
       [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV,
       'deployment.id': process.env.DEPLOYMENT_ID || 'unknown',
