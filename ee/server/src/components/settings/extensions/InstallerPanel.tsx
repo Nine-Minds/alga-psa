@@ -128,28 +128,37 @@ export default function InstallerPanel() {
 
       // 2) Finalize (no manifest or signature by default)
       try {
-        const finalizeBody = {
+        const finalizeResponse = await extFinalizeUpload({
           key,
           size: file.size,
-        };
-        const fin = (await extFinalizeUpload(finalizeBody)) as FinalizeSuccess;
+          responseMode: 'result' as const,
+        });
+
+        if (!finalizeResponse.success) {
+          const { code, message, details } = finalizeResponse.error;
+          const manifestIssue = code === 'MANIFEST_REQUIRED' || code === 'INVALID_MANIFEST';
+          if (manifestIssue) {
+            setNeedsManifest(true);
+          }
+          setError({
+            error: message || (manifestIssue ? 'Manifest JSON is required to finalize this bundle.' : 'Unexpected error finalizing installation'),
+            code,
+            details,
+          });
+          setInstalling(false);
+          return;
+        }
+
+        const fin = finalizeResponse.data;
         try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
         setSuccess(fin);
         setInstalling(false);
       } catch (finErr: any) {
-        // If server requires manifest JSON, prompt the user minimally
-        const code = finErr?.code as string | undefined;
-        const message = finErr?.message as string | undefined;
-        if (code === 'MANIFEST_REQUIRED' || (message && /manifest/i.test(message))) {
-          setNeedsManifest(true);
-          setError({ error: 'Manifest JSON is required to finalize this bundle.' });
-        } else {
-          setError({
-            error: finErr?.message ?? 'Unexpected error finalizing installation',
-            code: finErr?.code,
-            details: finErr?.details,
-          });
-        }
+        setError({
+          error: finErr?.message ?? 'Unexpected error finalizing installation',
+          code: finErr?.code,
+          details: finErr?.details,
+        });
         setInstalling(false);
       }
     } catch (err: any) {
@@ -162,7 +171,8 @@ export default function InstallerPanel() {
   const handleFinalizeWithManifest = useCallback(async () => {
     const key = uploadKeyRef.current;
     if (!key) return;
-    if (!manifestJson.trim()) {
+    const trimmedManifest = manifestJson.trim();
+    if (!trimmedManifest) {
       setError({ error: 'Please paste the manifest JSON before finalizing.' });
       return;
     }
@@ -172,13 +182,26 @@ export default function InstallerPanel() {
 
     try {
       // Validate JSON locally to avoid server round trip with invalid payload
-      JSON.parse(manifestJson);
+      JSON.parse(trimmedManifest);
 
-      const fin = (await extFinalizeUpload({
+      const finalizeResponse = await extFinalizeUpload({
         key,
         size: file?.size,
-        manifestJson: manifestJson.trim(),
-      })) as FinalizeSuccess;
+        manifestJson: trimmedManifest,
+        responseMode: 'result' as const,
+      });
+
+      if (!finalizeResponse.success) {
+        const { message, code, details } = finalizeResponse.error;
+        setError({
+          error: message || 'Failed to finalize with provided manifest',
+          code,
+          details,
+        });
+        return;
+      }
+
+      const fin = finalizeResponse.data;
       try { await installExtensionForCurrentTenantV2({ registryId: fin.extension.id, version: fin.version.version }); } catch {}
 
       setSuccess(fin);
