@@ -17,6 +17,7 @@ interface UseUserPreferenceReturn<T> {
   isLoading: boolean;
   error: Error | null;
   isUserLoggedIn: boolean;
+  hasLoadedInitial: boolean;
 }
 
 export function useUserPreference<T>(
@@ -38,23 +39,44 @@ export function useUserPreference<T>(
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedValueRef = useRef<T | null>(null);
 
-  // Initialize value from localStorage if available
-  const [value, setValueState] = useState<T>(() => {
-    if (typeof window !== 'undefined' && localStorageKey) {
+  // Initialize with default value to avoid hydration mismatch
+  const [value, setValueState] = useState<T>(defaultValue);
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [hasLoadedInitial, setHasLoadedInitial] = useState(false);
+
+  // Load from localStorage immediately after mount
+  useEffect(() => {
+    setIsHydrated(true);
+
+    // Load from localStorage if available
+    if (localStorageKey && typeof window !== 'undefined') {
       try {
         const stored = localStorage.getItem(localStorageKey);
-        if (stored) {
-          return JSON.parse(stored);
+        if (stored !== null) {
+          const parsedValue = JSON.parse(stored);
+          // Use requestAnimationFrame to ensure the update happens after paint
+          // This prevents the visual jump
+          requestAnimationFrame(() => {
+            setValueState(parsedValue);
+            setHasLoadedInitial(true);
+          });
+        } else {
+          setHasLoadedInitial(true);
         }
       } catch (e) {
         console.error('Failed to parse localStorage value:', e);
+        setHasLoadedInitial(true);
       }
+    } else {
+      setHasLoadedInitial(true);
     }
-    return defaultValue;
-  });
+  }, []); // Run once on mount
 
   // Load preference from server
   useEffect(() => {
+    // Only load from server after hydration
+    if (!isHydrated) return;
+
     const loadPreference = async () => {
       // Cancel any pending operations
       if (abortControllerRef.current) {
@@ -71,12 +93,12 @@ export function useUserPreference<T>(
 
         if (user && !abortControllerRef.current.signal.aborted) {
           const serverValue = await getUserPreference(user.user_id, preferenceKey);
-          
+
           if (!abortControllerRef.current.signal.aborted) {
             if (serverValue !== null) {
               setValueState(serverValue);
               lastSavedValueRef.current = serverValue;
-              
+
               // Sync with localStorage
               if (localStorageKey) {
                 try {
@@ -116,7 +138,7 @@ export function useUserPreference<T>(
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [preferenceKey, localStorageKey, onError]);
+  }, [isHydrated, preferenceKey, localStorageKey, onError]);
 
   // Save preference with debouncing
   const savePreference = useCallback(async (newValue: T) => {
@@ -189,6 +211,7 @@ export function useUserPreference<T>(
     setValue,
     isLoading,
     error,
-    isUserLoggedIn
+    isUserLoggedIn,
+    hasLoadedInitial
   };
 }

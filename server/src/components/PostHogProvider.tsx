@@ -24,14 +24,23 @@ function SuspendedPostHogPageView() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   const [isInitialized, setIsInitialized] = useState(false)
-  
+  const [isHydrated, setIsHydrated] = useState(false)
+
+  // Mark as hydrated after mount
   useEffect(() => {
+    setIsHydrated(true)
+  }, [])
+
+  useEffect(() => {
+    // Only initialize PostHog after hydration to avoid mismatches
+    if (!isHydrated) return
+
     // Check if telemetry is enabled
     if (!isPostHogEnabled()) {
       console.log('Usage statistics disabled by ALGA_USAGE_STATS environment variable')
       return
     }
-    
+
     posthog.init(posthogConfig.apiKey, {
       api_host: posthogConfig.apiHost,
       ui_host: posthogConfig.uiHost,
@@ -40,7 +49,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       loaded: (posthog) => {
         // If user IDs should be anonymized, use simple anonymous ID
         if (process.env.NEXT_PUBLIC_ANALYTICS_ANONYMIZE_USER_IDS !== 'false') {
-          const anonymousId = `anonymous_${typeof window !== 'undefined' ? window.location.hostname : 'server'}`
+          const anonymousId = `anonymous_${window.location.hostname}`
           posthog.identify(anonymousId)
         }
         setIsInitialized(true)
@@ -54,7 +63,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       // Disable session recording for privacy
       disable_session_recording: posthogConfig.features.sessionRecording === false,
     })
-  }, [])
+  }, [isHydrated])
 
   return (
     <PHProvider client={posthog}>
