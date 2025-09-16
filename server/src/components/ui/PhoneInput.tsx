@@ -80,6 +80,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Clean phone number display - remove country code from input
@@ -124,14 +125,22 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        isDropdownOpen &&
+        dropdownRef.current && !dropdownRef.current.contains(target) &&
+        buttonRef.current && !buttonRef.current.contains(target)
+      ) {
         setIsDropdownOpen(false);
+        setSearchQuery('');
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isDropdownOpen]);
 
   const handleCountrySelect = (selectedCountry: Country) => {
     setIsDropdownOpen(false);
@@ -182,17 +191,17 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   const showPlaceholderCode = !phoneCode && !currentCountry?.phone_code;
 
   return (
-    <div className={className}>
-      {label && (
-        <Label
-          htmlFor={id || dataAutomationId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
-      )}
-      <div className="relative z-20">
+    <div className={className} style={{ position: 'relative' }}>
+        {label && (
+          <Label
+            htmlFor={id || dataAutomationId}
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </Label>
+        )}
+      <div className="relative" style={{ zIndex: isDropdownOpen ? 2147483647 : 1 }}>
         <div className={`flex rounded-md transition-all duration-200 border ${
           error
             ? 'border-red-500 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-red-500'
@@ -202,6 +211,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           {countries && countries.length > 0 && (
             <div className="relative" ref={dropdownRef}>
               <button
+                ref={buttonRef}
                 type="button"
                 className="flex items-center px-2 py-2 bg-gray-50 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100 h-[42px] w-16 flex-shrink-0 rounded-l-md rounded-r-none border-0"
                 onClick={() => {
@@ -220,7 +230,16 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 z-[9999] w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto" style={{maxWidth: 'calc(100vw - 2rem)'}}>
+                <div
+                  className="absolute top-full left-0 w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
+                  style={{
+                    maxWidth: 'calc(100vw - 2rem)',
+                    zIndex: 2147483647,
+                    maxHeight: '240px',
+                    overflowY: 'auto'
+                  }}
+                  ref={dropdownRef}
+                >
                   <div className="p-2 border-b border-gray-200">
                     <input
                       ref={searchInputRef}
@@ -232,16 +251,22 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                       autoComplete="off"
                     />
                   </div>
-                  <div className="max-h-44 overflow-y-auto">
+                  <div style={{ maxHeight: '176px', overflowY: 'auto' }}>
                     {getFilteredCountries(countries || [], searchQuery).map((country, index) => {
                       const isCommon = COMMON_COUNTRIES.includes(country.code);
+                      const isFirstCommon = isCommon && index === 0;
                       const isFirstOther = !isCommon && index > 0 && COMMON_COUNTRIES.includes(getFilteredCountries(countries || [], searchQuery)[index - 1]?.code);
 
                       return (
                         <div key={country.code}>
+                          {isFirstCommon && !searchQuery.trim() && (
+                            <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50">
+                              Suggested
+                            </div>
+                          )}
                           {isFirstOther && (
                             <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50 border-t border-gray-200">
-                              Other Countries
+                              Alphabetical
                             </div>
                           )}
                           <button
