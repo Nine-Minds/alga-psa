@@ -203,7 +203,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                className="flex items-center px-2 py-2 bg-gray-50 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100 h-[42px] w-12 flex-shrink-0 rounded-l-md rounded-r-none border-0"
+                className="flex items-center px-2 py-2 bg-gray-50 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100 h-[42px] w-16 flex-shrink-0 rounded-l-md rounded-r-none border-0"
                 onClick={() => {
                   setIsDropdownOpen(!isDropdownOpen);
                   // Focus search input when dropdown opens
@@ -213,10 +213,10 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
                 }}
                 disabled={disabled}
               >
-                <span className={`font-medium text-xs ${showPlaceholderCode ? 'text-gray-400' : 'text-gray-700'} truncate`}>
+                <span className={`font-medium text-xs ${showPlaceholderCode ? 'text-gray-400' : 'text-gray-700'} flex-1 text-left`}>
                   {showPlaceholderCode ? '+1' : displayPhoneCode}
                 </span>
-                <ChevronDown className="ml-1 h-3 w-3 text-gray-400 flex-shrink-0" />
+                <ChevronDown className="h-3 w-3 text-gray-400 flex-shrink-0" />
               </button>
 
               {isDropdownOpen && (
