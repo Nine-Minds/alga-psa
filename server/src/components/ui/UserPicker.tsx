@@ -115,9 +115,14 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     });
 
   // Calculate selected user name for display
-  const selectedUserName = currentUser 
-    ? `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User'
-    : placeholder;
+  let selectedUserName;
+  if (currentUser) {
+    selectedUserName = `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim() || 'Unnamed User';
+  } else if (value === 'not_assigned') {
+    selectedUserName = 'Not assigned';
+  } else {
+    selectedUserName = placeholder;
+  }
 
   // Register the main container first, then the trigger button
   // Try to register as a child of company-details if we're in that context
@@ -290,7 +295,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
 
   const handleSelectUser = (userId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onValueChange(userId === 'unassigned' ? '' : userId);
+    onValueChange(userId === 'not_assigned' ? 'not_assigned' : userId);
     setIsOpen(false);
   };
 
@@ -327,7 +332,7 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
               size={size === 'sm' ? 'sm' : 'md'}
             />
           )}
-          <span className={!currentUser ? 'text-gray-400' : ''}>{selectedUserName}</span>
+          <span className={!currentUser && value !== 'not_assigned' ? 'text-gray-400' : ''}>{selectedUserName}</span>
         </div>
         <ChevronDown className="w-4 h-4 text-gray-500" />
       </Button>
@@ -371,9 +376,9 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
             }}>
               {/* Not assigned option */}
               <OptionButton
-                id={`${pickerId}-option-unassigned`}
+                id={`${pickerId}-option-not-assigned`}
                 label="Not assigned"
-                onClick={(e) => handleSelectUser('unassigned', e)}
+                onClick={(e) => handleSelectUser('not_assigned', e)}
                 className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
                 parentId={pickerId}
               >

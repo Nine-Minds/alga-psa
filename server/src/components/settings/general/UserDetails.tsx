@@ -253,7 +253,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             placeholder="Enter first name"
-            className="w-full"
+            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
 
@@ -266,7 +266,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Enter last name"
-            className="w-full"
+            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
 
@@ -279,13 +279,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email"
-            className="w-full"
+            className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
           />
         </div>
 
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
-            Roles
+            Roles (optional)
           </Text>
           <div className="space-y-2">
             {roles.map((role: IRole): JSX.Element => (
@@ -383,7 +383,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                       type={showAdminNewPassword ? "text" : "password"}
                       value={adminNewPassword}
                       onChange={(e) => setAdminNewPassword(e.target.value)}
-                      className="w-full pr-10"
+                      className="w-full pr-10 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
                       required
                     />
                     <button

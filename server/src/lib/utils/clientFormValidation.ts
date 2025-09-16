@@ -15,6 +15,18 @@ const hasNonEmojiContent = (text: string): boolean => {
   return withoutEmojis.length > 0 && /[\p{L}\p{N}]/u.test(withoutEmojis);
 };
 
+// Professional PSA acceptable placeholder values for optional fields
+const ACCEPTABLE_PLACEHOLDER_VALUES = [
+  'none', 'None', 'NONE',
+  'na', 'Na', 'NA', 'n/a', 'N/A', 'n.a.', 'N.A.'
+];
+
+// Helper function to check if a value is an acceptable placeholder
+const isAcceptablePlaceholder = (value: string): boolean => {
+  const trimmedValue = value.trim();
+  return ACCEPTABLE_PLACEHOLDER_VALUES.includes(trimmedValue);
+};
+
 // Professional validation lists - what real SaaS/CRM platforms use
 const VALID_TLDS = [
   'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'co', 'io', 'ai', 'app', 'dev',
@@ -80,16 +92,23 @@ export function validateCompanyName(name: string): string | null {
     return 'Company name cannot end with a domain extension';
   }
   
+  // Block placeholder names (company names are required so don't allow placeholders)
+  const placeholderNames = ['test', 'testing', 'example', 'demo', 'fake', 'dummy', 'placeholder',
+                           'temp', 'temporary', 'none', 'n/a', 'na', 'null', 'unknown'];
+  if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
+    return 'Please enter a real company name';
+  }
+
   // Must contain at least one letter or number (Unicode supported)
   if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
     return 'Company name must contain at least one letter or number';
   }
-  
+
   // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
   if (!/^[\p{L}\p{N}\s\-,.&'()]+$/u.test(nameWithoutEmojis)) {
     return 'Company name contains invalid characters';
   }
-  
+
   return null;
 }
 
@@ -98,8 +117,13 @@ export function validateWebsiteUrl(url: string): string | null {
   if (!url || !url.trim()) {
     return null; // URL is optional
   }
-  
+
   const trimmedUrl = url.trim();
+
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedUrl)) {
+    return null;
+  }
   
   // Enterprise rule: Max length 256 characters
   if (trimmedUrl.length > 256) {
@@ -564,6 +588,11 @@ export function validateIndustry(industry: string): string | null {
 
   const trimmedIndustry = industry.trim();
 
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedIndustry)) {
+    return null;
+  }
+
   // Enterprise rule: Max length 100 characters
   if (trimmedIndustry.length > 100) {
     return 'Industry must be 100 characters or less';
@@ -575,7 +604,7 @@ export function validateIndustry(industry: string): string | null {
 
   // Professional SaaS approach: Allow emojis but require meaningful content
   if (!hasNonEmojiContent(trimmedIndustry)) {
-    return 'Industry must contain meaningful text (letters or numbers)';
+    return 'Industry must contain meaningful text';
   }
 
   // Allow Unicode letters, numbers, spaces, common punctuation, and emojis
@@ -608,9 +637,10 @@ export function validateContactName(name: string): string | null {
     return 'Contact name must contain meaningful characters';
   }
   
-  // Block placeholder or testing names
-  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary', 
-                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null', 'n/a'];
+  // Block placeholder or testing names (contact names are required so don't allow placeholders)
+  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary',
+                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null',
+                           'none', 'n/a', 'na'];
   if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
     return 'Please enter a real contact name';
   }
@@ -625,6 +655,88 @@ export function validateContactName(name: string): string | null {
     return 'Contact name contains invalid characters';
   }
   
+  return null;
+}
+
+// Role validation - professional SaaS industry standards
+export function validateContactRole(role: string): string | null {
+  if (!role || !role.trim()) {
+    return null; // Role is optional
+  }
+
+  const trimmedRole = role.trim();
+
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedRole)) {
+    return null;
+  }
+
+  // Enterprise rule: Max length 100 characters (industry standard)
+  if (trimmedRole.length > 100) {
+    return 'Role must be 100 characters or less';
+  }
+
+  // Minimum meaningful length
+  if (trimmedRole.length < 2) {
+    return 'Role must be at least 2 characters long';
+  }
+
+  // Professional SaaS role validation - allow emojis but require meaningful content
+  const roleWithoutEmojis = trimmedRole.replace(EMOJI_REGEX, '').trim();
+
+  if (roleWithoutEmojis.length === 0) {
+    return 'Role must contain meaningful characters';
+  }
+
+  // Block common placeholder/test roles (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderRoles = [
+    'test', 'testing', 'temp', 'temporary', 'placeholder', 'sample', 'example', 'demo', 'fake', 'dummy',
+    'null', 'tbd', 'tba', 'unknown', 'role', 'position', 'job', 'title'
+  ];
+  if (placeholderRoles.includes(roleWithoutEmojis.toLowerCase())) {
+    return 'Please enter a specific role or job title';
+  }
+
+  // Must contain at least one letter (Unicode supported for international roles)
+  if (!/[\p{L}]/u.test(roleWithoutEmojis)) {
+    return 'Role must contain letters';
+  }
+
+  // Professional SaaS validation: Allow Unicode letters, numbers, spaces, common business punctuation
+  // This supports international business titles and modern role naming conventions
+  if (!/^[\p{L}\p{N}\s\-'.&/()]+$/u.test(roleWithoutEmojis)) {
+    return 'Role contains invalid characters';
+  }
+
+  // Block obviously inappropriate content patterns (professional SaaS standard)
+  const inappropriatePatterns = [
+    /^\d+$/, // Only numbers
+    /^[^\p{L}]+$/u, // No letters at all
+    /(.)\1{4,}/u, // Repeated characters (aaaaa, etc.)
+  ];
+
+  for (const pattern of inappropriatePatterns) {
+    if (pattern.test(roleWithoutEmojis)) {
+      return 'Please enter a valid professional role';
+    }
+  }
+
+  // Enterprise validation: Check for common role format patterns
+  // This helps ensure consistency in enterprise environments
+  const validRolePatterns = [
+    // Standard business roles: "Manager", "Senior Developer", "VP of Sales"
+    /^[\p{L}][\p{L}\s\-'.&/()]*[\p{L}]$/u,
+    // Single word roles: "CEO", "CTO", "Manager"
+    /^[\p{L}]+$/u,
+    // Roles with numbers: "Developer II", "Level 3 Support"
+    /^[\p{L}][\p{L}\p{N}\s\-'.&/()]*[\p{L}\p{N}]$/u
+  ];
+
+  const isValidFormat = validRolePatterns.some(pattern => pattern.test(roleWithoutEmojis));
+  if (!isValidFormat) {
+    return 'Please enter a standard professional role format';
+  }
+
   return null;
 }
 
@@ -782,8 +894,8 @@ export function validateTaxId(taxId: string): string | null {
     return 'Tax ID must contain letters or numbers';
   }
 
-  // Block obvious placeholder values
-  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
   if (placeholderValues.includes(trimmedTaxId.toLowerCase())) {
     return 'Please enter a valid tax ID';
   }
@@ -837,8 +949,8 @@ export function validateParentCompany(parentCompany: string): string | null {
     return 'Parent company name contains invalid characters';
   }
 
-  // Block obvious placeholder values
-  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example', 'same', 'self'];
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example', 'same', 'self'];
   if (placeholderValues.includes(nameWithoutEmojis.toLowerCase())) {
     return 'Please enter a valid parent company name';
   }
@@ -984,8 +1096,8 @@ export function validatePaymentTerms(paymentTerms: string): string | null {
     return 'Payment terms must contain letters or numbers';
   }
 
-  // Block obvious placeholder values
-  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
   if (placeholderValues.includes(lowerTerms)) {
     return 'Please enter valid payment terms';
   }

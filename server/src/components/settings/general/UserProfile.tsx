@@ -213,6 +213,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   id="firstName"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
               <div>
@@ -221,6 +222,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
                   id="lastName"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -231,19 +233,21 @@ export default function UserProfile({ userId }: UserProfileProps) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">Phone Number (optional)</Label>
               <Input
                 id="phone"
                 type="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 border-gray-200 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             <div>
-              <Label htmlFor="timezone">Time Zone</Label>
+              <Label htmlFor="timezone">Time Zone (optional)</Label>
               <TimezonePicker
                 value={timezone}
                 onValueChange={setTimezone}
