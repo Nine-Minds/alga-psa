@@ -748,6 +748,251 @@ export function validateAnnualRevenue(revenue: string): string | null {
   return null;
 }
 
+// Tax ID validation - professional SaaS/CRM grade with international support
+export function validateTaxId(taxId: string): string | null {
+  if (!taxId || !taxId.trim()) {
+    return null; // Tax ID is optional
+  }
+
+  const trimmedTaxId = taxId.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedTaxId.length > 50) {
+    return 'Tax ID must be 50 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful tax ID
+  if (trimmedTaxId.length < 2) {
+    return 'Tax ID must be at least 2 characters long';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedTaxId)) {
+    return 'Tax ID cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Support international tax ID formats
+  // Allow letters, numbers, hyphens, spaces, and common tax ID punctuation
+  if (!/^[\p{L}\p{N}\s\-./]+$/u.test(trimmedTaxId)) {
+    return 'Tax ID contains invalid characters';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedTaxId)) {
+    return 'Tax ID must contain letters or numbers';
+  }
+
+  // Block obvious placeholder values
+  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  if (placeholderValues.includes(trimmedTaxId.toLowerCase())) {
+    return 'Please enter a valid tax ID';
+  }
+
+  return null;
+}
+
+// Parent company validation - professional SaaS/CRM grade with international support
+export function validateParentCompany(parentCompany: string): string | null {
+  if (!parentCompany || !parentCompany.trim()) {
+    return null; // Parent company is optional
+  }
+
+  const trimmedParentCompany = parentCompany.trim();
+
+  // Enterprise rule: Max length 256 characters (same as company name)
+  if (trimmedParentCompany.length > 256) {
+    return 'Parent company name must be 256 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful company name
+  if (trimmedParentCompany.length < 2) {
+    return 'Parent company name must be at least 2 characters long';
+  }
+
+  // Professional SaaS approach: Allow emojis but require meaningful content
+  if (!hasNonEmojiContent(trimmedParentCompany)) {
+    return 'Parent company name must contain meaningful characters';
+  }
+
+  const nameWithoutEmojis = trimmedParentCompany.replace(EMOJI_REGEX, '').trim();
+
+  // Block standalone abbreviations
+  const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'CO', 'COMPANY', 'CORPORATION'];
+  if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
+    return 'Parent company name cannot be just a business abbreviation';
+  }
+
+  // Block domain extensions
+  if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
+    return 'Parent company name cannot end with a domain extension';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
+    return 'Parent company name must contain at least one letter or number';
+  }
+
+  // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
+  if (!/^[\p{L}\p{N}\s\-,.&'()]+$/u.test(nameWithoutEmojis)) {
+    return 'Parent company name contains invalid characters';
+  }
+
+  // Block obvious placeholder values
+  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example', 'same', 'self'];
+  if (placeholderValues.includes(nameWithoutEmojis.toLowerCase())) {
+    return 'Please enter a valid parent company name';
+  }
+
+  return null;
+}
+
+// Last contact date validation - professional SaaS/CRM grade
+export function validateLastContactDate(lastContactDate: string): string | null {
+  if (!lastContactDate || !lastContactDate.trim()) {
+    return null; // Last contact date is optional
+  }
+
+  const trimmedDate = lastContactDate.trim();
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedDate)) {
+    return 'Last contact date cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept various date formats
+  const dateFormats = [
+    // ISO format: YYYY-MM-DD
+    /^\d{4}-\d{2}-\d{2}$/,
+    // US format: MM/DD/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,
+    // European format: DD/MM/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,
+    // Dot format: DD.MM.YYYY
+    /^\d{1,2}\.\d{1,2}\.\d{4}$/,
+    // Hyphen format: DD-MM-YYYY
+    /^\d{1,2}-\d{1,2}-\d{4}$/,
+    // Short year: MM/DD/YY
+    /^\d{1,2}\/\d{1,2}\/\d{2}$/,
+    // Month name formats: "Jan 15, 2024", "January 15, 2024"
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$/i,
+    // Simple formats: "2024", "Q1 2024", "Jan 2024"
+    /^\d{4}$/,
+    /^Q[1-4]\s+\d{4}$/i,
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/i
+  ];
+
+  const isValidFormat = dateFormats.some(pattern => pattern.test(trimmedDate));
+
+  if (!isValidFormat) {
+    return 'Please enter a valid date (e.g., "2024-01-15", "01/15/2024", "Jan 15, 2024")';
+  }
+
+  // Additional validation: Check if the date is reasonable (not too far in the future)
+  try {
+    let dateToCheck: Date | null = null;
+
+    // Try to parse common formats
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+      dateToCheck = new Date(trimmedDate);
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmedDate)) {
+      dateToCheck = new Date(trimmedDate);
+    } else if (/^\d{4}$/.test(trimmedDate)) {
+      dateToCheck = new Date(parseInt(trimmedDate), 0, 1); // January 1st of that year
+    }
+
+    if (dateToCheck && !isNaN(dateToCheck.getTime())) {
+      const now = new Date();
+      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+
+      // Check if date is too far in the future (professional SaaS rule)
+      if (dateToCheck > oneYearFromNow) {
+        return 'Last contact date cannot be more than a year in the future';
+      }
+
+      // Check if date is too far in the past (reasonable business rule)
+      const fiftyYearsAgo = new Date(now.getFullYear() - 50, now.getMonth(), now.getDate());
+      if (dateToCheck < fiftyYearsAgo) {
+        return 'Last contact date cannot be more than 50 years ago';
+      }
+    }
+  } catch {
+    // If date parsing fails, rely on format validation
+  }
+
+  return null;
+}
+
+// Payment terms validation - professional SaaS/CRM grade
+export function validatePaymentTerms(paymentTerms: string): string | null {
+  if (!paymentTerms || !paymentTerms.trim()) {
+    return null; // Payment terms are optional
+  }
+
+  const trimmedTerms = paymentTerms.trim();
+
+  // Enterprise rule: Max length 100 characters
+  if (trimmedTerms.length > 100) {
+    return 'Payment terms must be 100 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful terms
+  if (trimmedTerms.length < 2) {
+    return 'Payment terms must be at least 2 characters long';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedTerms)) {
+    return 'Payment terms cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Support common payment terms formats
+  const lowerTerms = trimmedTerms.toLowerCase();
+
+  // Common professional payment terms patterns
+  const validPatterns = [
+    // Net terms: "Net 30", "NET 30", "net30"
+    /^net\s*\d+(\s+days?)?$/,
+    // Due terms: "Due on receipt", "Due upon delivery"
+    /^due\s+(on\s+)?(receipt|delivery|invoice|completion)$/,
+    // Days terms: "30 days", "60 days net"
+    /^\d+\s+days?(\s+net)?$/,
+    // Percentage terms: "2/10 net 30", "1% 10 days"
+    /^\d+(\.\d+)?[%\/]\d+(\s+(net\s+)?\d+)?$/,
+    // Advance terms: "50% advance", "Payment in advance"
+    /^(\d+%?\s+)?(advance|upfront|prepaid|prepayment)$/,
+    /^payment\s+in\s+advance$/,
+    // COD terms
+    /^(cod|cash\s+on\s+delivery)$/,
+    // Immediate terms
+    /^(immediate|upon\s+receipt|on\s+delivery)$/,
+    // Monthly terms
+    /^(monthly|quarterly|annually|weekly)$/,
+    // Credit terms
+    /^(credit\s+)?(\d+\s+days?\s+)?credit$/,
+    // Custom professional terms
+    /^[\p{L}\p{N}\s\-,.%\/()]+$/u
+  ];
+
+  const isValidPattern = validPatterns.some(pattern => pattern.test(lowerTerms));
+
+  if (!isValidPattern) {
+    return 'Payment terms contain invalid characters';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedTerms)) {
+    return 'Payment terms must contain letters or numbers';
+  }
+
+  // Block obvious placeholder values
+  const placeholderValues = ['none', 'n/a', 'na', 'null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  if (placeholderValues.includes(lowerTerms)) {
+    return 'Please enter valid payment terms';
+  }
+
+  return null;
+}
+
 // Comprehensive form validation function
 export function validateClientForm(formData: {
   companyName: string;
@@ -766,6 +1011,10 @@ export function validateClientForm(formData: {
   notes?: string;
   companySize?: string;
   annualRevenue?: string;
+  taxId?: string;
+  parentCompany?: string;
+  lastContactDate?: string;
+  paymentTerms?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
   
@@ -871,6 +1120,34 @@ export function validateClientForm(formData: {
     const annualRevenueError = validateAnnualRevenue(formData.annualRevenue);
     if (annualRevenueError) {
       errors.annual_revenue = annualRevenueError;
+    }
+  }
+
+  if (formData.taxId) {
+    const taxIdError = validateTaxId(formData.taxId);
+    if (taxIdError) {
+      errors.tax_id = taxIdError;
+    }
+  }
+
+  if (formData.parentCompany) {
+    const parentCompanyError = validateParentCompany(formData.parentCompany);
+    if (parentCompanyError) {
+      errors.parent_company_name = parentCompanyError;
+    }
+  }
+
+  if (formData.lastContactDate) {
+    const lastContactDateError = validateLastContactDate(formData.lastContactDate);
+    if (lastContactDateError) {
+      errors.last_contact_date = lastContactDateError;
+    }
+  }
+
+  if (formData.paymentTerms) {
+    const paymentTermsError = validatePaymentTerms(formData.paymentTerms);
+    if (paymentTermsError) {
+      errors.payment_terms = paymentTermsError;
     }
   }
 

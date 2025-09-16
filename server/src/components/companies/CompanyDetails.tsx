@@ -15,7 +15,7 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry } from 'server/src/lib/utils/clientFormValidation';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateTaxId, validateParentCompany, validateLastContactDate, validatePaymentTerms } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -98,10 +98,11 @@ const TextDetailItem: React.FC<{
   value: string;
   onEdit: (value: string) => void;
   automationId?: string;
-  validate?: (value: string) => string | null;
-}> = ({ label, value, onEdit, automationId, validate }) => {
+  fieldName?: string;
+  validateField?: (fieldName: string, value: string) => void;
+  error?: string;
+}> = ({ label, value, onEdit, automationId, fieldName, validateField, error }) => {
   const [localValue, setLocalValue] = useState(value);
-  const [error, setError] = useState<string | null>(null);
 
   // Register for UI automation with meaningful label
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -123,11 +124,18 @@ const TextDetailItem: React.FC<{
     }
   }, [localValue, updateMetadata, label]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear errors when user starts typing (professional SaaS pattern)
+    if (error && fieldName && validateField) {
+      validateField(fieldName, ''); // Clear the error
+    }
+  };
+
   const handleBlur = () => {
     // Professional SaaS validation pattern: validate on blur, not while typing
-    if (validate) {
-      const validationError = validate(localValue);
-      setError(validationError);
+    if (validateField && fieldName) {
+      validateField(fieldName, localValue);
     }
 
     // Always call onEdit to allow parent to determine if changes should be tracked
@@ -140,7 +148,7 @@ const TextDetailItem: React.FC<{
       <Input
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
           error
@@ -149,7 +157,7 @@ const TextDetailItem: React.FC<{
         }`}
       />
       {error && (
-        <Text size="1" className="text-red-600 mt-1">{error}</Text>
+        <p className="text-sm text-red-600 mt-1">{error}</p>
       )}
     </div>
   );
@@ -204,11 +212,51 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string) => {
+    let error: string | null = null;
+
+    switch (fieldName) {
+      case 'website':
+        error = validateWebsiteUrl(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
+        break;
+      case 'company_size':
+        error = validateCompanySize(value);
+        break;
+      case 'annual_revenue':
+        error = validateAnnualRevenue(value);
+        break;
+      case 'tax_id':
+        error = validateTaxId(value);
+        break;
+      case 'parent_company_name':
+        error = validateParentCompany(value);
+        break;
+      case 'last_contact_date':
+        error = validateLastContactDate(value);
+        break;
+      case 'payment_terms':
+        error = validatePaymentTerms(value);
+        break;
+      default:
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+  };
   const drawer = useDrawer();
 
 
@@ -572,7 +620,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
-                validate={validateWebsiteUrl}
+                fieldName="website"
+                validateField={validateField}
+                error={fieldErrors.website}
               />
 
               <TextDetailItem
@@ -580,7 +630,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
-                validate={validateIndustry}
+                fieldName="industry"
+                validateField={validateField}
+                error={fieldErrors.industry}
               />
 
               <TextDetailItem
@@ -588,7 +640,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
-                validate={validateCompanySize}
+                fieldName="company_size"
+                validateField={validateField}
+                error={fieldErrors.company_size}
               />
               
               <TextDetailItem
@@ -596,7 +650,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
-                validate={validateAnnualRevenue}
+                fieldName="annual_revenue"
+                validateField={validateField}
+                error={fieldErrors.annual_revenue}
               />
 
               {/* Language Preference */}
@@ -803,18 +859,27 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               value={editedCompany.properties?.tax_id ?? ""}
               onEdit={(value) => handleFieldChange('properties.tax_id', value)}
               automationId="tax-id-field"
+              fieldName="tax_id"
+              validateField={validateField}
+              error={fieldErrors.tax_id}
             />
             <TextDetailItem
               label="Payment Terms"
               value={editedCompany.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
+              fieldName="payment_terms"
+              validateField={validateField}
+              error={fieldErrors.payment_terms}
             />
             <TextDetailItem
               label="Parent Company"
               value={editedCompany.properties?.parent_company_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
+              fieldName="parent_company_name"
+              validateField={validateField}
+              error={fieldErrors.parent_company_name}
             />
             <FieldContainer
               label="Timezone"
@@ -834,9 +899,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               value={editedCompany.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
               automationId="last-contact-date-field"
+              fieldName="last_contact_date"
+              validateField={validateField}
+              error={fieldErrors.last_contact_date}
             />
           </div>
-          
+
           <Flex gap="4" justify="end" align="center">
             <Button
               id="save-additional-info-btn"
