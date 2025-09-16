@@ -48,7 +48,7 @@ export class UsageAnalytics {
       properties: {
         ...properties,
         user_ids_anonymized: this.anonymizeUserIds,
-        app_version: process.env.npm_package_version || process.env.APP_VERSION,
+        app_version: process.env.npm_package_version,
         environment: process.env.NODE_ENV,
       },
     });

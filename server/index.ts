@@ -1,12 +1,13 @@
 import express from 'express';
 import next from 'next';
 import cookieParser from 'cookie-parser';
-import { 
-  apiKeyAuthMiddleware, 
-  sessionAuthMiddleware, 
+import {
+  apiKeyAuthMiddleware,
+  sessionAuthMiddleware,
   tenantHeaderMiddleware,
-  authorizationMiddleware 
+  authorizationMiddleware
 } from './src/middleware/express/authMiddleware';
+import packageJson from './package.json';
 
 const dev = globalThis.process.env.NODE_ENV !== 'production';
 const hostname = globalThis.process.env.HOSTNAME || 'localhost';
@@ -41,7 +42,7 @@ async function createServer() {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: globalThis.process.uptime(),
-        version: '1.0.0'
+        version: packageJson.version
       });
     });
 
@@ -51,7 +52,7 @@ async function createServer() {
         status: 'ready',
         timestamp: new Date().toISOString(),
         uptime: globalThis.process.uptime(),
-        version: '1.0.0'
+        version: packageJson.version
       });
     });
 
@@ -75,6 +76,7 @@ async function createServer() {
     server.listen(port, '0.0.0.0', () => {
       console.log(`> Ready on http://${hostname}:${port}`);
       console.log(`> Environment: ${dev ? 'development' : 'production'}`);
+      console.log(`> Version: ${packageJson.version}`);
     });
 
     // Next.js handles WebSocket upgrades for HMR automatically

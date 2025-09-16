@@ -55,7 +55,7 @@ export async function getOrCreateInstanceId(): Promise<string> {
       instance_id: newInstanceId,
       instance_created_at: new Date().toISOString(),
       usage_stats_enabled: process.env.ALGA_USAGE_STATS !== 'false',
-      first_seen_version: process.env.npm_package_version || process.env.APP_VERSION || 'unknown',
+      first_seen_version: process.env.npm_package_version || 'unknown',
       environment: process.env.NODE_ENV || 'development'
     });
 

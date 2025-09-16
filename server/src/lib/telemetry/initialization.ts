@@ -28,6 +28,7 @@ import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions'
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
 import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
 import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
+import packageJson from '../../../package.json';
 import { SpanProcessor, Span, BatchSpanProcessor } from '@opentelemetry/sdk-trace-base';
 import { isUsageStatsEnabled } from '../../config/telemetry';
 import logger from '../../utils/logger';
@@ -157,7 +158,7 @@ export async function initializeTelemetry(): Promise<void> {
       [SemanticResourceAttributes.SERVICE_NAMESPACE]: 'alga-psa',
       [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: process.env.NODE_ENV,
       'deployment.id': process.env.DEPLOYMENT_ID || 'unknown',
-      'app.version': process.env.APP_VERSION || '1.0.0',
+      'app.version': packageJson.version,
       environment: process.env.NODE_ENV || 'development',
     });
 
