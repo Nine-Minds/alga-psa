@@ -588,7 +588,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Left Column - All Form Fields */}
             <div className="space-y-6">
               <TextDetailItem
-                label="Client Name"
+                label="Client Name *"
                 value={editedCompany.company_name}
                 onEdit={(value) => handleFieldChange('company_name', value)}
                 automationId="client-name-field"
@@ -601,7 +601,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 helperText="Select the account manager for this company"
                 automationId="account-manager-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager (optional)</Text>
                 <UserPicker
                   value={editedCompany.account_manager_id || ''}
                   onValueChange={(value) => handleFieldChange('account_manager_id', value)}
@@ -613,7 +613,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </FieldContainer>
               
               <TextDetailItem
-                label="Website"
+                label="Website (optional)"
                 value={editedCompany.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
@@ -623,7 +623,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               />
 
               <TextDetailItem
-                label="Industry"
+                label="Industry (optional)"
                 value={editedCompany.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
@@ -633,7 +633,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               />
 
               <TextDetailItem
-                label="Company Size"
+                label="Company Size (optional)"
                 value={editedCompany.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
@@ -643,7 +643,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               />
               
               <TextDetailItem
-                label="Annual Revenue"
+                label="Annual Revenue (optional)"
                 value={editedCompany.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
@@ -657,7 +657,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
                 {/* Client Type */}
                 <div className="space-y-2 col-span-2">
-                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type (optional)</Text>
                   <CustomSelect
                     id="client-type-select"
                     value={editedCompany.client_type || 'company'}
@@ -681,7 +681,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
               {/* Tags */}
               <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Tags (optional)</Text>
                 <TagManager
                   id={`${id}-tags`}
                   entityId={editedCompany.company_id}
@@ -696,7 +696,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Right Column - Company Locations Only */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations (optional)</Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -843,7 +843,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
             <TextDetailItem
-              label="Tax ID"
+              label="Tax ID (optional)"
               value={editedCompany.properties?.tax_id ?? ""}
               onEdit={(value) => handleFieldChange('properties.tax_id', value)}
               automationId="tax-id-field"
@@ -852,7 +852,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               error={fieldErrors.tax_id}
             />
             <TextDetailItem
-              label="Payment Terms"
+              label="Payment Terms (optional)"
               value={editedCompany.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
@@ -861,7 +861,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               error={fieldErrors.payment_terms}
             />
             <TextDetailItem
-              label="Parent Company"
+              label="Parent Company (optional)"
               value={editedCompany.properties?.parent_company_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
@@ -876,14 +876,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               helperText="Select the timezone for this company"
               automationId="timezone-field"
             >
-              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone (optional)</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
             <TextDetailItem
-              label="Last Contact Date"
+              label="Last Contact Date (optional)"
               value={editedCompany.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
               automationId="last-contact-date-field"

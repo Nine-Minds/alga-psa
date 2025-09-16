@@ -230,28 +230,28 @@ export function CompanyDetailsSettings() {
           />
 
           <TextDetailItem
-            label="Website"
+            label="Website (optional)"
             value={companyDetails.properties?.website || companyDetails.url || ''}
             onEdit={(value) => handleFieldChange('properties.website', value)}
             automationId="website-field"
           />
 
           <TextDetailItem
-            label="Industry"
+            label="Industry (optional)"
             value={companyDetails.properties?.industry || ''}
             onEdit={(value) => handleFieldChange('properties.industry', value)}
             automationId="industry-field"
           />
 
           <TextDetailItem
-            label="Company Size"
+            label="Company Size (optional)"
             value={companyDetails.properties?.company_size || ''}
             onEdit={(value) => handleFieldChange('properties.company_size', value)}
             automationId="company-size-field"
           />
           
           <TextDetailItem
-            label="Annual Revenue"
+            label="Annual Revenue (optional)"
             value={companyDetails.properties?.annual_revenue || ''}
             onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
@@ -261,7 +261,7 @@ export function CompanyDetailsSettings() {
         {/* Right Column - Company Locations */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+            <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations (optional)</Text>
             <Button
               id="locations-button"
               size="sm"

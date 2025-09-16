@@ -228,7 +228,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     // If field is empty, only validate required fields
     if (!trimmedValue) {
       if (fieldName === 'company_name' && isSubmitting) {
-        error = 'Company name is required';
+        error = 'Please enter a company name to continue';
       }
       // For optional fields, clear any existing errors when empty
       setFieldErrors(prev => ({
@@ -365,6 +365,22 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       validationMessages.push(companyNameError);
     }
 
+    // Primary Contact Name - Required
+    const contactNameError = validateContactName(contactData.full_name);
+    if (contactNameError) {
+      fieldValidationErrors.contact_name = contactNameError;
+      validationMessages.push(contactNameError);
+    }
+
+    // Primary Contact Email - Required
+    const contactEmailError = validateEmailAddress(contactData.email);
+    if (contactEmailError) {
+      fieldValidationErrors.contact_email = contactEmailError;
+      validationMessages.push(contactEmailError);
+    }
+
+    // Account Manager is optional - UserPicker has "Not assigned" option
+
     // Optional fields - only validate if they have content
     if (formData.url && formData.url.trim()) {
       const urlError = validateWebsiteUrl(formData.url);
@@ -430,21 +446,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       }
     }
 
-    if (contactData.full_name && contactData.full_name.trim()) {
-      const nameError = validateContactName(contactData.full_name);
-      if (nameError) {
-        fieldValidationErrors.contact_name = nameError;
-        validationMessages.push(nameError);
-      }
-    }
-
-    if (contactData.email && contactData.email.trim()) {
-      const contactEmailError = validateEmailAddress(contactData.email);
-      if (contactEmailError) {
-        fieldValidationErrors.contact_email = contactEmailError;
-        validationMessages.push(contactEmailError);
-      }
-    }
+    // Contact name and email are now required fields - validation moved to Essential field validation section above
 
     if (contactData.phone_number && contactData.phone_number.trim()) {
       const contactPhoneError = validatePhoneNumber(contactData.phone_number);
@@ -684,19 +686,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <form onSubmit={handleSubmit} id="quick-add-company-form" noValidate>
           <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
             
-            {/* Validation Errors */}
-            {hasAttemptedSubmit && validationErrors.length > 0 && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following errors:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    {validationErrors.map((err, index) => (
-                      <li key={index}>{err}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+            {/* Removed top validation errors - now showing inline near action button */}
             
             {/* Error Alert */}
             {error && (
@@ -756,7 +746,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
+                    Industry (optional)
                   </Label>
                   <Input
                     id="industry"
@@ -782,7 +772,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                    Website URL
+                    Website URL (optional)
                   </Label>
                   <Input
                     id="url"
@@ -803,7 +793,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Manager
+                    Account Manager (optional)
                   </Label>
                   <UserPicker
                     id="account-manager-picker"
@@ -815,6 +805,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                     buttonWidth="full"
                   />
+                  {fieldErrors.account_manager && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.account_manager}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -827,7 +820,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               
               <div>
                 <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
+                  Street Address (optional)
                 </Label>
                 <Input
                   id="address-line-1"
@@ -848,7 +841,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City
+                    City (optional)
                   </Label>
                   <Input
                     id="city"
@@ -868,7 +861,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
-                    State
+                    State (optional)
                   </Label>
                   <Input
                     id="state-province"
@@ -888,7 +881,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="company-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                    Zip Code
+                    Zip Code (optional)
                   </Label>
                   <Input
                     id="company-postal-code"
@@ -927,7 +920,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 <div>
                   <PhoneInput
                     id="company-location-phone"
-                    label="Phone"
+                    label="Phone (optional)"
                     value={locationData.phone || ''}
                     onChange={(value) => {
                       handleLocationChange('phone', value);
@@ -957,7 +950,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="company-location-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    Email (optional)
                   </Label>
                   <Input
                     id="company-location-email"
@@ -993,7 +986,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               
               <div>
                 <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
+                  Primary Contact Name *
                 </Label>
                 <Input
                   id="contact-name"
@@ -1014,7 +1007,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    Primary Contact Email *
                   </Label>
                   <Input
                     id="company-contact-email"
@@ -1042,7 +1035,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 <div>
                   <PhoneInput
                     id="company-contact-phone"
-                    label="Phone"
+                    label="Phone (optional)"
                     value={contactData.phone_number}
                     onChange={(value) => {
                       handleContactChange('phone_number', value);
@@ -1076,7 +1069,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="company-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                  Notes (optional)
                 </Label>
                 <TextArea
                   id="company-notes-input"
@@ -1115,15 +1108,21 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             >
               Cancel
             </Button>
-            <Button
-              id="create-company-btn"
-              type="submit"
-              form="quick-add-company-form"
-              disabled={isSubmitting || !isFormValid()}
-              className={(!isFormValid()) ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              {isSubmitting ? 'Creating...' : 'Create Client'}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {hasAttemptedSubmit && Object.keys(fieldErrors).length > 0 && (
+                <p className="text-sm text-red-600 text-right">
+                  Please fill in all required fields
+                </p>
+              )}
+              <Button
+                id="create-company-btn"
+                type="submit"
+                form="quick-add-company-form"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Client'}
+              </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>

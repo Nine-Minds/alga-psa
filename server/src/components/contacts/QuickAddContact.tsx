@@ -153,7 +153,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       case 'contact_name':
         // Enterprise name validation with full Unicode support
         if (!trimmedValue) {
-          if (isSubmitting) error = 'Full name is required';
+          if (isSubmitting) error = 'Please enter a full name to continue';
         } else if (trimmedValue.length < 1) {
           error = 'Full name cannot be empty';
         } else if (/^\s+$/.test(value)) {
@@ -166,7 +166,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       case 'contact_email':
         // Enterprise email validation
         if (!trimmedValue) {
-          if (isSubmitting) error = 'Email address is required';
+          if (isSubmitting) error = 'Please enter an email address to continue';
         } else if (/^\s+$/.test(value)) {
           error = 'Email address cannot contain only spaces';
         } else {
@@ -400,18 +400,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       title="Add New Contact"
     >
       <DialogContent>
-        {hasAttemptedSubmit && validationErrors.length > 0 && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertDescription>
-              Please fix the following errors:
-              <ul className="list-disc pl-5 mt-1 text-sm">
-                {validationErrors.map((err, index) => (
-                  <li key={index}>{err}</li>
-                ))}
-              </ul>
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Removed top validation errors - now showing inline near action button */}
         {error && (
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <button
@@ -497,7 +486,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             <div>
               <PhoneInput
                 id="quick-add-contact-phone"
-                label="Phone Number"
+                label="Phone Number (optional)"
                 value={phoneNumber}
                 onChange={(value) => {
                   setPhoneNumber(value);
@@ -537,7 +526,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               />
             </div>
             <div>
-              <Label htmlFor="role">Role</Label>
+              <Label htmlFor="role">Role (optional)</Label>
               <Input
                 id="quick-add-contact-role"
                 value={role}
@@ -559,7 +548,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               )}
             </div>
             <div>
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">Notes (optional)</Label>
               <TextArea
                 id="quick-add-contact-notes"
                 value={notes}
@@ -610,15 +599,21 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
             >
               Cancel
             </Button>
-            <Button
-              id="quick-add-contact-submit"
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting || !isFormValid()}
-              className={(!isFormValid()) ? 'opacity-50 cursor-not-allowed' : ''}
-            >
-              {isSubmitting ? 'Adding...' : 'Add Contact'}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {hasAttemptedSubmit && Object.keys(fieldErrors).length > 0 && (
+                <p className="text-sm text-red-600 text-right">
+                  Please fill in all required fields
+                </p>
+              )}
+              <Button
+                id="quick-add-contact-submit"
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Adding...' : 'Add Contact'}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
