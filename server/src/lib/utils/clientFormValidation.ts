@@ -646,6 +646,108 @@ export function validateNotes(notes: string): string | null {
 }
 
 
+// Company size validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateCompanySize(companySize: string): string | null {
+  if (!companySize || !companySize.trim()) {
+    return null; // Company size is optional
+  }
+
+  const trimmedSize = companySize.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedSize.length > 50) {
+    return 'Company size must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedSize)) {
+    return 'Company size cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English
+  const lowerSize = trimmedSize.toLowerCase();
+
+  // Common professional ranges (Microsoft/Salesforce patterns)
+  const validRanges = [
+    // Exact numbers
+    /^\d+$/,
+    // Ranges with hyphens or "to"
+    /^\d+-\d+$/,
+    /^\d+\s*to\s*\d+$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Mixed formats like "2.5 million", "5K", "10M", "1B"
+    /^\d+(\.\d+)?\s*(k|m|b|thousand|million|billion)$/,
+    // Professional ranges in plain English
+    /^(less than|under|fewer than)\s+\d+$/,
+    /^(more than|over|above)\s+\d+$/,
+    /^\d+\+$/,
+    // Common SaaS categories
+    /^(startup|small|medium|large|enterprise)$/,
+    /^(1-10|11-50|51-200|201-500|501-1000|1001-5000|5001\+)$/
+  ];
+
+  const isValid = validRanges.some(pattern => pattern.test(lowerSize));
+
+  if (!isValid) {
+    return 'Please enter a valid company size (e.g., "50", "10-50", "five hundred", "2.5M", "small", "enterprise")';
+  }
+
+  return null;
+}
+
+// Annual revenue validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateAnnualRevenue(revenue: string): string | null {
+  if (!revenue || !revenue.trim()) {
+    return null; // Annual revenue is optional
+  }
+
+  const trimmedRevenue = revenue.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedRevenue.length > 50) {
+    return 'Annual revenue must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedRevenue)) {
+    return 'Annual revenue cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English with currency symbols
+  const lowerRevenue = trimmedRevenue.toLowerCase().replace(/[\s$,£€¥]/g, '');
+
+  // Common professional revenue formats (Microsoft/Salesforce patterns)
+  const validFormats = [
+    // Exact numbers with optional currency symbols and commas
+    /^\d+(,\d{3})*(\.\d{2})?$/,
+    // Ranges
+    /^\d+-\d+$/,
+    /^\d+to\d+$/,
+    // Abbreviations (K, M, B)
+    /^\d+(\.\d+)?[kmb]$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Professional ranges in plain English
+    /^(lessthan|under|fewerthan)\d+$/,
+    /^(morethan|over|above)\d+$/,
+    /^\d+\+$/,
+    // Common SaaS revenue categories
+    /^(startup|earlystage|growth|established)$/,
+    /^(under1m|1m-10m|10m-100m|100m-1b|1b\+)$/,
+    // "Not disclosed" or similar professional responses
+    /^(notdisclosed|private|confidential|n\/a|na)$/
+  ];
+
+  const isValid = validFormats.some(pattern => pattern.test(lowerRevenue));
+
+  if (!isValid) {
+    return 'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")';
+  }
+
+  return null;
+}
+
 // Comprehensive form validation function
 export function validateClientForm(formData: {
   companyName: string;
@@ -662,6 +764,8 @@ export function validateClientForm(formData: {
   contactEmail?: string;
   contactPhone?: string;
   notes?: string;
+  companySize?: string;
+  annualRevenue?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
   
@@ -755,7 +859,21 @@ export function validateClientForm(formData: {
       errors.notes = notesError;
     }
   }
-  
+
+  if (formData.companySize) {
+    const companySizeError = validateCompanySize(formData.companySize);
+    if (companySizeError) {
+      errors.company_size = companySizeError;
+    }
+  }
+
+  if (formData.annualRevenue) {
+    const annualRevenueError = validateAnnualRevenue(formData.annualRevenue);
+    if (annualRevenueError) {
+      errors.annual_revenue = annualRevenueError;
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors
