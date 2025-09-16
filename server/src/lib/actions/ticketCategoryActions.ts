@@ -236,7 +236,17 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
   });
 }
 
-export async function getTicketCategoriesByChannel(channelId: string) {
+export interface ChannelCategoryData {
+  categories: ITicketCategory[];
+  channelConfig: {
+    category_type: 'custom' | 'itil';
+    display_itil_impact?: boolean;
+    display_itil_urgency?: boolean;
+    display_itil_category?: boolean;
+  };
+}
+
+export async function getTicketCategoriesByChannel(channelId: string): Promise<ChannelCategoryData> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('Unauthorized');
@@ -249,14 +259,44 @@ export async function getTicketCategoriesByChannel(channelId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // Get all categories for the channel ordered by name
+      // Get channel configuration
+      const channel = await trx('channels')
+        .where('tenant', tenant!)
+        .where('channel_id', channelId)
+        .select('category_type', 'display_itil_impact', 'display_itil_urgency', 'display_itil_category')
+        .first();
+
+      if (!channel) {
+        throw new Error('Channel not found');
+      }
+
+      const channelConfig = {
+        category_type: (channel.category_type || 'custom') as 'custom' | 'itil',
+        display_itil_impact: channel.display_itil_impact || false,
+        display_itil_urgency: channel.display_itil_urgency || false,
+        display_itil_category: channel.display_itil_category || false,
+      };
+
+      // If channel uses ITIL categories, return empty custom categories
+      if (channelConfig.category_type === 'itil') {
+        return {
+          categories: [],
+          channelConfig
+        };
+      }
+
+      // Get all custom categories for the channel ordered by name
       const categories = await trx<ITicketCategory>('categories')
         .where('tenant', tenant!)
         .where('channel_id', channelId)
         .orderBy('category_name');
 
       // Order them hierarchically
-      return orderCategoriesHierarchically(categories);
+      const orderedCategories = orderCategoriesHierarchically(categories);
+      return {
+        categories: orderedCategories,
+        channelConfig
+      };
     } catch (error) {
       console.error('Error fetching ticket categories by board:', error);
       throw new Error('Failed to fetch ticket categories');

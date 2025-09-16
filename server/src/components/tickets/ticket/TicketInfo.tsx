@@ -14,10 +14,16 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByChannel } from 'server/src/lib/actions/ticketCategoryActions';
+import { getTicketCategories, getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
+import { ItilLabels } from 'server/src/lib/utils/itilUtils';
 import { Pencil, Check } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
+
+// Helper function to get ITIL labels
+const getItilLabel = (type: 'impact' | 'urgency' | 'priority', value: number): string => {
+  return ItilLabels[type][value] || 'Unknown';
+};
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration
@@ -55,6 +61,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   isInDrawer = false,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
+    category_type: 'custom',
+    display_itil_impact: false,
+    display_itil_urgency: false,
+    display_itil_category: false,
+  });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(ticket.title);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -110,15 +122,48 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       try {
         if (ticket.channel_id) {
           // Fetch categories for the specific channel
-          const fetchedCategories = await getTicketCategoriesByChannel(ticket.channel_id);
-          setCategories(fetchedCategories);
+          const data = await getTicketCategoriesByChannel(ticket.channel_id);
+          // Ensure data is properly resolved and categories is an array
+          if (data && data.categories && Array.isArray(data.categories)) {
+            setCategories(data.categories);
+            setChannelConfig(data.channelConfig);
+          } else {
+            console.error('Invalid categories data received:', data);
+            setCategories([]);
+            setChannelConfig({
+              category_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+              display_itil_category: false,
+            });
+          }
         } else {
-          // If no channel, fetch all categories
+          // If no channel, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
-          setCategories(fetchedCategories);
+          // Ensure fetchedCategories is an array
+          if (Array.isArray(fetchedCategories)) {
+            setCategories(fetchedCategories);
+          } else {
+            console.error('Invalid categories data received:', fetchedCategories);
+            setCategories([]);
+          }
+          setChannelConfig({
+            category_type: 'custom',
+            display_itil_impact: false,
+            display_itil_urgency: false,
+            display_itil_category: false,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch categories:', error);
+        // Set empty defaults on error
+        setCategories([]);
+        setChannelConfig({
+          category_type: 'custom',
+          display_itil_impact: false,
+          display_itil_urgency: false,
+          display_itil_category: false,
+        });
       }
     };
 
@@ -298,18 +343,53 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 className="!w-fit"
               />
             </div>
-            <div className="col-span-2">
-              <h5 className="font-bold mb-1">Category</h5>
-              <div className="w-fit">
-                <CategoryPicker
-                  id={`${id}-category-picker`}
-                  categories={categories}
-                  selectedCategories={[getSelectedCategoryId()]}
-                  onSelect={handleCategoryChange}
-                  placeholder="Select a category..."
-                />
+            {channelConfig.category_type === 'custom' && (
+              <div className="col-span-2">
+                <h5 className="font-bold mb-1">Category</h5>
+                <div className="w-fit">
+                  <CategoryPicker
+                    id={`${id}-category-picker`}
+                    categories={categories}
+                    selectedCategories={[getSelectedCategoryId()]}
+                    onSelect={handleCategoryChange}
+                    placeholder="Select a category..."
+                  />
+                </div>
               </div>
-            </div>
+            )}
+            {channelConfig.category_type === 'itil' && (
+              <div className="col-span-2">
+                <h5 className="font-bold mb-1">ITIL Category</h5>
+                <div className="text-sm text-gray-600">
+                  {ticket.itil_category && ticket.itil_subcategory
+                    ? `${ticket.itil_category} > ${ticket.itil_subcategory}`
+                    : ticket.itil_category || 'Not categorized'}
+                </div>
+              </div>
+            )}
+            {channelConfig.category_type === 'itil' && (channelConfig.display_itil_impact || channelConfig.display_itil_urgency) && (
+              <div className="col-span-2">
+                <h5 className="font-bold mb-1">ITIL Classification</h5>
+                <div className="flex gap-4 text-sm">
+                  {channelConfig.display_itil_impact && (
+                    <div>
+                      <span className="font-medium">Impact:</span>{' '}
+                      <span className="text-gray-600">
+                        {ticket.itil_impact ? `${ticket.itil_impact} - ${getItilLabel('impact', ticket.itil_impact)}` : 'Not set'}
+                      </span>
+                    </div>
+                  )}
+                  {channelConfig.display_itil_urgency && (
+                    <div>
+                      <span className="font-medium">Urgency:</span>{' '}
+                      <span className="text-gray-600">
+                        {ticket.itil_urgency ? `${ticket.itil_urgency} - ${getItilLabel('urgency', ticket.itil_urgency)}` : 'Not set'}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2 mb-2">

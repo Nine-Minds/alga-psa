@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IChannel, CategoryType } from 'server/src/interfaces/channel.interface';
 import { 
   getAllChannels, 
   createChannel,
@@ -47,7 +47,11 @@ const ChannelsSettings: React.FC = () => {
     channel_name: '',
     description: '',
     display_order: 0,
-    is_inactive: false
+    is_inactive: false,
+    category_type: 'custom' as CategoryType,
+    display_itil_impact: false,
+    display_itil_urgency: false,
+    display_itil_category: false
   });
   
   // State for Import Dialog
@@ -77,7 +81,11 @@ const ChannelsSettings: React.FC = () => {
       channel_name: channel.channel_name || '',
       description: channel.description || '',
       display_order: channel.display_order || 0,
-      is_inactive: channel.is_inactive
+      is_inactive: channel.is_inactive,
+      category_type: channel.category_type || 'custom',
+      display_itil_impact: channel.display_itil_impact || false,
+      display_itil_urgency: channel.display_itil_urgency || false,
+      display_itil_category: channel.display_itil_category || false
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -108,7 +116,11 @@ const ChannelsSettings: React.FC = () => {
           channel_name: formData.channel_name,
           description: formData.description,
           display_order: formData.display_order,
-          is_inactive: formData.is_inactive
+          is_inactive: formData.is_inactive,
+          category_type: formData.category_type,
+          display_itil_impact: formData.display_itil_impact,
+          display_itil_urgency: formData.display_itil_urgency,
+          display_itil_category: formData.display_itil_category
         });
         toast.success('Board updated successfully');
       } else {
@@ -116,14 +128,18 @@ const ChannelsSettings: React.FC = () => {
           channel_name: formData.channel_name,
           description: formData.description,
           display_order: formData.display_order,
-          is_inactive: formData.is_inactive
+          is_inactive: formData.is_inactive,
+          category_type: formData.category_type,
+          display_itil_impact: formData.display_itil_impact,
+          display_itil_urgency: formData.display_itil_urgency,
+          display_itil_category: formData.display_itil_category
         });
         toast.success('Board created successfully');
       }
       
       setShowAddEditDialog(false);
       setEditingChannel(null);
-      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
+      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
       await fetchChannels();
     } catch (error) {
       console.error('Error saving channel:', error);
@@ -240,6 +256,19 @@ const ChannelsSettings: React.FC = () => {
       ),
     },
     {
+      title: 'Category Type',
+      dataIndex: 'category_type',
+      render: (value: string) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          value === 'itil'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-gray-100 text-gray-800'
+        }`}>
+          {value === 'itil' ? 'ITIL' : 'Custom'}
+        </span>
+      ),
+    },
+    {
       title: 'Actions',
       dataIndex: 'channel_id',
       width: '10%',
@@ -268,7 +297,7 @@ const ChannelsSettings: React.FC = () => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
-      ),
+      )
     },
   ];
 
@@ -297,7 +326,7 @@ const ChannelsSettings: React.FC = () => {
             id="add-channel-button"
             onClick={() => {
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -339,7 +368,7 @@ const ChannelsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingChannel(null);
-          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
+          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
           setError(null);
         }} 
         title={editingChannel ? "Edit Board" : "Add Board"}
@@ -390,6 +419,71 @@ const ChannelsSettings: React.FC = () => {
                 onCheckedChange={(checked) => setFormData({ ...formData, is_inactive: checked })}
               />
             </div>
+
+            <div className="border-t pt-4 space-y-4">
+              <h4 className="font-medium text-gray-800">Category Configuration</h4>
+              <div>
+                <Label htmlFor="category_type">Category Type</Label>
+                <select
+                  id="category_type"
+                  value={formData.category_type}
+                  onChange={(e) => {
+                    const newType = e.target.value as CategoryType;
+                    setFormData({
+                      ...formData,
+                      category_type: newType,
+                      // Reset ITIL options when switching to custom
+                      display_itil_impact: newType === 'itil' ? formData.display_itil_impact : false,
+                      display_itil_urgency: newType === 'itil' ? formData.display_itil_urgency : false,
+                      display_itil_category: newType === 'itil' ? formData.display_itil_category : false
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="custom">Custom Categories</option>
+                  <option value="itil">ITIL Categories</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose whether this board uses custom categories or ITIL-based categorization.
+                </p>
+              </div>
+
+              {formData.category_type === 'itil' && (
+                <div className="bg-gray-50 p-4 rounded-md space-y-3">
+                  <p className="text-sm font-medium text-gray-700">ITIL Display Options</p>
+                  <p className="text-xs text-gray-600">
+                    Configure which ITIL classification fields appear in the new ticket form.
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="display_itil_impact">Show Impact Field</Label>
+                    <Switch
+                      id="display_itil_impact"
+                      checked={formData.display_itil_impact}
+                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_impact: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="display_itil_urgency">Show Urgency Field</Label>
+                    <Switch
+                      id="display_itil_urgency"
+                      checked={formData.display_itil_urgency}
+                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_urgency: checked })}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="display_itil_category">Show Category Field</Label>
+                    <Switch
+                      id="display_itil_category"
+                      checked={formData.display_itil_category}
+                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_category: checked })}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </DialogContent>
         <DialogFooter>
@@ -399,7 +493,7 @@ const ChannelsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
               setError(null);
             }}
           >

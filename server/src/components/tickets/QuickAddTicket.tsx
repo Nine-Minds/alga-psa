@@ -9,7 +9,7 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
-import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
+import { getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
@@ -99,6 +99,12 @@ export function QuickAddTicket({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [selectedCompanyType, setSelectedCompanyType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
+    category_type: 'custom',
+    display_itil_impact: false,
+    display_itil_urgency: false,
+    display_itil_category: false,
+  });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
   const [channels, setChannels] = useState<IChannel[]>([]);
@@ -242,11 +248,35 @@ export function QuickAddTicket({
     const fetchCategories = async () => {
       if (channelId) {
         try {
-          const categoriesData = await getTicketCategoriesByChannel(channelId);
-          setCategories(categoriesData || []);
+          const data = await getTicketCategoriesByChannel(channelId);
+          console.log('QuickAddTicket received:', {
+            data,
+            categoriesType: Array.isArray(data?.categories) ? 'array' : typeof data?.categories,
+            categoriesLength: data?.categories?.length
+          });
+          // Ensure data is properly resolved and categories is an array
+          if (data && data.categories && Array.isArray(data.categories)) {
+            setCategories(data.categories);
+            setChannelConfig(data.channelConfig);
+          } else {
+            console.error('Invalid categories data received:', data);
+            setCategories([]);
+            setChannelConfig({
+              category_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+              display_itil_category: false,
+            });
+          }
         } catch (error) {
           console.error('Error fetching categories:', error);
           setCategories([]);
+          setChannelConfig({
+            category_type: 'custom',
+            display_itil_impact: false,
+            display_itil_urgency: false,
+            display_itil_category: false,
+          });
         }
       } else {
         setCategories([]);
@@ -652,7 +682,7 @@ export function QuickAddTicket({
                     />
                   </div>
 
-                  {channelId && (
+                  {channelId && channelConfig.category_type === 'custom' && (
                     <CategoryPicker
                       id={`${id}-category-picker`}
                       categories={categories}
@@ -692,7 +722,7 @@ export function QuickAddTicket({
                   />
 
                   {/* ITIL Priority Integration Helper */}
-                  {calculatedItilPriority && (
+                  {channelId && channelConfig.category_type === 'itil' && calculatedItilPriority && (
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
@@ -723,23 +753,25 @@ export function QuickAddTicket({
                   )}
 
                   {/* ITIL Fields Section */}
-                  <div className="border-t pt-4">
-                    <h3 className="text-sm font-medium mb-4 text-gray-700">ITIL Classification (Optional)</h3>
-                    <ItilFields
-                      values={{
-                        itil_impact: itilImpact,
-                        itil_urgency: itilUrgency,
-                        itil_category: itilCategory,
-                        itil_subcategory: itilSubcategory,
-                        resolution_code: resolutionCode,
-                        root_cause: rootCause,
-                        workaround: workaround
-                      }}
-                      onChange={handleItilFieldChange}
-                      readOnly={false}
-                      showResolutionFields={false}
-                    />
-                  </div>
+                  {channelId && channelConfig.category_type === 'itil' && (
+                    <div className="border-t pt-4">
+                      <h3 className="text-sm font-medium mb-4 text-gray-700">ITIL Classification</h3>
+                      <ItilFields
+                        values={{
+                          itil_impact: itilImpact,
+                          itil_urgency: itilUrgency,
+                          itil_category: itilCategory,
+                          itil_subcategory: itilSubcategory,
+                          resolution_code: resolutionCode,
+                          root_cause: rootCause,
+                          workaround: workaround
+                        }}
+                        onChange={handleItilFieldChange}
+                        readOnly={false}
+                        showResolutionFields={false}
+                      />
+                    </div>
+                  )}
 
                   <DialogFooter>
                     <Button
