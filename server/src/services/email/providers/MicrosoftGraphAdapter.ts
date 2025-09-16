@@ -14,7 +14,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   
   constructor(config: EmailProviderConfig) {
     super(config);
-    
+
     // Create axios instance with default headers
     this.httpClient = axios.create({
       baseURL: this.baseUrl,
@@ -32,6 +32,78 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
       return config;
     });
+  }
+
+  /**
+   * Build Microsoft Graph base path for the configured mailbox.
+   * For shared mailboxes, Graph requires the /users/{mailbox} prefix.
+   */
+  private getMailboxBasePath(): string {
+    const mailbox = (this.config.mailbox || '').trim();
+    if (!mailbox) {
+      return '/me';
+    }
+    return `/users/${encodeURIComponent(mailbox)}`;
+  }
+
+  /**
+   * Resolve a folder resource path for subscriptions and message retrieval.
+   */
+  private async buildFolderResourcePath(desiredFolder: string): Promise<{ resource: string; resolvedFolder: string }> {
+    const mailboxBase = this.getMailboxBasePath();
+    const fallbackResult = {
+      resource: `${mailboxBase}/mailFolders/inbox/messages`,
+      resolvedFolder: 'Inbox',
+    };
+
+    const requested = (desiredFolder || 'Inbox').trim();
+    if (!requested) {
+      return fallbackResult;
+    }
+
+    const wellKnownMap: Record<string, string> = {
+      inbox: 'inbox',
+      archive: 'archive',
+      drafts: 'drafts',
+      deleteditems: 'deleteditems',
+      junkemail: 'junkemail',
+      sentitems: 'sentitems',
+      outbox: 'outbox',
+      conversationhistory: 'conversationhistory',
+      clutter: 'clutter',
+      conflicts: 'conflicts',
+      localfailures: 'localfailures',
+      serverfailures: 'serverfailures',
+      syncissues: 'syncissues',
+    };
+
+    const normalizedKey = requested.toLowerCase().replace(/\s+/g, '');
+    if (wellKnownMap[normalizedKey]) {
+      return {
+        resource: `${mailboxBase}/mailFolders/${wellKnownMap[normalizedKey]}/messages`,
+        resolvedFolder: requested,
+      };
+    }
+
+    try {
+      const list = await this.httpClient.get(`${mailboxBase}/mailFolders`, {
+        params: { $select: 'id,displayName' },
+      });
+      const match = (list.data?.value || []).find(
+        (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
+      );
+      if (match?.id) {
+        return {
+          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(match.id)}/messages`,
+          resolvedFolder: match.displayName || requested,
+        };
+      }
+      this.log('warn', `Folder '${requested}' not found; defaulting subscription to Inbox`);
+    } catch (error: any) {
+      this.log('warn', `Failed to resolve folder '${requested}'; defaulting to Inbox`, error?.message || error);
+    }
+
+    return fallbackResult;
   }
 
   /**
@@ -214,33 +286,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       // Use a safe window (e.g., 60 hours) to avoid 400 due to out-of-range expiration
       const expirationMs = 60 * 60 * 1000 * 60; // 60 hours in ms
 
-      // Resolve folder segment: well-known name or ID for custom folder
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
-      const wellKnown = new Set([
-        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
-        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
-      ]);
-      let folderSegment = desiredFolder;
-      if (!wellKnown.has(desiredFolder)) {
-        try {
-          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
-          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
-          if (match?.id) {
-            folderSegment = match.id;
-          } else {
-            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
-            folderSegment = 'Inbox';
-          }
-        } catch (e: any) {
-          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
-          folderSegment = 'Inbox';
-        }
-      }
+      const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
+      const mailboxBase = this.getMailboxBasePath();
 
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${folderSegment}')/messages`,
+        resource,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -254,6 +307,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         resource: subscription.resource,
         expirationDateTime: subscription.expirationDateTime,
         clientState: maskedState,
+        mailboxBase,
+        folder: resolvedFolder,
       });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
@@ -330,7 +385,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async markMessageProcessed(messageId: string): Promise<void> {
     try {
-      await this.httpClient.patch(`/me/messages/${messageId}`, {
+      const mailboxBase = this.getMailboxBasePath();
+      await this.httpClient.patch(`${mailboxBase}/messages/${messageId}`, {
         isRead: true,
       });
 
@@ -345,7 +401,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async getMessageDetails(messageId: string): Promise<EmailMessageDetails> {
     try {
-      const response = await this.httpClient.get(`/me/messages/${messageId}`, {
+      const mailboxBase = this.getMailboxBasePath();
+      const response = await this.httpClient.get(`${mailboxBase}/messages/${messageId}`, {
         params: {
           $expand: 'attachments',
           $select:
@@ -409,13 +466,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
    */
   async testConnection(): Promise<{ success: boolean; error?: string }> {
     try {
-      const resp = await this.httpClient.get('/me');
-      const profile = resp.data || {};
-      const mailbox = (profile.mail || profile.userPrincipalName || '').toLowerCase();
-      const expected = (this.config.mailbox || '').toLowerCase();
-      if (expected && mailbox && mailbox !== expected) {
-        return { success: false, error: `Email mismatch: expected ${this.config.mailbox}, got ${mailbox}` };
-      }
+      const mailboxBase = this.getMailboxBasePath();
+      await this.httpClient.get(mailboxBase);
+      await this.httpClient.get(`${mailboxBase}/mailFolders`, {
+        params: { $top: 1, $select: 'id' },
+      });
       return { success: true };
     } catch (error: any) {
       return { success: false, error: error.message || 'Connection test failed' };
@@ -456,32 +511,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
 
       const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
-      // Resolve folder segment: well-known name or ID for custom folder
       const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
-      const wellKnown = new Set([
-        'Inbox','Archive','Drafts','DeletedItems','JunkEmail','SentItems','Outbox',
-        'ConversationHistory','Clutter','Conflicts','LocalFailures','ServerFailures','SyncIssues'
-      ]);
-      let folderSegment = desiredFolder;
-      if (!wellKnown.has(desiredFolder)) {
-        try {
-          const list = await this.httpClient.get('/me/mailFolders', { params: { $select: 'id,displayName' } });
-          const match = (list.data?.value || []).find((f: any) => (f.displayName || '').toLowerCase() === desiredFolder.toLowerCase());
-          if (match?.id) {
-            folderSegment = match.id;
-          } else {
-            this.log('warn', `Folder '${desiredFolder}' not found; defaulting subscription to Inbox`);
-            folderSegment = 'Inbox';
-          }
-        } catch (e: any) {
-          this.log('warn', `Failed to resolve folder '${desiredFolder}'; defaulting to Inbox: ${e?.message || e}`);
-          folderSegment = 'Inbox';
-        }
-      }
+      const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
+      const mailboxBase = this.getMailboxBasePath();
       const subscription = {
         changeType: 'created',
         notificationUrl: webhookUrl,
-        resource: `/me/mailFolders('${folderSegment}')/messages`,
+        resource,
         expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
         clientState: this.config.webhook_verification_token || 'email-webhook-verification',
       };
@@ -491,6 +527,8 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         resource: subscription.resource,
         expirationDateTime: subscription.expirationDateTime,
         clientState: subscription.clientState ? '**masked**' : 'none',
+        mailboxBase,
+        folder: resolvedFolder,
       });
 
       const response = await this.httpClient.post('/subscriptions', subscription);
