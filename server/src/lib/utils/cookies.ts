@@ -56,7 +56,7 @@ export const clientCookies = {
     }
 
     if (options?.sameSite) {
-      cookieString += `; samesite=${options.sameSite}`;
+      cookieString += `; SameSite=${options.sameSite}`;
     }
 
     document.cookie = cookieString;
@@ -74,3 +74,63 @@ export const clientCookies = {
     });
   }
 };
+
+/**
+ * Get a preference value from cookies with localStorage fallback.
+ * Automatically migrates localStorage values to cookies.
+ *
+ * @param key - The preference key
+ * @param defaultValue - Default value if not found
+ * @returns The preference value
+ */
+export function getPreferenceWithFallback(key: string, defaultValue: string = 'false'): string {
+  // Try cookie first
+  const cookieValue = clientCookies.get(key);
+  if (cookieValue !== undefined) {
+    return cookieValue;
+  }
+
+  // Fall back to localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const localValue = localStorage.getItem(key);
+      if (localValue !== null) {
+        // Migrate to cookie
+        clientCookies.set(key, localValue, {
+          expires: 365,
+          sameSite: 'lax',
+          path: '/'
+        });
+        return localValue;
+      }
+    } catch (e) {
+      console.error('Failed to read from localStorage:', e);
+    }
+  }
+
+  return defaultValue;
+}
+
+/**
+ * Save a preference to both cookie and localStorage.
+ *
+ * @param key - The preference key
+ * @param value - The value to save
+ */
+export function savePreference(key: string, value: string): void {
+  // Save to cookie
+  clientCookies.set(key, value, {
+    expires: 365,
+    sameSite: 'lax',
+    path: '/'
+  });
+
+  // Also save to localStorage for backup
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem(key, value);
+    } catch (e) {
+      console.error('Failed to save to localStorage:', e);
+    }
+  }
+}

@@ -7,14 +7,13 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
-import { clientCookies } from 'server/src/lib/utils/cookies';
+import { getPreferenceWithFallback, savePreference } from 'server/src/lib/utils/cookies';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
-  initialSidebarCollapsed?: boolean;
 }
 
-export default function DefaultLayout({ children, initialSidebarCollapsed }: DefaultLayoutProps) {
+export default function DefaultLayout({ children }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
 
@@ -27,24 +26,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed }: Def
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Get the actual preference
-    let preferredState = false;
-
-    const cookieValue = clientCookies.get('sidebar_collapsed');
-    const localValue = localStorage.getItem('sidebar_collapsed');
-
-    if (cookieValue !== undefined) {
-      // Use cookie value
-      preferredState = cookieValue === 'true';
-    } else if (localValue !== null) {
-      // Migrate from localStorage to cookie
-      preferredState = localValue === 'true';
-      clientCookies.set('sidebar_collapsed', String(preferredState), {
-        expires: 365,
-        sameSite: 'lax',
-        path: '/'
-      });
-    }
+    // Get the actual preference using the helper
+    const preferredState = getPreferenceWithFallback('sidebar_collapsed', 'false') === 'true';
 
     // Update state without transition
     setSidebarCollapsedState(preferredState);
@@ -62,21 +45,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed }: Def
     setSidebarCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
 
-      // Save to cookie (can be read on server)
-      clientCookies.set('sidebar_collapsed', String(newValue), {
-        expires: 365,
-        sameSite: 'lax',
-        path: '/'
-      });
-
-      // Also save to localStorage
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('sidebar_collapsed', String(newValue));
-        } catch (e) {
-          console.error('Failed to save to localStorage:', e);
-        }
-      }
+      // Save using the helper
+      savePreference('sidebar_collapsed', String(newValue));
 
       return newValue;
     });

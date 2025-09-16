@@ -58,5 +58,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     });
   }, [isBillingEnabled, isAdvancedFeaturesEnabled]);
 
-  return <Sidebar {...props} menuItems={menuItems} bottomMenuItems={bottomMenuItems} />;
+  return (
+    <Sidebar
+      {...props}
+      menuItems={menuItems}
+      bottomMenuItems={bottomMenuItems}
+      disableTransition={props.disableTransition}
+    />
+  );
 }

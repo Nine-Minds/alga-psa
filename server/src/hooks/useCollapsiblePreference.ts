@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { clientCookies } from '../lib/utils/cookies';
+import { getPreferenceWithFallback, savePreference } from '../lib/utils/cookies';
 
 interface UseCollapsiblePreferenceReturn {
   isCollapsed: boolean;
@@ -31,24 +31,8 @@ export function useCollapsiblePreference(
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Get the actual preference
-    let preferredState = defaultCollapsed;
-
-    const cookieValue = clientCookies.get(preferenceKey);
-    const localValue = localStorage.getItem(preferenceKey);
-
-    if (cookieValue !== undefined) {
-      // Use cookie value
-      preferredState = cookieValue === 'true';
-    } else if (localValue !== null) {
-      // Migrate from localStorage to cookie
-      preferredState = localValue === 'true';
-      clientCookies.set(preferenceKey, String(preferredState), {
-        expires: 365,
-        sameSite: 'lax',
-        path: '/'
-      });
-    }
+    // Get the actual preference using the helper
+    const preferredState = getPreferenceWithFallback(preferenceKey, String(defaultCollapsed)) === 'true';
 
     // Update state without transition
     setIsCollapsedState(preferredState);
@@ -66,21 +50,8 @@ export function useCollapsiblePreference(
     setIsCollapsedState(prev => {
       const newValue = typeof value === 'function' ? value(prev) : value;
 
-      // Save to cookie
-      clientCookies.set(preferenceKey, String(newValue), {
-        expires: 365,
-        sameSite: 'lax',
-        path: '/'
-      });
-
-      // Also save to localStorage for backup
-      if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem(preferenceKey, String(newValue));
-        } catch (e) {
-          console.error('Failed to save to localStorage:', e);
-        }
-      }
+      // Save using the helper
+      savePreference(preferenceKey, String(newValue));
 
       return newValue;
     });
