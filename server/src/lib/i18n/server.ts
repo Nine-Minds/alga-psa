@@ -45,6 +45,7 @@ export const getServerLocale = cache(
   async (options?: {
     tenantId?: string;
     userId?: string;
+    companyId?: string;
   }): Promise<SupportedLocale> => {
     try {
       // 1. Check cookie (user's explicit choice)
@@ -76,20 +77,42 @@ export const getServerLocale = cache(
         }
       }
 
-      // 3. Check tenant default locale
+      // 3. Check company default locale
+      if (options?.companyId && options?.tenantId) {
+        const knex = await getConnection(options.tenantId);
+        const company = await knex('companies')
+          .where({
+            company_id: options.companyId,
+            tenant: options.tenantId
+          })
+          .first();
+
+        const companyLocale = company?.properties?.defaultLocale;
+        if (companyLocale && isSupportedLocale(companyLocale)) {
+          return companyLocale;
+        }
+      }
+
+      // 4. Check tenant default locale (for client portal)
       if (options?.tenantId) {
         const knex = await getConnection(options.tenantId);
         const tenantSettings = await knex('tenant_settings')
           .where({ tenant: options.tenantId })
           .first();
 
-        const defaultLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
-        if (defaultLocale && isSupportedLocale(defaultLocale)) {
-          return defaultLocale;
+        const clientPortalLocale = tenantSettings?.settings?.clientPortal?.defaultLocale;
+        if (clientPortalLocale && isSupportedLocale(clientPortalLocale)) {
+          return clientPortalLocale;
+        }
+
+        // Check tenant-wide default locale
+        const tenantDefaultLocale = tenantSettings?.settings?.defaultLocale;
+        if (tenantDefaultLocale && isSupportedLocale(tenantDefaultLocale)) {
+          return tenantDefaultLocale;
         }
       }
 
-      // 4. Check Accept-Language header
+      // 5. Check Accept-Language header
       const acceptLanguage = headers().get('accept-language');
       if (acceptLanguage) {
         const preferredLocales = acceptLanguage
@@ -98,7 +121,7 @@ export const getServerLocale = cache(
         return getBestMatchingLocale(preferredLocales);
       }
 
-      // 5. Fall back to default locale
+      // 6. Fall back to default locale
       return LOCALE_CONFIG.defaultLocale as SupportedLocale;
     } catch (error) {
       console.error('Error detecting server locale:', error);

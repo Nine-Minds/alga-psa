@@ -53,7 +53,18 @@ exports.up = async function (knex) {
         "branding": {...},
         "theme": {...}
       },
+      "defaultLocale": "en",  -- Tenant-wide default locale
       ...other settings...
+    }'
+  `);
+
+  // Add comment for companies.properties to document language preference
+  await knex.raw(`
+    COMMENT ON COLUMN companies.properties IS
+    'Company properties as JSONB. Expected structure includes:
+    {
+      "defaultLocale": "en",  -- Company-wide default locale for all contacts
+      ...other properties...
     }'
   `);
 };

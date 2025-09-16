@@ -74,7 +74,7 @@ export function I18nProvider({
   portal = 'client',
 }: I18nProviderProps) {
   const [locale, setLocaleState] = useState<SupportedLocale>(
-    initialLocale || detectClientLocale()
+    initialLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
   );
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -170,22 +170,35 @@ export function useTranslation(namespace?: string) {
  * Client-side locale detection
  */
 export function detectClientLocale(): SupportedLocale {
+  // Only run on client side
+  if (typeof window === 'undefined') {
+    return LOCALE_CONFIG.defaultLocale as SupportedLocale;
+  }
+
   // 1. Check cookie
   const localeCookie = getCookie(LOCALE_CONFIG.cookie.name);
   if (localeCookie && isSupportedLocale(localeCookie)) {
     return localeCookie;
   }
 
-  // 2. Check localStorage
-  const localStorageLocale = localStorage.getItem(LOCALE_CONFIG.cookie.name);
-  if (localStorageLocale && isSupportedLocale(localStorageLocale)) {
-    return localStorageLocale;
+  // 2. Check localStorage (only on client)
+  try {
+    const localStorageLocale = localStorage.getItem(LOCALE_CONFIG.cookie.name);
+    if (localStorageLocale && isSupportedLocale(localStorageLocale)) {
+      return localStorageLocale;
+    }
+  } catch (e) {
+    // localStorage might not be available
   }
 
-  // 3. Check browser language
-  const browserLocale = navigator.language.split('-')[0];
-  if (isSupportedLocale(browserLocale)) {
-    return browserLocale;
+  // 3. Check browser language (only on client)
+  try {
+    const browserLocale = navigator.language.split('-')[0];
+    if (isSupportedLocale(browserLocale)) {
+      return browserLocale;
+    }
+  } catch (e) {
+    // navigator might not be available
   }
 
   // 4. Default
