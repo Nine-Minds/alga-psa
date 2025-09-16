@@ -142,6 +142,9 @@ config:
   llm:
     openai: 'key-here'
     anthropic: 'key-here'
+  extensions:
+    # Root wildcard domain used for extension apps (e.g., ext.example.com)
+    domainRoot: ""
   # Storage configuration
   storage:
     # Default storage provider configuration
