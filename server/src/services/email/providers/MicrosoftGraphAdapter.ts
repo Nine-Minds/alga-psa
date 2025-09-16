@@ -52,7 +52,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private async buildFolderResourcePath(desiredFolder: string): Promise<{ resource: string; resolvedFolder: string }> {
     const mailboxBase = this.getMailboxBasePath();
     const fallbackResult = {
-      resource: `${mailboxBase}/mailFolders/inbox/messages`,
+      resource: `${mailboxBase}/mailFolders('Inbox')/messages`,
       resolvedFolder: 'Inbox',
     };
 
@@ -62,25 +62,25 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
 
     const wellKnownMap: Record<string, string> = {
-      inbox: 'inbox',
-      archive: 'archive',
-      drafts: 'drafts',
-      deleteditems: 'deleteditems',
-      junkemail: 'junkemail',
-      sentitems: 'sentitems',
-      outbox: 'outbox',
-      conversationhistory: 'conversationhistory',
-      clutter: 'clutter',
-      conflicts: 'conflicts',
-      localfailures: 'localfailures',
-      serverfailures: 'serverfailures',
-      syncissues: 'syncissues',
+      inbox: 'Inbox',
+      archive: 'Archive',
+      drafts: 'Drafts',
+      deleteditems: 'DeletedItems',
+      junkemail: 'JunkEmail',
+      sentitems: 'SentItems',
+      outbox: 'Outbox',
+      conversationhistory: 'ConversationHistory',
+      clutter: 'Clutter',
+      conflicts: 'Conflicts',
+      localfailures: 'LocalFailures',
+      serverfailures: 'ServerFailures',
+      syncissues: 'SyncIssues',
     };
 
     const normalizedKey = requested.toLowerCase().replace(/\s+/g, '');
     if (wellKnownMap[normalizedKey]) {
       return {
-        resource: `${mailboxBase}/mailFolders/${wellKnownMap[normalizedKey]}/messages`,
+        resource: `${mailboxBase}/mailFolders('${wellKnownMap[normalizedKey]}')/messages`,
         resolvedFolder: requested,
       };
     }
@@ -93,8 +93,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         (f: any) => (f.displayName || '').toLowerCase() === requested.toLowerCase()
       );
       if (match?.id) {
+        const folderId = String(match.id).replace(/'/g, "''");
         return {
-          resource: `${mailboxBase}/mailFolders/${encodeURIComponent(match.id)}/messages`,
+          resource: `${mailboxBase}/mailFolders('${folderId}')/messages`,
           resolvedFolder: match.displayName || requested,
         };
       }
