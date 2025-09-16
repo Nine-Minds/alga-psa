@@ -353,30 +353,119 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     if (isSubmitting) return;
 
     setHasAttemptedSubmit(true);
-    
-    // Comprehensive validation
-    const validationResult = validateClientForm({
-      companyName: formData.company_name,
-      websiteUrl: formData.url,
-      industry: formData.properties?.industry,
-      email: locationData.email,
-      phone: locationData.phone,
-      address: locationData.address_line1,
-      city: locationData.city,
-      stateProvince: locationData.state_province,
-      postalCode: locationData.postal_code,
-      countryCode: locationData.country_code,
-      contactName: contactData.full_name,
-      contactEmail: contactData.email,
-      contactPhone: contactData.phone_number,
-      notes: formData.notes
-    });
-    
-    // Early return if validation fails - prevent async operations
-    if (!validationResult.isValid) {
-      setFieldErrors(validationResult.errors);
-      const errorMessages = Object.values(validationResult.errors).filter(Boolean);
-      setValidationErrors(errorMessages);
+
+    // Professional SaaS validation - only essential fields and fields with content
+    const fieldValidationErrors: Record<string, string> = {};
+    const validationMessages: string[] = [];
+
+    // Essential field validation
+    const companyNameError = validateCompanyName(formData.company_name);
+    if (companyNameError) {
+      fieldValidationErrors.company_name = companyNameError;
+      validationMessages.push(companyNameError);
+    }
+
+    // Optional fields - only validate if they have content
+    if (formData.url && formData.url.trim()) {
+      const urlError = validateWebsiteUrl(formData.url);
+      if (urlError) {
+        fieldValidationErrors.url = urlError;
+        validationMessages.push(urlError);
+      }
+    }
+
+    if (formData.properties?.industry && formData.properties.industry.trim()) {
+      const industryError = validateIndustry(formData.properties.industry);
+      if (industryError) {
+        fieldValidationErrors.industry = industryError;
+        validationMessages.push(industryError);
+      }
+    }
+
+    if (locationData.email && locationData.email.trim()) {
+      const emailError = validateEmailAddress(locationData.email);
+      if (emailError) {
+        fieldValidationErrors.location_email = emailError;
+        validationMessages.push(emailError);
+      }
+    }
+
+    if (locationData.phone && locationData.phone.trim()) {
+      const phoneError = validatePhoneNumber(locationData.phone);
+      if (phoneError) {
+        fieldValidationErrors.location_phone = phoneError;
+        validationMessages.push(phoneError);
+      }
+    }
+
+    if (locationData.address_line1 && locationData.address_line1.trim()) {
+      const addressError = validateAddress(locationData.address_line1);
+      if (addressError) {
+        fieldValidationErrors.address_line1 = addressError;
+        validationMessages.push(addressError);
+      }
+    }
+
+    if (locationData.city && locationData.city.trim()) {
+      const cityError = validateCityName(locationData.city);
+      if (cityError) {
+        fieldValidationErrors.city = cityError;
+        validationMessages.push(cityError);
+      }
+    }
+
+    if (locationData.state_province && locationData.state_province.trim()) {
+      const stateError = validateStateProvince(locationData.state_province);
+      if (stateError) {
+        fieldValidationErrors.state_province = stateError;
+        validationMessages.push(stateError);
+      }
+    }
+
+    if (locationData.postal_code && locationData.postal_code.trim()) {
+      const postalError = validatePostalCode(locationData.postal_code, locationData.country_code);
+      if (postalError) {
+        fieldValidationErrors.postal_code = postalError;
+        validationMessages.push(postalError);
+      }
+    }
+
+    if (contactData.full_name && contactData.full_name.trim()) {
+      const nameError = validateContactName(contactData.full_name);
+      if (nameError) {
+        fieldValidationErrors.contact_name = nameError;
+        validationMessages.push(nameError);
+      }
+    }
+
+    if (contactData.email && contactData.email.trim()) {
+      const contactEmailError = validateEmailAddress(contactData.email);
+      if (contactEmailError) {
+        fieldValidationErrors.contact_email = contactEmailError;
+        validationMessages.push(contactEmailError);
+      }
+    }
+
+    if (contactData.phone_number && contactData.phone_number.trim()) {
+      const contactPhoneError = validatePhoneNumber(contactData.phone_number);
+      if (contactPhoneError) {
+        fieldValidationErrors.contact_phone = contactPhoneError;
+        validationMessages.push(contactPhoneError);
+      }
+    }
+
+    if (formData.notes && formData.notes.trim()) {
+      const notesError = validateNotes(formData.notes);
+      if (notesError) {
+        fieldValidationErrors.notes = notesError;
+        validationMessages.push(notesError);
+      }
+    }
+
+    // Only block submission if there are validation errors
+    if (validationMessages.length > 0) {
+      setFieldErrors(fieldValidationErrors);
+      setValidationErrors(validationMessages);
       return; // Stop here - don't proceed with async submit logic
     }
 
@@ -541,86 +630,45 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     setContactCountryCode(countryCode);
   };
 
-  // Comprehensive form validation check for submit button state
+  // Professional SaaS form validation - only essential fields required (Microsoft/Meta standard)
   const isFormValid = () => {
-    // Required field: Company name
+    // Only required field: Company name (essential for business identification)
     if (!formData.company_name || !formData.company_name.trim()) {
       return false;
     }
 
-    // Check for any existing field errors
-    if (Object.values(fieldErrors).some(error => error && error.trim() !== '')) {
-      return false;
-    }
-
-    // Use client validation functions directly for silent validation
+    // Company name must be valid if provided
     const companyNameError = validateCompanyName(formData.company_name);
     if (companyNameError) return false;
 
-    // Optional field validations - only if they have content
-    if (formData.url && formData.url.trim()) {
-      const urlError = validateWebsiteUrl(formData.url);
-      if (urlError) return false;
-    }
+    // All other fields are optional - user can submit with just company name
+    // This follows Microsoft/SaaS pattern where users aren't blocked from proceeding
+    // Field validation errors only prevent submission if there are actual validation issues with provided content
 
-    if (formData.properties?.industry && formData.properties.industry.trim()) {
-      const industryError = validateIndustry(formData.properties.industry);
-      if (industryError) return false;
-    }
+    // Check for any existing field errors (but only for fields that have content)
+    const relevantErrors = Object.entries(fieldErrors).filter(([fieldName, error]) => {
+      if (!error || error.trim() === '') return false;
 
-    // Location validations - only if they have content
-    if (locationData.email && locationData.email.trim()) {
-      const emailError = validateEmailAddress(locationData.email);
-      if (emailError) return false;
-    }
+      // Only consider errors for fields that actually have content
+      switch (fieldName) {
+        case 'url': return formData.url && formData.url.trim();
+        case 'industry': return formData.properties?.industry && formData.properties.industry.trim();
+        case 'location_email': return locationData.email && locationData.email.trim();
+        case 'location_phone': return locationData.phone && locationData.phone.trim();
+        case 'postal_code': return locationData.postal_code && locationData.postal_code.trim();
+        case 'city': return locationData.city && locationData.city.trim();
+        case 'state_province': return locationData.state_province && locationData.state_province.trim();
+        case 'address_line1': return locationData.address_line1 && locationData.address_line1.trim();
+        case 'contact_name': return contactData.full_name && contactData.full_name.trim();
+        case 'contact_email': return contactData.email && contactData.email.trim();
+        case 'contact_phone': return contactData.phone_number && contactData.phone_number.trim();
+        case 'notes': return formData.notes && formData.notes.trim();
+        default: return true; // For unknown fields, consider errors
+      }
+    });
 
-    if (locationData.phone && locationData.phone.trim()) {
-      const phoneError = validatePhoneNumber(locationData.phone);
-      if (phoneError) return false;
-    }
-
-    if (locationData.postal_code && locationData.postal_code.trim()) {
-      const postalError = validatePostalCode(locationData.postal_code, locationData.country_code);
-      if (postalError) return false;
-    }
-
-    if (locationData.city && locationData.city.trim()) {
-      const cityError = validateCity(locationData.city);
-      if (cityError) return false;
-    }
-
-    if (locationData.state_province && locationData.state_province.trim()) {
-      const stateError = validateStateProvince(locationData.state_province);
-      if (stateError) return false;
-    }
-
-    if (locationData.address_line1 && locationData.address_line1.trim()) {
-      const addressError = validateAddressLine(locationData.address_line1);
-      if (addressError) return false;
-    }
-
-    // Contact validations - only if they have content
-    if (contactData.full_name && contactData.full_name.trim()) {
-      const nameError = validateContactName(contactData.full_name);
-      if (nameError) return false;
-    }
-
-    if (contactData.email && contactData.email.trim()) {
-      const contactEmailError = validateEmailAddress(contactData.email);
-      if (contactEmailError) return false;
-    }
-
-    if (contactData.phone_number && contactData.phone_number.trim()) {
-      const contactPhoneError = validatePhoneNumber(contactData.phone_number);
-      if (contactPhoneError) return false;
-    }
-
-    if (contactData.notes && contactData.notes.trim()) {
-      const notesError = validateNotes(contactData.notes);
-      if (notesError) return false;
-    }
-
-    return true;
+    // Only block submission if there are validation errors for fields with content
+    return relevantErrors.length === 0;
   };
 
 
@@ -857,7 +905,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.postal_code}</p>
                   )}
                 </div>
+              </div>
 
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Country
@@ -897,6 +947,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     countries={countries}
                     onCountryChange={(countryCode) => handleCountryChange(countryCode, countries.find(c => c.code === countryCode)?.name || '')}
                     disabled={isSubmitting}
+                    error={!!fieldErrors.location_phone}
                     data-automation-id="company-location-phone"
                   />
                   {fieldErrors.location_phone && (
@@ -1011,6 +1062,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     countries={countries}
                     onCountryChange={handleContactCountryChange}
                     disabled={isSubmitting}
+                    error={!!fieldErrors.contact_phone}
                     data-automation-id="company-contact-phone"
                   />
                   {fieldErrors.contact_phone && (

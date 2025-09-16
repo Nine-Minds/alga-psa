@@ -530,10 +530,11 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.firstName}
                       onChange={(e) => {
                         handleFieldChange('first_name', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, first_name: ['First name cannot contain only spaces'] }));
-                        }
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, first_name: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('first_name', e.target.value);
                       }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
@@ -552,10 +553,11 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.lastName}
                       onChange={(e) => {
                         handleFieldChange('last_name', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, last_name: ['Last name cannot contain only spaces'] }));
-                        }
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, last_name: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('last_name', e.target.value);
                       }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
@@ -575,10 +577,11 @@ const fetchContacts = async (): Promise<void> => {
                       value={newUser.email}
                       onChange={(e) => {
                         handleFieldChange('email', e.target.value);
-                        // Immediately validate if user enters only spaces
-                        if (/^\s+$/.test(e.target.value)) {
-                          setFieldErrors(prev => ({ ...prev, email: ['Email address cannot contain only spaces'] }));
-                        }
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, email: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('email', e.target.value);
                       }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />

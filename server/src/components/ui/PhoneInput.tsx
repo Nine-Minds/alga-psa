@@ -54,6 +54,7 @@ interface PhoneInputProps {
   disabled?: boolean;
   className?: string;
   required?: boolean;
+  error?: boolean; // Add error state support for styling
   'data-automation-id'?: string;
 }
 
@@ -71,6 +72,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   disabled = false,
   className = '',
   required = false,
+  error = false,
   'data-automation-id': dataAutomationId
 }) => {
   const [displayValue, setDisplayValue] = useState(value);
@@ -190,14 +192,18 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           {required && <span className="text-red-500 ml-1">*</span>}
         </Label>
       )}
-      <div className="relative">
-        <div className="flex border border-gray-300 rounded-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-purple-500">
+      <div className="relative z-20">
+        <div className={`flex rounded-md transition-all duration-200 border ${
+          error
+            ? 'border-red-500 focus-within:ring-2 focus-within:ring-red-500 focus-within:border-red-500'
+            : 'border-gray-300 focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-gray-300'
+        }`}>
           {/* Country Code Dropdown - integrated within phone field */}
           {countries && countries.length > 0 && (
             <div className="relative" ref={dropdownRef}>
               <button
                 type="button"
-                className="flex items-center px-2 py-2 border-0 bg-gray-50 text-sm rounded-l-md hover:bg-gray-100 focus:outline-none h-[42px] w-[65px]"
+                className="flex items-center px-2 py-2 bg-gray-50 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100 h-[42px] w-12 flex-shrink-0 rounded-l-md rounded-r-none border-0"
                 onClick={() => {
                   setIsDropdownOpen(!isDropdownOpen);
                   // Focus search input when dropdown opens
@@ -214,7 +220,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               </button>
 
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 z-50 w-72 mt-1 bg-white border border-gray-300 rounded-md shadow-md max-h-60 overflow-y-auto">
+                <div className="absolute top-full left-0 z-[9999] w-64 mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto" style={{maxWidth: 'calc(100vw - 2rem)'}}>
                   <div className="p-2 border-b border-gray-200">
                     <input
                       ref={searchInputRef}
@@ -262,7 +268,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
           )}
 
           {/* Phone Number Input */}
-          <Input
+          <input
             id={id || dataAutomationId}
             data-automation-id={dataAutomationId}
             type="tel"
@@ -272,7 +278,9 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            className={`flex-1 border-0 focus:ring-0 focus:border-0 ${countries && countries.length > 0 ? 'rounded-l-none' : 'rounded-md'} h-[42px]`}
+            className={`flex-1 min-w-0 px-3 py-2 text-sm bg-white focus:outline-none placeholder-gray-400 disabled:bg-gray-50 disabled:text-gray-500 h-[42px] ${
+              countries && countries.length > 0 ? 'rounded-l-none rounded-r-md border-0 focus:ring-0 focus:shadow-none' : 'rounded-md border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500'
+            }`}
           />
         </div>
       </div>

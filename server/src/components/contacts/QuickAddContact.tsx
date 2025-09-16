@@ -67,6 +67,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [countries, setCountries] = useState<ICountry[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -127,6 +128,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
       setFieldErrors({});
+      setIsSubmitting(false);
     }
   }, [isOpen, selectedCompanyId]);
 
@@ -239,9 +241,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     return error;
   };
 
-  // Comprehensive form validation check for submit button state
+  // Professional SaaS form validation - essential fields only (Microsoft/Meta standard)
   const isFormValid = () => {
-    // Required fields
+    // Essential fields: Full name and email (core contact identification)
     if (!fullName || !fullName.trim()) {
       return false;
     }
@@ -249,34 +251,34 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       return false;
     }
 
-    // Check for any existing field errors
-    if (Object.values(fieldErrors).some(error => error && error.trim() !== '')) {
-      return false;
-    }
-
-    // Use client validation functions directly for silent validation
+    // Essential fields must be valid
     const nameError = validateContactName(fullName);
     if (nameError) return false;
 
     const emailError = validateEmailAddress(email);
     if (emailError) return false;
 
-    // Optional field validations - only if they have content
-    if (role && role.trim()) {
-      const roleError = validateContactRole(role);
-      if (roleError) return false;
-    }
+    // All other fields are optional - user can submit with just name and email
+    // This follows Microsoft/SaaS pattern where users aren't blocked from proceeding
+    // Field validation errors only prevent submission if there are actual validation issues with provided content
 
-    if (phoneNumber && phoneNumber.trim()) {
-      // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
-      const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
-      if (!countryCodeOnlyPattern.test(phoneNumber.trim())) {
-        const phoneError = validatePhoneNumber(phoneNumber);
-        if (phoneError) return false;
+    // Check for validation errors only on fields that have content
+    const relevantErrors = Object.entries(fieldErrors).filter(([fieldName, error]) => {
+      if (!error || error.trim() === '') return false;
+
+      // Only consider errors for fields that actually have content
+      switch (fieldName) {
+        case 'contact_name': return true; // Always consider name errors (required field)
+        case 'contact_email': return true; // Always consider email errors (required field)
+        case 'contact_phone': return phoneNumber && phoneNumber.trim();
+        case 'role': return role && role.trim();
+        case 'notes': return notes && notes.trim();
+        default: return true; // For unknown fields, consider errors
       }
-    }
+    });
 
-    return true;
+    // Only block submission if there are validation errors for fields with content
+    return relevantErrors.length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent | React.MouseEvent) => {
@@ -290,11 +292,11 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       return;
     }
 
-    // Validate all fields using client validators
+    // Professional SaaS validation - only validate essential fields and fields with content
     const fieldValidationErrors: Record<string, string> = {};
     const validationMessages: string[] = [];
 
-    // Enterprise-grade validation on submit (strict validation like Microsoft/Meta)
+    // Essential fields validation (always required)
     const nameError = validateField('contact_name', fullName, true);
     if (nameError) {
       fieldValidationErrors.contact_name = nameError;
@@ -307,26 +309,36 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       validationMessages.push(emailError);
     }
 
-    // Validate phone even if empty to catch invalid partial entries
-    const phoneError = validateField('contact_phone', phoneNumber, true);
-    if (phoneError) {
-      fieldValidationErrors.contact_phone = phoneError;
-      validationMessages.push(phoneError);
+    // Optional fields - only validate if they have content
+    if (phoneNumber && phoneNumber.trim()) {
+      // Check if this is just a country code
+      const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+      if (!countryCodeOnlyPattern.test(phoneNumber.trim())) {
+        const phoneError = validateField('contact_phone', phoneNumber, true);
+        if (phoneError) {
+          fieldValidationErrors.contact_phone = phoneError;
+          validationMessages.push(phoneError);
+        }
+      }
     }
 
-    // Validate optional fields if they have content
-    const roleError = validateField('role', role, true);
-    if (roleError) {
-      fieldValidationErrors.role = roleError;
-      validationMessages.push(roleError);
+    if (role && role.trim()) {
+      const roleError = validateField('role', role, true);
+      if (roleError) {
+        fieldValidationErrors.role = roleError;
+        validationMessages.push(roleError);
+      }
     }
 
-    const notesError = validateField('notes', notes, true);
-    if (notesError) {
-      fieldValidationErrors.notes = notesError;
-      validationMessages.push(notesError);
+    if (notes && notes.trim()) {
+      const notesError = validateField('notes', notes, true);
+      if (notesError) {
+        fieldValidationErrors.notes = notesError;
+        validationMessages.push(notesError);
+      }
     }
 
+    // Only block submission if there are validation errors
     if (validationMessages.length > 0) {
       setFieldErrors(fieldValidationErrors);
       setValidationErrors(validationMessages);
@@ -335,6 +347,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
 
     setValidationErrors([]);
     setFieldErrors({});
+    setIsSubmitting(true);
 
     try {
       setError(null); // Clear any existing errors
@@ -356,6 +369,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       onContactAdded(newContact);
       onClose();
     } catch (err) {
+      setIsSubmitting(false);
       console.error('Error adding contact:', err);
       if (err instanceof Error) {
         // Preserve the original error message for display
@@ -502,8 +516,8 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
                 countries={countries}
                 onCountryChange={handleCountryChange}
+                error={!!fieldErrors.contact_phone}
                 data-automation-id="quick-add-contact-phone"
-                className={fieldErrors.contact_phone ? 'error' : ''}
               />
               {fieldErrors.contact_phone && (
                 <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
@@ -590,6 +604,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 setHasAttemptedSubmit(false);
                 setValidationErrors([]);
                 setFieldErrors({});
+                setIsSubmitting(false);
                 onClose();
               }}
             >
