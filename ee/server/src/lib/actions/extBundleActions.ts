@@ -29,8 +29,12 @@ import {
 import { upsertVersionFromManifest } from "../extensions/registry-v2";
 import { ensureRegistryV2KnexRepo } from "../extensions/registry-v2-repo-knex";
 import type { Knex } from "knex";
+import { getAdminConnection } from "@shared/db/admin";
 // Prefer a global/admin knex since registry tables are global
 async function getAdminKnex(): Promise<Knex> {
+  try {
+    return getAdminConnection();
+  } catch {}
   try {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const db = require('../../../server/src/lib/db/index.ts');
