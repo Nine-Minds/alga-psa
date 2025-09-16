@@ -3,7 +3,7 @@
  * @returns { Promise<void> }
  */
 exports.up = async function(knex) {
-  // Add missing phone codes for countries that don't have them yet
+  // Add missing phone codes for countries and territories with distinct dialing codes
   const missingPhoneCodeUpdates = [
     // Missing Caribbean and North American territories
     ['AI', '+1264'], // Anguilla
@@ -15,35 +15,30 @@ exports.up = async function(knex) {
     ['PM', '+508'], // Saint Pierre and Miquelon
     ['MF', '+590'], // Saint Martin (French part)
 
-    // Missing European territories
-    ['AX', '+358'], // Åland Islands (Finland)
+    // Missing European territories with distinct codes
+    ['AX', '+358'], // Åland Islands (uses Finland +358 but distinct routing)
     ['FO', '+298'], // Faroe Islands
-    ['GG', '+44'], // Guernsey
-    ['IM', '+44'], // Isle of Man
-    ['JE', '+44'], // Jersey
+    ['GG', '+44'], // Guernsey (uses UK +44 but distinct routing)
+    ['IM', '+44'], // Isle of Man (uses UK +44 but distinct routing)
+    ['JE', '+44'], // Jersey (uses UK +44 but distinct routing)
     ['GI', '+350'], // Gibraltar
     ['GL', '+299'], // Greenland
-    ['SJ', '+47'], // Svalbard and Jan Mayen
 
-    // Missing African territories and countries
-    ['EH', '+212'], // Western Sahara (Morocco)
-    ['MR', '+222'], // Mauritania
-    ['IO', '+246'], // British Indian Ocean Territory
-    ['TF', '+262'], // French Southern Territories
+    // Missing African countries and territories
+    ['EH', '+212'], // Western Sahara (uses Morocco routing)
+    ['MR', '+222'], // Mauritania (sovereign country that was missing)
 
-    // Missing Pacific territories
-    ['CC', '+61'], // Cocos (Keeling) Islands
-    ['CX', '+61'], // Christmas Island
+    // Missing Pacific territories with distinct codes
+    ['CC', '+61'], // Cocos (Keeling) Islands (uses Australia +61 but distinct routing)
+    ['CX', '+61'], // Christmas Island (uses Australia +61 but distinct routing)
     ['NF', '+672'], // Norfolk Island
-    ['PN', '+64'], // Pitcairn
-    ['HM', '+672'], // Heard Island and McDonald Islands
+    ['PN', '+64'], // Pitcairn Islands (uses New Zealand routing)
     ['UM', '+1'], // United States Minor Outlying Islands
-    ['BV', '+47'], // Bouvet Island (Norway)
 
-    // Missing South Atlantic
+    // Missing South Atlantic with distinct codes
     ['GS', '+500'], // South Georgia and the South Sandwich Islands
 
-    // East Timor
+    // Missing sovereign countries
     ['TL', '+670'], // Timor-Leste
   ];
 
@@ -63,9 +58,9 @@ exports.down = async function(knex) {
   // Remove the phone codes we added
   const countriesToClear = [
     'AI', 'BL', 'VG', 'MS', 'GP', 'MQ', 'PM', 'MF',
-    'AX', 'FO', 'GG', 'IM', 'JE', 'GI', 'GL', 'SJ',
-    'EH', 'MR', 'IO', 'TF',
-    'CC', 'CX', 'NF', 'PN', 'HM', 'UM', 'BV',
+    'AX', 'FO', 'GG', 'IM', 'JE', 'GI', 'GL',
+    'EH', 'MR',
+    'CC', 'CX', 'NF', 'PN', 'UM',
     'GS', 'TL'
   ];
 
