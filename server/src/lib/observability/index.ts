@@ -1,9 +1,9 @@
 /**
  * OpenTelemetry Observability Module
- * 
+ *
  * This module provides operational observability for the Grafana stack.
  * It is completely separate from PostHog usage analytics.
- * 
+ *
  * OBSERVABILITY (this module):
  * • Application performance metrics
  * • Error tracking and debugging
@@ -151,7 +151,7 @@ export const observability = {
       metricsReady: observabilityMetrics.isReady(),
       environment: process.env.NODE_ENV || 'development',
       serviceName: 'alga-psa',
-      serviceVersion: process.env.npm_package_version || '1.0.0',
+      serviceVersion: require('../utils/version').getAppVersion(),
     };
   },
 

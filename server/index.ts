@@ -7,7 +7,7 @@ import {
   tenantHeaderMiddleware,
   authorizationMiddleware
 } from './src/middleware/express/authMiddleware';
-import packageJson from './package.json';
+import { getAppVersion } from './src/lib/utils/version';
 
 const dev = globalThis.process.env.NODE_ENV !== 'production';
 const hostname = globalThis.process.env.HOSTNAME || 'localhost';
@@ -42,7 +42,7 @@ async function createServer() {
         status: 'healthy',
         timestamp: new Date().toISOString(),
         uptime: globalThis.process.uptime(),
-        version: packageJson.version
+        version: getAppVersion()
       });
     });
 
@@ -52,7 +52,7 @@ async function createServer() {
         status: 'ready',
         timestamp: new Date().toISOString(),
         uptime: globalThis.process.uptime(),
-        version: packageJson.version
+        version: getAppVersion()
       });
     });
 
@@ -76,7 +76,7 @@ async function createServer() {
     server.listen(port, '0.0.0.0', () => {
       console.log(`> Ready on http://${hostname}:${port}`);
       console.log(`> Environment: ${dev ? 'development' : 'production'}`);
-      console.log(`> Version: ${packageJson.version}`);
+      console.log(`> Version: ${getAppVersion()}`);
     });
 
     // Next.js handles WebSocket upgrades for HMR automatically

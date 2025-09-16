@@ -4,6 +4,7 @@ import { createTenantKnex } from '../db';
 import { getTenantForCurrentRequest } from '../tenant';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
+import { getAppVersion } from '../utils/version';
 
 interface AnalyticsSettings {
   instance_id: string;
@@ -55,7 +56,7 @@ export async function getOrCreateInstanceId(): Promise<string> {
       instance_id: newInstanceId,
       instance_created_at: new Date().toISOString(),
       usage_stats_enabled: process.env.ALGA_USAGE_STATS !== 'false',
-      first_seen_version: process.env.npm_package_version || 'unknown',
+      first_seen_version: getAppVersion(),
       environment: process.env.NODE_ENV || 'development'
     });
 
@@ -148,7 +149,7 @@ export async function updateAnalyticsPreferences(preferences: Partial<AnalyticsS
       instance_id: await getOrCreateInstanceId(),
       instance_created_at: new Date().toISOString(),
       usage_stats_enabled: true,
-      first_seen_version: process.env.npm_package_version || 'unknown',
+      first_seen_version: getAppVersion(),
       environment: process.env.NODE_ENV || 'development'
     };
 

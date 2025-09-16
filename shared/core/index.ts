@@ -4,4 +4,5 @@ export { VaultSecretProvider } from './VaultSecretProvider.js';
 export { CompositeSecretProvider } from './CompositeSecretProvider.js';
 export { EnvSecretProvider } from './EnvSecretProvider.js';
 export { getSecretProviderInstance } from './secretProvider.js';
+export { getSecret } from './getSecret.js';
 export { default as logger } from './logger.js';
