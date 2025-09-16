@@ -15,6 +15,7 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -97,8 +98,10 @@ const TextDetailItem: React.FC<{
   value: string;
   onEdit: (value: string) => void;
   automationId?: string;
-}> = ({ label, value, onEdit, automationId }) => {
+  validate?: (value: string) => string | null;
+}> = ({ label, value, onEdit, automationId, validate }) => {
   const [localValue, setLocalValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
 
   // Register for UI automation with meaningful label
   const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -121,6 +124,12 @@ const TextDetailItem: React.FC<{
   }, [localValue, updateMetadata, label]);
 
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validate) {
+      const validationError = validate(localValue);
+      setError(validationError);
+    }
+
     // Always call onEdit to allow parent to determine if changes should be tracked
     onEdit(localValue);
   };
@@ -133,8 +142,15 @@ const TextDetailItem: React.FC<{
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
+          error
+            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+        }`}
       />
+      {error && (
+        <Text size="1" className="text-red-600 mt-1">{error}</Text>
+      )}
     </div>
   );
 };
@@ -556,6 +572,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
+                validate={validateWebsiteUrl}
               />
 
               <TextDetailItem
@@ -563,6 +580,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
+                validate={validateIndustry}
               />
 
               <TextDetailItem
@@ -570,6 +588,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
+                validate={validateCompanySize}
               />
               
               <TextDetailItem
@@ -577,6 +596,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
+                validate={validateAnnualRevenue}
               />
 
               {/* Language Preference */}
