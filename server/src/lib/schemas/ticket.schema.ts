@@ -8,13 +8,14 @@ export const ticketFormSchema = z.object({
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
     assigned_to: z.string().uuid().nullable(),
-    priority_id: z.string().uuid(),
+    priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
     description: z.string(),
     category_id: z.string().uuid().nullable(),
     subcategory_id: z.string().uuid().nullable(),
     // ITIL-specific fields
     itil_impact: z.number().int().min(1).max(5).optional(),
     itil_urgency: z.number().int().min(1).max(5).optional(),
+    itil_priority_level: z.number().int().min(1).max(5).optional(), // Calculated ITIL priority
     itil_category: z.string().optional(),
     itil_subcategory: z.string().optional(),
     resolution_code: z.string().optional(),
@@ -22,6 +23,12 @@ export const ticketFormSchema = z.object({
     workaround: z.string().optional(),
     related_problem_id: z.string().uuid().nullable().optional(),
     sla_target: z.string().optional(),
+}).refine((data) => {
+    // Either priority_id OR itil_priority_level must be provided
+    return data.priority_id || data.itil_priority_level;
+}, {
+    message: "Either priority_id (for custom priorities) or itil_priority_level (for ITIL priorities) must be provided",
+    path: ["priority_id"], // Show error on priority_id field
 });
 
 export const createTicketFromAssetSchema = z.object({
@@ -53,10 +60,11 @@ export const ticketSchema = z.object({
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
     attributes: z.record(z.unknown()).nullable(),
-    priority_id: z.string().uuid(),
+    priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
     // ITIL-specific fields
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional(), // Calculated ITIL priority
     itil_category: z.string().nullable().optional(),
     itil_subcategory: z.string().nullable().optional(),
     resolution_code: z.string().nullable().optional(),

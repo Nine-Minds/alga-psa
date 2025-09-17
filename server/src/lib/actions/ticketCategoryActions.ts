@@ -240,6 +240,7 @@ export interface ChannelCategoryData {
   categories: ITicketCategory[];
   channelConfig: {
     category_type: 'custom' | 'itil';
+    priority_type: 'custom' | 'itil';
     display_itil_impact?: boolean;
     display_itil_urgency?: boolean;
     display_itil_category?: boolean;
@@ -263,7 +264,7 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
       const channel = await trx('channels')
         .where('tenant', tenant!)
         .where('channel_id', channelId)
-        .select('category_type', 'display_itil_impact', 'display_itil_urgency', 'display_itil_category')
+        .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency', 'display_itil_category')
         .first();
 
       if (!channel) {
@@ -272,6 +273,7 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
 
       const channelConfig = {
         category_type: (channel.category_type || 'custom') as 'custom' | 'itil',
+        priority_type: (channel.priority_type || 'custom') as 'custom' | 'itil',
         display_itil_impact: channel.display_itil_impact || false,
         display_itil_urgency: channel.display_itil_urgency || false,
         display_itil_category: channel.display_itil_category || false,
@@ -292,7 +294,7 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
         .orderBy('category_name');
 
       // Order them hierarchically
-      const orderedCategories = orderCategoriesHierarchically(categories);
+      const orderedCategories = await orderCategoriesHierarchically(categories);
       return {
         categories: orderedCategories,
         channelConfig
