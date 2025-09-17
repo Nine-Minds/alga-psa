@@ -40,7 +40,9 @@ export function ClientProfile() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [timezone, setTimezone] = useState('');
-  const [language, setLanguage] = useState<SupportedLocale>('en');
+  const [language, setLanguage] = useState<SupportedLocale | null>(null);
+  const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale>('en');
+  const [inheritedSource, setInheritedSource] = useState<'company' | 'tenant' | 'system'>('system');
 
   useEffect(() => {
     const init = async () => {
@@ -60,9 +62,13 @@ export function ClientProfile() {
 
         // Get user's language preference
         const userLocale = await getUserLocaleAction();
-        if (userLocale) {
-          setLanguage(userLocale);
-        }
+        setLanguage(userLocale); // This will be null if no preference is set
+
+        // Get what locale would be inherited if user has no preference
+        const { getInheritedLocaleAction } = await import('@/lib/actions/locale-actions/getInheritedLocale');
+        const inherited = await getInheritedLocaleAction();
+        setCurrentEffectiveLocale(inherited.locale);
+        setInheritedSource(inherited.source);
 
         // If this is a client user with a linked contact, get the contact avatar URL
         if (currentUser.user_type === 'client' && currentUser.contact_id) {
@@ -271,10 +277,19 @@ export function ClientProfile() {
             </div>
             <LanguagePreference
               value={language}
+              currentEffectiveLocale={currentEffectiveLocale}
+              inheritedSource={inheritedSource}
               onChange={async (locale) => {
                 setLanguage(locale);
-                await updateUserLocaleAction(locale);
+                if (locale === null) {
+                  // Clear the user's preference
+                  await updateUserLocaleAction(null);
+                } else {
+                  // Set a specific preference
+                  await updateUserLocaleAction(locale);
+                }
               }}
+              showNoneOption={true}
             />
           </CardContent>
         </Card>

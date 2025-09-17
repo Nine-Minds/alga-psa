@@ -4,12 +4,13 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { useI18n } from '@/lib/i18n/client';
 import CustomSelect, { SelectOption } from './CustomSelect';
+import { toast } from 'react-hot-toast';
 
 interface LanguagePreferenceProps {
   /** Current selected locale */
-  value?: SupportedLocale;
+  value?: SupportedLocale | null;
   /** Callback when language changes */
-  onChange?: (locale: SupportedLocale) => Promise<void> | void;
+  onChange?: (locale: SupportedLocale | null) => Promise<void> | void;
   /** Label for the field */
   label?: string;
   /** Helper text below the field */
@@ -22,6 +23,12 @@ interface LanguagePreferenceProps {
   className?: string;
   /** ID for automation */
   id?: string;
+  /** Whether to show "None" option for unsetting preference */
+  showNoneOption?: boolean;
+  /** Current effective locale (what's actually being used) */
+  currentEffectiveLocale?: SupportedLocale;
+  /** Where the inherited locale comes from */
+  inheritedSource?: 'company' | 'tenant' | 'system';
 }
 
 export function LanguagePreference({
@@ -33,47 +40,88 @@ export function LanguagePreference({
   loading = false,
   className = '',
   id = 'language-preference',
+  showNoneOption = true,
+  currentEffectiveLocale,
+  inheritedSource = 'system',
 }: LanguagePreferenceProps) {
   const { locale: currentLocale, setLocale } = useI18n();
-  const [selectedLocale, setSelectedLocale] = useState<SupportedLocale>(
-    value || currentLocale || (LOCALE_CONFIG.defaultLocale as SupportedLocale)
+  const effectiveLocale = currentEffectiveLocale || currentLocale;
+  const [selectedLocale, setSelectedLocale] = useState<SupportedLocale | 'none'>(
+    value === null || value === undefined ? 'none' : value
   );
   const [isChanging, setIsChanging] = useState(false);
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
-    return LOCALE_CONFIG.supportedLocales.map((locale) => ({
-      value: locale,
-      label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
-    }));
-  }, []);
+    const options: SelectOption[] = [];
+
+    // Add "None" option if enabled
+    if (showNoneOption) {
+      let inheritedLabel = 'Not set';
+      if (currentEffectiveLocale) {
+        const sourceText = inheritedSource === 'company' ? 'company default' :
+                          inheritedSource === 'tenant' ? 'tenant default' :
+                          'system default';
+        inheritedLabel = `Not set (Uses ${sourceText}: ${LOCALE_CONFIG.localeNames[currentEffectiveLocale]} - ${currentEffectiveLocale.toUpperCase()})`;
+      }
+      options.push({
+        value: 'none',
+        label: inheritedLabel,
+      });
+    }
+
+    // Add supported locales
+    LOCALE_CONFIG.supportedLocales.forEach((locale) => {
+      options.push({
+        value: locale,
+        label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
+      });
+    });
+
+    return options;
+  }, [showNoneOption, currentEffectiveLocale, inheritedSource]);
 
   useEffect(() => {
-    if (value) {
-      setSelectedLocale(value);
+    if (value !== undefined) {
+      setSelectedLocale(value === null ? 'none' : value);
     }
   }, [value]);
 
   const handleChange = async (newValue: string) => {
-    const newLocale = newValue as SupportedLocale;
+    if (newValue === selectedLocale) return;
 
-    if (newLocale === selectedLocale) return;
-
-    setSelectedLocale(newLocale);
+    const previousValue = selectedLocale;
+    setSelectedLocale(newValue as SupportedLocale | 'none');
     setIsChanging(true);
 
     try {
-      // Update the global locale
-      await setLocale(newLocale);
+      if (newValue === 'none') {
+        // User is unsetting their preference
+        // Clear the preference first
+        if (onChange) {
+          await onChange(null);
+        }
+        // Show a message and reload to get the inherited locale
+        toast.success('Language preference cleared. Using default language...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } else {
+        // User is setting a specific locale
+        const newLocale = newValue as SupportedLocale;
 
-      // Call the onChange callback if provided
-      if (onChange) {
-        await onChange(newLocale);
+        // Update the global locale
+        await setLocale(newLocale);
+
+        // Call the onChange callback if provided
+        if (onChange) {
+          await onChange(newLocale);
+        }
       }
     } catch (error) {
       console.error('Failed to update language preference:', error);
       // Revert on error
-      setSelectedLocale(selectedLocale);
+      setSelectedLocale(previousValue);
     } finally {
       setIsChanging(false);
     }

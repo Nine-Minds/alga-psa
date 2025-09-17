@@ -1,7 +1,7 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
@@ -11,6 +11,7 @@ import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
+import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
@@ -72,6 +73,7 @@ const SettingsPage = (): JSX.Element =>  {
   // Map URL slugs (kebab-case) to Tab Labels
   const slugToLabelMap: Record<string, string> = {
     'general': 'General',
+    'client-portal': 'Client Portal',
     'users': 'Users',
     'teams': 'Teams',
     'ticketing': 'Ticketing',
@@ -85,22 +87,33 @@ const SettingsPage = (): JSX.Element =>  {
     ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
   };
 
-  // Determine initial active tab based on URL parameter
-  // Hooks are now valid again
-  const [activeTab, setActiveTab] = React.useState<string>(() => {
-    const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || 'General'; // Default to 'General' if param is missing or invalid
-  });
+  // Initialize with a safe default for SSR
+  const [activeTab, setActiveTab] = useState<string>('General');
+  const [isClient, setIsClient] = useState(false);
+
+  // Handle client-side initialization
+  useEffect(() => {
+    setIsClient(true);
+    // Only update tab on client side to avoid hydration mismatch
+    if (tabParam) {
+      const initialLabel = slugToLabelMap[tabParam.toLowerCase()];
+      if (initialLabel) {
+        setActiveTab(initialLabel);
+      }
+    }
+  }, []); // Run once on mount
 
   // Update active tab when URL parameter changes
-  React.useEffect(() => {
+  useEffect(() => {
+    if (!isClient) return;
+
     const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
     const targetTab = currentLabel || 'General';
     // Only update state if the derived tab is different from the current state
     if (targetTab !== activeTab) {
        setActiveTab(targetTab);
     }
-  }, [tabParam]); // Correct dependency array
+  }, [tabParam, isClient]); // Include isClient to ensure client-side only
 
   const baseTabContent: TabContent[] = [
     {
@@ -118,6 +131,10 @@ const SettingsPage = (): JSX.Element =>  {
           </CardContent>
         </Card>
       ),
+    },
+    {
+      label: "Client Portal",
+      content: <ClientPortalSettings />,
     },
     {
       label: "Users",

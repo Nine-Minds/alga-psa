@@ -53,6 +53,7 @@ import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
+import { CompanyLanguagePreference } from './CompanyLanguagePreference';
 
 
 const SwitchDetailItem: React.FC<{
@@ -575,6 +576,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
               />
+
+              {/* Language Preference */}
+              <div className="space-y-2">
+                <CompanyLanguagePreference
+                  companyId={editedCompany.company_id}
+                  companyName={editedCompany.company_name}
+                  showCard={false}
+                />
+              </div>
 
               {/* Status and Client Type in 2 columns */}
               <div className="grid grid-cols-5 gap-4">

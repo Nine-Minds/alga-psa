@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { LanguagePreference } from './LanguagePreference';
-import { SupportedLocale } from '@/lib/i18n/config';
+import React, { useState, useEffect, useMemo } from 'react';
+import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateCompanyLocaleAction, getCompanyLocaleAction } from '@/lib/actions/company-actions/companyLocaleActions';
 import { toast } from 'react-hot-toast';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 
 interface CompanyLanguagePreferenceProps {
   /** Company ID */
@@ -19,15 +19,28 @@ interface CompanyLanguagePreferenceProps {
   onSave?: (locale: SupportedLocale) => void;
 }
 
+/**
+ * Language preference component for admin pages (without i18n dependency)
+ * This sets the default language for all contacts from a company
+ */
 export function CompanyLanguagePreference({
   companyId,
   companyName,
-  showCard = true,
+  showCard = false,
   className = '',
   onSave,
 }: CompanyLanguagePreferenceProps) {
   const [currentLocale, setCurrentLocale] = useState<SupportedLocale | undefined>();
   const [loading, setLoading] = useState(true);
+  const [isChanging, setIsChanging] = useState(false);
+
+  // Convert locale config to SelectOption format
+  const languageOptions = useMemo((): SelectOption[] => {
+    return LOCALE_CONFIG.supportedLocales.map((locale) => ({
+      value: locale,
+      label: `${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})`,
+    }));
+  }, []);
 
   useEffect(() => {
     const loadCompanyLocale = async () => {
@@ -46,18 +59,46 @@ export function CompanyLanguagePreference({
     loadCompanyLocale();
   }, [companyId]);
 
-  const handleLanguageChange = async (locale: SupportedLocale) => {
+  const handleLanguageChange = async (newLocale: string) => {
+    const locale = newLocale as SupportedLocale;
+
+    if (locale === currentLocale) return;
+
+    setIsChanging(true);
     try {
       await updateCompanyLocaleAction(companyId, locale);
       setCurrentLocale(locale);
-      toast.success(`Default language for ${companyName || 'company'} updated to ${locale.toUpperCase()}`);
+      toast.success(`Default language for ${companyName || 'company'} contacts updated to ${LOCALE_CONFIG.localeNames[locale]}`);
       onSave?.(locale);
     } catch (error) {
       console.error('Failed to update company language preference:', error);
       toast.error('Failed to update company language preference');
-      throw error; // Re-throw to let LanguagePreference handle reverting
+    } finally {
+      setIsChanging(false);
     }
   };
+
+  const content = (
+    <div className={className}>
+      <CustomSelect
+        id={`company-${companyId}-language`}
+        label="Default Language for Contacts"
+        options={languageOptions}
+        value={currentLocale || ''}
+        onValueChange={handleLanguageChange}
+        disabled={loading || isChanging}
+        placeholder="Select a language"
+        data-automation-id={`company-${companyId}-language-select`}
+      />
+      <p className="mt-1 text-sm text-gray-500">
+        This will be the default language for all contacts from {companyName || 'this company'}.
+        Individual users can override this in their personal settings.
+      </p>
+      {isChanging && (
+        <p className="mt-2 text-sm text-gray-500">Updating language preference...</p>
+      )}
+    </div>
+  );
 
   if (showCard) {
     return (
@@ -67,29 +108,11 @@ export function CompanyLanguagePreference({
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           Set the default language for all contacts in {companyName || 'this company'}.
-          Individual users can override this in their personal settings.
         </p>
-        <LanguagePreference
-          value={currentLocale}
-          onChange={handleLanguageChange}
-          label="Default Language for All Contacts"
-          helperText="This will be the default language for new contacts and those without a personal preference"
-          loading={loading}
-          id={`company-${companyId}-language`}
-        />
+        {content}
       </div>
     );
   }
 
-  return (
-    <LanguagePreference
-      value={currentLocale}
-      onChange={handleLanguageChange}
-      label="Company Default Language"
-      helperText={`Default language for all contacts in ${companyName || 'this company'}`}
-      loading={loading}
-      className={className}
-      id={`company-${companyId}-language`}
-    />
-  );
+  return content;
 }

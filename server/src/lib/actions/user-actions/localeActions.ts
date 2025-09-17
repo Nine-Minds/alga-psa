@@ -4,17 +4,31 @@ import { getCurrentUser } from './userActions';
 import { getConnection } from '@/lib/db/db';
 import { SupportedLocale, isSupportedLocale } from '@/lib/i18n/config';
 
-export async function updateUserLocaleAction(locale: SupportedLocale) {
+export async function updateUserLocaleAction(locale: SupportedLocale | null) {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not found');
   }
 
-  if (!isSupportedLocale(locale)) {
+  // If locale is null, we're clearing the preference
+  if (locale !== null && !isSupportedLocale(locale)) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
   const knex = await getConnection(user.tenant);
+
+  if (locale === null) {
+    // Delete the preference to clear it
+    await knex('user_preferences')
+      .where({
+        user_id: user.user_id,
+        setting_name: 'locale',
+        tenant: user.tenant
+      })
+      .delete();
+
+    return { success: true };
+  }
 
   // Check if preference exists
   const existing = await knex('user_preferences')

@@ -50,6 +50,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
   className,
   size = 'lg',
 }) => {
+  const { t } = useTranslation('clientPortal');
   const [isEditing, setIsEditing] = useState(false);
   const [isPendingUpload, startUploadTransition] = useTransition();
   const [isPendingDelete, startDeleteTransition] = useTransition();
@@ -274,7 +275,24 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 className="w-fit"
                 data-automation-id={`upload-${entityType}-image-button`}
               >
-                {isPendingUpload ? <LoadingIndicator spinnerProps={{ size: "xs" }} text={`Uploading ${entityType === 'company' ? 'Logo' : 'Avatar'}...`} className="mr-2" /> : <><Upload className="mr-2 h-4 w-4" /> Upload {entityType === 'company' ? 'Logo' : 'Avatar'}</>}
+                {isPendingUpload ? (
+                  <LoadingIndicator
+                    spinnerProps={{ size: "xs" }}
+                    text={entityType === 'company'
+                      ? t('profile.imageUpload.uploadingLogo', 'Uploading Logo...')
+                      : t('profile.imageUpload.uploadingAvatar', 'Uploading Avatar...')
+                    }
+                    className="mr-2"
+                  />
+                ) : (
+                  <>
+                    <Upload className="mr-2 h-4 w-4" />
+                    {entityType === 'company'
+                      ? t('profile.imageUpload.uploadLogo', 'Upload Logo')
+                      : t('profile.imageUpload.uploadAvatar', 'Upload Avatar')
+                    }
+                  </>
+                )}
               </Button>
               
               <input
@@ -299,8 +317,16 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                   className="w-fit"
                   data-automation-id={`delete-${entityType}-image-button`}
                 >
-                  {isPendingDelete ? <LoadingIndicator spinnerProps={{ size: "xs" }} text="Deleting..." className="mr-2" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
+                  {isPendingDelete ? (
+                    <LoadingIndicator
+                      spinnerProps={{ size: "xs" }}
+                      text={t('profile.imageUpload.deleting', 'Deleting...')}
+                      className="mr-2"
+                    />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  {t('profile.imageUpload.delete', 'Delete')}
                 </Button>
               )}
               
@@ -315,7 +341,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 className="w-fit"
                 data-automation-id={`cancel-${entityType}-image-edit-button`}
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
             </div>
             
@@ -333,10 +359,16 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDeleteImage}
-        title={`Delete ${entityType === 'company' ? 'Company Logo' : 'Profile Picture'}`}
-        message={`Are you sure you want to delete the ${entityType === 'company' ? 'logo' : 'profile picture'} for "${entityName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={entityType === 'company'
+          ? t('profile.imageUpload.deleteLogo', 'Delete Company Logo')
+          : t('profile.imageUpload.deleteProfilePicture', 'Delete Profile Picture')
+        }
+        message={entityType === 'company'
+          ? t('profile.imageUpload.deleteLogoConfirm', `Are you sure you want to delete the logo for "${entityName}"? This action cannot be undone.`)
+          : t('profile.imageUpload.deleteAvatarConfirm', `Are you sure you want to delete the profile picture for "${entityName}"? This action cannot be undone.`)
+        }
+        confirmLabel={t('common.delete', 'Delete')}
+        cancelLabel={t('common.cancel', 'Cancel')}
         isConfirming={isPendingDelete}
       />
     </div>

@@ -123,7 +123,21 @@
       "noDescription": "Aucune description trouvée.",
       "filtersError": "Échec du chargement des options de filtre.",
       "loadingError": "Échec du chargement des tickets. Veuillez réessayer.",
-      "statusUpdateError": "Échec de la mise à jour du statut du ticket"
+      "statusUpdateError": "Échec de la mise à jour du statut du ticket",
+      "notAuthenticated": "Non authentifié",
+      "userNotFound": "ID utilisateur introuvable dans la session",
+      "tenantNotFound": "Locataire introuvable dans la session. Veuillez vous déconnecter et vous reconnecter.",
+      "userNotAssociatedWithContact": "L'utilisateur n'est pas associé à un contact",
+      "contactNotAssociatedWithCompany": "Le contact n'est pas associé à une entreprise. Veuillez contacter le support.",
+      "ticketNotFound": "Ticket introuvable",
+      "commentNotFound": "Commentaire introuvable ou non autorisé",
+      "noDefaultChannel": "Aucun canal par défaut configuré pour les tickets",
+      "failedToCreateTicket": "Échec de la création du ticket",
+      "failedToFetchTicketDetails": "Échec de la récupération des détails du ticket",
+      "failedToAddComment": "Échec de l'ajout du commentaire",
+      "failedToUpdateComment": "Échec de la mise à jour du commentaire",
+      "failedToDeleteComment": "Échec de la suppression du commentaire",
+      "failedToUpdateTicketStatus": "Échec de la mise à jour du statut du ticket"
     },
     "conversation": {
       "comments": "Commentaires",
@@ -368,7 +382,30 @@
       "updateSuccess": "Profil mis à jour avec succès",
       "updateError": "Échec de la mise à jour du profil",
       "photoUploaded": "Photo téléchargée avec succès",
-      "photoRemoved": "Photo supprimée avec succès"
+      "photoRemoved": "Photo supprimée avec succès",
+      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'ils consultent vos informations de contact."
+    },
+    "imageUpload": {
+      "uploadAvatar": "Télécharger Avatar",
+      "uploadLogo": "Télécharger Logo",
+      "uploadingAvatar": "Téléchargement de l'avatar...",
+      "uploadingLogo": "Téléchargement du logo...",
+      "deleteAvatar": "Supprimer la photo de profil",
+      "deleteLogo": "Supprimer le logo de l'entreprise",
+      "deleteProfilePicture": "Supprimer la photo de profil",
+      "delete": "Supprimer",
+      "deleting": "Suppression...",
+      "deleteLogoConfirm": "Êtes-vous sûr de vouloir supprimer le logo ? Cette action ne peut pas être annulée.",
+      "deleteAvatarConfirm": "Êtes-vous sûr de vouloir supprimer la photo de profil ? Cette action ne peut pas être annulée.",
+      "edit": "Modifier",
+      "invalidType": "Veuillez sélectionner un fichier image.",
+      "sizeLimit": "La taille de l'image doit être inférieure à 2 Mo.",
+      "maxSize": "Max 2 Mo (PNG, JPG, GIF)",
+      "uploadSuccess": "Téléchargé avec succès.",
+      "uploadError": "Échec du téléchargement. Veuillez réessayer.",
+      "deleteSuccess": "Supprimé avec succès.",
+      "deleteError": "Échec de la suppression.",
+      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ceci ? Cette action ne peut pas être annulée."
     }
   },
   "companySettings": {

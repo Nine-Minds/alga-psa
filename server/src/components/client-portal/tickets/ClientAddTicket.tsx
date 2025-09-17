@@ -102,7 +102,20 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       onTicketAdded?.();
     } catch (error) {
       console.error('Error creating ticket:', error);
-      setError(error instanceof Error ? error.message : t('tickets.create.errors.createFailed'));
+      // Map backend error messages to translation keys
+      let errorMessage = t('tickets.create.errors.createFailed');
+      if (error instanceof Error) {
+        const errorMap: Record<string, string> = {
+          'Failed to create ticket': t('tickets.messages.failedToCreateTicket'),
+          'Contact not associated with a company': t('tickets.messages.contactNotAssociatedWithCompany'),
+          'User not associated with a contact': t('tickets.messages.userNotAssociatedWithContact'),
+          'Not authenticated': t('tickets.messages.notAuthenticated'),
+          'User ID not found in session': t('tickets.messages.userNotFound'),
+          'Tenant not found in session. Please log out and log back in.': t('tickets.messages.tenantNotFound'),
+        };
+        errorMessage = errorMap[error.message] || error.message;
+      }
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }

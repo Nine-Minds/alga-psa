@@ -10,7 +10,7 @@ import { TagProvider } from '../context/TagContext';
 import { ClientUIStateProvider } from '../types/ui-reflection/ClientUIStateProvider';
 import { DynamicExtensionProvider } from '../components/extensions/DynamicExtensionProvider';
 import { PostHogProvider } from "../components/PostHogProvider";
-import { I18nWrapper } from "../components/I18nWrapper";
+import { I18nWrapper } from "../components/i18n/I18nWrapper";
 import { getServerLocale } from "../lib/i18n/server";
 import { cookies } from 'next/headers';
 
