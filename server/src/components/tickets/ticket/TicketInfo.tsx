@@ -15,8 +15,8 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { ItilLabels } from 'server/src/lib/utils/itilUtils';
-import { Pencil, Check } from 'lucide-react';
+import { ItilLabels, ItilCategories, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { Pencil, Check, HelpCircle } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 
@@ -41,6 +41,7 @@ interface TicketInfoProps {
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
+  onItilFieldChange?: (field: string, value: any) => void;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -59,17 +60,32 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   allTagTexts = [],
   onTagsChange,
   isInDrawer = false,
+  onItilFieldChange,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
     category_type: 'custom',
+    priority_type: 'custom',
     display_itil_impact: false,
     display_itil_urgency: false,
     display_itil_category: false,
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(ticket.title);
+  const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+
+  // Calculate ITIL priority when impact and urgency are available
+  const calculatedItilPriority = React.useMemo(() => {
+    if (ticket.itil_impact && ticket.itil_urgency) {
+      try {
+        return calculateItilPriority(ticket.itil_impact, ticket.itil_urgency);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [ticket.itil_impact, ticket.itil_urgency]);
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>([{
     type: "paragraph",
     props: {
@@ -225,6 +241,12 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     return ticket.category_id || '';
   };
 
+  const handleItilFieldChange = (field: string, value: any) => {
+    if (onItilFieldChange) {
+      onItilFieldChange(field, value);
+    }
+  };
+
   const customStyles = {
     trigger: "w-fit !inline-flex items-center justify-between rounded px-3 py-2 text-sm font-medium bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
     content: "bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 overflow-auto",
@@ -335,13 +357,42 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              <PrioritySelect
-                value={ticket.priority_id}
-                options={priorityOptions}
-                onValueChange={(value) => onSelectChange('priority_id', value)}
-                customStyles={customStyles}
-                className="!w-fit"
-              />
+              {channelConfig.priority_type === 'itil' && calculatedItilPriority ? (
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor:
+                      calculatedItilPriority === 1 ? '#DC2626' : // Red
+                      calculatedItilPriority === 2 ? '#EA580C' : // Orange
+                      calculatedItilPriority === 3 ? '#F59E0B' : // Amber
+                      calculatedItilPriority === 4 ? '#3B82F6' : // Blue
+                      '#6B7280' // Gray
+                    }}
+                  />
+                  <span className="text-sm font-medium">
+                    {ItilLabels.priority[calculatedItilPriority]}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    (Impact {ticket.itil_impact} × Urgency {ticket.itil_urgency})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Show ITIL Priority Matrix"
+                  >
+                    <HelpCircle className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <PrioritySelect
+                  value={ticket.priority_id}
+                  options={priorityOptions}
+                  onValueChange={(value) => onSelectChange('priority_id', value)}
+                  customStyles={customStyles}
+                  className="!w-fit"
+                />
+              )}
             </div>
             {channelConfig.category_type === 'custom' && (
               <div className="col-span-2">
@@ -357,40 +408,194 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 </div>
               </div>
             )}
-            {channelConfig.category_type === 'itil' && (
-              <div className="col-span-2">
-                <h5 className="font-bold mb-1">ITIL Category</h5>
-                <div className="text-sm text-gray-600">
-                  {ticket.itil_category && ticket.itil_subcategory
-                    ? `${ticket.itil_category} > ${ticket.itil_subcategory}`
-                    : ticket.itil_category || 'Not categorized'}
+            {/* ITIL Fields for ITIL priority channels */}
+            {channelConfig.priority_type === 'itil' && (
+              <>
+                <div>
+                  <h5 className="font-bold mb-2">Impact</h5>
+                  <select
+                    value={ticket.itil_impact || ''}
+                    onChange={(e) => handleItilFieldChange('itil_impact', Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Impact</option>
+                    <option value="1">1 - High (Critical business function affected)</option>
+                    <option value="2">2 - Medium-High (Important function affected)</option>
+                    <option value="3">3 - Medium (Minor function affected)</option>
+                    <option value="4">4 - Medium-Low (Minimal impact)</option>
+                    <option value="5">5 - Low (No business impact)</option>
+                  </select>
                 </div>
-              </div>
+                <div>
+                  <h5 className="font-bold mb-2">Urgency</h5>
+                  <select
+                    value={ticket.itil_urgency || ''}
+                    onChange={(e) => handleItilFieldChange('itil_urgency', Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select Urgency</option>
+                    <option value="1">1 - High (Work cannot continue)</option>
+                    <option value="2">2 - Medium-High (Work severely impaired)</option>
+                    <option value="3">3 - Medium (Work continues with limitations)</option>
+                    <option value="4">4 - Medium-Low (Minor inconvenience)</option>
+                    <option value="5">5 - Low (Work continues normally)</option>
+                  </select>
+                </div>
+              </>
             )}
-            {channelConfig.category_type === 'itil' && (channelConfig.display_itil_impact || channelConfig.display_itil_urgency) && (
-              <div className="col-span-2">
-                <h5 className="font-bold mb-1">ITIL Classification</h5>
-                <div className="flex gap-4 text-sm">
-                  {channelConfig.display_itil_impact && (
-                    <div>
-                      <span className="font-medium">Impact:</span>{' '}
-                      <span className="text-gray-600">
-                        {ticket.itil_impact ? `${ticket.itil_impact} - ${getItilLabel('impact', ticket.itil_impact)}` : 'Not set'}
-                      </span>
-                    </div>
-                  )}
-                  {channelConfig.display_itil_urgency && (
-                    <div>
-                      <span className="font-medium">Urgency:</span>{' '}
-                      <span className="text-gray-600">
-                        {ticket.itil_urgency ? `${ticket.itil_urgency} - ${getItilLabel('urgency', ticket.itil_urgency)}` : 'Not set'}
-                      </span>
-                    </div>
-                  )}
+            {/* ITIL Categories for ITIL category channels */}
+            {channelConfig.category_type === 'itil' && (
+              <>
+                <div>
+                  <h5 className="font-bold mb-2">ITIL Category</h5>
+                  <select
+                    value={ticket.itil_category || ''}
+                    onChange={(e) => {
+                      handleItilFieldChange('itil_category', e.target.value);
+                      handleItilFieldChange('itil_subcategory', ''); // Reset subcategory
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select ITIL Category</option>
+                    <option value="Hardware">Hardware</option>
+                    <option value="Software">Software</option>
+                    <option value="Network">Network</option>
+                    <option value="Security">Security</option>
+                    <option value="Service Request">Service Request</option>
+                  </select>
                 </div>
-              </div>
+                <div>
+                  <h5 className="font-bold mb-2">ITIL Subcategory</h5>
+                  <select
+                    value={ticket.itil_subcategory || ''}
+                    onChange={(e) => handleItilFieldChange('itil_subcategory', e.target.value)}
+                    disabled={!ticket.itil_category}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Select Subcategory</option>
+                    {ticket.itil_category === 'Hardware' && (
+                      <>
+                        <option value="Server">Server</option>
+                        <option value="Desktop/Laptop">Desktop/Laptop</option>
+                        <option value="Network Equipment">Network Equipment</option>
+                        <option value="Printer">Printer</option>
+                        <option value="Storage">Storage</option>
+                        <option value="Mobile Device">Mobile Device</option>
+                      </>
+                    )}
+                    {ticket.itil_category === 'Software' && (
+                      <>
+                        <option value="Application">Application</option>
+                        <option value="Operating System">Operating System</option>
+                        <option value="Database">Database</option>
+                        <option value="Security Software">Security Software</option>
+                        <option value="Productivity Software">Productivity Software</option>
+                        <option value="Custom Application">Custom Application</option>
+                      </>
+                    )}
+                    {ticket.itil_category === 'Network' && (
+                      <>
+                        <option value="Connectivity">Connectivity</option>
+                        <option value="VPN">VPN</option>
+                        <option value="Wi-Fi">Wi-Fi</option>
+                        <option value="Internet">Internet</option>
+                        <option value="LAN/WAN">LAN/WAN</option>
+                        <option value="Firewall">Firewall</option>
+                      </>
+                    )}
+                    {ticket.itil_category === 'Security' && (
+                      <>
+                        <option value="Malware">Malware</option>
+                        <option value="Unauthorized Access">Unauthorized Access</option>
+                        <option value="Data Breach">Data Breach</option>
+                        <option value="Phishing">Phishing</option>
+                        <option value="Policy Violation">Policy Violation</option>
+                        <option value="Account Lockout">Account Lockout</option>
+                      </>
+                    )}
+                    {ticket.itil_category === 'Service Request' && (
+                      <>
+                        <option value="Access Request">Access Request</option>
+                        <option value="New User Setup">New User Setup</option>
+                        <option value="Software Installation">Software Installation</option>
+                        <option value="Equipment Request">Equipment Request</option>
+                        <option value="Information Request">Information Request</option>
+                        <option value="Change Request">Change Request</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              </>
             )}
           </div>
+
+          {/* ITIL Priority Matrix - Show when help icon is clicked */}
+          {showPriorityMatrix && channelConfig.priority_type === 'itil' && (
+            <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
+              <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs">
+                  <thead>
+                    <tr>
+                      <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
+                      <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
+                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
+                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
+                      <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
+                      <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
+                      <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
+                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
+                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
+                      <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
+                      <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                      <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                      <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-2 text-xs text-gray-600">
+                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="flex items-center gap-2 mb-2">
               <h2 className="text-lg font-semibold">Description</h2>
