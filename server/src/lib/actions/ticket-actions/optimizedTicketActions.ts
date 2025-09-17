@@ -728,6 +728,10 @@ export async function getTicketsForListWithCursor(
         company_name,
         entered_by_name,
         assigned_to_name,
+        // Extract ITIL fields explicitly
+        itil_priority_level,
+        itil_category,
+        itil_subcategory,
         ...rest
       } = ticket;
 
@@ -745,6 +749,10 @@ export async function getTicketsForListWithCursor(
         company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown',
+        // Include ITIL fields
+        itil_priority_level: itil_priority_level || undefined,
+        itil_category: itil_category || undefined,
+        itil_subcategory: itil_subcategory || undefined,
         ...convertDates(rest)
       };
     });

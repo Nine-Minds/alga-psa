@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { ItilLabels } from 'server/src/lib/utils/itilUtils';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
@@ -121,15 +122,39 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: 'Priority',
         dataIndex: 'priority_name',
         width: '10%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full border border-gray-300" 
-              style={{ backgroundColor: record.priority_color || '#6B7280' }}
-            />
-            <span>{value}</span>
-          </div>
-        ),
+        render: (value: string, record: ITicketListItem) => {
+          // Check if this ticket has ITIL priority
+          if (record.itil_priority_level) {
+            const itilPriorityLabel = ItilLabels.priority[record.itil_priority_level];
+            const priorityColor =
+              record.itil_priority_level === 1 ? '#EF4444' : // Critical - Red
+              record.itil_priority_level === 2 ? '#F97316' : // High - Orange
+              record.itil_priority_level === 3 ? '#EAB308' : // Medium - Yellow
+              record.itil_priority_level === 4 ? '#3B82F6' : // Low - Blue
+              '#6B7280'; // Planning - Gray
+
+            return (
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-3 h-3 rounded-full border border-gray-300"
+                  style={{ backgroundColor: priorityColor }}
+                />
+                <span>{itilPriorityLabel}</span>
+              </div>
+            );
+          }
+
+          // Fall back to standard priority display
+          return (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full border border-gray-300"
+                style={{ backgroundColor: record.priority_color || '#6B7280' }}
+              />
+              <span>{value}</span>
+            </div>
+          );
+        },
       }
     });
   }
@@ -155,6 +180,15 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'category_id',
         width: '10%',
         render: (value: string, record: ITicketListItem) => {
+          // Check if this ticket has ITIL category
+          if (record.itil_category) {
+            if (record.itil_subcategory) {
+              return `${record.itil_category} → ${record.itil_subcategory}`;
+            }
+            return record.itil_category;
+          }
+
+          // Fall back to standard category display
           if (!value && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display
