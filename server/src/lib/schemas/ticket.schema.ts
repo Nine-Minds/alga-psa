@@ -125,7 +125,23 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     category_name: z.string(),
     company_name: z.string(),
     entered_by_name: z.string(),
-    assigned_to_name: z.string().nullable()
+    assigned_to_name: z.string().nullable(),
+    // ITIL-specific fields for list items
+    itil_impact: z.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
+    itil_category: z.string().nullable().optional(),
+    itil_subcategory: z.string().nullable().optional(),
+    resolution_code: z.string().nullable().optional(),
+    root_cause: z.string().nullable().optional(),
+    workaround: z.string().nullable().optional(),
+    related_problem_id: z.string().uuid().nullable().optional(),
+    sla_target: z.string().nullable().optional(),
+    sla_breach: z.boolean().nullable().optional(),
+    escalated: z.boolean().nullable().optional(),
+    escalation_level: z.number().int().min(1).max(3).nullable().optional(),
+    escalated_at: z.string().nullable().optional(),
+    escalated_by: z.string().uuid().nullable().optional()
 });
 
 export const ticketListFiltersSchema = z.object({
