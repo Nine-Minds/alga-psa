@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/i18n/client';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { ChevronDown } from 'lucide-react';
@@ -44,11 +45,12 @@ interface TicketWithDetails extends ITicket {
 }
 
 export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps) {
+  const { t } = useTranslation('clientPortal');
   const [ticket, setTicket] = useState<TicketWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ id: string; name?: string | null; email?: string | null; avatarUrl?: string | null } | null>(null);
-  const [activeTab, setActiveTab] = useState('Comments');
+  const [activeTab, setActiveTab] = useState(t('tickets.messages.comments', 'Comments'));
   const [isEditing, setIsEditing] = useState(false);
   const [currentComment, setCurrentComment] = useState<IComment | null>(null);
   const [editorKey, setEditorKey] = useState(0);
@@ -96,7 +98,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
           });
         }
       } catch (err) {
-        setError('Failed to load ticket details');
+        setError(t('tickets.messages.loadError', 'Failed to load ticket details'));
         console.error(err);
       }
       setLoading(false);
@@ -126,7 +128,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
     if (!hasContent) {
       console.log("Cannot add empty comment");
-      toast.error("Cannot add empty comment");
+      toast.error(t('tickets.messages.emptyComment', 'Cannot add empty comment'));
       return false;
     }
 
@@ -158,8 +160,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       return true;
     } catch (error) {
       console.error('Failed to add comment:', error);
-      setError('Failed to add comment');
-      toast.error('Failed to add comment');
+      setError(t('tickets.messages.commentError', 'Failed to add comment'));
+      toast.error(t('tickets.messages.commentError', 'Failed to add comment'));
       return false;
     }
   };
@@ -190,7 +192,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                parsedContent[0].content[0].text === '')));
           
           if (isEmpty) {
-            toast.error("Cannot save empty note");
+            toast.error(t('tickets.messages.emptyNote', 'Cannot save empty note'));
             return;
           }
         } catch (e) {
@@ -349,7 +351,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
-      toast.error('Failed to update ticket status.');
+      toast.error(t('tickets.messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }
@@ -360,7 +362,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       <Dialog
         isOpen={isOpen}
         onClose={onClose}
-        title={loading ? 'Loading...' : ticket?.title || ''}
+        title={loading ? t('common.loading') : ticket?.title || ''}
         className="max-w-[800px] max-h-[80vh] overflow-y-auto"
         id="ticket-details"
       >
@@ -379,7 +381,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                     <DropdownMenu.Root>
                       <DropdownMenu.Trigger asChild>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 cursor-pointer hover:bg-blue-200">
-                          {ticket.status_name || 'Unknown Status'}
+                          {ticket.status_name || t('tickets.status.unknown', 'Unknown Status')}
                           <ChevronDown className="ml-1 h-3 w-3" />
                         </span>
                       </DropdownMenu.Trigger>
@@ -411,24 +413,24 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                           className={`w-3 h-3 rounded-full border border-gray-300 ${!ticket.priority_color ? 'bg-gray-500' : ''}`}
                           style={ticket.priority_color ? { backgroundColor: ticket.priority_color } : undefined}
                         />
-                        <span>{ticket.priority_name || 'Unknown Priority'}</span>
+                        <span>{ticket.priority_name || t('tickets.priority.unknown', 'Unknown Priority')}</span>
                       </div>
                     </span>
                   </div>
                   <p className="text-sm text-gray-500">
-                    Ticket #{ticket.ticket_number}
+                    {t('tickets.fields.ticketNumber')} #{ticket.ticket_number}
                   </p>
                 </div>
                 <div className="text-right text-sm text-gray-500">
-                  <p>Created {formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true })}</p>
+                  <p>{t('tickets.fields.createdAt')} {formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true })}</p>
                   {ticket.updated_at && (
-                    <p>Updated {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}</p>
+                    <p>{t('tickets.fields.updatedAt')} {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}</p>
                   )}
                 </div>
               </div>
 
               <div className="border-t pt-4">
-                <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">{t('tickets.fields.description')}</h3>
                 <div className="text-sm text-gray-700 break-words max-w-full overflow-hidden">
                   {(ticket.attributes?.description as string) ? (
                     <RichTextViewer
@@ -446,7 +448,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                       className="break-words max-w-full"
                     />
                   ) : (
-                    'No description found.'
+                    t('tickets.messages.noDescription', 'No description found.')
                   )}
                 </div>
               </div>
@@ -459,7 +461,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                   documents={ticket.documents || []}
                   userMap={ticket.userMap || {}}
                   currentUser={currentUser}
-                  activeTab={activeTab === 'Internal' ? 'Comments' : activeTab}
+                  activeTab={activeTab === 'Internal' ? t('tickets.messages.comments', 'Comments') : activeTab}
                   hideInternalTab={true}
                   isEditing={isEditing}
                   currentComment={currentComment}
@@ -495,8 +497,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
         isOpen={!!ticketToUpdateStatus}
         onClose={() => setTicketToUpdateStatus(null)}
         onConfirm={handleStatusChangeConfirm}
-        title="Update Ticket Status"
-        message={`Are you sure you want to change the status from "${ticketToUpdateStatus?.currentStatusName}" to "${ticketToUpdateStatus?.newStatusName}"?`}
+        title={t('tickets.actions.changeStatus')}
+        message={t('tickets.actions.confirmStatusChange')}
         confirmLabel="Update"
         cancelLabel="Cancel"
       />

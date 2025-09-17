@@ -10,6 +10,7 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface EntityImageUploadProps {
   entityType: EntityType;
@@ -187,7 +188,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         if (result.success) {
           setCurrentImageUrl(null);
           setIsEditing(false);
-          toast.success(result.message || `${entityType} image deleted successfully.`);
+          toast.success(result.message || t('profile.imageUpload.deleteSuccess', `${entityType === 'company' ? 'Logo' : 'Avatar'} deleted successfully.`));
           
           // Notify parent component if callback provided
           if (onImageChange) {

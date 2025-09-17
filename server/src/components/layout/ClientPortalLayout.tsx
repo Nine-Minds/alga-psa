@@ -80,7 +80,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     />
                   </div>
                   <span className="text-lg font-semibold flex items-center">
-                    <span className="text-[rgb(var(--color-text-900))]">Client Portal</span>
+                    <span className="text-[rgb(var(--color-text-900))]">{t('nav.clientPortal')}</span>
                   </span>
                 </Link>
               </div>
@@ -89,26 +89,26 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                   href="/client-portal/dashboard"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  {t('nav.dashboard', 'Dashboard')}
+                  {t('nav.dashboard')}
                 </Link>
                 <Link
                   href="/client-portal/tickets"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  {t('tickets.title', 'Support Tickets')}
+                  {t('nav.tickets')}
                 </Link>
                 <Link
                   href="/client-portal/projects"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  {t('projects.title', 'Projects')}
+                  {t('nav.projects')}
                 </Link>
                 {hasBillingAccess && (
                   <Link 
                     href="/client-portal/billing" 
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
-                    Billing
+                    {t('nav.billing')}
                   </Link>
                 )}
                 {/*
@@ -124,7 +124,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     href="/client-portal/company-settings" 
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
-                    Company Settings
+                    {t('nav.companySettings')}
                   </Link>
                 )}
               </div>
@@ -157,14 +157,14 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                         onSelect={() => router.push('/client-portal/profile')}
                       >
                         <User className="mr-2 h-3.5 w-3.5" />
-                        <span>Profile</span>
+                        <span>{t('nav.profile')}</span>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={handleSignOut}
                       >
                         <LogOut className="mr-2 h-3.5 w-3.5" />
-                        <span>Sign out</span>
+                        <span>{t('nav.signOut')}</span>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>

@@ -24,6 +24,7 @@ import {
 import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '@/lib/i18n/client';
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
@@ -77,6 +78,7 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
+  const { t } = useTranslation('clientPortal');
   const [currentTab, setCurrentTab] = useState('Overview');
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
@@ -295,7 +297,7 @@ export default function BillingOverview() {
   const tabs: TabContent[] = useMemo(() => {
     const tabsArray: TabContent[] = [
       {
-        label: 'Overview',
+        label: t('billing.tabs.overview'),
         content: (
           <div id="overview-tab">
             <BillingOverviewTab
@@ -316,7 +318,7 @@ export default function BillingOverview() {
     // Add Invoices tab only if user has access
     if (hasInvoiceAccess) {
       tabsArray.push({
-        label: 'Invoices',
+        label: t('billing.tabs.invoices'),
         content: (
           <div id="invoices-tab">
             <InvoicesTab

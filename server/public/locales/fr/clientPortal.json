@@ -1,76 +1,560 @@
 {
   "nav": {
-    "dashboard": "Tableau de bord"
+    "dashboard": "Tableau de bord",
+    "tickets": "Tickets de support",
+    "projects": "Projets",
+    "billing": "Facturation",
+    "assets": "Actifs",
+    "companySettings": "Paramètres de l'entreprise",
+    "profile": "Profil",
+    "signOut": "Déconnexion",
+    "clientPortal": "Portail Client"
   },
-  "welcome": {
-    "title": "Bienvenue sur le Portail Client",
-    "subtitle": "Accédez à vos tickets, factures et informations de projet"
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bon retour ! Voici un aperçu de votre compte.",
+    "loading": "Chargement du tableau de bord...",
+    "error": "Une erreur s'est produite lors du chargement du tableau de bord. Veuillez réessayer plus tard.",
+    "metrics": {
+      "openTickets": "Tickets de support ouverts",
+      "activeProjects": "Projets ouverts",
+      "pendingInvoices": "Factures en attente",
+      "activeAssets": "Actifs actifs"
+    },
+    "quickActions": {
+      "title": "Actions rapides",
+      "createTicket": "Créer un ticket de support",
+      "viewLatestInvoice": "Voir la dernière facture"
+    },
+    "recentActivity": {
+      "title": "Activité récente"
+    },
+    "viewAll": "Voir tous les {{item}} →"
   },
   "tickets": {
-    "title": "Tickets de Support",
+    "title": "Tickets de support",
+    "subtitle": "Consultez et gérez vos tickets de support",
     "createNew": "Créer un nouveau ticket",
+    "createButton": "Créer un ticket de support",
     "viewAll": "Voir tous les tickets",
     "myTickets": "Mes tickets",
+    "resetFilters": "Réinitialiser les filtres",
+    "filters": {
+      "allStatuses": "Tous les statuts",
+      "allOpen": "Tous les tickets ouverts",
+      "allClosed": "Tous les tickets fermés",
+      "allPriorities": "Toutes les priorités",
+      "search": "Rechercher des tickets...",
+      "category": "Filtrer par catégorie",
+      "clearFilters": "Effacer les filtres"
+    },
+    "create": {
+      "title": "Créer un ticket de support",
+      "titlePlaceholder": "Titre du ticket",
+      "descriptionPlaceholder": "Décrivez votre problème...",
+      "priorityPlaceholder": "Sélectionner la priorité",
+      "submit": "Créer le ticket",
+      "submitting": "Création...",
+      "errors": {
+        "titleRequired": "Le titre est requis",
+        "descriptionRequired": "La description est requise",
+        "priorityRequired": "Veuillez sélectionner une priorité",
+        "createFailed": "Échec de la création du ticket. Veuillez réessayer."
+      }
+    },
     "status": {
       "open": "Ouvert",
       "inProgress": "En cours",
       "resolved": "Résolu",
-      "closed": "Fermé"
+      "closed": "Fermé",
+      "pending": "En attente",
+      "waitingOnCustomer": "En attente du client",
+      "waitingOnVendor": "En attente du fournisseur"
     },
     "priority": {
       "low": "Faible",
       "medium": "Moyen",
       "high": "Élevé",
-      "urgent": "Urgent"
+      "urgent": "Urgent",
+      "critical": "Critique"
     },
     "fields": {
-      "subject": "Objet",
+      "ticketNumber": "Numéro de ticket",
+      "title": "Titre",
+      "subject": "Sujet",
       "description": "Description",
       "priority": "Priorité",
+      "status": "Statut",
       "category": "Catégorie",
+      "subcategory": "Sous-catégorie",
       "attachments": "Pièces jointes",
       "createdAt": "Créé le",
       "updatedAt": "Dernière mise à jour",
-      "assignedTo": "Assigné à"
+      "assignedTo": "Assigné à",
+      "requester": "Demandeur",
+      "company": "Entreprise",
+      "dueDate": "Date d'échéance",
+      "resolution": "Résolution",
+      "timeSpent": "Temps passé",
+      "notes": "Notes",
+      "internalNotes": "Notes internes"
+    },
+    "actions": {
+      "view": "Voir",
+      "edit": "Modifier",
+      "close": "Fermer le ticket",
+      "reopen": "Rouvrir le ticket",
+      "addNote": "Ajouter une note",
+      "uploadFile": "Télécharger un fichier",
+      "changeStatus": "Changer le statut",
+      "confirmStatusChange": "Êtes-vous sûr de vouloir changer le statut de ce ticket ?"
+    },
+    "messages": {
+      "noTickets": "Aucun ticket trouvé",
+      "loadingTickets": "Chargement des tickets...",
+      "ticketCreated": "Ticket créé avec succès",
+      "ticketUpdated": "Ticket mis à jour avec succès",
+      "ticketClosed": "Ticket fermé avec succès",
+      "error": "Une erreur s'est produite lors du traitement de votre demande",
+      "loadError": "Échec du chargement des détails du ticket",
+      "emptyComment": "Impossible d'ajouter un commentaire vide",
+      "commentError": "Échec de l'ajout du commentaire",
+      "emptyNote": "Impossible d'enregistrer une note vide",
+      "noDescription": "Aucune description trouvée.",
+      "filtersError": "Échec du chargement des options de filtre.",
+      "loadingError": "Échec du chargement des tickets. Veuillez réessayer.",
+      "statusUpdateError": "Échec de la mise à jour du statut du ticket"
+    },
+    "conversation": {
+      "comments": "Commentaires",
+      "client": "Client",
+      "internal": "Interne",
+      "allComments": "Tous les commentaires",
+      "resolution": "Résolution",
+      "internalComments": "Commentaires internes",
+      "resolutionComments": "Commentaires de résolution",
+      "markAsInternal": "Marquer comme interne",
+      "markedAsInternal": "Marqué comme interne",
+      "markAsResolution": "Marquer comme résolution",
+      "markedAsResolution": "Marqué comme résolution",
+      "oldestFirst": "Plus ancien en premier",
+      "newestFirst": "Plus récent en premier",
+      "addComment": "Ajouter un commentaire",
+      "typeComment": "Tapez votre commentaire ici...",
+      "submit": "Soumettre",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "edit": "Modifier",
+      "delete": "Supprimer",
+      "reply": "Répondre",
+      "edited": "Modifié",
+      "noComments": "Aucun commentaire pour le moment"
+    },
+    "documents": {
+      "title": "Documents",
+      "noDocuments": "Aucun document attaché",
+      "upload": "Télécharger un document",
+      "download": "Télécharger",
+      "remove": "Retirer",
+      "preview": "Aperçu",
+      "linkDocuments": "Lier des documents",
+      "editDocument": "Modifier le document",
+      "viewDocument": "Voir le document",
+      "downloadToPlay": "Télécharger pour lire",
+      "delete": "Supprimer",
+      "previewUnavailable": "Aperçu non disponible",
+      "newDocument": "Nouveau document",
+      "uploadFile": "Télécharger un fichier"
     }
   },
-  "invoices": {
-    "title": "Factures",
-    "viewAll": "Voir toutes les factures",
-    "unpaid": "Non payées",
-    "paid": "Payées",
-    "overdue": "En retard",
-    "dueDate": "Date d'échéance",
-    "amount": "Montant",
-    "status": "Statut",
-    "download": "Télécharger le PDF",
-    "payNow": "Payer maintenant",
-    "paymentHistory": "Historique des paiements"
+  "billing": {
+    "title": "Facturation",
+    "overview": "Aperçu",
+    "tabs": {
+      "overview": "Aperçu",
+      "invoices": "Factures"
+    },
+    "currentPlan": "Plan actuel",
+    "nextInvoice": "Prochaine facture",
+    "viewPlanDetails": "Voir les détails du plan",
+    "viewAllInvoices": "Voir toutes les factures",
+    "failedToLoad": "Échec du chargement des factures. Veuillez réessayer.",
+    "invoices": "Factures",
+    "payments": "Paiements",
+    "plans": "Plans de service",
+    "usage": "Métriques d'utilisation",
+    "hoursByService": "Heures par service",
+    "invoice": {
+      "number": "Facture n°",
+      "date": "Date de facture",
+      "dueDate": "Date d'échéance",
+      "dueDateText": "Échéance le {{date}}",
+      "noDueDate": "Pas de date d'échéance",
+      "amount": "Montant",
+      "status": "Statut",
+      "paid": "Payé",
+      "unpaid": "Non payé",
+      "overdue": "En retard",
+      "partial": "Partiel",
+      "draft": "Brouillon",
+      "finalized": "Finalisée",
+      "sendEmail": "Envoyer par e-mail",
+      "sendEmailFailed": "Échec de l'envoi de la facture par e-mail. Veuillez réessayer.",
+      "download": "Télécharger PDF",
+      "view": "Voir les détails",
+      "pay": "Payer maintenant",
+      "paymentHistory": "Historique des paiements"
+    },
+    "frequency": {
+      "monthly": "Mensuel",
+      "quarterly": "Trimestriel",
+      "annual": "Annuel",
+      "weekly": "Hebdomadaire",
+      "biweekly": "Bihebdomadaire"
+    },
+    "plan": {
+      "detailsTitle": "Détails du plan",
+      "name": "Nom du plan",
+      "frequency": "Fréquence de facturation",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "noEndDate": "Pas de date de fin",
+      "status": "Statut",
+      "customRate": "Tarif personnalisé",
+      "serviceCategory": "Catégorie de service",
+      "statusDescription": "Ce plan est actuellement {{status}} et {{expiry}}.",
+      "expiresOn": "expirera le {{date}}",
+      "noExpiry": "n'expirera pas"
+    },
+    "payment": {
+      "method": "Méthode de paiement",
+      "date": "Date de paiement",
+      "amount": "Montant",
+      "reference": "Référence",
+      "status": "Statut"
+    },
+    "bucket": {
+      "title": "Heures de service",
+      "remaining": "Heures restantes",
+      "used": "Heures utilisées",
+      "total": "Total des heures",
+      "usage": "Utilisation",
+      "overage": "Dépassement",
+      "noPlanTitle": "Aucun plan de bucket disponible",
+      "noPlanDescription": "Il n'y a pas de plans de bucket actifs pour votre compte."
+    },
+    "messages": {
+      "noInvoices": "Aucune facture trouvée",
+      "loadingInvoices": "Chargement des factures...",
+      "paymentSuccessful": "Paiement traité avec succès",
+      "paymentFailed": "Le paiement a échoué. Veuillez réessayer."
+    }
   },
   "projects": {
     "title": "Projets",
+    "subtitle": "Aperçu de vos projets actuels et passés",
+    "searchPlaceholder": "Rechercher des projets...",
+    "allStatuses": "Tous les statuts",
+    "resetFilters": "Réinitialiser les filtres",
     "active": "Projets actifs",
     "completed": "Projets terminés",
+    "onHold": "En attente",
     "timeline": "Chronologie",
     "milestones": "Jalons",
     "tasks": "Tâches",
     "documents": "Documents",
-    "team": "Membres de l'équipe"
+    "team": "Membres de l'équipe",
+    "budget": "Budget",
+    "fields": {
+      "projectName": "Nom du projet",
+      "reference": "Référence",
+      "name": "Nom du projet",
+      "description": "Description",
+      "status": "Statut",
+      "startDate": "Date de début",
+      "endDate": "Date de fin",
+      "projectManager": "Chef de projet",
+      "progress": "Progression",
+      "hoursLogged": "Heures enregistrées",
+      "budgetUsed": "Budget utilisé"
+    },
+    "status": {
+      "notStarted": "Non commencé",
+      "inProgress": "En cours",
+      "completed": "Terminé",
+      "onHold": "En attente",
+      "cancelled": "Annulé"
+    },
+    "messages": {
+      "noProjects": "Aucun projet trouvé",
+      "loadingProjects": "Chargement des projets...",
+      "noDescription": "Aucune description fournie"
+    },
+    "viewDetails": "Voir les détails →",
+    "details": "Détails",
+    "startDate": "Date de début",
+    "endDate": "Date de fin",
+    "lastUpdated": "Dernière mise à jour",
+    "taskCompletion": "Achèvement des tâches",
+    "percentComplete": "{{percent}}% Terminé",
+    "tasksCompleted": "{{completed}} sur {{total}} tâches terminées",
+    "budgetHours": "Heures budgétées",
+    "budgetUsed": "{{percent}}% du budget utilisé",
+    "hoursUsed": "{{spent}} sur {{budgeted}} heures",
+    "hoursUsage": "Utilisation des heures",
+    "hoursUsedDetail": "{{spent}} sur {{budgeted}} heures utilisées",
+    "hoursRemaining": "{{remaining}} heures restantes"
   },
   "profile": {
-    "title": "Mon Profil",
+    "title": "Mon profil",
+    "personalInfo": "Informations personnelles",
     "contactInfo": "Informations de contact",
     "companyInfo": "Informations de l'entreprise",
     "preferences": "Préférences",
-    "changePassword": "Changer le mot de passe",
-    "twoFactorAuth": "Authentification à deux facteurs",
-    "notificationSettings": "Paramètres de notification"
+    "security": "Sécurité",
+    "fields": {
+      "firstName": "Prénom",
+      "lastName": "Nom de famille",
+      "email": "Adresse e-mail",
+      "phone": "Numéro de téléphone",
+      "mobile": "Téléphone mobile",
+      "title": "Titre du poste",
+      "department": "Département",
+      "company": "Entreprise",
+      "address": "Adresse",
+      "city": "Ville",
+      "state": "État/Province",
+      "postalCode": "Code postal",
+      "country": "Pays",
+      "timezone": "Fuseau horaire",
+      "language": "Préférence linguistique",
+      "dateFormat": "Format de date",
+      "avatar": "Photo de profil"
+    },
+    "changePassword": {
+      "title": "Changer le mot de passe",
+      "current": "Mot de passe actuel",
+      "new": "Nouveau mot de passe",
+      "confirm": "Confirmer le nouveau mot de passe",
+      "requirements": "Le mot de passe doit contenir au moins 8 caractères",
+      "submit": "Mettre à jour le mot de passe",
+      "success": "Mot de passe mis à jour avec succès",
+      "error": "Échec de la mise à jour du mot de passe"
+    },
+    "twoFactorAuth": {
+      "title": "Authentification à deux facteurs",
+      "enable": "Activer 2FA",
+      "disable": "Désactiver 2FA",
+      "status": "Statut",
+      "enabled": "Activé",
+      "disabled": "Désactivé"
+    },
+    "notifications": {
+      "title": "Paramètres de notification",
+      "email": "Notifications par e-mail",
+      "ticketUpdates": "Mises à jour des tickets",
+      "projectUpdates": "Mises à jour des projets",
+      "invoices": "Notifications de factures",
+      "announcements": "Annonces système"
+    },
+    "actions": {
+      "save": "Enregistrer les modifications",
+      "cancel": "Annuler",
+      "edit": "Modifier le profil",
+      "uploadPhoto": "Télécharger une photo",
+      "removePhoto": "Supprimer la photo"
+    },
+    "messages": {
+      "updateSuccess": "Profil mis à jour avec succès",
+      "updateError": "Échec de la mise à jour du profil",
+      "photoUploaded": "Photo téléchargée avec succès",
+      "photoRemoved": "Photo supprimée avec succès"
+    }
+  },
+  "companySettings": {
+    "title": "Paramètres de l'entreprise",
+    "details": "Détails de l'entreprise",
+    "billing": "Informations de facturation",
+    "description": "Gérez les paramètres et configurations de votre entreprise.",
+    "tabs": {
+      "account": "Compte",
+      "companyDetails": "Détails de l'entreprise",
+      "userManagement": "Gestion des utilisateurs"
+    },
+    "fields": {
+      "companyLogo": "Logo de l'entreprise",
+      "companyName": "Nom de l'entreprise",
+      "companyLocations": "Emplacements de l'entreprise",
+      "manageLocations": "Gérer les emplacements",
+      "mainOffice": "Siège social",
+      "warehouse": "Entrepôt",
+      "website": "Site Web",
+      "industry": "Industrie",
+      "companySize": "Taille de l'entreprise",
+      "annualRevenue": "Chiffre d'affaires annuel",
+      "size": "Taille de l'entreprise",
+      "taxId": "Numéro fiscal",
+      "billingAddress": "Adresse de facturation",
+      "primaryContact": "Contact principal"
+    },
+    "users": {
+      "title": "Gestion des utilisateurs",
+      "searchUsers": "Rechercher des utilisateurs",
+      "addNewUser": "Ajouter un nouvel utilisateur",
+      "addUser": "Ajouter un utilisateur",
+      "editUser": "Modifier l'utilisateur",
+      "removeUser": "Supprimer l'utilisateur",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "roles": "Rôles",
+      "status": "Statut",
+      "actions": "Actions",
+      "active": "Actif",
+      "inactive": "Inactif",
+      "selectRole": "Sélectionner un rôle (optionnel)",
+      "createUser": "Créer un utilisateur",
+      "invite": "Envoyer une invitation",
+      "resendInvite": "Renvoyer l'invitation",
+      "lastLogin": "Dernière connexion"
+    },
+    "messages": {
+      "saveChanges": "Enregistrer les modifications",
+      "failedToLoad": "Échec du chargement des informations du compte",
+      "updateSuccess": "Paramètres de l'entreprise mis à jour avec succès",
+      "userAdded": "Utilisateur ajouté avec succès",
+      "userRemoved": "Utilisateur supprimé avec succès",
+      "inviteSent": "Invitation envoyée avec succès"
+    }
+  },
+  "documents": {
+    "title": "Documents",
+    "noDocuments": "Aucun document attaché",
+    "upload": "Télécharger un document",
+    "download": "Télécharger",
+    "remove": "Retirer",
+    "preview": "Aperçu",
+    "linkDocuments": "Lier des documents",
+    "editDocument": "Modifier le document",
+    "viewDocument": "Voir le document",
+    "downloadToPlay": "Télécharger pour lire",
+    "delete": "Supprimer",
+    "previewUnavailable": "Aperçu non disponible",
+    "newDocument": "Nouveau document",
+    "uploadFile": "Télécharger un fichier"
+  },
+  "common": {
+    "actions": "Actions",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "loading": "Chargement...",
+    "error": "Une erreur s'est produite",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "yes": "Oui",
+    "no": "Non",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "sort": "Trier",
+    "refresh": "Actualiser",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Télécharger",
+    "selectAll": "Tout sélectionner",
+    "clearSelection": "Effacer la sélection",
+    "view": "Voir",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "submit": "Soumettre",
+    "reset": "Réinitialiser",
+    "noData": "Aucune donnée disponible",
+    "required": "Requis",
+    "optional": "Optionnel",
+    "notSpecified": "Non spécifié",
+    "unknown": "Inconnu"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "email": "E-mail",
+    "password": "Mot de passe",
+    "emailPlaceholder": "Entrez votre e-mail",
+    "passwordPlaceholder": "Entrez votre mot de passe",
+    "signingIn": "Connexion en cours...",
+    "rememberMe": "Se souvenir de moi",
+    "forgotPassword": "Mot de passe oublié ?",
+    "resetPassword": "Réinitialiser le mot de passe",
+    "backToSignIn": "Retour à la connexion",
+    "sendResetLink": "Envoyer le lien de réinitialisation",
+    "resetLinkSent": "Le lien de réinitialisation du mot de passe a été envoyé à votre adresse e-mail",
+    "invalidCredentials": "E-mail ou mot de passe invalide",
+    "loginError": "Une erreur s'est produite lors de la connexion",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
+    "welcomeTitle": "Bienvenue sur votre portail client",
+    "welcomeSubtitle": "Gérez vos tickets de support et restez connecté",
+    "signInDescription": "Veuillez entrer vos identifiants pour accéder à votre compte.",
+    "accessDeniedTitle": "Accès refusé",
+    "accessDeniedMessage": "Vous n'avez pas la permission d'accéder au portail client.",
+    "registrationSuccessTitle": "Inscription réussie",
+    "registrationSuccessMessage": "Votre compte a été créé. Veuillez vous connecter.",
+    "features": {
+      "submitTickets": {
+        "title": "Soumettre des tickets de support",
+        "description": "Créez et gérez vos demandes de support"
+      },
+      "trackStatus": {
+        "title": "Suivre le statut des tickets",
+        "description": "Suivez la progression en temps réel"
+      },
+      "ticketHistory": {
+        "title": "Historique des tickets",
+        "description": "Accédez à votre historique complet de support"
+      },
+      "documentation": {
+        "title": "Accès à la documentation",
+        "description": "Consultez les documents et ressources partagés"
+      }
+    }
   },
   "notifications": {
     "title": "Notifications",
     "markAsRead": "Marquer comme lu",
     "markAllAsRead": "Tout marquer comme lu",
     "noNotifications": "Aucune nouvelle notification",
-    "settings": "Paramètres de notification"
+    "settings": "Paramètres de notification",
+    "viewAll": "Voir toutes les notifications"
+  },
+  "pagination": {
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
+    "pageInfo": "Page {{current}} sur {{total}} ({{count}} enregistrements au total)",
+    "rowsPerPage": "Lignes par page",
+    "page": "Page",
+    "of": "de",
+    "first": "Premier",
+    "last": "Dernier",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "lastWeek": "La semaine dernière",
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Le mois dernier",
+    "days": "Jours",
+    "hours": "Heures",
+    "minutes": "Minutes",
+    "seconds": "Secondes",
+    "ago": "il y a {{time}}",
+    "in": "dans {{time}}"
   }
 }

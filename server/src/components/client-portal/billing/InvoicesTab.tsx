@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number) => string;
@@ -32,6 +33,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatCurrency,
   formatDate
 }) => {
+  const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -67,7 +69,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         setInvoices(fetchedInvoices);
       } catch (err) {
         console.error('Error loading invoices:', err);
-        setError('Failed to load invoices. Please try again.');
+        setError(t('billing.failedToLoad'));
       } finally {
         setIsLoading(false);
       }
@@ -117,23 +119,23 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      setError('Failed to send invoice email. Please try again.');
+      setError(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     }
   };
 
   // Memoize the columns to prevent unnecessary re-creation
   const invoiceColumns: ColumnDefinition<InvoiceViewModel>[] = useMemo(() => [
     {
-      title: 'Invoice #',
+      title: t('billing.invoice.number'),
       dataIndex: 'invoice_number'
     },
     {
-      title: 'Date',
+      title: t('billing.invoice.date'),
       dataIndex: 'invoice_date',
       render: (value) => formatDate(value)
     },
     {
-      title: 'Amount',
+      title: t('billing.invoice.amount'),
       dataIndex: 'total',
       render: (value) => {
         // Convert cents to dollars and handle potential null/undefined
@@ -142,18 +144,18 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     },
     {
-      title: 'Status',
+      title: t('billing.invoice.status'),
       dataIndex: 'finalized_at',
       render: (value) => (
         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
           value ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
         }`}>
-          {value ? 'Finalized' : 'Draft'}
+          {value ? t('billing.invoice.finalized') : t('billing.invoice.draft')}
         </span>
       )
     },
     {
-      title: 'Actions',
+      title: t('common.actions'),
       dataIndex: 'invoice_id',
       render: (value: string, record: InvoiceViewModel) => (
         <DropdownMenu>
@@ -177,7 +179,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Eye className="mr-2 h-4 w-4" />
-              View Details
+              {t('billing.invoice.view')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`download-invoice-${record.invoice_number}-menu-item`}
@@ -187,7 +189,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Download className="mr-2 h-4 w-4" />
-              Download PDF
+              {t('billing.invoice.download')}
             </DropdownMenuItem>
             <DropdownMenuItem
               id={`email-invoice-${record.invoice_number}-menu-item`}
@@ -197,13 +199,13 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
               }}
             >
               <Mail className="mr-2 h-4 w-4" />
-              Send as Email
+              {t('billing.invoice.sendEmail')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     }
-  ], [formatDate]);
+  ], [formatDate, t]);
 
   // Loading state with skeleton
   if (isLoading) {

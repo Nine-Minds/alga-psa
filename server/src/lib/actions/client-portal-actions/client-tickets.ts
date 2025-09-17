@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex } from 'server/src/lib/db';
+import { getConnection } from 'server/src/lib/db/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
@@ -23,21 +23,37 @@ const clientTicketSchema = z.object({
 export async function getClientTickets(status: string): Promise<ITicketListItem[]> {
   try {
     const session = await auth();
+    console.log('Debug - Full session:', JSON.stringify(session?.user, null, 2));
+
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      console.error('Session user object:', session.user);
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
+
+    console.log('Debug - Session user ID:', session.user.id);
+    console.log('Debug - Tenant:', tenant);
+    console.log('Debug - CompanyId:', session.user.companyId);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's company_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -48,7 +64,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       const contact = await trx('contacts')
         .where({
           contact_name_id: user.contact_id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -139,8 +155,12 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       closed_at: ticket.closed_at instanceof Date ? ticket.closed_at.toISOString() : ticket.closed_at,
     }));
   } catch (error) {
-    console.error('Failed to fetch client tickets:', error);
-    throw new Error('Failed to fetch tickets');
+    console.error('Failed to fetch client tickets - Full error:', error);
+    if (error instanceof Error) {
+      console.error('Error message:', error.message);
+      console.error('Error stack:', error.stack);
+    }
+    throw error; // Throw the original error to see the actual issue
   }
 }
 
@@ -151,17 +171,26 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's company_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -172,7 +201,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
       const contact = await trx('contacts')
         .where({
           contact_name_id: user.contact_id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -208,7 +237,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         trx('comments')
         .where({
           ticket_id: ticketId,
-          tenant
+          tenant: tenant
         })
         .orderBy('created_at', 'asc'),
       
@@ -316,16 +345,25 @@ export async function addClientTicketComment(ticketId: string, content: string, 
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -369,16 +407,25 @@ export async function updateClientTicketComment(commentId: string, updates: Part
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -414,7 +461,7 @@ export async function updateClientTicketComment(commentId: string, updates: Part
       await trx('comments')
         .where({
           comment_id: commentId,
-          tenant
+          tenant: tenant
         })
         .update({
           ...updatesWithMarkdown,
@@ -435,16 +482,25 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -456,7 +512,7 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
       const ticket = await trx('tickets')
         .where({
           ticket_id: ticketId,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -468,7 +524,7 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
       await trx('tickets')
         .where({
           ticket_id: ticketId,
-          tenant
+          tenant: tenant
         })
         .update({
           status_id: newStatusId,
@@ -490,16 +546,25 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -523,7 +588,7 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
       await trx('comments')
         .where({
           comment_id: commentId,
-          tenant
+          tenant: tenant
         })
         .del();
     });
@@ -540,17 +605,26 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
       throw new Error('Not authenticated');
     }
 
-    const { knex: db, tenant } = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+    if (!session.user.id) {
+      throw new Error('User ID not found in session');
     }
+
+    // For client portal, tenant must be present
+    const tenant = session.user.tenant;
+    if (!tenant) {
+      console.error('Session missing tenant:', session.user);
+      throw new Error('Tenant not found in session. Please log out and log back in.');
+    }
+
+    // Get the database connection
+    const db = await getConnection(tenant);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's contact and company information
       const user = await trx('users')
         .where({
           user_id: session.user.id,
-          tenant
+          tenant: tenant
         })
         .first();
 
@@ -561,7 +635,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
       const contact = await trx('contacts')
         .where({
           contact_name_id: user.contact_id,
-          tenant
+          tenant: tenant
         })
         .first();
 

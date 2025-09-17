@@ -78,5 +78,16 @@
     "selectLanguage": "Select Language",
     "changeLanguage": "Change Language",
     "currentLanguage": "Current Language"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageInfo": "Page {{current}} of {{total}} ({{count}} total records)",
+    "page": "Page",
+    "of": "of",
+    "showing": "Showing {{from}} to {{to}} of {{total}} results",
+    "rowsPerPage": "Rows per page",
+    "first": "First",
+    "last": "Last"
   }
 }

@@ -338,8 +338,21 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             return true; // Allow sign in
         },
         async jwt({ token, user }) {
+            console.log('JWT callback - initial token:', {
+                id: token.id,
+                email: token.email,
+                companyId: token.companyId,
+                hasUser: !!user
+            });
+
             if (user) {
                 const extendedUser = user as ExtendedUser;
+                console.log('JWT callback - new user login:', {
+                    id: extendedUser.id,
+                    email: extendedUser.email,
+                    tenant: extendedUser.tenant,
+                    companyId: extendedUser.companyId
+                });
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;
@@ -355,17 +368,57 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             // On subsequent requests, validate the token
             const validatedUser = await validateUser(token);
             if (!validatedUser) {
+                console.log('JWT callback - validation failed for token:', token);
                 // If validation fails, return a token that will cause the session to be invalid
                 return { ...token, error: "TokenValidationError" };
             }
 
-            return {
+            console.log('JWT callback - validated user:', {
+                user_id: validatedUser.user_id,
+                email: validatedUser.email,
+                tenant: validatedUser.tenant
+            });
+
+            // For client users, fetch companyId if missing
+            let companyId = token.companyId;
+            let contactId = token.contactId || validatedUser.contact_id;
+
+            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !companyId) {
+                console.log('JWT callback - fetching companyId for client user');
+                const { getAdminConnection } = await import("@shared/db/admin");
+                const connection = await getAdminConnection();
+                const contact = await connection('contacts')
+                    .where({
+                        contact_name_id: validatedUser.contact_id,
+                        tenant: validatedUser.tenant
+                    })
+                    .first();
+
+                if (contact) {
+                    companyId = contact.company_id;
+                    console.log('JWT callback - found companyId:', companyId);
+                }
+            }
+
+            const result = {
                 ...token,
+                id: validatedUser.user_id, // Always use the validated user_id
                 name: validatedUser.first_name + " " + validatedUser.last_name,
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
-                user_type: validatedUser.user_type
+                user_type: validatedUser.user_type,
+                companyId: companyId, // Use fetched or preserved companyId
+                contactId: contactId  // Use fetched or preserved contactId
             };
+
+            console.log('JWT callback - final token:', {
+                id: result.id,
+                email: result.email,
+                tenant: result.tenant,
+                companyId: result.companyId
+            });
+
+            return result;
         },
         async session({ session, token }) {
             if (token.error === "TokenValidationError") {
@@ -375,9 +428,23 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
 
             const logger = (await import('@alga-psa/shared/core/logger')).default;
             logger.debug("Session Token:", token);
+            console.log('Session callback - token:', {
+                id: token.id,
+                email: token.email,
+                tenant: token.tenant,
+                user_type: token.user_type,
+                companyId: token.companyId,
+                contactId: token.contactId
+            });
+
             if (token && session.user) {
                 const user = session.user as ExtendedUser;
-                user.id = token.id as string;
+                // CRITICAL: Ensure id is always set
+                if (!token.id) {
+                    logger.error('Token missing id field!', { token });
+                    console.error('CRITICAL: Token missing id field!', token);
+                }
+                user.id = token.id as string || token.sub as string || ''; // Fallback to sub if id is missing
                 user.email = token.email || '';
                 user.name = token.name || '';
                 user.username = token.username as string;
@@ -389,6 +456,12 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.contactId = token.contactId as string;
             }
             logger.trace("Session Object:", session);
+            console.log('Session callback - final session.user:', {
+                id: session.user?.id,
+                email: session.user?.email,
+                tenant: session.user?.tenant,
+                companyId: session.user?.companyId
+            });
             return session;
         },
     },
@@ -663,8 +736,21 @@ export const options: NextAuthConfig = {
             return true; // Allow sign in
         },
         async jwt({ token, user }) {
+            console.log('JWT callback - initial token:', {
+                id: token.id,
+                email: token.email,
+                companyId: token.companyId,
+                hasUser: !!user
+            });
+
             if (user) {
                 const extendedUser = user as ExtendedUser;
+                console.log('JWT callback - new user login:', {
+                    id: extendedUser.id,
+                    email: extendedUser.email,
+                    tenant: extendedUser.tenant,
+                    companyId: extendedUser.companyId
+                });
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
                 token.name = extendedUser.name;
@@ -680,17 +766,57 @@ export const options: NextAuthConfig = {
             // On subsequent requests, validate the token
             const validatedUser = await validateUser(token);
             if (!validatedUser) {
+                console.log('JWT callback - validation failed for token:', token);
                 // If validation fails, return a token that will cause the session to be invalid
                 return { ...token, error: "TokenValidationError" };
             }
 
-            return {
+            console.log('JWT callback - validated user:', {
+                user_id: validatedUser.user_id,
+                email: validatedUser.email,
+                tenant: validatedUser.tenant
+            });
+
+            // For client users, fetch companyId if missing
+            let companyId = token.companyId;
+            let contactId = token.contactId || validatedUser.contact_id;
+
+            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !companyId) {
+                console.log('JWT callback - fetching companyId for client user');
+                const { getAdminConnection } = await import("@shared/db/admin");
+                const connection = await getAdminConnection();
+                const contact = await connection('contacts')
+                    .where({
+                        contact_name_id: validatedUser.contact_id,
+                        tenant: validatedUser.tenant
+                    })
+                    .first();
+
+                if (contact) {
+                    companyId = contact.company_id;
+                    console.log('JWT callback - found companyId:', companyId);
+                }
+            }
+
+            const result = {
                 ...token,
+                id: validatedUser.user_id, // Always use the validated user_id
                 name: validatedUser.first_name + " " + validatedUser.last_name,
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
-                user_type: validatedUser.user_type
+                user_type: validatedUser.user_type,
+                companyId: companyId, // Use fetched or preserved companyId
+                contactId: contactId  // Use fetched or preserved contactId
             };
+
+            console.log('JWT callback - final token:', {
+                id: result.id,
+                email: result.email,
+                tenant: result.tenant,
+                companyId: result.companyId
+            });
+
+            return result;
         },
         async session({ session, token }) {
             if (token.error === "TokenValidationError") {
@@ -700,9 +826,23 @@ export const options: NextAuthConfig = {
 
             const logger = (await import('@alga-psa/shared/core/logger')).default;
             logger.debug("Session Token:", token);
+            console.log('Session callback - token:', {
+                id: token.id,
+                email: token.email,
+                tenant: token.tenant,
+                user_type: token.user_type,
+                companyId: token.companyId,
+                contactId: token.contactId
+            });
+
             if (token && session.user) {
                 const user = session.user as ExtendedUser;
-                user.id = token.id as string;
+                // CRITICAL: Ensure id is always set
+                if (!token.id) {
+                    logger.error('Token missing id field!', { token });
+                    console.error('CRITICAL: Token missing id field!', token);
+                }
+                user.id = token.id as string || token.sub as string || ''; // Fallback to sub if id is missing
                 user.email = token.email || '';
                 user.name = token.name || '';
                 user.username = token.username as string;
@@ -714,6 +854,12 @@ export const options: NextAuthConfig = {
                 user.contactId = token.contactId as string;
             }
             logger.trace("Session Object:", session);
+            console.log('Session callback - final session.user:', {
+                id: session.user?.id,
+                email: session.user?.email,
+                tenant: session.user?.tenant,
+                companyId: session.user?.companyId
+            });
             return session;
         },
     },

@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface PlanDetailsDialogProps {
   plan: ICompanyBillingPlan | null;
@@ -22,6 +23,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
   formatCurrency = (amount: number) => `$${amount.toFixed(2)}`,
   formatDate
 }) => {
+  const { t } = useTranslation('clientPortal');
   // Loading state when plan is null but dialog is open
   const isLoading = isOpen && !plan;
 
@@ -33,38 +35,38 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">Plan Name</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.plan.name')}</p>
             <p className="mt-1">{plan.plan_name}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Billing Frequency</p>
-            <p className="mt-1">{plan.billing_frequency}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.plan.frequency')}</p>
+            <p className="mt-1">{t(`billing.frequency.${plan.billing_frequency.toLowerCase()}`, plan.billing_frequency)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Start Date</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.plan.startDate')}</p>
             <p className="mt-1">{formatDate(plan.start_date)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">End Date</p>
-            <p className="mt-1">{plan.end_date ? formatDate(plan.end_date) : 'No end date'}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.plan.endDate')}</p>
+            <p className="mt-1">{plan.end_date ? formatDate(plan.end_date) : t('billing.plan.noEndDate')}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">Status</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.plan.status')}</p>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
               plan.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
-              {plan.is_active ? 'Active' : 'Inactive'}
+              {plan.is_active ? t('common.active') : t('common.inactive')}
             </span>
           </div>
           {plan.custom_rate !== undefined && (
             <div>
-              <p className="text-sm font-medium text-gray-500">Custom Rate</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.plan.customRate')}</p>
               <p className="mt-1">{formatCurrency(plan.custom_rate)}</p>
             </div>
           )}
           {(plan.service_category_name || plan.service_category) && (
             <div>
-              <p className="text-sm font-medium text-gray-500">Service Category</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.plan.serviceCategory')}</p>
               <p className="mt-1">{plan.service_category_name || plan.service_category}</p>
             </div>
           )}
@@ -72,8 +74,10 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
 
         <div className="mt-4">
           <p className="text-sm text-gray-500">
-            This plan is currently {plan.is_active ? 'active' : 'inactive'} and will 
-            {plan.end_date ? ` expire on ${formatDate(plan.end_date)}` : ' not expire'}.
+            {t('billing.plan.statusDescription', {
+              status: plan.is_active ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase(),
+              expiry: plan.end_date ? t('billing.plan.expiresOn', { date: formatDate(plan.end_date) }) : t('billing.plan.noExpiry')
+            })}
           </p>
         </div>
       </div>
@@ -102,7 +106,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Plan Details" 
+      title={t('billing.plan.detailsTitle')} 
       data-automation-id="
       plan-details-dialog"
     >
@@ -114,7 +118,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
       <DialogFooter>
         <Button id="close-plan-dialog-button" variant="outline" onClick={onClose}>
           <X className="mr-2 h-4 w-4" />
-          Close
+          {t('common.close')}
         </Button>
       </DialogFooter>
     </Dialog>

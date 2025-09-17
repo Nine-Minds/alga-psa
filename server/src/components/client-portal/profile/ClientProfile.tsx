@@ -23,8 +23,10 @@ import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions
 import { LanguagePreference } from 'server/src/components/ui/LanguagePreference';
 import { SupportedLocale } from '@/lib/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
+import { useTranslation } from '@/lib/i18n/client';
 
 export function ClientProfile() {
+  const { t } = useTranslation('clientPortal');
   const [user, setUser] = useState<IUserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,7 +48,7 @@ export function ClientProfile() {
         setLoading(true);
         // Get user data
         const currentUser = await getCurrentUser();
-        if (!currentUser) throw new Error('User not found');
+        if (!currentUser) throw new Error(t('profile.messages.userNotFound', 'User not found'));
         setUser(currentUser);
         
         // Set form fields
@@ -84,7 +86,7 @@ export function ClientProfile() {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        setError(err instanceof Error ? err.message : t('profile.messages.loadError', 'Failed to load profile'));
       } finally {
         setLoading(false);
       }
@@ -95,7 +97,7 @@ export function ClientProfile() {
 
   const handleSave = async () => {
     if (!user) {
-      setError('User not found');
+      setError(t('profile.messages.userNotFound', 'User not found'));
       return;
     }
 
@@ -110,7 +112,7 @@ export function ClientProfile() {
       });
 
       // Show success toast
-      toast.success('Profile updated successfully');
+      toast.success(t('profile.messages.updateSuccess'));
 
       // Update notification preferences
       await Promise.all(
@@ -149,7 +151,7 @@ export function ClientProfile() {
 
     } catch (err) {
       console.error('Error saving profile:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to save profile';
+      const errorMessage = err instanceof Error ? err.message : t('profile.messages.updateError', 'Failed to save profile');
       setError(errorMessage);
       toast.error(errorMessage);
     }
@@ -175,7 +177,7 @@ export function ClientProfile() {
   if (loading) {
     return (
       <Card className="p-6">
-        <div>Loading profile...</div>
+        <div>{t('common.loading')}</div>
       </Card>
     );
   }
@@ -183,7 +185,7 @@ export function ClientProfile() {
   if (error) {
     return (
       <Card className="p-6">
-        <div className="text-red-500">Error: {error}</div>
+        <div className="text-red-500">{t('common.error')}: {error}</div>
       </Card>
     );
   }
@@ -191,26 +193,26 @@ export function ClientProfile() {
   if (!user) {
     return (
       <Card className="p-6">
-        <div>User not found</div>
+        <div>{t('profile.messages.userNotFound', 'User not found')}</div>
       </Card>
     );
   }
 
   const tabContent: TabContent[] = [
     {
-      label: "Profile",
+      label: t('nav.profile'),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>{t('profile.personalInfo')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Contact Avatar Upload - only shown for client users with a linked contact */}
             {user.user_type === 'client' && user.contact_id && (
               <div>
-                <h3 className="text-lg font-medium mb-2">Your Contact Avatar</h3>
+                <h3 className="text-lg font-medium mb-2">{t('profile.fields.avatar')}</h3>
                 <p className="text-sm text-gray-500 mb-2">
-                  This avatar is shown to MSP staff when they view your contact information.
+                  {t('profile.messages.avatarDescription', 'This avatar is shown to MSP staff when they view your contact information.')}
                 </p>
                 <ContactAvatarUpload
                   contactId={user.contact_id}
@@ -226,7 +228,7 @@ export function ClientProfile() {
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">{t('profile.fields.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={firstName}
@@ -234,7 +236,7 @@ export function ClientProfile() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">{t('profile.fields.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={lastName}
@@ -243,7 +245,7 @@ export function ClientProfile() {
               </div>
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('profile.fields.email')}</Label>
               <Input
                 id="email"
                 type="email"
@@ -252,7 +254,7 @@ export function ClientProfile() {
               />
             </div>
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">{t('profile.fields.phone')}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -261,7 +263,7 @@ export function ClientProfile() {
               />
             </div>
             <div>
-              <Label htmlFor="timezone">Time Zone</Label>
+              <Label htmlFor="timezone">{t('profile.fields.timezone')}</Label>
               <TimezonePicker
                 value={timezone}
                 onValueChange={setTimezone}
@@ -279,15 +281,15 @@ export function ClientProfile() {
       ),
     },
     {
-      label: "Security",
+      label: t('profile.security'),
       content: <PasswordChangeForm />,
     },
     {
-      label: "Notifications",
+      label: t('nav.notifications', 'Notifications'),
       content: (
         <Card>
           <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
+            <CardTitle>{t('profile.notifications.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -334,7 +336,7 @@ export function ClientProfile() {
           id="save-profile-button"
           onClick={handleSave}
         >
-          Save Changes
+          {t('profile.actions.save')}
         </Button>
       </div>
     </div>

@@ -13,8 +13,10 @@ import { Search, XCircle, ExternalLink } from 'lucide-react';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
+import { useTranslation } from '@/lib/i18n/client';
 
 export function ProjectsOverviewPage() {
+  const { t } = useTranslation('clientPortal');
   const [projects, setProjects] = useState<IProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -27,7 +29,7 @@ export function ProjectsOverviewPage() {
   // Define columns for the DataTable
   const columns: ColumnDefinition<IProject>[] = [
     {
-      title: 'Project Name',
+      title: t('projects.fields.projectName'),
       dataIndex: 'project_name',
       width: '30%',
       render: (value, record) => (
@@ -35,12 +37,12 @@ export function ProjectsOverviewPage() {
       )
     },
     {
-      title: 'Reference',
+      title: t('projects.fields.reference'),
       dataIndex: 'wbs_code',
       width: '15%'
     },
     {
-      title: 'Status',
+      title: t('projects.fields.status'),
       dataIndex: 'status_name',
       width: '15%',
       render: (value) => (
@@ -50,19 +52,19 @@ export function ProjectsOverviewPage() {
       )
     },
     {
-      title: 'Start Date',
+      title: t('projects.fields.startDate'),
       dataIndex: 'start_date',
       width: '15%',
       render: (value) => value ? formatDateOnly(new Date(value)) : 'N/A'
     },
     {
-      title: 'End Date',
+      title: t('projects.fields.endDate'),
       dataIndex: 'end_date',
       width: '15%',
       render: (value) => value ? formatDateOnly(new Date(value)) : 'N/A'
     },
     {
-      title: 'Details',
+      title: t('projects.details'),
       dataIndex: 'project_id',
       width: '10%',
       render: (_, record) => {
@@ -124,9 +126,9 @@ export function ProjectsOverviewPage() {
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-semibold">Projects</h1>
+          <h1 className="text-2xl font-semibold">{t('projects.title')}</h1>
           <p className="text-gray-600">
-            Overview of your current and past projects
+            {t('projects.subtitle')}
           </p>
         </div>
       </div>
@@ -137,7 +139,7 @@ export function ProjectsOverviewPage() {
           <Input
             id="project-search-input"
             type="text"
-            placeholder="Search projects..."
+            placeholder={t('projects.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -151,7 +153,7 @@ export function ProjectsOverviewPage() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="all">All Statuses</option>
+          <option value="all">{t('projects.allStatuses')}</option>
           <option value="open">All Open Projects</option>
           <option value="closed">All Closed Projects</option>
           <option value="planning">Planning</option>
@@ -168,7 +170,7 @@ export function ProjectsOverviewPage() {
           className="whitespace-nowrap flex items-center gap-2 ml-auto"
         >
           <XCircle className="h-4 w-4" />
-          Reset Filters
+          {t('projects.resetFilters')}
         </Button>
       </div>
       

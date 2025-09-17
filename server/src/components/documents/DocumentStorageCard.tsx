@@ -7,6 +7,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
+import { useTranslation } from '@/lib/i18n/client';
 import {
     Download,
     Trash2,
@@ -148,7 +149,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     className="mb-2"
                 >
                     <Download className="w-4 h-4 mr-2" />
-                    Download to Play
+                    {t('documents.downloadToPlay', 'Download to Play')}
                 </Button>
                 <div className="text-xs text-[rgb(var(--color-text-400))] mt-2">
                     The video will be downloaded and can be played with your system's default video player
@@ -233,6 +234,7 @@ function DocumentStorageCardComponent({
     isContentDocument = false,
     forceRefresh
 }: DocumentStorageCardProps): JSX.Element {
+    const { t } = useTranslation('clientPortal');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
         previewImage?: string;
@@ -489,7 +491,7 @@ function DocumentStorageCardComponent({
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
                             <EyeOff className="w-4 h-4" />
-                            <p className="text-sm">Preview unavailable</p>
+                            <p className="text-sm">{t('documents.previewUnavailable', 'Preview unavailable')}</p>
                         </div>
                     ) : (
                         <div className="mt-4 preview-container">
@@ -573,7 +575,7 @@ function DocumentStorageCardComponent({
                             className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] inline-flex items-center"
                         >
                             <Download className="w-4 h-4 mr-2" />
-                            Download
+                            {t('documents.download', 'Download')}
                         </Button>
                         {showDisassociate && onDisassociate && (
                             <Button
@@ -588,7 +590,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? 'Removing...' : 'Remove'}
+                                {isLoading ? t('common.loading') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
                         {onDelete && (
@@ -604,7 +606,7 @@ function DocumentStorageCardComponent({
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? 'Deleting...' : 'Delete'}
+                                {isLoading ? t('common.loading') : t('documents.delete', 'Delete')}
                             </Button>
                         )}
                     </div>

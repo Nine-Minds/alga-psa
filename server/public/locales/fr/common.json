@@ -78,5 +78,16 @@
     "selectLanguage": "Sélectionner la langue",
     "changeLanguage": "Changer de langue",
     "currentLanguage": "Langue actuelle"
+  },
+  "pagination": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "pageInfo": "Page {{current}} sur {{total}} ({{count}} enregistrements au total)",
+    "page": "Page",
+    "of": "sur",
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
+    "rowsPerPage": "Lignes par page",
+    "first": "Premier",
+    "last": "Dernier"
   }
 }
