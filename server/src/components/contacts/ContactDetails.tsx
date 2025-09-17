@@ -34,6 +34,9 @@ import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { TagManager } from 'server/src/components/tags';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
+import { validateContactName, validateEmailAddress, validatePhoneNumber, validateContactRole } from 'server/src/lib/utils/clientFormValidation';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
@@ -68,25 +71,52 @@ const TextDetailItem: React.FC<{
   label: string;
   value: string;
   onEdit: (value: string) => void;
-}> = ({ label, value, onEdit }) => {
+  fieldName?: string;
+  validateField?: (fieldName: string, value: string) => void;
+  error?: string;
+  type?: string;
+}> = ({ label, value, onEdit, fieldName, validateField, error, type = "text" }) => {
   const [localValue, setLocalValue] = useState(value);
 
-  const handleBlur = () => {
-    if (localValue !== value) {
-      onEdit(localValue);
+  useEffect(() => {
+    setLocalValue(value);
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear errors when user starts typing (professional SaaS pattern)
+    if (error && fieldName && validateField) {
+      validateField(fieldName, ''); // Clear the error
     }
   };
-  
+
+  const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validateField && fieldName) {
+      validateField(fieldName, localValue);
+    }
+
+    // Always call onEdit to allow parent to determine if changes should be tracked
+    onEdit(localValue);
+  };
+
   return (
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
-        type="text"
+        type={type}
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
+          error
+            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+        }`}
       />
+      {error && (
+        <p className="text-sm text-red-600 mt-1">{error}</p>
+      )}
     </div>
   );
 };
@@ -167,6 +197,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
@@ -178,11 +209,56 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     categories: ITicketCategory[];
     tags?: string[];
   } | null>(null);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState(() => {
+    // Enterprise locale detection
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+
+      if (detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry)) {
+        return detectedCountry;
+      }
+    } catch (e) {
+      // Fallback to US if detection fails
+    }
+    return 'US';
+  });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const drawer = useDrawer();
+
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string) => {
+    let error: string | null = null;
+
+    switch (fieldName) {
+      case 'full_name':
+        error = validateContactName(value);
+        break;
+      case 'email':
+        error = validateEmailAddress(value);
+        break;
+      case 'phone_number':
+      case 'contact_phone':
+        error = validatePhoneNumber(value);
+        break;
+      case 'role':
+        error = validateContactRole(value);
+        break;
+      default:
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+  };
 
   // Implement refreshContactData function
   const refreshContactData = useCallback(async () => {
@@ -211,9 +287,22 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setOriginalContact(contact);
     setSelectedCompanyId(contact.company_id || null);
     setHasUnsavedChanges(false);
-  }, [contact]);
+    setPhoneNumber(contact.phone_number || '');
 
-  // Fetch current user
+    // Set initial country code based on existing phone number
+    if (contact.phone_number && countries.length > 0) {
+      const phoneNum = contact.phone_number.trim();
+      // Try to match the phone number's country code with available countries
+      const matchingCountry = countries.find(country =>
+        country.phone_code && phoneNum.startsWith(country.phone_code)
+      );
+      if (matchingCountry) {
+        setCountryCode(matchingCountry.code);
+      }
+    }
+  }, [contact, countries]);
+
+  // Fetch current user and countries
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -223,7 +312,18 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         console.error('Error fetching current user:', error);
       }
     };
+
+    const fetchCountries = async () => {
+      try {
+        const countriesData = await getAllCountries();
+        setCountries(countriesData);
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+
     fetchUser();
+    fetchCountries();
   }, []);
 
   // Fetch ticket form options when user is available
@@ -316,6 +416,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setTags(updatedTags);
   };
 
+  const handleCountryChange = (newCountryCode: string) => {
+    setCountryCode(newCountryCode);
+    // Don't auto-populate area code - let PhoneInput component handle this naturally
+  };
+
   const handleCompanyClick = async () => {
     if (editedContact.company_id) {
       try {
@@ -391,12 +496,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <TextDetailItem
-              label="Full Name"
+              label="Full Name *"
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
+              fieldName="full_name"
+              validateField={validateField}
+              error={fieldErrors.full_name}
             />
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Company</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">Company (optional)</Text>
               {isEditingCompany ? (
                 // Show company picker when editing
                 <div className="flex items-center gap-2">
@@ -446,20 +554,52 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               )}
             </div>
             <TextDetailItem
-              label="Email"
+              label="Email *"
               value={editedContact.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
+              fieldName="email"
+              validateField={validateField}
+              error={fieldErrors.email}
+              type="email"
             />
             <TextDetailItem
-              label="Role"
+              label="Role (optional)"
               value={editedContact.role || ''}
               onEdit={(value) => handleFieldChange('role', value)}
+              fieldName="role"
+              validateField={validateField}
+              error={fieldErrors.role}
             />
-            <TextDetailItem
-              label="Phone Number"
-              value={editedContact.phone_number || ''}
-              onEdit={(value) => handleFieldChange('phone_number', value)}
-            />
+            <div>
+              <PhoneInput
+                id="contact-details-phone"
+                label="Phone Number (optional)"
+                value={phoneNumber}
+                onChange={(value) => {
+                  setPhoneNumber(value);
+                  handleFieldChange('phone_number', value);
+                  // Clear error when user starts typing, clears the field, or has only country code
+                  const trimmedValue = value.trim();
+                  const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                  if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                    setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  validateField('contact_phone', phoneNumber);
+                }}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={handleCountryChange}
+                error={!!fieldErrors.contact_phone}
+                data-automation-id="contact-details-phone"
+              />
+              {fieldErrors.contact_phone && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.contact_phone}</p>
+              )}
+            </div>
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
               onEdit={(isActive) => handleFieldChange('is_inactive', !isActive)}
@@ -468,7 +608,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
           {/* Tags Section */}
           <div className="space-y-2">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+            <Text as="label" size="2" className="text-gray-700 font-medium">Tags (optional)</Text>
             <TagManager
               entityId={editedContact.contact_name_id}
               entityType="contact"
@@ -480,7 +620,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
 
           {editedContact.notes && (
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Notes</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">Notes (optional)</Text>
               <div className="bg-gray-50 p-3 rounded-md border border-gray-200">
                 <Text className="text-sm whitespace-pre-wrap">{editedContact.notes}</Text>
               </div>

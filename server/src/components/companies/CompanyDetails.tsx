@@ -15,6 +15,7 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateTaxId, validateParentCompany, validateLastContactDate, validatePaymentTerms } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
@@ -95,7 +96,10 @@ const TextDetailItem: React.FC<{
   value: string;
   onEdit: (value: string) => void;
   automationId?: string;
-}> = ({ label, value, onEdit, automationId }) => {
+  fieldName?: string;
+  validateField?: (fieldName: string, value: string) => void;
+  error?: string;
+}> = ({ label, value, onEdit, automationId, fieldName, validateField, error }) => {
   const [localValue, setLocalValue] = useState(value);
 
   // Register for UI automation with meaningful label
@@ -118,7 +122,20 @@ const TextDetailItem: React.FC<{
     }
   }, [localValue, updateMetadata, label]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear errors when user starts typing (professional SaaS pattern)
+    if (error && fieldName && validateField) {
+      validateField(fieldName, ''); // Clear the error
+    }
+  };
+
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validateField && fieldName) {
+      validateField(fieldName, localValue);
+    }
+
     // Always call onEdit to allow parent to determine if changes should be tracked
     onEdit(localValue);
   };
@@ -129,10 +146,17 @@ const TextDetailItem: React.FC<{
       <Input
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
+          error
+            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+        }`}
       />
+      {error && (
+        <p className="text-sm text-red-600 mt-1">{error}</p>
+      )}
     </div>
   );
 };
@@ -185,11 +209,51 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string) => {
+    let error: string | null = null;
+
+    switch (fieldName) {
+      case 'website':
+        error = validateWebsiteUrl(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
+        break;
+      case 'company_size':
+        error = validateCompanySize(value);
+        break;
+      case 'annual_revenue':
+        error = validateAnnualRevenue(value);
+        break;
+      case 'tax_id':
+        error = validateTaxId(value);
+        break;
+      case 'parent_company_name':
+        error = validateParentCompany(value);
+        break;
+      case 'last_contact_date':
+        error = validateLastContactDate(value);
+        break;
+      case 'payment_terms':
+        error = validatePaymentTerms(value);
+        break;
+      default:
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+  };
   const drawer = useDrawer();
 
 
@@ -524,7 +588,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Left Column - All Form Fields */}
             <div className="space-y-6">
               <TextDetailItem
-                label="Client Name"
+                label="Client Name *"
                 value={editedCompany.company_name}
                 onEdit={(value) => handleFieldChange('company_name', value)}
                 automationId="client-name-field"
@@ -537,7 +601,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 helperText="Select the account manager for this company"
                 automationId="account-manager-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager (optional)</Text>
                 <UserPicker
                   value={editedCompany.account_manager_id || ''}
                   onValueChange={(value) => handleFieldChange('account_manager_id', value)}
@@ -549,31 +613,43 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </FieldContainer>
               
               <TextDetailItem
-                label="Website"
+                label="Website (optional)"
                 value={editedCompany.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
+                fieldName="website"
+                validateField={validateField}
+                error={fieldErrors.website}
               />
 
               <TextDetailItem
-                label="Industry"
+                label="Industry (optional)"
                 value={editedCompany.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
+                fieldName="industry"
+                validateField={validateField}
+                error={fieldErrors.industry}
               />
 
               <TextDetailItem
-                label="Company Size"
+                label="Company Size (optional)"
                 value={editedCompany.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
+                fieldName="company_size"
+                validateField={validateField}
+                error={fieldErrors.company_size}
               />
               
               <TextDetailItem
-                label="Annual Revenue"
+                label="Annual Revenue (optional)"
                 value={editedCompany.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
+                fieldName="annual_revenue"
+                validateField={validateField}
+                error={fieldErrors.annual_revenue}
               />
 
               {/* Status and Client Type in 2 columns */}
@@ -581,7 +657,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
                 {/* Client Type */}
                 <div className="space-y-2 col-span-2">
-                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type (optional)</Text>
                   <CustomSelect
                     id="client-type-select"
                     value={editedCompany.client_type || 'company'}
@@ -605,7 +681,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
               {/* Tags */}
               <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Tags (optional)</Text>
                 <TagManager
                   id={`${id}-tags`}
                   entityId={editedCompany.company_id}
@@ -620,7 +696,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Right Column - Company Locations Only */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations (optional)</Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -767,22 +843,31 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
             <TextDetailItem
-              label="Tax ID"
+              label="Tax ID (optional)"
               value={editedCompany.properties?.tax_id ?? ""}
               onEdit={(value) => handleFieldChange('properties.tax_id', value)}
               automationId="tax-id-field"
+              fieldName="tax_id"
+              validateField={validateField}
+              error={fieldErrors.tax_id}
             />
             <TextDetailItem
-              label="Payment Terms"
+              label="Payment Terms (optional)"
               value={editedCompany.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
+              fieldName="payment_terms"
+              validateField={validateField}
+              error={fieldErrors.payment_terms}
             />
             <TextDetailItem
-              label="Parent Company"
+              label="Parent Company (optional)"
               value={editedCompany.properties?.parent_company_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
+              fieldName="parent_company_name"
+              validateField={validateField}
+              error={fieldErrors.parent_company_name}
             />
             <FieldContainer
               label="Timezone"
@@ -791,20 +876,23 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               helperText="Select the timezone for this company"
               automationId="timezone-field"
             >
-              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone (optional)</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
             <TextDetailItem
-              label="Last Contact Date"
+              label="Last Contact Date (optional)"
               value={editedCompany.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
               automationId="last-contact-date-field"
+              fieldName="last_contact_date"
+              validateField={validateField}
+              error={fieldErrors.last_contact_date}
             />
           </div>
-          
+
           <Flex gap="4" justify="end" align="center">
             <Button
               id="save-additional-info-btn"

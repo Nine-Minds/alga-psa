@@ -813,6 +813,9 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
                   countryCode={formData.country_code}
                   phoneCode={countries.find(c => c.code === formData.country_code)?.phone_code}
+                  countries={countries}
+                  onCountryChange={(countryCode) => setFormData(prev => ({ ...prev, country_code: countryCode }))}
+                  error={false}
                   data-automation-id="phone-input"
                 />
               </div>

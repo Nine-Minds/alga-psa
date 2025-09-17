@@ -6,8 +6,26 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
-// Common emoji regex pattern used across validation functions
-const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u;
+// Comprehensive emoji regex pattern - professional SaaS grade (Microsoft/Salesforce standard)
+const EMOJI_REGEX = /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F900}-\u{1F9FF}]|[\u{1FA70}-\u{1FAFF}]|[\u{1F004}]|[\u{1F0CF}]|[\u{1F170}-\u{1F251}]/gu;
+
+// Helper function to check if content has meaningful characters (Microsoft/Salesforce approach)
+const hasNonEmojiContent = (text: string): boolean => {
+  const withoutEmojis = text.replace(EMOJI_REGEX, '').trim();
+  return withoutEmojis.length > 0 && /[\p{L}\p{N}]/u.test(withoutEmojis);
+};
+
+// Professional PSA acceptable placeholder values for optional fields
+const ACCEPTABLE_PLACEHOLDER_VALUES = [
+  'none', 'None', 'NONE',
+  'na', 'Na', 'NA', 'n/a', 'N/A', 'n.a.', 'N.A.'
+];
+
+// Helper function to check if a value is an acceptable placeholder
+const isAcceptablePlaceholder = (value: string): boolean => {
+  const trimmedValue = value.trim();
+  return ACCEPTABLE_PLACEHOLDER_VALUES.includes(trimmedValue);
+};
 
 // Professional validation lists - what real SaaS/CRM platforms use
 const VALID_TLDS = [
@@ -67,26 +85,30 @@ export function validateCompanyName(name: string): string | null {
     return 'Company name cannot be just a business abbreviation';
   }
   
-  // No repeats of the same character 3+ times
-  if (/(.)\1{2,}/.test(nameWithoutEmojis)) {
-    return 'Company name cannot contain repeated characters';
-  }
+  // Professional SaaS approach: Allow repeated characters (Mississippi Steel, PayPal, etc. are valid)
   
   // Block domain extensions
   if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
     return 'Company name cannot end with a domain extension';
   }
   
+  // Block placeholder names (company names are required so don't allow placeholders)
+  const placeholderNames = ['test', 'testing', 'example', 'demo', 'fake', 'dummy', 'placeholder',
+                           'temp', 'temporary', 'none', 'n/a', 'na', 'null', 'unknown'];
+  if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
+    return 'Please enter a real company name';
+  }
+
   // Must contain at least one letter or number (Unicode supported)
   if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
     return 'Company name must contain at least one letter or number';
   }
-  
+
   // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
-  if (!/^[\p{L}\p{N}\s\-,\.&'()]+$/u.test(nameWithoutEmojis)) {
+  if (!/^[\p{L}\p{N}\s\-,.&'()]+$/u.test(nameWithoutEmojis)) {
     return 'Company name contains invalid characters';
   }
-  
+
   return null;
 }
 
@@ -95,8 +117,13 @@ export function validateWebsiteUrl(url: string): string | null {
   if (!url || !url.trim()) {
     return null; // URL is optional
   }
-  
+
   const trimmedUrl = url.trim();
+
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedUrl)) {
+    return null;
+  }
   
   // Enterprise rule: Max length 256 characters
   if (trimmedUrl.length > 256) {
@@ -204,7 +231,7 @@ export function validateEmailAddress(email: string): string | null {
   }
   
   // Block obviously fake patterns
-  if (/^[0-9\.]+$/.test(domain) || // All numbers like 1.1
+  if (/^[0-9.]+$/.test(domain) || // All numbers like 1.1
       domain === '1.com' ||
       domain === '1.1' ||
       domain.length < 4) {
@@ -245,67 +272,72 @@ export function validatePhoneNumber(phone: string): string | null {
     return null; // Don't show error until user types more
   }
   
-  // Remove formatting to count actual digits
-  const digitsOnly = trimmedPhone.replace(/[\s\-\(\)\+\.]/g, '');
-  
+  // Extract Unicode digits (supports international number systems)
+  const unicodeDigits = trimmedPhone.replace(/[\s\-()\\+.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+  const digitCount = unicodeDigits.length;
+
   // If only 1-3 digits (like just country code), don't show error yet
-  if (digitsOnly.length < 4) {
+  if (digitCount < 4) {
     return null; // Wait for more input
   }
-  
-  // No emojis or letters
+
+  // No emojis
   if (EMOJI_REGEX.test(trimmedPhone)) {
     return 'Phone number cannot contain emojis';
   }
-  
-  // Allow only digits with formatting (spaces, dashes, parentheses)
-  if (!/^\+?[\d\s\-\(\)\.]+$/.test(trimmedPhone)) {
+
+  // Allow Unicode digits with international formatting
+  if (!/^[+\p{N}\s\-.()]+$/u.test(trimmedPhone)) {
     return 'Phone number can only contain numbers and formatting characters';
   }
-  
-  // Must be 7-15 digits (international standard) - but only after user has typed enough
-  if (digitsOnly.length >= 4 && digitsOnly.length < 7) {
+
+  // Must be 7-15 digits (ITU-T E.164 international standard)
+  if (digitCount >= 4 && digitCount < 7) {
     return 'Please enter a complete phone number';
   }
-  
-  if (digitsOnly.length > 15) {
+
+  if (digitCount > 15) {
     return 'Phone number is too long';
   }
-  
+
   // Only validate patterns if we have a reasonable length
-  if (digitsOnly.length >= 7) {
+  if (digitCount >= 7) {
+    const unicodeDigitString = unicodeDigits.join('');
+
     // Reject obvious fakes - same digits repeated
-    if (/^(\d)\1+$/.test(digitsOnly)) {
+    if (/^(.)\1+$/u.test(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Reject sequential patterns (like professional platforms do)
+
+    // Reject sequential patterns (supports Unicode digits)
     const isSequential = (str: string): boolean => {
       for (let i = 0; i < str.length - 2; i++) {
         const current = parseInt(str[i]);
         const next1 = parseInt(str[i + 1]);
         const next2 = parseInt(str[i + 2]);
-        
+
         // Check for ascending sequence (123, 234, etc.)
-        if (next1 === current + 1 && next2 === current + 2) {
-          return true;
-        }
-        
-        // Check for descending sequence (321, 210, etc.)
-        if (next1 === current - 1 && next2 === current - 2) {
-          return true;
+        if (!isNaN(current) && !isNaN(next1) && !isNaN(next2)) {
+          if (next1 === current + 1 && next2 === current + 2) {
+            return true;
+          }
+
+          // Check for descending sequence (321, 210, etc.)
+          if (next1 === current - 1 && next2 === current - 2) {
+            return true;
+          }
         }
       }
       return false;
     };
-    
-    if (isSequential(digitsOnly)) {
+
+    if (isSequential(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
-    
-    // Block common test numbers
+
+    // Block common test numbers (convert to regular digits for comparison)
     const testNumbers = ['1234567890', '0123456789', '1111111111', '0000000000', '5555555555'];
-    if (testNumbers.includes(digitsOnly)) {
+    if (testNumbers.includes(unicodeDigitString)) {
       return 'Please enter a valid phone number';
     }
   }
@@ -336,11 +368,11 @@ export function validatePostalCode(postalCode: string, countryCode: string = 'US
     case 'US':
       // US ZIP codes: 12345 or 12345-6789
       if (!/^\d{5}(-\d{4})?$/.test(trimmedCode)) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code (e.g., 12345 or 12345-6789)';
       }
       // Block obvious fake ZIP codes
       if (trimmedCode === '00000' || trimmedCode === '99999' || trimmedCode.startsWith('00000')) {
-        return 'Please enter a valid US ZIP code';
+        return 'Please enter a valid ZIP code';
       }
       break;
       
@@ -468,7 +500,7 @@ export function validateCityName(city: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\s\-'\.]+$/u.test(trimmedCity)) {
+  if (!/^[\p{L}\s\-'.]+$/u.test(trimmedCity)) {
     return 'City name contains invalid characters';
   }
   
@@ -505,7 +537,7 @@ export function validateAddress(address: string): string | null {
   
   // Allow Unicode letters, numbers, spaces, and international address punctuation
   // No requirement for both letters and numbers (international addresses vary)
-  if (!/^[\p{L}\p{N}\s\-,\.#\/'"()]+$/u.test(trimmedAddress)) {
+  if (!/^[\p{L}\p{N}\s\-,.#/'"()]+$/u.test(trimmedAddress)) {
     return 'Address contains invalid characters';
   }
   
@@ -541,45 +573,47 @@ export function validateStateProvince(state: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, periods
-  if (!/^[\p{L}\s\-\.]+$/u.test(trimmedState)) {
+  if (!/^[\p{L}\s\-.]+$/u.test(trimmedState)) {
     return 'State/Province contains invalid characters';
   }
   
   return null;
 }
 
-// Industry validation - enterprise international support
+// Industry validation - professional SaaS international support (Microsoft/Salesforce standard)
 export function validateIndustry(industry: string): string | null {
   if (!industry || !industry.trim()) {
     return null; // Industry is optional
   }
-  
+
   const trimmedIndustry = industry.trim();
-  
+
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedIndustry)) {
+    return null;
+  }
+
   // Enterprise rule: Max length 100 characters
   if (trimmedIndustry.length > 100) {
     return 'Industry must be 100 characters or less';
   }
-  
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedIndustry)) {
-    return 'Industry cannot contain emojis';
-  }
-  
+
   if (trimmedIndustry.length < 2) {
     return 'Industry must be at least 2 characters long';
   }
-  
-  // Must contain at least one letter or Unicode character
-  if (!/[\p{L}]/u.test(trimmedIndustry)) {
-    return 'Industry must contain letters';
+
+  // Professional SaaS approach: Allow emojis but require meaningful content
+  if (!hasNonEmojiContent(trimmedIndustry)) {
+    return 'Industry must contain meaningful text';
   }
-  
-  // Allow Unicode letters, spaces, hyphens, ampersands, slashes, commas
-  if (!/^[\p{L}\s\-&\/,]+$/u.test(trimmedIndustry)) {
-    return 'Industry contains invalid characters';
+
+  // Allow Unicode letters, numbers, spaces, common punctuation, and emojis
+  // Remove emojis temporarily to check base characters
+  const withoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '');
+  if (!/^[\p{L}\p{N}\s\-&/,.()%#]*$/u.test(withoutEmojis)) {
+    return 'Industry contains unsupported characters';
   }
-  
+
   return null;
 }
 
@@ -603,9 +637,10 @@ export function validateContactName(name: string): string | null {
     return 'Contact name must contain meaningful characters';
   }
   
-  // Block placeholder or testing names
-  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary', 
-                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null', 'n/a'];
+  // Block placeholder or testing names (contact names are required so don't allow placeholders)
+  const placeholderNames = ['test', 'testing', 'nobody', 'unknown', 'placeholder', 'temp', 'temporary',
+                           'admin', 'user', 'sample', 'example', 'demo', 'fake', 'dummy', 'null',
+                           'none', 'n/a', 'na'];
   if (placeholderNames.includes(nameWithoutEmojis.toLowerCase())) {
     return 'Please enter a real contact name';
   }
@@ -616,10 +651,92 @@ export function validateContactName(name: string): string | null {
   }
   
   // Allow Unicode letters, spaces, hyphens, apostrophes, periods
-  if (!/^[\p{L}\s\-'\.]+$/u.test(nameWithoutEmojis)) {
+  if (!/^[\p{L}\s\-'.]+$/u.test(nameWithoutEmojis)) {
     return 'Contact name contains invalid characters';
   }
   
+  return null;
+}
+
+// Role validation - professional SaaS industry standards
+export function validateContactRole(role: string): string | null {
+  if (!role || !role.trim()) {
+    return null; // Role is optional
+  }
+
+  const trimmedRole = role.trim();
+
+  // Allow professional placeholder values for optional fields
+  if (isAcceptablePlaceholder(trimmedRole)) {
+    return null;
+  }
+
+  // Enterprise rule: Max length 100 characters (industry standard)
+  if (trimmedRole.length > 100) {
+    return 'Role must be 100 characters or less';
+  }
+
+  // Minimum meaningful length
+  if (trimmedRole.length < 2) {
+    return 'Role must be at least 2 characters long';
+  }
+
+  // Professional SaaS role validation - allow emojis but require meaningful content
+  const roleWithoutEmojis = trimmedRole.replace(EMOJI_REGEX, '').trim();
+
+  if (roleWithoutEmojis.length === 0) {
+    return 'Role must contain meaningful characters';
+  }
+
+  // Block common placeholder/test roles (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderRoles = [
+    'test', 'testing', 'temp', 'temporary', 'placeholder', 'sample', 'example', 'demo', 'fake', 'dummy',
+    'null', 'tbd', 'tba', 'unknown', 'role', 'position', 'job', 'title'
+  ];
+  if (placeholderRoles.includes(roleWithoutEmojis.toLowerCase())) {
+    return 'Please enter a specific role or job title';
+  }
+
+  // Must contain at least one letter (Unicode supported for international roles)
+  if (!/[\p{L}]/u.test(roleWithoutEmojis)) {
+    return 'Role must contain letters';
+  }
+
+  // Professional SaaS validation: Allow Unicode letters, numbers, spaces, common business punctuation
+  // This supports international business titles and modern role naming conventions
+  if (!/^[\p{L}\p{N}\s\-'.&/()]+$/u.test(roleWithoutEmojis)) {
+    return 'Role contains invalid characters';
+  }
+
+  // Block obviously inappropriate content patterns (professional SaaS standard)
+  const inappropriatePatterns = [
+    /^\d+$/, // Only numbers
+    /^[^\p{L}]+$/u, // No letters at all
+    /(.)\1{4,}/u, // Repeated characters (aaaaa, etc.)
+  ];
+
+  for (const pattern of inappropriatePatterns) {
+    if (pattern.test(roleWithoutEmojis)) {
+      return 'Please enter a valid professional role';
+    }
+  }
+
+  // Enterprise validation: Check for common role format patterns
+  // This helps ensure consistency in enterprise environments
+  const validRolePatterns = [
+    // Standard business roles: "Manager", "Senior Developer", "VP of Sales"
+    /^[\p{L}][\p{L}\s\-'.&/()]*[\p{L}]$/u,
+    // Single word roles: "CEO", "CTO", "Manager"
+    /^[\p{L}]+$/u,
+    // Roles with numbers: "Developer II", "Level 3 Support"
+    /^[\p{L}][\p{L}\p{N}\s\-'.&/()]*[\p{L}\p{N}]$/u
+  ];
+
+  const isValidFormat = validRolePatterns.some(pattern => pattern.test(roleWithoutEmojis));
+  if (!isValidFormat) {
+    return 'Please enter a standard professional role format';
+  }
+
   return null;
 }
 
@@ -641,6 +758,353 @@ export function validateNotes(notes: string): string | null {
 }
 
 
+// Company size validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateCompanySize(companySize: string): string | null {
+  if (!companySize || !companySize.trim()) {
+    return null; // Company size is optional
+  }
+
+  const trimmedSize = companySize.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedSize.length > 50) {
+    return 'Company size must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedSize)) {
+    return 'Company size cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English
+  const lowerSize = trimmedSize.toLowerCase();
+
+  // Common professional ranges (Microsoft/Salesforce patterns)
+  const validRanges = [
+    // Exact numbers
+    /^\d+$/,
+    // Ranges with hyphens or "to"
+    /^\d+-\d+$/,
+    /^\d+\s*to\s*\d+$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Mixed formats like "2.5 million", "5K", "10M", "1B"
+    /^\d+(\.\d+)?\s*(k|m|b|thousand|million|billion)$/,
+    // Professional ranges in plain English
+    /^(less than|under|fewer than)\s+\d+$/,
+    /^(more than|over|above)\s+\d+$/,
+    /^\d+\+$/,
+    // Common SaaS categories
+    /^(startup|small|medium|large|enterprise)$/,
+    /^(1-10|11-50|51-200|201-500|501-1000|1001-5000|5001\+)$/
+  ];
+
+  const isValid = validRanges.some(pattern => pattern.test(lowerSize));
+
+  if (!isValid) {
+    return 'Please enter a valid company size (e.g., "50", "10-50", "five hundred", "2.5M", "small", "enterprise")';
+  }
+
+  return null;
+}
+
+// Annual revenue validation - professional SaaS/CRM grade (Microsoft/Salesforce standard)
+export function validateAnnualRevenue(revenue: string): string | null {
+  if (!revenue || !revenue.trim()) {
+    return null; // Annual revenue is optional
+  }
+
+  const trimmedRevenue = revenue.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedRevenue.length > 50) {
+    return 'Annual revenue must be 50 characters or less';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedRevenue)) {
+    return 'Annual revenue cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept both numeric and plain English with currency symbols
+  const lowerRevenue = trimmedRevenue.toLowerCase().replace(/[\s$,£€¥]/g, '');
+
+  // Common professional revenue formats (Microsoft/Salesforce patterns)
+  const validFormats = [
+    // Exact numbers with optional currency symbols and commas
+    /^\d+(,\d{3})*(\.\d{2})?$/,
+    // Ranges
+    /^\d+-\d+$/,
+    /^\d+to\d+$/,
+    // Abbreviations (K, M, B)
+    /^\d+(\.\d+)?[kmb]$/,
+    // Plain English numbers
+    /^(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion)(\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|million|billion))*$/,
+    // Professional ranges in plain English
+    /^(lessthan|under|fewerthan)\d+$/,
+    /^(morethan|over|above)\d+$/,
+    /^\d+\+$/,
+    // Common SaaS revenue categories
+    /^(startup|earlystage|growth|established)$/,
+    /^(under1m|1m-10m|10m-100m|100m-1b|1b\+)$/,
+    // "Not disclosed" or similar professional responses
+    /^(notdisclosed|private|confidential|n\/a|na)$/
+  ];
+
+  const isValid = validFormats.some(pattern => pattern.test(lowerRevenue));
+
+  if (!isValid) {
+    return 'Please enter valid annual revenue (e.g., "$1,000,000", "five million", "2.5M", "10M-50M", "not disclosed")';
+  }
+
+  return null;
+}
+
+// Tax ID validation - professional SaaS/CRM grade with international support
+export function validateTaxId(taxId: string): string | null {
+  if (!taxId || !taxId.trim()) {
+    return null; // Tax ID is optional
+  }
+
+  const trimmedTaxId = taxId.trim();
+
+  // Enterprise rule: Max length 50 characters
+  if (trimmedTaxId.length > 50) {
+    return 'Tax ID must be 50 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful tax ID
+  if (trimmedTaxId.length < 2) {
+    return 'Tax ID must be at least 2 characters long';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedTaxId)) {
+    return 'Tax ID cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Support international tax ID formats
+  // Allow letters, numbers, hyphens, spaces, and common tax ID punctuation
+  if (!/^[\p{L}\p{N}\s\-./]+$/u.test(trimmedTaxId)) {
+    return 'Tax ID contains invalid characters';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedTaxId)) {
+    return 'Tax ID must contain letters or numbers';
+  }
+
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  if (placeholderValues.includes(trimmedTaxId.toLowerCase())) {
+    return 'Please enter a valid tax ID';
+  }
+
+  return null;
+}
+
+// Parent company validation - professional SaaS/CRM grade with international support
+export function validateParentCompany(parentCompany: string): string | null {
+  if (!parentCompany || !parentCompany.trim()) {
+    return null; // Parent company is optional
+  }
+
+  const trimmedParentCompany = parentCompany.trim();
+
+  // Enterprise rule: Max length 256 characters (same as company name)
+  if (trimmedParentCompany.length > 256) {
+    return 'Parent company name must be 256 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful company name
+  if (trimmedParentCompany.length < 2) {
+    return 'Parent company name must be at least 2 characters long';
+  }
+
+  // Professional SaaS approach: Allow emojis but require meaningful content
+  if (!hasNonEmojiContent(trimmedParentCompany)) {
+    return 'Parent company name must contain meaningful characters';
+  }
+
+  const nameWithoutEmojis = trimmedParentCompany.replace(EMOJI_REGEX, '').trim();
+
+  // Block standalone abbreviations
+  const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'CO', 'COMPANY', 'CORPORATION'];
+  if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
+    return 'Parent company name cannot be just a business abbreviation';
+  }
+
+  // Block domain extensions
+  if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
+    return 'Parent company name cannot end with a domain extension';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
+    return 'Parent company name must contain at least one letter or number';
+  }
+
+  // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
+  if (!/^[\p{L}\p{N}\s\-,.&'()]+$/u.test(nameWithoutEmojis)) {
+    return 'Parent company name contains invalid characters';
+  }
+
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example', 'same', 'self'];
+  if (placeholderValues.includes(nameWithoutEmojis.toLowerCase())) {
+    return 'Please enter a valid parent company name';
+  }
+
+  return null;
+}
+
+// Last contact date validation - professional SaaS/CRM grade
+export function validateLastContactDate(lastContactDate: string): string | null {
+  if (!lastContactDate || !lastContactDate.trim()) {
+    return null; // Last contact date is optional
+  }
+
+  const trimmedDate = lastContactDate.trim();
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedDate)) {
+    return 'Last contact date cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Accept various date formats
+  const dateFormats = [
+    // ISO format: YYYY-MM-DD
+    /^\d{4}-\d{2}-\d{2}$/,
+    // US format: MM/DD/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,
+    // European format: DD/MM/YYYY
+    /^\d{1,2}\/\d{1,2}\/\d{4}$/,
+    // Dot format: DD.MM.YYYY
+    /^\d{1,2}\.\d{1,2}\.\d{4}$/,
+    // Hyphen format: DD-MM-YYYY
+    /^\d{1,2}-\d{1,2}-\d{4}$/,
+    // Short year: MM/DD/YY
+    /^\d{1,2}\/\d{1,2}\/\d{2}$/,
+    // Month name formats: "Jan 15, 2024", "January 15, 2024"
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}$/i,
+    // Simple formats: "2024", "Q1 2024", "Jan 2024"
+    /^\d{4}$/,
+    /^Q[1-4]\s+\d{4}$/i,
+    /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}$/i
+  ];
+
+  const isValidFormat = dateFormats.some(pattern => pattern.test(trimmedDate));
+
+  if (!isValidFormat) {
+    return 'Please enter a valid date (e.g., "2024-01-15", "01/15/2024", "Jan 15, 2024")';
+  }
+
+  // Additional validation: Check if the date is reasonable (not too far in the future)
+  try {
+    let dateToCheck: Date | null = null;
+
+    // Try to parse common formats
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedDate)) {
+      dateToCheck = new Date(trimmedDate);
+    } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmedDate)) {
+      dateToCheck = new Date(trimmedDate);
+    } else if (/^\d{4}$/.test(trimmedDate)) {
+      dateToCheck = new Date(parseInt(trimmedDate), 0, 1); // January 1st of that year
+    }
+
+    if (dateToCheck && !isNaN(dateToCheck.getTime())) {
+      const now = new Date();
+      const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
+
+      // Check if date is too far in the future (professional SaaS rule)
+      if (dateToCheck > oneYearFromNow) {
+        return 'Last contact date cannot be more than a year in the future';
+      }
+
+      // Check if date is too far in the past (reasonable business rule)
+      const fiftyYearsAgo = new Date(now.getFullYear() - 50, now.getMonth(), now.getDate());
+      if (dateToCheck < fiftyYearsAgo) {
+        return 'Last contact date cannot be more than 50 years ago';
+      }
+    }
+  } catch {
+    // If date parsing fails, rely on format validation
+  }
+
+  return null;
+}
+
+// Payment terms validation - professional SaaS/CRM grade
+export function validatePaymentTerms(paymentTerms: string): string | null {
+  if (!paymentTerms || !paymentTerms.trim()) {
+    return null; // Payment terms are optional
+  }
+
+  const trimmedTerms = paymentTerms.trim();
+
+  // Enterprise rule: Max length 100 characters
+  if (trimmedTerms.length > 100) {
+    return 'Payment terms must be 100 characters or less';
+  }
+
+  // Minimum 2 characters for meaningful terms
+  if (trimmedTerms.length < 2) {
+    return 'Payment terms must be at least 2 characters long';
+  }
+
+  // No emojis
+  if (EMOJI_REGEX.test(trimmedTerms)) {
+    return 'Payment terms cannot contain emojis';
+  }
+
+  // Professional SaaS approach: Support common payment terms formats
+  const lowerTerms = trimmedTerms.toLowerCase();
+
+  // Common professional payment terms patterns
+  const validPatterns = [
+    // Net terms: "Net 30", "NET 30", "net30"
+    /^net\s*\d+(\s+days?)?$/,
+    // Due terms: "Due on receipt", "Due upon delivery"
+    /^due\s+(on\s+)?(receipt|delivery|invoice|completion)$/,
+    // Days terms: "30 days", "60 days net"
+    /^\d+\s+days?(\s+net)?$/,
+    // Percentage terms: "2/10 net 30", "1% 10 days"
+    /^\d+(\.\d+)?[%\/]\d+(\s+(net\s+)?\d+)?$/,
+    // Advance terms: "50% advance", "Payment in advance"
+    /^(\d+%?\s+)?(advance|upfront|prepaid|prepayment)$/,
+    /^payment\s+in\s+advance$/,
+    // COD terms
+    /^(cod|cash\s+on\s+delivery)$/,
+    // Immediate terms
+    /^(immediate|upon\s+receipt|on\s+delivery)$/,
+    // Monthly terms
+    /^(monthly|quarterly|annually|weekly)$/,
+    // Credit terms
+    /^(credit\s+)?(\d+\s+days?\s+)?credit$/,
+    // Custom professional terms
+    /^[\p{L}\p{N}\s\-,.%\/()]+$/u
+  ];
+
+  const isValidPattern = validPatterns.some(pattern => pattern.test(lowerTerms));
+
+  if (!isValidPattern) {
+    return 'Payment terms contain invalid characters';
+  }
+
+  // Must contain at least one letter or number (Unicode supported)
+  if (!/[\p{L}\p{N}]/u.test(trimmedTerms)) {
+    return 'Payment terms must contain letters or numbers';
+  }
+
+  // Block obvious placeholder values (but allow 'none' and 'n/a' as acceptable placeholders)
+  const placeholderValues = ['null', 'unknown', 'tbd', 'pending', 'temp', 'test', 'example'];
+  if (placeholderValues.includes(lowerTerms)) {
+    return 'Please enter valid payment terms';
+  }
+
+  return null;
+}
+
 // Comprehensive form validation function
 export function validateClientForm(formData: {
   companyName: string;
@@ -657,6 +1121,12 @@ export function validateClientForm(formData: {
   contactEmail?: string;
   contactPhone?: string;
   notes?: string;
+  companySize?: string;
+  annualRevenue?: string;
+  taxId?: string;
+  parentCompany?: string;
+  lastContactDate?: string;
+  paymentTerms?: string;
 }): ValidationResult {
   const errors: Record<string, string> = {};
   
@@ -750,7 +1220,49 @@ export function validateClientForm(formData: {
       errors.notes = notesError;
     }
   }
-  
+
+  if (formData.companySize) {
+    const companySizeError = validateCompanySize(formData.companySize);
+    if (companySizeError) {
+      errors.company_size = companySizeError;
+    }
+  }
+
+  if (formData.annualRevenue) {
+    const annualRevenueError = validateAnnualRevenue(formData.annualRevenue);
+    if (annualRevenueError) {
+      errors.annual_revenue = annualRevenueError;
+    }
+  }
+
+  if (formData.taxId) {
+    const taxIdError = validateTaxId(formData.taxId);
+    if (taxIdError) {
+      errors.tax_id = taxIdError;
+    }
+  }
+
+  if (formData.parentCompany) {
+    const parentCompanyError = validateParentCompany(formData.parentCompany);
+    if (parentCompanyError) {
+      errors.parent_company_name = parentCompanyError;
+    }
+  }
+
+  if (formData.lastContactDate) {
+    const lastContactDateError = validateLastContactDate(formData.lastContactDate);
+    if (lastContactDateError) {
+      errors.last_contact_date = lastContactDateError;
+    }
+  }
+
+  if (formData.paymentTerms) {
+    const paymentTermsError = validatePaymentTerms(formData.paymentTerms);
+    if (paymentTermsError) {
+      errors.payment_terms = paymentTermsError;
+    }
+  }
+
   return {
     isValid: Object.keys(errors).length === 0,
     errors

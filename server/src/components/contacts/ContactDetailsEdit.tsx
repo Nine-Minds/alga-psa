@@ -21,6 +21,7 @@ import { ReflectionContainer } from '../../types/ui-reflection/ReflectionContain
 import { ButtonComponent, FormFieldComponent } from '../../types/ui-reflection/types';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
+import { validateContactName, validateEmailAddress, validatePhoneNumber, validateNotes } from '../../lib/utils/clientFormValidation';
 
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -86,10 +87,10 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
         return;
       }
       
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(contact.email.trim())) {
-        setError('Please enter a valid email address');
+      // Enterprise-grade validation
+      const emailError = validateEmailAddress(contact.email);
+      if (emailError) {
+        setError(emailError);
         return;
       }
       
