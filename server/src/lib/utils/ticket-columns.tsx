@@ -9,9 +9,11 @@ import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ItilLabels } from 'server/src/lib/utils/itilUtils';
+import { IChannel } from 'server/src/interfaces/channel.interface';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
+  channels: IChannel[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
@@ -26,6 +28,7 @@ interface CreateTicketColumnsOptions {
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
     categories,
+    channels,
     displaySettings,
     onTicketClick,
     onDeleteClick,
@@ -53,6 +56,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
 
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+
+  // Helper function to get channel for a ticket
+  const getChannelForTicket = (ticket: ITicketListItem): IChannel | undefined => {
+    return channels.find(channel => channel.channel_id === ticket.channel_id);
+  };
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
 
@@ -123,8 +131,10 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'priority_name',
         width: '10%',
         render: (value: string, record: ITicketListItem) => {
-          // Check if this ticket has ITIL priority
-          if (record.itil_priority_level) {
+          const channel = getChannelForTicket(record);
+
+          // Check if current channel uses ITIL priority and ticket has ITIL priority data
+          if (channel?.priority_type === 'itil' && record.itil_priority_level) {
             const itilPriorityLabel = ItilLabels.priority[record.itil_priority_level];
             const priorityColor =
               record.itil_priority_level === 1 ? '#EF4444' : // Critical - Red
@@ -144,14 +154,14 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
             );
           }
 
-          // Fall back to standard priority display
+          // Use standard priority display for non-ITIL channels or tickets without ITIL priority
           return (
             <div className="flex items-center gap-2">
               <div
                 className="w-3 h-3 rounded-full border border-gray-300"
                 style={{ backgroundColor: record.priority_color || '#6B7280' }}
               />
-              <span>{value}</span>
+              <span>{value || 'Unknown'}</span>
             </div>
           );
         },
@@ -180,15 +190,17 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'category_id',
         width: '10%',
         render: (value: string, record: ITicketListItem) => {
-          // Check if this ticket has ITIL category
-          if (record.itil_category) {
+          const channel = getChannelForTicket(record);
+
+          // Check if current channel uses ITIL category and ticket has ITIL category data
+          if (channel?.category_type === 'itil' && record.itil_category) {
             if (record.itil_subcategory) {
               return `${record.itil_category} → ${record.itil_subcategory}`;
             }
             return record.itil_category;
           }
 
-          // Fall back to standard category display
+          // Use standard category display for non-ITIL channels
           if (!value && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display
