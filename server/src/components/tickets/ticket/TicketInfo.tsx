@@ -42,6 +42,11 @@ interface TicketInfoProps {
   onTagsChange?: (tags: ITag[]) => void;
   isInDrawer?: boolean;
   onItilFieldChange?: (field: string, value: any) => void;
+  // Local ITIL state values
+  itilImpact?: number;
+  itilUrgency?: number;
+  itilCategory?: string;
+  itilSubcategory?: string;
 }
 
 const TicketInfo: React.FC<TicketInfoProps> = ({
@@ -61,6 +66,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   onTagsChange,
   isInDrawer = false,
   onItilFieldChange,
+  itilImpact,
+  itilUrgency,
+  itilCategory,
+  itilSubcategory,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
@@ -77,15 +86,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
 
   // Calculate ITIL priority when impact and urgency are available
   const calculatedItilPriority = React.useMemo(() => {
-    if (ticket.itil_impact && ticket.itil_urgency) {
+    if (itilImpact && itilUrgency) {
       try {
-        return calculateItilPriority(ticket.itil_impact, ticket.itil_urgency);
+        return calculateItilPriority(itilImpact, itilUrgency);
       } catch {
         return null;
       }
     }
     return null;
-  }, [ticket.itil_impact, ticket.itil_urgency]);
+  }, [itilImpact, itilUrgency]);
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>([{
     type: "paragraph",
     props: {
@@ -414,7 +423,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <div>
                   <h5 className="font-bold mb-2">Impact</h5>
                   <select
-                    value={ticket.itil_impact || ''}
+                    value={itilImpact || ''}
                     onChange={(e) => handleItilFieldChange('itil_impact', Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -429,7 +438,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <div>
                   <h5 className="font-bold mb-2">Urgency</h5>
                   <select
-                    value={ticket.itil_urgency || ''}
+                    value={itilUrgency || ''}
                     onChange={(e) => handleItilFieldChange('itil_urgency', Number(e.target.value))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
@@ -449,7 +458,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <div>
                   <h5 className="font-bold mb-2">ITIL Category</h5>
                   <select
-                    value={ticket.itil_category || ''}
+                    value={itilCategory || ''}
                     onChange={(e) => {
                       handleItilFieldChange('itil_category', e.target.value);
                       handleItilFieldChange('itil_subcategory', ''); // Reset subcategory
@@ -467,13 +476,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <div>
                   <h5 className="font-bold mb-2">ITIL Subcategory</h5>
                   <select
-                    value={ticket.itil_subcategory || ''}
+                    value={itilSubcategory || ''}
                     onChange={(e) => handleItilFieldChange('itil_subcategory', e.target.value)}
-                    disabled={!ticket.itil_category}
+                    disabled={!itilCategory}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
                   >
                     <option value="">Select Subcategory</option>
-                    {ticket.itil_category === 'Hardware' && (
+                    {itilCategory === 'Hardware' && (
                       <>
                         <option value="Server">Server</option>
                         <option value="Desktop/Laptop">Desktop/Laptop</option>
@@ -483,7 +492,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         <option value="Mobile Device">Mobile Device</option>
                       </>
                     )}
-                    {ticket.itil_category === 'Software' && (
+                    {itilCategory === 'Software' && (
                       <>
                         <option value="Application">Application</option>
                         <option value="Operating System">Operating System</option>
@@ -493,7 +502,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         <option value="Custom Application">Custom Application</option>
                       </>
                     )}
-                    {ticket.itil_category === 'Network' && (
+                    {itilCategory === 'Network' && (
                       <>
                         <option value="Connectivity">Connectivity</option>
                         <option value="VPN">VPN</option>
@@ -503,7 +512,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         <option value="Firewall">Firewall</option>
                       </>
                     )}
-                    {ticket.itil_category === 'Security' && (
+                    {itilCategory === 'Security' && (
                       <>
                         <option value="Malware">Malware</option>
                         <option value="Unauthorized Access">Unauthorized Access</option>
@@ -513,7 +522,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                         <option value="Account Lockout">Account Lockout</option>
                       </>
                     )}
-                    {ticket.itil_category === 'Service Request' && (
+                    {itilCategory === 'Service Request' && (
                       <>
                         <option value="Access Request">Access Request</option>
                         <option value="New User Setup">New User Setup</option>
