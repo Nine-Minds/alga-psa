@@ -1,6 +1,7 @@
 import { TenantEntity } from './index';
 
 export type CategoryType = 'custom' | 'itil';
+export type PriorityType = 'custom' | 'itil';
 
 export interface IChannel extends TenantEntity {
   channel_id?: string;
@@ -12,6 +13,9 @@ export interface IChannel extends TenantEntity {
 
   // Category type configuration
   category_type?: CategoryType;
+
+  // Priority type configuration
+  priority_type?: PriorityType;
 
   // Display configuration for form fields
   display_contact_name_id?: boolean;

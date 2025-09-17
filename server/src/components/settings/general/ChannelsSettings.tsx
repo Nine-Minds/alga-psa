@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { IChannel, CategoryType } from 'server/src/interfaces/channel.interface';
+import { IChannel, CategoryType, PriorityType } from 'server/src/interfaces/channel.interface';
 import { 
   getAllChannels, 
   createChannel,
@@ -49,6 +49,7 @@ const ChannelsSettings: React.FC = () => {
     display_order: 0,
     is_inactive: false,
     category_type: 'custom' as CategoryType,
+    priority_type: 'custom' as PriorityType,
     display_itil_impact: false,
     display_itil_urgency: false,
     display_itil_category: false
@@ -83,6 +84,7 @@ const ChannelsSettings: React.FC = () => {
       display_order: channel.display_order || 0,
       is_inactive: channel.is_inactive,
       category_type: channel.category_type || 'custom',
+      priority_type: channel.priority_type || 'custom',
       display_itil_impact: channel.display_itil_impact || false,
       display_itil_urgency: channel.display_itil_urgency || false,
       display_itil_category: channel.display_itil_category || false
@@ -118,6 +120,7 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: formData.category_type,
+          priority_type: formData.priority_type,
           display_itil_impact: formData.display_itil_impact,
           display_itil_urgency: formData.display_itil_urgency,
           display_itil_category: formData.display_itil_category
@@ -130,6 +133,7 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: formData.category_type,
+          priority_type: formData.priority_type,
           display_itil_impact: formData.display_itil_impact,
           display_itil_urgency: formData.display_itil_urgency,
           display_itil_category: formData.display_itil_category
@@ -139,7 +143,7 @@ const ChannelsSettings: React.FC = () => {
       
       setShowAddEditDialog(false);
       setEditingChannel(null);
-      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
       await fetchChannels();
     } catch (error) {
       console.error('Error saving channel:', error);
@@ -326,7 +330,7 @@ const ChannelsSettings: React.FC = () => {
             id="add-channel-button"
             onClick={() => {
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -368,7 +372,7 @@ const ChannelsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingChannel(null);
-          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
           setError(null);
         }} 
         title={editingChannel ? "Edit Board" : "Add Board"}
@@ -421,7 +425,8 @@ const ChannelsSettings: React.FC = () => {
             </div>
 
             <div className="border-t pt-4 space-y-4">
-              <h4 className="font-medium text-gray-800">Category Configuration</h4>
+              <h4 className="font-medium text-gray-800">Ticket Configuration</h4>
+
               <div>
                 <Label htmlFor="category_type">Category Type</Label>
                 <select
@@ -448,7 +453,32 @@ const ChannelsSettings: React.FC = () => {
                 </p>
               </div>
 
-              {formData.category_type === 'itil' && (
+              <div>
+                <Label htmlFor="priority_type">Priority Type</Label>
+                <select
+                  id="priority_type"
+                  value={formData.priority_type}
+                  onChange={(e) => {
+                    const newType = e.target.value as PriorityType;
+                    setFormData({
+                      ...formData,
+                      priority_type: newType,
+                      // Auto-enable impact/urgency fields when using ITIL priorities
+                      display_itil_impact: newType === 'itil' ? true : formData.display_itil_impact,
+                      display_itil_urgency: newType === 'itil' ? true : formData.display_itil_urgency
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                >
+                  <option value="custom">Custom Priorities</option>
+                  <option value="itil">ITIL Priorities (Impact × Urgency)</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Choose whether this board uses custom priorities or ITIL-based priority calculation from Impact and Urgency.
+                </p>
+              </div>
+
+              {(formData.category_type === 'itil' || formData.priority_type === 'itil') && (
                 <div className="bg-gray-50 p-4 rounded-md space-y-3">
                   <p className="text-sm font-medium text-gray-700">ITIL Display Options</p>
                   <p className="text-xs text-gray-600">
@@ -493,7 +523,7 @@ const ChannelsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
               setError(null);
             }}
           >

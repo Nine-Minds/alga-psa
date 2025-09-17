@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -101,6 +102,7 @@ export function QuickAddTicket({
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
     category_type: 'custom',
+    priority_type: 'custom',
     display_itil_impact: false,
     display_itil_urgency: false,
     display_itil_category: false,
@@ -120,6 +122,7 @@ export function QuickAddTicket({
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
+  const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
   const [itilCategory, setItilCategory] = useState<string>('');
   const [itilSubcategory, setItilSubcategory] = useState<string>('');
   const [resolutionCode, setResolutionCode] = useState<string>('');
@@ -252,7 +255,9 @@ export function QuickAddTicket({
           console.log('QuickAddTicket received:', {
             data,
             categoriesType: Array.isArray(data?.categories) ? 'array' : typeof data?.categories,
-            categoriesLength: data?.categories?.length
+            categoriesLength: data?.categories?.length,
+            channelConfig: data?.channelConfig,
+            priority_type: data?.channelConfig?.priority_type
           });
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories && Array.isArray(data.categories)) {
@@ -263,6 +268,7 @@ export function QuickAddTicket({
             setCategories([]);
             setChannelConfig({
               category_type: 'custom',
+              priority_type: 'custom',
               display_itil_impact: false,
               display_itil_urgency: false,
               display_itil_category: false,
@@ -273,6 +279,7 @@ export function QuickAddTicket({
           setCategories([]);
           setChannelConfig({
             category_type: 'custom',
+            priority_type: 'custom',
             display_itil_impact: false,
             display_itil_urgency: false,
             display_itil_category: false,
@@ -329,6 +336,7 @@ export function QuickAddTicket({
   const handleChannelChange = (newChannelId: string) => {
     setChannelId(newChannelId);
     setSelectedCategories([]);
+    setShowPriorityMatrix(false);
     clearErrorIfSubmitted();
   };
 
@@ -359,25 +367,6 @@ export function QuickAddTicket({
     clearErrorIfSubmitted();
   };
 
-  const applyItilPriorityToTicketPriority = () => {
-    if (calculatedItilPriority && priorities.length > 0) {
-      // Try to map ITIL priority (1-5) to existing ticket priorities
-      // Find a priority that matches or is closest to the ITIL priority level
-      const sortedPriorities = [...priorities].sort((a, b) => a.order_number - b.order_number);
-
-      let selectedPriority = sortedPriorities[0]; // Default to first priority
-
-      if (calculatedItilPriority <= sortedPriorities.length) {
-        selectedPriority = sortedPriorities[calculatedItilPriority - 1];
-      } else {
-        // If calculated priority exceeds available priorities, use the last one
-        selectedPriority = sortedPriorities[sortedPriorities.length - 1];
-      }
-
-      setPriorityId(selectedPriority.priority_id);
-      clearErrorIfSubmitted();
-    }
-  };
 
   const resetForm = () => {
     setTitle('');
@@ -403,6 +392,7 @@ export function QuickAddTicket({
     // Reset ITIL fields
     setItilImpact(undefined);
     setItilUrgency(undefined);
+    setShowPriorityMatrix(false);
     setItilCategory('');
     setItilSubcategory('');
     setResolutionCode('');
@@ -425,7 +415,24 @@ export function QuickAddTicket({
     if (!assignedTo) validationErrors.push('Assigned To');
     if (!channelId) validationErrors.push('Channel');
     if (!statusId) validationErrors.push('Status');
-    if (!priorityId) validationErrors.push('Priority');
+
+    // Validate priority based on channel type
+    if (channelConfig.priority_type === 'custom') {
+      // Custom priority boards require priority_id
+      if (!priorityId) {
+        validationErrors.push('Priority');
+      }
+    } else if (channelConfig.priority_type === 'itil') {
+      // ITIL priority boards require impact and urgency
+      if (!itilImpact) validationErrors.push('Impact');
+      if (!itilUrgency) validationErrors.push('Urgency');
+    } else {
+      // Default to custom behavior if priority_type is undefined
+      if (!priorityId) {
+        validationErrors.push('Priority');
+      }
+    }
+
     if (!companyId) validationErrors.push('Client');
     return validationErrors;
   };
@@ -454,7 +461,19 @@ export function QuickAddTicket({
       formData.append('assigned_to', assignedTo);
       formData.append('channel_id', channelId);
       formData.append('status_id', statusId);
-      formData.append('priority_id', priorityId);
+
+      // Handle priority based on channel configuration
+      if (channelConfig.priority_type === 'itil') {
+        // For ITIL priority type, store the calculated priority level
+        if (calculatedItilPriority) {
+          formData.append('itil_priority_level', calculatedItilPriority.toString());
+        }
+        // Don't set priority_id for ITIL boards
+      } else {
+        // For custom priority type, use the selected priority
+        formData.append('priority_id', priorityId);
+      }
+
       formData.append('company_id', companyId);
 
       if (selectedCompanyType === 'company' && contactId) {
@@ -709,69 +728,273 @@ export function QuickAddTicket({
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
                   />
 
-                  <CustomSelect
-                    id={`${id}-priority`}
-                    value={priorityId}
-                    onValueChange={(value) => {
-                      setPriorityId(value);
-                      clearErrorIfSubmitted();
-                    }}
-                    options={memoizedPriorityOptions}
-                    placeholder="Select Priority *"
-                    className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
-                  />
+                  {/* Priority Section - Show different UI based on channel priority type */}
+                  {channelId && (
+                    <>
+                      {/* Custom Priority - Editable dropdown (only show if explicitly custom, not by default) */}
+                      {channelConfig.priority_type && channelConfig.priority_type === 'custom' && (
+                        <CustomSelect
+                          id={`${id}-priority`}
+                          value={priorityId}
+                          onValueChange={(value) => {
+                            setPriorityId(value);
+                            clearErrorIfSubmitted();
+                          }}
+                          options={memoizedPriorityOptions}
+                          placeholder="Select Priority *"
+                          className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
+                        />
+                      )}
 
-                  {/* ITIL Priority Integration Helper */}
-                  {channelId && channelConfig.category_type === 'itil' && calculatedItilPriority && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-blue-800 font-medium">
-                            ITIL Calculated Priority:
-                          </span>
-                          <span className={`px-2 py-1 rounded text-sm font-semibold ${
-                            calculatedItilPriority === 1 ? 'bg-red-100 text-red-800' :
-                            calculatedItilPriority === 2 ? 'bg-orange-100 text-orange-800' :
-                            calculatedItilPriority === 3 ? 'bg-yellow-100 text-yellow-800' :
-                            calculatedItilPriority === 4 ? 'bg-blue-100 text-blue-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {ItilLabels.priority[calculatedItilPriority]}
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={applyItilPriorityToTicketPriority}
-                          className="text-xs"
-                        >
-                          Apply to Priority
-                        </Button>
-                      </div>
-                    </div>
+                      {/* ITIL Priority - Show Impact and Urgency fields */}
+                      {channelConfig.priority_type === 'itil' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
+                            <select
+                              value={itilImpact || ''}
+                              onChange={(e) => {
+                                setItilImpact(e.target.value ? parseInt(e.target.value) : undefined);
+                                clearErrorIfSubmitted();
+                              }}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                hasAttemptedSubmit && !itilImpact ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                            >
+                              <option value="">Select Impact</option>
+                              <option value="1">1 - High (Critical business function affected)</option>
+                              <option value="2">2 - Medium-High (Important function affected)</option>
+                              <option value="3">3 - Medium (Minor function affected)</option>
+                              <option value="4">4 - Medium-Low (Minimal impact)</option>
+                              <option value="5">5 - Low (No business impact)</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Urgency *</label>
+                            <select
+                              value={itilUrgency || ''}
+                              onChange={(e) => {
+                                setItilUrgency(e.target.value ? parseInt(e.target.value) : undefined);
+                                clearErrorIfSubmitted();
+                              }}
+                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                                hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : 'border-gray-300'
+                              }`}
+                            >
+                              <option value="">Select Urgency</option>
+                              <option value="1">1 - High (Work cannot continue)</option>
+                              <option value="2">2 - Medium-High (Work severely impaired)</option>
+                              <option value="3">3 - Medium (Work continues with limitations)</option>
+                              <option value="4">4 - Medium-Low (Minor inconvenience)</option>
+                              <option value="5">5 - Low (Work continues normally)</option>
+                            </select>
+                          </div>
+
+                          {/* Read-only Priority field showing calculated value */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="block text-sm font-medium text-gray-700">Priority (Calculated)</label>
+                              <button
+                                type="button"
+                                onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title="Show ITIL Priority Matrix"
+                              >
+                                <HelpCircle className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className={`w-full px-3 py-2 border rounded-md bg-gray-50 ${
+                              hasAttemptedSubmit && (!itilImpact || !itilUrgency) ? 'border-red-500' : 'border-gray-300'
+                            }`}>
+                              {calculatedItilPriority ? (
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    style={{ backgroundColor:
+                                      calculatedItilPriority === 1 ? '#DC2626' : // Red
+                                      calculatedItilPriority === 2 ? '#EA580C' : // Orange
+                                      calculatedItilPriority === 3 ? '#F59E0B' : // Amber
+                                      calculatedItilPriority === 4 ? '#3B82F6' : // Blue
+                                      '#6B7280' // Gray
+                                    }}
+                                  />
+                                  <span className="text-gray-900">
+                                    {ItilLabels.priority[calculatedItilPriority]}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    (Impact {itilImpact} × Urgency {itilUrgency})
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500">Select Impact and Urgency to calculate priority</span>
+                              )}
+                            </div>
+
+                            {/* ITIL Priority Matrix - Show when help icon is clicked */}
+                            {showPriorityMatrix && (
+                              <div className="mt-3 p-4 bg-gray-50 border rounded-lg">
+                                <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full text-xs">
+                                    <thead>
+                                      <tr>
+                                        <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
+                                        <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-600">
+                                  <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                                  <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </>
                   )}
 
-                  {/* ITIL Fields Section */}
+                  {/* ITIL Categories - Show when using ITIL categories */}
                   {channelId && channelConfig.category_type === 'itil' && (
-                    <div className="border-t pt-4">
-                      <h3 className="text-sm font-medium mb-4 text-gray-700">ITIL Classification</h3>
-                      <ItilFields
-                        values={{
-                          itil_impact: itilImpact,
-                          itil_urgency: itilUrgency,
-                          itil_category: itilCategory,
-                          itil_subcategory: itilSubcategory,
-                          resolution_code: resolutionCode,
-                          root_cause: rootCause,
-                          workaround: workaround
-                        }}
-                        onChange={handleItilFieldChange}
-                        readOnly={false}
-                        showResolutionFields={false}
-                      />
-                    </div>
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Category</label>
+                        <select
+                          value={itilCategory || ''}
+                          onChange={(e) => {
+                            setItilCategory(e.target.value);
+                            setItilSubcategory(''); // Reset subcategory when category changes
+                            clearErrorIfSubmitted();
+                          }}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        >
+                          <option value="">Select ITIL Category</option>
+                          <option value="Hardware">Hardware</option>
+                          <option value="Software">Software</option>
+                          <option value="Network">Network</option>
+                          <option value="Security">Security</option>
+                          <option value="Service Request">Service Request</option>
+                        </select>
+                      </div>
+
+                      {itilCategory && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Subcategory</label>
+                          <select
+                            value={itilSubcategory || ''}
+                            onChange={(e) => {
+                              setItilSubcategory(e.target.value);
+                              clearErrorIfSubmitted();
+                            }}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                          >
+                            <option value="">Select Subcategory</option>
+                            {itilCategory === 'Hardware' && (
+                              <>
+                                <option value="Server">Server</option>
+                                <option value="Desktop/Laptop">Desktop/Laptop</option>
+                                <option value="Network Equipment">Network Equipment</option>
+                                <option value="Printer">Printer</option>
+                                <option value="Storage">Storage</option>
+                                <option value="Mobile Device">Mobile Device</option>
+                              </>
+                            )}
+                            {itilCategory === 'Software' && (
+                              <>
+                                <option value="Application">Application</option>
+                                <option value="Operating System">Operating System</option>
+                                <option value="Database">Database</option>
+                                <option value="Security Software">Security Software</option>
+                                <option value="Productivity Software">Productivity Software</option>
+                                <option value="Custom Application">Custom Application</option>
+                              </>
+                            )}
+                            {itilCategory === 'Network' && (
+                              <>
+                                <option value="Connectivity">Connectivity</option>
+                                <option value="VPN">VPN</option>
+                                <option value="Wi-Fi">Wi-Fi</option>
+                                <option value="Internet">Internet</option>
+                                <option value="LAN/WAN">LAN/WAN</option>
+                                <option value="Firewall">Firewall</option>
+                              </>
+                            )}
+                            {itilCategory === 'Security' && (
+                              <>
+                                <option value="Malware">Malware</option>
+                                <option value="Unauthorized Access">Unauthorized Access</option>
+                                <option value="Data Breach">Data Breach</option>
+                                <option value="Phishing">Phishing</option>
+                                <option value="Policy Violation">Policy Violation</option>
+                                <option value="Account Lockout">Account Lockout</option>
+                              </>
+                            )}
+                            {itilCategory === 'Service Request' && (
+                              <>
+                                <option value="Access Request">Access Request</option>
+                                <option value="New User Setup">New User Setup</option>
+                                <option value="Software Installation">Software Installation</option>
+                                <option value="Equipment Request">Equipment Request</option>
+                                <option value="Information Request">Information Request</option>
+                                <option value="Change Request">Change Request</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      )}
+                    </>
                   )}
+
+
 
                   <DialogFooter>
                     <Button
@@ -787,7 +1010,11 @@ export function QuickAddTicket({
                       type="submit"
                       variant="default"
                       disabled={isSubmitting}
-                      className={!title.trim() || !description.trim() || !assignedTo || !channelId || !statusId || !priorityId || !companyId ? 'opacity-50' : ''}
+                      className={!title.trim() || !description.trim() || !assignedTo || !channelId || !statusId ||
+                        (channelConfig.priority_type === 'custom' && !priorityId) ||
+                        (channelConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+                        (channelConfig.priority_type === undefined && !priorityId) ||
+                        !companyId ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>
