@@ -81,6 +81,8 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
           display_order: displayOrder,
           is_inactive: channelData.is_inactive || false,
           is_default: isDefault,
+          category_type: channelData.category_type || 'custom',
+          priority_type: channelData.priority_type || 'custom',
           tenant
         })
         .returning('*');
