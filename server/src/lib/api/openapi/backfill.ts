@@ -1,5 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { ZodTypeAny } from 'zod';
-import routeInventory from '../../../../../docs/openapi/route-inventory.json' assert { type: 'json' };
 import { ApiOpenApiRegistry } from './registry';
 import { ApiRouteSpec } from './types';
 
@@ -55,13 +57,13 @@ export function registerInventoryBackfillRoutes(
   registry: ApiOpenApiRegistry,
   deps: { ErrorResponse: ZodTypeAny; PlaceholderObject: ZodTypeAny },
 ) {
+  const records = loadRouteInventory();
+
   const seen = new Set(
     registry
       .getRegisteredRoutes()
       .map((route) => `${route.method.toLowerCase()}::${route.path}`),
   );
-
-  const records = routeInventory as InventoryRecord[];
 
   for (const record of records) {
     const edition = normalizeEdition(record.edition);
@@ -114,4 +116,28 @@ export function registerInventoryBackfillRoutes(
       registry.registerRoute(routeSpec);
     }
   }
+}
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function loadRouteInventory(): InventoryRecord[] {
+  const candidatePaths = [
+    path.resolve(__dirname, '../../../../../docs/openapi/route-inventory.json'),
+    path.resolve(process.cwd(), 'docs/openapi/route-inventory.json'),
+    path.resolve(process.cwd(), '../docs/openapi/route-inventory.json'),
+  ];
+
+  for (const candidate of candidatePaths) {
+    try {
+      if (fs.existsSync(candidate)) {
+        const content = fs.readFileSync(candidate, 'utf-8');
+        return JSON.parse(content) as InventoryRecord[];
+      }
+    } catch {
+      // Ignore and try the next candidate path.
+    }
+  }
+
+  return [];
 }
