@@ -77,7 +77,121 @@
   "language": {
     "selectLanguage": "Select Language",
     "changeLanguage": "Change Language",
-    "currentLanguage": "Current Language"
+    "currentLanguage": "Current Language",
+    "preference": {
+      "label": "Language Preference",
+      "helper": "Select your preferred language for the interface",
+      "placeholder": "Select a language",
+      "cleared": "Language preference cleared. Using default language...",
+      "updating": "Updating language preference...",
+      "notSet": "Not set",
+      "notSetWithSource": "Not set (Uses {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "company": "company default",
+        "tenant": "tenant default",
+        "system": "system default"
+      }
+    }
+  },
+  "yes": "Yes",
+  "no": "No",
+  "companies": {
+    "locations": {
+      "sectionTitle": "Company Locations",
+      "manageButton": "Manage Locations",
+      "dialogTitle": "Manage Locations - {{company}}",
+      "managerLabel": "Company Locations Manager",
+      "listTitle": "Locations",
+      "buttons": {
+        "add": "Add Location",
+        "save": "Save Location"
+      },
+      "card": {
+        "unnamed": "Unnamed Location",
+        "setDefault": "Set as default",
+        "edit": "Edit location",
+        "delete": "Delete location",
+        "addressLabel": "Address",
+        "addressHelper": "Full address for this location",
+        "phoneLabel": "Phone",
+        "phoneHelper": "Phone number for this location",
+        "phoneValue": "Phone: {{phone}}",
+        "emailLabel": "Email",
+        "emailHelper": "Email address for this location",
+        "emailValue": "Email: {{email}}",
+        "billingTag": "Billing",
+        "shippingTag": "Shipping",
+        "notesLabel": "Notes",
+        "notesHelper": "Additional notes for this location"
+      },
+      "form": {
+        "locationName": "Location Name",
+        "locationNameHelper": "Name for this location (e.g., Main Office, Warehouse)",
+        "addressLine1": "Address Line 1",
+        "addressLine1Helper": "Primary address line (required)",
+        "addressLine2": "Address Line 2",
+        "addressLine2Helper": "Additional address information (optional)",
+        "addressLine3": "Address Line 3",
+        "city": "City",
+        "cityHelper": "City name (required)",
+        "stateProvince": "State/Province",
+        "stateProvinceHelper": "State or province name",
+        "postalCode": "Postal Code",
+        "postalCodeHelper": "ZIP or postal code",
+        "country": "Country",
+        "countryHelper": "Select country (required)",
+        "phone": "Phone",
+        "phoneHelper": "Phone number for this location",
+        "email": "Email",
+        "emailHelper": "Email address for this location",
+        "taxRegion": "Tax Region",
+        "taxRegionHelper": "Select the applicable tax region",
+        "notes": "Notes",
+        "notesHelper": "Additional notes about this location",
+        "defaultLocation": "Default Location",
+        "defaultLocationHelper": "Mark this as the default location for the company",
+        "billingAddress": "Billing Address",
+        "billingAddressHelper": "Use this location as the billing address",
+        "shippingAddress": "Shipping Address",
+        "shippingAddressHelper": "Use this location as the shipping address",
+        "placeholder": {
+          "locationName": "e.g., Main Office, Warehouse",
+          "addressLine1": "Enter address *",
+          "city": "Enter city *",
+          "country": "Select Country *",
+          "loadingCountries": "Loading countries...",
+          "taxRegionOption": "Select a tax region...",
+          "taxRegion": "Select a tax region..."
+        }
+      },
+      "validation": {
+        "title": "Please fill in the required fields:"
+      },
+      "errors": {
+        "loadTaxRegions": "Failed to load tax regions",
+        "loadCountries": "Failed to load countries",
+        "loadLocations": "Failed to load company locations",
+        "save": "Failed to save location",
+        "delete": "Failed to delete location",
+        "setDefault": "Failed to set default location"
+      },
+      "success": {
+        "create": "Location created successfully",
+        "update": "Location updated successfully",
+        "delete": "Location deleted successfully",
+        "setDefault": "Default location updated"
+      },
+      "dialog": {
+        "addTitle": "Add New Location",
+        "editTitle": "Edit Location",
+        "deleteTitle": "Delete Location",
+        "deleteMessage": "Are you sure you want to delete the location \"{{name}}\"? This action cannot be undone."
+      },
+      "empty": {
+        "title": "No locations added yet",
+        "description": "Click \"Add Location\" to get started"
+      }
+    }
   },
   "pagination": {
     "previous": "Previous",

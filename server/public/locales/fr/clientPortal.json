@@ -1,29 +1,29 @@
 {
   "nav": {
     "dashboard": "Tableau de bord",
-    "tickets": "Tickets de support",
+    "tickets": "Tickets d'assistance",
     "projects": "Projets",
     "billing": "Facturation",
     "assets": "Actifs",
     "companySettings": "Paramètres de l'entreprise",
     "profile": "Profil",
     "signOut": "Déconnexion",
-    "clientPortal": "Portail Client"
+    "clientPortal": "Portail client"
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "welcome": "Bon retour ! Voici un aperçu de votre compte.",
+    "welcome": "Content de vous revoir ! Voici un aperçu de votre compte.",
     "loading": "Chargement du tableau de bord...",
-    "error": "Une erreur s'est produite lors du chargement du tableau de bord. Veuillez réessayer plus tard.",
+    "error": "Une erreur est survenue lors du chargement du tableau de bord. Veuillez réessayer plus tard.",
     "metrics": {
-      "openTickets": "Tickets de support ouverts",
-      "activeProjects": "Projets ouverts",
+      "openTickets": "Tickets d'assistance ouverts",
+      "activeProjects": "Projets en cours",
       "pendingInvoices": "Factures en attente",
-      "activeAssets": "Actifs actifs"
+      "activeAssets": "Actifs en service"
     },
     "quickActions": {
       "title": "Actions rapides",
-      "createTicket": "Créer un ticket de support",
+      "createTicket": "Créer un ticket d'assistance",
       "viewLatestInvoice": "Voir la dernière facture"
     },
     "recentActivity": {
@@ -32,10 +32,10 @@
     "viewAll": "Voir tous les {{item}} →"
   },
   "tickets": {
-    "title": "Tickets de support",
-    "subtitle": "Consultez et gérez vos tickets de support",
+    "title": "Tickets d'assistance",
+    "subtitle": "Consultez et gérez vos tickets d'assistance",
     "createNew": "Créer un nouveau ticket",
-    "createButton": "Créer un ticket de support",
+    "createButton": "Créer un ticket d'assistance",
     "viewAll": "Voir tous les tickets",
     "myTickets": "Mes tickets",
     "resetFilters": "Réinitialiser les filtres",
@@ -49,15 +49,15 @@
       "clearFilters": "Effacer les filtres"
     },
     "create": {
-      "title": "Créer un ticket de support",
+      "title": "Créer un ticket d'assistance",
       "titlePlaceholder": "Titre du ticket",
       "descriptionPlaceholder": "Décrivez votre problème...",
       "priorityPlaceholder": "Sélectionner la priorité",
-      "submit": "Créer le ticket",
-      "submitting": "Création...",
+      "submit": "Créer un ticket",
+      "submitting": "Création en cours...",
       "errors": {
-        "titleRequired": "Le titre est requis",
-        "descriptionRequired": "La description est requise",
+        "titleRequired": "Le titre est obligatoire",
+        "descriptionRequired": "La description est obligatoire",
         "priorityRequired": "Veuillez sélectionner une priorité",
         "createFailed": "Échec de la création du ticket. Veuillez réessayer."
       }
@@ -69,14 +69,16 @@
       "closed": "Fermé",
       "pending": "En attente",
       "waitingOnCustomer": "En attente du client",
-      "waitingOnVendor": "En attente du fournisseur"
+      "waitingOnVendor": "En attente du fournisseur",
+      "unknown": "Statut inconnu"
     },
     "priority": {
       "low": "Faible",
-      "medium": "Moyen",
-      "high": "Élevé",
+      "medium": "Moyenne",
+      "high": "Élevée",
       "urgent": "Urgent",
-      "critical": "Critique"
+      "critical": "Critique",
+      "unknown": "Priorité inconnue"
     },
     "fields": {
       "ticketNumber": "Numéro de ticket",
@@ -88,9 +90,9 @@
       "category": "Catégorie",
       "subcategory": "Sous-catégorie",
       "attachments": "Pièces jointes",
-      "createdAt": "Créé le",
+      "createdAt": "Créé",
       "updatedAt": "Dernière mise à jour",
-      "assignedTo": "Assigné à",
+      "assignedTo": "Attribué à",
       "requester": "Demandeur",
       "company": "Entreprise",
       "dueDate": "Date d'échéance",
@@ -105,9 +107,9 @@
       "close": "Fermer le ticket",
       "reopen": "Rouvrir le ticket",
       "addNote": "Ajouter une note",
-      "uploadFile": "Télécharger un fichier",
-      "changeStatus": "Changer le statut",
-      "confirmStatusChange": "Êtes-vous sûr de vouloir changer le statut de ce ticket ?"
+      "uploadFile": "Téléverser un fichier",
+      "changeStatus": "Modifier le statut",
+      "confirmStatusChange": "Êtes-vous sûr de vouloir modifier le statut de ce ticket ?"
     },
     "messages": {
       "noTickets": "Aucun ticket trouvé",
@@ -115,7 +117,7 @@
       "ticketCreated": "Ticket créé avec succès",
       "ticketUpdated": "Ticket mis à jour avec succès",
       "ticketClosed": "Ticket fermé avec succès",
-      "error": "Une erreur s'est produite lors du traitement de votre demande",
+      "error": "Une erreur est survenue lors du traitement de votre demande",
       "loadError": "Échec du chargement des détails du ticket",
       "emptyComment": "Impossible d'ajouter un commentaire vide",
       "commentError": "Échec de l'ajout du commentaire",
@@ -126,9 +128,9 @@
       "statusUpdateError": "Échec de la mise à jour du statut du ticket",
       "notAuthenticated": "Non authentifié",
       "userNotFound": "ID utilisateur introuvable dans la session",
-      "tenantNotFound": "Locataire introuvable dans la session. Veuillez vous déconnecter et vous reconnecter.",
-      "userNotAssociatedWithContact": "L'utilisateur n'est pas associé à un contact",
-      "contactNotAssociatedWithCompany": "Le contact n'est pas associé à une entreprise. Veuillez contacter le support.",
+      "tenantNotFound": "Locataire introuvable dans la session. Veuillez vous déconnecter puis vous reconnecter.",
+      "userNotAssociatedWithContact": "Utilisateur non associé à un contact",
+      "contactNotAssociatedWithCompany": "Contact non associé à une entreprise. Veuillez contacter le support.",
       "ticketNotFound": "Ticket introuvable",
       "commentNotFound": "Commentaire introuvable ou non autorisé",
       "noDefaultChannel": "Aucun canal par défaut configuré pour les tickets",
@@ -151,11 +153,11 @@
       "markedAsInternal": "Marqué comme interne",
       "markAsResolution": "Marquer comme résolution",
       "markedAsResolution": "Marqué comme résolution",
-      "oldestFirst": "Plus ancien en premier",
-      "newestFirst": "Plus récent en premier",
+      "oldestFirst": "Plus anciens d'abord",
+      "newestFirst": "Plus récents d'abord",
       "addComment": "Ajouter un commentaire",
-      "typeComment": "Tapez votre commentaire ici...",
-      "submit": "Soumettre",
+      "typeComment": "Saisissez votre commentaire ici...",
+      "submit": "Envoyer",
       "cancel": "Annuler",
       "save": "Enregistrer",
       "edit": "Modifier",
@@ -166,8 +168,8 @@
     },
     "documents": {
       "title": "Documents",
-      "noDocuments": "Aucun document attaché",
-      "upload": "Télécharger un document",
+      "noDocuments": "Aucun document joint",
+      "upload": "Téléverser un document",
       "download": "Télécharger",
       "remove": "Retirer",
       "preview": "Aperçu",
@@ -178,7 +180,7 @@
       "delete": "Supprimer",
       "previewUnavailable": "Aperçu non disponible",
       "newDocument": "Nouveau document",
-      "uploadFile": "Télécharger un fichier"
+      "uploadFile": "Téléverser un fichier"
     }
   },
   "billing": {
@@ -188,33 +190,33 @@
       "overview": "Aperçu",
       "invoices": "Factures"
     },
-    "currentPlan": "Plan actuel",
+    "currentPlan": "Forfait actuel",
     "nextInvoice": "Prochaine facture",
-    "viewPlanDetails": "Voir les détails du plan",
+    "viewPlanDetails": "Voir les détails du forfait",
     "viewAllInvoices": "Voir toutes les factures",
     "failedToLoad": "Échec du chargement des factures. Veuillez réessayer.",
     "invoices": "Factures",
     "payments": "Paiements",
-    "plans": "Plans de service",
-    "usage": "Métriques d'utilisation",
+    "plans": "Formules de service",
+    "usage": "Indicateurs d'utilisation",
     "hoursByService": "Heures par service",
     "invoice": {
       "number": "Facture n°",
-      "date": "Date de facture",
+      "date": "Date de la facture",
       "dueDate": "Date d'échéance",
       "dueDateText": "Échéance le {{date}}",
       "noDueDate": "Pas de date d'échéance",
       "amount": "Montant",
       "status": "Statut",
-      "paid": "Payé",
-      "unpaid": "Non payé",
+      "paid": "Payée",
+      "unpaid": "Impayée",
       "overdue": "En retard",
-      "partial": "Partiel",
+      "partial": "Partielle",
       "draft": "Brouillon",
       "finalized": "Finalisée",
       "sendEmail": "Envoyer par e-mail",
       "sendEmailFailed": "Échec de l'envoi de la facture par e-mail. Veuillez réessayer.",
-      "download": "Télécharger PDF",
+      "download": "Télécharger le PDF",
       "view": "Voir les détails",
       "pay": "Payer maintenant",
       "paymentHistory": "Historique des paiements"
@@ -227,8 +229,8 @@
       "biweekly": "Bihebdomadaire"
     },
     "plan": {
-      "detailsTitle": "Détails du plan",
-      "name": "Nom du plan",
+      "detailsTitle": "Détails du forfait",
+      "name": "Nom du forfait",
       "frequency": "Fréquence de facturation",
       "startDate": "Date de début",
       "endDate": "Date de fin",
@@ -236,12 +238,12 @@
       "status": "Statut",
       "customRate": "Tarif personnalisé",
       "serviceCategory": "Catégorie de service",
-      "statusDescription": "Ce plan est actuellement {{status}} et {{expiry}}.",
-      "expiresOn": "expirera le {{date}}",
-      "noExpiry": "n'expirera pas"
+      "statusDescription": "Ce forfait est actuellement {{status}} et {{expiry}}.",
+      "expiresOn": "expire le {{date}}",
+      "noExpiry": "n'expire pas"
     },
     "payment": {
-      "method": "Méthode de paiement",
+      "method": "Mode de paiement",
       "date": "Date de paiement",
       "amount": "Montant",
       "reference": "Référence",
@@ -251,17 +253,17 @@
       "title": "Heures de service",
       "remaining": "Heures restantes",
       "used": "Heures utilisées",
-      "total": "Total des heures",
+      "total": "Total d'heures",
       "usage": "Utilisation",
       "overage": "Dépassement",
-      "noPlanTitle": "Aucun plan de bucket disponible",
-      "noPlanDescription": "Il n'y a pas de plans de bucket actifs pour votre compte."
+      "noPlanTitle": "Aucune banque d'heures disponible",
+      "noPlanDescription": "Aucun forfait d'heures actif pour votre compte."
     },
     "messages": {
       "noInvoices": "Aucune facture trouvée",
       "loadingInvoices": "Chargement des factures...",
       "paymentSuccessful": "Paiement traité avec succès",
-      "paymentFailed": "Le paiement a échoué. Veuillez réessayer."
+      "paymentFailed": "Échec du paiement. Veuillez réessayer."
     }
   },
   "projects": {
@@ -272,7 +274,7 @@
     "resetFilters": "Réinitialiser les filtres",
     "active": "Projets actifs",
     "completed": "Projets terminés",
-    "onHold": "En attente",
+    "onHold": "En pause",
     "timeline": "Chronologie",
     "milestones": "Jalons",
     "tasks": "Tâches",
@@ -289,14 +291,14 @@
       "endDate": "Date de fin",
       "projectManager": "Chef de projet",
       "progress": "Progression",
-      "hoursLogged": "Heures enregistrées",
+      "hoursLogged": "Heures consignées",
       "budgetUsed": "Budget utilisé"
     },
     "status": {
       "notStarted": "Non commencé",
       "inProgress": "En cours",
       "completed": "Terminé",
-      "onHold": "En attente",
+      "onHold": "En pause",
       "cancelled": "Annulé"
     },
     "messages": {
@@ -310,10 +312,10 @@
     "endDate": "Date de fin",
     "lastUpdated": "Dernière mise à jour",
     "taskCompletion": "Achèvement des tâches",
-    "percentComplete": "{{percent}}% Terminé",
+    "percentComplete": "{{percent}} % terminé",
     "tasksCompleted": "{{completed}} sur {{total}} tâches terminées",
     "budgetHours": "Heures budgétées",
-    "budgetUsed": "{{percent}}% du budget utilisé",
+    "budgetUsed": "{{percent}} % du budget utilisé",
     "hoursUsed": "{{spent}} sur {{budgeted}} heures",
     "hoursUsage": "Utilisation des heures",
     "hoursUsedDetail": "{{spent}} sur {{budgeted}} heures utilisées",
@@ -322,8 +324,8 @@
   "profile": {
     "title": "Mon profil",
     "personalInfo": "Informations personnelles",
-    "contactInfo": "Informations de contact",
-    "companyInfo": "Informations de l'entreprise",
+    "contactInfo": "Coordonnées",
+    "companyInfo": "Informations sur l'entreprise",
     "preferences": "Préférences",
     "security": "Sécurité",
     "fields": {
@@ -331,7 +333,7 @@
       "lastName": "Nom de famille",
       "email": "Adresse e-mail",
       "phone": "Numéro de téléphone",
-      "mobile": "Téléphone mobile",
+      "mobile": "Téléphone portable",
       "title": "Titre du poste",
       "department": "Département",
       "company": "Entreprise",
@@ -341,7 +343,7 @@
       "postalCode": "Code postal",
       "country": "Pays",
       "timezone": "Fuseau horaire",
-      "language": "Préférence linguistique",
+      "language": "Langue préférée",
       "dateFormat": "Format de date",
       "avatar": "Photo de profil"
     },
@@ -353,15 +355,16 @@
       "requirements": "Le mot de passe doit contenir au moins 8 caractères",
       "submit": "Mettre à jour le mot de passe",
       "success": "Mot de passe mis à jour avec succès",
-      "error": "Échec de la mise à jour du mot de passe"
+      "error": "Échec de la mise à jour du mot de passe",
+      "passwordMismatch": "Les nouveaux mots de passe ne correspondent pas"
     },
     "twoFactorAuth": {
       "title": "Authentification à deux facteurs",
-      "enable": "Activer 2FA",
-      "disable": "Désactiver 2FA",
+      "enable": "Activer la 2FA",
+      "disable": "Désactiver la 2FA",
       "status": "Statut",
-      "enabled": "Activé",
-      "disabled": "Désactivé"
+      "enabled": "Activée",
+      "disabled": "Désactivée"
     },
     "notifications": {
       "title": "Paramètres de notification",
@@ -375,42 +378,44 @@
       "save": "Enregistrer les modifications",
       "cancel": "Annuler",
       "edit": "Modifier le profil",
-      "uploadPhoto": "Télécharger une photo",
-      "removePhoto": "Supprimer la photo"
+      "uploadPhoto": "Téléverser une photo",
+      "removePhoto": "Retirer la photo"
     },
     "messages": {
       "updateSuccess": "Profil mis à jour avec succès",
       "updateError": "Échec de la mise à jour du profil",
-      "photoUploaded": "Photo téléchargée avec succès",
-      "photoRemoved": "Photo supprimée avec succès",
-      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'ils consultent vos informations de contact."
+      "photoUploaded": "Photo téléversée avec succès",
+      "photoRemoved": "Photo retirée avec succès",
+      "userNotFound": "Utilisateur introuvable",
+      "loadError": "Échec du chargement du profil",
+      "avatarDescription": "Cet avatar est affiché au personnel MSP lorsqu'il consulte vos informations de contact."
     },
     "imageUpload": {
-      "uploadAvatar": "Télécharger Avatar",
-      "uploadLogo": "Télécharger Logo",
-      "uploadingAvatar": "Téléchargement de l'avatar...",
-      "uploadingLogo": "Téléchargement du logo...",
+      "uploadAvatar": "Téléverser un avatar",
+      "uploadLogo": "Téléverser un logo",
+      "uploadingAvatar": "Téléversement de l'avatar...",
+      "uploadingLogo": "Téléversement du logo...",
       "deleteAvatar": "Supprimer la photo de profil",
       "deleteLogo": "Supprimer le logo de l'entreprise",
       "deleteProfilePicture": "Supprimer la photo de profil",
       "delete": "Supprimer",
-      "deleting": "Suppression...",
-      "deleteLogoConfirm": "Êtes-vous sûr de vouloir supprimer le logo ? Cette action ne peut pas être annulée.",
-      "deleteAvatarConfirm": "Êtes-vous sûr de vouloir supprimer la photo de profil ? Cette action ne peut pas être annulée.",
+      "deleting": "Suppression en cours...",
+      "deleteLogoConfirm": "Voulez-vous vraiment supprimer le logo ? Cette action est irréversible.",
+      "deleteAvatarConfirm": "Voulez-vous vraiment supprimer la photo de profil ? Cette action est irréversible.",
       "edit": "Modifier",
       "invalidType": "Veuillez sélectionner un fichier image.",
-      "sizeLimit": "La taille de l'image doit être inférieure à 2 Mo.",
-      "maxSize": "Max 2 Mo (PNG, JPG, GIF)",
-      "uploadSuccess": "Téléchargé avec succès.",
-      "uploadError": "Échec du téléchargement. Veuillez réessayer.",
-      "deleteSuccess": "Supprimé avec succès.",
+      "sizeLimit": "L'image doit être inférieure à 2 Mo.",
+      "maxSize": "Maximum 2 Mo (PNG, JPG, GIF)",
+      "uploadSuccess": "Téléversement réussi.",
+      "uploadError": "Échec du téléversement. Veuillez réessayer.",
+      "deleteSuccess": "Suppression réussie.",
       "deleteError": "Échec de la suppression.",
-      "deleteConfirm": "Êtes-vous sûr de vouloir supprimer ceci ? Cette action ne peut pas être annulée."
+      "deleteConfirm": "Voulez-vous vraiment supprimer ceci ? Cette action est irréversible."
     }
   },
   "companySettings": {
     "title": "Paramètres de l'entreprise",
-    "details": "Détails de l'entreprise",
+    "details": "Informations sur l'entreprise",
     "billing": "Informations de facturation",
     "description": "Gérez les paramètres et configurations de votre entreprise.",
     "tabs": {
@@ -421,18 +426,20 @@
     "fields": {
       "companyLogo": "Logo de l'entreprise",
       "companyName": "Nom de l'entreprise",
-      "companyLocations": "Emplacements de l'entreprise",
-      "manageLocations": "Gérer les emplacements",
+      "companyLocations": "Sites de l'entreprise",
+      "manageLocations": "Gérer les sites",
       "mainOffice": "Siège social",
       "warehouse": "Entrepôt",
-      "website": "Site Web",
-      "industry": "Industrie",
+      "website": "Site web",
+      "industry": "Secteur d'activité",
       "companySize": "Taille de l'entreprise",
-      "annualRevenue": "Chiffre d'affaires annuel",
+      "annualRevenue": "Revenu annuel",
       "size": "Taille de l'entreprise",
       "taxId": "Numéro fiscal",
       "billingAddress": "Adresse de facturation",
-      "primaryContact": "Contact principal"
+      "primaryContact": "Contact principal",
+      "uploadLogo": "Téléverser un logo",
+      "deleteLogo": "Supprimer le logo de l'entreprise"
     },
     "users": {
       "title": "Gestion des utilisateurs",
@@ -440,9 +447,9 @@
       "addNewUser": "Ajouter un nouvel utilisateur",
       "addUser": "Ajouter un utilisateur",
       "editUser": "Modifier l'utilisateur",
-      "removeUser": "Supprimer l'utilisateur",
+      "removeUser": "Retirer l'utilisateur",
       "firstName": "Prénom",
-      "lastName": "Nom",
+      "lastName": "Nom de famille",
       "email": "E-mail",
       "phone": "Téléphone",
       "roles": "Rôles",
@@ -450,25 +457,37 @@
       "actions": "Actions",
       "active": "Actif",
       "inactive": "Inactif",
-      "selectRole": "Sélectionner un rôle (optionnel)",
+      "selectRole": "Sélectionner un rôle (facultatif)",
       "createUser": "Créer un utilisateur",
       "invite": "Envoyer une invitation",
       "resendInvite": "Renvoyer l'invitation",
-      "lastLogin": "Dernière connexion"
+      "lastLogin": "Dernière connexion",
+      "userNotFound": "Utilisateur introuvable",
+      "failedToLoad": "Échec du chargement des détails de l'utilisateur",
+      "failedToUpdate": "Échec de la mise à jour de l'utilisateur",
+      "failedToAssignRole": "Échec de l'attribution du rôle",
+      "failedToRemoveRole": "Échec de la suppression du rôle",
+      "statusDescription": "Définir le statut du compte utilisateur",
+      "noRolesAssigned": "Aucun rôle attribué",
+      "assignRole": "Attribuer un rôle",
+      "resetPassword": "Réinitialiser le mot de passe utilisateur"
     },
     "messages": {
       "saveChanges": "Enregistrer les modifications",
       "failedToLoad": "Échec du chargement des informations du compte",
       "updateSuccess": "Paramètres de l'entreprise mis à jour avec succès",
       "userAdded": "Utilisateur ajouté avec succès",
-      "userRemoved": "Utilisateur supprimé avec succès",
-      "inviteSent": "Invitation envoyée avec succès"
+      "userRemoved": "Utilisateur retiré avec succès",
+      "inviteSent": "Invitation envoyée avec succès",
+      "noPermission": "Vous n'avez pas l'autorisation d'accéder aux paramètres de l'entreprise",
+      "companyNotFound": "Entreprise introuvable",
+      "updateError": "Échec de la mise à jour des détails de l'entreprise"
     }
   },
   "documents": {
     "title": "Documents",
-    "noDocuments": "Aucun document attaché",
-    "upload": "Télécharger un document",
+    "noDocuments": "Aucun document joint",
+    "upload": "Téléverser un document",
     "download": "Télécharger",
     "remove": "Retirer",
     "preview": "Aperçu",
@@ -479,14 +498,14 @@
     "delete": "Supprimer",
     "previewUnavailable": "Aperçu non disponible",
     "newDocument": "Nouveau document",
-    "uploadFile": "Télécharger un fichier"
+    "uploadFile": "Téléverser un fichier"
   },
   "common": {
     "actions": "Actions",
     "active": "Actif",
     "inactive": "Inactif",
     "loading": "Chargement...",
-    "error": "Une erreur s'est produite",
+    "error": "Une erreur est survenue",
     "save": "Enregistrer",
     "cancel": "Annuler",
     "delete": "Supprimer",
@@ -502,17 +521,17 @@
     "export": "Exporter",
     "import": "Importer",
     "download": "Télécharger",
-    "upload": "Télécharger",
+    "upload": "Téléverser",
     "selectAll": "Tout sélectionner",
     "clearSelection": "Effacer la sélection",
     "view": "Voir",
     "back": "Retour",
     "next": "Suivant",
     "previous": "Précédent",
-    "submit": "Soumettre",
+    "submit": "Envoyer",
     "reset": "Réinitialiser",
     "noData": "Aucune donnée disponible",
-    "required": "Requis",
+    "required": "Obligatoire",
     "optional": "Optionnel",
     "notSpecified": "Non spécifié",
     "unknown": "Inconnu"
@@ -530,29 +549,29 @@
     "resetPassword": "Réinitialiser le mot de passe",
     "backToSignIn": "Retour à la connexion",
     "sendResetLink": "Envoyer le lien de réinitialisation",
-    "resetLinkSent": "Le lien de réinitialisation du mot de passe a été envoyé à votre adresse e-mail",
-    "invalidCredentials": "E-mail ou mot de passe invalide",
-    "loginError": "Une erreur s'est produite lors de la connexion",
+    "resetLinkSent": "Le lien de réinitialisation a été envoyé à votre adresse e-mail",
+    "invalidCredentials": "Adresse e-mail ou mot de passe invalide",
+    "loginError": "Une erreur est survenue lors de la connexion",
     "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter.",
     "welcomeTitle": "Bienvenue sur votre portail client",
-    "welcomeSubtitle": "Gérez vos tickets de support et restez connecté",
-    "signInDescription": "Veuillez entrer vos identifiants pour accéder à votre compte.",
+    "welcomeSubtitle": "Gérez vos tickets d'assistance et restez connecté",
+    "signInDescription": "Veuillez saisir vos identifiants pour accéder à votre compte.",
     "accessDeniedTitle": "Accès refusé",
-    "accessDeniedMessage": "Vous n'avez pas la permission d'accéder au portail client.",
+    "accessDeniedMessage": "Vous n'avez pas l'autorisation d'accéder au portail client.",
     "registrationSuccessTitle": "Inscription réussie",
     "registrationSuccessMessage": "Votre compte a été créé. Veuillez vous connecter.",
     "features": {
       "submitTickets": {
-        "title": "Soumettre des tickets de support",
+        "title": "Soumettre des tickets d'assistance",
         "description": "Créez et gérez vos demandes de support"
       },
       "trackStatus": {
-        "title": "Suivre le statut des tickets",
-        "description": "Suivez la progression en temps réel"
+        "title": "Suivre l'état des tickets",
+        "description": "Surveillez la progression en temps réel"
       },
       "ticketHistory": {
         "title": "Historique des tickets",
-        "description": "Accédez à votre historique complet de support"
+        "description": "Accédez à l'ensemble de votre historique d'assistance"
       },
       "documentation": {
         "title": "Accès à la documentation",
@@ -573,9 +592,9 @@
     "pageInfo": "Page {{current}} sur {{total}} ({{count}} enregistrements au total)",
     "rowsPerPage": "Lignes par page",
     "page": "Page",
-    "of": "de",
-    "first": "Premier",
-    "last": "Dernier",
+    "of": "sur",
+    "first": "Première",
+    "last": "Dernière",
     "previous": "Précédent",
     "next": "Suivant"
   },

@@ -79,7 +79,7 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
 const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
   const { t } = useTranslation('clientPortal');
-  const [currentTab, setCurrentTab] = useState('Overview');
+  const [currentTab, setCurrentTab] = useState<string | null>(null);
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,14 +102,16 @@ export default function BillingOverview() {
     endDate: ''
   });
 
-  // Set date range after mount to avoid hydration issues
+  // Set date range and initial tab after mount to avoid hydration issues
   useEffect(() => {
     const now = new Date();
     setDateRange({
       startDate: format(subDays(now, 30), 'yyyy-MM-dd'),
       endDate: format(now, 'yyyy-MM-dd')
     });
-  }, []);
+    // Set the initial tab to the translated overview label
+    setCurrentTab(t('billing.tabs.overview'));
+  }, [t]);
 
   // Load billing data
   useEffect(() => {
@@ -397,7 +399,7 @@ export default function BillingOverview() {
     <div id="client-billing-overview" className="space-y-6">
       <CustomTabs
         tabs={tabs}
-        defaultTab={currentTab}
+        defaultTab={currentTab || tabs[0]?.label}
         onTabChange={handleTabChange}
       />
 

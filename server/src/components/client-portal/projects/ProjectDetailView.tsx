@@ -6,6 +6,7 @@ import DonutChart from 'server/src/components/projects/DonutChart';
 import HoursProgressBar from 'server/src/components/projects/HoursProgressBar';
 import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src/lib/utils/projectUtils';
 import { formatDistanceToNow } from 'date-fns';
+import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { useTranslation } from '@/lib/i18n/client';
 
 interface ProjectDetailViewProps {
@@ -13,7 +14,8 @@ interface ProjectDetailViewProps {
 }
 
 export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('clientPortal');
+  const dateLocale = getDateFnsLocale(i18n.language);
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -131,7 +133,7 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
             <p className="text-sm text-gray-600">{t('projects.lastUpdated', 'Last Updated')}</p>
             <p className="font-medium">
               {project.updated_at
-                ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })
+                ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: dateLocale })
                 : t('common.unknown', 'Unknown')}
             </p>
           </div>

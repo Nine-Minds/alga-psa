@@ -238,7 +238,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
         />
         {invoices.length === 0 && (
           <div className="text-center py-10">
-            <p className="text-gray-500">No invoices found</p>
+            <p className="text-gray-500">{t('billing.messages.noInvoices', 'No invoices found')}</p>
           </div>
         )}
       </div>

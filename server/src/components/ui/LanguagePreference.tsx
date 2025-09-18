@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
-import { useI18n } from '@/lib/i18n/client';
+import { useI18n, useTranslation } from '@/lib/i18n/client';
 import CustomSelect, { SelectOption } from './CustomSelect';
 import { toast } from 'react-hot-toast';
 
@@ -34,8 +34,8 @@ interface LanguagePreferenceProps {
 export function LanguagePreference({
   value,
   onChange,
-  label = 'Language Preference',
-  helperText = 'Select your preferred language for the interface',
+  label,
+  helperText,
   disabled = false,
   loading = false,
   className = '',
@@ -45,6 +45,9 @@ export function LanguagePreference({
   inheritedSource = 'system',
 }: LanguagePreferenceProps) {
   const { locale: currentLocale, setLocale } = useI18n();
+  const { t } = useTranslation('common');
+  const fieldLabel = label ?? t('language.preference.label', 'Language Preference');
+  const fieldHelperText = helperText ?? t('language.preference.helper', 'Select your preferred language for the interface');
   const effectiveLocale = currentEffectiveLocale || currentLocale;
   const [selectedLocale, setSelectedLocale] = useState<SupportedLocale | 'none'>(
     value === null || value === undefined ? 'none' : value
@@ -57,12 +60,24 @@ export function LanguagePreference({
 
     // Add "None" option if enabled
     if (showNoneOption) {
-      let inheritedLabel = 'Not set';
+      let inheritedLabel = t('language.preference.notSet', 'Not set');
       if (currentEffectiveLocale) {
-        const sourceText = inheritedSource === 'company' ? 'company default' :
-                          inheritedSource === 'tenant' ? 'tenant default' :
-                          'system default';
-        inheritedLabel = `Not set (Uses ${sourceText}: ${LOCALE_CONFIG.localeNames[currentEffectiveLocale]} - ${currentEffectiveLocale.toUpperCase()})`;
+        const sourceKey =
+          inheritedSource === 'company'
+            ? 'language.preference.source.company'
+            : inheritedSource === 'tenant'
+            ? 'language.preference.source.tenant'
+            : 'language.preference.source.system';
+        const sourceText = t(sourceKey, inheritedSource === 'company' ? 'company default' : inheritedSource === 'tenant' ? 'tenant default' : 'system default');
+        inheritedLabel = t(
+          'language.preference.notSetWithSource',
+          'Not set (Uses {{source}}: {{languageName}} - {{locale}})',
+          {
+            source: sourceText,
+            languageName: LOCALE_CONFIG.localeNames[currentEffectiveLocale],
+            locale: currentEffectiveLocale.toUpperCase(),
+          }
+        );
       }
       options.push({
         value: 'none',
@@ -79,7 +94,7 @@ export function LanguagePreference({
     });
 
     return options;
-  }, [showNoneOption, currentEffectiveLocale, inheritedSource]);
+  }, [showNoneOption, currentEffectiveLocale, inheritedSource, t]);
 
   useEffect(() => {
     if (value !== undefined) {
@@ -102,7 +117,7 @@ export function LanguagePreference({
           await onChange(null);
         }
         // Show a message and reload to get the inherited locale
-        toast.success('Language preference cleared. Using default language...');
+        toast.success(t('language.preference.cleared', 'Language preference cleared. Using default language...'));
         setTimeout(() => {
           window.location.reload();
         }, 1000);
@@ -129,24 +144,24 @@ export function LanguagePreference({
 
   return (
     <div className={className}>
-      {helperText && !label && (
-        <p className="mb-1 text-sm text-gray-500">{helperText}</p>
+      {fieldHelperText && !fieldLabel && (
+        <p className="mb-1 text-sm text-gray-500">{fieldHelperText}</p>
       )}
       <CustomSelect
         id={id}
-        label={label}
+        label={fieldLabel}
         options={languageOptions}
         value={selectedLocale}
         onValueChange={handleChange}
         disabled={disabled || loading || isChanging}
-        placeholder="Select a language"
+        placeholder={t('language.preference.placeholder', 'Select a language')}
         data-automation-id={`${id}-select`}
       />
-      {helperText && label && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+      {fieldHelperText && fieldLabel && (
+        <p className="mt-1 text-sm text-gray-500">{fieldHelperText}</p>
       )}
       {isChanging && (
-        <p className="mt-2 text-sm text-gray-500">Updating language preference...</p>
+        <p className="mt-2 text-sm text-gray-500">{t('language.preference.updating', 'Updating language preference...')}</p>
       )}
     </div>
   );

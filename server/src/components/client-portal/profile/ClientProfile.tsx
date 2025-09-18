@@ -204,9 +204,10 @@ export function ClientProfile() {
     );
   }
 
+  const profileTabLabel = t('nav.profile');
   const tabContent: TabContent[] = [
     {
-      label: t('nav.profile'),
+      label: profileTabLabel,
       content: (
         <Card>
           <CardHeader>
@@ -340,9 +341,9 @@ export function ClientProfile() {
 
   return (
     <div className="space-y-6">
-      <CustomTabs 
+      <CustomTabs
         tabs={tabContent}
-        defaultTab="Profile"
+        defaultTab={profileTabLabel}
       />
 
       {/* Action Buttons */}

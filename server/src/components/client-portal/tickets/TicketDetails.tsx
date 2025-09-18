@@ -16,6 +16,7 @@ import {
   updateTicketStatus
 } from 'server/src/lib/actions/client-portal-actions/client-tickets';
 import { formatDistanceToNow } from 'date-fns';
+import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
 import { ITicket } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -45,7 +46,8 @@ interface TicketWithDetails extends ITicket {
 }
 
 export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps) {
-  const { t } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('clientPortal');
+  const dateLocale = getDateFnsLocale(i18n.language);
   const [ticket, setTicket] = useState<TicketWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -422,9 +424,9 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
                   </p>
                 </div>
                 <div className="text-right text-sm text-gray-500">
-                  <p>{t('tickets.fields.createdAt')} {formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true })}</p>
+                  <p>{t('tickets.fields.createdAt')} {formatDistanceToNow(new Date(ticket.entered_at || ''), { addSuffix: true, locale: dateLocale })}</p>
                   {ticket.updated_at && (
-                    <p>{t('tickets.fields.updatedAt')} {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true })}</p>
+                    <p>{t('tickets.fields.updatedAt')} {formatDistanceToNow(new Date(ticket.updated_at), { addSuffix: true, locale: dateLocale })}</p>
                   )}
                 </div>
               </div>
