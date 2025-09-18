@@ -1,0 +1,62 @@
+# Schema Coverage Snapshot
+
+- Total routes: 416
+- Routes with canonical schemas: 360 (86%)
+- Routes missing canonical schemas: 56
+- Routes handled without controllers (likely Next.js handlers): 56
+
+## Controllers Missing Canonical Schemas
+- All controllers import canonical schemas.
+
+## Routes Lacking Canonical Schemas
+- `GET` /api/auth/google/callback (CE)
+- `GET` /api/auth/microsoft/callback (CE)
+- `GET` /api/auth/session (CE)
+- `POST` /api/auth/validate-api-key (CE)
+- `POST` /api/auth/validate-token (CE)
+- `GET/POST` /api/auth/{nextauth} (CE)
+- `GET/POST` /api/billing/licence-count (CE)
+- `POST` /api/chat/stream/title (CE)
+- `GET/POST` /api/chat/stream/{slug} (CE)
+- `GET` /api/documents/download/{fileId} (CE)
+- `GET` /api/documents/view/{fileId} (CE)
+- `GET` /api/documents/{documentId}/download (CE)
+- `POST` /api/email/oauth/initiate (CE)
+- `POST` /api/email/refresh-watch (CE)
+- `OPTIONS/POST` /api/email/webhooks/google (CE)
+- `GET/OPTIONS/POST` /api/email/webhooks/microsoft (CE)
+- `POST` /api/email/webhooks/test (CE)
+- `POST` /api/ext-bundles/abort (EE)
+- `POST` /api/ext-bundles/finalize (EE)
+- `POST` /api/ext-bundles/upload-proxy (EE)
+- `DELETE/GET/PATCH/POST/PUT` /api/ext/{extensionId}/{path} (CE)
+- `DELETE/GET/PATCH/POST/PUT` /api/ext/{extensionId}/{path} (EE)
+- `GET` /api/extensions/install-info (EE)
+- `GET` /api/extensions/registry-db-check (EE)
+- `POST` /api/extensions/reprovision (EE)
+- `GET/POST` /api/extensions/softwareone/agreements (CE)
+- `GET` /api/extensions/softwareone/agreements/{id} (CE)
+- `GET/POST` /api/extensions/softwareone/statements (CE)
+- `GET` /api/extensions/softwareone/statements/{id} (CE)
+- `GET` /api/extensions/softwareone/statements/{id}/charges (CE)
+- `POST` /api/extensions/softwareone/sync (CE)
+- `GET` /api/extensions/{extensionId}/agreements (CE)
+- `GET` /api/extensions/{extensionId}/agreements/{id} (CE)
+- `GET` /api/extensions/{extensionId}/statements (CE)
+- `GET` /api/extensions/{extensionId}/statements/{id} (CE)
+- `GET` /api/extensions/{extensionId}/statements/{id}/charges (CE)
+- `POST` /api/extensions/{extensionId}/sync (CE)
+- `GET` /api/files/{fileId}/download (CE)
+- `GET` /api/health (CE)
+- `GET` /api/healthz (CE)
+- `GET` /api/installs/lookup-by-host (CE)
+- `GET` /api/installs/lookup-by-host (EE)
+- `GET` /api/installs/validate (CE)
+- `GET` /api/installs/validate (EE)
+- `GET` /api/integrations/qbo/callback (CE)
+- `GET` /api/integrations/qbo/connect (CE)
+- `GET` /api/integrations/qbo/status (CE)
+- `POST` /api/provisioning/tenants (EE)
+- `GET` /api/readyz (CE)
+- `GET/POST` /api/v1/admin/telemetry-settings (CE)
+- ...and 6 more

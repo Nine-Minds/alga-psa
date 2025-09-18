@@ -1,0 +1,4730 @@
+[
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/google/callback",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/auth/google/callback/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/microsoft/callback",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/auth/microsoft/callback/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/session",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/auth/session/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/validate-api-key",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/auth/validate-api-key/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/validate-token",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/auth/validate-token/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/auth/{nextauth}",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/auth/[...nextauth]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/billing/licence-count",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/billing/licence-count/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/chat/stream/title",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/chat/stream/title/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/chat/stream/{slug}",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/chat/stream/[...slug]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/documents/download/{fileId}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/documents/download/[fileId]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/documents/view/{fileId}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/documents/view/[fileId]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/documents/{documentId}/download",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/documents/[documentId]/download/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/email/oauth/initiate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/email/oauth/initiate/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/email/refresh-watch",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/email/refresh-watch/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/email/webhooks/google",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/email/webhooks/google/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/email/webhooks/microsoft",
+    "methods": [
+      "GET",
+      "OPTIONS",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/email/webhooks/microsoft/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/email/webhooks/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/email/webhooks/test/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/ext/{extensionId}/{path}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/ext/[extensionId]/[...path]/route.ts",
+    "controller": "AbortController",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/agreements",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/agreements/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/agreements/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/agreements/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/statements",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/statements/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/statements/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/statements/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/statements/{id}/charges",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/statements/[id]/charges/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/softwareone/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/extensions/softwareone/sync/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/agreements",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/agreements/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/agreements/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/agreements/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/statements",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/statements/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/statements/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/statements/[id]/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/statements/{id}/charges",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/statements/[id]/charges/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/extensions/{extensionId}/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/extensions/[extensionId]/sync/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/files/{fileId}/download",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/files/[fileId]/download/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/health/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/healthz",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/healthz/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/installs/lookup-by-host",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/installs/lookup-by-host/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/installs/validate",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/installs/validate/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/integrations/qbo/callback",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/integrations/qbo/callback/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/integrations/qbo/connect",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/integrations/qbo/connect/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/integrations/qbo/status",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/integrations/qbo/status/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/readyz",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/readyz/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/admin/telemetry-settings",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/admin/telemetry-settings/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/bulk-status",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/assets/bulk-status/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/bulk-update",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/assets/bulk-update/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/documents/{associationId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/assets/documents/[associationId]/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/assets/export/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/maintenance/{scheduleId}",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/assets/maintenance/[scheduleId]/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/relationships/{relationshipId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/assets/relationships/[relationshipId]/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/assets/search/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/assets/stats/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/documents",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/documents/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/history",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/history/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/maintenance",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/maintenance/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/maintenance/record",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/maintenance/record/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/assets/{id}/relationships",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/assets/[id]/relationships/route.ts",
+    "controller": "ApiAssetController",
+    "controller_import": "@/lib/api/controllers/ApiAssetController",
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/executions",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/executions/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/executions/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/executions/[id]/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/executions/{id}/retry",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/executions/[id]/retry/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/meta",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/meta/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/performance",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/performance/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/rules",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/rules/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/rules/bulk-execute",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/rules/bulk-execute/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/rules/bulk-status",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/rules/bulk-status/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/rules/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/automation/rules/[id]/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/rules/{id}/execute",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/rules/[id]/execute/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/statistics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/statistics/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/templates",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/templates/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/templates/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/automation/templates/[id]/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/automation/templates/{id}/use",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/automation/templates/[id]/use/route.ts",
+    "controller": "ApiAutomationController",
+    "controller_import": "server/src/lib/api/controllers/ApiAutomationController",
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-analytics/overview",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/billing-analytics/overview/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk",
+    "methods": [
+      "DELETE",
+      "POST",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "server/src/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk/add-services",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/add-services/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk/create",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/create/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk/delete",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/delete/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk/remove-services",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/remove-services/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/bulk/update",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/bulk/update/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/activation",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/activation/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/analytics/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/copy",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/copy/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/fixed-config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/fixed-config/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/services",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/services/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/services/{serviceId}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/services/[serviceId]/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "server/src/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/billing-plans/{id}/usage-metrics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/billing-plans/[id]/usage-metrics/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/categories/analytics/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/bulk/delete",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/categories/bulk/delete/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/categories/search/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/service",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/categories/service/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/service/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/categories/service/[id]/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/ticket",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/categories/ticket/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/ticket/move",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/categories/ticket/move/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/ticket/tree",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/categories/ticket/tree/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/ticket/tree/{channelId}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/categories/ticket/tree/[channelId]/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/categories/ticket/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/categories/ticket/[id]/route.ts",
+    "controller": "ApiCategoryController",
+    "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/companies",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/companies/route.ts",
+    "controller": "ApiCompanyController",
+    "controller_import": "@/lib/api/controllers/ApiCompanyController",
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/companies/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/companies/stats/route.ts",
+    "controller": "ApiCompanyController",
+    "controller_import": "@/lib/api/controllers/ApiCompanyController",
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/companies/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/companies/[id]/route.ts",
+    "controller": "ApiCompanyController",
+    "controller_import": "@/lib/api/controllers/ApiCompanyController",
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/companies/{id}/contacts",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/companies/[id]/contacts/route.ts",
+    "controller": "ApiCompanyController",
+    "controller_import": "@/lib/api/controllers/ApiCompanyController",
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/companies/{id}/locations",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/companies/[id]/locations/route.ts",
+    "controller": "ApiCompanyController",
+    "controller_import": "@/lib/api/controllers/ApiCompanyController",
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/company-billing-plans",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/company-billing-plans/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/company-billing-plans/{id}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/company-billing-plans/[id]/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contacts",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/contacts/route.ts",
+    "controller": "ApiContactController",
+    "controller_import": "server/src/lib/api/controllers/ApiContactController",
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contacts/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/contacts/export/route.ts",
+    "controller": "ApiContactController",
+    "controller_import": "server/src/lib/api/controllers/ApiContactController",
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contacts/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/contacts/search/route.ts",
+    "controller": "ApiContactController",
+    "controller_import": "server/src/lib/api/controllers/ApiContactController",
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contacts/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/contacts/stats/route.ts",
+    "controller": "ApiContactController",
+    "controller_import": "server/src/lib/api/controllers/ApiContactController",
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/contacts/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/contacts/[id]/route.ts",
+    "controller": "ApiContactController",
+    "controller_import": "server/src/lib/api/controllers/ApiContactController",
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/feature-access",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/feature-access/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/feature-flags",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/feature-flags/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/billing/calculate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/billing/calculate/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/billing/payment-terms",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/billing/payment-terms/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/bulk/credits",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/bulk/credits/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/bulk/invoices",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/bulk/invoices/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/bulk/transactions",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/bulk/transactions/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/credits",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/credits/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/credits/apply",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/credits/apply/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/credits/prepayment",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/credits/prepayment/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/credits/transfer",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/credits/transfer/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/credits/validate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/credits/validate/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/invoices",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/invoices/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/invoices/{id}/finalize",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/invoices/[id]/finalize/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/invoices/{id}/items",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/invoices/[id]/items/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/payment-methods",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/payment-methods/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/payment-methods/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/financial/payment-methods/[id]/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/reconciliation/run",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/reconciliation/run/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/reconciliation/{id}/resolve",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/reconciliation/[id]/resolve/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/reports/aging",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/reports/aging/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/reports/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/reports/analytics/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/reports/balance",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/reports/balance/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/tax/calculate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/tax/calculate/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/tax/rates",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/financial/tax/rates/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/transactions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/financial/transactions/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/financial/transactions/{id}",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/financial/transactions/[id]/route.ts",
+    "controller": "ApiFinancialController",
+    "controller_import": "server/src/lib/api/controllers/ApiFinancialController",
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/accounts",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/accounts/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/accounts/mappings",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/accounts/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/connection/refresh",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/connection/refresh/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/connection/status",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/connection/status/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/connection/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/connection/test/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/customers/mappings",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/customers/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/customers/mappings/{mapping_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/customers/mappings/[mapping_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/customers/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/customers/sync/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/diagnostics",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/diagnostics/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/health/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/health/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/health/config/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/invoices/export",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/invoices/export/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/invoices/import",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/invoices/import/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/items",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/items/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/mappings",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/mappings/{mapping_id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/mappings/[mapping_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/oauth/callback",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/oauth/callback/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/oauth/disconnect",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/oauth/disconnect/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/oauth/initiate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/oauth/initiate/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/payment-methods",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/payment-methods/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/payments/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/payments/sync/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/bulk/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/full",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/full/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/history",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/history/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/status",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/status/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/status/{sync_id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/status/[sync_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/{sync_id}/cancel",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/[sync_id]/cancel/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/sync/{sync_id}/retry",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/sync/[sync_id]/retry/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/tax-codes",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/tax-codes/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/tax-codes/mappings",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/tax-codes/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/integrations/quickbooks/terms",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/integrations/quickbooks/terms/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "server/src/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/analytics/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/bulk/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/bulk/credit",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/bulk/credit/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/bulk/delete",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/bulk/delete/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/bulk/send",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/bulk/send/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/export/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/generate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/generate/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/manual",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/manual/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/preview",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/preview/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/recurring",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/recurring/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/recurring/{id}",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/recurring/[id]/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/search/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/approve",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/approve/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/credit",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/credit/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/duplicate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/duplicate/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/finalize",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/finalize/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/items",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/items/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/payment",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/payment/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/pdf",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/pdf/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/reject",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/reject/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/send",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/send/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/tax",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/tax/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/invoices/{id}/transactions",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/invoices/[id]/transactions/route.ts",
+    "controller": "ApiInvoiceController",
+    "controller_import": "server/src/lib/api/controllers/ApiInvoiceController",
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/docs",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/docs/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/endpoints",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/endpoints/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/health/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/openapi",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/openapi/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/permissions",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/permissions/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/schemas",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/schemas/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/sdk",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/sdk/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/meta/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/meta/stats/route.ts",
+    "controller": "ApiMetadataController",
+    "controller_import": "@/lib/api/controllers/ApiMetadataController",
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/permission-checks",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/permission-checks/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/permissions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/permissions/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/permissions/categories",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/permissions/categories/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/permissions/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/permissions/[id]/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/permissions/{id}/roles",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/permissions/[id]/roles/route.ts",
+    "controller": "ApiPermissionController",
+    "controller_import": "@/lib/api/controllers/ApiPermissionController",
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/plan-bundles",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/plan-bundles/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/plan-bundles/{bundleId}/plans",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/plan-bundles/[bundleId]/plans/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/plan-bundles/{bundleId}/plans/{planId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/plan-bundles/[bundleId]/plans/[planId]/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/plan-templates",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/plan-templates/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/plan-templates/{id}/create-plan",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/plan-templates/[id]/create-plan/route.ts",
+    "controller": "ApiBillingPlanController",
+    "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/projects/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/bulk-assign",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/bulk-assign/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/bulk-status",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/bulk-status/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/bulk-update",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/bulk-update/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/export/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/search/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/stats/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/tasks/{taskId}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/tasks/[taskId]/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/tasks/{taskId}/checklist",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/projects/tasks/[taskId]/checklist/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}/phases",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/phases/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}/phases/{phaseId}",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/phases/[phaseId]/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}/phases/{phaseId}/tasks",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/phases/[phaseId]/tasks/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}/tasks",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/tasks/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/projects/{id}/tickets",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/projects/[id]/tickets/route.ts",
+    "controller": "ApiProjectController",
+    "controller_import": "@/lib/api/controllers/ApiProjectController",
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/accounts",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/accounts/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/accounts/mappings",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/accounts/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/connection/refresh",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/connection/refresh/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/connection/status",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/connection/status/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/connection/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/connection/test/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/customers/mappings",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/customers/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/customers/mappings/{mapping_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/customers/mappings/[mapping_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/customers/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/customers/sync/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/diagnostics",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/diagnostics/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/health/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/health/config",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/health/config/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/invoices/export",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/invoices/export/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/invoices/import",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/invoices/import/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/items",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/items/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/mappings",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/mappings/{mapping_id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/mappings/[mapping_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/oauth/callback",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/oauth/callback/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/oauth/disconnect",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/oauth/disconnect/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/oauth/initiate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/oauth/initiate/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/payment-methods",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/payment-methods/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/payments/sync",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/payments/sync/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/bulk/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/full",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/full/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/history",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/history/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/status",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/status/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/status/{sync_id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/status/[sync_id]/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/{sync_id}/cancel",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/[sync_id]/cancel/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/sync/{sync_id}/retry",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/sync/[sync_id]/retry/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/tax-codes",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/tax-codes/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/tax-codes/mappings",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/tax-codes/mappings/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/quickbooks/terms",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/quickbooks/terms/route.ts",
+    "controller": "ApiQuickBooksController",
+    "controller_import": "@/lib/api/controllers/ApiQuickBooksController",
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/rbac/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/rbac/analytics/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/rbac/audit",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/rbac/audit/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/roles/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/roles/bulk/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles/templates",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/roles/templates/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/roles/[id]/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles/{id}/clone",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/roles/[id]/clone/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/roles/{id}/permissions",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/roles/[id]/permissions/route.ts",
+    "controller": "ApiRoleController",
+    "controller_import": "@/lib/api/controllers/ApiRoleController",
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/schedules",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/schedules/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/schedules/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/schedules/search/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/schedules/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/schedules/[id]/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/schedules/{id}/conflicts",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/schedules/[id]/conflicts/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tags/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tags/analytics/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/bulk",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tags/bulk/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/bulk/merge",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tags/bulk/merge/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/bulk/tag",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tags/bulk/tag/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/bulk/untag",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/tags/bulk/untag/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/by-text",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/tags/by-text/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/cloud",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tags/cloud/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/entity/{entityType}/{entityId}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tags/entity/[entityType]/[entityId]/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tags/search/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tags/[id]/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/{id}/colors",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tags/[id]/colors/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tags/{id}/text",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tags/[id]/text/route.ts",
+    "controller": "ApiTagController",
+    "controller_import": "@/lib/api/controllers/ApiTagController",
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/teams/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/bulk",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/teams/bulk/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/hierarchy",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/teams/hierarchy/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/teams/search/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/teams/stats/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/analytics/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/hierarchy",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/hierarchy/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/manager",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/manager/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/members",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/members/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/members/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/members/bulk/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/members/{userId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/members/[userId]/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/permissions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/permissions/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/permissions/{permissionId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/permissions/[permissionId]/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/teams/{id}/projects",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/teams/[id]/projects/route.ts",
+    "controller": "ApiTeamController",
+    "controller_import": "@/lib/api/controllers/ApiTeamController",
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/test-auth",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/test-auth/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "@/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/from-asset",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/from-asset/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/search/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/stats/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/assignment",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/assignment/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/comments",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/comments/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/tickets/{id}/status",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/tickets/[id]/status/route.ts",
+    "controller": "ApiTicketController",
+    "controller_import": "server/src/lib/api/controllers/ApiTicketController",
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/active-session",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/active-session/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/approve",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/approve/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/bulk",
+    "methods": [
+      "DELETE",
+      "POST",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/bulk/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/export/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/request-changes",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/request-changes/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/search/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/start-tracking",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/start-tracking/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/stats/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/stop-tracking/{sessionId}",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/stop-tracking/[sessionId]/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/templates",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/templates/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-entries/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/time-entries/[id]/route.ts",
+    "controller": "ApiTimeEntryController",
+    "controller_import": "@/lib/api/controllers/ApiTimeEntryController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-periods",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-periods/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-periods/current",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-periods/current/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-periods/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/time-periods/[id]/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-periods/{id}/close",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-periods/[id]/close/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-periods/{id}/reopen",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-periods/[id]/reopen/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/bulk/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/export/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/search/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/add-entry",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/add-entry/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/approve",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/approve/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/entries",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/entries/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/reject",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/reject/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/remove-entry",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/remove-entry/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/request-changes",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/request-changes/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/reverse-approval",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/reverse-approval/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/submit",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/submit/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/time-sheets/{id}/summary",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/time-sheets/[id]/summary/route.ts",
+    "controller": "ApiTimeSheetController",
+    "controller_import": "server/src/lib/api/controllers/ApiTimeSheetController",
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/user-roles",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/user-roles/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/user/telemetry-decision",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/user/telemetry-decision/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/user/telemetry-preferences",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/user/telemetry-preferences/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/users/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/activity",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/users/activity/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/bulk/create",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/users/bulk/create/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/bulk/deactivate",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/users/bulk/deactivate/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/users/search/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/stats",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/users/stats/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/2fa/disable",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/2fa/disable/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/2fa/enable",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/2fa/enable/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/activity",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/activity/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/avatar",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/avatar/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/password",
+    "methods": [
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/password/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/permissions",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/permissions/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/preferences",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/preferences/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/roles",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/roles/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/teams",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/teams/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/users/{id}/teams/{teamId}",
+    "methods": [
+      "DELETE"
+    ],
+    "route_file": "server/src/app/api/v1/users/[id]/teams/[teamId]/route.ts",
+    "controller": "ApiUserController",
+    "controller_import": "@/lib/api/controllers/ApiUserController",
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/analytics/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/bulk/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/events",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/events/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/events/trigger",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/events/trigger/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/export/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/filter/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/filter/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/health/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/search/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/subscriptions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/subscriptions/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/templates",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/templates/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/templates/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/templates/[id]/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/templates/{id}/create",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/templates/[id]/create/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/transform/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/transform/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/validate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/validate/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/verify",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/verify/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/analytics/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/deliveries",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/deliveries/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/deliveries/[delivery_id]/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/deliveries/[delivery_id]/retry/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/filter/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/filter/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/health",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/health/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/secret/rotate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/secret/rotate/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/subscriptions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/subscriptions/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/transform/test",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/transform/test/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/webhooks/{id}/validate",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/webhooks/[id]/validate/route.ts",
+    "controller": "ApiWebhookController",
+    "controller_import": "server/src/lib/api/controllers/ApiWebhookController",
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/analytics",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/analytics/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/events",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/events/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/events/{id}",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/events/[id]/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/bulk",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/bulk/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/bulk-action",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/bulk-action/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/{id}",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/[id]/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/{id}/cancel",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/[id]/cancel/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/{id}/pause",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/[id]/pause/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/{id}/restart",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/[id]/restart/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/executions/{id}/resume",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/executions/[id]/resume/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/export",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/export/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/import",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/import/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/search",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/search/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/bulk-assign",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/bulk-assign/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}/claim",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/claim/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/tasks/{id}/complete",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/tasks/[id]/complete/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/templates",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/templates/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/templates/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/templates/[id]/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "CE",
+    "route_path": "/api/v1/workflows/{id}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "route_file": "server/src/app/api/v1/workflows/[id]/route.ts",
+    "controller": "ApiWorkflowController",
+    "controller_import": "server/src/lib/api/controllers/ApiWorkflowController",
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts"
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/ext-bundles/abort",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/ext-bundles/abort/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/ext-bundles/finalize",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/ext-bundles/finalize/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/ext-bundles/upload-proxy",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/ext-bundles/upload-proxy/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/ext/{extensionId}/{path}",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "route_file": "ee/server/src/app/api/ext/[extensionId]/[...path]/route.ts",
+    "controller": "AbortController",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/extensions/install-info",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/extensions/install-info/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/extensions/registry-db-check",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/extensions/registry-db-check/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/extensions/reprovision",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/extensions/reprovision/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/installs/lookup-by-host",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/installs/lookup-by-host/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/installs/validate",
+    "methods": [
+      "GET"
+    ],
+    "route_file": "ee/server/src/app/api/installs/validate/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/provisioning/tenants",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/provisioning/tenants/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  },
+  {
+    "edition": "EE",
+    "route_path": "/api/v1/auth/verify",
+    "methods": [
+      "POST"
+    ],
+    "route_file": "ee/server/src/app/api/v1/auth/verify/route.ts",
+    "controller": "",
+    "controller_import": "",
+    "controller_file": ""
+  }
+]

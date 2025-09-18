@@ -40,7 +40,7 @@ import {
   hasPermission 
 } from '../../auth/rbac';
 import {
-  ApiRequest,
+  AuthenticatedApiRequest,
   UnauthorizedError,
   ForbiddenError,
   NotFoundError,
@@ -74,6 +74,27 @@ export class ApiCategoryController extends ApiBaseController {
     this.categoryService = categoryService;
   }
 
+  private mapCategoryTypeToPermissionResource(categoryType?: CategoryType): 'billing_settings' | 'ticket_settings' {
+    return categoryType === 'service' ? 'billing_settings' : 'ticket_settings';
+  }
+
+  private async ensurePermission(
+    req: AuthenticatedApiRequest,
+    resource: 'billing_settings' | 'ticket_settings',
+    action: string
+  ): Promise<void> {
+    if (!req.context.user) {
+      throw new UnauthorizedError('User context required');
+    }
+
+    const knex = await getConnection(req.context.tenant);
+    const hasAccess = await hasPermission(req.context.user, resource, action, knex);
+    if (!hasAccess) {
+      const resourceLabel = resource.replace('_', ' ');
+      throw new ForbiddenError(`Permission denied: Cannot ${action} ${resourceLabel}`);
+    }
+  }
+
   // ========================================================================
   // SERVICE CATEGORY OPERATIONS
   // ========================================================================
@@ -90,7 +111,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'read');
+          await this.ensurePermission(apiRequest, 'billing_settings', 'read');
 
           // Parse query parameters
           const url = new URL(req.url);
@@ -141,7 +162,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'read');
+          await this.ensurePermission(apiRequest, 'billing_settings', 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
           const category = await this.categoryService.getServiceCategoryById(id, apiRequest.context!);
@@ -170,7 +191,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'create');
+          await this.ensurePermission(apiRequest, 'billing_settings', 'create');
 
           // Parse and validate request body
           const body = await req.json();
@@ -206,7 +227,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'update');
+          await this.ensurePermission(apiRequest, 'billing_settings', 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
 
@@ -244,7 +265,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'delete');
+          await this.ensurePermission(apiRequest, 'billing_settings', 'delete');
 
           const id = await this.extractIdFromPath(apiRequest);
           await this.categoryService.deleteServiceCategory(id, apiRequest.context!);
@@ -273,7 +294,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'read');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'read');
 
           // Parse query parameters
           const url = new URL(req.url);
@@ -324,7 +345,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'read');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'read');
 
           const id = await this.extractIdFromPath(apiRequest);
           const category = await this.categoryService.getTicketCategoryById(id, apiRequest.context!);
@@ -353,7 +374,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'create');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'create');
 
           // Parse and validate request body
           const body = await req.json();
@@ -389,7 +410,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'update');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'update');
 
           const id = await this.extractIdFromPath(apiRequest);
 
@@ -427,7 +448,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'delete');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'delete');
 
           const id = await this.extractIdFromPath(apiRequest);
           await this.categoryService.deleteTicketCategory(id, apiRequest.context!);
@@ -452,7 +473,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'read');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'read');
 
           const url = new URL(req.url);
           const pathParts = url.pathname.split('/');
@@ -482,7 +503,7 @@ export class ApiCategoryController extends ApiBaseController {
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
           // Check permissions
-          await this.checkPermission(apiRequest, 'update');
+          await this.ensurePermission(apiRequest, 'ticket_settings', 'update');
 
           // Parse and validate request body
           const body = await req.json();
@@ -525,9 +546,6 @@ export class ApiCategoryController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'read');
-
           // Parse query parameters
           const url = new URL(req.url);
           const query: Record<string, any> = {};
@@ -544,6 +562,10 @@ export class ApiCategoryController extends ApiBaseController {
             }
             throw error;
           }
+
+          // Check permissions
+          const resource = this.mapCategoryTypeToPermissionResource(validatedQuery.category_type);
+          await this.ensurePermission(apiRequest, resource, 'read');
 
           const results = await this.categoryService.searchCategories(
             validatedQuery.search_term,
@@ -576,9 +598,6 @@ export class ApiCategoryController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'read');
-
           // Parse query parameters
           const url = new URL(req.url);
           const query: Record<string, any> = {};
@@ -595,6 +614,10 @@ export class ApiCategoryController extends ApiBaseController {
             }
             throw error;
           }
+
+          // Check permissions
+          const resource = this.mapCategoryTypeToPermissionResource(validatedQuery.category_type);
+          await this.ensurePermission(apiRequest, resource, 'read');
 
           const analytics = await this.categoryService.getCategoryAnalytics(
             validatedQuery,
@@ -627,9 +650,6 @@ export class ApiCategoryController extends ApiBaseController {
         
         // Run within tenant context
         return await runWithTenant(apiRequest.context!.tenant, async () => {
-          // Check permissions
-          await this.checkPermission(apiRequest, 'delete');
-
           // Parse and validate request body
           const body = await req.json();
           let validatedData;
@@ -641,6 +661,10 @@ export class ApiCategoryController extends ApiBaseController {
             }
             throw error;
           }
+
+          // Check permissions
+          const resource = this.mapCategoryTypeToPermissionResource(validatedData.category_type);
+          await this.ensurePermission(apiRequest, resource, 'delete');
 
           const result = await this.categoryService.bulkDeleteCategories(
             validatedData.category_ids,
