@@ -28,7 +28,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { ItilFields } from './ItilFields';
-import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
+import { calculateItilPriority, ItilLabels, getItilCategoriesAsTicketCategories } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
@@ -140,6 +140,76 @@ export function QuickAddTicket({
     }
     return null;
   }, [itilImpact, itilUrgency]);
+
+  // ITIL options for selects
+  const itilImpactOptions: SelectOption[] = [
+    { value: '1', label: '1 - High (Critical business function affected)' },
+    { value: '2', label: '2 - Medium-High (Important function affected)' },
+    { value: '3', label: '3 - Medium (Minor function affected)' },
+    { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+    { value: '5', label: '5 - Low (No business impact)' }
+  ];
+
+  const itilUrgencyOptions: SelectOption[] = [
+    { value: '1', label: '1 - High (Work cannot continue)' },
+    { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+    { value: '3', label: '3 - Medium (Work continues with limitations)' },
+    { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+    { value: '5', label: '5 - Low (Work continues normally)' }
+  ];
+
+  // Get ITIL categories in the same format as custom categories
+  const itilCategoriesForPicker = useMemo(() => {
+    return getItilCategoriesAsTicketCategories();
+  }, []);
+
+  // Get currently selected ITIL category ID for CategoryPicker
+  const getSelectedItilCategoryId = (): string => {
+    if (!itilCategory) return '';
+
+    // If we have both category and subcategory, return the subcategory ID
+    if (itilSubcategory) {
+      const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
+      const subcategoryKey = itilSubcategory.toLowerCase().replace(/[\s\/]+/g, '-');
+      return `itil-${categoryKey}-${subcategoryKey}`;
+    }
+
+    // If we only have category, return the parent category ID
+    const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
+    return `itil-${categoryKey}`;
+  };
+
+  // Handle ITIL category selection from CategoryPicker
+  const handleItilCategoryChange = (categoryIds: string[]) => {
+    if (categoryIds.length === 0) {
+      // Clear both category and subcategory
+      setItilCategory('');
+      setItilSubcategory('');
+      return;
+    }
+
+    const selectedCategoryId = categoryIds[0];
+    const selectedCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategoryId);
+
+    if (!selectedCategory) {
+      console.error('Selected ITIL category not found');
+      return;
+    }
+
+    if (selectedCategory.parent_category) {
+      // This is a subcategory selection
+      const parentCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategory.parent_category);
+      if (parentCategory) {
+        setItilCategory(parentCategory.category_name);
+        setItilSubcategory(selectedCategory.category_name);
+      }
+    } else {
+      // This is a parent category selection
+      setItilCategory(selectedCategory.category_name);
+      setItilSubcategory('');
+    }
+  };
+
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -751,44 +821,30 @@ export function QuickAddTicket({
                         <>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
-                            <select
-                              value={itilImpact || ''}
-                              onChange={(e) => {
-                                setItilImpact(e.target.value ? parseInt(e.target.value) : undefined);
+                            <CustomSelect
+                              options={itilImpactOptions}
+                              value={itilImpact?.toString() || null}
+                              onValueChange={(value) => {
+                                setItilImpact(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                                hasAttemptedSubmit && !itilImpact ? 'border-red-500' : 'border-gray-300'
-                              }`}
-                            >
-                              <option value="">Select Impact</option>
-                              <option value="1">1 - High (Critical business function affected)</option>
-                              <option value="2">2 - Medium-High (Important function affected)</option>
-                              <option value="3">3 - Medium (Minor function affected)</option>
-                              <option value="4">4 - Medium-Low (Minimal impact)</option>
-                              <option value="5">5 - Low (No business impact)</option>
-                            </select>
+                              placeholder="Select Impact"
+                              className={hasAttemptedSubmit && !itilImpact ? 'border-red-500' : ''}
+                            />
                           </div>
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Urgency *</label>
-                            <select
-                              value={itilUrgency || ''}
-                              onChange={(e) => {
-                                setItilUrgency(e.target.value ? parseInt(e.target.value) : undefined);
+                            <CustomSelect
+                              options={itilUrgencyOptions}
+                              value={itilUrgency?.toString() || null}
+                              onValueChange={(value) => {
+                                setItilUrgency(value ? parseInt(value) : undefined);
                                 clearErrorIfSubmitted();
                               }}
-                              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                                hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : 'border-gray-300'
-                              }`}
-                            >
-                              <option value="">Select Urgency</option>
-                              <option value="1">1 - High (Work cannot continue)</option>
-                              <option value="2">2 - Medium-High (Work severely impaired)</option>
-                              <option value="3">3 - Medium (Work continues with limitations)</option>
-                              <option value="4">4 - Medium-Low (Minor inconvenience)</option>
-                              <option value="5">5 - Low (Work continues normally)</option>
-                            </select>
+                              placeholder="Select Urgency"
+                              className={hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : ''}
+                            />
                           </div>
 
                           {/* Read-only Priority field showing calculated value */}
@@ -905,93 +961,20 @@ export function QuickAddTicket({
 
                   {/* ITIL Categories - Show when using ITIL categories */}
                   {channelId && channelConfig.category_type === 'itil' && (
-                    <>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Category</label>
-                        <select
-                          value={itilCategory || ''}
-                          onChange={(e) => {
-                            setItilCategory(e.target.value);
-                            setItilSubcategory(''); // Reset subcategory when category changes
-                            clearErrorIfSubmitted();
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        >
-                          <option value="">Select ITIL Category</option>
-                          <option value="Hardware">Hardware</option>
-                          <option value="Software">Software</option>
-                          <option value="Network">Network</option>
-                          <option value="Security">Security</option>
-                          <option value="Service Request">Service Request</option>
-                        </select>
-                      </div>
-
-                      {itilCategory && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Subcategory</label>
-                          <select
-                            value={itilSubcategory || ''}
-                            onChange={(e) => {
-                              setItilSubcategory(e.target.value);
-                              clearErrorIfSubmitted();
-                            }}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                          >
-                            <option value="">Select Subcategory</option>
-                            {itilCategory === 'Hardware' && (
-                              <>
-                                <option value="Server">Server</option>
-                                <option value="Desktop/Laptop">Desktop/Laptop</option>
-                                <option value="Network Equipment">Network Equipment</option>
-                                <option value="Printer">Printer</option>
-                                <option value="Storage">Storage</option>
-                                <option value="Mobile Device">Mobile Device</option>
-                              </>
-                            )}
-                            {itilCategory === 'Software' && (
-                              <>
-                                <option value="Application">Application</option>
-                                <option value="Operating System">Operating System</option>
-                                <option value="Database">Database</option>
-                                <option value="Security Software">Security Software</option>
-                                <option value="Productivity Software">Productivity Software</option>
-                                <option value="Custom Application">Custom Application</option>
-                              </>
-                            )}
-                            {itilCategory === 'Network' && (
-                              <>
-                                <option value="Connectivity">Connectivity</option>
-                                <option value="VPN">VPN</option>
-                                <option value="Wi-Fi">Wi-Fi</option>
-                                <option value="Internet">Internet</option>
-                                <option value="LAN/WAN">LAN/WAN</option>
-                                <option value="Firewall">Firewall</option>
-                              </>
-                            )}
-                            {itilCategory === 'Security' && (
-                              <>
-                                <option value="Malware">Malware</option>
-                                <option value="Unauthorized Access">Unauthorized Access</option>
-                                <option value="Data Breach">Data Breach</option>
-                                <option value="Phishing">Phishing</option>
-                                <option value="Policy Violation">Policy Violation</option>
-                                <option value="Account Lockout">Account Lockout</option>
-                              </>
-                            )}
-                            {itilCategory === 'Service Request' && (
-                              <>
-                                <option value="Access Request">Access Request</option>
-                                <option value="New User Setup">New User Setup</option>
-                                <option value="Software Installation">Software Installation</option>
-                                <option value="Equipment Request">Equipment Request</option>
-                                <option value="Information Request">Information Request</option>
-                                <option value="Change Request">Change Request</option>
-                              </>
-                            )}
-                          </select>
-                        </div>
-                      )}
-                    </>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Category</label>
+                      <CategoryPicker
+                        id="quick-add-itil-category-picker"
+                        categories={itilCategoriesForPicker}
+                        selectedCategories={getSelectedItilCategoryId() ? [getSelectedItilCategoryId()] : []}
+                        onSelect={(categoryIds) => {
+                          handleItilCategoryChange(categoryIds);
+                          clearErrorIfSubmitted();
+                        }}
+                        placeholder="Select ITIL category..."
+                        multiSelect={false}
+                      />
+                    </div>
                   )}
 
 

@@ -243,3 +243,62 @@ export const ItilResolutionCodes = [
   'User Error',
   'Known Error'
 ];
+
+/**
+ * Format ITIL category and subcategory display consistently with custom categories
+ * @param category ITIL category (e.g., 'Hardware')
+ * @param subcategory ITIL subcategory (e.g., 'Server')
+ * @returns Formatted display string (e.g., 'Hardware → Server' or 'Hardware' if no subcategory)
+ */
+export function formatItilCategoryDisplay(category?: string | null, subcategory?: string | null): string {
+  if (!category) {
+    return '';
+  }
+
+  if (subcategory) {
+    return `${category} → ${subcategory}`;
+  }
+
+  return category;
+}
+
+/**
+ * Convert ITIL categories to ITicketCategory format for use with CategoryPicker
+ * @returns Array of ITicketCategory objects representing ITIL categories
+ */
+export function getItilCategoriesAsTicketCategories(): any[] {
+  const categories: any[] = [];
+
+  // Add parent categories and their children
+  Object.entries(ItilCategories).forEach(([categoryName, categoryData], index) => {
+    const parentId = `itil-${categoryName.toLowerCase().replace(/\s+/g, '-')}`;
+
+    // Add parent category
+    categories.push({
+      category_id: parentId,
+      category_name: categoryName,
+      parent_category: null,
+      is_inactive: false,
+      tenant_id: '', // Will be set by the system
+      created_at: new Date(),
+      updated_at: new Date()
+    });
+
+    // Add child categories
+    categoryData.subcategories.forEach((subcategoryName, subIndex) => {
+      const childId = `itil-${categoryName.toLowerCase().replace(/\s+/g, '-')}-${subcategoryName.toLowerCase().replace(/[\s\/]+/g, '-')}`;
+
+      categories.push({
+        category_id: childId,
+        category_name: subcategoryName,
+        parent_category: parentId,
+        is_inactive: false,
+        tenant_id: '', // Will be set by the system
+        created_at: new Date(),
+        updated_at: new Date()
+      });
+    });
+  });
+
+  return categories;
+}
