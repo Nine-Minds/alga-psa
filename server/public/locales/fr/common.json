@@ -56,6 +56,31 @@
     "invalidPassword": "Mot de passe invalide",
     "passwordMismatch": "Les mots de passe ne correspondent pas"
   },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Non authentifié",
+      "accessDenied": "Accès refusé",
+      "clientPortalOnly": "Accès refusé : Les actions du portail client sont réservées aux utilisateurs clients",
+      "insufficientPermissions": "Permissions insuffisantes",
+      "userIdNotFound": "ID d'utilisateur non trouvé dans la session",
+      "tenantNotFound": "Locataire non trouvé dans la session. Veuillez vous déconnecter et vous reconnecter.",
+      "userNotFound": "Utilisateur non trouvé",
+      "contactNotFound": "Utilisateur non associé à un contact",
+      "companyNotFound": "Contact non associé à une entreprise"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Permissions insuffisantes pour afficher les tickets",
+        "readDetails": "Permissions insuffisantes pour afficher les détails du ticket",
+        "create": "Permissions insuffisantes pour créer des tickets",
+        "update": "Permissions insuffisantes pour mettre à jour les tickets",
+        "updateStatus": "Permissions insuffisantes pour mettre à jour le statut du ticket",
+        "addComments": "Permissions insuffisantes pour ajouter des commentaires",
+        "updateComments": "Permissions insuffisantes pour modifier les commentaires",
+        "deleteComments": "Permissions insuffisantes pour supprimer les commentaires"
+      }
+    }
+  },
   "time": {
     "today": "Aujourd'hui",
     "yesterday": "Hier",

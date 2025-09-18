@@ -56,6 +56,31 @@
     "invalidPassword": "Invalid password",
     "passwordMismatch": "Passwords do not match"
   },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Not authenticated",
+      "accessDenied": "Access denied",
+      "clientPortalOnly": "Access denied: Client portal actions are restricted to client users",
+      "insufficientPermissions": "Insufficient permissions",
+      "userIdNotFound": "User ID not found in session",
+      "tenantNotFound": "Tenant not found in session. Please log out and log back in.",
+      "userNotFound": "User not found",
+      "contactNotFound": "User not associated with a contact",
+      "companyNotFound": "Contact not associated with a company"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Insufficient permissions to view tickets",
+        "readDetails": "Insufficient permissions to view ticket details",
+        "create": "Insufficient permissions to create tickets",
+        "update": "Insufficient permissions to update tickets",
+        "updateStatus": "Insufficient permissions to update ticket status",
+        "addComments": "Insufficient permissions to add comments",
+        "updateComments": "Insufficient permissions to update comments",
+        "deleteComments": "Insufficient permissions to delete comments"
+      }
+    }
+  },
   "time": {
     "today": "Today",
     "yesterday": "Yesterday",

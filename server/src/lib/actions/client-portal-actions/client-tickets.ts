@@ -6,9 +6,10 @@ import { Knex } from 'knex';
 import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
+import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { z } from 'zod';
-import { NumberingService } from 'server/src/lib/services/numberingService';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
@@ -41,8 +42,25 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      throw new Error('Insufficient permissions to view tickets');
+    }
 
     console.log('Debug - Session user ID:', session.user.id);
     console.log('Debug - Tenant:', tenant);
@@ -182,8 +200,25 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canRead = await hasPermission(userForPermission, 'ticket', 'read', db);
+    if (!canRead) {
+      throw new Error('Insufficient permissions to view ticket details');
+    }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's company_id
@@ -356,8 +391,25 @@ export async function addClientTicketComment(ticketId: string, content: string, 
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to add comments');
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
@@ -373,7 +425,7 @@ export async function addClientTicketComment(ticketId: string, content: string, 
 
       let markdownContent = "";
       try {
-        markdownContent = await convertBlockNoteToMarkdown(content);
+        markdownContent = convertBlockNoteToMarkdown(content);
         console.log("Converted markdown content for client comment:", markdownContent);
       } catch (e) {
         console.error("Error converting client comment to markdown:", e);
@@ -418,8 +470,25 @@ export async function updateClientTicketComment(commentId: string, updates: Part
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update comments');
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
@@ -449,7 +518,7 @@ export async function updateClientTicketComment(commentId: string, updates: Part
       let updatesWithMarkdown = { ...updates };
       if (updates.note) {
         try {
-          const markdownContent = await convertBlockNoteToMarkdown(updates.note);
+          const markdownContent = convertBlockNoteToMarkdown(updates.note);
           console.log("Converted markdown content for updated client comment:", markdownContent);
           updatesWithMarkdown.markdown_content = markdownContent;
         } catch (e) {
@@ -493,8 +562,25 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canUpdate = await hasPermission(userForPermission, 'ticket', 'update', db);
+    if (!canUpdate) {
+      throw new Error('Insufficient permissions to update ticket status');
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
@@ -557,8 +643,25 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canDelete = await hasPermission(userForPermission, 'ticket', 'delete', db);
+    if (!canDelete) {
+      throw new Error('Insufficient permissions to delete comments');
+    }
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const user = await trx('users')
@@ -616,8 +719,25 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
       throw new Error('Tenant not found in session. Please log out and log back in.');
     }
 
+    // Enforce client portal access only
+    if (session.user.user_type !== 'client') {
+      throw new Error('Access denied: Client portal actions are restricted to client users');
+    }
+
     // Get the database connection
     const db = await getConnection(tenant);
+
+    // Check RBAC permission
+    const userForPermission = {
+      user_id: session.user.id,
+      email: session.user.email,
+      user_type: session.user.user_type,
+      is_inactive: false
+    } as IUser;
+    const canCreate = await hasPermission(userForPermission, 'ticket', 'create', db);
+    if (!canCreate) {
+      throw new Error('Insufficient permissions to create tickets');
+    }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Get user's contact and company information
