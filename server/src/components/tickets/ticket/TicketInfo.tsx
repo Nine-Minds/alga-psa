@@ -157,6 +157,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             setCategories([]);
             setChannelConfig({
               category_type: 'custom',
+              priority_type: 'custom',
               display_itil_impact: false,
               display_itil_urgency: false,
               display_itil_category: false,
@@ -174,6 +175,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           }
           setChannelConfig({
             category_type: 'custom',
+            priority_type: 'custom',
             display_itil_impact: false,
             display_itil_urgency: false,
             display_itil_category: false,
@@ -185,6 +187,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         setCategories([]);
         setChannelConfig({
           category_type: 'custom',
+          priority_type: 'custom',
           display_itil_impact: false,
           display_itil_urgency: false,
           display_itil_category: false,
@@ -359,6 +362,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   // Clear categories when channel changes
                   onSelectChange('category_id', null);
                   onSelectChange('subcategory_id', null);
+
+                  // Clear priority fields when channel changes
+                  // This ensures that switching between custom and ITIL priority types
+                  // doesn't retain the wrong priority data
+                  onSelectChange('priority_id', null);
+                  if (onItilFieldChange) {
+                    onItilFieldChange('itil_impact', null);
+                    onItilFieldChange('itil_urgency', null);
+                    onItilFieldChange('itil_priority_level', null);
+                  }
                 }}
                 customStyles={customStyles}
                 className="!w-fit"
@@ -366,36 +379,42 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              {channelConfig.priority_type === 'itil' && calculatedItilPriority ? (
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full border border-gray-300"
-                    style={{ backgroundColor:
-                      calculatedItilPriority === 1 ? '#DC2626' : // Red
-                      calculatedItilPriority === 2 ? '#EA580C' : // Orange
-                      calculatedItilPriority === 3 ? '#F59E0B' : // Amber
-                      calculatedItilPriority === 4 ? '#3B82F6' : // Blue
-                      '#6B7280' // Gray
-                    }}
-                  />
-                  <span className="text-sm font-medium">
-                    {ItilLabels.priority[calculatedItilPriority]}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    (Impact {ticket.itil_impact} × Urgency {ticket.itil_urgency})
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
-                    title="Show ITIL Priority Matrix"
-                  >
-                    <HelpCircle className="w-4 h-4" />
-                  </button>
-                </div>
+              {channelConfig.priority_type === 'itil' ? (
+                calculatedItilPriority ? (
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-full border border-gray-300"
+                      style={{ backgroundColor:
+                        calculatedItilPriority === 1 ? '#DC2626' : // Red
+                        calculatedItilPriority === 2 ? '#EA580C' : // Orange
+                        calculatedItilPriority === 3 ? '#F59E0B' : // Amber
+                        calculatedItilPriority === 4 ? '#3B82F6' : // Blue
+                        '#6B7280' // Gray
+                      }}
+                    />
+                    <span className="text-sm font-medium">
+                      {ItilLabels.priority[calculatedItilPriority]}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      (Impact {ticket.itil_impact} × Urgency {ticket.itil_urgency})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      title="Show ITIL Priority Matrix"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">
+                    Please set Impact and Urgency below to determine priority
+                  </div>
+                )
               ) : (
                 <PrioritySelect
-                  value={ticket.priority_id}
+                  value={ticket.priority_id || null}
                   options={priorityOptions}
                   onValueChange={(value) => onSelectChange('priority_id', value)}
                   customStyles={customStyles}
