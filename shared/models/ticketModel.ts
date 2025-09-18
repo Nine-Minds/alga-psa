@@ -1046,14 +1046,14 @@ export class TicketModel {
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
-    // Map to DB enum/text values: prefer 'user' | 'contact' | 'unknown'
+    // Map to DB enum/text values that align with comment_author_type_new
     const dbAuthorType = (() => {
       switch (validatedData.author_type) {
         case 'internal':
         case 'system':
-          return 'user';
+          return 'internal';
         case 'contact':
-          return 'contact';
+          return 'client';
         default:
           return 'unknown';
       }

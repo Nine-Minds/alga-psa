@@ -1,8 +1,14 @@
 import { Knex, knex } from 'knex';
 import dotenv from 'dotenv';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getSecret } from '../src/lib/utils/getSecret';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const serverRoot = path.resolve(__dirname, '..');
 
 const PRODUCTION_DB_NAMES = ['sebastian_prod', 'production', 'prod'];
 
@@ -22,7 +28,7 @@ export function verifyTestDatabase(dbName: string): void {
  * @returns Knex instance configured for testing
  */
 export async function createTestDbConnection(): Promise<Knex> {
-  const dbName = process.env.DB_NAME_SERVER || 'sebastian_test';
+  const dbName = 'sebastian_test';
   verifyTestDatabase(dbName);
 
   const config: Knex.Config = {
@@ -40,12 +46,14 @@ export async function createTestDbConnection(): Promise<Knex> {
       max: 20,
     },
     migrations: {
-      directory: './migrations',
+      directory: path.join(serverRoot, 'migrations'),
     },
     seeds: {
-      directory: './seeds/dev',
+      directory: path.join(serverRoot, 'seeds', 'dev'),
     },
   };
+
+  console.log(config);
 
   return knex(config);
 }
