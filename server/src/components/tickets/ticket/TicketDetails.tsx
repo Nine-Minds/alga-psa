@@ -194,8 +194,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // ITIL-specific state for editing
     const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
     const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
-    const [itilCategory, setItilCategory] = useState<string>(ticket.itil_category || '');
-    const [itilSubcategory, setItilSubcategory] = useState<string>(ticket.itil_subcategory || '');
+    // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer } = useDrawer();
     const router = useRouter();
@@ -1030,13 +1029,7 @@ const handleClose = () => {
                 case 'itil_urgency':
                     setItilUrgency(value);
                     break;
-                case 'itil_category':
-                    setItilCategory(value);
-                    setItilSubcategory(''); // Reset subcategory when category changes
-                    break;
-                case 'itil_subcategory':
-                    setItilSubcategory(value);
-                    break;
+                // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
             }
 
             const user = await getCurrentUser();
@@ -1054,18 +1047,11 @@ const handleClose = () => {
                 const currentImpact = field === 'itil_impact' ? value : itilImpact;
                 const currentUrgency = field === 'itil_urgency' ? value : itilUrgency;
 
-                if (currentImpact && currentUrgency) {
-                    // Import the ITIL utility function dynamically
-                    const { calculateItilPriority } = await import('server/src/lib/utils/itilUtils');
-                    const calculatedPriority = calculateItilPriority(currentImpact, currentUrgency);
-                    updateData.itil_priority_level = calculatedPriority;
-                }
+                // NOTE: Priority mapping is now handled in the backend
+                // The backend will calculate and map ITIL priority to the correct priority_id
             }
 
-            // Reset subcategory in updateData if category changed
-            if (field === 'itil_category') {
-                updateData.itil_subcategory = '';
-            }
+            // NOTE: Category management is now unified through the CategoryPicker
 
             await updateTicketWithCache(ticket.ticket_id!, updateData, user);
 

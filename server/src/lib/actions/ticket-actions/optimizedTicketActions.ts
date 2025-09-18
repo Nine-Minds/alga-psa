@@ -728,10 +728,7 @@ export async function getTicketsForListWithCursor(
         company_name,
         entered_by_name,
         assigned_to_name,
-        // Extract ITIL fields explicitly
-        itil_priority_level,
-        itil_category,
-        itil_subcategory,
+        // NOTE: Legacy ITIL fields removed - now using unified system
         ...rest
       } = ticket;
 
@@ -749,10 +746,7 @@ export async function getTicketsForListWithCursor(
         company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown',
-        // Include ITIL fields
-        itil_priority_level: itil_priority_level || undefined,
-        itil_category: itil_category || undefined,
-        itil_subcategory: itil_subcategory || undefined,
+        // NOTE: ITIL fields now handled through unified priority_id and category_id
         ...convertDates(rest)
       };
     });
@@ -788,9 +782,11 @@ export async function getTicketFormOptions(user: IUser) {
     // Fetch all options in parallel
     const [
       statuses,
-      priorities,
+      customPriorities,
+      itilPriorities,
       channels,
-      categories,
+      customCategories,
+      itilCategories,
       companies,
       users,
       tags
@@ -802,18 +798,29 @@ export async function getTicketFormOptions(user: IUser) {
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-      
-      // Priorities - fetch only tenant-specific ticket priorities
+
+      // Custom priorities - fetch only tenant-specific ticket priorities
       trx('priorities')
         .where({ tenant, item_type: 'ticket' })
         .orderBy('priority_name', 'asc'),
+
+      // ITIL priorities - fetch from standard_priorities
+      trx('standard_priorities')
+        .where({ is_itil_standard: true, item_type: 'ticket' })
+        .orderBy('order_number', 'asc'),
       
       trx('channels')
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
-      
+
+      // Custom categories - fetch only tenant-specific categories
       trx('categories')
         .where({ tenant })
+        .orderBy('category_name', 'asc'),
+
+      // ITIL categories - fetch from standard_categories
+      trx('standard_categories')
+        .where({ is_itil_standard: true })
         .orderBy('category_name', 'asc'),
       
       trx('companies as c')
@@ -843,11 +850,27 @@ export async function getTicketFormOptions(user: IUser) {
       }))
     ];
 
-    const priorityOptions = [
-      { value: 'all', label: 'All Priorities' },
-      ...priorities.map((priority: any) => ({
+    // Combine custom and ITIL priorities
+    const allPriorities = [
+      ...customPriorities.map((priority: any) => ({
         value: priority.priority_id,
         label: priority.priority_name,
+        color: priority.color,
+        is_itil: false
+      })),
+      ...itilPriorities.map((priority: any) => ({
+        value: priority.priority_id,
+        label: priority.priority_name,
+        color: priority.color,
+        is_itil: true
+      }))
+    ];
+
+    const priorityOptions = [
+      { value: 'all', label: 'All Priorities' },
+      ...allPriorities.map((priority: any) => ({
+        value: priority.value,
+        label: priority.label,
         color: priority.color
       }))
     ];
@@ -876,12 +899,24 @@ export async function getTicketFormOptions(user: IUser) {
     });
     // --- End Logo URL Processing ---
 
+    // Combine custom and ITIL categories
+    const allCategories = [
+      ...customCategories.map((category: any) => ({
+        ...category,
+        is_itil: false
+      })),
+      ...itilCategories.map((category: any) => ({
+        ...category,
+        is_itil: true
+      }))
+    ];
+
     return {
       statusOptions,
       priorityOptions,
       channelOptions,
       agentOptions,
-      categories,
+      categories: allCategories,
       companies: companiesWithLogos, // Return companies with logos
       users,
       tags: Array.isArray(tags) ? tags.map((tag: any) => tag.tag_text) : [] // Return unique tag texts

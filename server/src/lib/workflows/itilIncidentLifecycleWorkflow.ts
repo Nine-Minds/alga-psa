@@ -98,7 +98,7 @@ async function performIncidentCategorization(context: any, incidentData: any): P
   }
   
   // Auto-categorize based on keywords if not already categorized
-  if (!incidentData.itil_category) {
+  if (!incidentData.category_id) {
     const autoCategory = await actions.autoCategorizePatch(incidentData.title + ' ' + incidentData.description);
     
     if (autoCategory.category) {

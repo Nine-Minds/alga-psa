@@ -146,9 +146,25 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       // ITIL-specific fields
       const itil_impact = data.get('itil_impact');
       const itil_urgency = data.get('itil_urgency');
-      const itil_priority_level = data.get('itil_priority_level');
-      const itil_category = data.get('itil_category');
-      const itil_subcategory = data.get('itil_subcategory');
+
+      // For ITIL channels, calculate priority and map to standard_priorities record
+      let finalPriorityId = data.get('priority_id') as string;
+
+      if (itil_impact && itil_urgency) {
+        // Calculate ITIL priority level
+        const { calculateItilPriority } = require('../../utils/itilUtils');
+        const priorityLevel = calculateItilPriority(parseInt(itil_impact as string), parseInt(itil_urgency as string));
+
+        // Get the corresponding ITIL priority record from standard_priorities
+        const itilPriorityRecord = await trx('standard_priorities')
+          .where('is_itil_standard', true)
+          .where('itil_priority_level', priorityLevel)
+          .first();
+
+        if (itilPriorityRecord) {
+          finalPriorityId = itilPriorityRecord.priority_id;
+        }
+      }
 
       // Convert FormData to CreateTicketInput format
       const createTicketInput: CreateTicketInput = {
@@ -162,32 +178,13 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         description: description as string,
         category_id: category_id === '' ? undefined : (category_id as string),
         subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
-        // ITIL-specific fields
+        priority_id: finalPriorityId, // Always use priority_id (mapped from ITIL if needed)
+        // ITIL-specific fields (kept for UI display)
         itil_impact: itil_impact ? parseInt(itil_impact as string) : undefined,
         itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
-        itil_priority_level: (() => {
-          // First, try to use the provided priority level
-          if (itil_priority_level) {
-            return parseInt(itil_priority_level as string);
-          }
-          // If no priority level provided but we have impact and urgency, calculate it
-          if (itil_impact && itil_urgency) {
-            const { calculateItilPriority } = require('../../utils/itilUtils');
-            return calculateItilPriority(parseInt(itil_impact as string), parseInt(itil_urgency as string));
-          }
-          return undefined;
-        })(),
-        itil_category: itil_category || undefined,
-        itil_subcategory: itil_subcategory || undefined,
         entered_by: user.user_id,
         source: 'web_app'
       };
-
-      // Only set priority_id if it's provided (for custom priority channels)
-      // For ITIL channels, priority_id should be completely omitted
-      if (data.get('priority_id')) {
-        createTicketInput.priority_id = data.get('priority_id') as string;
-      }
 
       // Server-specific: Create adapters for dependency injection
       const eventPublisher = new ServerEventPublisher();

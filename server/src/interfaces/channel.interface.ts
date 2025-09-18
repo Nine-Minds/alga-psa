@@ -32,5 +32,4 @@ export interface IChannel extends TenantEntity {
   // ITIL-specific display configuration
   display_itil_impact?: boolean;
   display_itil_urgency?: boolean;
-  display_itil_category?: boolean;
 }

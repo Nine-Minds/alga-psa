@@ -15,7 +15,7 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { ItilLabels, calculateItilPriority, getItilCategoriesAsTicketCategories } from 'server/src/lib/utils/itilUtils';
+import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
 import { Pencil, Check, HelpCircle } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
@@ -91,57 +91,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     return null;
   }, [itilImpact, itilUrgency]);
 
-  // Get ITIL categories in the same format as custom categories
-  const itilCategoriesForPicker = React.useMemo(() => {
-    return getItilCategoriesAsTicketCategories();
-  }, []);
+  // Get ITIL categories from props (now includes both custom and ITIL)
+  // NOTE: Categories are now unified - no need for separate ITIL category filtering
 
-  // Get currently selected ITIL category ID for CategoryPicker
-  const getSelectedItilCategoryId = (): string => {
-    if (!itilCategory) return '';
+  // NOTE: ITIL category selection is now handled by the unified CategoryPicker system
 
-    // If we have both category and subcategory, return the subcategory ID
-    if (itilSubcategory) {
-      const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
-      const subcategoryKey = itilSubcategory.toLowerCase().replace(/[\s\/]+/g, '-');
-      return `itil-${categoryKey}-${subcategoryKey}`;
-    }
-
-    // If we only have category, return the parent category ID
-    const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
-    return `itil-${categoryKey}`;
-  };
-
-  // Handle ITIL category selection from CategoryPicker
-  const handleItilCategoryChange = (categoryIds: string[]) => {
-    if (categoryIds.length === 0) {
-      // Clear both category and subcategory
-      onItilFieldChange && onItilFieldChange('itil_category', '');
-      onItilFieldChange && onItilFieldChange('itil_subcategory', '');
-      return;
-    }
-
-    const selectedCategoryId = categoryIds[0];
-    const selectedCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategoryId);
-
-    if (!selectedCategory) {
-      console.error('Selected ITIL category not found');
-      return;
-    }
-
-    if (selectedCategory.parent_category) {
-      // This is a subcategory selection
-      const parentCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategory.parent_category);
-      if (parentCategory) {
-        onItilFieldChange && onItilFieldChange('itil_category', parentCategory.category_name);
-        onItilFieldChange && onItilFieldChange('itil_subcategory', selectedCategory.category_name);
-      }
-    } else {
-      // This is a parent category selection
-      onItilFieldChange && onItilFieldChange('itil_category', selectedCategory.category_name);
-      onItilFieldChange && onItilFieldChange('itil_subcategory', '');
-    }
-  };
+  // NOTE: ITIL category selection is now handled by the unified CategoryPicker
+  // Categories are managed through the regular onCategoryChange handler
 
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>([{
     type: "paragraph",
@@ -208,8 +164,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               priority_type: 'custom',
               display_itil_impact: false,
               display_itil_urgency: false,
-              display_itil_category: false,
-            });
+              });
           }
         } else {
           // If no channel, fetch all categories and use custom categories
@@ -226,7 +181,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             priority_type: 'custom',
             display_itil_impact: false,
             display_itil_urgency: false,
-            display_itil_category: false,
           });
         }
       } catch (error) {
@@ -418,7 +372,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   if (onItilFieldChange) {
                     onItilFieldChange('itil_impact', null);
                     onItilFieldChange('itil_urgency', null);
-                    onItilFieldChange('itil_priority_level', null);
                   }
                 }}
                 customStyles={customStyles}
@@ -470,16 +423,16 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 />
               )}
             </div>
-            {channelConfig.category_type === 'custom' && (
+            {channelConfig.category_type && (
               <div className="col-span-2">
-                <h5 className="font-bold mb-1">Category</h5>
+                <h5 className="font-bold mb-1">{channelConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
                   <CategoryPicker
                     id={`${id}-category-picker`}
-                    categories={categories}
+                    categories={channelConfig.category_type === 'custom' ? categories.filter(c => !c.is_itil) : categories.filter(c => c.is_itil)}
                     selectedCategories={[getSelectedCategoryId()]}
                     onSelect={handleCategoryChange}
-                    placeholder="Select a category..."
+                    placeholder={channelConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
                   />
                 </div>
               </div>
@@ -520,19 +473,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               </>
             )}
             {/* ITIL Categories for ITIL category channels */}
-            {channelConfig.category_type === 'itil' && (
-              <div>
-                <h5 className="font-bold mb-2">ITIL Category</h5>
-                <CategoryPicker
-                  id={`${id}-itil-category-picker`}
-                  categories={itilCategoriesForPicker}
-                  selectedCategories={getSelectedItilCategoryId() ? [getSelectedItilCategoryId()] : []}
-                  onSelect={handleItilCategoryChange}
-                  placeholder="Select ITIL category..."
-                  multiSelect={false}
-                />
-              </div>
-            )}
+            {/* ITIL Categories are now handled by the unified CategoryPicker above */}
           </div>
 
           {/* ITIL Priority Matrix - Show when help icon is clicked */}

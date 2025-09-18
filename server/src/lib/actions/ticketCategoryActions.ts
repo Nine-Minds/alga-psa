@@ -243,7 +243,6 @@ export interface ChannelCategoryData {
     priority_type: 'custom' | 'itil';
     display_itil_impact?: boolean;
     display_itil_urgency?: boolean;
-    display_itil_category?: boolean;
   };
 }
 
@@ -264,7 +263,7 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
       const channel = await trx('channels')
         .where('tenant', tenant!)
         .where('channel_id', channelId)
-        .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency', 'display_itil_category')
+        .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency')
         .first();
 
       if (!channel) {
@@ -276,13 +275,31 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
         priority_type: (channel.priority_type || 'custom') as 'custom' | 'itil',
         display_itil_impact: channel.display_itil_impact || false,
         display_itil_urgency: channel.display_itil_urgency || false,
-        display_itil_category: channel.display_itil_category || false,
       };
 
-      // If channel uses ITIL categories, return empty custom categories
+      // If channel uses ITIL categories, fetch ITIL categories from standard_categories
       if (channelConfig.category_type === 'itil') {
+        const itilCategories = await trx('standard_categories')
+          .where('is_itil_standard', true)
+          .orderBy('category_name');
+
+        // Map standard_categories fields to match the expected ITicketCategory interface
+        const mappedCategories = itilCategories.map(cat => ({
+          category_id: cat.id,                          // Map id -> category_id
+          category_name: cat.category_name,
+          parent_category: cat.parent_category_uuid,    // Map parent_category_uuid -> parent_category
+          description: cat.description,
+          display_order: cat.display_order,
+          created_at: cat.created_at,
+          updated_at: cat.updated_at,
+          is_itil: true                                 // Add the filtering flag
+        }));
+
+        // Apply the same hierarchical ordering as custom categories
+        const orderedItilCategories = await orderCategoriesHierarchically(mappedCategories);
+
         return {
-          categories: [],
+          categories: orderedItilCategories,
           channelConfig
         };
       }
@@ -293,10 +310,15 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
         .where('channel_id', channelId)
         .orderBy('category_name');
 
-      // Order them hierarchically
+      // Order them hierarchically and mark as custom categories
       const orderedCategories = await orderCategoriesHierarchically(categories);
+      const categoriesWithFlag = orderedCategories.map(cat => ({
+        ...cat,
+        is_itil: false
+      }));
+
       return {
-        categories: orderedCategories,
+        categories: categoriesWithFlag,
         channelConfig
       };
     } catch (error) {
