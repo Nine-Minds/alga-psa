@@ -21,8 +21,10 @@ import { ChevronDown, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
+import { useTranslation } from '@/lib/i18n/client';
 
 export function TicketList() {
+  const { t } = useTranslation('clientPortal');
   const [tickets, setTickets] = useState<ITicketListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
@@ -43,6 +45,7 @@ export function TicketList() {
     newStatus: string;
     currentStatus: string;
   } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Load statuses, priorities, and categories
   useEffect(() => {
@@ -55,9 +58,9 @@ export function TicketList() {
         ]);
 
         setStatusOptions([
-          { value: 'all', label: 'All Statuses' },
-          { value: 'open', label: 'All Open Tickets' },
-          { value: 'closed', label: 'All Closed Tickets' },
+          { value: 'all', label: t('tickets.filters.allStatuses') },
+          { value: 'open', label: t('tickets.filters.allOpen') },
+          { value: 'closed', label: t('tickets.filters.allClosed') },
           ...statuses.map((status: { status_id: string; name: string | null; is_closed: boolean }): SelectOption => ({
             value: status.status_id!,
             label: status.name ?? "",
@@ -66,7 +69,7 @@ export function TicketList() {
         ]);
 
         setPriorityOptions([
-          { value: 'all', label: 'All Priorities' },
+          { value: 'all', label: t('tickets.filters.allPriorities') },
           ...priorities.map((priority: { priority_id: string; priority_name: string }) => ({
             value: priority.priority_id,
             label: priority.priority_name
@@ -76,6 +79,7 @@ export function TicketList() {
         setCategories(categories);
       } catch (error) {
         console.error('Failed to load options:', error);
+        setError(t('tickets.messages.filtersError', 'Failed to load filter options.'));
       }
     };
 
@@ -153,6 +157,7 @@ export function TicketList() {
       setTickets(sortedTickets);
     } catch (error) {
       console.error('Failed to load tickets:', error);
+      setError(t('tickets.messages.loadingError', 'Failed to load tickets. Please try again.'));
     }
     setLoading(false);
   }, [selectedStatus, selectedPriority, selectedCategories, excludedCategories, searchQuery, sortField, sortDirection]);
@@ -207,7 +212,7 @@ export function TicketList() {
 
   const columns: ColumnDefinition<ITicketListItem>[] = [
     {
-      title: 'Ticket Number',
+      title: t('tickets.fields.ticketNumber'),
       dataIndex: 'ticket_number',
       width: '75px',
       render: (value: string, record: ITicketListItem) => (
@@ -225,7 +230,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Title',
+      title: t('tickets.fields.title'),
       dataIndex: 'title',
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
@@ -243,7 +248,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Status',
+      title: t('tickets.fields.status'),
       dataIndex: 'status_name',
       width: '20%',
       render: (value: string, record: ITicketListItem) => (
@@ -285,7 +290,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Priority',
+      title: t('tickets.fields.priority'),
       dataIndex: 'priority_name',
       width: '15%',
       render: (value: string, record: ITicketListItem) => (
@@ -299,7 +304,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Assigned To',
+      title: t('tickets.fields.assignedTo'),
       dataIndex: 'assigned_to_name',
       width: '15%',
       render: (value: string) => (
@@ -307,7 +312,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Created',
+      title: t('tickets.fields.createdAt'),
       dataIndex: 'entered_at',
       width: '15%',
       render: (value: string | null) => (
@@ -317,7 +322,7 @@ export function TicketList() {
       ),
     },
     {
-      title: 'Updated',
+      title: t('tickets.fields.updatedAt'),
       dataIndex: 'updated_at',
       width: '15%',
       render: (value: string | null) => (
@@ -336,19 +341,27 @@ export function TicketList() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <p className="text-red-700">{error}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white shadow rounded-lg p-4 w-full">
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
-          <p className="text-gray-600">View and manage your support tickets</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('tickets.title')}</h1>
+          <p className="text-gray-600">{t('tickets.subtitle')}</p>
         </div>
         <Button
           id="create-ticket-button"
           className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] px-4 py-2"
           onClick={() => setIsAddTicketOpen(true)}
         >
-          Create Support Ticket
+          {t('tickets.createButton')}
         </Button>
       </div>
       <div className="flex items-center gap-3 flex-nowrap mb-4">
@@ -371,7 +384,7 @@ export function TicketList() {
             selectedCategories={selectedCategories}
             excludedCategories={excludedCategories}
             onSelect={handleCategorySelect}
-            placeholder="Filter by category"
+            placeholder={t('tickets.filters.category')}
             multiSelect={true}
             showExclude={true}
             showReset={true}
@@ -382,7 +395,7 @@ export function TicketList() {
           <SearchInput
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search tickets..."
+            placeholder={t('tickets.filters.search')}
             className="min-w-[200px]"
           />
 
@@ -393,12 +406,12 @@ export function TicketList() {
             className="whitespace-nowrap flex items-center gap-2 ml-auto"
           >
             <XCircle className="h-4 w-4" />
-            Reset Filters
+            {t('tickets.resetFilters')}
           </Button>
         </div>
 
       <h2 className="text-xl font-semibold mt-6 mb-2">
-        Tickets
+        {t('tickets.title')}
       </h2>
 
       <div className="w-full overflow-x-auto">

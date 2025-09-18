@@ -12,6 +12,7 @@ import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces'
 import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
+import { useTranslation } from '@/lib/i18n/client';
 
 // Flag to control visibility of bucket usage metrics
 const SHOW_USAGE_FEATURES = false;
@@ -37,6 +38,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
   formatDate,
   onViewAllInvoices
 }) => {
+  const { t } = useTranslation('clientPortal');
   // State for plan details dialog
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   
@@ -45,11 +47,11 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">Current Plan</p>
+          <p className="text-sm font-medium text-gray-500">{t('billing.currentPlan')}</p>
           {billingPlan ? (
             <>
               <p className="mt-2 text-3xl font-semibold">{billingPlan.plan_name}</p>
-              <p className="mt-1 text-sm text-gray-500">{billingPlan.billing_frequency}</p>
+              <p className="mt-1 text-sm text-gray-500">{t(`billing.frequency.${billingPlan.billing_frequency?.toLowerCase() || 'monthly'}`)}</p>
             </>
           ) : (
             <>
@@ -66,7 +68,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         variant="outline"
         onClick={() => setIsPlanDialogOpen(true)}
       >
-        View Plan Details
+        {t('billing.viewPlanDetails')}
       </Button>
     </Card>
   ), [billingPlan]);
@@ -76,14 +78,14 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm font-medium text-gray-500">Next Invoice</p>
+          <p className="text-sm font-medium text-gray-500">{t('billing.nextInvoice')}</p>
           {invoices.length > 0 ? (
             <>
               <p className="mt-2 text-3xl font-semibold">
                 {invoices[0]?.total_amount ? formatCurrency(invoices[0].total_amount) : '$0.00'}
               </p>
               <p className="mt-1 text-sm text-gray-500">
-                {invoices[0]?.invoice_date ? `Due ${formatDate(invoices[0].invoice_date)}` : 'No due date'}
+                {invoices[0]?.invoice_date ? t('billing.invoice.dueDateText', { date: formatDate(invoices[0].invoice_date) }) : t('billing.invoice.noDueDate')}
               </p>
             </>
           ) : (
@@ -105,7 +107,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           }
         }}
       >
-        View All Invoices
+        {t('billing.viewAllInvoices')}
       </Button>
     </Card>
   ), [invoices, formatCurrency, formatDate, onViewAllInvoices]);
@@ -121,7 +123,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
         {/* Enhanced Bucket Usage Visualization - optionally hidden */}
         {SHOW_USAGE_FEATURES && (
         <Card id="bucket-usage-card" className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Bucket Usage</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('billing.bucket.usage')}</h3>
           {isBucketUsageLoading || isLoading ? (
             // Client-side loading state with skeleton
             <div className="grid gap-6 md:grid-cols-2">
@@ -143,9 +145,9 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
             <div className="flex items-center justify-center py-8">
               <div className="text-center">
                 <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-lg font-medium text-gray-900">No bucket plans available</h3>
+                <h3 className="mt-2 text-lg font-medium text-gray-900">{t('billing.bucket.noPlanTitle')}</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  There are no active bucket plans for your account.
+                  {t('billing.bucket.noPlanDescription')}
                 </p>
               </div>
             </div>

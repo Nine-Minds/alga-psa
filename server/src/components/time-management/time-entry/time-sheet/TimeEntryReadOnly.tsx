@@ -4,7 +4,7 @@ import { memo, useMemo } from 'react';
 import { parseISO } from 'date-fns';
 import { Button } from 'server/src/components/ui/Button';
 import { Pencil, Trash2 } from 'lucide-react';
-import { BsClock } from 'react-icons/bs';
+import { Clock } from 'lucide-react';
 import { TimeEntryReadOnlyProps } from './types';
 import { formatTimeForInput, getServiceById } from './utils';
 
@@ -26,7 +26,7 @@ const TimeEntryReadOnly = memo(function TimeEntryReadOnly({
     <div className="border p-4 rounded hover:bg-gray-50 flex items-center justify-between">
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
-          <BsClock className="text-gray-400" />
+          <Clock className="text-gray-400" />
           <span>
             {entry?.start_time && formatTimeForInput(parseISO(entry.start_time))} - {entry?.end_time && formatTimeForInput(parseISO(entry.end_time))}
           </span>

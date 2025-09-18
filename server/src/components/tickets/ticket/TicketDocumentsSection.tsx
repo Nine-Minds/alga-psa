@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Documents from 'server/src/components/documents/Documents';
+import { useTranslation } from '@/lib/i18n/client';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocumentByTicketId } from 'server/src/lib/actions/document-actions/documentActions';
 import styles from './TicketDetails.module.css';
@@ -18,6 +19,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
   id = 'ticket-documents-section',
   ticketId
 }) => {
+  const { t } = useTranslation('clientPortal');
   const { data: session } = useSession();
   const userId = session?.user?.id || '';
   
@@ -50,7 +52,7 @@ const TicketDocumentsSection: React.FC<TicketDocumentsSectionProps> = ({
       <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
         <div className="p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold">Documents</h2>
+            <h2 className="text-xl font-bold">{t('tickets.documents.title', 'Documents')}</h2>
           </div>
           <Documents
             id={`${id}-documents`}

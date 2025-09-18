@@ -15,6 +15,7 @@ import { Input } from 'server/src/components/ui/Input';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/client';
 import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -73,6 +74,7 @@ const Documents = ({
   uploadFormRef,
   searchTermFromParent = ''
 }: DocumentsProps): JSX.Element => {
+  const { t } = useTranslation('clientPortal');
   const [documentsToDisplay, setDocumentsToDisplay] = useState<IDocument[]>(initialDocuments);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -378,7 +380,7 @@ const Documents = ({
               variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
-              New Document
+              {t('documents.newDocument', 'New Document')}
             </Button>
             <Button
               id={`${id}-upload-btn`}
@@ -392,7 +394,7 @@ const Documents = ({
               variant="default"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Upload File
+              {t('documents.uploadFile', 'Upload File')}
             </Button>
             {entityId && entityType && (
               <Button
@@ -402,7 +404,7 @@ const Documents = ({
                 data-testid="link-documents-button"
               >
                 <Link className="w-4 h-4 mr-2" />
-                Link Documents
+                {t('documents.linkDocuments', 'Link Documents')}
               </Button>
             )}
           </div>
@@ -490,7 +492,7 @@ const Documents = ({
           <div className="flex flex-col h-full">
             <div className="flex justify-between items-center mb-4 pb-4">
               <h2 className="text-lg font-semibold">
-                {isCreatingNew ? 'New Document' : (isEditModeInDrawer ? 'Edit Document' : 'View Document')}
+                {isCreatingNew ? t('documents.newDocument', 'New Document') : (isEditModeInDrawer ? t('documents.editDocument', 'Edit Document') : t('documents.viewDocument', 'View Document'))}
               </h2>
               <div className="flex items-center space-x-2">
                 {selectedDocument &&

@@ -29,8 +29,10 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { useTranslation } from '@/lib/i18n/client';
 
 export function UserManagementSettings() {
+  const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const [users, setUsers] = useState<IUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -194,22 +196,22 @@ export function UserManagementSettings() {
   // Define columns for DataTable
   const columns: ColumnDefinition<IUser>[] = [
     {
-      title: 'First Name',
+      title: t('companySettings.users.firstName'),
       dataIndex: 'first_name',
       width: '20%',
     },
     {
-      title: 'Last Name',
+      title: t('companySettings.users.lastName'),
       dataIndex: 'last_name',
       width: '20%',
     },
     {
-      title: 'Email',
+      title: t('companySettings.users.email'),
       dataIndex: 'email',
       width: '25%',
     },
     {
-      title: 'Phone',
+      title: t('companySettings.users.phone'),
       dataIndex: 'phone',
       width: '15%',
       render: (value, record) => (
@@ -217,7 +219,7 @@ export function UserManagementSettings() {
       ),
     },
     {
-      title: 'Roles',
+      title: t('companySettings.users.roles'),
       dataIndex: 'user_id',
       width: '20%',
       render: (userId) => {
@@ -232,17 +234,17 @@ export function UserManagementSettings() {
       },
     },
     {
-      title: 'Status',
+      title: t('companySettings.users.status'),
       dataIndex: 'is_inactive',
       width: '10%',
       render: (value, record) => (
         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.is_inactive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-          {record.is_inactive ? 'Inactive' : 'Active'}
+          {record.is_inactive ? t('companySettings.users.inactive') : t('companySettings.users.active')}
         </span>
       ),
     },
     {
-      title: 'Actions',
+      title: t('companySettings.users.actions'),
       dataIndex: 'user_id',
       width: '5%',
       render: (_, record) => (
@@ -265,7 +267,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2"
               >
                 <Pencil className="h-4 w-4" />
-                Edit
+                {t('common.edit')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 id={`delete-user-menu-item-${record.user_id}`}
@@ -273,7 +275,7 @@ export function UserManagementSettings() {
                 className="flex items-center gap-2 text-red-600"
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t('common.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -306,22 +308,22 @@ export function UserManagementSettings() {
           <div className="relative">
             <Input
               type="text"
-              placeholder="Search users"
+              placeholder={t('companySettings.users.searchUsers')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
             />
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
-          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>Add New User</Button>
+          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>{t('companySettings.users.addNewUser')}</Button>
         </div>
 
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
-            <h3 className="text-lg font-semibold mb-2">Add New User</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('companySettings.users.addNewUser')}</h3>
             <div className="space-y-2">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">{t('companySettings.users.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={newUser.firstName}
@@ -329,7 +331,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">{t('companySettings.users.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={newUser.lastName}
@@ -337,7 +339,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t('companySettings.users.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -346,7 +348,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -369,7 +371,7 @@ export function UserManagementSettings() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{t('companySettings.users.roles')}</Label>
                 <CustomSelect
                   value={newUser.roleId}
                   onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
@@ -377,10 +379,10 @@ export function UserManagementSettings() {
                     value: role.role_id,
                     label: role.role_name
                   }))}
-                  placeholder="Select a role (optional)"
+                  placeholder={t('companySettings.users.selectRole', 'Select a role (optional)')}
                 />
               </div>
-              <Button id="submit-new-user-btn" onClick={handleCreateUser}>Create User</Button>
+              <Button id="submit-new-user-btn" onClick={handleCreateUser}>{t('companySettings.users.createUser', 'Create User')}</Button>
             </div>
           </div>
         )}

@@ -12,6 +12,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface CommentItemProps {
   id?: string;
@@ -49,6 +50,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onEdit,
   onDelete
 }) => {
+  const { t } = useTranslation('clientPortal');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editedContent, setEditedContent] = useState<PartialBlock[]>(() => {
     try {
@@ -131,14 +133,14 @@ const CommentItem: React.FC<CommentItemProps> = ({
             onClick={handleSave}
             disabled={false}
           >
-            Save
+            {t('tickets.conversation.save', 'Save')}
           </Button>
           <Button
             id={`${commentId}-cancel-btn`}
             variant="outline"
             onClick={onClose}
           >
-            Cancel
+            {t('tickets.conversation.cancel', 'Cancel')}
           </Button>
         </div>
       </div>
@@ -258,7 +260,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       {new Date(conversation.created_at).toLocaleString()}
                       {conversation.updated_at &&
                        new Date(conversation.updated_at).getTime() > new Date(conversation.created_at).getTime() &&
-                       " (edited)"}
+                       ` (${t('tickets.conversation.edited', 'edited')})`}
                     </span>
                   )}
                 </p>
