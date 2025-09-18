@@ -2,10 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  ItilImpact,
-  ItilUrgency,
   ItilLabels,
-  ItilCategories,
   ItilResolutionCodes,
   calculateItilPriority
 } from '../../lib/utils/itilUtils';
@@ -20,8 +17,6 @@ interface ItilFieldsProps {
   values: {
     itil_impact?: number;
     itil_urgency?: number;
-    itil_category?: string;
-    itil_subcategory?: string;
     resolution_code?: string;
     root_cause?: string;
     workaround?: string;
@@ -65,11 +60,6 @@ export const ItilFields: React.FC<ItilFieldsProps> = ({
     label: `${label} (${value})`
   }));
 
-  const categoryOptions: SelectOption[] = Object.keys(ItilCategories).map((category) => ({
-    value: category,
-    label: category
-  }));
-
   const resolutionCodeOptions: SelectOption[] = ItilResolutionCodes.map((code) => ({
     value: code,
     label: code
@@ -82,21 +72,6 @@ export const ItilFields: React.FC<ItilFieldsProps> = ({
   const handleUrgencyChange = (value: string) => {
     onChange('itil_urgency', Number(value));
   };
-
-  const handleCategoryChange = (value: string) => {
-    onChange('itil_category', value);
-    // Reset subcategory when category changes
-    onChange('itil_subcategory', '');
-  };
-
-  const availableSubcategories = values.itil_category
-    ? ItilCategories[values.itil_category]?.subcategories || []
-    : [];
-
-  const subcategoryOptions: SelectOption[] = availableSubcategories.map((subcategory: string) => ({
-    value: subcategory,
-    label: subcategory
-  }));
 
   return (
     <div className="space-y-6">
@@ -164,41 +139,9 @@ export const ItilFields: React.FC<ItilFieldsProps> = ({
         </CardContent>
       </Card>
 
-      {/* ITIL Category Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>ITIL Category</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Category */}
-            <div className="space-y-2">
-              <Label htmlFor="itil-category">Category</Label>
-              <CustomSelect
-                id="itil-category"
-                options={categoryOptions}
-                value={values.itil_category || null}
-                onValueChange={handleCategoryChange}
-                disabled={readOnly}
-                placeholder="Select Category"
-              />
-            </div>
-
-            {/* Subcategory */}
-            <div className="space-y-2">
-              <Label htmlFor="itil-subcategory">Subcategory</Label>
-              <CustomSelect
-                id="itil-subcategory"
-                options={subcategoryOptions}
-                value={values.itil_subcategory || null}
-                onValueChange={(value) => onChange('itil_subcategory', value)}
-                disabled={readOnly || !values.itil_category}
-                placeholder="Select Subcategory"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* NOTE: ITIL Category selection is now handled by the unified CategoryPicker component.
+           Categories are passed from parent components and stored in the standard category_id field.
+           This maintains ITIL functionality while using the consolidated category system. */}
 
       {/* Resolution Fields (only show when editing resolved tickets) */}
       {showResolutionFields && (

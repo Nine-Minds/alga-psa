@@ -169,13 +169,11 @@ export class ItilService {
       }
 
       if (category) {
-        await this.knex('tickets')
-          .where('ticket_id', ticketId)
-          .update({
-            itil_category: category,
-            itil_subcategory: subcategory || null,
-            updated_at: this.knex.fn.now()
-          });
+        // NOTE: ITIL categories are now stored in the unified category_id field
+        // This service should be updated to use the CategoryPicker integration
+        // For now, this auto-categorization is disabled to prevent conflicts
+        console.log('Auto-categorization detected:', { category, subcategory });
+        // TODO: Implement unified category assignment
       }
     } catch (error) {
       console.error('Error auto-categorizing ticket:', error);
@@ -223,10 +221,13 @@ export class ItilService {
         }
       });
 
-      // Group by category
+      // Group by category (now using unified category system)
       tickets.forEach(ticket => {
-        if (ticket.itil_category) {
-          metrics.byCategory[ticket.itil_category] = (metrics.byCategory[ticket.itil_category] || 0) + 1;
+        // NOTE: Categories are now in the unified category_id field
+        // This should be updated to query the category name from standard_categories
+        if (ticket.category_id) {
+          // TODO: Join with standard_categories to get category name for metrics
+          metrics.byCategory['Unified Categories'] = (metrics.byCategory['Unified Categories'] || 0) + 1;
         }
       });
 

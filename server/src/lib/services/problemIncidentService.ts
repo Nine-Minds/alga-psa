@@ -287,8 +287,8 @@ export class ProblemIncidentService {
 
       const potentialProblems = [];
 
-      // 1. Find problems with same ITIL category
-      if (incident.itil_category) {
+      // 1. Find problems with same category (now using unified category system)
+      if (incident.category_id) {
         const categoryProblems = await this.knex('problems')
           .select('problem_id', 'problem_number', 'title', 'is_known_error', 'incident_count')
           .where('tenant', tenant)

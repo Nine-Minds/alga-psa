@@ -23,15 +23,12 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
   attributes: Record<string, unknown> | null; // Changed from any to unknown
-  priority_id?: string; // Optional - only used for custom priorities, ITIL uses itil_priority_level
+  priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
   location?: ICompanyLocation; // For populated location data
-  // ITIL-specific fields
+  // ITIL-specific fields (for UI calculation and display only)
   itil_impact?: number; // 1-5 scale (1 = High, 5 = Low)
   itil_urgency?: number; // 1-5 scale (1 = High, 5 = Low)
-  itil_priority_level?: number; // 1-5 scale (calculated from Impact × Urgency)
-  itil_category?: string; // ITIL incident category
-  itil_subcategory?: string; // ITIL incident subcategory
   resolution_code?: string; // How the incident was resolved
   root_cause?: string; // Root cause analysis
   workaround?: string; // Temporary workaround if any
@@ -110,6 +107,7 @@ export interface ITicketCategory extends TenantEntity {
   created_at?: Date;
   description?: string;
   display_order?: number;
+  is_itil?: boolean; // Flag to distinguish ITIL categories from custom categories
 }
 
 export interface IAgentSchedule {

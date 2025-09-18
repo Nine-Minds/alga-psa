@@ -28,7 +28,7 @@ import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponen
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { ItilFields } from './ItilFields';
-import { calculateItilPriority, ItilLabels, getItilCategoriesAsTicketCategories } from '../../lib/utils/itilUtils';
+import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
@@ -105,7 +105,6 @@ export function QuickAddTicket({
     priority_type: 'custom',
     display_itil_impact: false,
     display_itil_urgency: false,
-    display_itil_category: false,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
@@ -123,8 +122,6 @@ export function QuickAddTicket({
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
-  const [itilCategory, setItilCategory] = useState<string>('');
-  const [itilSubcategory, setItilSubcategory] = useState<string>('');
   const [resolutionCode, setResolutionCode] = useState<string>('');
   const [rootCause, setRootCause] = useState<string>('');
   const [workaround, setWorkaround] = useState<string>('');
@@ -158,57 +155,10 @@ export function QuickAddTicket({
     { value: '5', label: '5 - Low (Work continues normally)' }
   ];
 
-  // Get ITIL categories in the same format as custom categories
-  const itilCategoriesForPicker = useMemo(() => {
-    return getItilCategoriesAsTicketCategories();
-  }, []);
+  // NOTE: Categories are now unified - no need for separate ITIL category filtering
 
-  // Get currently selected ITIL category ID for CategoryPicker
-  const getSelectedItilCategoryId = (): string => {
-    if (!itilCategory) return '';
-
-    // If we have both category and subcategory, return the subcategory ID
-    if (itilSubcategory) {
-      const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
-      const subcategoryKey = itilSubcategory.toLowerCase().replace(/[\s\/]+/g, '-');
-      return `itil-${categoryKey}-${subcategoryKey}`;
-    }
-
-    // If we only have category, return the parent category ID
-    const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
-    return `itil-${categoryKey}`;
-  };
-
-  // Handle ITIL category selection from CategoryPicker
-  const handleItilCategoryChange = (categoryIds: string[]) => {
-    if (categoryIds.length === 0) {
-      // Clear both category and subcategory
-      setItilCategory('');
-      setItilSubcategory('');
-      return;
-    }
-
-    const selectedCategoryId = categoryIds[0];
-    const selectedCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategoryId);
-
-    if (!selectedCategory) {
-      console.error('Selected ITIL category not found');
-      return;
-    }
-
-    if (selectedCategory.parent_category) {
-      // This is a subcategory selection
-      const parentCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategory.parent_category);
-      if (parentCategory) {
-        setItilCategory(parentCategory.category_name);
-        setItilSubcategory(selectedCategory.category_name);
-      }
-    } else {
-      // This is a parent category selection
-      setItilCategory(selectedCategory.category_name);
-      setItilSubcategory('');
-    }
-  };
+  // NOTE: ITIL category selection is now handled by the unified CategoryPicker
+  // Categories are managed through the selectedCategories state and regular category handling
 
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
@@ -341,7 +291,6 @@ export function QuickAddTicket({
               priority_type: 'custom',
               display_itil_impact: false,
               display_itil_urgency: false,
-              display_itil_category: false,
             });
           }
         } catch (error) {
@@ -352,7 +301,6 @@ export function QuickAddTicket({
             priority_type: 'custom',
             display_itil_impact: false,
             display_itil_urgency: false,
-            display_itil_category: false,
           });
         }
       } else {
@@ -418,12 +366,7 @@ export function QuickAddTicket({
       case 'itil_urgency':
         setItilUrgency(value);
         break;
-      case 'itil_category':
-        setItilCategory(value);
-        break;
-      case 'itil_subcategory':
-        setItilSubcategory(value);
-        break;
+      // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
       case 'resolution_code':
         setResolutionCode(value);
         break;
@@ -463,8 +406,6 @@ export function QuickAddTicket({
     setItilImpact(undefined);
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
-    setItilCategory('');
-    setItilSubcategory('');
     setResolutionCode('');
     setRootCause('');
     setWorkaround('');
@@ -532,17 +473,9 @@ export function QuickAddTicket({
       formData.append('channel_id', channelId);
       formData.append('status_id', statusId);
 
-      // Handle priority based on channel configuration
-      if (channelConfig.priority_type === 'itil') {
-        // For ITIL priority type, store the calculated priority level
-        if (calculatedItilPriority) {
-          formData.append('itil_priority_level', calculatedItilPriority.toString());
-        }
-        // Don't set priority_id for ITIL boards
-      } else {
-        // For custom priority type, use the selected priority
-        formData.append('priority_id', priorityId);
-      }
+      // Always append priority_id - for ITIL channels, the backend will map
+      // the calculated priority to the correct ITIL standard priority record
+      formData.append('priority_id', priorityId);
 
       formData.append('company_id', companyId);
 
@@ -568,19 +501,16 @@ export function QuickAddTicket({
         }
       }
 
-      // Add ITIL fields if provided
+      // Add ITIL Impact and Urgency for calculation (if provided)
       if (itilImpact) {
         formData.append('itil_impact', itilImpact.toString());
       }
       if (itilUrgency) {
         formData.append('itil_urgency', itilUrgency.toString());
       }
-      if (itilCategory) {
-        formData.append('itil_category', itilCategory);
-      }
-      if (itilSubcategory) {
-        formData.append('itil_subcategory', itilSubcategory);
-      }
+
+      // ITIL categories now use the unified category system
+      // The selected ITIL category ID is already in selectedCategories/categoryId
       if (resolutionCode) {
         formData.append('resolution_code', resolutionCode);
       }
@@ -771,16 +701,16 @@ export function QuickAddTicket({
                     />
                   </div>
 
-                  {channelId && channelConfig.category_type === 'custom' && (
+                  {channelId && channelConfig.category_type && (
                     <CategoryPicker
                       id={`${id}-category-picker`}
-                      categories={categories}
+                      categories={channelConfig.category_type === 'custom' ? categories.filter(c => !c.is_itil) : categories.filter(c => c.is_itil)}
                       selectedCategories={selectedCategories}
                       onSelect={(categoryIds) => {
                         setSelectedCategories(categoryIds);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder="Select category"
+                      placeholder={channelConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
                       multiSelect={false}
                       className="w-full"
                     />
@@ -959,23 +889,7 @@ export function QuickAddTicket({
                     </>
                   )}
 
-                  {/* ITIL Categories - Show when using ITIL categories */}
-                  {channelId && channelConfig.category_type === 'itil' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">ITIL Category</label>
-                      <CategoryPicker
-                        id="quick-add-itil-category-picker"
-                        categories={itilCategoriesForPicker}
-                        selectedCategories={getSelectedItilCategoryId() ? [getSelectedItilCategoryId()] : []}
-                        onSelect={(categoryIds) => {
-                          handleItilCategoryChange(categoryIds);
-                          clearErrorIfSubmitted();
-                        }}
-                        placeholder="Select ITIL category..."
-                        multiSelect={false}
-                      />
-                    </div>
-                  )}
+                  {/* ITIL Categories are now handled by the unified CategoryPicker above */}
 
 
 

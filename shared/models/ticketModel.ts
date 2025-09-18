@@ -21,22 +21,13 @@ export const ticketFormSchema = z.object({
   contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
   status_id: z.string().uuid('Status ID must be a valid UUID'),
   assigned_to: z.string().uuid('Assigned to must be a valid UUID').nullable(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID').nullable().optional(), // Optional for ITIL tickets
+  priority_id: z.string().uuid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
   description: z.string(),
   category_id: z.string().uuid('Category ID must be a valid UUID').nullable(),
   subcategory_id: z.string().uuid('Subcategory ID must be a valid UUID').nullable(),
-  // ITIL-specific fields
+  // ITIL-specific fields (for UI calculation only)
   itil_impact: z.number().int().min(1).max(5).optional(),
   itil_urgency: z.number().int().min(1).max(5).optional(),
-  itil_priority_level: z.number().int().min(1).max(5).optional(),
-  itil_category: z.string().optional(),
-  itil_subcategory: z.string().optional(),
-}).refine((data) => {
-  // Either priority_id OR itil_priority_level must be provided
-  return data.priority_id || data.itil_priority_level;
-}, {
-  message: "Either priority_id (for custom priorities) or itil_priority_level (for ITIL priorities) must be provided",
-  path: ["priority_id"], // Show error on priority_id field
 });
 
 // Ticket creation from asset schema
@@ -125,12 +116,9 @@ export interface CreateTicketInput {
   impact_id?: string;
   updated_by?: string;
   closed_by?: string;
-  // ITIL-specific fields
+  // ITIL-specific fields (for UI calculation only)
   itil_impact?: number;
   itil_urgency?: number;
-  itil_priority_level?: number;
-  itil_category?: string;
-  itil_subcategory?: string;
   closed_at?: string;
   is_closed?: boolean;
 }
@@ -656,12 +644,9 @@ export class TicketModel {
       entered_by: cleanedInput.entered_by || null,
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
-      // ITIL-specific fields
+      // ITIL-specific fields (for UI display only - not stored in DB)
       itil_impact: cleanedInput.itil_impact || null,
       itil_urgency: cleanedInput.itil_urgency || null,
-      itil_priority_level: cleanedInput.itil_priority_level || null,
-      itil_category: cleanedInput.itil_category || null,
-      itil_subcategory: cleanedInput.itil_subcategory || null,
       resolution_code: cleanedInput.resolution_code || null,
       root_cause: cleanedInput.root_cause || null,
       workaround: cleanedInput.workaround || null,
@@ -678,9 +663,9 @@ export class TicketModel {
       attributes: Object.keys(attributes).length > 0 ? attributes : null
     };
 
-    // Custom validation: Either priority_id OR itil_priority_level must be provided
-    if (!validationData.priority_id && !validationData.itil_priority_level) {
-      throw new Error('Validation failed: Either priority_id (for custom priorities) or itil_priority_level (for ITIL priorities) must be provided');
+    // Custom validation: priority_id is required for all tickets (unified system)
+    if (!validationData.priority_id) {
+      throw new Error('Validation failed: priority_id is required for all tickets');
     }
 
     // Final validation of complete ticket data using the database schema
