@@ -11,98 +11,111 @@
 - A minimal generator (`sdk/scripts/generate-openapi.ts`) produces service-category endpoints only.
 - No centralized registry of routes or metadata; spec isn’t auto-generated in CI.
 
-## 3. Scope & Deliverables
-1. **Spec Coverage**
-   - CE core endpoints (tickets, contacts, companies, assets, billing, workflows, auth, etc.).
-   - EE-specific endpoints (provisioning, partner APIs) flagged via `x-edition: enterprise`.
-   - Shared schemas (errors, pagination, RBAC permissions, metadata).
-2. **Tooling**
-   - Route metadata registry integrated with controllers.
-   - Generation script that walks the registry + emits JSON/YAML.
-   - CI job (GitHub Actions) verifying specs are up to date.
-3. **Documentation & Processes**
-   - Contributor guide for updating metadata & schemas.
-   - Spec publishing pipeline (Swagger UI/Redoc / static export).
-   - Contract-testing harness option for key endpoints.
+## 3. Phased Rollout Plan
 
-## 4. Strategy Overview
-1. **Standardize Validation**
-   - Ensure every route uses a Zod schema (request body, query, params, responses).
-   - Backfill schemas where missing; refactor controllers to rely on them.
-2. **Introduce Route Metadata**
-   - Add `registerOpenApi` exports per controller (path, method, tags, RBAC notes, schemas).
-   - Include extension fields (`x-rbac-resource`, `x-tenant-header-required`, `x-edition`).
-3. **Central Registry Module**
-   - `server/src/lib/api/openapiRegistry.ts` collects metadata at import time.
-   - Provide helper to register standard responses & components.
-4. **Generator Script Upgrade**
-   - Modify `sdk/scripts/generate-openapi.ts` to:
-     - Import registry definitions.
-     - Register schemas/components.
-     - Emit spec per edition (flags `--edition ce|ee`).
-5. **Automation**
-   - Add `npm run openapi:generate:ce|ee` scripts.
-   - CI job: regenerate + diff check during PR.
-   - Optional: nightly job publishes HTML docs to internal site/S3.
-6. **Quality Gates**
-   - Add unit tests verifying registry registration (e.g., expect certain paths exist).
-   - Integration tests validating runtime responses against spec (sampling key endpoints via Zod).
+### Phase 0 – Alignment & Discovery (Week 0–1)
+**Goals**
+- Confirm scope (CE + EE) and stakeholder expectations.
+- Inventory current routes, schemas, and existing doc consumers.
 
-## 5. Workstreams & Tasks
+**Key Activities**
+- Catalog every API route under `server/src/app/api/**` with edition, authentication, and owning team.
+- Identify spec consumers (partners, SDKs, internal teams) and capture requirements.
+- Finalize success metrics and governance (who approves spec changes, release cadence).
 
-### Workstream A – Schema Audit & Backfill
-- Inventory existing Zod schemas; map endpoints lacking coverage.
-- Create missing request/response schemas (focus on legacy controllers).
-- Add enums / shared types for RBAC responses, errors.
+**Exit Criteria**
+- Signed-off scope document & RACI.
+- Backlog created with all missing schemas/metadata items.
 
-### Workstream B – Controller Metadata Instrumentation
-- Define interface for metadata (`ApiRouteSpec`).
-- Update controllers incrementally:
-  1. Tickets
-  2. Categories
-  3. Companies/Contacts
-  4. Assets
-  5. Billing/Invoices
-  6. Authentication (sessions/API keys)
-  7. EE extras (provisioning, extensions).
-- Include tests to ensure `registerOpenApi` align with `route.ts` exports.
+### Phase 1 – Schema Foundation (Week 1–2)
+**Goals**
+- Ensure every endpoint has canonical Zod schemas for inputs/outputs.
 
-### Workstream C – Generator & Publishing
-- Enhance generator to consume metadata + output both CE/EE specs.
-- Add CLI flags (`--edition`, `--output`), environment discovery, version stamping.
-- Wire CI job to call generator and fail on diff.
-- Build docs site (Next.js route or static Redoc) referencing generated YAML.
+**Key Activities**
+- Audit existing schemas; add missing ones for legacy controllers.
+- Standardize shared types (errors, pagination, RBAC responses, metadata objects).
+- Add schema tests to guard against breaking changes.
 
-### Workstream D – Developer Experience
-- Update `sdk/README.md` with workflow, add contributor checklist.
-- Create `docs/openapi/CHANGELOG.md` tracking spec revisions.
-- Provide scripts for Postman collection export or SDK generation (optional stretch).
+**Exit Criteria**
+- 100% of routes mapped to Zod schemas.
+- Shared schema library published and referenced by controllers.
 
-## 6. Milestones
-| Milestone | Description | Target |
-|-----------|-------------|--------|
-| M1 | Schema audit complete, backlog created | +1 week |
-| M2 | Metadata registry implemented, tickets/categories covered | +2 weeks |
-| M3 | Generator v2 emitting CE/EE specs with CI check | +3 weeks |
-| M4 | Remaining controllers instrumented | +5 weeks |
-| M5 | Public documentation (Swagger/Redoc) live | +6 weeks |
-| M6 | Contract tests (smoke coverage) | +8 weeks |
+### Phase 2 – Route Metadata Registry (Week 2–3)
+**Goals**
+- Expose consistent OpenAPI metadata for every route.
 
-## 7. Risks & Mitigations
-- **Schema gaps / drift**: Some legacy endpoints lack Zod validation → allocate refactor time & pair with domain owners.
-- **Controller import side effects**: Loading controllers during generation might require environment bootstrapping → isolate metadata in pure modules or guard imports.
-- **Large spec churn**: Frequent schema updates might overwhelm reviews → maintain changelog + auto-generated diff summaries.
-- **EE confidentiality**: Ensure EE-only routes marked clearly; avoid publishing private endpoints outside internal docs.
+**Key Activities**
+- Add `registerOpenApi` (or equivalent) metadata exports per controller.
+- Introduce `openapiRegistry.ts` to collect route specs without side effects.
+- Annotate endpoints with edition (`x-edition`), RBAC resource/action, tenant requirements.
 
-## 8. Open Questions
-- Do we version the API? (If yes, incorporate `info.version` strategy + tags.)
-- Where should HTML docs live (Next.js route vs. separate static hosting)?
-- Should we auto-generate SDKs (TypeScript/Go) post-spec as part of release?
-- Is there a preferred contract-testing framework (Prism, Dredd, custom)?
+**Exit Criteria**
+- Registry can enumerate all CE + EE paths with associated schemas.
+- Unit test verifies controllers register expected routes.
 
-## 9. Next Steps
-1. Approve plan scope and timeline.
-2. Assign leads for Workstreams A–D.
-3. Kick off schema audit (create tracking doc in Notion/Jira).
-4. Prototype controller metadata on tickets/categories to validate approach.
-5. Integrate results into the existing `openapi:generate` tooling for iterative rollout.
+### Phase 3 – Generator & Automation (Week 3–4)
+**Goals**
+- Produce authoritative CE/EE specs on demand and in CI.
+
+**Key Activities**
+- Upgrade `sdk/scripts/generate-openapi.ts` to consume the registry.
+- Add CLI flags (`--edition`, `--output`) and version stamping.
+- Wire GitHub Action (or pipeline) to regenerate spec and fail on diff.
+
+**Exit Criteria**
+- `npm run openapi:generate:ce|ee` outputs complete specs.
+- CI job ensures committed spec is current.
+
+### Phase 4 – Publication & Developer Experience (Week 4–6)
+**Goals**
+- Make the spec discoverable and easy to work with.
+
+**Key Activities**
+- Publish Swagger UI / Redoc (Next.js route or static hosting) using generated YAML.
+- Update docs (`sdk/README.md`, contributor guide) with workflow, changelog, approval process.
+- Provide sample SDK generation scripts / Postman collections.
+
+**Exit Criteria**
+- Public/internal documentation site live with CE/EE specs.
+- Contributor checklist adopted in PR template.
+
+### Phase 5 – Continuous Verification & Enhancements (Week 6+)
+**Goals**
+- Keep the spec trustworthy and extend automation.
+
+**Key Activities**
+- Add contract tests comparing live responses against Zod schemas for critical paths.
+- Track spec changes in `docs/openapi/CHANGELOG.md`.
+- Evaluate automated SDK generation or partner-specific bundles.
+
+**Exit Criteria**
+- Smoke contract tests passing in CI.
+- Changelog process in place with ownership assigned.
+
+## 4. Timeline Snapshot
+| Phase | Focus | Target Window |
+|-------|-------|---------------|
+| 0 | Alignment & discovery | Week 0–1 |
+| 1 | Schema foundation | Week 1–2 |
+| 2 | Metadata registry | Week 2–3 |
+| 3 | Generator & automation | Week 3–4 |
+| 4 | Publication & DX | Week 4–6 |
+| 5 | Continuous verification | Week 6+ |
+
+## 5. Risks & Mitigations
+- **Schema gaps / drift**: Some legacy endpoints lack Zod validation → front-load refactor time in Phase 1 and pair with domain owners.
+- **Controller import side effects**: Registry must avoid executing business logic during generation → isolate metadata in pure modules, use lazy imports.
+- **Spec churn fatigue**: Large diffs overwhelm PR reviewers → maintain spec changelog and auto-generate diff summaries in CI.
+- **EE confidentiality**: EE-only routes should stay internal → enforce `x-edition` tagging and restrict public publishing pipeline.
+
+## 6. Open Questions
+- Do we introduce formal API versioning alongside the spec rollout?
+- Where should HTML documentation live (Next.js vs. dedicated static hosting)?
+- Should spec publication trigger automated SDK/regression testing?
+- Preferred contract-testing framework (Prism, Dredd, custom harness)?
+
+## 7. Immediate Next Steps
+1. Review/approve phased plan with API leadership.
+2. Staff owners for Phases 0–3 (schema lead, tooling lead, doc lead).
+3. Kick off Phase 0 discovery (route inventory + stakeholder interviews).
+4. Prepare tracking board (Jira/Notion) seeded with Phase 1 tasks.
