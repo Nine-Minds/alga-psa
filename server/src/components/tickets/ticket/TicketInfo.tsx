@@ -15,15 +15,11 @@ import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
 import { getTicketCategories, getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { ItilLabels, ItilCategories, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
+import { ItilLabels, calculateItilPriority, getItilCategoriesAsTicketCategories } from 'server/src/lib/utils/itilUtils';
 import { Pencil, Check, HelpCircle } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { Input } from 'server/src/components/ui/Input';
 
-// Helper function to get ITIL labels
-const getItilLabel = (type: 'impact' | 'urgency' | 'priority', value: number): string => {
-  return ItilLabels[type][value] || 'Unknown';
-};
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration
@@ -62,7 +58,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   isSubmitting = false,
   users = [],
   tags = [],
-  allTagTexts = [],
   onTagsChange,
   isInDrawer = false,
   onItilFieldChange,
@@ -95,6 +90,59 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
     return null;
   }, [itilImpact, itilUrgency]);
+
+  // Get ITIL categories in the same format as custom categories
+  const itilCategoriesForPicker = React.useMemo(() => {
+    return getItilCategoriesAsTicketCategories();
+  }, []);
+
+  // Get currently selected ITIL category ID for CategoryPicker
+  const getSelectedItilCategoryId = (): string => {
+    if (!itilCategory) return '';
+
+    // If we have both category and subcategory, return the subcategory ID
+    if (itilSubcategory) {
+      const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
+      const subcategoryKey = itilSubcategory.toLowerCase().replace(/[\s\/]+/g, '-');
+      return `itil-${categoryKey}-${subcategoryKey}`;
+    }
+
+    // If we only have category, return the parent category ID
+    const categoryKey = itilCategory.toLowerCase().replace(/\s+/g, '-');
+    return `itil-${categoryKey}`;
+  };
+
+  // Handle ITIL category selection from CategoryPicker
+  const handleItilCategoryChange = (categoryIds: string[]) => {
+    if (categoryIds.length === 0) {
+      // Clear both category and subcategory
+      onItilFieldChange && onItilFieldChange('itil_category', '');
+      onItilFieldChange && onItilFieldChange('itil_subcategory', '');
+      return;
+    }
+
+    const selectedCategoryId = categoryIds[0];
+    const selectedCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategoryId);
+
+    if (!selectedCategory) {
+      console.error('Selected ITIL category not found');
+      return;
+    }
+
+    if (selectedCategory.parent_category) {
+      // This is a subcategory selection
+      const parentCategory = itilCategoriesForPicker.find(c => c.category_id === selectedCategory.parent_category);
+      if (parentCategory) {
+        onItilFieldChange && onItilFieldChange('itil_category', parentCategory.category_name);
+        onItilFieldChange && onItilFieldChange('itil_subcategory', selectedCategory.category_name);
+      }
+    } else {
+      // This is a parent category selection
+      onItilFieldChange && onItilFieldChange('itil_category', selectedCategory.category_name);
+      onItilFieldChange && onItilFieldChange('itil_subcategory', '');
+    }
+  };
+
   const [descriptionContent, setDescriptionContent] = useState<PartialBlock[]>([{
     type: "paragraph",
     props: {
@@ -441,119 +489,49 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <>
                 <div>
                   <h5 className="font-bold mb-2">Impact</h5>
-                  <select
-                    value={itilImpact || ''}
-                    onChange={(e) => handleItilFieldChange('itil_impact', Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Impact</option>
-                    <option value="1">1 - High (Critical business function affected)</option>
-                    <option value="2">2 - Medium-High (Important function affected)</option>
-                    <option value="3">3 - Medium (Minor function affected)</option>
-                    <option value="4">4 - Medium-Low (Minimal impact)</option>
-                    <option value="5">5 - Low (No business impact)</option>
-                  </select>
+                  <CustomSelect
+                    options={[
+                      { value: '1', label: '1 - High (Critical business function affected)' },
+                      { value: '2', label: '2 - Medium-High (Important function affected)' },
+                      { value: '3', label: '3 - Medium (Minor function affected)' },
+                      { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+                      { value: '5', label: '5 - Low (No business impact)' }
+                    ]}
+                    value={itilImpact?.toString() || null}
+                    onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
+                    placeholder="Select Impact"
+                  />
                 </div>
                 <div>
                   <h5 className="font-bold mb-2">Urgency</h5>
-                  <select
-                    value={itilUrgency || ''}
-                    onChange={(e) => handleItilFieldChange('itil_urgency', Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select Urgency</option>
-                    <option value="1">1 - High (Work cannot continue)</option>
-                    <option value="2">2 - Medium-High (Work severely impaired)</option>
-                    <option value="3">3 - Medium (Work continues with limitations)</option>
-                    <option value="4">4 - Medium-Low (Minor inconvenience)</option>
-                    <option value="5">5 - Low (Work continues normally)</option>
-                  </select>
+                  <CustomSelect
+                    options={[
+                      { value: '1', label: '1 - High (Work cannot continue)' },
+                      { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+                      { value: '3', label: '3 - Medium (Work continues with limitations)' },
+                      { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+                      { value: '5', label: '5 - Low (Work continues normally)' }
+                    ]}
+                    value={itilUrgency?.toString() || null}
+                    onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
+                    placeholder="Select Urgency"
+                  />
                 </div>
               </>
             )}
             {/* ITIL Categories for ITIL category channels */}
             {channelConfig.category_type === 'itil' && (
-              <>
-                <div>
-                  <h5 className="font-bold mb-2">ITIL Category</h5>
-                  <select
-                    value={itilCategory || ''}
-                    onChange={(e) => {
-                      handleItilFieldChange('itil_category', e.target.value);
-                      handleItilFieldChange('itil_subcategory', ''); // Reset subcategory
-                    }}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select ITIL Category</option>
-                    <option value="Hardware">Hardware</option>
-                    <option value="Software">Software</option>
-                    <option value="Network">Network</option>
-                    <option value="Security">Security</option>
-                    <option value="Service Request">Service Request</option>
-                  </select>
-                </div>
-                <div>
-                  <h5 className="font-bold mb-2">ITIL Subcategory</h5>
-                  <select
-                    value={itilSubcategory || ''}
-                    onChange={(e) => handleItilFieldChange('itil_subcategory', e.target.value)}
-                    disabled={!itilCategory}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                  >
-                    <option value="">Select Subcategory</option>
-                    {itilCategory === 'Hardware' && (
-                      <>
-                        <option value="Server">Server</option>
-                        <option value="Desktop/Laptop">Desktop/Laptop</option>
-                        <option value="Network Equipment">Network Equipment</option>
-                        <option value="Printer">Printer</option>
-                        <option value="Storage">Storage</option>
-                        <option value="Mobile Device">Mobile Device</option>
-                      </>
-                    )}
-                    {itilCategory === 'Software' && (
-                      <>
-                        <option value="Application">Application</option>
-                        <option value="Operating System">Operating System</option>
-                        <option value="Database">Database</option>
-                        <option value="Security Software">Security Software</option>
-                        <option value="Productivity Software">Productivity Software</option>
-                        <option value="Custom Application">Custom Application</option>
-                      </>
-                    )}
-                    {itilCategory === 'Network' && (
-                      <>
-                        <option value="Connectivity">Connectivity</option>
-                        <option value="VPN">VPN</option>
-                        <option value="Wi-Fi">Wi-Fi</option>
-                        <option value="Internet">Internet</option>
-                        <option value="LAN/WAN">LAN/WAN</option>
-                        <option value="Firewall">Firewall</option>
-                      </>
-                    )}
-                    {itilCategory === 'Security' && (
-                      <>
-                        <option value="Malware">Malware</option>
-                        <option value="Unauthorized Access">Unauthorized Access</option>
-                        <option value="Data Breach">Data Breach</option>
-                        <option value="Phishing">Phishing</option>
-                        <option value="Policy Violation">Policy Violation</option>
-                        <option value="Account Lockout">Account Lockout</option>
-                      </>
-                    )}
-                    {itilCategory === 'Service Request' && (
-                      <>
-                        <option value="Access Request">Access Request</option>
-                        <option value="New User Setup">New User Setup</option>
-                        <option value="Software Installation">Software Installation</option>
-                        <option value="Equipment Request">Equipment Request</option>
-                        <option value="Information Request">Information Request</option>
-                        <option value="Change Request">Change Request</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              </>
+              <div>
+                <h5 className="font-bold mb-2">ITIL Category</h5>
+                <CategoryPicker
+                  id={`${id}-itil-category-picker`}
+                  categories={itilCategoriesForPicker}
+                  selectedCategories={getSelectedItilCategoryId() ? [getSelectedItilCategoryId()] : []}
+                  onSelect={handleItilCategoryChange}
+                  placeholder="Select ITIL category..."
+                  multiSelect={false}
+                />
+              </div>
             )}
           </div>
 
