@@ -38,7 +38,7 @@ export const createServiceCategorySchema = z.object({
   description: z.string()
     .max(1000, 'Description too long')
     .optional(),
-  is_active: booleanTransform.optional()
+  is_active: booleanTransform.or(z.boolean()).optional()
 });
 
 export const updateServiceCategorySchema = createUpdateSchema(createServiceCategorySchema);
