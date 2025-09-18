@@ -52,6 +52,7 @@
     "migrate:ee": "node scripts/run-ee-migrations.js"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^6.3.1",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
     "@aws-sdk/client-s3": "^3.744.0",
