@@ -41,6 +41,7 @@ import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/d
 import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
 import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
 import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
+import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
