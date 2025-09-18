@@ -1,8 +1,9 @@
+import type { ZodTypeAny } from 'zod';
 import { ApiOpenApiRegistry, zOpenApi } from '../registry';
 
 export function registerServiceCategoryRoutes(
   registry: ApiOpenApiRegistry,
-  deps: { ErrorResponse: z.ZodTypeAny },
+  deps: { ErrorResponse: ZodTypeAny },
 ) {
   const ServiceCategory = registry.registerSchema(
     'ServiceCategory',

@@ -32,12 +32,13 @@ export class ApiOpenApiRegistry {
     return this.registry.register(name, schema);
   }
 
-  registerComponent<TSchema extends ZodTypeAny>(
+  registerComponent<TComponent = unknown>(
     type: 'schemas' | 'responses' | 'parameters' | 'requestBodies' | 'headers' | 'securitySchemes',
     name: string,
-    component: TSchema | unknown,
-  ): void {
-    this.registry.registerComponent(type, name, component);
+    component: TComponent,
+  ): TComponent {
+    this.registry.registerComponent(type, name, component as any);
+    return component;
   }
 
   registerRoute(route: ApiRouteSpec): void {
@@ -50,7 +51,7 @@ export class ApiOpenApiRegistry {
     const responses = this.buildResponses(route.responses);
     const extensions = this.buildExtensions(route);
 
-    this.registry.registerPath({
+    const pathConfig = {
       method: route.method,
       path: route.path,
       summary: route.summary,
@@ -62,7 +63,9 @@ export class ApiOpenApiRegistry {
       request,
       responses,
       extensions,
-    });
+    };
+
+    this.registry.registerPath(pathConfig as any);
   }
 
   buildDocument(options: DocumentBuildOptions) {
