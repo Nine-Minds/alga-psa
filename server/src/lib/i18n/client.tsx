@@ -5,7 +5,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import i18next, { TFunction } from 'i18next';
+import i18next from 'i18next';
 import { initReactI18next, useTranslation as useI18nextTranslation } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
 import LanguageDetector from 'i18next-browser-languagedetector';
@@ -38,8 +38,11 @@ async function initI18n(locale?: SupportedLocale) {
       detection: {
         order: ['cookie', 'localStorage', 'navigator'],
         caches: ['cookie', 'localStorage'],
-        cookieName: LOCALE_CONFIG.cookie.name,
-        cookieOptions: LOCALE_CONFIG.cookie,
+        lookupCookie: LOCALE_CONFIG.cookie.name,
+        lookupLocalStorage: 'locale',
+        cookieOptions: {
+          sameSite: LOCALE_CONFIG.cookie.sameSite,
+        },
       },
     });
 
@@ -177,7 +180,7 @@ export function detectClientLocale(): SupportedLocale {
 
   // 1. Check cookie
   const localeCookie = getCookie(LOCALE_CONFIG.cookie.name);
-  if (localeCookie && isSupportedLocale(localeCookie)) {
+  if (localeCookie && typeof localeCookie === 'string' && isSupportedLocale(localeCookie)) {
     return localeCookie;
   }
 

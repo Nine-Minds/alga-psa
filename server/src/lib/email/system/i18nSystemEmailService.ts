@@ -115,7 +115,7 @@ export class I18nSystemEmailService extends BaseEmailService {
   /**
    * Determine the best locale for the email
    */
-  private async determineLocale(params: I18nSystemEmailParams): Promise<SupportedLocale> {
+  private async determineLocale(params: { locale?: SupportedLocale; tenantId?: string; userId?: string }): Promise<SupportedLocale> {
     // 1. Explicit locale parameter
     if (params.locale) {
       return params.locale;
@@ -227,7 +227,11 @@ export class I18nSystemEmailService extends BaseEmailService {
    * Override sendEmail to handle language detection
    */
   public async sendEmail(params: I18nSystemEmailParams): Promise<EmailSendResult> {
-    const locale = await this.determineLocale(params);
+    const locale = await this.determineLocale({
+      locale: params.locale,
+      tenantId: params.tenantId,
+      userId: params.userId
+    });
 
     // Store locale for use in template generation
     const paramsWithLocale = {
@@ -265,7 +269,7 @@ export class I18nSystemEmailService extends BaseEmailService {
       template = {
         subject: this.replaceVariables(dbTemplate.subject, data),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text, data)
+        text: this.replaceVariables(dbTemplate.text || '', data)
       };
     } else {
       // Fall back to hardcoded template
@@ -310,7 +314,7 @@ export class I18nSystemEmailService extends BaseEmailService {
       template = {
         subject: this.replaceVariables(dbTemplate.subject, data),
         html: this.replaceVariables(dbTemplate.html, data),
-        text: this.replaceVariables(dbTemplate.text, data)
+        text: this.replaceVariables(dbTemplate.text || '', data)
       };
     } else {
       // Fall back to hardcoded template

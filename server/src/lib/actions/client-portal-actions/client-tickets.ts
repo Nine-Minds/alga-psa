@@ -330,15 +330,33 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
     // Create user map, including avatar URLs
     const usersWithAvatars = await Promise.all(result.users.map(async (user: any) => {
       let avatarUrl: string | null = null;
-      if (user.avatar_file_id) {
+
+      // For internal users, use getUserAvatarUrlAction
+      if (user.user_type === 'internal') {
         try {
-          const { getImageUrl } = await import('server/src/lib/actions/document-actions/documentActions');
-          avatarUrl = await getImageUrl(user.avatar_file_id);
-        } catch (imgError) {
-          console.error(`Error fetching avatar URL for user ${user.user_id} fileId ${user.avatar_file_id}:`, imgError);
-          avatarUrl = null;
+          const { getUserAvatarUrlAction } = await import('server/src/lib/actions/avatar-actions');
+          avatarUrl = await getUserAvatarUrlAction(user.user_id, tenant);
+        } catch (error) {
+          console.error(`Error fetching avatar URL for internal user ${user.user_id}:`, error);
         }
       }
+      // For client users, get their contact avatar
+      else if (user.user_type === 'client') {
+        try {
+          // First, get the user's contact_id
+          const userRecord = await db('users')
+            .where({ user_id: user.user_id, tenant })
+            .first();
+
+          if (userRecord?.contact_id) {
+            const { getContactAvatarUrlAction } = await import('server/src/lib/actions/avatar-actions');
+            avatarUrl = await getContactAvatarUrlAction(userRecord.contact_id, tenant);
+          }
+        } catch (error) {
+          console.error(`Error fetching avatar URL for client user ${user.user_id}:`, error);
+        }
+      }
+
       const { avatar_file_id, ...userData } = user;
       return {
         ...userData,

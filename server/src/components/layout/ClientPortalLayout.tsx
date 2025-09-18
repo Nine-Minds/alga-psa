@@ -33,32 +33,46 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
     console.log('Signing out...');
   };
 
+  const fetchAvatarUrl = async (contactId: string, tenant: string) => {
+    try {
+      const contactAvatarUrl = await getContactAvatarUrlAction(contactId, tenant);
+      setAvatarUrl(contactAvatarUrl);
+    } catch (error) {
+      console.error('Error fetching contact avatar:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
-      const user = await getCurrentUser();      
+      const user = await getCurrentUser();
       if (user) {
         setUserData(user);
-        
+
         // Check permissions using the server action
         const permissions = await checkClientPortalPermissions();
         setHasCompanySettingsAccess(permissions.hasCompanySettingsAccess);
         setHasBillingAccess(permissions.hasBillingAccess);
         setHasUserManagementAccess(permissions.hasUserManagementAccess);
-        
+
         if (user.contact_id) {
-          try {
-            // For client users, use the contact avatar
-            const contactAvatarUrl = await getContactAvatarUrlAction(user.contact_id, user.tenant);
-            setAvatarUrl(contactAvatarUrl);
-          } catch (error) {
-            console.error('Error fetching contact avatar:', error);
-          }
+          await fetchAvatarUrl(user.contact_id, user.tenant);
         }
       }
     };
 
     fetchUserData();
   }, []);
+
+  // Poll for avatar changes every 5 seconds when the component is visible
+  useEffect(() => {
+    if (!userData?.contact_id || !userData?.tenant) return;
+
+    const intervalId = setInterval(() => {
+      fetchAvatarUrl(userData.contact_id!, userData.tenant);
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [userData?.contact_id, userData?.tenant]);
 
   return (
     <div className="min-h-screen bg-gray-100">

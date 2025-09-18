@@ -40,7 +40,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.plan.frequency')}</p>
-            <p className="mt-1">{t(`billing.frequency.${plan.billing_frequency.toLowerCase()}`, plan.billing_frequency)}</p>
+            <p className="mt-1">{t(`billing.frequency.${plan.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: plan.billing_frequency || 'Monthly' })}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.plan.startDate')}</p>

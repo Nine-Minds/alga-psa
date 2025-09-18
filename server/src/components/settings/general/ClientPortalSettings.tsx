@@ -183,7 +183,6 @@ const ClientPortalSettings = () => {
                 <li>Individual user preference (highest priority)</li>
                 <li>Company default language</li>
                 <li>Organization default (configured here)</li>
-                <li>Browser language preference</li>
                 <li>System default (English)</li>
               </ol>
             </div>

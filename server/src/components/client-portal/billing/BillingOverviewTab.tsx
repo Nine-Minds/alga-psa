@@ -51,7 +51,7 @@ const BillingOverviewTab: React.FC<BillingOverviewTabProps> = React.memo(({
           {billingPlan ? (
             <>
               <p className="mt-2 text-3xl font-semibold">{billingPlan.plan_name}</p>
-              <p className="mt-1 text-sm text-gray-500">{t(`billing.frequency.${billingPlan.billing_frequency.toLowerCase()}`, billingPlan.billing_frequency)}</p>
+              <p className="mt-1 text-sm text-gray-500">{t(`billing.frequency.${billingPlan.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: billingPlan.billing_frequency || 'Monthly' })}</p>
             </>
           ) : (
             <>

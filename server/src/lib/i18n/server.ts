@@ -7,7 +7,6 @@ import { initReactI18next } from 'react-i18next';
 import HttpBackend from 'i18next-http-backend';
 import { cache } from 'react';
 import { cookies, headers } from 'next/headers';
-import { getCookie } from 'cookies-next';
 import {
   LOCALE_CONFIG,
   I18N_CONFIG,
@@ -49,7 +48,8 @@ export const getServerLocale = cache(
   }): Promise<SupportedLocale> => {
     try {
       // 1. Check cookie (user's explicit choice)
-      const localeCookie = getCookie(LOCALE_CONFIG.cookie.name, { cookies });
+      const cookieStore = await cookies();
+      const localeCookie = cookieStore.get(LOCALE_CONFIG.cookie.name)?.value;
       if (localeCookie && isSupportedLocale(localeCookie)) {
         return localeCookie;
       }
@@ -113,7 +113,8 @@ export const getServerLocale = cache(
       }
 
       // 5. Check Accept-Language header
-      const acceptLanguage = headers().get('accept-language');
+      const headerStore = await headers();
+      const acceptLanguage = headerStore.get('accept-language');
       if (acceptLanguage) {
         const preferredLocales = acceptLanguage
           .split(',')
@@ -160,7 +161,7 @@ export async function setUserLocale(locale: SupportedLocale) {
     throw new Error(`Unsupported locale: ${locale}`);
   }
 
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   cookieStore.set(LOCALE_CONFIG.cookie.name, locale, {
     maxAge: LOCALE_CONFIG.cookie.maxAge,
     sameSite: LOCALE_CONFIG.cookie.sameSite,

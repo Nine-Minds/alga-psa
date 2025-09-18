@@ -37,6 +37,7 @@ interface VideoPreviewProps {
 }
 
 function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
+    const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -109,6 +110,7 @@ interface VideoModalProps {
 }
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
+    const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -496,7 +498,7 @@ function DocumentStorageCardComponent({
                     ) : (
                         <div className="mt-4 preview-container">
                             {document.mime_type?.startsWith('video/') ? (
-                                <VideoPreviewComponent 
+                                <VideoPreviewComponent
                                     fileId={document.file_id || ''}
                                     mimeType={document.mime_type || ''}
                                     fileName={document.document_name}
