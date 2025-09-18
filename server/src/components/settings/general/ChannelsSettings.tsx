@@ -49,10 +49,7 @@ const ChannelsSettings: React.FC = () => {
     display_order: 0,
     is_inactive: false,
     category_type: 'custom' as CategoryType,
-    priority_type: 'custom' as PriorityType,
-    display_itil_impact: false,
-    display_itil_urgency: false,
-    display_itil_category: false
+    priority_type: 'custom' as PriorityType
   });
   
   // State for Import Dialog
@@ -84,10 +81,7 @@ const ChannelsSettings: React.FC = () => {
       display_order: channel.display_order || 0,
       is_inactive: channel.is_inactive,
       category_type: channel.category_type || 'custom',
-      priority_type: channel.priority_type || 'custom',
-      display_itil_impact: channel.display_itil_impact || false,
-      display_itil_urgency: channel.display_itil_urgency || false,
-      display_itil_category: channel.display_itil_category || false
+      priority_type: channel.priority_type || 'custom'
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -120,10 +114,7 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: formData.category_type,
-          priority_type: formData.priority_type,
-          display_itil_impact: formData.display_itil_impact,
-          display_itil_urgency: formData.display_itil_urgency,
-          display_itil_category: formData.display_itil_category
+          priority_type: formData.priority_type
         });
         toast.success('Board updated successfully');
       } else {
@@ -133,17 +124,14 @@ const ChannelsSettings: React.FC = () => {
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
           category_type: formData.category_type,
-          priority_type: formData.priority_type,
-          display_itil_impact: formData.display_itil_impact,
-          display_itil_urgency: formData.display_itil_urgency,
-          display_itil_category: formData.display_itil_category
+          priority_type: formData.priority_type
         });
         toast.success('Board created successfully');
       }
       
       setShowAddEditDialog(false);
       setEditingChannel(null);
-      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
       await fetchChannels();
     } catch (error) {
       console.error('Error saving channel:', error);
@@ -273,6 +261,19 @@ const ChannelsSettings: React.FC = () => {
       ),
     },
     {
+      title: 'Priority Type',
+      dataIndex: 'priority_type',
+      render: (value: string) => (
+        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          value === 'itil'
+            ? 'bg-blue-100 text-blue-800'
+            : 'bg-gray-100 text-gray-800'
+        }`}>
+          {value === 'itil' ? 'ITIL' : 'Custom'}
+        </span>
+      ),
+    },
+    {
       title: 'Actions',
       dataIndex: 'channel_id',
       width: '10%',
@@ -330,7 +331,7 @@ const ChannelsSettings: React.FC = () => {
             id="add-channel-button"
             onClick={() => {
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -372,7 +373,7 @@ const ChannelsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingChannel(null);
-          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
           setError(null);
         }} 
         title={editingChannel ? "Edit Board" : "Add Board"}
@@ -432,17 +433,7 @@ const ChannelsSettings: React.FC = () => {
                 <select
                   id="category_type"
                   value={formData.category_type}
-                  onChange={(e) => {
-                    const newType = e.target.value as CategoryType;
-                    setFormData({
-                      ...formData,
-                      category_type: newType,
-                      // Reset ITIL options when switching to custom
-                      display_itil_impact: newType === 'itil' ? formData.display_itil_impact : false,
-                      display_itil_urgency: newType === 'itil' ? formData.display_itil_urgency : false,
-                      display_itil_category: newType === 'itil' ? formData.display_itil_category : false
-                    });
-                  }}
+                  onChange={(e) => setFormData({ ...formData, category_type: e.target.value as CategoryType })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="custom">Custom Categories</option>
@@ -458,16 +449,7 @@ const ChannelsSettings: React.FC = () => {
                 <select
                   id="priority_type"
                   value={formData.priority_type}
-                  onChange={(e) => {
-                    const newType = e.target.value as PriorityType;
-                    setFormData({
-                      ...formData,
-                      priority_type: newType,
-                      // Auto-enable impact/urgency fields when using ITIL priorities
-                      display_itil_impact: newType === 'itil' ? true : formData.display_itil_impact,
-                      display_itil_urgency: newType === 'itil' ? true : formData.display_itil_urgency
-                    });
-                  }}
+                  onChange={(e) => setFormData({ ...formData, priority_type: e.target.value as PriorityType })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 >
                   <option value="custom">Custom Priorities</option>
@@ -478,41 +460,6 @@ const ChannelsSettings: React.FC = () => {
                 </p>
               </div>
 
-              {(formData.category_type === 'itil' || formData.priority_type === 'itil') && (
-                <div className="bg-gray-50 p-4 rounded-md space-y-3">
-                  <p className="text-sm font-medium text-gray-700">ITIL Display Options</p>
-                  <p className="text-xs text-gray-600">
-                    Configure which ITIL classification fields appear in the new ticket form.
-                  </p>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="display_itil_impact">Show Impact Field</Label>
-                    <Switch
-                      id="display_itil_impact"
-                      checked={formData.display_itil_impact}
-                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_impact: checked })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="display_itil_urgency">Show Urgency Field</Label>
-                    <Switch
-                      id="display_itil_urgency"
-                      checked={formData.display_itil_urgency}
-                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_urgency: checked })}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="display_itil_category">Show Category Field</Label>
-                    <Switch
-                      id="display_itil_category"
-                      checked={formData.display_itil_category}
-                      onCheckedChange={(checked) => setFormData({ ...formData, display_itil_category: checked })}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </DialogContent>
@@ -523,7 +470,7 @@ const ChannelsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', display_itil_impact: false, display_itil_urgency: false, display_itil_category: false });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
               setError(null);
             }}
           >
