@@ -18,10 +18,10 @@
 - Confirm scope (CE + EE) and stakeholder expectations.
 - Inventory current routes, schemas, and existing doc consumers.
 
-**Key Activities**
-- Catalog every API route under `server/src/app/api/**` with edition, authentication, and owning team.
-- Identify spec consumers (partners, SDKs, internal teams) and capture requirements.
-- Finalize success metrics and governance (who approves spec changes, release cadence).
+**Tasks**
+- [ ] Export route inventory from `server/src/app/api/**`, capturing path, method, edition, auth mode, owning team, and source controller.
+- [ ] Interview/key sync with product, integrations, and partner success to confirm external/internal consumers and their deliverables.
+- [ ] Draft and circulate OpenAPI program charter (scope, success metrics, governance/RACI, release cadence) for approval.
 
 **Exit Criteria**
 - Signed-off scope document & RACI.
@@ -31,10 +31,11 @@
 **Goals**
 - Ensure every endpoint has canonical Zod schemas for inputs/outputs.
 
-**Key Activities**
-- Audit existing schemas; add missing ones for legacy controllers.
-- Standardize shared types (errors, pagination, RBAC responses, metadata objects).
-- Add schema tests to guard against breaking changes.
+**Tasks**
+- [ ] Compare route inventory against `server/src/lib/api/schemas/**` and log endpoints lacking request/query/response Zod schemas.
+- [ ] Implement missing schemas for legacy controllers, ensuring each controller imports the canonical definitions.
+- [ ] Publish shared schema module covering errors, pagination, RBAC payloads, metadata, and update controllers to reference it.
+- [ ] Add unit tests validating schema shape (e.g., `zod` parsing fixtures) and integrate into CI.
 
 **Exit Criteria**
 - 100% of routes mapped to Zod schemas.
@@ -44,10 +45,12 @@
 **Goals**
 - Expose consistent OpenAPI metadata for every route.
 
-**Key Activities**
-- Add `registerOpenApi` (or equivalent) metadata exports per controller.
-- Introduce `openapiRegistry.ts` to collect route specs without side effects.
-- Annotate endpoints with edition (`x-edition`), RBAC resource/action, tenant requirements.
+**Tasks**
+- [ ] Define `ApiRouteSpec` TypeScript interface (path, method, summary, tags, security, schemas, extensions).
+- [ ] Create `server/src/lib/api/openapiRegistry.ts` exporting helpers to register components/paths without triggering controller side effects.
+- [ ] Update each controller to expose a `registerOpenApi(registry)` function that records paths and attaches Zod schemas.
+- [ ] Ensure every route includes `x-edition`, `x-rbac-resource`, `x-tenant-header-required`, and other necessary extensions.
+- [ ] Add automated test verifying registry enumeration covers the full route inventory.
 
 **Exit Criteria**
 - Registry can enumerate all CE + EE paths with associated schemas.
@@ -57,10 +60,12 @@
 **Goals**
 - Produce authoritative CE/EE specs on demand and in CI.
 
-**Key Activities**
-- Upgrade `sdk/scripts/generate-openapi.ts` to consume the registry.
-- Add CLI flags (`--edition`, `--output`) and version stamping.
-- Wire GitHub Action (or pipeline) to regenerate spec and fail on diff.
+**Tasks**
+- [ ] Refactor `sdk/scripts/generate-openapi.ts` to import the registry, register shared components, and iterate over all route specs.
+- [ ] Add CLI options for edition selection, output directory, and version stamp injection; document usage.
+- [ ] Update npm scripts (`openapi:generate:ce`, `openapi:generate:ee`) to invoke the generator with appropriate flags.
+- [ ] Introduce CI job that runs the generator, compares output against committed files, and fails on divergence.
+- [ ] Announce new workflow in engineering release notes / Slack once CI is green.
 
 **Exit Criteria**
 - `npm run openapi:generate:ce|ee` outputs complete specs.
@@ -70,10 +75,12 @@
 **Goals**
 - Make the spec discoverable and easy to work with.
 
-**Key Activities**
-- Publish Swagger UI / Redoc (Next.js route or static hosting) using generated YAML.
-- Update docs (`sdk/README.md`, contributor guide) with workflow, changelog, approval process.
-- Provide sample SDK generation scripts / Postman collections.
+**Tasks**
+- [ ] Stand up Swagger UI or Redoc endpoint (Next.js route or static export) sourcing the generated YAML spec(s).
+- [ ] Update `sdk/README.md`, contributor guide, and onboarding docs with the generation workflow, review checklist, and approval policy.
+- [ ] Create and publish `docs/openapi/CHANGELOG.md` tracking spec revisions with owner assignments.
+- [ ] Generate example SDK/client artifacts (e.g., TypeScript client, Postman collection) and link them from docs.
+- [ ] Update PR template with checklist item referencing OpenAPI spec updates when modifying API endpoints.
 
 **Exit Criteria**
 - Public/internal documentation site live with CE/EE specs.
@@ -83,10 +90,11 @@
 **Goals**
 - Keep the spec trustworthy and extend automation.
 
-**Key Activities**
-- Add contract tests comparing live responses against Zod schemas for critical paths.
-- Track spec changes in `docs/openapi/CHANGELOG.md`.
-- Evaluate automated SDK generation or partner-specific bundles.
+**Tasks**
+- [ ] Implement smoke contract tests (e.g., Vitest + fetch) validating sample endpoints against Zod schemas and run them in CI.
+- [ ] Automate changelog entries (script or manual template) whenever the spec changes; enforce via PR checklist.
+- [ ] Assess automated SDK generation (e.g., `openapi-generator-cli`) and document recommendation for go-live.
+- [ ] Schedule quarterly spec reviews with stakeholder teams to confirm accuracy and capture new requirements.
 
 **Exit Criteria**
 - Smoke contract tests passing in CI.
