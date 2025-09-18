@@ -31,6 +31,11 @@ Each subpackage remains independent—run installs/tests within the respective d
    ```bash
    npm run sample:create-service-category -- "Onboarding"
    ```
+4. Generate the latest OpenAPI spec:
+   ```bash
+   npm run openapi:generate
+   ```
+   The JSON and YAML outputs land in `docs/openapi/` for documentation sites or client generation.
 
 You can safely add more scripts under `samples/` or automation under `scripts/` without affecting the sibling SDK packages.
 

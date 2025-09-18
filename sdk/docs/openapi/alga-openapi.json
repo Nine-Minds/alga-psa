@@ -1,0 +1,387 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Alga PSA API",
+    "version": "0.1.0",
+    "description": "OpenAPI specification generated from Zod schemas."
+  },
+  "servers": [
+    {
+      "url": "https://algapsa.com",
+      "description": "Production"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Service Categories"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-api-key"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {}
+            },
+            "required": [
+              "code",
+              "message"
+            ]
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "ServiceCategory": {
+        "type": "object",
+        "properties": {
+          "tenant": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category_name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "display_order": {
+            "type": "integer",
+            "default": 0
+          },
+          "is_active": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "updated_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Future-proof: categories can be tagged for grouping."
+          }
+        },
+        "required": [
+          "tenant",
+          "category_id",
+          "category_name",
+          "is_active",
+          "created_at",
+          "updated_at",
+          "created_by",
+          "updated_by"
+        ],
+        "description": "Service category resource."
+      },
+      "ServiceCategoryCreateRequest": {
+        "type": "object",
+        "properties": {
+          "category_name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Display name for the service category."
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional description that provides more context for the category."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Indicates whether the category is active (defaults to true)."
+          }
+        },
+        "required": [
+          "category_name"
+        ],
+        "description": "Payload for creating a service category."
+      },
+      "ServiceCategoryListQuery": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "description": "Filters categories whose name or description matches the provided value."
+          },
+          "is_active": {
+            "type": "boolean",
+            "description": "Filters by whether the category is active."
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Page number (defaults to 1)."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "description": "Number of records to return per page (defaults to 25, maximum 100)."
+          }
+        },
+        "description": "Query parameters for listing service categories."
+      },
+      "PaginatedServiceCategoryResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ServiceCategory"
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "hasNext": {
+                "type": "boolean"
+              },
+              "hasPrev": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages",
+              "hasNext",
+              "hasPrev"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "data",
+          "pagination"
+        ],
+        "description": "Paginated list response wrapper."
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/api/v1/categories/service": {
+      "get": {
+        "summary": "List service categories",
+        "description": "Returns a paginated list of service categories within the current tenant.",
+        "tags": [
+          "Service Categories"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filters categories whose name or description matches the provided value."
+            },
+            "required": false,
+            "description": "Filters categories whose name or description matches the provided value.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "boolean",
+              "description": "Filters by whether the category is active."
+            },
+            "required": false,
+            "description": "Filters by whether the category is active.",
+            "name": "is_active",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Page number (defaults to 1)."
+            },
+            "required": false,
+            "description": "Page number (defaults to 1).",
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Number of records to return per page (defaults to 25, maximum 100)."
+            },
+            "required": false,
+            "description": "Number of records to return per page (defaults to 25, maximum 100).",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A paginated list of service categories.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedServiceCategoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create service category",
+        "description": "Creates a new service category for the tenant. Requires the billing settings create permission.",
+        "tags": [
+          "Service Categories"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceCategoryCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Service category created successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ServiceCategory"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication failed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Authenticated user lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}
