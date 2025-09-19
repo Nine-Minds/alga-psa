@@ -13,6 +13,49 @@ const ensureSequentialMode = async (knex) => {
   `);
 };
 
+const constraintExists = async (knex, constraintName) => {
+  const { rows } = await knex.raw(
+    'SELECT 1 FROM pg_constraint WHERE conname = ? LIMIT 1',
+    [constraintName]
+  );
+  return rows.length > 0;
+};
+
+const isCitus = async (knex) => {
+  const { rows } = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus'"
+  );
+  return rows.length > 0;
+};
+
+const addForeignKey = async (knex, constraintName, column) => {
+  if (await constraintExists(knex, constraintName)) {
+    return;
+  }
+
+  const citus = await isCitus(knex);
+  const onDeleteClause = citus ? '' : ' ON DELETE SET NULL';
+
+  await knex.raw(`
+    ALTER TABLE service_categories
+    ADD CONSTRAINT ${constraintName}
+    FOREIGN KEY (tenant, ${column})
+    REFERENCES users (tenant, user_id)${onDeleteClause};
+  `);
+};
+
+const dropForeignKeyIfExists = async (knex, constraintName) => {
+  if (await constraintExists(knex, constraintName)) {
+    await knex.raw(`
+      ALTER TABLE service_categories
+      DROP CONSTRAINT ${constraintName};
+    `);
+  }
+};
+
+const CREATED_BY_FK = 'service_categories_tenant_created_by_foreign';
+const UPDATED_BY_FK = 'service_categories_tenant_updated_by_foreign';
+
 exports.up = async function up(knex) {
   await ensureSequentialMode(knex);
 
@@ -69,18 +112,8 @@ exports.up = async function up(knex) {
         AND sc.updated_by IS NULL;
     `);
 
-    await knex.schema.alterTable('service_categories', table => {
-      table
-        .foreign(['tenant', 'created_by'])
-        .references(['tenant', 'user_id'])
-        .inTable('users')
-        .onDelete('SET NULL');
-      table
-        .foreign(['tenant', 'updated_by'])
-        .references(['tenant', 'user_id'])
-        .inTable('users')
-        .onDelete('SET NULL');
-    });
+    await addForeignKey(knex, CREATED_BY_FK, 'created_by');
+    await addForeignKey(knex, UPDATED_BY_FK, 'updated_by');
   }
 };
 
@@ -88,10 +121,8 @@ exports.down = async function down(knex) {
   await ensureSequentialMode(knex);
 
   if (await hasColumn(knex, 'service_categories', 'created_by')) {
-    await knex.schema.alterTable('service_categories', table => {
-      table.dropForeign(['tenant', 'created_by']);
-      table.dropForeign(['tenant', 'updated_by']);
-    });
+    await dropForeignKeyIfExists(knex, CREATED_BY_FK);
+    await dropForeignKeyIfExists(knex, UPDATED_BY_FK);
 
     await knex.schema.alterTable('service_categories', table => {
       table.dropColumn('created_by');

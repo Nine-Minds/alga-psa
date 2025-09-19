@@ -1,5 +1,5 @@
-const CREATED_BY_FK = 'service_categories_created_by_fkey';
-const UPDATED_BY_FK = 'service_categories_updated_by_fkey';
+const CREATED_BY_FK = 'service_categories_tenant_created_by_foreign';
+const UPDATED_BY_FK = 'service_categories_tenant_updated_by_foreign';
 
 const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
 
@@ -22,6 +22,29 @@ const ensureSequentialMode = async (knex) => {
         EXECUTE 'SET citus.multi_shard_modify_mode TO ''sequential''';
       END IF;
     END $$;
+  `);
+};
+
+const isCitus = async (knex) => {
+  const { rows } = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus'"
+  );
+  return rows.length > 0;
+};
+
+const addForeignKey = async (knex, constraintName, column) => {
+  if (await constraintExists(knex, constraintName)) {
+    return;
+  }
+
+  const citus = await isCitus(knex);
+  const onDeleteClause = citus ? '' : ' ON DELETE SET NULL';
+
+  await knex.raw(`
+    ALTER TABLE service_categories
+    ADD CONSTRAINT ${constraintName}
+    FOREIGN KEY (tenant, ${column})
+    REFERENCES users (tenant, user_id)${onDeleteClause};
   `);
 };
 
@@ -83,6 +106,8 @@ exports.up = async function up(knex) {
       WHERE sc.tenant = first_users.tenant
         AND sc.created_by IS NULL;
     `);
+
+    await addForeignKey(knex, CREATED_BY_FK, 'created_by');
   }
 
   if (await hasColumn(knex, 'service_categories', 'updated_by')) {
@@ -103,32 +128,8 @@ exports.up = async function up(knex) {
       WHERE sc.tenant = first_users.tenant
         AND sc.updated_by IS NULL;
     `);
-  }
 
-  if (
-    (await hasColumn(knex, 'service_categories', 'created_by')) &&
-    !(await constraintExists(knex, CREATED_BY_FK))
-  ) {
-    await knex.raw(`
-      ALTER TABLE service_categories
-      ADD CONSTRAINT ${CREATED_BY_FK}
-      FOREIGN KEY (tenant, created_by)
-      REFERENCES users (tenant, user_id)
-      ON DELETE SET NULL;
-    `);
-  }
-
-  if (
-    (await hasColumn(knex, 'service_categories', 'updated_by')) &&
-    !(await constraintExists(knex, UPDATED_BY_FK))
-  ) {
-    await knex.raw(`
-      ALTER TABLE service_categories
-      ADD CONSTRAINT ${UPDATED_BY_FK}
-      FOREIGN KEY (tenant, updated_by)
-      REFERENCES users (tenant, user_id)
-      ON DELETE SET NULL;
-    `);
+    await addForeignKey(knex, UPDATED_BY_FK, 'updated_by');
   }
 };
 
