@@ -22,22 +22,32 @@ const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
 const DEFAULT_LANGUAGE_CODE = 'en';
 const NOT_NULL_CONTAINS_NULL_ERROR = 'contains null values';
 
-const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
-  await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET DEFAULT ?', [tableName, 'language_code', DEFAULT_LANGUAGE_CODE]);
+const assertAllowedTable = (tableName) => {
+  if (!['system_email_templates', 'tenant_email_templates'].includes(tableName)) {
+    throw new Error(`Unexpected table for language code migration: ${tableName}`);
+  }
 
-  await knex(tableName)
+  return tableName;
+};
+
+const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
+  const sanitizedTable = assertAllowedTable(tableName);
+
+  await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`);
+
+  await knex(sanitizedTable)
     .whereNull('language_code')
     .update({ language_code: DEFAULT_LANGUAGE_CODE });
 
   try {
-    await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, 'language_code']);
+    await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
   } catch (error) {
     if (error?.message?.includes(NOT_NULL_CONTAINS_NULL_ERROR)) {
-      await knex(tableName)
+      await knex(sanitizedTable)
         .whereNull('language_code')
         .update({ language_code: DEFAULT_LANGUAGE_CODE });
 
-      await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, 'language_code']);
+      await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
       return;
     }
 
