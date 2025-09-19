@@ -33,27 +33,22 @@ const assertAllowedTable = (tableName) => {
 const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
   const sanitizedTable = assertAllowedTable(tableName);
 
-  await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`);
+  await knex.transaction(async (trx) => {
+    await trx.raw(`LOCK TABLE ${sanitizedTable} IN SHARE ROW EXCLUSIVE MODE`);
 
-  await knex.raw(`UPDATE ${sanitizedTable} SET language_code = DEFAULT WHERE language_code IS NULL`);
+    await trx.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`);
 
-  const { rows } = await knex.raw(`SELECT COUNT(*)::int AS null_count FROM ${sanitizedTable} WHERE language_code IS NULL`);
-  const remainingNulls = rows?.[0]?.null_count ?? 0;
+    await trx.raw(`UPDATE ${sanitizedTable} SET language_code = '${DEFAULT_LANGUAGE_CODE}' WHERE language_code IS NULL`);
 
-  try {
-    await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
-  } catch (error) {
-    if (error?.message?.includes(NOT_NULL_CONTAINS_NULL_ERROR)) {
-      if (remainingNulls > 0) {
-        await knex.raw(`UPDATE ${sanitizedTable} SET language_code = DEFAULT WHERE language_code IS NULL`);
-      }
+    const { rows: nullRows } = await trx.raw(`SELECT id, name FROM ${sanitizedTable} WHERE language_code IS NULL LIMIT 5`);
 
-      await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
-      return;
+    if (nullRows.length > 0) {
+      const detail = nullRows.map(({ id, name }) => `id=${id},name=${name}`).join('; ');
+      throw new Error(`Unable to backfill ${sanitizedTable}; sample rows still NULL: ${detail}`);
     }
 
-    throw error;
-  }
+    await trx.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
+  });
 };
 
 exports.up = async function (knex) {
