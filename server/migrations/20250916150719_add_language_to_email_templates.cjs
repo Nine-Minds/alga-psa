@@ -17,30 +17,60 @@ const ensureSequentialMode = async (knex) => {
   `);
 };
 
+const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
+
+const DEFAULT_LANGUAGE_CODE = 'en';
+const NOT_NULL_CONTAINS_NULL_ERROR = 'contains null values';
+
+const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
+  await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET DEFAULT ?', [tableName, 'language_code', DEFAULT_LANGUAGE_CODE]);
+
+  await knex(tableName)
+    .whereNull('language_code')
+    .update({ language_code: DEFAULT_LANGUAGE_CODE });
+
+  try {
+    await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, 'language_code']);
+  } catch (error) {
+    if (error?.message?.includes(NOT_NULL_CONTAINS_NULL_ERROR)) {
+      await knex(tableName)
+        .whereNull('language_code')
+        .update({ language_code: DEFAULT_LANGUAGE_CODE });
+
+      await knex.raw('ALTER TABLE ?? ALTER COLUMN ?? SET NOT NULL', [tableName, 'language_code']);
+      return;
+    }
+
+    throw error;
+  }
+};
+
 exports.up = async function (knex) {
   await ensureSequentialMode(knex);
 
   // Add language_code to system_email_templates (reference table in Citus)
-  await knex.schema.alterTable('system_email_templates', (table) => {
-    table.string('language_code', 10);
-  });
+  const systemHasLanguage = await hasColumn(knex, 'system_email_templates', 'language_code');
+  if (!systemHasLanguage) {
+    await knex.schema.alterTable('system_email_templates', (table) => {
+      table.string('language_code', 10);
+    });
+  }
 
-  await knex('system_email_templates').update({ language_code: 'en' });
-  await knex.raw("ALTER TABLE system_email_templates ALTER COLUMN language_code SET DEFAULT 'en'");
-  await knex.raw('ALTER TABLE system_email_templates ALTER COLUMN language_code SET NOT NULL');
+  await setLanguageCodeDefaultAndNotNull(knex, 'system_email_templates');
 
   // Create index after column is added
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_system_email_templates_name_language ON system_email_templates(name, language_code)');
 
   // Add language_code to tenant_email_templates (distributed table in Citus)
-  await knex.schema.alterTable('tenant_email_templates', (table) => {
-    table.string('language_code', 10);
-  });
+  const tenantHasLanguage = await hasColumn(knex, 'tenant_email_templates', 'language_code');
+  if (!tenantHasLanguage) {
+    await knex.schema.alterTable('tenant_email_templates', (table) => {
+      table.string('language_code', 10);
+    });
+  }
 
   await ensureSequentialMode(knex);
-  await knex('tenant_email_templates').update({ language_code: 'en' });
-  await knex.raw("ALTER TABLE tenant_email_templates ALTER COLUMN language_code SET DEFAULT 'en'");
-  await knex.raw('ALTER TABLE tenant_email_templates ALTER COLUMN language_code SET NOT NULL');
+  await setLanguageCodeDefaultAndNotNull(knex, 'tenant_email_templates');
 
   // Create index including tenant column for Citus compatibility
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_tenant_email_templates_tenant_name_language ON tenant_email_templates(tenant, name, language_code)');
