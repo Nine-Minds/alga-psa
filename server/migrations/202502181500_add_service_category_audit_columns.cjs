@@ -28,20 +28,34 @@ const isCitus = async (knex) => {
   return rows.length > 0;
 };
 
+const CITUS_SET_NULL_ERROR = 'SET NULL or SET DEFAULT is not supported';
+
 const addForeignKey = async (knex, constraintName, column) => {
   if (await constraintExists(knex, constraintName)) {
     return;
   }
 
-  const citus = await isCitus(knex);
-  const onDeleteClause = citus ? '' : ' ON DELETE SET NULL';
-
-  await knex.raw(`
+  const baseSql = `
     ALTER TABLE service_categories
     ADD CONSTRAINT ${constraintName}
     FOREIGN KEY (tenant, ${column})
-    REFERENCES users (tenant, user_id)${onDeleteClause};
-  `);
+    REFERENCES users (tenant, user_id)
+  `;
+
+  if (await isCitus(knex)) {
+    await knex.raw(`${baseSql};`);
+    return;
+  }
+
+  try {
+    await knex.raw(`${baseSql} ON DELETE SET NULL;`);
+  } catch (error) {
+    if (error?.message?.includes(CITUS_SET_NULL_ERROR)) {
+      await knex.raw(`${baseSql};`);
+      return;
+    }
+    throw error;
+  }
 };
 
 const dropForeignKeyIfExists = async (knex, constraintName) => {
