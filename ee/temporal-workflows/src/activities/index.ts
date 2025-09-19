@@ -8,3 +8,4 @@ export * from './customer-tracking-activities.js';
 export * from './extension-domain-activities.js';
 export * from './license-management-activities.js';
 export * from './nm-store-callback-activities.js';
+export * from './portal-domain-activities.js';

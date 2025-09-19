@@ -2,17 +2,22 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Badge } from 'server/src/components/ui/Badge';
 import { Globe } from 'lucide-react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
+import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);
+  const [portalLoading, setPortalLoading] = useState(true);
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
@@ -38,6 +43,22 @@ const ClientPortalSettings = () => {
     };
 
     loadTenantSettings();
+  }, []);
+
+  useEffect(() => {
+    const loadPortalStatus = async () => {
+      setPortalLoading(true);
+      try {
+        const status = await getPortalDomainStatusAction();
+        setPortalStatus(status);
+      } catch (error) {
+        console.error('Failed to load portal domain status:', error);
+      } finally {
+        setPortalLoading(false);
+      }
+    };
+
+    loadPortalStatus();
   }, []);
 
   const handleDefaultLanguageChange = async (newLocale: string) => {
@@ -91,23 +112,32 @@ const ClientPortalSettings = () => {
           <CardTitle>
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
-              Custom Domain (Coming Soon)
+              Custom Domain
+              <Badge variant="outline" className="uppercase text-[10px] tracking-wide">
+                Enterprise
+              </Badge>
             </div>
           </CardTitle>
           <CardDescription>
-            Configure a custom domain for your client portal (e.g., portal.yourcompany.com)
+            Enterprise tenants can host the portal on a custom domain. Your default hosted address is shown below.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="bg-gray-50 rounded-lg p-6 text-center">
-              <p className="text-gray-600 mb-2">Custom domain configuration will be available in a future update.</p>
-              <p className="text-sm text-gray-500">You'll be able to:</p>
-              <ul className="text-sm text-gray-500 mt-2 space-y-1">
-                <li>• Use your own domain for the client portal</li>
-                <li>• Configure SSL certificates automatically</li>
-                <li>• Set up custom email domains</li>
-              </ul>
+            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6">
+              {portalLoading ? (
+                <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
+              ) : (
+                <div className="space-y-3 text-center">
+                  <div className="text-sm font-medium text-gray-600">Default portal address</div>
+                  <code className="inline-block rounded bg-white px-3 py-1 text-sm text-gray-900 shadow-sm">
+                    {portalStatus?.canonicalHost ?? '—'}
+                  </code>
+                  <p className="text-xs text-gray-500">
+                    Upgrade to Enterprise to configure a branded customer portal domain and automated certificates.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>
