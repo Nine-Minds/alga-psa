@@ -35,17 +35,18 @@ const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
 
   await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`);
 
-  await knex(sanitizedTable)
-    .whereNull('language_code')
-    .update({ language_code: DEFAULT_LANGUAGE_CODE });
+  await knex.raw(`UPDATE ${sanitizedTable} SET language_code = DEFAULT WHERE language_code IS NULL`);
+
+  const { rows } = await knex.raw(`SELECT COUNT(*)::int AS null_count FROM ${sanitizedTable} WHERE language_code IS NULL`);
+  const remainingNulls = rows?.[0]?.null_count ?? 0;
 
   try {
     await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
   } catch (error) {
     if (error?.message?.includes(NOT_NULL_CONTAINS_NULL_ERROR)) {
-      await knex(sanitizedTable)
-        .whereNull('language_code')
-        .update({ language_code: DEFAULT_LANGUAGE_CODE });
+      if (remainingNulls > 0) {
+        await knex.raw(`UPDATE ${sanitizedTable} SET language_code = DEFAULT WHERE language_code IS NULL`);
+      }
 
       await knex.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
       return;
