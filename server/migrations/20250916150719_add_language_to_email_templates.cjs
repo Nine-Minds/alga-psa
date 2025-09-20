@@ -17,66 +17,105 @@ const ensureSequentialMode = async (knex) => {
   `);
 };
 
-const hasColumn = (knex, table, column) => knex.schema.hasColumn(table, column);
-
 const DEFAULT_LANGUAGE_CODE = 'en';
-const NOT_NULL_CONTAINS_NULL_ERROR = 'contains null values';
+const LANGUAGE_COLUMN = 'language_code';
+const TEMP_LANGUAGE_COLUMN = 'language_code_tmp';
+const NULL_VALUES_ERROR = 'contains null values';
 
-const assertAllowedTable = (tableName) => {
+const assertSupportedTable = (tableName) => {
   if (!['system_email_templates', 'tenant_email_templates'].includes(tableName)) {
-    throw new Error(`Unexpected table for language code migration: ${tableName}`);
+    throw new Error(`Unexpected table for language migration: ${tableName}`);
   }
-
   return tableName;
 };
 
-const setLanguageCodeDefaultAndNotNull = async (knex, tableName) => {
-  const sanitizedTable = assertAllowedTable(tableName);
+const addLanguageColumnIfMissing = async (knex, tableName) => {
+  await knex.raw(
+    `ALTER TABLE ${tableName} ADD COLUMN IF NOT EXISTS ${LANGUAGE_COLUMN} VARCHAR(10)`
+  );
+};
+
+const populateLanguageDefaults = async (knex, tableName) => {
+  await knex.raw(`LOCK TABLE ${tableName} IN SHARE ROW EXCLUSIVE MODE`);
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} ALTER COLUMN ${LANGUAGE_COLUMN} SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`
+  );
+
+  await knex.raw(
+    `UPDATE ${tableName} SET ${LANGUAGE_COLUMN} = COALESCE(${LANGUAGE_COLUMN}, '${DEFAULT_LANGUAGE_CODE}') WHERE ${LANGUAGE_COLUMN} IS NULL`
+  );
+};
+
+const rebuildLanguageColumn = async (knex, tableName) => {
+  await knex.raw(
+    `ALTER TABLE ${tableName} DROP COLUMN IF EXISTS ${TEMP_LANGUAGE_COLUMN}`
+  );
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} ADD COLUMN ${TEMP_LANGUAGE_COLUMN} VARCHAR(10) DEFAULT '${DEFAULT_LANGUAGE_CODE}' NOT NULL`
+  );
+
+  await knex.raw(
+    `UPDATE ${tableName} SET ${TEMP_LANGUAGE_COLUMN} = COALESCE(${LANGUAGE_COLUMN}, '${DEFAULT_LANGUAGE_CODE}')`
+  );
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} DROP COLUMN IF EXISTS ${LANGUAGE_COLUMN}`
+  );
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} RENAME COLUMN ${TEMP_LANGUAGE_COLUMN} TO ${LANGUAGE_COLUMN}`
+  );
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} ALTER COLUMN ${LANGUAGE_COLUMN} SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`
+  );
+
+  await knex.raw(
+    `ALTER TABLE ${tableName} ALTER COLUMN ${LANGUAGE_COLUMN} SET NOT NULL`
+  );
+};
+
+const ensureLanguageCodeColumn = async (knex, tableName) => {
+  const table = assertSupportedTable(tableName);
+
+  await addLanguageColumnIfMissing(knex, table);
 
   await knex.transaction(async (trx) => {
-    await trx.raw(`LOCK TABLE ${sanitizedTable} IN SHARE ROW EXCLUSIVE MODE`);
+    await populateLanguageDefaults(trx, table);
 
-    await trx.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET DEFAULT '${DEFAULT_LANGUAGE_CODE}'`);
+    try {
+      await trx.raw(
+        `ALTER TABLE ${table} ALTER COLUMN ${LANGUAGE_COLUMN} SET NOT NULL`
+      );
+    } catch (error) {
+      if (!error.message?.includes(NULL_VALUES_ERROR)) {
+        throw error;
+      }
 
-    await trx.raw(`UPDATE ${sanitizedTable} SET language_code = '${DEFAULT_LANGUAGE_CODE}' WHERE language_code IS NULL`);
-
-    const { rows: nullRows } = await trx.raw(`SELECT id, name FROM ${sanitizedTable} WHERE language_code IS NULL LIMIT 5`);
-
-    if (nullRows.length > 0) {
-      const detail = nullRows.map(({ id, name }) => `id=${id},name=${name}`).join('; ');
-      throw new Error(`Unable to backfill ${sanitizedTable}; sample rows still NULL: ${detail}`);
+      await rebuildLanguageColumn(trx, table);
     }
-
-    await trx.raw(`ALTER TABLE ${sanitizedTable} ALTER COLUMN language_code SET NOT NULL`);
   });
 };
 
 exports.up = async function (knex) {
   await ensureSequentialMode(knex);
 
-  // Add language_code to system_email_templates (reference table in Citus)
-  const systemHasLanguage = await hasColumn(knex, 'system_email_templates', 'language_code');
-  if (!systemHasLanguage) {
-    await knex.schema.alterTable('system_email_templates', (table) => {
-      table.string('language_code', 10);
-    });
-  }
+  // Clean up any partially applied constraints/indexes from previous runs
+  await knex.raw('ALTER TABLE system_email_templates DROP CONSTRAINT IF EXISTS system_email_templates_name_language_key');
+  await knex.raw('ALTER TABLE tenant_email_templates DROP CONSTRAINT IF EXISTS tenant_email_templates_tenant_name_language_key');
+  await knex.raw('DROP INDEX IF EXISTS idx_system_email_templates_name_language');
+  await knex.raw('DROP INDEX IF EXISTS idx_tenant_email_templates_tenant_name_language');
 
-  await setLanguageCodeDefaultAndNotNull(knex, 'system_email_templates');
+  // Add language_code to system_email_templates (reference table in Citus)
+  await ensureLanguageCodeColumn(knex, 'system_email_templates');
 
   // Create index after column is added
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_system_email_templates_name_language ON system_email_templates(name, language_code)');
 
   // Add language_code to tenant_email_templates (distributed table in Citus)
-  const tenantHasLanguage = await hasColumn(knex, 'tenant_email_templates', 'language_code');
-  if (!tenantHasLanguage) {
-    await knex.schema.alterTable('tenant_email_templates', (table) => {
-      table.string('language_code', 10);
-    });
-  }
-
-  await ensureSequentialMode(knex);
-  await setLanguageCodeDefaultAndNotNull(knex, 'tenant_email_templates');
+  await ensureLanguageCodeColumn(knex, 'tenant_email_templates');
 
   // Create index including tenant column for Citus compatibility
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_tenant_email_templates_tenant_name_language ON tenant_email_templates(tenant, name, language_code)');
