@@ -113,7 +113,7 @@ const ClientPortalSettings = () => {
             <div className="flex items-center gap-2">
               <Globe className="h-5 w-5" />
               Custom Domain
-              <Badge variant="outline" className="uppercase text-[10px] tracking-wide">
+              <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
                 Enterprise
               </Badge>
             </div>
