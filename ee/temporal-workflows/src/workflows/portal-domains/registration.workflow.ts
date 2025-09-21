@@ -1,4 +1,4 @@
-import { proxyActivities, setHandler, sleep, workflow, Trigger } from '@temporalio/workflow';
+import { proxyActivities, setHandler, sleep, Trigger, defineSignal, log } from '@temporalio/workflow';
 import type {
   PortalDomainWorkflowInput,
   PortalDomainWorkflowTrigger,
@@ -26,17 +26,17 @@ const {
   }
 );
 
-const SIGNAL_RECONCILE = 'reconcilePortalDomainState';
+const reconcileSignal = defineSignal<[PortalDomainWorkflowInput | undefined]>('reconcilePortalDomainState');
 
 export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkflowInput): Promise<void> {
-  workflow.log.info('Portal domain workflow started', input);
+  log.info('Portal domain workflow started', { input });
 
   let pendingTrigger: PortalDomainWorkflowTrigger | undefined = input.trigger;
   let reconcileTrigger = new Trigger<void>();
 
-  setHandler(SIGNAL_RECONCILE, (payload?: PortalDomainWorkflowInput) => {
+  setHandler(reconcileSignal, (payload?: PortalDomainWorkflowInput) => {
     pendingTrigger = payload?.trigger ?? 'refresh';
-    workflow.log.info('Received reconcile signal', { pendingTrigger });
+    log.info('Received reconcile signal', { pendingTrigger });
     reconcileTrigger.resolve();
   });
 
@@ -44,7 +44,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     const record = await loadPortalDomain({ portalDomainId: input.portalDomainId });
 
     if (!record) {
-      workflow.log.warn('Portal domain not found; exiting workflow', { portalDomainId: input.portalDomainId });
+      log.warn('Portal domain not found; exiting workflow', { portalDomainId: input.portalDomainId });
       return;
     }
 
@@ -55,7 +55,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       : record.canonical_host;
 
     if (record.status === 'disabled') {
-      workflow.log.info('Domain disabled, ensuring reconciliation for cleanup');
+      log.info('Domain disabled, ensuring reconciliation for cleanup');
       await markPortalDomainStatus({
         portalDomainId: record.id,
         status: 'disabled',
@@ -123,7 +123,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     await Promise.race([timeoutPromise, reconcileTrigger]);
 
     if (!pendingTrigger) {
-      workflow.log.info('No pending trigger after wake; ending workflow.');
+    log.info('No pending trigger after wake; ending workflow.');
       return;
     }
 
