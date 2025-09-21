@@ -205,9 +205,13 @@ const nextConfig = {
 
         // Avoid base-prefix aliases that can shadow more specific '/entry' aliases
         // Feature swap aliases for Webpack (point directly to ts/tsx files)
-        '@product/extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+        '@product/extensions/entry': (() => {
+          const eePath = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
+          const ossPath = path.join(__dirname, '../packages/product-extensions/oss/entry.tsx');
+          const selectedPath = isEE ? eePath : ossPath;
+          console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+          return selectedPath;
+        })(),
         '@product/settings-extensions/entry': isEE
           ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
