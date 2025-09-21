@@ -10,6 +10,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+// DEBUG LOGGING - Remove after troubleshooting
+console.log('=== CE BUILD DEBUG ===');
+console.log('process.env.EDITION:', process.env.EDITION);
+console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
+console.log('isEE result:', isEE);
+console.log('Current working directory:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('=== END DEBUG ===');
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
