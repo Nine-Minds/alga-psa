@@ -142,7 +142,10 @@ export async function requestPasswordReset(
 
         // Get the tenant's default company for email branding
         const tenantDefaultCompany = await trx('tenant_companies')
-          .join('companies', 'companies.company_id', 'tenant_companies.company_id')
+          .join('companies', function() {
+            this.on('companies.company_id', '=', 'tenant_companies.company_id')
+                .andOn('companies.tenant', '=', 'tenant_companies.tenant');
+          })
           .where({ 
             'tenant_companies.tenant': tenant,
             'tenant_companies.is_default': true 
