@@ -11,6 +11,8 @@ import {
   updatePortalDomain,
   upsertPortalDomain,
   isTerminalStatus,
+  type PortalDomainStatus,
+  type UpdatePortalDomainInput,
   normalizeHostname,
   type PortalDomain,
 } from 'server/src/models/PortalDomainModel';
@@ -196,6 +198,54 @@ export async function refreshPortalDomainStatusAction(): Promise<PortalDomainSta
   analytics.capture('portal_domain.refresh', {
     tenant_id: tenant,
     status: status.status,
+  });
+
+  return status;
+}
+
+const RETRYABLE_FAILURE_STATUSES: PortalDomainStatus[] = ['dns_failed', 'certificate_failed'];
+
+export async function retryPortalDomainRegistrationAction(): Promise<PortalDomainStatusResponse> {
+  const { knex, tenant } = await ensurePermission(UPDATE_ACTION);
+  const current = await getPortalDomain(knex, tenant);
+
+  if (!current || !current.domain) {
+    throw new Error('No failed custom domain registration to retry.');
+  }
+
+  if (!RETRYABLE_FAILURE_STATUSES.includes(current.status)) {
+    throw new Error('Retry is only available after a failed registration.');
+  }
+
+  const now = new Date().toISOString();
+  const nextStatus: UpdatePortalDomainInput = {
+    lastCheckedAt: now,
+  };
+
+  if (current.status === 'dns_failed') {
+    nextStatus.status = 'pending_dns';
+    nextStatus.statusMessage = `Retrying DNS verification. Ensure ${current.domain} points to ${current.canonicalHost}.`;
+  } else {
+    nextStatus.status = 'pending_certificate';
+    nextStatus.statusMessage = 'Retrying certificate provisioning. Verifying ACME challenge reachability.';
+  }
+
+  const updated = await updatePortalDomain(knex, tenant, nextStatus);
+
+  if (updated) {
+    await enqueuePortalDomainWorkflow({
+      tenantId: tenant,
+      portalDomainId: updated.id,
+      trigger: 'refresh',
+    }).catch(() => undefined);
+  }
+
+  const status = await fetchStatus(knex, tenant);
+
+  analytics.capture('portal_domain.retry', {
+    tenant_id: tenant,
+    status: status.status,
+    failure_status: current.status,
   });
 
   return status;

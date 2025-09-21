@@ -17,6 +17,7 @@ import {
   requestPortalDomainRegistrationAction,
   refreshPortalDomainStatusAction,
   disablePortalDomainAction,
+  retryPortalDomainRegistrationAction,
 } from '@ee/lib/actions/tenant-actions/portalDomainActions';
 import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
@@ -68,6 +69,7 @@ const ClientPortalSettings = () => {
   const [domainInput, setDomainInput] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [retrying, setRetrying] = useState(false);
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
@@ -149,6 +151,21 @@ const ClientPortalSettings = () => {
     }
   };
 
+  const handleRetry = async () => {
+    setRetrying(true);
+    try {
+      const status = await retryPortalDomainRegistrationAction();
+      setPortalStatus(status);
+      setDomainInput(status.domain ?? domainInput);
+      toast.success('Retry queued. Re-check status in a few moments.');
+    } catch (error: any) {
+      console.error('Failed to retry custom domain provisioning:', error);
+      toast.error(error?.message ?? 'Retry failed.');
+    } finally {
+      setRetrying(false);
+    }
+  };
+
   const handleDisable = async () => {
     if (!portalStatus?.domain) {
       return;
@@ -221,6 +238,7 @@ const ClientPortalSettings = () => {
 
   const badge = getStatusBadge(portalStatus?.status);
   const expectedCname = portalStatus?.verificationDetails?.expected_cname ?? portalStatus?.canonicalHost;
+  const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
   return (
     <div className="space-y-6">
@@ -247,8 +265,8 @@ const ClientPortalSettings = () => {
           ) : (
             <div className="space-y-6">
               <div className="rounded border border-gray-200 bg-gray-50 p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="space-y-2">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="space-y-2">
                     <div className="text-sm font-medium text-gray-700">Current status</div>
                     <div className="text-sm text-gray-900">
                       {portalStatus?.domain ? (
@@ -270,10 +288,21 @@ const ClientPortalSettings = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleRefresh}
-                      disabled={submitting || refreshing}
+                      disabled={submitting || refreshing || retrying}
                     >
                       {refreshing ? 'Refreshing...' : 'Refresh'}
                     </Button>
+                    {isFailureState && (
+                      <Button
+                        id="client-portal-domain-retry"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRetry}
+                        disabled={submitting || retrying}
+                      >
+                        {retrying ? 'Retrying…' : 'Retry'}
+                      </Button>
+                    )}
                     {portalStatus?.domain && (
                       <Button
                         id="client-portal-domain-remove"
