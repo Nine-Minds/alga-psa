@@ -1,4 +1,4 @@
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
 import { createTenantKnex } from 'server/src/lib/db';
 
 export const PORTAL_DOMAIN_TABLE = 'portal_domains';
@@ -83,6 +83,18 @@ export function computeCanonicalHost(tenantId: string): string {
   return `${prefix}.portal.algapsa.com`;
 }
 
+function coerceLastCheckedAt(knex: Knex, value: Date | string | null): Date | Knex.Raw | null {
+  if (value === null) {
+    return null;
+  }
+
+  if (value instanceof Date) {
+    return value;
+  }
+
+  return new Date(value);
+}
+
 function mapRow(row: PortalDomainRecord): PortalDomain {
   return {
     id: row.id,
@@ -137,13 +149,15 @@ export async function upsertPortalDomain(
   const now = knex.fn.now();
   const canonicalHost = computeCanonicalHost(tenant);
   const normalizedDomain = normalizeHostname(input.domain);
+  const lastCheckedAt =
+    input.lastCheckedAt === undefined ? knex.fn.now() : coerceLastCheckedAt(knex, input.lastCheckedAt);
   const payload = {
     tenant,
     domain: normalizedDomain,
     canonical_host: canonicalHost,
     status: input.status ?? 'pending_dns',
     status_message: input.statusMessage ?? null,
-    last_checked_at: input.lastCheckedAt ?? knex.fn.now(),
+    last_checked_at: lastCheckedAt,
     verification_method: input.verificationMethod ?? 'cname',
     verification_details: input.verificationDetails ?? {},
     certificate_secret_name: input.certificateSecretName ?? null,
@@ -199,7 +213,7 @@ export async function updatePortalDomain(
   }
 
   if (patch.lastCheckedAt !== undefined) {
-    updates.last_checked_at = patch.lastCheckedAt;
+    updates.last_checked_at = coerceLastCheckedAt(knex, patch.lastCheckedAt);
   }
 
   if (patch.verificationMethod) {
