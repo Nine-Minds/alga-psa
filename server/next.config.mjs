@@ -275,9 +275,13 @@ const nextConfig = {
           console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
           return selectedPath;
         })(),
-        '@product/settings-extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+        '@product/settings-extensions/entry': (() => {
+          const eePath = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
+          const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
+          const selectedPath = isEE ? eePath : ossPath;
+          console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+          return selectedPath;
+        })(),
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
@@ -308,6 +312,24 @@ const nextConfig = {
       const ceEmptyAbs = path.join(__dirname, 'src', 'empty');
       const eeSrcAbs = path.join(__dirname, '../ee/server/src');
       config.resolve.alias[ceEmptyAbs] = eeSrcAbs;
+
+      const pkgSettingsEntry = path.join(__dirname, '../packages/product-settings-extensions/entry.ts');
+      const pkgSettingsEntryIndex = path.join(__dirname, '../packages/product-settings-extensions/entry.tsx');
+      const pkgSettingsEeEntry = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
+      config.resolve.alias[pkgSettingsEntry] = pkgSettingsEeEntry;
+      config.resolve.alias[pkgSettingsEntryIndex] = pkgSettingsEeEntry;
+
+      const pkgExtensionsEntry = path.join(__dirname, '../packages/product-extensions/entry.ts');
+      const pkgExtensionsEntryIndex = path.join(__dirname, '../packages/product-extensions/entry.tsx');
+      const pkgExtensionsEeEntry = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
+      config.resolve.alias[pkgExtensionsEntry] = pkgExtensionsEeEntry;
+      config.resolve.alias[pkgExtensionsEntryIndex] = pkgExtensionsEeEntry;
+
+      const pkgChatEntry = path.join(__dirname, '../packages/product-chat/entry.ts');
+      const pkgChatEntryIndex = path.join(__dirname, '../packages/product-chat/entry.tsx');
+      const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
+      config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
+      config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
     }
 
     console.log('[next.config] aliases', {
