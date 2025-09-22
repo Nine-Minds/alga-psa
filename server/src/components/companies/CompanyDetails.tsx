@@ -463,10 +463,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      await deleteCompany(company.company_id);
-      toast.success('Client deleted successfully');
-      setIsDeleteDialogOpen(false);
-      router.push('/msp/companies');
+      const result = await deleteCompany(company.company_id);
+      if (result.success) {
+        toast.success('Client deleted successfully');
+        setIsDeleteDialogOpen(false);
+        router.push('/msp/companies');
+      } else {
+        if (result.code === 'DEFAULT_COMPANY_PROTECTED') {
+          toast.error(result.message || 'Cannot delete the default company');
+        } else if (result.dependencies && result.dependencies.length > 0) {
+          const dependencyText = result.dependencies.join(', ');
+          toast.error(`Cannot delete client. It has associated ${dependencyText}s that must be removed first.`);
+        } else {
+          toast.error(result.message || 'Failed to delete client. Please try again.');
+        }
+      }
     } catch (error) {
       console.error('Error deleting company:', error);
       toast.error('Failed to delete client. Please try again.');
@@ -800,7 +811,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <Button
               id="delete-company-button"
               onClick={() => setIsDeleteDialogOpen(true)}
-              variant="destructive"
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
               disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4 mr-2" />

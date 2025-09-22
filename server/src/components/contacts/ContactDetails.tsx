@@ -704,7 +704,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             <Button
               id="delete-contact-button"
               onClick={() => setIsDeleteDialogOpen(true)}
-              variant="destructive"
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
               disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4 mr-2" />
