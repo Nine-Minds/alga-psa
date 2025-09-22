@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import fs from 'fs';
 import webpack from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
@@ -57,6 +58,63 @@ class LogModuleResolutionPlugin {
             descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
           });
         } catch {}
+      });
+    });
+  }
+}
+
+class EditionBuildDiagnosticsPlugin {
+  constructor(options = {}) {
+    this.options = {
+      watchedRequests: options.watchedRequests || [
+        '@product/chat/entry',
+        '@product/extensions/entry',
+        '@product/settings-extensions/entry',
+        'ee/server/src/app/msp/chat/page',
+      ],
+    };
+  }
+
+  apply(compiler) {
+    compiler.hooks.beforeCompile.tap('EditionBuildDiagnosticsPlugin', () => {
+      const editionSnapshot = {
+        EDITION: process.env.EDITION,
+        NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION,
+        NODE_ENV: process.env.NODE_ENV,
+        cwd: process.cwd(),
+        timestamp: new Date().toISOString(),
+      };
+      console.log('[edition-diagnostics] build env', editionSnapshot);
+
+      const eePaths = [
+        path.join(__dirname, '../ee/server/src/app/msp/chat/page.tsx'),
+        path.join(__dirname, '../ee/server/src/components/chat/Chat.tsx'),
+      ];
+
+      eePaths.forEach((candidate) => {
+        console.log('[edition-diagnostics] ee artifact', {
+          path: candidate,
+          exists: fs.existsSync(candidate),
+        });
+      });
+    });
+
+    compiler.hooks.normalModuleFactory.tap('EditionBuildDiagnosticsPlugin', (nmf) => {
+      nmf.hooks.afterResolve.tap('EditionBuildDiagnosticsPlugin', (result) => {
+        if (!result) return;
+
+        const request = result.request || result.rawRequest || '';
+        const matched = this.options.watchedRequests.some((token) => request && request.includes(token));
+        const resource = result.resource || '';
+
+        if (!matched && !resource.includes('/ee/server/src/')) return;
+
+        console.log('[edition-diagnostics] module resolution', {
+          request,
+          resource,
+          issuer: result.contextInfo?.issuer,
+          descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
+        });
       });
     });
   }
@@ -255,6 +313,10 @@ const nextConfig = {
       ceEmptyAbs: isEE ? path.join(__dirname, 'src', 'empty') : undefined,
       eeSrcAbs: isEE ? path.join(__dirname, '../ee/server/src') : undefined,
     });
+
+    config.plugins = config.plugins || [];
+    config.plugins.push(new LogModuleResolutionPlugin());
+    config.plugins.push(new EditionBuildDiagnosticsPlugin());
 
     // Exclude database dialects we don't use and heavy dev dependencies
     config.externals = [
