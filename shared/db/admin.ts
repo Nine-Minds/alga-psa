@@ -1,5 +1,5 @@
 import knex, { Knex } from 'knex';
-import knexfile from './knexfile';
+import knexfile from './knexfile.js';
 import { getSecret } from '@shared/core';
 
 let adminConnection: Knex | null = null;
