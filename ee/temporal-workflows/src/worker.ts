@@ -41,22 +41,24 @@ interface WorkerConfig {
  * Get worker configuration from environment variables
  */
 function getWorkerConfig(): WorkerConfig {
+  const defaultQueues = ['tenant-workflows', 'portal-domain-workflows'];
   const queuesEnv = process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
 
-  const defaultQueues = ['tenant-workflows', 'portal-domain-workflows'];
-  const parsedQueues = queuesEnv
-    ? queuesEnv
-        .split(',')
-        .map((queue) => queue.trim())
-        .filter((queue) => queue.length > 0)
+  const taskQueues = queuesEnv
+    ? Array.from(
+        new Set(
+          queuesEnv
+            .split(',')
+            .map((queue) => queue.trim())
+            .filter((queue) => queue.length > 0)
+        )
+      )
     : defaultQueues;
-
-  const taskQueues = Array.from(new Set(parsedQueues.length > 0 ? parsedQueues : defaultQueues));
 
   return {
     temporalAddress: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
     temporalNamespace: process.env.TEMPORAL_NAMESPACE || 'default',
-    taskQueues: taskQueues.length > 0 ? taskQueues : ['tenant-workflows'],
+    taskQueues: taskQueues.length > 0 ? taskQueues : defaultQueues,
     maxConcurrentActivityTaskExecutions: parseInt(process.env.MAX_CONCURRENT_ACTIVITIES || '10'),
     maxConcurrentWorkflowTaskExecutions: parseInt(process.env.MAX_CONCURRENT_WORKFLOWS || '10'),
   };
