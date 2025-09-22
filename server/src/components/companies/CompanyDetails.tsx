@@ -1187,6 +1187,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           confirmLabel={isDeleting ? 'Deleting...' : 'Delete Client'}
           cancelLabel="Cancel"
           isConfirming={isDeleting}
+          confirmVariant="destructive"
         />
       </div>
     </ReflectionContainer>
