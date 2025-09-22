@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { IWorkflowActionResult } from './workflowInterfaces';
+import { IWorkflowActionResult } from './workflowInterfaces.js';
 
 /**
  * Model for workflow_action_results table

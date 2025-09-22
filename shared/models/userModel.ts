@@ -7,14 +7,14 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { hashPassword } from '../utils/encryption';
+import { hashPassword } from '../utils/encryption.js';
 import type {
   IUser,
   IRole,
   CreatePortalUserInput,
   CreatePortalUserResult,
   PortalRoleOptions
-} from '../interfaces/user.interfaces';
+} from '../interfaces/user.interfaces.js';
 
 // Re-export types for convenience
 export type { 

@@ -1,7 +1,7 @@
-import { RedisStreamClient } from '../workflow/streams/redisStreamClient';
-import { WorkflowEventBase } from '../workflow/streams/workflowEventSchema';
+import { RedisStreamClient } from '../workflow/streams/redisStreamClient.js';
+import { WorkflowEventBase } from '../workflow/streams/workflowEventSchema.js';
 import { v4 as uuidv4 } from 'uuid';
-import logger from '../core/logger';
+import logger from '../core/logger.js';
 
 // Initialize Redis stream client
 let redisClient: RedisStreamClient | null = null;

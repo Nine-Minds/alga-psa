@@ -5,6 +5,6 @@
  * This allows clean imports from both EE and main server contexts
  */
 
-export { default as logger } from './logger';
-export { clientLogger } from './client-logger';
-export * from './types';
+export { default as logger } from './logger.js';
+export { clientLogger } from './client-logger.js';
+export * from './types.js';

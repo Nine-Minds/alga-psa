@@ -1,5 +1,5 @@
-import { ISecretProvider } from './ISecretProvider';
-import logger from './logger';
+import { ISecretProvider } from './ISecretProvider.js';
+import logger from './logger.js';
 
 /**
  * Environment variable secret provider.

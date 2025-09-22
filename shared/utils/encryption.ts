@@ -1,4 +1,4 @@
-import { getSecret } from '../core/getSecret';
+import { getSecret } from '../core/getSecret.js';
 
 // Utility: encode string to Uint8Array
 const te = new TextEncoder();

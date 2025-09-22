@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { logger } from '@shared/core';
+import { logger } from '@alga-psa/shared/core';
 
 /**
  * Interface for a workflow registration

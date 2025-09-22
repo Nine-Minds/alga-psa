@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { getAdminConnection } from '@alga-psa/shared/db/admin';
-import { computeDomain } from './domain';
-import type { InstallInfo } from './types';
+import { computeDomain } from './domain.js';
+import type { InstallInfo } from './types.js';
 
 export async function getInstallInfoForTenant(tenantId: string, registryId: string): Promise<InstallInfo | null> {
   const adminDb: Knex = await getAdminConnection();

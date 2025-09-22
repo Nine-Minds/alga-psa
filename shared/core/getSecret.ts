@@ -1,4 +1,4 @@
-import { getSecretProviderInstance } from './secretProvider';
+import { getSecretProviderInstance } from './secretProvider.js';
 
 /**
  * Gets a secret value from the secret provider system or environment variable
