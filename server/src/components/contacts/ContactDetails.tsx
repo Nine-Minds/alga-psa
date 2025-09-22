@@ -702,10 +702,10 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               Save Changes
             </Button>
             <Button
-              id="delete-contact-btn"
+              id="delete-contact-button"
               onClick={() => setIsDeleteDialogOpen(true)}
-              variant="outline"
-              className="text-red-600 border-red-600 hover:bg-red-50"
+              variant="destructive"
+              disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Contact

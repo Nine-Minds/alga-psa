@@ -798,10 +798,10 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               Add Ticket
             </Button>
             <Button
-              id="delete-company-btn"
+              id="delete-company-button"
               onClick={() => setIsDeleteDialogOpen(true)}
-              variant="outline"
-              className="text-red-600 border-red-600 hover:bg-red-50"
+              variant="destructive"
+              disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Client
