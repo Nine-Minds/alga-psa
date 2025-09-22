@@ -464,12 +464,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     setIsDeleting(true);
     try {
       await deleteCompany(company.company_id);
-      toast.success('Company deleted successfully');
+      toast.success('Client deleted successfully');
       setIsDeleteDialogOpen(false);
       router.push('/msp/companies');
     } catch (error) {
       console.error('Error deleting company:', error);
-      toast.error('Failed to delete company. Please try again.');
+      toast.error('Failed to delete client. Please try again.');
     } finally {
       setIsDeleting(false);
     }
@@ -804,7 +804,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               className="text-red-600 border-red-600 hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4 mr-2" />
-              Delete Company
+              Delete Client
             </Button>
           </Flex>
         </div>
@@ -1153,9 +1153,9 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           isOpen={isDeleteDialogOpen}
           onClose={() => setIsDeleteDialogOpen(false)}
           onConfirm={handleDelete}
-          title="Delete Company"
+          title="Delete Client"
           message={`Are you sure you want to delete "${editedCompany.company_name}"? This action cannot be undone and will remove all associated data.`}
-          confirmLabel={isDeleting ? 'Deleting...' : 'Delete Company'}
+          confirmLabel={isDeleting ? 'Deleting...' : 'Delete Client'}
           cancelLabel="Cancel"
           isConfirming={isDeleting}
         />
