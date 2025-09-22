@@ -637,123 +637,32 @@ export async function deleteCompany(companyId: string): Promise<{
     const counts: Record<string, number> = {};
 
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Check for contacts
-      const contactCount = await trx('contacts')
-        .where({ company_id: companyId, tenant })
-        .count('contact_name_id as count')
-        .first();
-      console.log('Contact count result:', contactCount);
-      if (contactCount && Number(contactCount.count) > 0) {
-        dependencies.push('contact');
-        counts['contact'] = Number(contactCount.count);
-      }
-
-      // Check for active tickets
+      // Check for active tickets (only blocker for tickets)
       const ticketCount = await trx('tickets')
         .where({ company_id: companyId, tenant, is_closed: false })
         .count('ticket_id as count')
         .first();
-      console.log('Ticket count result:', ticketCount);
+      console.log('Active ticket count result:', ticketCount);
       if (ticketCount && Number(ticketCount.count) > 0) {
         dependencies.push('ticket');
         counts['ticket'] = Number(ticketCount.count);
       }
 
-      // Check for projects
+      // Check for active projects (only blocker for projects)
       const projectCount = await trx('projects')
         .where({ company_id: companyId, tenant })
+        .whereNotIn('status', ['completed', 'cancelled', 'closed'])
         .count('project_id as count')
         .first();
-      console.log('Project count result:', projectCount);
+      console.log('Active project count result:', projectCount);
       if (projectCount && Number(projectCount.count) > 0) {
         dependencies.push('project');
         counts['project'] = Number(projectCount.count);
       }
 
-      // Check for documents using document_associations table
-      const documentCount = await trx('document_associations')
-        .where({ 
-          entity_id: companyId, 
-          entity_type: 'company', 
-          tenant 
-        })
-        .count('document_id as count')
-        .first();
-      console.log('Document count result:', documentCount);
-      if (documentCount && Number(documentCount.count) > 0) {
-        dependencies.push('document');
-        counts['document'] = Number(documentCount.count);
-      }
-
-      // Check for invoices
-      const invoiceCount = await trx('invoices')
-        .where({ company_id: companyId, tenant })
-        .count('invoice_id as count')
-        .first();
-      console.log('Invoice count result:', invoiceCount);
-      if (invoiceCount && Number(invoiceCount.count) > 0) {
-        dependencies.push('invoice');
-        counts['invoice'] = Number(invoiceCount.count);
-      }
-
-      // Check for interactions
-      const interactionCount = await trx('interactions')
-        .where({ company_id: companyId, tenant })
-        .count('interaction_id as count')
-        .first();
-      console.log('Interaction count result:', interactionCount);
-      if (interactionCount && Number(interactionCount.count) > 0) {
-        dependencies.push('interaction');
-        counts['interaction'] = Number(interactionCount.count);
-      }
-
-      // Check for locations
-      const locationCount = await trx('company_locations')
-        .join('companies', 'companies.company_id', 'company_locations.company_id')
-        .where({ 
-          'company_locations.company_id': companyId,
-          'companies.tenant': tenant 
-        })
-        .count('* as count')
-        .first();
-      console.log('Location count result:', locationCount);
-      if (locationCount && Number(locationCount.count) > 0) {
-        dependencies.push('location');
-        counts['location'] = Number(locationCount.count);
-      }
-
-      // Check for service usage
-      const usageCount = await trx('usage_tracking')
-        .where({ company_id: companyId, tenant })
-        .count('usage_id as count')
-        .first();
-      console.log('Usage count result:', usageCount);
-      if (usageCount && Number(usageCount.count) > 0) {
-        dependencies.push('service_usage');
-        counts['service_usage'] = Number(usageCount.count);
-      }
-
-      // Check for billing plans
-      const billingPlanCount = await trx('company_billing_plans')
-        .where({ company_id: companyId, tenant })
-        .count('company_billing_plan_id as count')
-        .first();
-      console.log('Billing plan count result:', billingPlanCount);
-      if (billingPlanCount && Number(billingPlanCount.count) > 0) {
-        dependencies.push('billing_plan');
-        counts['billing_plan'] = Number(billingPlanCount.count);
-      }
-
-      // Check for bucket usage
-      const bucketUsageCount = await trx('bucket_usage')
-        .where({ company_id: companyId, tenant })
-        .count('usage_id as count')
-        .first();
-      console.log('Bucket usage count result:', bucketUsageCount);
-      if (bucketUsageCount && Number(bucketUsageCount.count) > 0) {
-        dependencies.push('bucket_usage');
-        counts['bucket_usage'] = Number(bucketUsageCount.count);
-      }
+      // Note: Contacts, locations, documents, invoices, interactions,
+      // usage records, and billing plans will be cascade deleted
+      // and should NOT block company deletion per user requirements
     });
 
     // We're automatically deleting tax rates and settings when deleting the company,
@@ -788,11 +697,64 @@ export async function deleteCompany(companyId: string): Promise<{
       // Delete associated tags first
       await deleteEntityTags(trx, companyId, 'company');
 
+      // Cascade delete associated records that are no longer blockers
+
+      // Delete contacts
+      await trx('contacts')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
+      // Delete company locations
+      await trx('company_locations')
+        .where({ company_id: companyId })
+        .delete();
+
+      // Delete document associations
+      await trx('document_associations')
+        .where({ entity_id: companyId, entity_type: 'company', tenant })
+        .delete();
+
+      // Delete closed tickets
+      await trx('tickets')
+        .where({ company_id: companyId, tenant, is_closed: true })
+        .delete();
+
+      // Delete completed projects
+      await trx('projects')
+        .where({ company_id: companyId, tenant })
+        .whereIn('status', ['completed', 'cancelled', 'closed'])
+        .delete();
+
+      // Delete invoices
+      await trx('invoices')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
+      // Delete interactions
+      await trx('interactions')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
+      // Delete usage tracking records
+      await trx('usage_tracking')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
+      // Delete billing plans
+      await trx('company_billing_plans')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
+      // Delete bucket usage
+      await trx('bucket_usage')
+        .where({ company_id: companyId, tenant })
+        .delete();
+
       // Delete company tax settings
       await trx('company_tax_settings')
         .where({ company_id: companyId, tenant })
         .delete();
-      
+
       // Delete company tax rates
       await trx('company_tax_rates')
         .where({ company_id: companyId, tenant })

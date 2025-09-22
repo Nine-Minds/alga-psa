@@ -475,7 +475,12 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         } else if (result.dependencies && result.dependencies.length > 0) {
           const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
           const dependencyText = result.dependencies.map(pluralize).join(', ');
-          toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
+          // Only show blocking message for actual blockers (open tickets)
+          if (result.dependencies.includes('active tickets') || result.dependencies.includes('ticket')) {
+            toast.error(`Cannot delete client. It has open tickets that must be closed or resolved first.`);
+          } else {
+            toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
+          }
         } else {
           toast.error(result.message || 'Failed to delete client. Please try again.');
         }
