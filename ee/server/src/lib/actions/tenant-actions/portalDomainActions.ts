@@ -144,7 +144,8 @@ export async function requestPortalDomainRegistrationAction(
   const canonicalHost = computeCanonicalHost(tenant);
   const existing = await getPortalDomain(knex, tenant);
   const normalizedDomain = validateRequestedDomain(request.domain, canonicalHost);
-  const domainChanged = existing ? existing.domain !== normalizedDomain : true;
+  const isNewDomain = !existing;
+  const domainChanged = existing ? existing.domain !== normalizedDomain : false;
 
   const record = await upsertPortalDomain(knex, tenant, {
     domain: normalizedDomain,

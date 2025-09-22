@@ -4,9 +4,7 @@ import type { PortalDomain } from 'server/src/models/PortalDomainModel';
 
 type MockWorkflowResult = { enqueued: boolean };
 
-type PortalDomainState = PortalDomain;
-
-const baseRecord: PortalDomainState = {
+const baseRecord: PortalDomain = {
   id: 'portal-domain-1',
   tenant: 'tenant-123',
   domain: 'current.example.com',
@@ -22,7 +20,7 @@ const baseRecord: PortalDomainState = {
   updatedAt: new Date(),
 };
 
-let portalDomainStore: PortalDomainState = { ...baseRecord };
+let portalDomainStore: PortalDomain | null = { ...baseRecord };
 
 const analyticsCapture = vi.fn();
 const enqueueWorkflow = vi.fn(async (): Promise<MockWorkflowResult> => ({ enqueued: true }));
@@ -83,10 +81,15 @@ vi.mock('server/src/models/PortalDomainModel', async () => {
   return {
     ...actual,
     computeCanonicalHost: vi.fn(() => 'tenant123.portal.algapsa.com'),
-    getPortalDomain: vi.fn(async () => ({ ...portalDomainStore })),
+    getPortalDomain: vi.fn(async () => (portalDomainStore ? { ...portalDomainStore } : null)),
     upsertPortalDomain: vi.fn(async (_knex: any, _tenant: string, input: any) => {
+      const existing = portalDomainStore ?? {
+        ...baseRecord,
+        id: input.id ?? 'portal-domain-1',
+        domain: input.domain,
+      };
       portalDomainStore = {
-        ...portalDomainStore,
+        ...existing,
         domain: input.domain,
         status: input.status,
         statusMessage: input.statusMessage,
@@ -95,16 +98,17 @@ vi.mock('server/src/models/PortalDomainModel', async () => {
         lastSyncedResourceVersion: input.lastSyncedResourceVersion,
         updatedAt: new Date(),
         lastCheckedAt: input.lastCheckedAt ? new Date(input.lastCheckedAt) : new Date(),
-      } satisfies PortalDomainState;
+      } satisfies PortalDomain;
       return { ...portalDomainStore };
     }),
     updatePortalDomain: vi.fn(async (_knex: any, _tenant: string, patch: any) => {
-      const next: PortalDomainState = {
-        ...portalDomainStore,
+      const current = portalDomainStore ?? baseRecord;
+      const next: PortalDomain = {
+        ...current,
         ...patch,
         lastCheckedAt: patch.lastCheckedAt
           ? new Date(patch.lastCheckedAt)
-          : portalDomainStore.lastCheckedAt,
+          : current.lastCheckedAt,
         updatedAt: new Date(),
       };
       portalDomainStore = next;
@@ -121,6 +125,21 @@ describe('requestPortalDomainRegistrationAction', () => {
     portalDomainStore = { ...baseRecord };
     analyticsCapture.mockClear();
     enqueueWorkflow.mockClear();
+  });
+
+  it('enqueues register trigger when no prior domain exists', async () => {
+    portalDomainStore = null;
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'first.example.com' });
+
+    expect(enqueueWorkflow).toHaveBeenCalledWith({
+      tenantId: 'tenant-123',
+      portalDomainId: 'portal-domain-1',
+      trigger: 'register',
+    });
+    expect(result.status.domain).toBe('first.example.com');
+    expect(result.status.status).toBe('pending_dns');
+    expect(result.status.statusMessage).toContain('Waiting for DNS verification');
   });
 
   it('resets state and enqueues refresh when changing to a new domain', async () => {
