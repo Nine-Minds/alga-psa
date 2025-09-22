@@ -109,9 +109,14 @@ class EditionBuildDiagnosticsPlugin {
 
         if (!matched && !resource.includes('/ee/server/src/')) return;
 
+        const createData = result.createData || {};
         console.log('[edition-diagnostics] module resolution', {
           request,
           resource,
+          resolvedResource: resource || createData.resource || createData.resolvedModule,
+          resolvedPath: createData.path,
+          userRequest: createData.userRequest,
+          type: createData.type,
           issuer: result.contextInfo?.issuer,
           descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
         });
