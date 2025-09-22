@@ -359,7 +359,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         url: newTicket.url,
         status_id: newTicket.status_id,
         status_name: typeof status?.label === 'string' ? status.label : '',
-        priority_id: newTicket.priority_id,
+        priority_id: newTicket.priority_id ?? null,
         priority_name: typeof priority?.label === 'string' ? priority.label : '',
         channel_id: newTicket.channel_id,
         channel_name: channel?.channel_name || '',

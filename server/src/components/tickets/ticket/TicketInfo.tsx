@@ -152,9 +152,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           // Fetch categories for the specific channel
           const data = await getTicketCategoriesByChannel(ticket.channel_id);
           // Ensure data is properly resolved and categories is an array
-          if (data && data.categories && Array.isArray(data.categories)) {
-            setCategories(data.categories);
-            setChannelConfig(data.channelConfig);
+          if (data && data.categories) {
+            // Extra safety check - ensure it's actually an array
+            const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
+            setCategories(categoriesArray);
+            if (data.channelConfig) {
+              setChannelConfig(data.channelConfig);
+            }
           } else {
             console.error('Invalid categories data received:', data);
             setCategories([]);

@@ -27,8 +27,8 @@ type CategoryType = 'parent' | 'child';
 
 export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = ({
   id = 'category-picker',
-  categories,
-  selectedCategories,
+  categories = [],
+  selectedCategories = [],
   excludedCategories = [],
   onSelect,
   placeholder = 'Select categories...',
@@ -60,19 +60,21 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
   // Transform categories into TreeSelect format
   const treeOptions = useMemo((): TreeSelectOption<CategoryType>[] => {
     // Ensure categories is an array - if it's not, return empty array
-    if (!Array.isArray(categories)) {
-      console.error('CategoryPicker: categories prop is not an array:', categories);
+    if (!categories || !Array.isArray(categories)) {
+      if (categories !== undefined && categories !== null) {
+        console.error('CategoryPicker: categories prop is not an array:', categories);
+      }
       return [{
         label: 'No Category',
         value: 'no-category',
         type: 'parent' as CategoryType,
-        selected: selectedCategories.includes('no-category'),
-        excluded: excludedCategories.includes('no-category'),
+        selected: Array.isArray(selectedCategories) ? selectedCategories.includes('no-category') : false,
+        excluded: Array.isArray(excludedCategories) ? excludedCategories.includes('no-category') : false,
       }];
     }
 
     // Filter out any categories without proper names
-    const validCategories = categories.filter(c => c.category_name && c.category_name.trim() !== '');
+    const validCategories = categories.filter(c => c && c.category_name && c.category_name.trim() !== '');
 
     // First, separate parents and children
     const parentCategories = validCategories.filter(c => !c.parent_category);

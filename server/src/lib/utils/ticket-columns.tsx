@@ -168,15 +168,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         render: (value: string, record: ITicketListItem) => {
           const channel = getChannelForTicket(record);
 
-          // Check if current channel uses ITIL category and ticket has ITIL category data
-          if (channel?.category_type === 'itil' && record.itil_category) {
-            if (record.itil_subcategory) {
-              return `${record.itil_category} → ${record.itil_subcategory}`;
-            }
-            return record.itil_category;
-          }
-
-          // Use standard category display for non-ITIL channels
+          // Use unified category display for all channels (ITIL and custom)
           if (!value && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display

@@ -732,7 +732,19 @@ export async function getTicketsForListWithCursor(
         ...rest
       } = ticket;
 
+      const convertedRest = convertDates(rest);
+      // Clean up null ITIL fields
+      if (convertedRest.itil_impact === null) {
+        convertedRest.itil_impact = undefined;
+      }
+      if (convertedRest.itil_urgency === null) {
+        convertedRest.itil_urgency = undefined;
+      }
+      if (convertedRest.itil_priority_level === null) {
+        convertedRest.itil_priority_level = undefined;
+      }
       return {
+        ...convertedRest,
         status_id: status_id || null,
         priority_id: priority_id || null,
         channel_id: channel_id || null,
@@ -745,14 +757,12 @@ export async function getTicketsForListWithCursor(
         category_name: category_name || 'Unknown',
         company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown',
-        // NOTE: ITIL fields now handled through unified priority_id and category_id
-        ...convertDates(rest)
+        assigned_to_name: assigned_to_name || 'Unknown'
       };
     });
 
     return {
-      tickets: validateData(z.array(ticketListItemSchema), ticketListItems),
+      tickets: ticketListItems as ITicketListItem[],
       nextCursor
     };
     } catch (error) {
@@ -928,6 +938,34 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     }
     if ('subcategory_id' in updateData && !updateData.subcategory_id) {
       updateData.subcategory_id = null;
+    }
+
+    // Handle ITIL priority calculation if impact or urgency is being updated
+    if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
+      const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
+      const newUrgency = 'itil_urgency' in updateData ? updateData.itil_urgency : currentTicket.itil_urgency;
+
+      if (newImpact && newUrgency) {
+        // Calculate ITIL priority level
+        const { calculateItilPriority } = require('../../utils/itilUtils');
+        const priorityLevel = calculateItilPriority(newImpact, newUrgency);
+
+        // Map priority level to ITIL priority name pattern
+        const priorityNamePattern = `P${priorityLevel} -%`;
+
+        // Get the corresponding ITIL priority record from tenant's priorities table
+        const itilPriorityRecord = await trx('priorities')
+          .where('tenant', tenant)
+          .where('is_from_itil_standard', true)
+          .where('priority_name', 'like', priorityNamePattern)
+          .where('item_type', 'ticket')
+          .first();
+
+        if (itilPriorityRecord) {
+          updateData.priority_id = itilPriorityRecord.priority_id;
+          updateData.itil_priority_level = priorityLevel;
+        }
+      }
     }
 
     // Check if we're updating the assigned_to field
