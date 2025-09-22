@@ -665,7 +665,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
             {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
-              <Text size="2" className="text-red-600 mr-2">
+              <Text size="2" className="text-red-600 mr-2" role="alert">
                 Please fill in all required fields
               </Text>
             )}
