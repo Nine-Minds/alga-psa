@@ -70,6 +70,9 @@ exports.up = async function up(knex) {
       }
     }
   }
+
+  const dbUserServer = process.env.DB_USER_SERVER || 'app_user';
+  await knex.schema.raw('GRANT ALL PRIVILEGES ON TABLE portal_domains TO ??', [dbUserServer]);
 };
 
 exports.down = async function down(knex) {
