@@ -358,7 +358,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       {/* Action Buttons */}
       <div className="flex justify-end items-center space-x-2">
         {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
-          <span className="text-red-600 text-sm mr-2">
+          <span className="text-red-600 text-sm mr-2" role="alert">
             Please fill in all required fields
           </span>
         )}
