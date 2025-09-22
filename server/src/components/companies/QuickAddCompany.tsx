@@ -474,6 +474,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     setIsSubmitting(true);
     setError(null);
     setValidationErrors([]);
+    setFieldErrors({}); // Clear field errors when validation passes
     try {
       const dataToSend = {
         ...formData,
