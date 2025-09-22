@@ -12,8 +12,8 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows
 COPY tsconfig.base.json /app/tsconfig.base.json
 
 WORKDIR /app/ee/temporal-workflows
-# Install dependencies
-RUN npm install
+# Install dependencies (skip prepare scripts to avoid building shared during base stage)
+RUN npm install --ignore-scripts
 
 # Development stage
 FROM base AS development
