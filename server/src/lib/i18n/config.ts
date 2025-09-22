@@ -13,7 +13,7 @@ export const LOCALE_CONFIG = {
    * Array of supported locales
    * Add new languages here to enable them throughout the application
    */
-  supportedLocales: ['en', 'fr', 'es', 'de'] as const,
+  supportedLocales: ['en', 'fr', 'es', 'de', 'nl'] as const,
 
   /**
    * Human-readable names for each locale
@@ -24,6 +24,7 @@ export const LOCALE_CONFIG = {
     fr: 'Français',
     es: 'Español',
     de: 'Deutsch',
+    nl: 'Nederlands',
   } as const,
 
   /**
