@@ -70,6 +70,9 @@ const ClientPortalSettings = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const onEditDomainIntent = useCallback((_details: { previous: string; next: string }) => {
+    // Placeholder – wired once edit workflow is implemented
+  }, []);
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
@@ -238,6 +241,11 @@ const ClientPortalSettings = () => {
 
   const badge = getStatusBadge(portalStatus?.status);
   const expectedCname = portalStatus?.verificationDetails?.expected_cname ?? portalStatus?.canonicalHost;
+  const existingDomain = portalStatus?.domain ?? null;
+  const normalizedInput = domainInput.trim();
+  const editingExistingDomain = Boolean(existingDomain);
+  const isDirtyDomain = editingExistingDomain && normalizedInput !== existingDomain;
+
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
   return (
@@ -267,31 +275,44 @@ const ClientPortalSettings = () => {
               <div className="rounded border border-gray-200 bg-gray-50 p-4">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
-                    <div className="text-sm font-medium text-gray-700">Current status</div>
-                    <div className="text-sm text-gray-900">
-                      {portalStatus?.domain ? (
-                        <span className="font-semibold">{portalStatus.domain}</span>
-                      ) : (
-                        <span className="text-gray-500">No custom domain configured</span>
+                      <div className="text-sm font-medium text-gray-700">Current status</div>
+                      <div className="text-sm text-gray-900">
+                        {portalStatus?.domain ? (
+                          <span className="font-semibold">{portalStatus.domain}</span>
+                        ) : (
+                          <span className="text-gray-500">No custom domain configured</span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {portalStatus?.statusMessage || DEFAULT_STATUS_MESSAGE}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        Last checked: {formatTimestamp(portalStatus?.lastCheckedAt)}
+                      </p>
+                      {editingExistingDomain && (
+                        <div className="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                          {isDirtyDomain ? (
+                            <span>
+                              Updating domain to <strong>{normalizedInput || '—'}</strong>. Provisioning will restart once you update.
+                            </span>
+                          ) : (
+                            <span>
+                              To change your domain, edit the value below and submit to kick off a new provisioning run.
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
-                    <p className="text-sm text-gray-600">
-                      {portalStatus?.statusMessage || DEFAULT_STATUS_MESSAGE}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Last checked: {formatTimestamp(portalStatus?.lastCheckedAt)}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      id="client-portal-domain-refresh"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRefresh}
-                      disabled={submitting || refreshing || retrying}
-                    >
-                      {refreshing ? 'Refreshing...' : 'Refresh'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        id="client-portal-domain-refresh"
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        disabled={submitting || refreshing || retrying}
+                      >
+                        {refreshing ? 'Refreshing...' : 'Refresh'}
+                      </Button>
                     {isFailureState && (
                       <Button
                         id="client-portal-domain-retry"
@@ -330,7 +351,13 @@ const ClientPortalSettings = () => {
                     <Input
                       id="client-portal-domain-input"
                       value={domainInput}
-                      onChange={(event) => setDomainInput(event.target.value)}
+                      onChange={(event) => {
+                        const nextValue = event.target.value;
+                        setDomainInput(nextValue);
+                        if (editingExistingDomain && existingDomain && nextValue.trim() !== existingDomain) {
+                          onEditDomainIntent({ previous: existingDomain, next: nextValue.trim() });
+                        }
+                      }}
                       placeholder="portal.example.com"
                       disabled={submitting}
                       autoComplete="off"
@@ -338,10 +365,27 @@ const ClientPortalSettings = () => {
                     <Button
                       id="client-portal-domain-submit"
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || (!editingExistingDomain && !normalizedInput) || (editingExistingDomain && !isDirtyDomain)}
                     >
-                      {submitting ? 'Submitting…' : 'Save Domain'}
+                      {submitting
+                        ? 'Submitting…'
+                        : editingExistingDomain
+                          ? isDirtyDomain
+                            ? 'Update Domain'
+                            : 'Save Domain'
+                          : 'Save Domain'}
                     </Button>
+                    {editingExistingDomain && isDirtyDomain && (
+                      <Button
+                        id="client-portal-domain-cancel-edit"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setDomainInput(existingDomain)}
+                        disabled={submitting}
+                      >
+                        Cancel Edit
+                      </Button>
+                    )}
                   </div>
                 </div>
               </form>

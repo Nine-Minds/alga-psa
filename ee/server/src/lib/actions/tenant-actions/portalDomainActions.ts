@@ -142,15 +142,20 @@ export async function requestPortalDomainRegistrationAction(
   const { knex, tenant } = await ensurePermission(UPDATE_ACTION);
 
   const canonicalHost = computeCanonicalHost(tenant);
+  const existing = await getPortalDomain(knex, tenant);
   const normalizedDomain = validateRequestedDomain(request.domain, canonicalHost);
+  const domainChanged = existing ? existing.domain !== normalizedDomain : true;
 
   const record = await upsertPortalDomain(knex, tenant, {
     domain: normalizedDomain,
     status: 'pending_dns',
-    statusMessage: `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
+    statusMessage: domainChanged
+      ? `Updating custom domain. Waiting for DNS verification of ${normalizedDomain}.`
+      : `Waiting for DNS verification. Point a CNAME to ${canonicalHost}.`,
     verificationDetails: {
       expected_cname: canonicalHost,
       requested_domain: normalizedDomain,
+      ...(existing && domainChanged ? { previous_domain: existing.domain } : {}),
     },
     lastCheckedAt: new Date().toISOString(),
     certificateSecretName: null,
@@ -160,20 +165,23 @@ export async function requestPortalDomainRegistrationAction(
   const workflowResult = await enqueuePortalDomainWorkflow({
     tenantId: tenant,
     portalDomainId: record.id,
-    trigger: 'register',
+    trigger: domainChanged ? 'refresh' : 'register',
   });
 
   analytics.capture('portal_domain.registration_enqueued', {
     tenant_id: tenant,
     domain: normalizedDomain,
     workflow_enqueued: workflowResult.enqueued,
-    trigger: 'register',
+    trigger: domainChanged ? 'refresh' : 'register',
+    was_update: domainChanged,
   });
 
   if (!workflowResult.enqueued) {
     await updatePortalDomain(knex, tenant, {
       status: 'pending_dns',
-      statusMessage: 'Saved domain, but failed to enqueue provisioning. Please try again or contact support.',
+      statusMessage: domainChanged
+        ? 'Saved domain change, but failed to enqueue provisioning. Please retry or contact support.'
+        : 'Saved domain, but failed to enqueue provisioning. Please try again or contact support.',
     });
   }
 
