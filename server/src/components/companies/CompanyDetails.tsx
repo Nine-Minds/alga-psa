@@ -473,7 +473,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         if (result.code === 'DEFAULT_COMPANY_PROTECTED') {
           toast.error(result.message || 'Cannot delete the default company');
         } else if (result.dependencies && result.dependencies.length > 0) {
-          const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
           // Only show blocking message for actual blockers (open tickets/projects)
           if (result.dependencies.includes('ticket')) {
             const ticketCount = result.counts?.ticket || 1;
@@ -484,6 +483,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             const projectText = projectCount === 1 ? 'project' : 'projects';
             toast.error(`Cannot delete client. It has ${projectCount} active ${projectText} that must be completed first.`);
           } else {
+            const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
             const dependencyText = result.dependencies.map(pluralize).join(', ');
             toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
           }
@@ -502,34 +502,33 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const handleSave = async () => {
     if (isSaving) return;
     setHasAttemptedSubmit(true);
-
-    // Professional PSA validation pattern: Check required fields
-    const requiredFields = {
-      company_name: editedCompany.company_name?.trim() || ''
-    };
-
-    // Clear previous errors and validate required fields
-    const newErrors: Record<string, string> = {};
-    let hasValidationErrors = false;
-
-    Object.entries(requiredFields).forEach(([field, value]) => {
-      if (field === 'company_name') {
-        const error = validateCompanyName(value);
-        if (error) {
-          newErrors[field] = error;
-          hasValidationErrors = true;
-        }
-      }
-    });
-
-    setFieldErrors(newErrors);
-
-    if (hasValidationErrors) {
-      return;
-    }
-
     setIsSaving(true);
+
     try {
+      // Professional PSA validation pattern: Check required fields
+      const requiredFields = {
+        company_name: editedCompany.company_name?.trim() || ''
+      };
+
+      // Clear previous errors and validate required fields
+      const newErrors: Record<string, string> = {};
+      let hasValidationErrors = false;
+
+      Object.entries(requiredFields).forEach(([field, value]) => {
+        if (field === 'company_name') {
+          const error = validateCompanyName(value);
+          if (error) {
+            newErrors[field] = error;
+            hasValidationErrors = true;
+          }
+        }
+      });
+
+      setFieldErrors(newErrors);
+
+      if (hasValidationErrors) {
+        return;
+      }
       // Prepare data for update, removing computed fields
       const {
         account_manager_full_name,
@@ -806,7 +805,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </Text>
             )}
             <Button
-              id="save-company-changes-btn"
+              id="save-company-changes"
               onClick={handleSave}
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -814,7 +813,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button
-              id="add-ticket-btn"
+              id="add-ticket"
               onClick={() => setIsQuickAddTicketOpen(true)}
               variant="default"
             >
@@ -998,7 +997,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </Text>
             )}
             <Button
-              id="save-additional-info-btn"
+              id="save-additional-info"
               onClick={handleSave}
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1041,7 +1040,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
           <div className="flex justify-end space-x-2">
             <Button
-              id={`${id}-save-note-btn`}
+              id={`${id}-save-note`}
               onClick={handleSaveNote}
               disabled={!hasUnsavedNoteChanges}
               className={`text-white transition-colors ${
