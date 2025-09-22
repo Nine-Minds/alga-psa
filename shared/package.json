@@ -36,8 +36,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "lint": "eslint .",
-    "prepare": "npm run build"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@js-temporal/polyfill": "^0.4.4",
