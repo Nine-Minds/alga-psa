@@ -468,12 +468,13 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         toast.success('Client deleted successfully');
         setIsDeleteDialogOpen(false);
         router.push('/msp/companies');
+        return;
       } else {
         if (result.code === 'DEFAULT_COMPANY_PROTECTED') {
           toast.error(result.message || 'Cannot delete the default company');
         } else if (result.dependencies && result.dependencies.length > 0) {
-          const dependencyText = result.dependencies.join(', ');
-          toast.error(`Cannot delete client. It has associated ${dependencyText}s that must be removed first.`);
+          const dependencyText = result.dependencies.map(dep => dep === 'contact' ? 'contacts' : `${dep}s`).join(', ');
+          toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
         } else {
           toast.error(result.message || 'Failed to delete client. Please try again.');
         }
