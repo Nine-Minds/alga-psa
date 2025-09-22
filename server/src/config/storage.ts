@@ -1,4 +1,4 @@
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 interface StorageProviderConfig {
     type: 'local' | 's3';

@@ -2,7 +2,7 @@
 
 // Removed WorkflowContext import
 import { QboTenantCredentials, QboApiErrorResponse, QboFault, QboErrorDetail } from './types'; // Added QboFault, QboErrorDetail
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 // Import necessary HTTP client (e.g., axios, fetch) and secret management utilities
 // Using console.log as logger per user feedback
 const logger = {
