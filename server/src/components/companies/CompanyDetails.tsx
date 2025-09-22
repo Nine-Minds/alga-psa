@@ -473,7 +473,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         if (result.code === 'DEFAULT_COMPANY_PROTECTED') {
           toast.error(result.message || 'Cannot delete the default company');
         } else if (result.dependencies && result.dependencies.length > 0) {
-          const dependencyText = result.dependencies.map(dep => dep === 'contact' ? 'contacts' : `${dep}s`).join(', ');
+          const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
+          const dependencyText = result.dependencies.map(pluralize).join(', ');
           toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
         } else {
           toast.error(result.message || 'Failed to delete client. Please try again.');
