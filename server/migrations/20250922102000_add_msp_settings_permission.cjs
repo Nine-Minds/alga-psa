@@ -21,7 +21,7 @@ exports.up = async function up(knex) {
       if (!existingPermission.msp || !existingPermission.client) {
         await knex('permissions')
           .where({ permission_id: permissionId })
-          .update({ msp: true, client: true, updated_at: knex.fn.now() });
+          .update({ msp: true, client: true, description: existingPermission.description || 'Manage portal settings' });
       }
     } else {
       const [inserted] = await knex('permissions')
@@ -34,7 +34,6 @@ exports.up = async function up(knex) {
           client: true,
           description: 'Manage portal settings',
           created_at: knex.fn.now(),
-          updated_at: knex.fn.now(),
         })
         .returning(['permission_id']);
 
@@ -93,6 +92,6 @@ exports.down = async function down(knex) {
 
     await knex('permissions')
       .where({ permission_id: permission.permission_id })
-      .update({ msp: false, client: true, updated_at: knex.fn.now() });
+      .update({ msp: false, client: true });
   }
 };
