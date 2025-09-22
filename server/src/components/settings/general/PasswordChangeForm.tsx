@@ -145,7 +145,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             <Label htmlFor="newPassword">{t('profile.changePassword.new', 'New Password')}</Label>
             <div className="relative">
               <Input
-                id="newPassword"
+                id="new-password-input"
                 type={showNewPassword ? "text" : "password"}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -170,7 +170,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             <Label htmlFor="confirmPassword">{t('profile.changePassword.confirm', 'Confirm New Password')}</Label>
             <div className="relative">
               <Input
-                id="confirmPassword"
+                id="confirm-password-input"
                 type={showConfirmPassword ? "text" : "password"}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
