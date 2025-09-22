@@ -21,6 +21,7 @@ import ApiKeysSetup from '../api/ApiKeysSetup';
 import UserAvatarUpload from 'server/src/components/settings/profile/UserAvatarUpload';
 import { toast } from 'react-hot-toast';
 import { getUserAvatarUrlAction } from '@/lib/actions/avatar-actions';
+import { validateContactName, validateEmailAddress, validatePhoneNumber } from 'server/src/lib/utils/clientFormValidation';
 
 interface UserProfileProps {
   userId?: string; // Optional - if not provided, uses current user
@@ -33,6 +34,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [categories, setCategories] = useState<NotificationCategory[]>([]);
   const [subtypesByCategory, setSubtypesByCategory] = useState<Record<number, NotificationSubtype[]>>({});
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -92,6 +95,50 @@ export default function UserProfile({ userId }: UserProfileProps) {
       return;
     }
 
+    setHasAttemptedSubmit(true);
+
+    // Professional PSA validation pattern: Check required fields
+    const requiredFields = {
+      first_name: firstName.trim() || '',
+      last_name: lastName.trim() || '',
+      email: email.trim() || ''
+    };
+
+    // Clear previous errors and validate required fields
+    const newErrors: Record<string, string> = {};
+    let hasValidationErrors = false;
+
+    Object.entries(requiredFields).forEach(([field, value]) => {
+      if (field === 'first_name' || field === 'last_name') {
+        const error = validateContactName(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      } else if (field === 'email') {
+        const error = validateEmailAddress(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      }
+    });
+
+    // Validate optional phone field if provided
+    if (phone.trim()) {
+      const phoneError = validatePhoneNumber(phone.trim());
+      if (phoneError) {
+        newErrors.phone = phoneError;
+        hasValidationErrors = true;
+      }
+    }
+
+    setFieldErrors(newErrors);
+
+    if (hasValidationErrors) {
+      return;
+    }
+
     try {
       // Update user profile
       await updateUser(user.user_id, {
@@ -138,6 +185,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
       );
 
       // Show success confirmation
+      setHasAttemptedSubmit(false);
       toast.success('Profile updated successfully');
 
     } catch (err) {
@@ -308,10 +356,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
       />
 
       {/* Action Buttons */}
-      <div className="flex justify-end space-x-2">
-        <Button 
+      <div className="flex justify-end items-center space-x-2">
+        {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+          <span className="text-red-600 text-sm mr-2">
+            Please fill in all required fields
+          </span>
+        )}
+        <Button
           id="save-button"
           onClick={handleSave}
+          className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors"
         >
           Save Changes
         </Button>
