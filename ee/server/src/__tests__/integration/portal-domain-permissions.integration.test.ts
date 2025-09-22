@@ -97,7 +97,7 @@ const { runWithTenant } = await import('server/src/lib/db');
 describe('Portal domain permissions', () => {
   const HOOK_TIMEOUT = 180_000;
   let mspAdmin: { user_id: string; tenant: string; user_type: string | null } | null = null;
-  let clientUser: { user_id: string; tenant: string; user_type: string | null } | null = null;
+  let clientPortalAdmin: { user_id: string; tenant: string; user_type: string | null } | null = null;
 
   beforeAll(async () => {
     db = await createTestDbConnection();
@@ -110,7 +110,7 @@ describe('Portal domain permissions', () => {
       throw new Error('Unable to locate seeded MSP Admin user for tests');
     }
 
-    clientUser = await ensureClientPortalUser(db, tenantId);
+    clientPortalAdmin = await ensureClientPortalAdmin(db, tenantId);
   }, HOOK_TIMEOUT);
 
   afterAll(async () => {
@@ -150,17 +150,17 @@ describe('Portal domain permissions', () => {
     expect(enqueueWorkflow).toHaveBeenCalled();
   });
 
-  it('rejects client users without portal settings permission', async () => {
+  it('rejects client portal users attempting to register a custom domain', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({
-      ...clientUser!,
-      user_type: clientUser!.user_type || 'client',
+      ...clientPortalAdmin!,
+      user_type: clientPortalAdmin!.user_type || 'client',
     });
 
     await expect(
       runWithTenant(tenantId, async () =>
         requestPortalDomainRegistrationAction({ domain: 'not-allowed.example.com' })
       )
-    ).rejects.toThrow('You do not have permission to manage client portal settings.');
+    ).rejects.toThrow('Client portal users cannot manage custom domains.');
 
     const existing = await db<PortalDomainRecord>('portal_domains')
       .where({ tenant: tenantId })
@@ -236,21 +236,24 @@ async function findMspUserByRole(connection: Knex, roleName: string): Promise<{ 
   return row ?? null;
 }
 
-async function ensureClientPortalUser(connection: Knex, tenant: string): Promise<{ user_id: string; tenant: string; user_type: string | null }> {
-  const existing = await findClientUserByRole(connection, 'User');
+async function ensureClientPortalAdmin(
+  connection: Knex,
+  tenant: string
+): Promise<{ user_id: string; tenant: string; user_type: string | null }> {
+  const existing = await findClientUserByRole(connection, 'Admin');
   if (existing) {
     return existing;
   }
 
-  const clientUserRole = await connection('roles')
-    .where({ tenant, role_name: 'User', client: true })
+  const clientAdminRole = await connection('roles')
+    .where({ tenant, role_name: 'Admin', client: true })
     .first('role_id');
 
-  if (!clientUserRole) {
-    throw new Error('Unable to locate client portal User role for tests');
+  if (!clientAdminRole) {
+    throw new Error('Unable to locate client portal Admin role for tests');
   }
 
-  const email = `portal-user-${uuidv4()}@example.com`;
+  const email = `portal-admin-${uuidv4()}@example.com`;
 
   const [insertedUser] = await connection('users')
     .insert({
@@ -258,7 +261,7 @@ async function ensureClientPortalUser(connection: Knex, tenant: string): Promise
       username: email,
       hashed_password: 'test_password',
       first_name: 'Portal',
-      last_name: 'User',
+      last_name: 'Admin',
       email,
       auth_method: 'password',
       user_type: 'client',
@@ -270,7 +273,7 @@ async function ensureClientPortalUser(connection: Knex, tenant: string): Promise
   await connection('user_roles').insert({
     tenant,
     user_id: insertedUser.user_id,
-    role_id: clientUserRole.role_id,
+    role_id: clientAdminRole.role_id,
     created_at: new Date(),
   });
 

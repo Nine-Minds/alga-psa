@@ -87,6 +87,10 @@ async function ensurePermission(action: typeof READ_ACTION | typeof UPDATE_ACTIO
     throw new Error('Tenant context is required');
   }
 
+  if (action === UPDATE_ACTION && user.user_type === 'client') {
+    throw new Error('Client portal users cannot manage custom domains.');
+  }
+
   const allowed = await hasPermission(user, REQUIRED_RESOURCE, action, knex);
   if (!allowed) {
     throw new Error('You do not have permission to manage client portal settings.');
