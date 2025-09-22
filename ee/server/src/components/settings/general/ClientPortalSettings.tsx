@@ -9,6 +9,7 @@ import { Badge, type BadgeVariant } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
+import { Alert, AlertDescription } from '@/components/ui/Alert';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
@@ -58,6 +59,22 @@ function formatTimestamp(value: string | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
 }
 
+function resolveErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === 'string' && error.trim().length > 0) {
+    return error;
+  }
+  if (error && typeof error === 'object' && 'message' in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message.trim().length > 0) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
@@ -70,6 +87,7 @@ const ClientPortalSettings = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
+  const [portalError, setPortalError] = useState<string | null>(null);
   const onEditDomainIntent = useCallback((_details: { previous: string; next: string }) => {
     // Placeholder – wired once edit workflow is implemented
   }, []);
@@ -106,9 +124,12 @@ const ClientPortalSettings = () => {
       const status = await getPortalDomainStatusAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
+      setPortalError(null);
     } catch (error) {
+      const message = resolveErrorMessage(error, 'Unable to load portal domain status.');
+      setPortalError(message);
       console.error('Failed to load portal domain status:', error);
-      toast.error('Unable to load portal domain status.');
+      toast.error(message);
     } finally {
       setPortalLoading(false);
     }
@@ -122,7 +143,9 @@ const ClientPortalSettings = () => {
     event.preventDefault();
 
     if (!domainInput.trim()) {
-      toast.error('Enter a domain before submitting.');
+      const message = 'Enter a domain before submitting.';
+      setPortalError(message);
+      toast.error(message);
       return;
     }
 
@@ -131,10 +154,13 @@ const ClientPortalSettings = () => {
       const result = await requestPortalDomainRegistrationAction({ domain: domainInput.trim() });
       setPortalStatus(result.status);
       setDomainInput(result.status.domain ?? domainInput.trim());
+       setPortalError(null);
       toast.success('Custom domain request submitted.');
     } catch (error: any) {
+      const message = resolveErrorMessage(error, 'Failed to register custom domain.');
+      setPortalError(message);
       console.error('Failed to register portal domain:', error);
-      toast.error(error?.message ?? 'Failed to register custom domain.');
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -146,9 +172,12 @@ const ClientPortalSettings = () => {
       const status = await refreshPortalDomainStatusAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
+      setPortalError(null);
     } catch (error) {
+      const message = resolveErrorMessage(error, 'Failed to refresh domain status.');
+      setPortalError(message);
       console.error('Failed to refresh portal domain status:', error);
-      toast.error('Failed to refresh domain status.');
+      toast.error(message);
     } finally {
       setRefreshing(false);
     }
@@ -160,10 +189,13 @@ const ClientPortalSettings = () => {
       const status = await retryPortalDomainRegistrationAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
+      setPortalError(null);
       toast.success('Retry queued. Re-check status in a few moments.');
     } catch (error: any) {
+      const message = resolveErrorMessage(error, 'Retry failed.');
+      setPortalError(message);
       console.error('Failed to retry custom domain provisioning:', error);
-      toast.error(error?.message ?? 'Retry failed.');
+      toast.error(message);
     } finally {
       setRetrying(false);
     }
@@ -187,10 +219,13 @@ const ClientPortalSettings = () => {
       const status = await disablePortalDomainAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
+      setPortalError(null);
       toast.success('Custom domain disabled.');
     } catch (error) {
+      const message = resolveErrorMessage(error, 'Failed to disable custom domain.');
+      setPortalError(message);
       console.error('Failed to disable custom domain:', error);
-      toast.error('Failed to disable custom domain.');
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -265,6 +300,15 @@ const ClientPortalSettings = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {portalError && (
+            <Alert
+              variant="destructive"
+              className="mb-4"
+              data-automation-id="client-portal-domain-error"
+            >
+              <AlertDescription>{portalError}</AlertDescription>
+            </Alert>
+          )}
           {portalLoading ? (
             <div className="space-y-3">
               <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
