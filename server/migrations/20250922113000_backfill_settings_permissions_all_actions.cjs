@@ -1,7 +1,5 @@
 /**
- * Ensure MSP Admin roles can manage portal settings
- * - Adds/updates the settings:update permission for MSP
- * - Assigns the permission to the MSP Admin role per tenant
+ * Ensure MSP Admin roles have full access to settings permissions after prior migrations.
  */
 
 exports.up = async function up(knex) {
@@ -19,22 +17,22 @@ exports.up = async function up(knex) {
       .first('role_id');
 
     for (const { action, description } of actions) {
-      const existingPermission = await knex('permissions')
+      const permission = await knex('permissions')
         .where({ tenant, resource: 'settings', action })
         .first();
 
       let permissionId;
 
-      if (existingPermission) {
-        permissionId = existingPermission.permission_id;
+      if (permission) {
+        permissionId = permission.permission_id;
 
-        if (!existingPermission.msp || !existingPermission.client || (!existingPermission.description && description)) {
+        if (!permission.msp || !permission.client || (!permission.description && description)) {
           await knex('permissions')
             .where({ permission_id: permissionId })
             .update({
               msp: true,
               client: true,
-              description: existingPermission.description || description,
+              description: permission.description || description,
             });
         }
       } else {
@@ -58,11 +56,11 @@ exports.up = async function up(knex) {
         continue;
       }
 
-      const hasAssignment = await knex('role_permissions')
+      const assignment = await knex('role_permissions')
         .where({ tenant, role_id: adminRole.role_id, permission_id: permissionId })
         .first();
 
-      if (!hasAssignment) {
+      if (!assignment) {
         await knex('role_permissions').insert({
           tenant,
           role_id: adminRole.role_id,
