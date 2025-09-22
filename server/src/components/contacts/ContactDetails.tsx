@@ -847,7 +847,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           onClose={() => setIsDeleteDialogOpen(false)}
           onConfirm={handleDelete}
           title="Delete Contact"
-          message={`Are you sure you want to delete "${editedContact.full_name}"? This action cannot be undone and will remove all associated data.`}
+          message={`Are you sure you want to delete "${editedContact.full_name || editedContact.email}"? This action cannot be undone and will remove all associated data.`}
           confirmLabel={isDeleting ? 'Deleting...' : 'Delete Contact'}
           cancelLabel="Cancel"
           isConfirming={isDeleting}
