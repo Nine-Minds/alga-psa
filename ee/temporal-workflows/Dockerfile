@@ -3,7 +3,12 @@ FROM node:20-bullseye AS base
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl -sSL https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl \
+    && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
 

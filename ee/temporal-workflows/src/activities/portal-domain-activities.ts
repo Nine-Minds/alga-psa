@@ -1,9 +1,12 @@
 import { promises as dns } from 'dns';
 import { promises as fs } from 'node:fs';
-import { join as joinPath } from 'node:path';
+import { join as joinPath, dirname } from 'node:path';
 import { setTimeout as delay } from 'timers/promises';
+import { execFile } from 'node:child_process';
+import type { ExecFileOptions } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { Knex } from 'knex';
-import { KubeConfig, CustomObjectsApi } from '@kubernetes/client-node';
+import { dump as dumpYaml } from 'js-yaml';
 
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
 
@@ -20,6 +23,8 @@ const MANAGED_LABEL = 'portal.alga-psa.com/managed';
 const TENANT_LABEL = 'portal.alga-psa.com/tenant';
 const DOMAIN_ID_LABEL = 'portal.alga-psa.com/domain-id';
 const DOMAIN_HOST_LABEL = 'portal.alga-psa.com/domain-host';
+
+const execFileAsync = promisify(execFile);
 
 export interface PortalDomainConfig {
   certificateNamespace: string;
@@ -72,8 +77,6 @@ const ACTIVE_RECONCILE_STATUSES = new Set([
   'active',
 ]);
 
-let cachedKubeClients: { customObjects: CustomObjectsApi } | null = null;
-
 function parseSelector(rawValue?: string | null): Record<string, string> | null {
   if (!rawValue) {
     return null;
@@ -106,31 +109,6 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
 
 function shouldManageStatus(status: string | null | undefined): boolean {
   return status ? ACTIVE_RECONCILE_STATUSES.has(status) : false;
-}
-
-async function getCustomObjectsApi(): Promise<CustomObjectsApi> {
-  if (cachedKubeClients) {
-    return cachedKubeClients.customObjects;
-  }
-
-  const kubeConfigPath = process.env.PORTAL_DOMAIN_KUBECONFIG;
-  const kubeConfig = new KubeConfig();
-
-  try {
-    if (kubeConfigPath) {
-      kubeConfig.loadFromFile(kubeConfigPath);
-    } else {
-      kubeConfig.loadFromDefault();
-    }
-  } catch (error) {
-    throw new Error(`Failed to load Kubernetes configuration: ${formatErrorMessage(error)}`);
-  }
-
-  cachedKubeClients = {
-    customObjects: kubeConfig.makeApiClient(CustomObjectsApi),
-  };
-
-  return cachedKubeClients.customObjects;
 }
 
 async function getConnection(): Promise<Knex> {
@@ -217,144 +195,99 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
   const config = DEFAULT_CONFIG;
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
   const manifests = managedRows.map((row) => renderPortalDomainResources(row, config));
-
-  const desiredNames = {
-    certificates: new Set(manifests.map((manifest) => manifest.certificate.metadata?.name ?? '').filter(Boolean)),
-    gateways: new Set(manifests.map((manifest) => manifest.gateway.metadata?.name ?? '').filter(Boolean)),
-    virtualServices: new Set(manifests.map((manifest) => manifest.virtualService.metadata?.name ?? '').filter(Boolean)),
-  };
-
   const errors: string[] = [];
 
-  let manifestDir = config.manifestOutputDirectory;
-  if (manifestDir) {
-    try {
-      await ensureDirectory(manifestDir);
-    } catch (error) {
-      const message = formatErrorMessage(error, 'Failed to prepare manifest output directory');
-      console.error('[portal-domains] manifest directory error', {
-        directory: manifestDir,
-        error: message,
-      });
-      errors.push(message);
-      manifestDir = null;
+  let gitConfig: GitConfiguration;
+  try {
+    gitConfig = resolveGitConfiguration();
+  } catch (error) {
+    const message = formatErrorMessage(error, 'Failed to resolve Git configuration');
+    return { success: false, appliedCount: 0, errors: [message] };
+  }
+
+  let repoDir: string;
+  try {
+    repoDir = await prepareGitRepository(gitConfig);
+  } catch (error) {
+    const message = formatErrorMessage(error, 'Failed to prepare Git repository');
+    return { success: false, appliedCount: 0, errors: [message] };
+  }
+
+  const manifestRoot = resolveManifestRoot(repoDir, gitConfig.relativePathSegments);
+  try {
+    await ensureDirectory(manifestRoot);
+  } catch (error) {
+    const message = formatErrorMessage(error, 'Failed to prepare manifest directory');
+    return { success: false, appliedCount: 0, errors: [message] };
+  }
+
+  const desiredFiles = new Map<string, RenderedPortalDomainResources>();
+  for (const manifest of manifests) {
+    desiredFiles.set(`${manifest.tenantSlug}.yaml`, manifest);
+  }
+
+  let existingFiles: string[] = [];
+  try {
+    existingFiles = await listYamlFiles(manifestRoot);
+  } catch (error) {
+    const message = formatErrorMessage(error, 'Failed to enumerate existing manifest files');
+    errors.push(message);
+  }
+
+  for (const fileName of existingFiles) {
+    if (!desiredFiles.has(fileName)) {
+      const fullPath = joinPath(manifestRoot, fileName);
+      try {
+        await runKubectl(['delete', '-f', fullPath, '--ignore-not-found']);
+      } catch (error) {
+        errors.push(formatErrorMessage(error, `Failed to delete Kubernetes resources for ${fileName}`));
+      }
+
+      try {
+        await fs.rm(fullPath, { force: true });
+      } catch (error) {
+        errors.push(formatErrorMessage(error, `Failed to remove manifest file ${fileName}`));
+      }
     }
   }
 
-  console.info('[portal-domains] reconcile start', {
-    tenantId: args.tenantId,
-    totalDomains: rows.length,
-    managedDomains: managedRows.length,
-  });
+  for (const [fileName, manifest] of desiredFiles) {
+    const filePath = joinPath(manifestRoot, fileName);
+    try {
+      await ensureDirectory(dirname(filePath));
+      const yamlContent = renderManifestYaml(manifest);
+      await fs.writeFile(filePath, yamlContent, 'utf8');
+    } catch (error) {
+      errors.push(formatErrorMessage(error, `Failed to write manifest file ${fileName}`));
+    }
+  }
 
-  const customObjects = await getCustomObjectsApi();
-  let appliedCount = 0;
+  try {
+    await runGit(['add', '--all', gitConfig.relativePathPosix], gitConfig, { suppressOutput: true });
+  } catch (error) {
+    errors.push(formatErrorMessage(error, 'Failed to stage manifest changes'));
+  }
+
+  if (desiredFiles.size > 0) {
+    try {
+      await runKubectl(['apply', '-f', manifestRoot, '--recursive']);
+    } catch (error) {
+      errors.push(formatErrorMessage(error, 'Failed to apply manifest changes to cluster'));
+    }
+  }
 
   for (const manifest of manifests) {
-    if (manifestDir) {
-      try {
-        await writeManifestsToDisk(manifestDir, manifest);
-      } catch (error) {
-        const message = `[${manifest.record.id}] ${formatErrorMessage(error, 'Failed to persist manifests to disk')}`;
-        console.error('[portal-domains] manifest write error', {
-          portalDomainId: manifest.record.id,
-          directory: manifestDir,
-          error: message,
-        });
-        errors.push(message);
-      }
-    }
-
     try {
-      const certificateResult = await applyCustomResource(customObjects, {
-        def: {
-          group: 'cert-manager.io',
-          version: 'v1',
-          plural: 'certificates',
-          namespace: config.certificateNamespace,
-        },
-        body: manifest.certificate,
-      });
-
-      const gatewayResult = await applyCustomResource(customObjects, {
-        def: {
-          group: 'networking.istio.io',
-          version: 'v1beta1',
-          plural: 'gateways',
-          namespace: config.gatewayNamespace,
-        },
-        body: manifest.gateway,
-      });
-
-      const virtualServiceResult = await applyCustomResource(customObjects, {
-        def: {
-          group: 'networking.istio.io',
-          version: 'v1beta1',
-          plural: 'virtualservices',
-          namespace: config.virtualServiceNamespace,
-        },
-        body: manifest.virtualService,
-      });
-
-      appliedCount += certificateResult.applied + gatewayResult.applied + virtualServiceResult.applied;
-
       await knex(TABLE_NAME)
         .where({ id: manifest.record.id })
         .update({
           certificate_secret_name: manifest.secretName,
-          last_synced_resource_version: virtualServiceResult.resourceVersion ?? null,
+          last_synced_resource_version: null,
           updated_at: knex.fn.now(),
           last_checked_at: knex.fn.now(),
         });
     } catch (error) {
-      const message = `[${manifest.record.id}] ${formatErrorMessage(error, 'Failed to reconcile Kubernetes resources')}`;
-      console.error('[portal-domains] reconcile error', { portalDomainId: manifest.record.id, error: message });
-      errors.push(message);
-    }
-  }
-
-  const pruneSpecs: Array<{ def: ResourceDefinition; desiredNames: Set<string> }> = [
-    {
-      def: {
-        group: 'cert-manager.io',
-        version: 'v1',
-        plural: 'certificates',
-        namespace: config.certificateNamespace,
-      },
-      desiredNames: desiredNames.certificates,
-    },
-    {
-      def: {
-        group: 'networking.istio.io',
-        version: 'v1beta1',
-        plural: 'gateways',
-        namespace: config.gatewayNamespace,
-      },
-      desiredNames: desiredNames.gateways,
-    },
-    {
-      def: {
-        group: 'networking.istio.io',
-        version: 'v1beta1',
-        plural: 'virtualservices',
-        namespace: config.virtualServiceNamespace,
-      },
-      desiredNames: desiredNames.virtualServices,
-    },
-  ];
-
-  for (const spec of pruneSpecs) {
-    try {
-      const pruned = await pruneCustomResources(customObjects, spec);
-      appliedCount += pruned;
-    } catch (error) {
-      const message = formatErrorMessage(error, `Failed to prune ${spec.def.plural}`);
-      console.error('[portal-domains] prune error', {
-        resource: spec.def.plural,
-        namespace: spec.def.namespace,
-        error: message,
-      });
-      errors.push(message);
+      errors.push(formatErrorMessage(error, `Failed to update portal_domains row ${manifest.record.id}`));
     }
   }
 
@@ -363,15 +296,34 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
     .map((row) => row.id);
 
   if (cleanupIds.length > 0) {
-    await knex(TABLE_NAME)
-      .whereIn('id', cleanupIds)
-      .update({
-        certificate_secret_name: null,
-        last_synced_resource_version: null,
-        updated_at: knex.fn.now(),
-        last_checked_at: knex.fn.now(),
-      });
+    try {
+      await knex(TABLE_NAME)
+        .whereIn('id', cleanupIds)
+        .update({
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          updated_at: knex.fn.now(),
+          last_checked_at: knex.fn.now(),
+        });
+    } catch (error) {
+      errors.push(formatErrorMessage(error, 'Failed to clear metadata for disabled domains'));
+    }
   }
+
+  try {
+    const status = await runGit(['status', '--porcelain'], gitConfig, { suppressOutput: true });
+    if (status.stdout.trim()) {
+      await runGit(['config', 'user.name', gitConfig.authorName], gitConfig, { suppressOutput: true });
+      await runGit(['config', 'user.email', gitConfig.authorEmail], gitConfig, { suppressOutput: true });
+      const commitMessage = buildCommitMessage(manifests);
+      await runGit(['commit', '-m', commitMessage], gitConfig, { suppressOutput: true });
+      await runGit(['push', 'origin', gitConfig.branch], gitConfig);
+    }
+  } catch (error) {
+    errors.push(formatErrorMessage(error, 'Failed to commit or push manifest changes'));
+  }
+
+  const appliedCount = desiredFiles.size;
 
   console.info('[portal-domains] reconcile complete', {
     tenantId: args.tenantId,
@@ -384,6 +336,207 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
   }
 
   return { success: true, appliedCount };
+}
+
+interface GitConfiguration {
+  repoUrl: string;
+  authenticatedRepoUrl: string;
+  branch: string;
+  workspaceDir: string;
+  repoDir: string;
+  relativePathPosix: string;
+  relativePathSegments: string[];
+  authorName: string;
+  authorEmail: string;
+  token: string;
+  maskValues: string[];
+}
+
+interface CommandOptions extends ExecFileOptions {
+  maskValues?: string[];
+  suppressOutput?: boolean;
+}
+
+function resolveGitConfiguration(): GitConfiguration {
+  const repoUrl = process.env.PORTAL_DOMAIN_GIT_REPO || 'https://github.com/Nine-Minds/nm-kube-config.git';
+  const branch = process.env.PORTAL_DOMAIN_GIT_BRANCH || 'main';
+  const workspaceDir = process.env.PORTAL_DOMAIN_GIT_WORKDIR || '/tmp/portal-domain-sync';
+  const relativePathPosix = process.env.PORTAL_DOMAIN_GIT_ROOT || 'alga-psa/portal-domains';
+  const authorName = process.env.PORTAL_DOMAIN_GIT_AUTHOR_NAME || 'Portal Domains Bot';
+  const authorEmail = process.env.PORTAL_DOMAIN_GIT_AUTHOR_EMAIL || 'platform@nineminds.ai';
+  const token = process.env.GITHUB_ACCESS_TOKEN;
+
+  if (!token) {
+    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain reconciliation.');
+  }
+
+  const url = new URL(repoUrl);
+  url.username = token;
+  url.password = '';
+
+  const repoDir = joinPath(workspaceDir, 'nm-kube-config');
+  const relativePathSegments = relativePathPosix.split('/').filter(Boolean);
+
+  return {
+    repoUrl,
+    authenticatedRepoUrl: url.toString(),
+    branch,
+    workspaceDir,
+    repoDir,
+    relativePathPosix,
+    relativePathSegments,
+    authorName,
+    authorEmail,
+    token,
+    maskValues: [token, url.toString()],
+  };
+}
+
+async function prepareGitRepository(config: GitConfiguration): Promise<string> {
+  await ensureDirectory(config.workspaceDir);
+  const gitEnv = { GIT_TERMINAL_PROMPT: '0' };
+
+  const gitDirExists = await pathExists(joinPath(config.repoDir, '.git'));
+  if (!gitDirExists) {
+    await runCommand('git', ['clone', config.authenticatedRepoUrl, config.repoDir], {
+      cwd: config.workspaceDir,
+      env: gitEnv,
+      maskValues: config.maskValues,
+      suppressOutput: true,
+    });
+  }
+
+  await runCommand('git', ['remote', 'set-url', 'origin', config.authenticatedRepoUrl], {
+    cwd: config.repoDir,
+    env: gitEnv,
+    maskValues: config.maskValues,
+    suppressOutput: true,
+  });
+
+  await runCommand('git', ['fetch', 'origin', config.branch], {
+    cwd: config.repoDir,
+    env: gitEnv,
+    maskValues: config.maskValues,
+    suppressOutput: true,
+  });
+
+  await runCommand('git', ['checkout', config.branch], {
+    cwd: config.repoDir,
+    env: gitEnv,
+    maskValues: config.maskValues,
+    suppressOutput: true,
+  });
+
+  await runCommand('git', ['pull', 'origin', config.branch], {
+    cwd: config.repoDir,
+    env: gitEnv,
+    maskValues: config.maskValues,
+    suppressOutput: true,
+  });
+
+  return config.repoDir;
+}
+
+function resolveManifestRoot(repoDir: string, segments: string[]): string {
+  return joinPath(repoDir, ...segments);
+}
+
+async function listYamlFiles(directory: string): Promise<string[]> {
+  try {
+    const entries = await fs.readdir(directory, { withFileTypes: true });
+    return entries
+      .filter((entry) => entry.isFile() && /\.ya?ml$/i.test(entry.name))
+      .map((entry) => entry.name)
+      .sort();
+  } catch (error: any) {
+    if (error?.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function runGit(args: string[], config: GitConfiguration, options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
+  return runCommand('git', args, {
+    cwd: options.cwd || config.repoDir,
+    env: { ...(options.env || {}), GIT_TERMINAL_PROMPT: '0' },
+    maskValues: config.maskValues,
+    suppressOutput: options.suppressOutput,
+  });
+}
+
+async function runKubectl(args: string[]): Promise<{ stdout: string; stderr: string }> {
+  return runCommand('kubectl', args, { suppressOutput: true });
+}
+
+async function runCommand(command: string, args: string[], options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
+  const maskValues = options.maskValues?.filter(Boolean) ?? [];
+  const execOptions: ExecFileOptions = {
+    cwd: options.cwd,
+    env: { ...process.env, ...(options.env || {}) },
+    encoding: 'utf8',
+    maxBuffer: options.maxBuffer ?? 1024 * 1024 * 10,
+  };
+
+  try {
+    const { stdout: rawStdout, stderr: rawStderr } = await execFileAsync(command, args, execOptions);
+    const stdout = typeof rawStdout === 'string' ? rawStdout : rawStdout.toString('utf8');
+    const stderr = typeof rawStderr === 'string' ? rawStderr : rawStderr.toString('utf8');
+    if (!options.suppressOutput) {
+      const sanitizedStdout = maskSecrets(stdout, maskValues).trim();
+      const sanitizedStderr = maskSecrets(stderr, maskValues).trim();
+      if (sanitizedStdout) {
+        console.debug(`[portal-domains] ${command} stdout: ${sanitizedStdout}`);
+      }
+      if (sanitizedStderr) {
+        console.debug(`[portal-domains] ${command} stderr: ${sanitizedStderr}`);
+      }
+    }
+    return { stdout, stderr };
+  } catch (error) {
+    const message = maskSecrets(formatErrorMessage(error), maskValues);
+    throw new Error(message);
+  }
+}
+
+function renderManifestYaml(manifest: RenderedPortalDomainResources): string {
+  const documents = [manifest.certificate, manifest.gateway, manifest.virtualService];
+  return documents
+    .map((doc, index) => {
+      const yaml = dumpYaml(doc, { sortKeys: true, noRefs: true });
+      return index === 0 ? yaml : `---\n${yaml}`;
+    })
+    .join('')
+    .concat('\n');
+}
+
+function buildCommitMessage(manifests: RenderedPortalDomainResources[]): string {
+  if (manifests.length === 0) {
+    return 'chore(portal-domains): sync empty state';
+  }
+
+  const slugs = Array.from(new Set(manifests.map((manifest) => manifest.tenantSlug)));
+  const preview = slugs.slice(0, 5).join(', ');
+  const suffix = slugs.length > 5 ? `${preview}, +${slugs.length - 5} more` : preview;
+  return `chore(portal-domains): sync ${suffix}`;
+}
+
+function maskSecrets(value: string, secrets: string[]): string {
+  return secrets.reduce((acc, secret) => {
+    if (!secret) {
+      return acc;
+    }
+    return acc.split(secret).join('***');
+  }, value);
+}
+
+async function pathExists(targetPath: string): Promise<boolean> {
+  try {
+    await fs.access(targetPath);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function lookupCname(domain: string): Promise<string[]> {
@@ -413,28 +566,6 @@ function normalizeHostname(hostname: string): string {
   return hostname.trim().replace(/\.$/, '').toLowerCase();
 }
 
-interface ResourceDefinition {
-  group: string;
-  version: string;
-  plural: string;
-  namespace: string;
-}
-
-interface ApplyResourceOptions {
-  def: ResourceDefinition;
-  body: Record<string, any>;
-}
-
-interface ApplyResult {
-  applied: number;
-  resourceVersion?: string;
-}
-
-interface PruneResourceOptions {
-  def: ResourceDefinition;
-  desiredNames: Set<string>;
-}
-
 export interface RenderedPortalDomainResources {
   record: PortalDomainActivityRecord;
   certificate: Record<string, any>;
@@ -444,84 +575,6 @@ export interface RenderedPortalDomainResources {
   tenantSlug: string;
   gatewayName: string;
   virtualServiceName: string;
-}
-
-async function applyCustomResource(client: CustomObjectsApi, options: ApplyResourceOptions): Promise<ApplyResult> {
-  const { def } = options;
-  const body = deepClone(options.body);
-  const metadata = body.metadata || {};
-
-  if (!metadata.name) {
-    throw new Error('Manifest metadata.name is required.');
-  }
-
-  const namespace = metadata.namespace || def.namespace;
-  body.metadata = {
-    ...metadata,
-    namespace,
-    labels: {
-      ...(metadata.labels || {}),
-      [MANAGED_LABEL]: 'true',
-    },
-  };
-
-  try {
-    const existing = await client.getNamespacedCustomObject(def.group, def.version, namespace, def.plural, metadata.name);
-    const existingBody = existing.body as any;
-    body.metadata.resourceVersion = existingBody?.metadata?.resourceVersion;
-    const response = await client.replaceNamespacedCustomObject(def.group, def.version, namespace, def.plural, metadata.name, body);
-    const updated = response.body as any;
-    return {
-      applied: 1,
-      resourceVersion: updated?.metadata?.resourceVersion,
-    };
-  } catch (error: any) {
-    const status = error?.response?.status;
-    if (status === 404) {
-      const response = await client.createNamespacedCustomObject(def.group, def.version, namespace, def.plural, body);
-      const created = response.body as any;
-      return {
-        applied: 1,
-        resourceVersion: created?.metadata?.resourceVersion,
-      };
-    }
-    throw error;
-  }
-}
-
-async function pruneCustomResources(client: CustomObjectsApi, options: PruneResourceOptions): Promise<number> {
-  const { def, desiredNames } = options;
-  const namespace = def.namespace;
-  const labelSelector = `${MANAGED_LABEL}=true`;
-  let pruned = 0;
-
-  try {
-    const response = await client.listNamespacedCustomObject(def.group, def.version, namespace, def.plural, undefined, undefined, undefined, undefined, labelSelector);
-    const list = (response.body as any)?.items ?? [];
-
-    for (const item of list) {
-      const name: string | undefined = item?.metadata?.name;
-      if (!name) {
-        continue;
-      }
-      if (desiredNames.has(name)) {
-        continue;
-      }
-      try {
-        await client.deleteNamespacedCustomObject(def.group, def.version, namespace, def.plural, name);
-        pruned += 1;
-      } catch (error: any) {
-        const status = error?.response?.status;
-        if (status !== 404) {
-          throw error;
-        }
-      }
-    }
-  } catch (error) {
-    throw new Error(formatErrorMessage(error, `Failed to list ${def.plural} for pruning`));
-  }
-
-  return pruned;
 }
 
 export function renderPortalDomainResources(record: PortalDomainActivityRecord, config: PortalDomainConfig): RenderedPortalDomainResources {
@@ -712,32 +765,8 @@ function truncateName(input: string, maxLength: number): string {
   return input.slice(0, maxLength);
 }
 
-function deepClone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value));
-}
-
 async function ensureDirectory(directoryPath: string): Promise<void> {
   await fs.mkdir(directoryPath, { recursive: true });
-}
-
-async function writeManifestsToDisk(baseDirectory: string, manifest: RenderedPortalDomainResources): Promise<void> {
-  const tenantDir = joinPath(baseDirectory, manifest.tenantSlug);
-  await ensureDirectory(tenantDir);
-
-  const files: Array<{ name: string; content: unknown }> = [
-    { name: 'certificate.json', content: manifest.certificate },
-    { name: 'gateway.json', content: manifest.gateway },
-    { name: 'virtualservice.json', content: manifest.virtualService },
-  ];
-
-  await Promise.all(
-    files.map((file) => writeJsonFile(joinPath(tenantDir, file.name), file.content))
-  );
-}
-
-async function writeJsonFile(filePath: string, content: unknown): Promise<void> {
-  const payload = `${JSON.stringify(content, null, 2)}\n`;
-  await fs.writeFile(filePath, payload, 'utf8');
 }
 
 function formatErrorMessage(error: unknown, prefix?: string): string {

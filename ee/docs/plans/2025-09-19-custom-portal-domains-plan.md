@@ -10,8 +10,8 @@ Overview / Rationale
 Key Decisions & Clarifications
 - Canonical target: Store `<first 7 chars of tenant_id>.portal.algapsa.com` in the database so DNS guidance remains stable even if tenant metadata shifts.
 - Certificates: Re-use the existing wildcard `*.portal.algapsa.com` certificate for the canonical ingress path. Vanity domains CNAME to the canonical host; cert-manager issues per-domain certificates through ACME using HTTP-01, leveraging our ingress path. No new Route53 zones required.
-- Reconciliation: Runs inside a Temporal activity that renders the full desired state on each execution and reapplies Kubernetes resources (no standalone operator).
-- Istio config source: Treat `nm-kube-config/alga-psa` as the source of truth for Gateway/VirtualService manifests so every reconciliation-driven change is captured in Git history before being applied.
+- Reconciliation: Temporal activity generates desired manifests, writes them into the `nm-kube-config/alga-psa` repo, applies via `kubectl`/Helm, and commits back to Git for auditability (no standalone operator).
+- Istio config source: `nm-kube-config/alga-psa` is the single source of truth; the activity rewrites YAML based on DB state, ensuring every change is versioned prior to applying in-cluster.
 - Observability: Use our existing OpenTelemetry setup for workflow/activity spans and PostHog for counters and timings.
 - Security: Gate all settings actions with RBAC (tenant admins only) and audit via existing logging helpers.
 
@@ -19,7 +19,7 @@ Current State Snapshot
 - UI: CE build now shows the canonical hosted domain with an Enterprise badge; EE build ships a fully wired domain form (status, refresh/disable controls, DNS instructions) backed by server actions.
 - CE vs EE: Webpack alias continues to map `@ee/*` to CE stubs, with an enterprise override providing the rich settings panel dynamically.
 - Persistence & actions: `portal_domains` table, model helpers, and CE/EE server actions are implemented and committed.
-- Temporal scaffolding: Workflow client, DNS verification activity, and reconciliation now render Istio Gateway/VirtualService + Certificate manifests, optionally write JSON snapshots to `PORTAL_DOMAIN_MANIFEST_DIR`, apply changes through the Kubernetes API, and prune stale resources.
+- Temporal scaffolding: Workflow client, DNS verification activity, and reconciliation handle manifest generation; next iteration moves reconciliation to GitOps by rewriting `nm-kube-config` manifests, applying them, and committing the diff.
 - Istio & cert-manager: `algapsa-gateway`, `apps-gateway`, and `apps-gateway-auto` continue to terminate traffic with cert-manager issued secrets. Per-tenant `Gateway` + `VirtualService` resources are generated automatically; HTTP-01 challenge routing can be enabled via `PORTAL_DOMAIN_CHALLENGE_*` env configuration.
 
 Target Tenant Experience
@@ -83,10 +83,12 @@ Kubernetes & TLS Strategy
 - Reconciliation flushes the desired resource set on every run and prunes labelled resources that no longer map to active domains.
 
 GitOps Workflow (nm-kube-config)
-- Point `PORTAL_DOMAIN_MANIFEST_DIR` at `nm-kube-config/alga-psa/portal-domains` (or similar); the reconciliation activity now writes JSON manifests (`certificate.json`, `gateway.json`, `virtualservice.json`) into a per-tenant folder on every run.
-- Commit those snapshots to nm-kube-config and raise PRs so production changes are traceable; apply via the usual GitOps pipeline or ad-hoc `kubectl apply -f` when break-glass access is needed.
-- Add a lightweight CLI (e.g. `pnpm nm-kube-sync`) that diffs generated manifests against the worktree, opens commits with descriptive messages, and can optionally `kubectl apply` for emergency fixes.
-- Document the human workflow: review manifests, merge PR, deploy via GitOps, then trigger the Temporal `refresh` action so database status aligns with cluster state.
+- Production manifests live under `~/nm-kube-config/alga-psa/portal-domains/<tenantSlug>.yaml`. Each file contains the rendered `Certificate`, `Gateway`, and `VirtualService` separated by `---` so kubectl/Helm can apply them directly.
+- Staging (hv-dev2) mirrors the layout at `~/nm-kube-config/argo-workflow/alga-psa-dev/portal-domains/<tenantSlug>.yaml` to keep dev/test traffic isolated. The workflow picks the target root based on environment.
+- `PORTAL_DOMAIN_MANIFEST_DIR` points at the appropriate root folder; on every reconciliation the activity rewrites the per-tenant YAML from database state (sorted keys, deterministic ordering) so Git diffs stay readable.
+- After files are updated the activity runs `kubectl apply -f <tenantSlug>.yaml` (or batched apply) against the cluster, stages the changes with `git add portal-domains`, commits with a message like `chore(portal-domains): sync <tenantSlug>`, and pushes to the shared repo.
+- A helper CLI (`pnpm nm-kube-sync`) will encapsulate diff detection, safe commit messages, optional PR creation, and fall back to printing `kubectl` commands for manual review when auto-apply is disabled.
+- Operational playbook: review the generated Git diff, merge/push (or approve the automation’s push), verify Argo/Flux sync health, then trigger the Temporal refresh action so DB status aligns with the cluster.
 
 UI Updates (CE vs EE)
 - CE (`server/src/components/settings/general/ClientPortalSettings.tsx`): Replace “Coming Soon” with a read-only card highlighting default portal address (`<tenant7>.portal.algapsa.com`) and note that custom domains require Enterprise.
@@ -125,7 +127,7 @@ Implementation Plan
 3. **Temporal Workflow & Activities** – 🟡 In progress
    - DNS verification + reconciliation activities now apply/prune Kubernetes resources and write manifest snapshots; remaining work covers certificate readiness polling, richer status messaging, and workflow tests.
 4. **GitOps & Reconciliation Tooling** – 🟡 In progress
-   - Manifests land in `PORTAL_DOMAIN_MANIFEST_DIR`; still need a CLI to diff/commit/apply and documentation updates for the nm-kube-config PR flow.
+   - Per-tenant YAML written to `nm-kube-config/{alga-psa|argo-workflow/alga-psa-dev}/portal-domains`; still need the CLI to diff/commit/apply and docs for the automation flow.
 5. **Kubernetes Reconciliation Templates & HTTP-01 Pathing** – 🟡 In progress
    - Gateway/VirtualService templates implemented with optional HTTP-01 routing via `PORTAL_DOMAIN_CHALLENGE_*`; still need to standardise the challenge-serving workload and productionize readiness probes.
 6. **UI (CE + EE)** – ✅ Completed (2025-09-19)
