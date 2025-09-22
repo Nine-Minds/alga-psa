@@ -642,7 +642,6 @@ export async function deleteCompany(companyId: string): Promise<{
         .where({ company_id: companyId, tenant, is_closed: false })
         .count('ticket_id as count')
         .first();
-      console.log('Active ticket count result:', ticketCount);
       if (ticketCount && Number(ticketCount.count) > 0) {
         dependencies.push('ticket');
         counts['ticket'] = Number(ticketCount.count);
@@ -650,11 +649,11 @@ export async function deleteCompany(companyId: string): Promise<{
 
       // Check for active projects (only blocker for projects)
       const projectCount = await trx('projects')
-        .where({ company_id: companyId, tenant })
-        .whereNotIn('status', ['completed', 'cancelled', 'closed'])
-        .count('project_id as count')
+        .join('project_statuses as ps', 'projects.status', 'ps.status_id')
+        .where({ 'projects.company_id': companyId, 'projects.tenant': tenant })
+        .where('ps.is_closed', false)
+        .count('projects.project_id as count')
         .first();
-      console.log('Active project count result:', projectCount);
       if (projectCount && Number(projectCount.count) > 0) {
         dependencies.push('project');
         counts['project'] = Number(projectCount.count);
@@ -706,7 +705,7 @@ export async function deleteCompany(companyId: string): Promise<{
 
       // Delete company locations
       await trx('company_locations')
-        .where({ company_id: companyId })
+        .where({ company_id: companyId, tenant })
         .delete();
 
       // Delete document associations

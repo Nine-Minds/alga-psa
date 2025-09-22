@@ -474,11 +474,17 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           toast.error(result.message || 'Cannot delete the default company');
         } else if (result.dependencies && result.dependencies.length > 0) {
           const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
-          const dependencyText = result.dependencies.map(pluralize).join(', ');
-          // Only show blocking message for actual blockers (open tickets)
-          if (result.dependencies.includes('active tickets') || result.dependencies.includes('ticket')) {
-            toast.error(`Cannot delete client. It has open tickets that must be closed or resolved first.`);
+          // Only show blocking message for actual blockers (open tickets/projects)
+          if (result.dependencies.includes('ticket')) {
+            const ticketCount = result.counts?.ticket || 1;
+            const ticketText = ticketCount === 1 ? 'ticket' : 'tickets';
+            toast.error(`Cannot delete client. It has ${ticketCount} open ${ticketText} that must be closed or resolved first.`);
+          } else if (result.dependencies.includes('project')) {
+            const projectCount = result.counts?.project || 1;
+            const projectText = projectCount === 1 ? 'project' : 'projects';
+            toast.error(`Cannot delete client. It has ${projectCount} active ${projectText} that must be completed first.`);
           } else {
+            const dependencyText = result.dependencies.map(pluralize).join(', ');
             toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
           }
         } else {
@@ -519,7 +525,6 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     setFieldErrors(newErrors);
 
     if (hasValidationErrors) {
-      setIsSaving(false);
       return;
     }
 
