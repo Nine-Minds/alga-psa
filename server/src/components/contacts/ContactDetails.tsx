@@ -211,6 +211,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   } | null>(null);
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -378,23 +379,58 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   };
 
   const handleSave = async () => {
+    setHasAttemptedSubmit(true);
+
+    // Professional PSA validation pattern: Check required fields
+    const requiredFields = {
+      full_name: editedContact.full_name?.trim() || '',
+      email: editedContact.email?.trim() || ''
+    };
+
+    // Clear previous errors and validate required fields
+    const newErrors: Record<string, string> = {};
+    let hasValidationErrors = false;
+
+    Object.entries(requiredFields).forEach(([field, value]) => {
+      if (field === 'full_name') {
+        const error = validateContactName(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      } else if (field === 'email') {
+        const error = validateEmailAddress(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      }
+    });
+
+    setFieldErrors(newErrors);
+
+    if (hasValidationErrors) {
+      return;
+    }
+
     try {
       // Make sure contact_name_id is included in the data being sent
       const dataToUpdate = {
         ...editedContact,
         contact_name_id: editedContact.contact_name_id
       };
-      
+
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
       setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
-      
+      setHasAttemptedSubmit(false);
+
       toast({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
       });
-      
+
       // In quick view mode, mark that changes were saved (for refresh on drawer close)
       // In regular mode, refresh immediately to maintain existing behavior
       if (quickView && onChangesSaved) {
@@ -628,15 +664,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           )}
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
               id="save-contact-changes-btn"
               onClick={handleSave}
-              disabled={!hasUnsavedChanges}
-              className={`text-white transition-colors ${
-                hasUnsavedChanges
-                  ? "bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))]"
-                  : "bg-[rgb(var(--color-border-400))] cursor-not-allowed"
-              }`}
+              className="bg-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-600))] text-white transition-colors"
             >
               Save Changes
             </Button>

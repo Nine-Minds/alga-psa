@@ -146,6 +146,7 @@ const TextDetailItem: React.FC<{
     <div className="space-y-2" {...automationIdProps}>
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
+        id={automationId ? `${automationId}-input` : undefined}
         type="text"
         value={localValue}
         onChange={handleChange}
@@ -213,6 +214,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
@@ -457,13 +459,40 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
   const handleSave = async () => {
     if (isSaving) return;
-    
+    setHasAttemptedSubmit(true);
+
+    // Professional PSA validation pattern: Check required fields
+    const requiredFields = {
+      company_name: editedCompany.company_name?.trim() || ''
+    };
+
+    // Clear previous errors and validate required fields
+    const newErrors: Record<string, string> = {};
+    let hasValidationErrors = false;
+
+    Object.entries(requiredFields).forEach(([field, value]) => {
+      if (field === 'company_name') {
+        const error = validateCompanyName(value);
+        if (error) {
+          newErrors[field] = error;
+          hasValidationErrors = true;
+        }
+      }
+    });
+
+    setFieldErrors(newErrors);
+
+    if (hasValidationErrors) {
+      setIsSaving(false);
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Prepare data for update, removing computed fields
-      const { 
+      const {
         account_manager_full_name,
-        ...restOfEditedCompany 
+        ...restOfEditedCompany
       } = editedCompany;
       const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
         ...restOfEditedCompany,
@@ -475,6 +504,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
       setEditedCompany(updatedCompany);
       setHasUnsavedChanges(false);
+      setHasAttemptedSubmit(false);
       toast.success("Company details saved successfully.");
     } catch (error) {
       console.error('Error saving company:', error);
@@ -729,10 +759,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           </div>
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
               id="save-company-changes-btn"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -906,10 +941,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           </div>
 
           <Flex gap="4" justify="end" align="center">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
               id="save-additional-info-btn"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}

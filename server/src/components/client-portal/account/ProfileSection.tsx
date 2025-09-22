@@ -200,6 +200,7 @@ export default function ProfileSection() {
               Phone Number
             </label>
             <PhoneInput
+              id="profile-phone-input"
               value={profile.phone}
               onChange={(value) => {
                 setProfile(prev => ({ ...prev, phone: value }));
