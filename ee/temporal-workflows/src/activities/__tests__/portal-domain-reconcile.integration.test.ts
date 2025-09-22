@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const virtualServices: any[] = [];
 const certificates: any[] = [];
+const deletedVirtualServices: Array<{ namespace: string; name: string }> = [];
 
 vi.mock('@alga-psa/shared/db/admin.js', () => {
   const rows = [
@@ -90,6 +91,35 @@ vi.mock('@alga-psa/shared/db/admin.js', () => {
 
 vi.mock('@kubernetes/client-node', () => {
   class FakeCustomObjectsApi {
+    existing: Record<string, any[]> = {
+      virtualservices: [
+        {
+          metadata: {
+            name: 'portal-domain-vs-old',
+            namespace: 'msp',
+            labels: {
+              'portal.alga-psa.com/managed': 'true',
+              'portal.alga-psa.com/domain-id': 'domain-old',
+            },
+          },
+          spec: {
+            http: [
+              {
+                route: [
+                  {
+                    destination: {
+                      host: 'legacy-service.msp.svc.cluster.local',
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      ],
+      certificates: [],
+    };
+
     getNamespacedCustomObject = vi.fn().mockRejectedValue({ response: { status: 404 } });
     replaceNamespacedCustomObject = vi.fn();
     createNamespacedCustomObject = vi.fn((group: string, version: string, namespace: string, plural: string, body: any) => {
@@ -101,8 +131,22 @@ vi.mock('@kubernetes/client-node', () => {
       }
       return { body: { metadata: { resourceVersion: '1' } } };
     });
-    listNamespacedCustomObject = vi.fn().mockResolvedValue({ body: { items: [] } });
-    deleteNamespacedCustomObject = vi.fn().mockResolvedValue({});
+    listNamespacedCustomObject = vi.fn(async (_group: string, _version: string, namespace: string, plural: string, _options?: any, _continue?: any, _limit?: any, _timeout?: any, _labelSelector?: string) => {
+      const items = (this.existing[plural] ?? []).map((item) => ({
+        ...item,
+        metadata: {
+          ...(item.metadata ?? {}),
+          namespace: item.metadata?.namespace ?? namespace,
+        },
+      }));
+      return { body: { items } };
+    });
+    deleteNamespacedCustomObject = vi.fn(async (_group: string, _version: string, namespace: string, plural: string, name: string) => {
+      if (plural === 'virtualservices') {
+        deletedVirtualServices.push({ namespace, name });
+      }
+      return {};
+    });
   }
 
   const fakeApi = new FakeCustomObjectsApi();
@@ -125,6 +169,7 @@ describe('reconcilePortalDomains', () => {
   beforeEach(() => {
     virtualServices.length = 0;
     certificates.length = 0;
+    deletedVirtualServices.length = 0;
   });
 
   it('routes virtual service traffic to the app once certificate succeeds', async () => {
@@ -141,5 +186,20 @@ describe('reconcilePortalDomains', () => {
 
     const primaryRoute = httpRoutes[httpRoutes.length - 1];
     expect(primaryRoute?.route?.[0]?.destination?.host).toBe('sebastian.msp.svc.cluster.local');
+  });
+
+  it('creates new manifests and prunes legacy virtual services when the domain changes', async () => {
+    const { reconcilePortalDomains } = await import('../portal-domain-activities.js');
+
+    const result = await reconcilePortalDomains({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
+
+    expect(result.success).toBe(true);
+
+    expect(virtualServices).toHaveLength(1);
+    const newVirtualService = virtualServices[0];
+    expect(newVirtualService.metadata?.name).toContain('portal-domain');
+    expect(newVirtualService.spec?.http?.[0]?.route?.[0]?.destination?.host).toBe('sebastian.msp.svc.cluster.local');
+
+    expect(deletedVirtualServices).toContainEqual({ namespace: 'msp', name: 'portal-domain-vs-old' });
   });
 });
