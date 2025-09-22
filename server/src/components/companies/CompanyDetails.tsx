@@ -555,6 +555,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   const handleBillingConfigSave = async (updatedBillingConfig: Partial<ICompany>) => {
+    setIsSaving(true);
     try {
       const updatedCompany = await updateCompany(company.company_id, updatedBillingConfig);
       setEditedCompany(prevCompany => {
@@ -566,6 +567,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       });
     } catch (error) {
       console.error('Error updating company:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -592,6 +595,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   const handleSaveNote = async () => {
+    setIsSaving(true);
     try {
       if (!currentUser) {
         console.error('Cannot save note: No current user');
@@ -600,14 +604,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
       // Convert blocks to JSON string
       const blockData = JSON.stringify(currentContent);
-      
+
       if (editedCompany.notes_document_id) {
         // Update existing note document
         await updateBlockContent(editedCompany.notes_document_id, {
           block_data: blockData,
           user_id: currentUser.user_id
         });
-        
+
         // Refresh document metadata to show updated timestamp
         const updatedDocument = await getDocument(editedCompany.notes_document_id);
         setNoteDocument(updatedDocument);
@@ -620,28 +624,30 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           entityId: editedCompany.company_id,
           entityType: 'company'
         });
-        
+
         // Update company with the new notes_document_id
         await updateCompany(editedCompany.company_id, {
           notes_document_id: document_id
         });
-        
+
         // Update local state
         setEditedCompany(prev => ({
           ...prev,
           notes_document_id: document_id
         }));
-        
+
         // Get the newly created document metadata
         const newDocument = await getDocument(document_id);
         setNoteDocument(newDocument);
       }
-      
+
       setHasUnsavedNoteChanges(false);
       toast.success("Note saved successfully.");
     } catch (error) {
       console.error('Error saving note:', error);
       toast.error("Failed to save note. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -805,7 +811,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </Text>
             )}
             <Button
-              id="save-company-changes"
+              id="save-company-changes-button"
               onClick={handleSave}
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -813,7 +819,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button
-              id="add-ticket"
+              id="add-ticket-button"
               onClick={() => setIsQuickAddTicketOpen(true)}
               variant="default"
             >
@@ -997,7 +1003,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </Text>
             )}
             <Button
-              id="save-additional-info"
+              id="save-additional-info-button"
               onClick={handleSave}
               disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1040,7 +1046,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
           <div className="flex justify-end space-x-2">
             <Button
-              id={`${id}-save-note`}
+              id={`${id}-save-note-button`}
               onClick={handleSaveNote}
               disabled={!hasUnsavedNoteChanges}
               className={`text-white transition-colors ${

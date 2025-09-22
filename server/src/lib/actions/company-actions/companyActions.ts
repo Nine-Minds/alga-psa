@@ -654,7 +654,9 @@ export async function deleteCompany(companyId: string): Promise<{
              .andOn('projects.tenant', '=', 'statuses.tenant')
         })
         .where({ 'projects.company_id': companyId, 'projects.tenant': tenant })
-        .where('statuses.is_closed', false)
+        .where(function () {
+          this.where('statuses.is_closed', false).orWhereNull('statuses.status_id');
+        })
         .count('projects.project_id as count')
         .first();
       if (projectCount && Number(projectCount.count) > 0) {
@@ -734,6 +736,7 @@ export async function deleteCompany(companyId: string): Promise<{
       if (completedProjectIds.length > 0) {
         await trx('projects')
           .whereIn('project_id', completedProjectIds.map(p => p.project_id))
+          .andWhere('tenant', tenant)
           .delete();
       }
 
