@@ -32,7 +32,7 @@ const logger = createLogger({
 interface WorkerConfig {
   temporalAddress: string;
   temporalNamespace: string;
-  taskQueue: string;
+  taskQueues: string[];
   maxConcurrentActivityTaskExecutions: number;
   maxConcurrentWorkflowTaskExecutions: number;
 }
@@ -41,10 +41,22 @@ interface WorkerConfig {
  * Get worker configuration from environment variables
  */
 function getWorkerConfig(): WorkerConfig {
+  const queuesEnv = process.env.TEMPORAL_TASK_QUEUES || process.env.TEMPORAL_TASK_QUEUE;
+
+  const defaultQueues = ['tenant-workflows', 'portal-domain-workflows'];
+  const parsedQueues = queuesEnv
+    ? queuesEnv
+        .split(',')
+        .map((queue) => queue.trim())
+        .filter((queue) => queue.length > 0)
+    : defaultQueues;
+
+  const taskQueues = Array.from(new Set(parsedQueues.length > 0 ? parsedQueues : defaultQueues));
+
   return {
     temporalAddress: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
     temporalNamespace: process.env.TEMPORAL_NAMESPACE || 'default',
-    taskQueue: process.env.TEMPORAL_TASK_QUEUE || 'tenant-workflows',
+    taskQueues: taskQueues.length > 0 ? taskQueues : ['tenant-workflows'],
     maxConcurrentActivityTaskExecutions: parseInt(process.env.MAX_CONCURRENT_ACTIVITIES || '10'),
     maxConcurrentWorkflowTaskExecutions: parseInt(process.env.MAX_CONCURRENT_WORKFLOWS || '10'),
   };
@@ -53,50 +65,53 @@ function getWorkerConfig(): WorkerConfig {
 /**
  * Create and configure the Temporal worker
  */
-async function createWorker(config: WorkerConfig): Promise<Worker> {
+async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
   logger.info('Connecting to Temporal', { 
     address: config.temporalAddress,
     namespace: config.temporalNamespace 
   });
 
-  // Connect to Temporal
   const connection = await NativeConnection.connect({
     address: config.temporalAddress,
   });
 
   logger.info('Connected to Temporal successfully');
 
-  // Create worker
-  const worker = await Worker.create({
-    connection,
-    namespace: config.temporalNamespace,
-    workflowsPath: new URL('./workflows/index.js', import.meta.url).pathname,
-    activities,
-    taskQueue: config.taskQueue,
-    maxConcurrentActivityTaskExecutions: config.maxConcurrentActivityTaskExecutions,
-    maxConcurrentWorkflowTaskExecutions: config.maxConcurrentWorkflowTaskExecutions,
-    // Enable detailed logging in development
-    debugMode: process.env.NODE_ENV === 'development',
-  });
+  const workers: Worker[] = [];
 
-  logger.info('Worker created successfully', {
-    taskQueue: config.taskQueue,
-    maxConcurrentActivities: config.maxConcurrentActivityTaskExecutions,
-    maxConcurrentWorkflows: config.maxConcurrentWorkflowTaskExecutions,
-  });
+  for (const taskQueue of config.taskQueues) {
+    const worker = await Worker.create({
+      connection,
+      namespace: config.temporalNamespace,
+      workflowsPath: new URL('./workflows/index.js', import.meta.url).pathname,
+      activities,
+      taskQueue,
+      maxConcurrentActivityTaskExecutions: config.maxConcurrentActivityTaskExecutions,
+      maxConcurrentWorkflowTaskExecutions: config.maxConcurrentWorkflowTaskExecutions,
+      debugMode: process.env.NODE_ENV === 'development',
+    });
 
-  return worker;
+    logger.info('Worker created successfully', {
+      taskQueue,
+      maxConcurrentActivities: config.maxConcurrentActivityTaskExecutions,
+      maxConcurrentWorkflows: config.maxConcurrentWorkflowTaskExecutions,
+    });
+
+    workers.push(worker);
+  }
+
+  return workers;
 }
 
 /**
  * Handle graceful shutdown
  */
-function setupGracefulShutdown(worker: Worker): void {
+function setupGracefulShutdown(workers: Worker[]): void {
   const shutdownHandler = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down gracefully...`);
     
     try {
-      await worker.shutdown();
+      await Promise.all(workers.map((worker) => worker.shutdown()));
       logger.info('Worker shutdown completed');
       process.exit(0);
     } catch (error) {
@@ -172,19 +187,19 @@ async function main(): Promise<void> {
     const config = getWorkerConfig();
     logger.info('Worker configuration', config);
 
-    // Create and start worker
-    const worker = await createWorker(config);
+    const workers = await createWorkers(config);
     
     // Setup graceful shutdown
-    setupGracefulShutdown(worker);
+    setupGracefulShutdown(workers);
     
     // Start health check server if enabled
     startHealthCheck();
 
-    logger.info('Worker starting...', { taskQueue: config.taskQueue });
-    
-    // Start the worker (this will run indefinitely)
-    await worker.run();
+    config.taskQueues.forEach((taskQueue) =>
+      logger.info('Worker starting...', { taskQueue })
+    );
+
+    await Promise.all(workers.map((worker) => worker.run()));
     
   } catch (error) {
     logger.error('Failed to start worker', { 
