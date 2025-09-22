@@ -20,7 +20,7 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
 setTypeParser(20, parseFloat);
 setTypeParser(1114, (str: string) => new Date(str + 'Z'));
 
-import { getSecret } from '@alga-psa/shared/core/index.js';
+import { getSecret } from '../core/getSecret.js';
 
 const getDbPassword = async () => await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
 const getPostgresPassword = async () => await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
