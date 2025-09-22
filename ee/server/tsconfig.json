@@ -5,13 +5,19 @@
     "noImplicitAny": false,
     "paths": {
       "@/*": [
-        "server/src/*"
+        "ee/server/src/*"
       ],
       "@ee": [
         "ee/server/src"
       ],
       "@ee/*": [
         "ee/server/src/*"
+      ],
+      "@main-test-utils": [
+        "server/test-utils"
+      ],
+      "@main-test-utils/*": [
+        "server/test-utils/*"
       ],
       "@shared": [
         "shared"
@@ -64,7 +70,6 @@
     "src/**/*.test.tsx",
     "src/**/*.spec.ts",
     "src/**/*.spec.tsx",
-    "src/**/*.playwright.test.ts",
-    "src/__tests__/**"
+    "src/**/*.playwright.test.ts"
   ]
 }
