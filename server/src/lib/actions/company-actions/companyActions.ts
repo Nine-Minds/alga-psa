@@ -649,9 +649,12 @@ export async function deleteCompany(companyId: string): Promise<{
 
       // Check for active projects (only blocker for projects)
       const projectCount = await trx('projects')
-        .join('project_statuses as ps', 'projects.status', 'ps.status_id')
+        .leftJoin('statuses', function() {
+          this.on('projects.status', '=', 'statuses.status_id')
+             .andOn('projects.tenant', '=', 'statuses.tenant')
+        })
         .where({ 'projects.company_id': companyId, 'projects.tenant': tenant })
-        .where('ps.is_closed', false)
+        .where('statuses.is_closed', false)
         .count('projects.project_id as count')
         .first();
       if (projectCount && Number(projectCount.count) > 0) {
@@ -719,10 +722,20 @@ export async function deleteCompany(companyId: string): Promise<{
         .delete();
 
       // Delete completed projects
-      await trx('projects')
-        .where({ company_id: companyId, tenant })
-        .whereIn('status', ['completed', 'cancelled', 'closed'])
-        .delete();
+      const completedProjectIds = await trx('projects')
+        .leftJoin('statuses', function() {
+          this.on('projects.status', '=', 'statuses.status_id')
+             .andOn('projects.tenant', '=', 'statuses.tenant')
+        })
+        .where({ 'projects.company_id': companyId, 'projects.tenant': tenant })
+        .where('statuses.is_closed', true)
+        .select('projects.project_id');
+
+      if (completedProjectIds.length > 0) {
+        await trx('projects')
+          .whereIn('project_id', completedProjectIds.map(p => p.project_id))
+          .delete();
+      }
 
       // Delete invoices
       await trx('invoices')
