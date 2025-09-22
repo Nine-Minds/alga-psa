@@ -6,12 +6,13 @@
 exports.up = function(knex) {
   return knex.schema
     .alterTable('tickets', function(table) {
-      // ITIL Impact and Urgency (1-5 scale) - kept for UI calculation
+      // ITIL Impact and Urgency (1-5 scale)
+      // These are kept for UI calculation and priority matrix determination
       table.integer('itil_impact').nullable().comment('ITIL Impact level (1=High, 5=Low)');
       table.integer('itil_urgency').nullable().comment('ITIL Urgency level (1=High, 5=Low)');
 
-      // NOTE: itil_category, itil_subcategory, and itil_priority_level fields removed
-      // ITIL tickets now use standard priority_id and category_id fields like custom tickets
+      // Calculated ITIL priority level (1-5) based on impact/urgency matrix
+      table.integer('itil_priority_level').nullable().comment('Calculated ITIL priority (1=Critical, 5=Planning)');
 
       // Resolution and Root Cause
       table.text('resolution_code').nullable().comment('How the incident was resolved');
@@ -34,33 +35,16 @@ exports.up = function(knex) {
       // Add constraints with explicit names
       table.check('itil_impact >= 1 AND itil_impact <= 5', [], 'tickets_itil_impact_check');
       table.check('itil_urgency >= 1 AND itil_urgency <= 5', [], 'tickets_itil_urgency_check');
+      table.check('itil_priority_level >= 1 AND itil_priority_level <= 5', [], 'tickets_itil_priority_level_check');
       table.check('escalation_level >= 1 AND escalation_level <= 3', [], 'tickets_escalation_level_check');
 
       // Add indexes for performance
       table.index(['itil_impact']);
       table.index(['itil_urgency']);
+      table.index(['itil_priority_level']);
       table.index(['sla_breach']);
       table.index(['escalated']);
       table.index(['escalation_level']);
-
-      // Note: Foreign key for escalated_by removed due to constraint issues
-      // The escalated_by field will still work as a reference, just without DB-level enforcement
-    })
-    // Add ITIL standard flags to standard tables
-    .alterTable('standard_priorities', function(table) {
-      table.boolean('is_itil_standard').defaultTo(false).comment('Whether this is an ITIL standard priority');
-      table.integer('itil_priority_level').nullable().comment('ITIL priority level (1-5) for mapping');
-    })
-    .alterTable('standard_categories', function(table) {
-      table.boolean('is_itil_standard').defaultTo(false).comment('Whether this is an ITIL standard category');
-    })
-    .alterTable('standard_channels', function(table) {
-      table.boolean('supports_itil_priority').defaultTo(false).comment('Whether channel supports ITIL priority methodology');
-      table.boolean('supports_itil_categories').defaultTo(false).comment('Whether channel supports ITIL categories');
-    })
-    .alterTable('channels', function(table) {
-      table.boolean('supports_itil_priority').defaultTo(false).comment('Whether channel supports ITIL priority methodology');
-      table.boolean('supports_itil_categories').defaultTo(false).comment('Whether channel supports ITIL categories');
     });
 };
 
@@ -74,11 +58,13 @@ exports.down = function(knex) {
       // Drop check constraints
       table.dropChecks(['tickets_itil_impact_check']);
       table.dropChecks(['tickets_itil_urgency_check']);
+      table.dropChecks(['tickets_itil_priority_level_check']);
       table.dropChecks(['tickets_escalation_level_check']);
 
       // Drop indexes
       table.dropIndex(['itil_impact']);
       table.dropIndex(['itil_urgency']);
+      table.dropIndex(['itil_priority_level']);
       table.dropIndex(['sla_breach']);
       table.dropIndex(['escalated']);
       table.dropIndex(['escalation_level']);
@@ -86,6 +72,7 @@ exports.down = function(knex) {
       // Drop columns
       table.dropColumn('itil_impact');
       table.dropColumn('itil_urgency');
+      table.dropColumn('itil_priority_level');
       table.dropColumn('resolution_code');
       table.dropColumn('root_cause');
       table.dropColumn('workaround');
@@ -96,21 +83,5 @@ exports.down = function(knex) {
       table.dropColumn('escalation_level');
       table.dropColumn('escalated_at');
       table.dropColumn('escalated_by');
-    })
-    // Remove ITIL flags from standard tables
-    .alterTable('standard_priorities', function(table) {
-      table.dropColumn('is_itil_standard');
-      table.dropColumn('itil_priority_level');
-    })
-    .alterTable('standard_categories', function(table) {
-      table.dropColumn('is_itil_standard');
-    })
-    .alterTable('standard_channels', function(table) {
-      table.dropColumn('supports_itil_priority');
-      table.dropColumn('supports_itil_categories');
-    })
-    .alterTable('channels', function(table) {
-      table.dropColumn('supports_itil_priority');
-      table.dropColumn('supports_itil_categories');
     });
 };

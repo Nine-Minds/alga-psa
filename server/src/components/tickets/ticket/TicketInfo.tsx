@@ -72,7 +72,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     priority_type: 'custom',
     display_itil_impact: false,
     display_itil_urgency: false,
-    display_itil_category: false,
   });
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(ticket.title);
@@ -192,7 +191,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           priority_type: 'custom',
           display_itil_impact: false,
           display_itil_urgency: false,
-          display_itil_category: false,
         });
       }
     };
@@ -429,7 +427,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 <div className="w-fit">
                   <CategoryPicker
                     id={`${id}-category-picker`}
-                    categories={channelConfig.category_type === 'custom' ? categories.filter(c => !c.is_itil) : categories.filter(c => c.is_itil)}
+                    categories={categories}
                     selectedCategories={[getSelectedCategoryId()]}
                     onSelect={handleCategoryChange}
                     placeholder={channelConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}

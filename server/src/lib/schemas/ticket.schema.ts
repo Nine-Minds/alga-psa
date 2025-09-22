@@ -12,14 +12,10 @@ export const ticketFormSchema = z.object({
     description: z.string(),
     category_id: z.string().uuid().nullable(),
     subcategory_id: z.string().uuid().nullable(),
-    // ITIL-specific fields (for UI calculation only)
+    // ITIL-specific fields (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).optional(),
     itil_urgency: z.number().int().min(1).max(5).optional(),
-    resolution_code: z.string().optional(),
-    root_cause: z.string().optional(),
-    workaround: z.string().optional(),
-    related_problem_id: z.string().uuid().nullable().optional(),
-    sla_target: z.string().optional(),
+    itil_priority_level: z.number().int().min(1).max(5).optional(),
 });
 
 export const createTicketFromAssetSchema = z.object({
@@ -52,19 +48,10 @@ export const ticketSchema = z.object({
     closed_at: z.string().nullable(),
     attributes: z.record(z.unknown()).nullable(),
     priority_id: z.string().uuid().nullable(), // Used for both custom and ITIL priorities
-    // ITIL-specific fields (for UI calculation only)
+    // ITIL-specific fields (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
-    resolution_code: z.string().nullable().optional(),
-    root_cause: z.string().nullable().optional(),
-    workaround: z.string().nullable().optional(),
-    related_problem_id: z.string().uuid().nullable().optional(),
-    sla_target: z.string().nullable().optional(),
-    sla_breach: z.boolean().nullable().optional(),
-    escalated: z.boolean().nullable().optional(),
-    escalation_level: z.number().int().min(1).max(3).nullable().optional(),
-    escalated_at: z.string().nullable().optional(),
-    escalated_by: z.string().uuid().nullable().optional()
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -114,19 +101,10 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     company_name: z.string(),
     entered_by_name: z.string(),
     assigned_to_name: z.string().nullable(),
-    // ITIL-specific fields for list items (for UI calculation only)
+    // ITIL-specific fields for list items (for priority calculation)
     itil_impact: z.number().int().min(1).max(5).nullable().optional(),
     itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
-    resolution_code: z.string().nullable().optional(),
-    root_cause: z.string().nullable().optional(),
-    workaround: z.string().nullable().optional(),
-    related_problem_id: z.string().uuid().nullable().optional(),
-    sla_target: z.string().nullable().optional(),
-    sla_breach: z.boolean().nullable().optional(),
-    escalated: z.boolean().nullable().optional(),
-    escalation_level: z.number().int().min(1).max(3).nullable().optional(),
-    escalated_at: z.string().nullable().optional(),
-    escalated_by: z.string().uuid().nullable().optional()
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
 });
 
 export const ticketListFiltersSchema = z.object({

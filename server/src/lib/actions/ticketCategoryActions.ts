@@ -130,6 +130,18 @@ export async function deleteTicketCategory(categoryId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+    // Check if this is an ITIL standard category (immutable)
+    const category = await trx('categories')
+      .where({
+        tenant,
+        category_id: categoryId
+      })
+      .first();
+
+    if (category?.is_from_itil_standard) {
+      throw new Error('ITIL standard categories cannot be deleted');
+    }
+
     // Check if category has subcategories
     const hasSubcategories = await trx('categories')
       .where({
@@ -193,6 +205,17 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+    // Check if this is an ITIL standard category (immutable)
+    const existingCategory = await trx('categories')
+      .where({
+        tenant,
+        category_id: categoryId
+      })
+      .first();
+
+    if (existingCategory?.is_from_itil_standard) {
+      throw new Error('ITIL standard categories cannot be edited');
+    }
     // Check if new name conflicts with existing category in the same channel
     if (categoryData.category_name) {
       const existingCategory = await trx('categories')
@@ -277,48 +300,18 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
         display_itil_urgency: channel.display_itil_urgency || false,
       };
 
-      // If channel uses ITIL categories, fetch ITIL categories from standard_categories
-      if (channelConfig.category_type === 'itil') {
-        const itilCategories = await trx('standard_categories')
-          .where('is_itil_standard', true)
-          .orderBy('category_name');
-
-        // Map standard_categories fields to match the expected ITicketCategory interface
-        const mappedCategories = itilCategories.map(cat => ({
-          category_id: cat.id,                          // Map id -> category_id
-          category_name: cat.category_name,
-          parent_category: cat.parent_category_uuid,    // Map parent_category_uuid -> parent_category
-          description: cat.description,
-          display_order: cat.display_order,
-          created_at: cat.created_at,
-          updated_at: cat.updated_at,
-          is_itil: true                                 // Add the filtering flag
-        }));
-
-        // Apply the same hierarchical ordering as custom categories
-        const orderedItilCategories = await orderCategoriesHierarchically(mappedCategories);
-
-        return {
-          categories: orderedItilCategories,
-          channelConfig
-        };
-      }
-
-      // Get all custom categories for the channel ordered by name
-      const categories = await trx<ITicketCategory>('categories')
+      // Fetch categories for this channel from tenant's categories table
+      // (ITIL categories are copied to tenant table when channel is configured for ITIL)
+      const categories = await trx('categories')
         .where('tenant', tenant!)
         .where('channel_id', channelId)
         .orderBy('category_name');
 
-      // Order them hierarchically and mark as custom categories
+      // Apply hierarchical ordering
       const orderedCategories = await orderCategoriesHierarchically(categories);
-      const categoriesWithFlag = orderedCategories.map(cat => ({
-        ...cat,
-        is_itil: false
-      }));
 
       return {
-        categories: categoriesWithFlag,
+        categories: orderedCategories,
         channelConfig
       };
     } catch (error) {

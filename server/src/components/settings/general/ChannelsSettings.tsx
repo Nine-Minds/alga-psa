@@ -20,6 +20,7 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Switch } from 'server/src/components/ui/Switch';
+import CustomSelect from 'server/src/components/ui/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -430,15 +431,16 @@ const ChannelsSettings: React.FC = () => {
 
               <div>
                 <Label htmlFor="category_type">Category Type</Label>
-                <select
-                  id="category_type"
+                <CustomSelect
                   value={formData.category_type}
-                  onChange={(e) => setFormData({ ...formData, category_type: e.target.value as CategoryType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="custom">Custom Categories</option>
-                  <option value="itil">ITIL Categories</option>
-                </select>
+                  onValueChange={(value) => setFormData({ ...formData, category_type: value as CategoryType })}
+                  options={[
+                    { value: 'custom', label: 'Custom Categories' },
+                    { value: 'itil', label: 'ITIL Categories' }
+                  ]}
+                  placeholder="Select category type"
+                  className="w-full"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board uses custom categories or ITIL-based categorization.
                 </p>
@@ -446,15 +448,16 @@ const ChannelsSettings: React.FC = () => {
 
               <div>
                 <Label htmlFor="priority_type">Priority Type</Label>
-                <select
-                  id="priority_type"
+                <CustomSelect
                   value={formData.priority_type}
-                  onChange={(e) => setFormData({ ...formData, priority_type: e.target.value as PriorityType })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="custom">Custom Priorities</option>
-                  <option value="itil">ITIL Priorities (Impact × Urgency)</option>
-                </select>
+                  onValueChange={(value) => setFormData({ ...formData, priority_type: value as PriorityType })}
+                  options={[
+                    { value: 'custom', label: 'Custom Priorities' },
+                    { value: 'itil', label: 'ITIL Priorities (Impact × Urgency)' }
+                  ]}
+                  placeholder="Select priority type"
+                  className="w-full"
+                />
                 <p className="text-xs text-muted-foreground mt-1">
                   Choose whether this board uses custom priorities or ITIL-based priority calculation from Impact and Urgency.
                 </p>

@@ -782,11 +782,9 @@ export async function getTicketFormOptions(user: IUser) {
     // Fetch all options in parallel
     const [
       statuses,
-      customPriorities,
-      itilPriorities,
+      priorities,
       channels,
-      customCategories,
-      itilCategories,
+      categories,
       companies,
       users,
       tags
@@ -799,28 +797,20 @@ export async function getTicketFormOptions(user: IUser) {
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
 
-      // Custom priorities - fetch only tenant-specific ticket priorities
+      // Fetch only tenant-specific ticket priorities (includes ITIL ones copied to tenant)
       trx('priorities')
         .where({ tenant, item_type: 'ticket' })
+        .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc'),
-
-      // ITIL priorities - fetch from standard_priorities
-      trx('standard_priorities')
-        .where({ is_itil_standard: true, item_type: 'ticket' })
-        .orderBy('order_number', 'asc'),
       
       trx('channels')
         .where({ tenant })
         .orderBy('channel_name', 'asc'),
 
-      // Custom categories - fetch only tenant-specific categories
+      // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
       trx('categories')
         .where({ tenant })
-        .orderBy('category_name', 'asc'),
-
-      // ITIL categories - fetch from standard_categories
-      trx('standard_categories')
-        .where({ is_itil_standard: true })
+        .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
       trx('companies as c')
@@ -850,27 +840,11 @@ export async function getTicketFormOptions(user: IUser) {
       }))
     ];
 
-    // Combine custom and ITIL priorities
-    const allPriorities = [
-      ...customPriorities.map((priority: any) => ({
-        value: priority.priority_id,
-        label: priority.priority_name,
-        color: priority.color,
-        is_itil: false
-      })),
-      ...itilPriorities.map((priority: any) => ({
-        value: priority.priority_id,
-        label: priority.priority_name,
-        color: priority.color,
-        is_itil: true
-      }))
-    ];
-
     const priorityOptions = [
       { value: 'all', label: 'All Priorities' },
-      ...allPriorities.map((priority: any) => ({
-        value: priority.value,
-        label: priority.label,
+      ...priorities.map((priority: any) => ({
+        value: priority.priority_id,
+        label: priority.priority_name,
         color: priority.color
       }))
     ];
@@ -899,24 +873,14 @@ export async function getTicketFormOptions(user: IUser) {
     });
     // --- End Logo URL Processing ---
 
-    // Combine custom and ITIL categories
-    const allCategories = [
-      ...customCategories.map((category: any) => ({
-        ...category,
-        is_itil: false
-      })),
-      ...itilCategories.map((category: any) => ({
-        ...category,
-        is_itil: true
-      }))
-    ];
+    // Use tenant categories directly (includes ITIL ones if copied)
 
     return {
       statusOptions,
       priorityOptions,
       channelOptions,
       agentOptions,
-      categories: allCategories,
+      categories,
       companies: companiesWithLogos, // Return companies with logos
       users,
       tags: Array.isArray(tags) ? tags.map((tag: any) => tag.tag_text) : [] // Return unique tag texts

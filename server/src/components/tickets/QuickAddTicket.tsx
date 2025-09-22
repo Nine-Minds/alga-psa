@@ -27,7 +27,6 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
-import { ItilFields } from './ItilFields';
 import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
@@ -122,9 +121,6 @@ export function QuickAddTicket({
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
   const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
   const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
-  const [resolutionCode, setResolutionCode] = useState<string>('');
-  const [rootCause, setRootCause] = useState<string>('');
-  const [workaround, setWorkaround] = useState<string>('');
 
   // Calculate ITIL priority when impact and urgency are set
   const calculatedItilPriority = useMemo(() => {
@@ -272,13 +268,6 @@ export function QuickAddTicket({
       if (channelId) {
         try {
           const data = await getTicketCategoriesByChannel(channelId);
-          console.log('QuickAddTicket received:', {
-            data,
-            categoriesType: Array.isArray(data?.categories) ? 'array' : typeof data?.categories,
-            categoriesLength: data?.categories?.length,
-            channelConfig: data?.channelConfig,
-            priority_type: data?.channelConfig?.priority_type
-          });
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories && Array.isArray(data.categories)) {
             setCategories(data.categories);
@@ -358,28 +347,6 @@ export function QuickAddTicket({
     clearErrorIfSubmitted();
   };
 
-  const handleItilFieldChange = (field: string, value: any) => {
-    switch (field) {
-      case 'itil_impact':
-        setItilImpact(value);
-        break;
-      case 'itil_urgency':
-        setItilUrgency(value);
-        break;
-      // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
-      case 'resolution_code':
-        setResolutionCode(value);
-        break;
-      case 'root_cause':
-        setRootCause(value);
-        break;
-      case 'workaround':
-        setWorkaround(value);
-        break;
-    }
-    clearErrorIfSubmitted();
-  };
-
 
   const resetForm = () => {
     setTitle('');
@@ -406,9 +373,6 @@ export function QuickAddTicket({
     setItilImpact(undefined);
     setItilUrgency(undefined);
     setShowPriorityMatrix(false);
-    setResolutionCode('');
-    setRootCause('');
-    setWorkaround('');
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -511,15 +475,6 @@ export function QuickAddTicket({
 
       // ITIL categories now use the unified category system
       // The selected ITIL category ID is already in selectedCategories/categoryId
-      if (resolutionCode) {
-        formData.append('resolution_code', resolutionCode);
-      }
-      if (rootCause) {
-        formData.append('root_cause', rootCause);
-      }
-      if (workaround) {
-        formData.append('workaround', workaround);
-      }
 
       const newTicket = await addTicket(formData, user);
       if (!newTicket) {
@@ -704,7 +659,7 @@ export function QuickAddTicket({
                   {channelId && channelConfig.category_type && (
                     <CategoryPicker
                       id={`${id}-category-picker`}
-                      categories={channelConfig.category_type === 'custom' ? categories.filter(c => !c.is_itil) : categories.filter(c => c.is_itil)}
+                      categories={categories}
                       selectedCategories={selectedCategories}
                       onSelect={(categoryIds) => {
                         setSelectedCategories(categoryIds);

@@ -71,12 +71,15 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
       }];
     }
 
+    // Filter out any categories without proper names
+    const validCategories = categories.filter(c => c.category_name && c.category_name.trim() !== '');
+
     // First, separate parents and children
-    const parentCategories = categories.filter(c => !c.parent_category);
+    const parentCategories = validCategories.filter(c => !c.parent_category);
     const childrenMap = new Map<string, ITicketCategory[]>();
     
     // Group children by parent
-    categories.filter(c => c.parent_category).forEach((child: ITicketCategory): void => {
+    validCategories.filter(c => c.parent_category).forEach((child: ITicketCategory): void => {
       if (!childrenMap.has(child.parent_category!)) {
         childrenMap.set(child.parent_category!, []);
       }
@@ -85,13 +88,23 @@ export const CategoryPicker: React.FC<CategoryPickerProps & AutomationProps> = (
 
     // Transform into tree structure with selected and excluded states
     const categoryOptions = parentCategories.map((parent: ITicketCategory): TreeSelectOption<CategoryType> => ({
-      label: parent.category_name,
+      label: parent.is_from_itil_standard ? (
+        <span className="flex items-center gap-1">
+          {parent.category_name}
+          <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+        </span>
+      ) : parent.category_name,
       value: parent.category_id,
       type: 'parent' as CategoryType,
       selected: selectedCategories.includes(parent.category_id),
       excluded: excludedCategories.includes(parent.category_id),
       children: childrenMap.get(parent.category_id)?.map((child: ITicketCategory): TreeSelectOption<CategoryType> => ({
-        label: child.category_name,
+        label: child.is_from_itil_standard ? (
+          <span className="flex items-center gap-1">
+            {child.category_name}
+            <span className="px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+          </span>
+        ) : child.category_name,
         value: child.category_id,
         type: 'child' as CategoryType,
         selected: selectedCategories.includes(child.category_id),

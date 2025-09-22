@@ -1283,8 +1283,6 @@ const handleClose = () => {
                                     onItilFieldChange={handleItilFieldChange}
                                     itilImpact={itilImpact}
                                     itilUrgency={itilUrgency}
-                                    itilCategory={itilCategory}
-                                    itilSubcategory={itilSubcategory}
                                 />
                             </div>
                         </Suspense>

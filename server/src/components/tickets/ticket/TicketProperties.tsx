@@ -743,65 +743,6 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
         </div>
       </div>
 
-      {/* ITIL Resolution Fields - Only show when ticket is closed */}
-      {ticket.closed_at && (
-        <div className={`${styles['card']} p-6 space-y-4`}>
-          <h2 className={`${styles['panel-header']}`}>Resolution Details</h2>
-          <div className="space-y-4">
-            {/* Resolution Code */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Resolution Code
-              </label>
-              <select
-                value={ticket.resolution_code || ''}
-                onChange={(e) => onItilFieldChange && onItilFieldChange('resolution_code', e.target.value)}
-                disabled={!onItilFieldChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-              >
-                <option value="">Select Resolution Code</option>
-                <option value="Fixed">Fixed</option>
-                <option value="Workaround">Workaround</option>
-                <option value="No Action Required">No Action Required</option>
-                <option value="Duplicate">Duplicate</option>
-                <option value="Cannot Reproduce">Cannot Reproduce</option>
-                <option value="User Error">User Error</option>
-                <option value="Known Issue">Known Issue</option>
-              </select>
-            </div>
-
-            {/* Root Cause */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Root Cause
-              </label>
-              <textarea
-                value={ticket.root_cause || ''}
-                onChange={(e) => onItilFieldChange && onItilFieldChange('root_cause', e.target.value)}
-                disabled={!onItilFieldChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                placeholder="Describe the root cause of the incident..."
-              />
-            </div>
-
-            {/* Workaround */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Workaround
-              </label>
-              <textarea
-                value={ticket.workaround || ''}
-                onChange={(e) => onItilFieldChange && onItilFieldChange('workaround', e.target.value)}
-                disabled={!onItilFieldChange}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                placeholder="Describe any temporary workarounds provided..."
-              />
-            </div>
-          </div>
-        </div>
-      )}
 
     </div>
   );

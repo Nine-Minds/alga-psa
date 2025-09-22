@@ -298,6 +298,11 @@ const CategoriesSettings: React.FC = () => {
           <span className={`text-gray-700 font-medium ${record.parent_category ? '' : 'font-semibold'}`}>
             {value}
           </span>
+          {record.is_from_itil_standard && (
+            <span className="ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">
+              ITIL
+            </span>
+          )}
         </div>
       ),
     },
@@ -339,33 +344,42 @@ const CategoriesSettings: React.FC = () => {
       title: 'Actions',
       dataIndex: 'category_id',
       width: '10%',
-      render: (value: string, record: ITicketCategory) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              id={`edit-category-${value}-button`}
-              onClick={() => startEditing(record)}>
-              Edit
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              id={`delete-category-${value}-button`}
-              onClick={() => setDeleteDialog({
-                isOpen: true,
-                categoryId: value,
-                categoryName: record.category_name
-              })}
-              className="text-red-600"
-            >
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      render: (value: string, record: ITicketCategory) => {
+        // ITIL imported categories cannot be edited or deleted
+        if (record.is_from_itil_standard) {
+          return (
+            <span className="text-xs text-gray-400">Protected</span>
+          );
+        }
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button id={`category-${value}-actions-button`} variant="ghost" className="h-8 w-8 p-0">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={`edit-category-${value}-button`}
+                onClick={() => startEditing(record)}>
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                id={`delete-category-${value}-button`}
+                onClick={() => setDeleteDialog({
+                  isOpen: true,
+                  categoryId: value,
+                  categoryName: record.category_name
+                })}
+                className="text-red-600"
+              >
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
     },
   ];
 

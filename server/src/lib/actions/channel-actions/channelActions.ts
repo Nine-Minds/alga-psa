@@ -5,6 +5,8 @@ import Channel from '../../models/channel';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
+import { ItilStandardsService } from '../../services/itilStandardsService';
+import { getCurrentUser } from '../user-actions/userActions';
 
 export interface FindChannelByNameOutput {
   id: string;
@@ -46,6 +48,15 @@ export async function getAllChannels(includeAll: boolean = true): Promise<IChann
 
 export async function createChannel(channelData: Omit<IChannel, 'channel_id' | 'tenant'>): Promise<IChannel> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // If no display_order provided, get the next available order
@@ -83,10 +94,22 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
           is_default: isDefault,
           category_type: channelData.category_type || 'custom',
           priority_type: channelData.priority_type || 'custom',
+          display_itil_impact: channelData.display_itil_impact || false,
+          display_itil_urgency: channelData.display_itil_urgency || false,
           tenant
         })
         .returning('*');
-      
+
+      // If ITIL types are configured, copy the standards to tenant tables
+      await ItilStandardsService.handleItilConfiguration(
+        trx,
+        tenant,
+        user.user_id,
+        newChannel.channel_id,
+        channelData.category_type,
+        channelData.priority_type
+      );
+
       return newChannel;
     });
   } catch (error) {
@@ -116,8 +139,26 @@ export async function deleteChannel(channelId: string): Promise<boolean> {
 
 export async function updateChannel(channelId: string, channelData: Partial<Omit<IChannel, 'tenant'>>): Promise<IChannel> {
   const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get the current channel to check for ITIL type changes
+      const currentChannel = await trx('channels')
+        .where({ channel_id: channelId, tenant })
+        .first();
+
+      if (!currentChannel) {
+        throw new Error('Board not found');
+      }
+
       // If setting as default, unset all other defaults first
       if (channelData.is_default === true) {
         await trx('channels')
@@ -125,16 +166,34 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
           .whereNot('channel_id', channelId)
           .update({ is_default: false });
       }
-      
+
       const [updatedChannel] = await trx('channels')
         .where({ channel_id: channelId, tenant })
         .update(channelData)
         .returning('*');
-      
-      if (!updatedChannel) {
-        throw new Error('Board not found');
+
+      // Handle ITIL type changes
+      const categoryTypeChanged = channelData.category_type && channelData.category_type !== currentChannel.category_type;
+      const priorityTypeChanged = channelData.priority_type && channelData.priority_type !== currentChannel.priority_type;
+
+      if (categoryTypeChanged || priorityTypeChanged) {
+        // If switching to ITIL, copy the standards
+        await ItilStandardsService.handleItilConfiguration(
+          trx,
+          tenant,
+          user.user_id,
+          channelId,
+          channelData.category_type || currentChannel.category_type,
+          channelData.priority_type || currentChannel.priority_type
+        );
+
+        // If switching away from ITIL, clean up unused standards
+        if ((categoryTypeChanged && currentChannel.category_type === 'itil') ||
+            (priorityTypeChanged && currentChannel.priority_type === 'itil')) {
+          await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
+        }
       }
-      
+
       return updatedChannel;
     });
   } catch (error) {
