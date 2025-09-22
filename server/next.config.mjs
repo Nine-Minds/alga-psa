@@ -31,8 +31,7 @@ class LogModuleResolutionPlugin {
         try {
           if (!data) return;
           const req = data.request || '';
-          if (req.startsWith('@ee') || req.includes('ee/server/src')) {
-            // Minimal, structured log for clarity during iteration
+          if (process.env.LOG_MODULE_RESOLUTION === '1' && (req.startsWith('@ee') || req.includes('ee/server/src'))) {
             console.log('[resolve:before]', {
               request: req,
               issuer: data.contextInfo?.issuer,
@@ -47,7 +46,7 @@ class LogModuleResolutionPlugin {
           const req = result.createData?.request || result.request || result.rawRequest || '';
           const res = result.resource || '';
           const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/server/src/empty/');
-          if (!hit) return;
+          if (!hit || process.env.LOG_MODULE_RESOLUTION !== '1') return;
           const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/server/src/empty/') ? 'CE-stub' : 'unknown');
           console.log('[resolve:after]', {
             request: req,
@@ -76,6 +75,12 @@ class EditionBuildDiagnosticsPlugin {
   }
 
   apply(compiler) {
+    const shouldLog = String(process.env.LOG_EDITION_DIAGNOSTICS || '').toLowerCase();
+    const enabled = shouldLog === '1' || shouldLog === 'true';
+    if (!enabled) {
+      return;
+    }
+
     compiler.hooks.beforeCompile.tap('EditionBuildDiagnosticsPlugin', () => {
       const editionSnapshot = {
         EDITION: process.env.EDITION,
