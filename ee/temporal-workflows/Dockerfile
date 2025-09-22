@@ -12,6 +12,8 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows
 COPY tsconfig.base.json /app/tsconfig.base.json
 
 WORKDIR /app/ee/temporal-workflows
+# Install global build tooling required by shared package scripts
+RUN npm install -g typescript
 # Install dependencies (skip prepare scripts to avoid building shared during base stage)
 RUN npm install --ignore-scripts
 
