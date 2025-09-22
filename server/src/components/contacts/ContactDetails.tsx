@@ -9,7 +9,8 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
-import { ExternalLink, Pencil } from 'lucide-react';
+import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -21,7 +22,7 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { updateContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { updateContact, deleteContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from 'server/src/hooks/use-toast';
@@ -212,6 +213,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [countries, setCountries] = useState<ICountry[]>([]);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [countryCode, setCountryCode] = useState(() => {
     // Enterprise locale detection
     try {
@@ -376,6 +379,28 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
       [field]: value
     }));
     setHasUnsavedChanges(true);
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteContact(editedContact.contact_name_id);
+      toast({
+        title: "Contact Deleted",
+        description: "Contact has been deleted successfully.",
+      });
+      setIsDeleteDialogOpen(false);
+      router.push('/msp/contacts');
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      toast({
+        title: "Delete Failed",
+        description: "Could not delete contact. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -676,6 +701,15 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             >
               Save Changes
             </Button>
+            <Button
+              id="delete-contact-btn"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Contact
+            </Button>
           </Flex>
         </div>
       )
@@ -804,6 +838,19 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           tabs={quickView ? [tabContent[0]] : tabContent}
           defaultTab={findTabLabel(searchParams?.get('tab'))}
           onTabChange={handleTabChange}
+        />
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-contact-confirmation-dialog"
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={handleDelete}
+          title="Delete Contact"
+          message={`Are you sure you want to delete "${editedContact.full_name}"? This action cannot be undone and will remove all associated data.`}
+          confirmLabel={isDeleting ? 'Deleting...' : 'Delete Contact'}
+          cancelLabel="Cancel"
+          isConfirming={isDeleting}
         />
       </div>
     </ReflectionContainer>

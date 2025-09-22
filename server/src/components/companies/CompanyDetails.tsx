@@ -15,16 +15,16 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateTaxId, validateParentCompany, validateLastContactDate, validatePaymentTerms } from 'server/src/lib/utils/clientFormValidation';
+import { validateCompanyName, validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateTaxId, validateParentCompany, validateLastContactDate, validatePaymentTerms } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, deleteCompany, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -56,6 +56,7 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { CompanyLanguagePreference } from './CompanyLanguagePreference';
 import { useTranslation } from '@/lib/i18n/client';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 
 const SwitchDetailItem: React.FC<{
@@ -215,6 +216,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
@@ -455,6 +458,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       // Compare with original company to determine if there are unsaved changes
       return JSON.stringify(tempCompany) !== JSON.stringify(company);
     });
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteCompany(company.company_id);
+      toast.success('Company deleted successfully');
+      setIsDeleteDialogOpen(false);
+      router.push('/msp/companies');
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      toast.error('Failed to delete company. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleSave = async () => {
@@ -778,6 +796,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               variant="default"
             >
               Add Ticket
+            </Button>
+            <Button
+              id="delete-company-btn"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Company
             </Button>
           </Flex>
         </div>
@@ -1119,6 +1146,19 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-company-confirmation-dialog"
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={handleDelete}
+          title="Delete Company"
+          message={`Are you sure you want to delete "${editedCompany.company_name}"? This action cannot be undone and will remove all associated data.`}
+          confirmLabel={isDeleting ? 'Deleting...' : 'Delete Company'}
+          cancelLabel="Cancel"
+          isConfirming={isDeleting}
+        />
       </div>
     </ReflectionContainer>
   );
