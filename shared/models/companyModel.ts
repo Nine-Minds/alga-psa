@@ -13,7 +13,7 @@ import {
   UpdateCompanyInput, 
   CompanyCreationOptions 
 } from '../interfaces/company.interfaces.js';
-import { ValidationResult } from '../interfaces/validation.interfaces.js';
+import { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION SCHEMAS

@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { WorkflowStateSnapshot } from '../core/workflowEventSourcing.js';
+import { WorkflowStateSnapshot } from '../core/workflowEventSourcing';
 import { logger } from '@alga-psa/shared/core';
 
 /**

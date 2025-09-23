@@ -1,7 +1,7 @@
 /**
  * Interfaces for the Task Inbox system
  */
-import { WorkflowTaskStatus } from './workflowTaskModel.js';
+import { WorkflowTaskStatus } from './workflowTaskModel';
 
 /**
  * Task creation parameters

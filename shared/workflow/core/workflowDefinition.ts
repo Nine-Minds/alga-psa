@@ -1,4 +1,4 @@
-import { WorkflowFunction } from './workflowContext.js';
+import { WorkflowFunction } from './workflowContext';
 import { logger } from '@alga-psa/shared/core';
 // Ensure TypeScript loads correctly under ESM <-> CJS interop
 // When importing a CommonJS module (TypeScript) from ESM, the exports land on `default`

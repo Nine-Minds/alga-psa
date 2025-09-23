@@ -8,10 +8,10 @@
  * 3. Ticket creation in the database
  */
 
-import { TestOrchestrator } from './lib/test-orchestrator.js';
-import { EmailProcessor } from './lib/email-processor.js';
-import { WorkflowValidator } from './lib/workflow-validator.js';
-import { DatabaseValidator } from './lib/database-validator.js';
+import { TestOrchestrator } from './lib/test-orchestrator';
+import { EmailProcessor } from './lib/email-processor';
+import { WorkflowValidator } from './lib/workflow-validator';
+import { DatabaseValidator } from './lib/database-validator';
 
 class E2ETestSuite {
   constructor() {

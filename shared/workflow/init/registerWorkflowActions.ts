@@ -4,9 +4,9 @@
  * from both the server and the workflow-worker
  */
 
-import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index.js';
+import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
 import { logger } from '@alga-psa/shared/core';
-import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService.js';
+import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
 

@@ -1,9 +1,9 @@
 import { Worker, NativeConnection } from '@temporalio/worker';
 import { createLogger, format, transports } from 'winston';
-import * as activities from './activities/index.js';
+import * as activities from './activities/index';
 import * as dotenv from 'dotenv';
 import express from 'express';
-import { validateStartup, logConfiguration } from './config/startupValidation.js';
+import { validateStartup, logConfiguration } from './config/startupValidation';
 
 // Load environment variables
 dotenv.config();

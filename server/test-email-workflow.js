@@ -3,7 +3,7 @@
  * This bypasses MailHog polling and directly triggers the EmailProcessor
  */
 
-import { EmailProcessor } from './src/services/email/EmailProcessor.js';
+import { EmailProcessor } from './src/services/email/EmailProcessor';
 
 async function testEmailProcessing() {
   console.log('🧪 Testing email processing workflow directly...');

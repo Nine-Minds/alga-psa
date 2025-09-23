@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { IWorkflowSyncPoint } from './workflowInterfaces.js';
-import { withTransaction } from '@alga-psa/shared/db/index.js';
+import { IWorkflowSyncPoint } from './workflowInterfaces';
+import { withTransaction } from '@alga-psa/shared/db/index';
 
 /**
  * Model for workflow_sync_points table
