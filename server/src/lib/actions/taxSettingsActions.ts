@@ -7,6 +7,8 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
+import { getCurrentUser } from './user-actions/userActions';
+import { hasPermission } from 'server/src/lib/auth/rbac';
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
     const { knex: db, tenant } = await createTenantKnex();
@@ -201,8 +203,18 @@ export async function updateTaxRegion(
   region_code: string,
   data: { region_code?: string; region_name?: string; is_active?: boolean }
 ): Promise<ITaxRegion> {
-  const { knex, tenant } = await createTenantKnex();
-  const updateData: Partial<Pick<ITaxRegion, 'region_code' | 'region_name' | 'is_active'>> = {};
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      throw new Error('No authenticated user found');
+    }
+
+    if (!await hasPermission(currentUser, 'billing', 'update')) {
+      throw new Error('Permission denied: Cannot update tax regions');
+    }
+
+    const { knex, tenant } = await createTenantKnex();
+    const updateData: Partial<Pick<ITaxRegion, 'region_code' | 'region_name' | 'is_active'>> = {};
 
   if (data.region_code !== undefined) {
     updateData.region_code = data.region_code;
@@ -229,7 +241,6 @@ export async function updateTaxRegion(
   }
 
 
-  try {
     // If updating the region_code, check for uniqueness
     if (data.region_code !== undefined && data.region_code !== region_code) {
       const existingRegion = await knex<ITaxRegion>('tax_regions')
@@ -255,10 +266,13 @@ export async function updateTaxRegion(
     return updatedRegion;
   } catch (error) {
     console.error('Error updating tax region:', error);
-     if (error instanceof Error) {
-       if (error.message.includes('not found')) {
-         throw error; // Re-throw the specific not found error
-       }
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        throw error; // Re-throw the specific not found error
+      }
+      if (error.message.includes('Permission denied')) {
+        throw error; // Re-throw permission errors
+      }
       throw new Error(`Failed to update tax region: ${error.message}`);
     } else {
       throw new Error('Failed to update tax region due to an unexpected error.');
