@@ -7,7 +7,7 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
-import { getCurrentUser } from './user-actions/userActions';
+import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
   try {
@@ -209,7 +209,7 @@ export async function updateTaxRegion(
       throw new Error('No authenticated user found');
     }
 
-    if (!await hasPermission(currentUser, 'billing', 'update')) {
+    if (!(await hasPermission(currentUser, 'billing', 'update'))) {
       throw new Error('Permission denied: Cannot update tax regions');
     }
 
