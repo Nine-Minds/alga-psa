@@ -20,6 +20,133 @@ def load-local-env [] {
     }
 }
 
+# Determine environment-specific configuration for hosted environments
+def get-hosted-env-config [environment?: string] {
+    let requested = (if ($environment | is-empty) { "hosted" } else { $environment | str downcase })
+    let env_key = if $requested in ["hosted", "dev", "default"] {
+        "hosted"
+    } else if $requested in ["sebastian", "staging", "hv-dev2"] {
+        "sebastian"
+    } else {
+        error make { msg: $"($env.ALGA_COLOR_RED)Unsupported environment '($environment)'. Use 'hosted' or 'sebastian'.($env.ALGA_COLOR_RESET)" }
+    }
+
+    if $env_key == "sebastian" {
+        {
+            key: "sebastian"
+            display: "Sebastian (hv-dev2 cluster)"
+            namespace_prefix: "alga-hosted-"
+            release_prefix: "alga-hosted-"
+            temp_prefix: "hosted-sebastian"
+            vault_role_prefix: "alga-psa-hosted-"
+            expected_context: "config-hv-dev2"
+            kubeconfig_hint: $"($nu.home-path)/.kube/config-hv-dev2"
+            values_relative_path: "hosted-env-sebastian/values-hosted-env.yaml"
+            vault_enabled: false
+        }
+    } else {
+        {
+            key: "hosted"
+            display: "Hosted (config cluster)"
+            namespace_prefix: "alga-hosted-"
+            release_prefix: "alga-hosted-"
+            temp_prefix: "hosted"
+            vault_role_prefix: "alga-psa-hosted-"
+            expected_context: "config"
+            kubeconfig_hint: $"($nu.home-path)/.kube/config"
+            values_relative_path: "hosted-env-dev/values-hosted-env.yaml"
+            vault_enabled: true
+        }
+    }
+}
+
+# Ensure kubectl is pointing at the expected context for the selected environment
+def ensure-hosted-env-context [env_cfg: record] {
+    let expected = ($env_cfg | get expected_context?)
+    if ($expected | is-empty) {
+        return
+    }
+
+    let kubeconfig_hint = ($env_cfg | get kubeconfig_hint? | default "")
+    let set_kubeconfig = {|path|
+        if ($path | is-empty) {
+            false
+        } else if not ($path | path exists) {
+            print $"($env.ALGA_COLOR_YELLOW)Expected kubeconfig not found at ($path).($env.ALGA_COLOR_RESET)"
+            false
+        } else {
+            let current_env = ($env.KUBECONFIG? | default "")
+            if $current_env != $path {
+                print $"($env.ALGA_COLOR_CYAN)Setting KUBECONFIG to ($path) for hosted environment operations.($env.ALGA_COLOR_RESET)"
+                load-env { KUBECONFIG: $path }
+            }
+            true
+        }
+    }
+
+    mut ctx_result = (kubectl config current-context | complete)
+    mut current = if $ctx_result.exit_code == 0 { $ctx_result.stdout | str trim } else { "" }
+
+    if $ctx_result.exit_code != 0 or ($current | is-empty) {
+        if not (do $set_kubeconfig $kubeconfig_hint) {
+            print $"($env.ALGA_COLOR_RED)Unable to determine kubectl context.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_YELLOW)Set KUBECONFIG to point at ($kubeconfig_hint) and ensure context ($expected) exists.($env.ALGA_COLOR_RESET)"
+            error make { msg: $"($env.ALGA_COLOR_RED)kubectl context check failed($env.ALGA_COLOR_RESET)" }
+        }
+        $ctx_result = (kubectl config current-context | complete)
+        if $ctx_result.exit_code == 0 {
+            $current = ($ctx_result.stdout | str trim)
+        }
+    }
+
+    if $current != $expected {
+        if not ($kubeconfig_hint | is-empty) and (($env.KUBECONFIG? | default "") != $kubeconfig_hint) {
+            if (do $set_kubeconfig $kubeconfig_hint) {
+                $ctx_result = (kubectl config current-context | complete)
+                if $ctx_result.exit_code == 0 {
+                    $current = ($ctx_result.stdout | str trim)
+                }
+            }
+        }
+
+        if $current == $expected { return }
+
+        # Attempt to switch contexts automatically if available.
+        let switched = do {
+            let contexts = (kubectl config get-contexts -o name | complete)
+            if $contexts.exit_code == 0 and ($contexts.stdout | lines | any {|ctx| $ctx == $expected }) {
+                let use_res = (kubectl config use-context $expected | complete)
+                if $use_res.exit_code == 0 {
+                    print $"($env.ALGA_COLOR_CYAN)Switched kubectl context to ($expected).($env.ALGA_COLOR_RESET)"
+                    true
+                } else {
+                    print $"($env.ALGA_COLOR_YELLOW)kubectl config use-context ($expected) failed: ($use_res.stderr | str trim)($env.ALGA_COLOR_RESET)"
+                    false
+                }
+            } else {
+                if ($contexts.exit_code != 0) {
+                    print $"($env.ALGA_COLOR_YELLOW)kubectl context list unavailable: ($contexts.stderr | str trim)($env.ALGA_COLOR_RESET)"
+                } else {
+                    print $"($env.ALGA_COLOR_YELLOW)Context ($expected) not found in kubeconfig.($env.ALGA_COLOR_RESET)"
+                }
+                false
+            }
+        }
+
+        if $switched {
+            let verify = (kubectl config current-context | complete)
+            if $verify.exit_code == 0 {
+                let verified_ctx = ($verify.stdout | str trim)
+                if $verified_ctx == $expected { return }
+            }
+        }
+
+        print $"($env.ALGA_COLOR_RED)Active kubectl context '($current)' does not match expected '($expected)' for ($env_cfg.display).($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)Run: export KUBECONFIG=($kubeconfig_hint); kubectl config use-context ($expected)($env.ALGA_COLOR_RESET)"
+        error make { msg: $"($env.ALGA_COLOR_RED)Incorrect kubectl context for hosted environment($env.ALGA_COLOR_RESET)" }
+    }
+}
+
 # Helper to sanitize branch to k8s-safe and release-safe fragment
 def sanitize-branch-name [branch: string] {
     let sanitized_base = ($branch | str replace -a "/" "-" | str downcase | str replace -a "[^a-z0-9-]" "-" | str replace -r "^-+|-+$" "" | str replace -r "-+" "-")
@@ -55,15 +182,19 @@ def show-job-diagnostics [ns: string, job: string] {
 # Create hosted environment (code-server + deps in cluster, Vault-enabled)
 export def hosted-env-create [
     branch: string   # Branch name to create environment for
+    --environment (-e): string = "hosted"
 ] {
     # Load local environment variables if available
     load-local-env
+    let env_cfg = (get-hosted-env-config $environment)
+    ensure-hosted-env-context $env_cfg
     
     let project_root = find-project-root
     let sanitized_branch = (sanitize-branch-name $branch)
-    let namespace = $"alga-hosted-($sanitized_branch)"
+    let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
+    let release = $"($env_cfg.release_prefix)($sanitized_branch)"
 
-    print $"($env.ALGA_COLOR_CYAN)Creating hosted environment for branch: ($branch) → ($namespace)($env.ALGA_COLOR_RESET)"
+    print $"($env.ALGA_COLOR_CYAN)Creating hosted environment for branch: ($branch) → ($namespace) on ($env_cfg.display)($env.ALGA_COLOR_RESET)"
 
     # Guard if exists (and handle Terminating state)
     let existing = (kubectl get namespace $namespace | complete)
@@ -91,8 +222,8 @@ export def hosted-env-create [
 
     # Render temp values
     let safe_filename = ($branch | str replace -a "/" "-")
-    let temp_values_file = $"($project_root)/temp-values-hosted-($safe_filename).yaml"
-    let role_name = $"alga-psa-hosted-($namespace)"
+    let temp_values_file = $"($project_root)/temp-values-($env_cfg.temp_prefix)-($safe_filename).yaml"
+    let role_name = $"($env_cfg.vault_role_prefix)($namespace)"
 
     # Ensure a Vault role exists for this namespace so Vault Agent can auth
     def ensure-vault-role [role: string, ns: string] {
@@ -200,7 +331,11 @@ spec:
         (kubectl -n msp delete job $job_name --ignore-not-found=true | complete) | ignore
     }
 
-    ensure-vault-role $role_name $namespace
+    if ($env_cfg.vault_enabled? | default true) {
+        ensure-vault-role $role_name $namespace
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)Vault role creation skipped for ($env_cfg.display).($env.ALGA_COLOR_RESET)"
+    }
 
     # Copy required secrets from msp namespace
     print $"($env.ALGA_COLOR_CYAN)Copying required secrets to ($namespace)...($env.ALGA_COLOR_RESET)"
@@ -238,6 +373,13 @@ spec:
         print $"($env.ALGA_COLOR_YELLOW)⚠ temporal-worker-secret not found in msp namespace($env.ALGA_COLOR_RESET)"
     }
 
+    let vault_enabled = ($env_cfg.vault_enabled? | default true)
+    let vault_block = if $vault_enabled {
+        $"vaultAgent:\n  enabled: true\n  role: \"($role_name)\""
+    } else {
+        "vaultAgent:\n  enabled: false"
+    }
+
     let values_content = $"
 # Generated values for hosted environment
 hostedEnv:
@@ -248,9 +390,38 @@ hostedEnv:
   repository:
     url: \"https://github.com/Nine-Minds/alga-psa.git\"
     branch: \"($branch)\"
-vaultAgent:
-  role: \"($role_name)\""
-    
+  git:
+    authorName: \"Hosted Environment\"
+    authorEmail: \"hosted@alga.local\"
+  codeServer:
+    enabled: true
+    image:
+      repository: \"harbor.nineminds.com/nineminds/alga-code-server\"
+      tag: \"latest\"
+      pullPolicy: \"Always\"
+      is_private: true
+      credentials: \"harbor-credentials\"
+    service:
+      type: \"ClusterIP\"
+      port: 8080
+    password: \"alga-dev\"
+    resources:
+      limits:
+        cpu: \"4\"
+        memory: \"8Gi\"
+      requests:
+        cpu: \"500m\"
+        memory: \"2Gi\"
+  persistence:
+    enabled: false
+
+($vault_block)
+
+config:
+  hocuspocus:
+    hostFQDN: ""
+"
+
     $values_content | save -f $temp_values_file
 
     try {
@@ -261,14 +432,20 @@ vaultAgent:
         } else {
             $env.ALGA_KUBE_CONFIG_PATH
         }
-        let user_values_path = $"($kube_config_base)/hosted-env-dev/values-hosted-env.yaml"
-        if not ($user_values_path | path exists) {
-            print $"($env.ALGA_COLOR_YELLOW)Warning: ($user_values_path) not found. Helm may fail if required values are missing.($env.ALGA_COLOR_RESET)"
-            print $"($env.ALGA_COLOR_YELLOW)Tip: Set ALGA_KUBE_CONFIG_PATH environment variable to your nm-kube-config directory path.($env.ALGA_COLOR_RESET)"
+        let user_values_path = $"($kube_config_base)/($env_cfg.values_relative_path)"
+        let user_values_exists = ($user_values_path | path exists)
+        if not $user_values_exists {
+            print $"($env.ALGA_COLOR_YELLOW)Warning: ($user_values_path) not found. Proceeding with generated values only.($env.ALGA_COLOR_RESET)"
+            print $"($env.ALGA_COLOR_YELLOW)Tip: Set ALGA_KUBE_CONFIG_PATH to your nm-kube-config directory or create the file if overrides are needed.($env.ALGA_COLOR_RESET)"
+        }
+        let helm_cmd = if $user_values_exists {
+            $"helm upgrade --install ($release) ./helm -f ($user_values_path) -f ($temp_values_file) -n ($namespace)"
+        } else {
+            $"helm upgrade --install ($release) ./helm -f ($temp_values_file) -n ($namespace)"
         }
         let helm_result = do {
             cd $project_root
-            helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f $user_values_path -f $temp_values_file -n $namespace | complete
+            bash -c $helm_cmd | complete
         }
 
         if $helm_result.exit_code != 0 {
@@ -279,14 +456,20 @@ vaultAgent:
                 print $"($env.ALGA_COLOR_YELLOW)Helm reported non-fatal issues; retrying with --install...($env.ALGA_COLOR_RESET)"
                 let retry_install = do {
                     cd $project_root
-                    # Use same path calculation as above
+                    # Re-evaluate in case ALGA_KUBE_CONFIG_PATH changed between attempts
                     let kube_config_base = if ($env.ALGA_KUBE_CONFIG_PATH? | is-empty) {
                         $"($nu.home-path)/nm-kube-config"
                     } else {
                         $env.ALGA_KUBE_CONFIG_PATH
                     }
-                    let user_values_path = $"($kube_config_base)/hosted-env-dev/values-hosted-env.yaml"
-                    helm upgrade --install $"alga-hosted-($sanitized_branch)" ./helm -f $user_values_path -f $temp_values_file -n $namespace | complete
+                    let retry_user_values = $"($kube_config_base)/($env_cfg.values_relative_path)"
+                    let retry_exists = ($retry_user_values | path exists)
+                    let retry_cmd = if $retry_exists {
+                        $"helm upgrade --install ($release) ./helm -f ($retry_user_values) -f ($temp_values_file) -n ($namespace)"
+                    } else {
+                        $"helm upgrade --install ($release) ./helm -f ($temp_values_file) -n ($namespace)"
+                    }
+                    bash -c $retry_cmd | complete
                 }
                 if $retry_install.exit_code != 0 {
                     print $retry_install.stderr
@@ -301,7 +484,7 @@ vaultAgent:
 
         print $helm_result.stdout
         print $"($env.ALGA_COLOR_CYAN)Waiting for deployments to be ready...($env.ALGA_COLOR_RESET)"
-        let wait_result = (kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/instance=$"alga-hosted-($sanitized_branch)" -n $namespace | complete)
+        let wait_result = (kubectl wait --for=condition=available --timeout=300s deployment -l app.kubernetes.io/instance=$release -n $namespace | complete)
         if $wait_result.exit_code == 0 {
             print $"($env.ALGA_COLOR_GREEN)Hosted environment ready.($env.ALGA_COLOR_RESET)"
         } else {
@@ -318,8 +501,12 @@ vaultAgent:
 }
 
 # List hosted environments
-export def hosted-env-list [] {
-    print $"($env.ALGA_COLOR_CYAN)Active hosted environments:($env.ALGA_COLOR_RESET)"
+export def hosted-env-list [
+    --environment (-e): string = "hosted"
+] {
+    let env_cfg = (get-hosted-env-config $environment)
+    ensure-hosted-env-context $env_cfg
+    print $"($env.ALGA_COLOR_CYAN)Active hosted environments on ($env_cfg.display):($env.ALGA_COLOR_RESET)"
     let ns = (kubectl get namespaces -l type=hosted-environment -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.labels.branch}{"\n"}{end}' | complete)
     if $ns.exit_code != 0 { print $ns.stderr; return }
     let environments = ($ns.stdout | lines | where ($it | str trim | str length) > 0)
@@ -330,7 +517,7 @@ export def hosted-env-list [] {
     for line in $environments {
         let parts = ($line | split column "\t")
         let namespace = ($parts | get column1 | get 0)
-        let branch = ($parts | get column2 -i | get 0? | default "Unknown")
+        let branch = ($parts | get column2 -o | get 0? | default "Unknown")
         print $"│ ($namespace | fill -w 28) │ ($branch | fill -w 24) │"
     }
     print "└────────────────────────────────────────────────────────────┘"
@@ -339,9 +526,13 @@ export def hosted-env-list [] {
 # Connect (port-forward) to code-server in hosted environment
 export def hosted-env-connect [
     branch: string
+    --environment (-e): string = "hosted"
 ] {
+    let env_cfg = (get-hosted-env-config $environment)
+    ensure-hosted-env-context $env_cfg
     let sanitized_branch = (sanitize-branch-name $branch)
-    let namespace = $"alga-hosted-($sanitized_branch)"
+    let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
+    let release = $"($env_cfg.release_prefix)($sanitized_branch)"
 
     # Ensure environment exists
     let env_check = (kubectl get namespace $namespace | complete)
@@ -351,7 +542,7 @@ export def hosted-env-connect [
         return
     }
 
-    print $"($env.ALGA_COLOR_CYAN)Connecting to hosted environment for branch: ($branch)($env.ALGA_COLOR_RESET)"
+    print $"($env.ALGA_COLOR_CYAN)Connecting to hosted environment for branch: ($branch) on ($env_cfg.display)($env.ALGA_COLOR_RESET)"
     print $"($env.ALGA_COLOR_CYAN)Setting up port forwarding...($env.ALGA_COLOR_RESET)"
     print $"($env.ALGA_COLOR_YELLOW)This runs in foreground. Press Enter to stop.($env.ALGA_COLOR_RESET)"
 
@@ -380,9 +571,9 @@ export def hosted-env-connect [
     print $"  Code App:     ($code_app_port)"
 
     # Start port forwarding in background and log output
-    let pf_name = $"alga-hosted-($sanitized_branch)"
-    let log_code_server = $"/tmp/pf-hosted-code-server-($sanitized_branch).log"
-    let log_code_app    = $"/tmp/pf-hosted-code-app-($sanitized_branch).log"
+    let pf_name = $release
+    let log_code_server = $"/tmp/pf-($env_cfg.temp_prefix)-code-server-($sanitized_branch).log"
+    let log_code_app    = $"/tmp/pf-($env_cfg.temp_prefix)-code-app-($sanitized_branch).log"
 
     bash -c $"kubectl port-forward -n ($namespace) svc/($pf_name)-code-server --address=127.0.0.1 ($code_server_port):8080 > ($log_code_server) 2>&1 &"
     bash -c $"kubectl port-forward -n ($namespace) svc/($pf_name)-code-server --address=127.0.0.1 ($code_app_port):3000 > ($log_code_app) 2>&1 &"
@@ -428,32 +619,36 @@ export def hosted-env-connect [
 export def hosted-env-destroy [
     branch: string
     --force = false
+    --environment (-e): string = "hosted"
 ] {
+    let env_cfg = (get-hosted-env-config $environment)
+    ensure-hosted-env-context $env_cfg
     let sanitized_branch = (sanitize-branch-name $branch)
-    let namespace = $"alga-hosted-($sanitized_branch)"
-    let role_name = $"alga-psa-hosted-($namespace)"
-    let release = $"alga-hosted-($sanitized_branch)"
+    let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
+    let role_name = $"($env_cfg.vault_role_prefix)($namespace)"
+    let release = $"($env_cfg.release_prefix)($sanitized_branch)"
 
     if (not $force) {
-        print $"($env.ALGA_COLOR_YELLOW)This will permanently destroy the hosted environment for ($branch).($env.ALGA_COLOR_RESET)"
+        print $"($env.ALGA_COLOR_YELLOW)This will permanently destroy the hosted environment for ($branch) on ($env_cfg.display).($env.ALGA_COLOR_RESET)"
         let confirm = (input "Type 'delete' to confirm: ")
         if $confirm != "delete" { print "Aborted."; return }
     }
 
     # Attempt to delete per-namespace Vault role (best-effort)
-    do {
-        let has_vault = (not (which vault | is-empty))
-        if $has_vault {
-            let del_role = (vault delete auth/kubernetes/role/$role_name | complete)
-            if $del_role.exit_code == 0 {
-                print $"($env.ALGA_COLOR_CYAN)Deleted Vault role: ($role_name)($env.ALGA_COLOR_RESET)"
-                return
+    if ($env_cfg.vault_enabled? | default true) {
+        do {
+            let has_vault = (not (which vault | is-empty))
+            if $has_vault {
+                let del_role = (vault delete auth/kubernetes/role/$role_name | complete)
+                if $del_role.exit_code == 0 {
+                    print $"($env.ALGA_COLOR_CYAN)Deleted Vault role: ($role_name)($env.ALGA_COLOR_RESET)"
+                    return
+                }
             }
-        }
-        # Fallback: in-cluster delete via Job in msp
-        let suffix = ($role_name | hash sha256 | str substring 0..8)
-        let job_name = $"vault-role-delete-($suffix)"
-        let job_yaml = $"
+            # Fallback: in-cluster delete via Job in msp
+            let suffix = ($role_name | hash sha256 | str substring 0..8)
+            let job_name = $"vault-role-delete-($suffix)"
+            let job_yaml = $"
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -488,9 +683,12 @@ spec:
               name: vault-credentials
               key: VAULT_TOKEN
 "
-        (echo $job_yaml | kubectl apply -f - | complete) | ignore
-        (kubectl -n msp wait --for=condition=complete --timeout=120s job/$job_name | complete) | ignore
-        (kubectl -n msp delete job $job_name --ignore-not-found=true | complete) | ignore
+            (echo $job_yaml | kubectl apply -f - | complete) | ignore
+            (kubectl -n msp wait --for=condition=complete --timeout=120s job/$job_name | complete) | ignore
+            (kubectl -n msp delete job $job_name --ignore-not-found=true | complete) | ignore
+        }
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)Vault role deletion skipped for ($env_cfg.display).($env.ALGA_COLOR_RESET)"
     }
 
     # If namespace already gone, skip uninstall and deletion
@@ -524,9 +722,12 @@ spec:
 # Simple status
 export def hosted-env-status [
     branch: string
+    --environment (-e): string = "hosted"
 ] {
+    let env_cfg = (get-hosted-env-config $environment)
+    ensure-hosted-env-context $env_cfg
     let sanitized_branch = (sanitize-branch-name $branch)
-    let namespace = $"alga-hosted-($sanitized_branch)"
-    print $"($env.ALGA_COLOR_CYAN)Status for ($namespace):($env.ALGA_COLOR_RESET)"
+    let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
+    print $"($env.ALGA_COLOR_CYAN)Status for ($namespace) on ($env_cfg.display):($env.ALGA_COLOR_RESET)"
     kubectl get all -n $namespace
 }

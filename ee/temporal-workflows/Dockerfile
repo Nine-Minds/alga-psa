@@ -3,7 +3,12 @@ FROM node:20-bullseye AS base
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
+    git \
     && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl -sSL https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl \
+    && chmod +x /usr/local/bin/kubectl
 
 WORKDIR /app
 
@@ -12,8 +17,10 @@ COPY ee/temporal-workflows/ /app/ee/temporal-workflows
 COPY tsconfig.base.json /app/tsconfig.base.json
 
 WORKDIR /app/ee/temporal-workflows
-# Install dependencies
-RUN npm install
+# Install global build tooling required by shared package scripts
+RUN npm install -g typescript
+# Install dependencies (skip prepare scripts to avoid building shared during base stage)
+RUN npm install --ignore-scripts
 
 # Development stage
 FROM base AS development

@@ -50,11 +50,11 @@ def --wrapped main [
        print "  nu main.nu dev-env-status [<branch>]"
        print "    Get environment status and URLs"
        print ""
-       print "  nu main.nu hosted-env-create <branch>     # Create hosted code-server env in cluster"
-       print "  nu main.nu hosted-env-list                # List hosted environments"
-       print "  nu main.nu hosted-env-connect <branch>    # Port-forward code-server"
-       print "  nu main.nu hosted-env-destroy <branch> [--force]"
-       print "  nu main.nu hosted-env-status <branch>     # Show k8s objects"
+       print "  nu main.nu hosted-env-create <branch> [--environment hosted|sebastian]     # Create hosted code-server env"
+       print "  nu main.nu hosted-env-list [--environment hosted|sebastian]               # List hosted environments"
+       print "  nu main.nu hosted-env-connect <branch> [--environment hosted|sebastian]    # Port-forward code-server"
+       print "  nu main.nu hosted-env-destroy <branch> [--force] [--environment hosted|sebastian]"
+       print "  nu main.nu hosted-env-status <branch> [--environment hosted|sebastian]     # Show k8s objects"
        print ""
        print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
        print "  nu main.nu -- dev-up --edition ee --detached"
@@ -170,11 +170,11 @@ def --wrapped main [
        print "  nu main.nu dev-env-status [<branch>]"
        print "    Get environment status and URLs"
        print ""
-       print "  nu main.nu hosted-env-create <branch>     # Create hosted code-server env in cluster"
-       print "  nu main.nu hosted-env-list                # List hosted environments"
-       print "  nu main.nu hosted-env-connect <branch>    # Port-forward code-server"
-       print "  nu main.nu hosted-env-destroy <branch> [--force]"
-       print "  nu main.nu hosted-env-status <branch>     # Show k8s objects"
+       print "  nu main.nu hosted-env-create <branch> [--environment hosted|sebastian]     # Create hosted code-server env"
+       print "  nu main.nu hosted-env-list [--environment hosted|sebastian]               # List hosted environments"
+       print "  nu main.nu hosted-env-connect <branch> [--environment hosted|sebastian]    # Port-forward code-server"
+       print "  nu main.nu hosted-env-destroy <branch> [--force] [--environment hosted|sebastian]"
+       print "  nu main.nu hosted-env-status <branch> [--environment hosted|sebastian]     # Show k8s objects"
        print ""
        print "Note: Use '--' before dev-up when using flags to prevent Nu from parsing them:"
        print "  nu main.nu -- dev-up --edition ee --detached"
@@ -624,36 +624,125 @@ def --wrapped main [
        }
        # Hosted environment commands
        "hosted-env-create" => {
-           let branch = ($args | get 1? | default null)
+           let env_flag = (parse-flag $args "--environment")
+           let env_short = (parse-flag $args "-e")
+           let environment = if $env_flag != null { $env_flag } else { $env_short }
+           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_env: false } { |arg, acc|
+               if $acc.skip_env {
+                   { branch: $acc.branch, skip_env: false }
+               } else if $arg == "--environment" or $arg == "-e" {
+                   { branch: $acc.branch, skip_env: true }
+               } else {
+                   if $acc.branch == null {
+                       { branch: $arg, skip_env: false }
+                   } else {
+                       $acc
+                   }
+               }
+           })
+           let branch = ($branch_state | get branch)
            if $branch == null {
                error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-create requires branch argument($env.ALGA_COLOR_RESET)" }
            }
-           hosted-env-create $branch
+           if $environment == null {
+               hosted-env-create $branch
+           } else {
+               hosted-env-create $branch --environment $environment
+           }
        }
        "hosted-env-list" => {
-           hosted-env-list
+           let env_flag = (parse-flag $args "--environment")
+           let env_short = (parse-flag $args "-e")
+           let environment = if $env_flag != null { $env_flag } else { $env_short }
+           if $environment == null {
+               hosted-env-list
+           } else {
+               hosted-env-list --environment $environment
+           }
        }
        "hosted-env-connect" => {
-           let branch = ($args | get 1? | default null)
+           let env_flag = (parse-flag $args "--environment")
+           let env_short = (parse-flag $args "-e")
+           let environment = if $env_flag != null { $env_flag } else { $env_short }
+           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_env: false } { |arg, acc|
+               if $acc.skip_env {
+                   { branch: $acc.branch, skip_env: false }
+               } else if $arg == "--environment" or $arg == "-e" {
+                   { branch: $acc.branch, skip_env: true }
+               } else {
+                   if $acc.branch == null {
+                       { branch: $arg, skip_env: false }
+                   } else {
+                       $acc
+                   }
+               }
+           })
+           let branch = ($branch_state | get branch)
            if $branch == null {
                error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-connect requires branch argument($env.ALGA_COLOR_RESET)" }
            }
-           hosted-env-connect $branch
+           if $environment == null {
+               hosted-env-connect $branch
+           } else {
+               hosted-env-connect $branch --environment $environment
+           }
        }
        "hosted-env-destroy" => {
-           let branch = ($args | get 1? | default null)
+           let env_flag = (parse-flag $args "--environment")
+           let env_short = (parse-flag $args "-e")
+           let environment = if $env_flag != null { $env_flag } else { $env_short }
+           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_env: false } { |arg, acc|
+               if $acc.skip_env {
+                   { branch: $acc.branch, skip_env: false }
+               } else if $arg == "--environment" or $arg == "-e" {
+                   { branch: $acc.branch, skip_env: true }
+               } else if $arg == "--force" {
+                   $acc
+               } else {
+                   if $acc.branch == null {
+                       { branch: $arg, skip_env: false }
+                   } else {
+                       $acc
+                   }
+               }
+           })
+           let branch = ($branch_state | get branch)
            if $branch == null {
                error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-destroy requires branch argument($env.ALGA_COLOR_RESET)" }
            }
            let force = (check-flag $args "--force")
-           hosted-env-destroy $branch --force $force
+           if $environment == null {
+               hosted-env-destroy $branch --force $force
+           } else {
+               hosted-env-destroy $branch --force $force --environment $environment
+           }
        }
        "hosted-env-status" => {
-           let branch = ($args | get 1? | default null)
+           let env_flag = (parse-flag $args "--environment")
+           let env_short = (parse-flag $args "-e")
+           let environment = if $env_flag != null { $env_flag } else { $env_short }
+           let branch_state = (($args | skip 1) | reduce -f { branch: null skip_env: false } { |arg, acc|
+               if $acc.skip_env {
+                   { branch: $acc.branch, skip_env: false }
+               } else if $arg == "--environment" or $arg == "-e" {
+                   { branch: $acc.branch, skip_env: true }
+               } else {
+                   if $acc.branch == null {
+                       { branch: $arg, skip_env: false }
+                   } else {
+                       $acc
+                   }
+               }
+           })
+           let branch = ($branch_state | get branch)
            if $branch == null {
                error make { msg: $"($env.ALGA_COLOR_RED)hosted-env-status requires branch argument($env.ALGA_COLOR_RESET)" }
            }
-           hosted-env-status $branch
+           if $environment == null {
+               hosted-env-status $branch
+           } else {
+               hosted-env-status $branch --environment $environment
+           }
        }
        _ => {
            error make { msg: $"($env.ALGA_COLOR_RED)Unknown command: '($command)'. Must be 'migrate', 'dev-up', 'dev-down', 'dev-env-*', 'dev-env-force-cleanup', 'update-workflow', 'register-workflow', 'build-image', 'build-all-images', 'build-code-server', 'build-ai-api', 'build-ai-web', 'build-ai-web-k8s', 'build-ai-all', 'config', 'create-tenant', 'list-tenants', or 'cleanup-tenant'.($env.ALGA_COLOR_RESET)" }

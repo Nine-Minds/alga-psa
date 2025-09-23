@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { IWorkflowTimer } from './workflowInterfaces';
+import { IWorkflowTimer } from './workflowInterfaces.js';
 
 /**
  * Model for workflow_timers table

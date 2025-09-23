@@ -1,13 +1,13 @@
 import { createClient } from 'redis';
 import type { RedisClientType, RedisClientOptions } from 'redis';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@shared/core';
-import { getSecret } from '../../core/getSecret';
+import { logger } from '@alga-psa/shared/core';
+import { getSecret } from '../../core/getSecret.js';
 import { 
   WorkflowEventBase, 
   RedisStreamMessage,
   parseStreamEvent
-} from './workflowEventSchema';
+} from './workflowEventSchema.js';
 
 /**
  * Configuration options for the Redis Stream client

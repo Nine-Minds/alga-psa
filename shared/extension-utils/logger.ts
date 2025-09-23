@@ -9,4 +9,4 @@
  */
 
 // Re-export the client-safe logger as default for extension components
-export { default } from './client-logger';
+export { default } from './client-logger.js';

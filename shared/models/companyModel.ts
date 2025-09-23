@@ -12,8 +12,8 @@ import {
   CreateCompanyInput, 
   UpdateCompanyInput, 
   CompanyCreationOptions 
-} from '../interfaces/company.interfaces';
-import { ValidationResult } from '../interfaces/validation.interfaces';
+} from '../interfaces/company.interfaces.js';
+import { ValidationResult } from '../interfaces/validation.interfaces.js';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -79,8 +79,8 @@ export type {
   CreateCompanyInput, 
   UpdateCompanyInput, 
   CompanyCreationOptions 
-} from '../interfaces/company.interfaces';
-export type { ValidationResult } from '../interfaces/validation.interfaces';
+} from '../interfaces/company.interfaces.js';
+export type { ValidationResult } from '../interfaces/validation.interfaces.js';
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS

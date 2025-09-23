@@ -3,7 +3,7 @@
  *
  * This service provides validation of form data against JSON Schema
  */
-import type { FormValidationResult } from '../persistence/formRegistryInterfaces';
+import type { FormValidationResult } from '../persistence/formRegistryInterfaces.js';
 
 // Define a simplified error object type that matches what Ajv returns
 interface ValidationError {

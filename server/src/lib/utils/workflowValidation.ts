@@ -4,8 +4,7 @@
 
 import { z } from 'zod';
 import logger from '@alga-psa/shared/core/logger';
-import * as ts from 'typescript';
-import { Project, Node, SyntaxKind, ObjectLiteralExpression } from 'ts-morph';
+import { Project, Node, SyntaxKind, ObjectLiteralExpression, ts } from 'ts-morph';
 
 // Zod schema for workflow metadata
 export const WorkflowMetadataSchema = z.object({

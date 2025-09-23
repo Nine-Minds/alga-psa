@@ -13,8 +13,8 @@ import {
   TagMapping,
   CreateTagInput,
   CreateTagOutput
-} from '../interfaces/tag.interfaces';
-import { ValidationResult } from '../interfaces/validation.interfaces';
+} from '../interfaces/tag.interfaces.js';
+import { ValidationResult } from '../interfaces/validation.interfaces.js';
 
 // =============================================================================
 // VALIDATION SCHEMAS
@@ -63,8 +63,8 @@ export type {
   TagMapping,
   CreateTagInput,
   CreateTagOutput
-} from '../interfaces/tag.interfaces';
-export type { ValidationResult } from '../interfaces/validation.interfaces';
+} from '../interfaces/tag.interfaces.js';
+export type { ValidationResult } from '../interfaces/validation.interfaces.js';
 
 // =============================================================================
 // COLOR GENERATION

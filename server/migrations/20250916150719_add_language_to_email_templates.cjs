@@ -4,19 +4,43 @@
  * Citus-compatible: unique constraints include tenant column for distributed tables
  */
 
+const ensureSequentialMode = async (knex) => {
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) THEN
+        EXECUTE 'SET citus.multi_shard_modify_mode TO ''sequential''';
+      END IF;
+    END $$;
+  `);
+};
+
 exports.up = async function (knex) {
+  await ensureSequentialMode(knex);
+
   // Add language_code to system_email_templates (reference table in Citus)
   await knex.schema.alterTable('system_email_templates', (table) => {
-    table.string('language_code', 10).defaultTo('en').notNullable();
+    table.string('language_code', 10);
   });
+
+  await knex('system_email_templates').update({ language_code: 'en' });
+  await knex.raw("ALTER TABLE system_email_templates ALTER COLUMN language_code SET DEFAULT 'en'");
+  await knex.raw('ALTER TABLE system_email_templates ALTER COLUMN language_code SET NOT NULL');
 
   // Create index after column is added
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_system_email_templates_name_language ON system_email_templates(name, language_code)');
 
   // Add language_code to tenant_email_templates (distributed table in Citus)
   await knex.schema.alterTable('tenant_email_templates', (table) => {
-    table.string('language_code', 10).defaultTo('en').notNullable();
+    table.string('language_code', 10);
   });
+
+  await ensureSequentialMode(knex);
+  await knex('tenant_email_templates').update({ language_code: 'en' });
+  await knex.raw("ALTER TABLE tenant_email_templates ALTER COLUMN language_code SET DEFAULT 'en'");
+  await knex.raw('ALTER TABLE tenant_email_templates ALTER COLUMN language_code SET NOT NULL');
 
   // Create index including tenant column for Citus compatibility
   await knex.raw('CREATE INDEX IF NOT EXISTS idx_tenant_email_templates_tenant_name_language ON tenant_email_templates(tenant, name, language_code)');
@@ -70,6 +94,8 @@ exports.up = async function (knex) {
 };
 
 exports.down = async function (knex) {
+  await ensureSequentialMode(knex);
+
   // Remove unique constraints with language_code
   await knex.raw('ALTER TABLE system_email_templates DROP CONSTRAINT IF EXISTS system_email_templates_name_language_key');
   await knex.raw('ALTER TABLE tenant_email_templates DROP CONSTRAINT IF EXISTS tenant_email_templates_tenant_name_language_key');
@@ -102,6 +128,6 @@ exports.down = async function (knex) {
   await knex.schema.alterTable('tenant_email_templates', (table) => {
     table.dropColumn('language_code');
   });
-
-  // Note: No need to remove locale from user_preferences as we're using the existing key-value structure
 };
+
+exports.config = { transaction: false };

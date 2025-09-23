@@ -6,10 +6,10 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 // Use ESM-compliant .js paths for NodeNext
-import { getFormValidationService } from './formValidationService';
-import FormDefinitionModel from '../persistence/formDefinitionModel';
-import FormSchemaModel from '../persistence/formSchemaModel';
-import type { IFormDefinition, IFormSchema } from '../persistence/formRegistryInterfaces';
+import { getFormValidationService } from './formValidationService.js';
+import FormDefinitionModel from '../persistence/formDefinitionModel.js';
+import FormSchemaModel from '../persistence/formSchemaModel.js';
+import type { IFormDefinition, IFormSchema } from '../persistence/formRegistryInterfaces.js';
 import {
   IFormDefinition as IFormDefinitionType,
   IFormSchema as IFormSchemaType,
@@ -19,7 +19,7 @@ import {
   FormSearchParams,
   FormValidationResult,
   FormWithSchema
-} from '../persistence/formRegistryInterfaces';
+} from '../persistence/formRegistryInterfaces.js';
 
 export class FormRegistry {
   /**

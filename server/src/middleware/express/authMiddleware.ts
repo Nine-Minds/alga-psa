@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js';
 
 // Cache NM Store key to avoid fetching every request
 let NM_STORE_KEY_CACHE: string | null = null;

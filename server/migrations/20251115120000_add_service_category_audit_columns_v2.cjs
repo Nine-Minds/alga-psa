@@ -12,7 +12,22 @@ const constraintExists = async (knex, constraintName) => {
   return rows.length > 0;
 };
 
+const ensureSequentialMode = async (knex) => {
+  await knex.raw(`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_extension WHERE extname = 'citus'
+      ) THEN
+        EXECUTE 'SET citus.multi_shard_modify_mode TO ''sequential''';
+      END IF;
+    END $$;
+  `);
+};
+
 exports.up = async function up(knex) {
+  await ensureSequentialMode(knex);
+
   const needsIsActive = !(await hasColumn(knex, 'service_categories', 'is_active'));
   const lacksCreatedAt = !(await hasColumn(knex, 'service_categories', 'created_at'));
   const lacksUpdatedAt = !(await hasColumn(knex, 'service_categories', 'updated_at'));
@@ -43,15 +58,11 @@ exports.up = async function up(knex) {
   }
 
   if (await hasColumn(knex, 'service_categories', 'created_at')) {
-    await knex('service_categories')
-      .whereNull('created_at')
-      .update({ created_at: knex.fn.now() });
+    await knex.raw('UPDATE service_categories SET created_at = DEFAULT WHERE created_at IS NULL');
   }
 
   if (await hasColumn(knex, 'service_categories', 'updated_at')) {
-    await knex('service_categories')
-      .whereNull('updated_at')
-      .update({ updated_at: knex.fn.now() });
+    await knex.raw('UPDATE service_categories SET updated_at = DEFAULT WHERE updated_at IS NULL');
   }
 
   if (await hasColumn(knex, 'service_categories', 'created_by')) {
@@ -122,6 +133,8 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
+  await ensureSequentialMode(knex);
+
   if (await constraintExists(knex, CREATED_BY_FK)) {
     await knex.raw(`
       ALTER TABLE service_categories
@@ -165,3 +178,5 @@ exports.down = async function down(knex) {
     });
   }
 };
+
+exports.config = { transaction: false };

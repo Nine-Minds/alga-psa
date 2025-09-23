@@ -10,7 +10,7 @@ import { createTenantKnex } from '../../../../../lib/db'; // Added DB import
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { ISecretProvider } from '@alga-psa/shared/core';
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'; // Corrected import path
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider.js'; // Corrected import path
 import { createWorkflowEventAttachment } from '../../../../../lib/actions/workflow-event-attachment-actions'; // Added action import
 import { EventCatalogModel } from '../../../../../models/eventCatalog'; // Added model import
 // TODO: Import actual CSRF token validation logic

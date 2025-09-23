@@ -16,6 +16,6 @@ export type {
   IWorkflowEventAttachment,
   ICreateWorkflowEventAttachment,
   IUpdateWorkflowEventAttachment
-} from './eventCatalog';
+} from './eventCatalog.js';
 
 // Don't export EventType/EventTypeEnum from here - let streams handle it
