@@ -259,7 +259,7 @@ export class EmailService {
     try {
       // First try to find existing contact
       const existingContact = await this.findContactByEmail(input.email);
-      
+
       if (existingContact && existingContact.company_id === input.company_id) {
         return {
           id: existingContact.contact_id,
@@ -614,9 +614,9 @@ export class EmailService {
       // 4. Associate it with the ticket
 
       const documentId = uuidv4();
-      
+
       logger.info(`Processing email attachment: ${input.attachmentData.name} for ticket ${input.ticketId}`);
-      
+
       return {
         documentId,
         success: true,
@@ -636,12 +636,12 @@ export class EmailService {
   async saveEmailClientAssociation(input: SaveEmailClientAssociationInput): Promise<SaveEmailClientAssociationOutput> {
     try {
       const associationId = uuidv4();
-      
+
       // This would typically save the association to a dedicated table
       // for learning email-to-client mappings
-      
+
       logger.info(`Saving email association: ${input.email} -> company ${input.company_id}`);
-      
+
       return {
         success: true,
         associationId,
