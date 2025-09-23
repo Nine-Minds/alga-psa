@@ -513,10 +513,12 @@ const CategoriesSettings: React.FC = () => {
                 <CustomSelect
                   value={formData.channel_id}
                   onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
-                  options={channels.map(ch => ({
-                    value: ch.channel_id || '',
-                    label: ch.channel_name || ''
-                  }))}
+                  options={channels
+                    .filter(ch => ch.category_type !== 'itil')
+                    .map(ch => ({
+                      value: ch.channel_id || '',
+                      label: ch.channel_name || ''
+                    }))}
                   placeholder="Select a board"
                   className="w-full"
                 />
@@ -532,10 +534,12 @@ const CategoriesSettings: React.FC = () => {
                   <CustomSelect
                     value={formData.channel_id}
                     onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
-                    options={channels.map(ch => ({
-                      value: ch.channel_id || '',
-                      label: ch.channel_name || ''
-                    }))}
+                    options={channels
+                      .filter(ch => ch.category_type !== 'itil')
+                      .map(ch => ({
+                        value: ch.channel_id || '',
+                        label: ch.channel_name || ''
+                      }))}
                     placeholder="Select a board"
                     className="w-full"
                   />
@@ -609,10 +613,12 @@ const CategoriesSettings: React.FC = () => {
                   <CustomSelect
                     value={importTargetChannel}
                     onValueChange={setImportTargetChannel}
-                    options={channels.map(ch => ({
-                      value: ch.channel_id || '',
-                      label: ch.channel_name || ''
-                    }))}
+                    options={channels
+                      .filter(ch => ch.category_type !== 'itil')
+                      .map(ch => ({
+                        value: ch.channel_id || '',
+                        label: ch.channel_name || ''
+                      }))}
                     placeholder="Select a board for imported categories"
                     className="w-full"
                   />
@@ -660,7 +666,7 @@ const CategoriesSettings: React.FC = () => {
                         const isSubcategory = !!category.parent_category_uuid;
                         
                         // Calculate order display for subcategories
-                        let orderDisplay;
+                        let orderDisplay: React.ReactNode;
                         if (isSubcategory) {
                           const siblingSubcategories = organizedCategories.filter(
                             cat => cat.parent_category_uuid === category.parent_category_uuid
