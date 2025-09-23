@@ -1,6 +1,6 @@
 /**
  * Extension utilities
- * 
+ *
  * Centralized exports for extension system utilities
  * This allows clean imports from both EE and main server contexts
  */

@@ -28,11 +28,11 @@ export class EnvSecretProvider implements ISecretProvider {
   async getAppSecret(name: string): Promise<string | undefined> {
     const envKey = this.prefix ? `${this.prefix}_${name}` : name;
     const value = process.env[envKey];
-    
+
     if (value !== undefined) {
       logger.debug(`EnvSecretProvider found app secret: ${envKey}`);
     }
-    
+
     return value;
   }
 
@@ -45,15 +45,15 @@ export class EnvSecretProvider implements ISecretProvider {
    * @returns The secret value or undefined if not found
    */
   async getTenantSecret(tenantId: string, name: string): Promise<string | undefined> {
-    const envKey = this.prefix 
+    const envKey = this.prefix
       ? `${this.prefix}_TENANT_${tenantId}_${name}`
       : `TENANT_${tenantId}_${name}`;
     const value = process.env[envKey];
-    
+
     if (value !== undefined) {
       logger.debug(`EnvSecretProvider found tenant secret: ${envKey}`);
     }
-    
+
     return value;
   }
 

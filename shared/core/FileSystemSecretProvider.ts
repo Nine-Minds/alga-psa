@@ -1,6 +1,6 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import { ISecretProvider } from './ISecretProvider.js';
+import { ISecretProvider } from './ISecretProvider';
 
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';
@@ -76,7 +76,7 @@ export class FileSystemSecretProvider implements ISecretProvider {
     }
     const filePath = path.join(await this.getBasePath(), safeName);
     // console.debug(`Attempting to read app secret: ${filePath}`);
-    
+
     return this.readFileContent(filePath) || '';
   }
 

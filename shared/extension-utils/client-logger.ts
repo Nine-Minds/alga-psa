@@ -1,6 +1,6 @@
 /**
  * Client-safe logger for extension components
- * 
+ *
  * This logger works in both server and client contexts without dependencies
  * on Node.js-specific modules like 'fs' that cause build errors in Next.js.
  */
@@ -27,7 +27,7 @@ class ClientSafeLogger implements Logger {
       // Server-side: try to use the server logger, fallback to console
       try {
         // Dynamic import to avoid build-time resolution issues
-        import('../core/logger.js').then(({ default: serverLogger }) => {
+        import('../core/logger').then(({ default: serverLogger }) => {
           serverLogger.error(message, meta);
         }).catch(() => {
           console.error(this.formatMessage('error', message, meta));
@@ -43,7 +43,7 @@ class ClientSafeLogger implements Logger {
       console.warn(this.formatMessage('warn', message, meta));
     } else {
       try {
-        import('../core/logger.js').then(({ default: serverLogger }) => {
+        import('../core/logger').then(({ default: serverLogger }) => {
           serverLogger.warn(message, meta);
         }).catch(() => {
           console.warn(this.formatMessage('warn', message, meta));
@@ -59,7 +59,7 @@ class ClientSafeLogger implements Logger {
       console.info(this.formatMessage('info', message, meta));
     } else {
       try {
-        import('../core/logger.js').then(({ default: serverLogger }) => {
+        import('../core/logger').then(({ default: serverLogger }) => {
           serverLogger.info(message, meta);
         }).catch(() => {
           console.info(this.formatMessage('info', message, meta));
@@ -75,7 +75,7 @@ class ClientSafeLogger implements Logger {
       console.debug(this.formatMessage('debug', message, meta));
     } else {
       try {
-        import('../core/logger.js').then(({ default: serverLogger }) => {
+        import('../core/logger').then(({ default: serverLogger }) => {
           serverLogger.debug(message, meta);
         }).catch(() => {
           console.debug(this.formatMessage('debug', message, meta));

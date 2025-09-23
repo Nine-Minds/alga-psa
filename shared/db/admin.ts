@@ -6,7 +6,7 @@ let adminConnection: Knex | null = null;
 export async function getAdminConnection(): Promise<Knex> {
     const connectionId = Math.random().toString(36).substring(7);
     // console.log(`[getAdminConnection:${connectionId}] Called - adminConnection exists:`, !!adminConnection);
-    
+
     // Return existing connection if available and not destroyed
     if (adminConnection) {
         try {
@@ -20,7 +20,7 @@ export async function getAdminConnection(): Promise<Knex> {
             adminConnection = null;
         }
     }
-    
+
 
     const environment = process.env.NODE_ENV || 'development';
     const dbPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
@@ -58,7 +58,7 @@ export async function getAdminConnection(): Promise<Knex> {
 
     adminConnection = knex(config);
     // console.log(`[getAdminConnection:${connectionId}] Created new Knex instance, testing connection...`);
-    
+
     try {
         await adminConnection.raw('SELECT 1');
         // console.log(`[getAdminConnection:${connectionId}] New connection test successful`);
@@ -66,7 +66,7 @@ export async function getAdminConnection(): Promise<Knex> {
         // console.error(`[getAdminConnection:${connectionId}] New connection test failed:`, error instanceof Error ? error.message : String(error));
         throw error;
     }
-    
+
     return adminConnection;
 }
 

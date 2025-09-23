@@ -1,9 +1,9 @@
 /**
  * Dead Letter Queue Utility
- * 
+ *
  * This script provides utilities for managing the dead letter queue (DLQ) for workflow events.
  * It allows listing, viewing, and reprocessing messages in the DLQ.
- * 
+ *
  * Usage:
  *   node dlq-util.js list <executionId> [count]
  *   node dlq-util.js view <executionId> <messageId>
@@ -20,15 +20,15 @@ async function main() {
   const args = process.argv.slice(2);
   const command = args[0]?.toLowerCase();
   const executionId = args[1];
-  
+
   if (!command || !executionId) {
     printUsage();
     process.exit(1);
   }
-  
+
   const redisClient = getRedisStreamClient();
   await redisClient.initialize();
-  
+
   try {
     switch (command) {
       case 'list':
@@ -65,7 +65,7 @@ Commands:
   list       List messages in the DLQ for a specific execution
   view       View details of a specific message in the DLQ
   reprocess  Move a message from the DLQ back to the original stream for reprocessing
-  
+
 Arguments:
   executionId  The workflow execution ID (use 'global' for the global event stream)
   messageId    The ID of the message in the DLQ
@@ -76,17 +76,17 @@ Arguments:
 async function listMessages(redisClient, executionId, countArg) {
   const count = parseInt(countArg) || 100;
   console.log(`Listing up to ${count} messages in DLQ for execution ${executionId}...`);
-  
+
   const messages = await redisClient.listDeadLetterQueueMessages(executionId, count);
-  
+
   if (messages.length === 0) {
     console.log('No messages found in DLQ.');
     return;
   }
-  
+
   console.log(`Found ${messages.length} messages in DLQ:`);
   console.log('-----------------------------------');
-  
+
   for (const message of messages) {
     console.log(`ID: ${message.id}`);
     console.log(`Error: ${message.error_message}`);
@@ -101,17 +101,17 @@ async function viewMessage(redisClient, executionId, messageId) {
     printUsage();
     process.exit(1);
   }
-  
+
   console.log(`Viewing message ${messageId} in DLQ for execution ${executionId}...`);
-  
+
   const messages = await redisClient.listDeadLetterQueueMessages(executionId);
   const message = messages.find(msg => msg.id === messageId);
-  
+
   if (!message) {
     console.error(`Message ${messageId} not found in DLQ for execution ${executionId}`);
     return;
   }
-  
+
   console.log('Message details:');
   console.log('-----------------------------------');
   console.log(`ID: ${message.id}`);
@@ -137,11 +137,11 @@ async function reprocessMessage(redisClient, executionId, messageId) {
     printUsage();
     process.exit(1);
   }
-  
+
   console.log(`Reprocessing message ${messageId} from DLQ for execution ${executionId}...`);
-  
+
   const success = await redisClient.reprocessDeadLetterQueueMessage(executionId, messageId);
-  
+
   if (success) {
     console.log(`Successfully reprocessed message ${messageId}`);
   } else {

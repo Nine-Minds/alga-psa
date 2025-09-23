@@ -5,16 +5,16 @@ use "utils.nu" *
 def load-local-env [] {
     let project_root = find-project-root
     let env_file = $"($project_root)/.env.local"
-    
+
     if ($env_file | path exists) {
         # Parse .env.local file and load variables
-        let env_vars = (open $env_file 
-            | lines 
+        let env_vars = (open $env_file
+            | lines
             | where ($it | str trim | str length) > 0
             | where not ($it | str starts-with "#")
             | parse "{key}={value}"
             | transpose -r -d)
-        
+
         # Load the environment variables
         load-env $env_vars
     }
@@ -188,7 +188,7 @@ export def hosted-env-create [
     load-local-env
     let env_cfg = (get-hosted-env-config $environment)
     ensure-hosted-env-context $env_cfg
-    
+
     let project_root = find-project-root
     let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
@@ -339,12 +339,14 @@ spec:
 
     # Copy required secrets from msp namespace
     print $"($env.ALGA_COLOR_CYAN)Copying required secrets to ($namespace)...($env.ALGA_COLOR_RESET)"
-    
+
     # Copy nm-store-db-secret if it exists in msp namespace
     let nm_store_secret_exists = (kubectl -n msp get secret nm-store-db-secret | complete)
     if $nm_store_secret_exists.exit_code == 0 {
-        (kubectl -n msp get secret nm-store-db-secret -o yaml | 
-         sed $"s/namespace: msp/namespace: ($namespace)/" | 
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret nm-store-db-secret -n $namespace --ignore-not-found=true | complete) | ignore
+        (kubectl -n msp get secret nm-store-db-secret -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
          kubectl apply -f - | complete) | ignore
         print $"($env.ALGA_COLOR_GREEN)✓ Copied nm-store-db-secret($env.ALGA_COLOR_RESET)"
     } else {
@@ -354,6 +356,8 @@ spec:
     # Copy resend-credentials if it exists in msp namespace
     let resend_secret_exists = (kubectl -n msp get secret resend-credentials | complete)
     if $resend_secret_exists.exit_code == 0 {
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret resend-credentials -n $namespace --ignore-not-found=true | complete) | ignore
         (kubectl -n msp get secret resend-credentials -o yaml |
          sed $"s/namespace: msp/namespace: ($namespace)/" |
          kubectl apply -f - | complete) | ignore
@@ -365,12 +369,40 @@ spec:
     # Copy temporal-worker-secret if it exists in msp namespace
     let temporal_secret_exists = (kubectl -n msp get secret temporal-worker-secret | complete)
     if $temporal_secret_exists.exit_code == 0 {
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret temporal-worker-secret -n $namespace --ignore-not-found=true | complete) | ignore
         (kubectl -n msp get secret temporal-worker-secret -o yaml |
          sed $"s/namespace: msp/namespace: ($namespace)/" |
          kubectl apply -f - | complete) | ignore
         print $"($env.ALGA_COLOR_GREEN)✓ Copied temporal-worker-secret($env.ALGA_COLOR_RESET)"
     } else {
         print $"($env.ALGA_COLOR_YELLOW)⚠ temporal-worker-secret not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
+    # Copy redis-credentials if it exists in msp namespace
+    let redis_secret_exists = (kubectl -n msp get secret redis-credentials | complete)
+    if $redis_secret_exists.exit_code == 0 {
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret redis-credentials -n $namespace --ignore-not-found=true | complete) | ignore
+        (kubectl -n msp get secret redis-credentials -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied redis-credentials($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ redis-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
+    # Copy harbor-credentials if it exists in msp namespace
+    let harbor_secret_exists = (kubectl -n msp get secret harbor-credentials | complete)
+    if $harbor_secret_exists.exit_code == 0 {
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret harbor-credentials -n $namespace --ignore-not-found=true | complete) | ignore
+        (kubectl -n msp get secret harbor-credentials -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied harbor-credentials($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ harbor-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
     }
 
     let vault_enabled = ($env_cfg.vault_enabled? | default true)
@@ -417,9 +449,39 @@ hostedEnv:
 
 ($vault_block)
 
+# Configure hosted environment to use shared external database
+db:
+  enabled: false  # Don't create local database pod
+
+redis:
+  enabled: false  # Don't create local redis pod
+
 config:
+  db:
+    host: \"cluster-0.alga-db.svc.cluster.local\"
+    user: \"app_user\"
+    port: 5432
+    type: \"postgres\"
+    # Use plain host value, not secret
+    hostSecret:
+      name: \"\"
+      key: \"\"
+    # Use existing db-credentials secret for external database
+    server_password_admin_secret:
+      name: \"db-credentials\"
+      key: \"DB_PASSWORD_SUPERUSER\"
+    server_password_secret:
+      name: \"db-credentials\"
+      key: \"DB_PASSWORD_SERVER\"
+  redis:
+    host: \"redis.msp.svc.cluster.local\"
+    port: 6379
   hocuspocus:
-    hostFQDN: ""
+    hostFQDN: \"\"
+
+# Override storage class for Sebastian environment
+persistence:
+  storageClass: \"microk8s-hostpath\"
 "
 
     $values_content | save -f $temp_values_file
@@ -571,18 +633,24 @@ export def hosted-env-connect [
     print $"  Code App:     ($code_app_port)"
 
     # Start port forwarding in background and log output
-    let pf_name = $release
+    # Find the code-server pod for direct forwarding (more reliable than service forwarding with Istio)
+    let pod_result = (kubectl get pods -n $namespace -l app.kubernetes.io/component=code-server -o jsonpath='{.items[0].metadata.name}' | complete)
+    if $pod_result.exit_code != 0 or ($pod_result.stdout | str trim | is-empty) {
+        print $"($env.ALGA_COLOR_RED)Could not find code-server pod in namespace ($namespace)($env.ALGA_COLOR_RESET)"
+        return
+    }
+    let pod_name = ($pod_result.stdout | str trim)
     let log_code_server = $"/tmp/pf-($env_cfg.temp_prefix)-code-server-($sanitized_branch).log"
     let log_code_app    = $"/tmp/pf-($env_cfg.temp_prefix)-code-app-($sanitized_branch).log"
 
-    bash -c $"kubectl port-forward -n ($namespace) svc/($pf_name)-code-server --address=127.0.0.1 ($code_server_port):8080 > ($log_code_server) 2>&1 &"
-    bash -c $"kubectl port-forward -n ($namespace) svc/($pf_name)-code-server --address=127.0.0.1 ($code_app_port):3000 > ($log_code_app) 2>&1 &"
+    bash -c $"kubectl port-forward -n ($namespace) pod/($pod_name) --address=127.0.0.1 ($code_server_port):8080 > ($log_code_server) 2>&1 &"
+    bash -c $"kubectl port-forward -n ($namespace) pod/($pod_name) --address=127.0.0.1 ($code_app_port):3000 > ($log_code_app) 2>&1 &"
 
     # Give processes time to start
     sleep 2sec
 
     # Verify background processes started
-    let pf_check = do { bash -c $"ps aux | grep -E 'kubectl port-forward.*($pf_name)-code-server' | grep -v grep | wc -l" | complete }
+    let pf_check = do { bash -c $"ps aux | grep -E 'kubectl port-forward.*pod/($pod_name)' | grep -v grep | wc -l" | complete }
     if ($pf_check.stdout | str trim | into int) < 2 {
         print $"($env.ALGA_COLOR_YELLOW)Warning: Port-forwarding may not have started correctly. Checking logs...($env.ALGA_COLOR_RESET)"
         for log_file in [ $log_code_server $log_code_app ] {
@@ -606,7 +674,7 @@ export def hosted-env-connect [
     input "Press Enter to stop port forwarding..."
 
     # Kill all kubectl port-forward processes for this env
-    bash -c $"pkill -f 'kubectl port-forward.*($pf_name)-code-server'" | complete | ignore
+    bash -c $"pkill -f 'kubectl port-forward.*pod/($pod_name)'" | complete | ignore
 
     # Clean up logs
     rm -f $log_code_server

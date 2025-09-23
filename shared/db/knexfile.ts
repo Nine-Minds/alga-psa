@@ -136,7 +136,7 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
 
   const env = (typeof process !== 'undefined' && process.env?.APP_ENV) || 'development';
   const config = await getKnexConfig(env);
-  
+
   return {
     ...config,
     asyncStackTraces: true,

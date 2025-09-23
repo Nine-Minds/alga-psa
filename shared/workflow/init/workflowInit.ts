@@ -1,5 +1,5 @@
 import { getActionRegistry } from '../core/actionRegistry.js';
-import { getWorkflowRuntime } from '../core/workflowRuntime.js';
+import { getWorkflowRuntime } from '../core/workflowRuntime';
 import logger from '@alga-psa/shared/core/logger.js';
 
 /**
@@ -9,10 +9,10 @@ import logger from '@alga-psa/shared/core/logger.js';
 export async function initializeWorkflowSystem(): Promise<void> {
   try {
     logger.info('Initializing workflow system...');
-    
+
     // Initialize action registry
     const actionRegistry = getActionRegistry();
-    
+
     // Register common actions
     actionRegistry.registerSimpleAction(
       'log_audit_event',
@@ -27,7 +27,7 @@ export async function initializeWorkflowSystem(): Promise<void> {
         return { success: true };
       }
     );
-    
+
     actionRegistry.registerSimpleAction(
       'send_notification',
       'Send a notification',
@@ -40,7 +40,7 @@ export async function initializeWorkflowSystem(): Promise<void> {
         return { success: true, notificationId: `notif-${Date.now()}` };
       }
     );
-    
+
     actionRegistry.registerSimpleAction(
       'get_user_role',
       'Get user role',
@@ -55,20 +55,20 @@ export async function initializeWorkflowSystem(): Promise<void> {
           'user3': 'senior_manager',
           'user4': 'admin'
         };
-        
-        const role = params.userId in roles 
-          ? roles[params.userId as keyof typeof roles] 
+
+        const role = params.userId in roles
+          ? roles[params.userId as keyof typeof roles]
           : 'user';
-          
+
         return role;
       }
     );
-    
-    
+
+
     // Initialize workflow runtime
     getWorkflowRuntime(actionRegistry);
-    
-    
+
+
     logger.info('Workflow system initialized successfully');
   } catch (error) {
     logger.error('Failed to initialize workflow system:', error);

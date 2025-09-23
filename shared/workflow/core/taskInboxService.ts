@@ -23,7 +23,7 @@ interface TaskActionContext extends ActionExecutionContext {
 export class TaskInboxService {
   /**
    * Create a new task in the Task Inbox
-   * 
+   *
    * @param knex Knex instance
    * @param tenant Tenant ID
    * @param executionId Workflow execution ID
@@ -77,11 +77,11 @@ export class TaskInboxService {
 
       // Create the task - ensure assigned_roles and assigned_users are properly formatted JSON arrays
       console.log('DEBUG createTask - Raw params assignTo:', JSON.stringify(params.assignTo, null, 2));
-      
+
       let assignedRoles: string[] | undefined = undefined;
       if (params.assignTo?.roles) {
         console.log('DEBUG createTask - Raw roles:', params.assignTo.roles, 'Type:', typeof params.assignTo.roles);
-        
+
         if (typeof params.assignTo.roles === 'string') {
           assignedRoles = [params.assignTo.roles];
           console.log('DEBUG createTask - Converted string role to array:', assignedRoles);
@@ -92,11 +92,11 @@ export class TaskInboxService {
           console.log('DEBUG createTask - Invalid roles format, set to undefined');
         }
       }
-      
+
       let assignedUsers: string[] | undefined = undefined;
       if (params.assignTo?.users) {
         console.log('DEBUG createTask - Raw users:', params.assignTo.users, 'Type:', typeof params.assignTo.users);
-        
+
         if (typeof params.assignTo.users === 'string') {
           assignedUsers = [params.assignTo.users];
           console.log('DEBUG createTask - Converted string user to array:', assignedUsers);
@@ -107,17 +107,17 @@ export class TaskInboxService {
           console.log('DEBUG createTask - Invalid users format, set to undefined');
         }
       }
-      
+
       if (assignedRoles !== undefined && !Array.isArray(assignedRoles)) {
         console.log('DEBUG createTask - Final check: roles is not an array, forcing to undefined');
         assignedRoles = undefined;
       }
-      
+
       if (assignedUsers !== undefined && !Array.isArray(assignedUsers)) {
         console.log('DEBUG createTask - Final check: users is not an array, forcing to undefined');
         assignedUsers = undefined;
       }
-      
+
       // Prepare the task object with the new dual FK structure.
       // IWorkflowTask will need to be updated to reflect these new fields.
       // For now, we construct the object as expected by WorkflowTaskModel.createTask after its own update.
@@ -137,14 +137,14 @@ export class TaskInboxService {
         assigned_users: assignedUsers,
         created_by: userId
       };
-      
+
       console.log('DEBUG createTask - Final task payload to be inserted:', JSON.stringify(taskPayload, null, 2));
-      
+
       // Insert the task - capturing the returned task ID
       // WorkflowTaskModel.createTask will need to be updated to accept this payload.
       const generatedTaskId = await WorkflowTaskModel.createTask(knex, tenant, taskPayload as any); // Use 'as any' temporarily if IWorkflowTask is not yet updated
       console.log('DEBUG createTask - Task created with ID:', generatedTaskId);
-      
+
       // Add task history entry - using the generated task ID from the database
       try {
         await WorkflowTaskModel.addTaskHistory(knex, tenant, {
@@ -160,7 +160,7 @@ export class TaskInboxService {
         console.error('Error adding task history:', error);
         // Continue even if history fails - the task is already created
       }
-      
+
       // Create a task created event - using the generated task ID
       const eventId = `${uuidv4()}`;
       const event = {
@@ -186,7 +186,7 @@ export class TaskInboxService {
         },
         created_at: new Date().toISOString()
       };
-      
+
       // Insert the event
       try {
         await knex('workflow_events').insert(event);
@@ -195,7 +195,7 @@ export class TaskInboxService {
         console.error('Error creating task event:', error);
         // Continue even if event creation fails - the task is already created
       }
-      
+
       return generatedTaskId; // Return the generated task ID from the database
     } catch (error) {
       console.error('Error creating task:', error);
@@ -205,7 +205,7 @@ export class TaskInboxService {
 
   /**
    * Creates a task with an inline form definition
-   * 
+   *
    * @param knex Knex instance
    * @param tenant Tenant ID
    * @param executionId Workflow execution ID
@@ -372,8 +372,8 @@ export class TaskInboxService {
 
   /**
    * Clean up temporary forms for a specific tenant
-   * 
-   * @param knex Knex instance 
+   *
+   * @param knex Knex instance
    * @param tenant Tenant ID
    * @returns Number of forms deleted
    */
@@ -417,7 +417,7 @@ export class TaskInboxService {
 
   /**
    * Clean up temporary forms for all tenants
-   * 
+   *
    * @param knex Knex instance
    * @returns Total number of forms deleted
    */
@@ -456,7 +456,7 @@ export class TaskInboxService {
       // Get database connection
       const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
       const knex = await getAdminConnection();
-      
+
       // Create the task with inline form
       const taskId = await this.createTaskWithInlineForm(
         knex,
@@ -478,7 +478,7 @@ export class TaskInboxService {
         },
         context.userId
       );
-      
+
       return {
         success: true,
         taskId
@@ -492,11 +492,11 @@ export class TaskInboxService {
       };
     }
   }
-  
+
   /**
    * Register a task creation action with the workflow engine
    * This allows workflows to create human tasks
-   * 
+   *
    * @param actionRegistry The action registry to register with
    */
   registerTaskActions(actionRegistry: ActionRegistry): void {
@@ -516,31 +516,31 @@ export class TaskInboxService {
       async (params: Record<string, any>, context: ActionExecutionContext) => {
         try {
           const taskInboxService = new TaskInboxService();
-          
+
           // Get database connection
           const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
           const knex = await getAdminConnection();
-          
+
           // Validate and normalize inputs
           let assignTo: { roles?: string[]; users?: string[] } | undefined = undefined;
-          
+
           console.log('DEBUG create_human_task - Context:', {
             tenant: context.tenant,
             executionId: context.executionId,
             userId: context.userId || 'undefined', // Log userId to verify it's being passed
             idempotencyKey: context.idempotencyKey
           });
-          
+
           console.log('DEBUG create_human_task - Input params:', JSON.stringify(params, null, 2));
-          
+
           // Ensure assignTo is properly structured with valid array values
           if (params.assignTo) {
             console.log('DEBUG create_human_task - Original assignTo:', JSON.stringify(params.assignTo, null, 2));
-            
+
             // Check if roles is a string and convert to array if needed
             let roles = params.assignTo.roles;
             console.log('DEBUG create_human_task - Original roles:', roles, 'Type:', typeof roles);
-            
+
             if (typeof roles === 'string') {
               roles = [roles]; // Convert single string to array
               console.log('DEBUG create_human_task - Converted string role to array:', roles);
@@ -548,11 +548,11 @@ export class TaskInboxService {
               roles = undefined; // If not string or array, set to undefined
               console.log('DEBUG create_human_task - Invalid roles format, set to undefined');
             }
-            
+
             // Check if users is a string and convert to array if needed
             let users = params.assignTo.users;
             console.log('DEBUG create_human_task - Original users:', users, 'Type:', typeof users);
-            
+
             if (typeof users === 'string') {
               users = [users]; // Convert single string to array
               console.log('DEBUG create_human_task - Converted string user to array:', users);
@@ -560,17 +560,17 @@ export class TaskInboxService {
               users = undefined; // If not string or array, set to undefined
               console.log('DEBUG create_human_task - Invalid users format, set to undefined');
             }
-            
+
             assignTo = {
               roles: roles,
               users: users
             };
-            
+
             console.log('DEBUG create_human_task - Normalized assignTo:', JSON.stringify(assignTo, null, 2));
           } else {
             console.log('DEBUG create_human_task - No assignTo provided');
           }
-          
+
           // Create the task with validated inputs
           const taskId = await taskInboxService.createTask(
             knex,
@@ -587,7 +587,7 @@ export class TaskInboxService {
             },
             context.userId
           );
-          
+
           return {
             success: true,
             taskId
@@ -637,7 +637,7 @@ export class TaskInboxService {
       async (params: Record<string, any>, context: ActionExecutionContext) => {
         try {
           const taskInboxService = new TaskInboxService();
-          
+
           // Step 1: Create the task with inline form
           const createTaskResult = await taskInboxService.createTaskWithInlineFormAction(params, context);
 
@@ -659,44 +659,44 @@ export class TaskInboxService {
             const knex = await getAdminConnection();
 
             const taskCompletedEventName = TaskEventNames.taskCompleted(taskId);
-            
+
             // In a real implementation, this would use the workflow context's waitFor
             // Since that's not available in ActionExecutionContext, we'll have to mock this
             // This is just a prototype implementation that polls the task status
-            
+
             console.log(`Waiting for task completion event: ${taskCompletedEventName}`);
-            
+
             // Poll for task completion - this is not how it would work in production
             // In production, this would use the event system, but for TypeScript validation
             // we need a simplified implementation
-            
+
             // Set timeout
             const timeoutMs = params.waitForEventTimeoutMilliseconds || 3600000; // 1 hour default
             const startTime = Date.now();
-            
+
             // Poll every 5 seconds
             const pollIntervalMs = 5000;
             let isCompleted = false;
             let task: IWorkflowTask | null = null;
-            
+
             while (Date.now() - startTime < timeoutMs && !isCompleted) {
               // Check if task is completed
               task = await WorkflowTaskModel.getTaskById(knex, context.tenant, taskId);
-              
+
               if (task && task.status === WorkflowTaskStatus.COMPLETED) {
                 isCompleted = true;
                 break;
               }
-              
+
               // Wait for next poll
               await new Promise(resolve => setTimeout(resolve, pollIntervalMs));
             }
-            
+
             // If we timed out
             if (!isCompleted) {
               throw new Error(`Timeout waiting for task ${taskId} to complete`);
             }
-            
+
             // Task completed successfully
             return {
               success: true,
@@ -733,17 +733,17 @@ export class TaskInboxService {
       async (params: Record<string, any>, context: ActionExecutionContext) => {
         try {
           const taskInboxService = new TaskInboxService();
-          
+
           // Get database connection
           const { getAdminConnection } = await import('@alga-psa/shared/db/admin.js');
           const knex = await getAdminConnection();
-          
+
           // Clean up temporary forms
           const deletedCount = await taskInboxService.cleanupTemporaryForms(
             knex,
             params.tenant
           );
-          
+
           return {
             success: true,
             deletedCount
