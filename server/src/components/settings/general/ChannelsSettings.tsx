@@ -60,6 +60,7 @@ const ChannelsSettings: React.FC = () => {
   // State for ITIL Info Modal
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
   const [selectedImportChannels, setSelectedImportChannels] = useState<string[]>([]);
+  const [importChannelItilSettings, setImportChannelItilSettings] = useState<Record<string, boolean>>({});
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
@@ -150,20 +151,77 @@ const ChannelsSettings: React.FC = () => {
 
   const handleImport = async () => {
     try {
-      if (importConflicts.length > 0) {
-        await importReferenceData('channels', selectedImportChannels, undefined, conflictResolutions);
-      } else {
-        const conflicts = await checkImportConflicts('channels', selectedImportChannels);
-        if (conflicts.length > 0) {
-          setImportConflicts(conflicts);
-          return;
+      // Get the reference channels data first
+      const referenceChannels = availableReferenceChannels.filter(channel =>
+        selectedImportChannels.includes(channel.id)
+      );
+
+      // Separate ITIL and non-ITIL channels
+      const itilChannels = referenceChannels.filter(channel =>
+        importChannelItilSettings[channel.id]
+      );
+      const regularChannels = referenceChannels.filter(channel =>
+        !importChannelItilSettings[channel.id]
+      );
+
+      const allResults: any = { imported: [], skipped: [] };
+
+      // Import regular channels using the existing process
+      if (regularChannels.length > 0) {
+        const regularChannelIds = regularChannels.map(c => c.id);
+        let regularResult;
+
+        if (importConflicts.length > 0) {
+          const regularConflicts = Object.fromEntries(
+            Object.entries(conflictResolutions).filter(([id]) => regularChannelIds.includes(id))
+          );
+          regularResult = await importReferenceData('channels', regularChannelIds, undefined, regularConflicts);
+        } else {
+          const conflicts = await checkImportConflicts('channels', regularChannelIds);
+          if (conflicts.length > 0) {
+            setImportConflicts(conflicts);
+            return;
+          }
+          regularResult = await importReferenceData('channels', regularChannelIds);
         }
-        await importReferenceData('channels', selectedImportChannels);
+
+        if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
+        if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
-      
+
+      // Create ITIL channels manually using the createChannel API
+      for (const channel of itilChannels) {
+        try {
+          const resolution = conflictResolutions[channel.id];
+          const channelName = resolution?.newName || channel.channel_name;
+          const displayOrder = resolution?.newOrder || channel.display_order;
+
+          await createChannel({
+            channel_name: channelName,
+            description: channel.description || '',
+            display_order: displayOrder,
+            is_inactive: channel.is_inactive || false,
+            category_type: 'itil',
+            priority_type: 'itil'
+          });
+
+          allResults.imported.push({
+            channel_name: channelName,
+            reference_id: channel.id
+          });
+        } catch (createError) {
+          console.error(`Failed to create ITIL channel ${channel.channel_name}:`, createError);
+          allResults.skipped.push({
+            name: channel.channel_name,
+            reason: 'Failed to create as ITIL channel'
+          });
+        }
+      }
+
       toast.success('Boards imported successfully');
       setShowImportDialog(false);
       setSelectedImportChannels([]);
+      setImportChannelItilSettings({});
       setImportConflicts([]);
       setConflictResolutions({});
       await fetchChannels();
@@ -506,6 +564,19 @@ const ChannelsSettings: React.FC = () => {
                     <div className="flex-1">Description</div>
                     <div className="w-20 text-center">Active</div>
                     <div className="w-20 text-center">Default</div>
+                    <div className="w-24 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        ITIL
+                        <button
+                          type="button"
+                          onClick={() => setShowItilInfoModal(true)}
+                          className="text-gray-400 hover:text-gray-600 transition-colors"
+                          title="View ITIL categories and priority matrix"
+                        >
+                          <HelpCircle className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
                     <div className="w-16 text-center">Order</div>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
@@ -546,6 +617,18 @@ const ChannelsSettings: React.FC = () => {
                             className="data-[state=checked]:bg-primary-500"
                           />
                         </div>
+                        <div className="w-24 text-center">
+                          <Switch
+                            checked={importChannelItilSettings[channel.id] || false}
+                            onCheckedChange={(checked) => {
+                              setImportChannelItilSettings(prev => ({
+                                ...prev,
+                                [channel.id]: checked
+                              }));
+                            }}
+                            className="data-[state=checked]:bg-blue-500"
+                          />
+                        </div>
                         <div className="w-16 text-center text-sm text-muted-foreground">
                           {channel.display_order}
                         </div>
@@ -564,6 +647,7 @@ const ChannelsSettings: React.FC = () => {
             onClick={() => {
               setShowImportDialog(false);
               setSelectedImportChannels([]);
+              setImportChannelItilSettings({});
             }}
           >
             Cancel
