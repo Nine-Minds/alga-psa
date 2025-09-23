@@ -302,10 +302,21 @@ export async function getTicketCategoriesByChannel(channelId: string): Promise<C
 
       // Fetch categories for this channel from tenant's categories table
       // (ITIL categories are copied to tenant table when channel is configured for ITIL)
-      const categories = await trx('categories')
-        .where('tenant', tenant!)
-        .where('channel_id', channelId)
-        .orderBy('category_name');
+      let categories;
+
+      if (channelConfig.category_type === 'itil') {
+        // For ITIL channels, get all ITIL categories regardless of which channel they were created for
+        categories = await trx('categories')
+          .where('tenant', tenant!)
+          .where('is_from_itil_standard', true)
+          .orderBy('category_name');
+      } else {
+        // For custom channels, get categories specific to this channel
+        categories = await trx('categories')
+          .where('tenant', tenant!)
+          .where('channel_id', channelId)
+          .orderBy('category_name');
+      }
 
       // Apply hierarchical ordering
       const orderedCategories = await orderCategoriesHierarchically(categories);
