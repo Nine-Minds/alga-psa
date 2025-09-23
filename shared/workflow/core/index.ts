@@ -1,4 +1,4 @@
-export { getWorkflowRuntime } from './workflowRuntime.js';
+export { getWorkflowRuntime } from './workflowRuntime';
 export { getActionRegistry } from './actionRegistry.js';
 export type { WorkflowDefinition, WorkflowMetadata } from './workflowDefinition.js';
 export { serializeWorkflowDefinition, deserializeWorkflowDefinition } from './workflowDefinition.js';
@@ -7,8 +7,8 @@ export { WorkflowEventSourcing } from './workflowEventSourcing.js';
 export type { EventReplayOptions } from './workflowEventSourcing.js';
 export type { ActionExecutionContext, ActionExecutionFunction, ActionParameterDefinition } from './actionRegistry.js';
 export { TransactionIsolationLevel } from './actionRegistry.js';
-export type { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from './workflowRuntime.js';
+export type { TypeScriptWorkflowRuntime, ProcessQueuedEventParams } from './workflowRuntime';
 export type { WorkflowFunction } from './workflowContext.js';
 export type { ActionRegistry } from './actionRegistry.js';
 export { WorkflowState } from './workflowContext.js';
-export type { EventSubmissionOptions } from './workflowRuntime.js';
+export type { EventSubmissionOptions } from './workflowRuntime';

@@ -1,9 +1,9 @@
 /// <reference types="node" />
-import { ISecretProvider } from './ISecretProvider.js';
+import { ISecretProvider } from './ISecretProvider';
 // Dynamic import Node-only providers to keep Edge runtime clean
-import { EnvSecretProvider } from './EnvSecretProvider.js';
-import { CompositeSecretProvider } from './CompositeSecretProvider.js';
-import logger from './logger.js';
+import { EnvSecretProvider } from './EnvSecretProvider';
+import { CompositeSecretProvider } from './CompositeSecretProvider';
+import logger from './logger';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
@@ -27,7 +27,7 @@ type ProviderType = typeof SUPPORTED_PROVIDER_TYPES[number];
 
 /**
  * Gets or creates a cached instance of the specified provider type.
- * 
+ *
  * @param providerType - The type of provider to instantiate
  * @returns The cached provider instance
  * @throws Error if the provider type is unsupported or initialization fails
@@ -39,14 +39,14 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
         envProviderInstance = new EnvSecretProvider();
       }
       return envProviderInstance;
-    
+
     case 'filesystem':
       if (!filesystemProviderInstance) {
-        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider.js');
+        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;
-    
+
     case 'vault':
       if (!vaultProviderInstance) {
         // Use direct vault provider
@@ -63,7 +63,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
         throw new Error('Failed to initialize vault provider');
       }
       return vaultProviderInstance;
-    
+
     default:
       throw new Error(`Unsupported provider type: ${providerType}`);
   }
@@ -71,7 +71,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
 
 /**
  * Validates provider configuration and required environment variables.
- * 
+ *
  * @param readChain - Array of provider type names for the read chain
  * @param writeProvider - Provider type name for writes
  * @throws Error if configuration is invalid or required environment variables are missing
@@ -90,7 +90,7 @@ function validateProviderConfiguration(readChain: string[], writeProvider: strin
 
   // Validate required environment variables for each configured provider
   const allProviders = new Set([...readChain, writeProvider]);
-  
+
   for (const providerType of allProviders) {
     switch (providerType) {
       case 'vault':
@@ -109,7 +109,7 @@ function validateProviderConfiguration(readChain: string[], writeProvider: strin
 
 /**
  * Builds a composite secret provider based on environment variable configuration.
- * 
+ *
  * @returns A configured CompositeSecretProvider instance
  * @throws Error if configuration is invalid
  */
@@ -118,7 +118,7 @@ async function buildSecretProviders(): Promise<CompositeSecretProvider> {
   const writeProviderEnv = getEnvVar('SECRET_WRITE_PROVIDER') || 'filesystem';
 
   const readChain = readChainEnv.split(',').map(s => s.trim()).filter(s => s.length > 0);
-  
+
   if (readChain.length === 0) {
     throw new Error('SECRET_READ_CHAIN cannot be empty');
   }
@@ -140,10 +140,10 @@ let initializationPromise: Promise<ISecretProvider> | null = null;
 
 /**
  * Factory function to get the configured secret provider instance.
- * 
+ *
  * New behavior: If SECRET_READ_CHAIN or SECRET_WRITE_PROVIDER are set, uses the composite system.
  * Legacy behavior: Reads the SECRET_PROVIDER_TYPE environment variable for backward compatibility.
- * 
+ *
  * @returns The singleton instance of the configured ISecretProvider.
  * @throws Error if the selected provider fails to initialize or configuration is invalid.
  */
@@ -161,7 +161,7 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
   initializationPromise = (async () => {
     // Check if new composite configuration is present
     const hasCompositeConfig = getEnvVar('SECRET_READ_CHAIN') || getEnvVar('SECRET_WRITE_PROVIDER');
-    
+
     if (hasCompositeConfig) {
       logger.info('Initializing composite secret provider system');
       secretProviderInstance = await buildSecretProviders();

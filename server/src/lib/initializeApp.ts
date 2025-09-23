@@ -2,7 +2,7 @@ import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { initializeScheduledJobs } from './jobs/initializeScheduledJobs';
 import { logger } from '@alga-psa/shared/core';
-import { initializeServerWorkflows } from '@alga-psa/shared/workflow';
+import { initializeServerWorkflows } from '@alga-psa/shared/workflow/init/serverInit';
 import { syncStandardTemplates } from './startupTasks';
 import { validateEnv } from 'server/src/config/envConfig';
 import { validateRequiredConfiguration, validateDatabaseConnectivity, validateSecretUniqueness } from 'server/src/config/criticalEnvValidation';

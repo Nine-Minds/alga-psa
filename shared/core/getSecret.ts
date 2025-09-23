@@ -1,4 +1,4 @@
-import { getSecretProviderInstance } from './secretProvider.js';
+import { getSecretProviderInstance } from './secretProvider';
 
 /**
  * Gets a secret value from the secret provider system or environment variable
@@ -14,11 +14,11 @@ export async function getSecret(secretName: string, envVar: string, defaultValue
     const secret = await secretProvider.getAppSecret(secretName);
     if (secret) {
       return secret;
-    } 
+    }
   } catch (error) {
     console.warn(`Failed to read secret '${secretName}' from secret provider:`, error instanceof Error ? error.message : 'Unknown error');
   }
-  
+
   // Fallback to environment variable
   if (process.env[envVar]) {
     let envValue = process.env[envVar] || defaultValue;
@@ -26,7 +26,7 @@ export async function getSecret(secretName: string, envVar: string, defaultValue
     console.log(`Environment variable ${envVar} value: ${envValue}`);
     return envValue;
   }
-  
+
   console.warn(`Neither secret provider nor ${envVar} environment variable found, using default value`);
   return defaultValue;
 }

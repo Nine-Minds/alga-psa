@@ -1,22 +1,22 @@
 // Re-export core functionality
-export * from './core/index.js';
+export * from './core/index';
 
 // Re-export db functionality
-export * from './db/index.js';
+export * from './db/index';
 
 // Re-export workflow functionality
-export * from './workflow/index.js';
+export * from './workflow/index';
 
 // Re-export types
-export * from './types/index.js';
+export * from './types/index';
 
 // Re-export canonical interfaces
-export * from './interfaces/company.interfaces.js';
-export * from './interfaces/contact.interfaces.js';
-export * from './interfaces/tag.interfaces.js';
-export * from './interfaces/validation.interfaces.js';
+export * from './interfaces/company.interfaces';
+export * from './interfaces/contact.interfaces';
+export * from './interfaces/tag.interfaces';
+export * from './interfaces/validation.interfaces';
 
-export { default as logger } from '@alga-psa/shared/core/logger.js';
+export { default as logger } from '@alga-psa/shared/core/logger';
 
 // Re-export extension utilities
-export * from './extension-utils/index.js';
+export * from './extension-utils/index';

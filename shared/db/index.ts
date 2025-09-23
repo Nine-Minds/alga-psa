@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { getAdminConnection } from './admin.js';
+import { getAdminConnection } from './admin';
 
 /**
  * Execute a function within a transaction
@@ -22,7 +22,7 @@ export async function withAdminTransaction<T>(
 ): Promise<T> {
   const transactionId = Math.random().toString(36).substring(7);
   console.log(`[withAdminTransaction:${transactionId}] Starting transaction wrapper`);
-  
+
   try {
     // If we already have a transaction, use it directly
     if (existingConnection && 'commit' in existingConnection && 'rollback' in existingConnection) {
@@ -31,7 +31,7 @@ export async function withAdminTransaction<T>(
       console.log(`[withAdminTransaction:${transactionId}] Existing transaction callback completed successfully`);
       return result;
     }
-    
+
     // If we have a connection but not a transaction, create one
     if (existingConnection) {
       console.log(`[withAdminTransaction:${transactionId}] Creating transaction on existing connection`);
@@ -39,7 +39,7 @@ export async function withAdminTransaction<T>(
       console.log(`[withAdminTransaction:${transactionId}] New transaction on existing connection completed successfully`);
       return result;
     }
-    
+
     // Otherwise, get admin connection and create transaction
     console.log(`[withAdminTransaction:${transactionId}] Getting admin connection for new transaction`);
     const adminDb = await getAdminConnection();
@@ -53,7 +53,7 @@ export async function withAdminTransaction<T>(
     //     pending: adminDb.client.pool.pending
     //   } : 'No pool info available'
     // });
-    
+
     // console.log(`[withAdminTransaction:${transactionId}] Creating transaction on admin connection`);
     const result = await adminDb.transaction(callback);
     // console.log(`[withAdminTransaction:${transactionId}] Admin transaction completed successfully`);
