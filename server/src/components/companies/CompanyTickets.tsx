@@ -184,8 +184,8 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       }
 
       openDrawer(
-        <TicketDetails 
-          isInDrawer={true} 
+        <TicketDetails
+          isInDrawer={true}
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
           initialChannel={ticketData.channel}
@@ -202,6 +202,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           initialCategories={ticketData.categories}
           initialCompanies={ticketData.companies}
           initialLocations={ticketData.locations}
+          currentUser={currentUser}
         />
       );
     } catch (error) {

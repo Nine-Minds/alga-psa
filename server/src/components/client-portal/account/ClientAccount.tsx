@@ -5,12 +5,14 @@ import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/
 import { Table } from 'server/src/components/ui/Table';
 import { getClientCompany } from 'server/src/lib/actions/client-portal-actions/client-company';
 import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
+import { useTranslation } from '@/lib/i18n/client';
 
 import type { ICompany } from 'server/src/interfaces/company.interfaces';
 import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 
 export default function ClientAccount() {
+  const { t } = useTranslation('clientPortal');
   const [isLoading, setIsLoading] = useState(true);
   const [company, setCompany] = useState<ICompany | null>(null);
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
@@ -61,7 +63,7 @@ export default function ClientAccount() {
         }
       } catch (e) {
         if (!mounted) return;
-        setError('Failed to load account information');
+        setError(t('companySettings.messages.failedToLoad'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -77,9 +79,9 @@ export default function ClientAccount() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card id="company-details-card" className="p-6"><div>Loading company details…</div></Card>
-        <Card id="billing-plan-card" className="p-6"><div>Loading billing plan…</div></Card>
-        <Card className="p-6"><div>Loading invoices…</div></Card>
+        <Card id="company-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
+        <Card id="billing-plan-card" className="p-6"><div>{t('common.loading')}</div></Card>
+        <Card className="p-6"><div>{t('common.loading')}</div></Card>
       </div>
     );
   }
@@ -97,22 +99,22 @@ export default function ClientAccount() {
       {/* Company Details */}
       <Card id="company-details-card" className="bg-white">
         <CardHeader>
-          <CardTitle>Company Details</CardTitle>
+          <CardTitle>{t('companySettings.tabs.companyDetails')}</CardTitle>
         </CardHeader>
         <CardContent>
           {company ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-600">Company Name</div>
+                <div className="text-sm text-gray-600">{t('companySettings.fields.companyName')}</div>
                 <div className="text-base font-medium">{company.company_name}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Website</div>
+                <div className="text-sm text-gray-600">{t('companySettings.fields.website')}</div>
                 <div className="text-base font-medium">{company.properties?.website || company.url || '—'}</div>
               </div>
             </div>
           ) : (
-            <div>No company information available.</div>
+            <div>{t('common.noData')}</div>
           )}
         </CardContent>
       </Card>
@@ -120,7 +122,7 @@ export default function ClientAccount() {
       {/* Billing Plan */}
       <Card id="billing-plan-card" className="bg-white">
         <CardHeader>
-          <CardTitle>Billing Plan</CardTitle>
+          <CardTitle>{t('billing.currentPlan')}</CardTitle>
         </CardHeader>
         <CardContent>
           {billingPlan ? (
@@ -136,7 +138,7 @@ export default function ClientAccount() {
               </div> */}
             </div>
           ) : (
-            <div className="text-gray-600">No active plan found.</div>
+            <div className="text-gray-600">{t('common.noData')}</div>
           )}
         </CardContent>
       </Card>
@@ -144,25 +146,25 @@ export default function ClientAccount() {
       {/* Invoices */}
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Invoices</CardTitle>
+          <CardTitle>{t('billing.invoices')}</CardTitle>
         </CardHeader>
         <CardContent>
           {!hasInvoiceAccess ? (
-            <div className="text-sm text-gray-600">You do not have access to view invoices.</div>
+            <div className="text-sm text-gray-600">{t('billing.messages.noInvoices')}</div>
           ) : (
             <Table id="invoices-table">
               <thead>
                 <tr>
-                  <th>Invoice #</th>
-                  <th>Date</th>
-                  <th>Total</th>
-                  <th>Status</th>
+                  <th>{t('billing.invoice.number')}</th>
+                  <th>{t('billing.invoice.date')}</th>
+                  <th>{t('billing.invoice.amount')}</th>
+                  <th>{t('billing.invoice.status')}</th>
                 </tr>
               </thead>
               <tbody>
                 {invoices.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="text-center py-4 text-gray-500">No invoices found</td>
+                    <td colSpan={4} className="text-center py-4 text-gray-500">{t('billing.messages.noInvoices')}</td>
                   </tr>
                 ) : (
                   invoices.slice(0, 10).map((inv) => (

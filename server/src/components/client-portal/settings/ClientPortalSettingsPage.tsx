@@ -7,8 +7,10 @@ import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { useTranslation } from '@/lib/i18n/client';
 
 export default function ClientPortalSettingsPage() {
+  const { t } = useTranslation('clientPortal');
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -22,16 +24,16 @@ export default function ClientPortalSettingsPage() {
   }, []);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>{t('common.loading')}</div>;
   }
 
   const tabs = [
     {
-      label: 'Account',
+      label: t('companySettings.tabs.account'),
       content: <ClientAccount />
     },
     {
-      label: 'Company Details',
+      label: t('companySettings.tabs.companyDetails'),
       content: <CompanyDetailsSettings />
     }
   ];
@@ -39,7 +41,7 @@ export default function ClientPortalSettingsPage() {
   // Only add User Management tab if user has permission
   if (hasUserManagementAccess) {
     tabs.push({
-      label: 'User Management',
+      label: t('companySettings.tabs.userManagement'),
       content: <UserManagementSettings />
     });
   }
@@ -48,9 +50,9 @@ export default function ClientPortalSettingsPage() {
     <DrawerProvider>
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Company Settings</h1>
+        <h1 className="text-2xl font-semibold">{t('companySettings.title')}</h1>
         <p className="text-gray-600">
-          Manage your company settings and configurations.
+          {t('companySettings.description')}
         </p>
       </div>
 

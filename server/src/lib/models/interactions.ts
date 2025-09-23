@@ -217,12 +217,17 @@ class InteractionModel {
     const { knex: db, tenant } = await createTenantKnex();
 
     try {
+      // Never attempt to update the tenant (distribution/partition key).
+      // Some backends (e.g., Citus) reject updates that include the partition/distribution column
+      // even if the value remains unchanged.
+      const { tenant: _ignoreTenant, interaction_id: _ignoreId, ...safeUpdateData } = updateData as any;
+
       const [updatedInteraction] = await db('interactions')
         .where({ 
           interaction_id: interactionId,
           tenant
         })
-        .update(updateData)
+        .update(safeUpdateData)
         .returning('*');
 
       // Get the full interaction details including type name

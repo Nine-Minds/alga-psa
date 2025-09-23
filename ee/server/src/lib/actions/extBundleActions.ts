@@ -139,6 +139,7 @@ export type FinalizeParams = {
   declaredHash?: string;
   manifestJson?: string;
   signature?: { text?: string; algorithm?: "cosign" | "x509" | "pgp" };
+  responseMode?: "throw" | "result";
 };
 
 export type FinalizeResult = {
@@ -148,7 +149,41 @@ export type FinalizeResult = {
   canonicalKey: string;
 };
 
-export async function extFinalizeUpload(params: FinalizeParams): Promise<FinalizeResult> {
+export type FinalizeUploadResponse =
+  | { success: true; data: FinalizeResult }
+  | { success: false; error: { message: string; code?: string; details?: unknown } };
+
+type FinalizeParamsInternal = Omit<FinalizeParams, "responseMode">;
+
+function formatFinalizeError(err: unknown): { message: string; code?: string; details?: unknown } {
+  if (err instanceof HttpError) {
+    const payload: { message: string; code?: string; details?: unknown } = {
+      message: err.message,
+    };
+    if (err.code) payload.code = err.code;
+    if (typeof err.details !== "undefined") payload.details = err.details;
+    return payload;
+  }
+
+  if (err && typeof err === "object") {
+    const maybe = err as { message?: unknown; code?: unknown; details?: unknown };
+    const message = typeof maybe.message === "string" && maybe.message.length > 0
+      ? maybe.message
+      : "Unexpected error finalizing upload";
+    const payload: { message: string; code?: string; details?: unknown } = { message };
+    if (typeof maybe.code === "string" && maybe.code.length > 0) {
+      payload.code = maybe.code;
+    }
+    if (typeof maybe.details !== "undefined") {
+      payload.details = maybe.details;
+    }
+    return payload;
+  }
+
+  return { message: "Unexpected error finalizing upload" };
+}
+
+async function finalizeUploadInternal(params: FinalizeParamsInternal): Promise<FinalizeResult> {
   // Ensure Registry v2 repository is wired before any DB writes
   await ensureRegistryV2KnexRepo(getAdminKnex);
   const { key, size, declaredHash, manifestJson, signature } = params ?? ({} as any);
@@ -385,6 +420,24 @@ export async function extFinalizeUpload(params: FinalizeParams): Promise<Finaliz
     contentHash: computedHash,
     canonicalKey,
   };
+}
+
+export async function extFinalizeUpload(params: FinalizeParams & { responseMode: "result" }): Promise<FinalizeUploadResponse>;
+export async function extFinalizeUpload(params: FinalizeParams & { responseMode?: "throw" }): Promise<FinalizeResult>;
+export async function extFinalizeUpload(params: FinalizeParams): Promise<FinalizeResult | FinalizeUploadResponse> {
+  const { responseMode = "throw", ...rest } = (params ?? {}) as FinalizeParams;
+  try {
+    const result = await finalizeUploadInternal(rest as FinalizeParamsInternal);
+    if (responseMode === "result") {
+      return { success: true, data: result };
+    }
+    return result;
+  } catch (err) {
+    if (responseMode === "result") {
+      return { success: false, error: formatFinalizeError(err) };
+    }
+    throw err;
+  }
 }
 
 export type AbortParams = { key: string; reason?: string };

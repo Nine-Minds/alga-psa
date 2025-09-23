@@ -58,6 +58,8 @@ const nextConfig = {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
     // Alias optional DB drivers we don't use to an empty shim for Turbopack
     resolveAlias: {
+      // Fix for emoji-mart data loading in Turbopack
+      '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
       // Base app alias
       '@': './src',
       // Native DB drivers not used

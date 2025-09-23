@@ -1,0 +1,20 @@
+{
+  "name": "@alga/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "sample:create-service-category": "tsx samples/node/create-service-category.ts",
+    "openapi:generate": "tsx scripts/generate-openapi.ts"
+  },
+  "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^6.3.1",
+    "yaml": "^2.6.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^3.12.10",
+    "typescript": "^5.4.0"
+  }
+}

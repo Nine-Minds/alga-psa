@@ -1,0 +1,5754 @@
+[
+  {
+    "route_path": "/api/auth/google/callback",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/microsoft/callback",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/session",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/validate-api-key",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/validate-token",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/auth/{nextauth}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/billing/licence-count",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/chat/stream/title",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/chat/stream/{slug}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/documents/download/{fileId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/documents/view/{fileId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/documents/{documentId}/download",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/email/oauth/initiate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/email/refresh-watch",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/email/webhooks/google",
+    "edition": "CE",
+    "methods": [
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/email/webhooks/microsoft",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "OPTIONS",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/email/webhooks/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/ext/{extensionId}/{path}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/agreements",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/agreements/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/statements",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/statements/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/statements/{id}/charges",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/softwareone/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/agreements",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/agreements/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/statements",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/statements/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/statements/{id}/charges",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/{extensionId}/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/files/{fileId}/download",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/healthz",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/installs/lookup-by-host",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/installs/validate",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/qbo/callback",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/qbo/connect",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/integrations/qbo/status",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/readyz",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/admin/telemetry-settings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/assets",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/bulk-status",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/bulk-update",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/documents/{associationId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/maintenance/{scheduleId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/relationships/{relationshipId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/documents",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/history",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/maintenance",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/maintenance/record",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/assets/{id}/relationships",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAssetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/asset.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/asset.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/executions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/executions/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/executions/{id}/retry",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/meta",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/performance",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/rules",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/rules/bulk-execute",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/rules/bulk-status",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/rules/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/rules/{id}/execute",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/statistics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/templates",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/templates/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/automation/templates/{id}/use",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiAutomationController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/automationSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-analytics/overview",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk/add-services",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk/create",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk/delete",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk/remove-services",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/bulk/update",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/activation",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/copy",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/fixed-config",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/services",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/services/{serviceId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/billing-plans/{id}/usage-metrics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/bulk/delete",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/service",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/service/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/ticket",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/ticket/move",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/ticket/tree",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/ticket/tree/{channelId}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/categories/ticket/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/categorySchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/companies",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/company.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/company.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/companies/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/company.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/company.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/companies/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/company.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/company.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/companies/{id}/contacts",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/company.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/company.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/companies/{id}/locations",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/company.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/company.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/company-billing-plans",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/company-billing-plans/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/contacts/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiContactController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/contact.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/contact.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/feature-access",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/feature-flags",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/financial/billing/calculate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/billing/payment-terms",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/bulk/credits",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/bulk/invoices",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/bulk/transactions",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/credits",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/credits/apply",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/credits/prepayment",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/credits/transfer",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/credits/validate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/invoices",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/invoices/{id}/finalize",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/invoices/{id}/items",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/payment-methods",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/payment-methods/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/reconciliation/run",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/reconciliation/{id}/resolve",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/reports/aging",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/reports/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/reports/balance",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/tax/calculate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/tax/rates",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/transactions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/financial/transactions/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiFinancialController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/financialSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/accounts",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/accounts/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/connection/refresh",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/connection/status",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/connection/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/customers/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/customers/mappings/{mapping_id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/customers/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/diagnostics",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/health/config",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/invoices/export",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/invoices/import",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/items",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/mappings/{mapping_id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/oauth/callback",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/oauth/disconnect",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/oauth/initiate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/payment-methods",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/payments/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/full",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/history",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/status",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/status/{sync_id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/{sync_id}/cancel",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/sync/{sync_id}/retry",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/tax-codes",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/tax-codes/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/integrations/quickbooks/terms",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/bulk/credit",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/bulk/delete",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/bulk/send",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/generate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/manual",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/preview",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/recurring",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/recurring/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/approve",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/credit",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/duplicate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/finalize",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/items",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/payment",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/pdf",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/reject",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/send",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/tax",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/invoices/{id}/transactions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiInvoiceController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/invoiceSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/docs",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/endpoints",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/openapi",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/permissions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/schemas",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/sdk",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/meta/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiMetadataController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/metadataSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/permission-checks",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/permissions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/permissions/categories",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/permissions/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/permissions/{id}/roles",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiPermissionController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/plan-bundles",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/plan-bundles/{bundleId}/plans",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/plan-bundles/{bundleId}/plans/{planId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/plan-templates",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/plan-templates/{id}/create-plan",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/billingPlanSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/bulk-assign",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/bulk-status",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/bulk-update",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/tasks/{taskId}/checklist",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}/phases",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}/phases/{phaseId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}/phases/{phaseId}/tasks",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}/tasks",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/projects/{id}/tickets",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiProjectController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/project.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/project.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/accounts",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/accounts/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/connection/refresh",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/connection/status",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/connection/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/customers/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/customers/mappings/{mapping_id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/customers/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/diagnostics",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/health/config",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/invoices/export",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/invoices/import",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/items",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/mappings/{mapping_id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/oauth/callback",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/oauth/disconnect",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/oauth/initiate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/payment-methods",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/payments/sync",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/full",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/history",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/status",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/status/{sync_id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/{sync_id}/cancel",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/sync/{sync_id}/retry",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/tax-codes",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/tax-codes/mappings",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/quickbooks/terms",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiQuickBooksController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/quickbooksSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/rbac/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/rbac/audit",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/roles",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/roles/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/roles/templates",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/roles/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/roles/{id}/clone",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/roles/{id}/permissions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiRoleController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/permissionRoleSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/schedules",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/schedules/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/schedules/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/schedules/{id}/conflicts",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/bulk",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/bulk/merge",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/bulk/tag",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/bulk/untag",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/by-text",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/cloud",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/entity/{entityType}/{entityId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/{id}/colors",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tags/{id}/text",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTagController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/tagSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/bulk",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/hierarchy",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/hierarchy",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/manager",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/members",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/members/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/members/{userId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/permissions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/permissions/{permissionId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/teams/{id}/projects",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTeamController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/teamSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/test-auth",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/tickets",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/from-asset",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/assignment",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/comments",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/tickets/{id}/status",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTicketController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/ticket.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/active-session",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/approve",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/bulk",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/request-changes",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/start-tracking",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/stop-tracking/{sessionId}",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/templates",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-entries/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeEntryController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeEntry.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-periods",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-periods/current",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-periods/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-periods/{id}/close",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-periods/{id}/reopen",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/add-entry",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/approve",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/entries",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/reject",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/remove-entry",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/request-changes",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/reverse-approval",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/submit",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/time-sheets/{id}/summary",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiTimeSheetController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/timeSheet.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/user-roles",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/user/telemetry-decision",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/user/telemetry-preferences",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/users",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/activity",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/bulk/create",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/bulk/deactivate",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/stats",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/2fa/disable",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/2fa/enable",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/activity",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/avatar",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/password",
+    "edition": "CE",
+    "methods": [
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/permissions",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/preferences",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/roles",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/teams",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/users/{id}/teams/{teamId}",
+    "edition": "CE",
+    "methods": [
+      "DELETE"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiUserController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/userSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/events",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/events/trigger",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/filter/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/subscriptions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/templates",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/templates/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/templates/{id}/create",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/transform/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/validate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/verify",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/deliveries",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/deliveries/{delivery_id}/retry",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/filter/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/health",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/secret/rotate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/subscriptions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/transform/test",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/webhooks/{id}/validate",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWebhookController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/webhookSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/analytics",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/events",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/events/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/bulk",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/bulk-action",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/{id}/cancel",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/{id}/pause",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/{id}/restart",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/executions/{id}/resume",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/export",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/import",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/search",
+    "edition": "CE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/bulk-assign",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}/claim",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/tasks/{id}/complete",
+    "edition": "CE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/templates",
+    "edition": "CE",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/templates/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/v1/workflows/{id}",
+    "edition": "CE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PUT"
+    ],
+    "controller_file": "server/src/lib/api/controllers/ApiWorkflowController.ts",
+    "schema_imports": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ],
+    "canonical_schemas": [
+      "server/src/lib/api/schemas/workflowSchemas.ts"
+    ]
+  },
+  {
+    "route_path": "/api/ext-bundles/abort",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/ext-bundles/finalize",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/ext-bundles/upload-proxy",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/ext/{extensionId}/{path}",
+    "edition": "EE",
+    "methods": [
+      "DELETE",
+      "GET",
+      "PATCH",
+      "POST",
+      "PUT"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/install-info",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/registry-db-check",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/extensions/reprovision",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/installs/lookup-by-host",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/installs/validate",
+    "edition": "EE",
+    "methods": [
+      "GET"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/provisioning/tenants",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  },
+  {
+    "route_path": "/api/v1/auth/verify",
+    "edition": "EE",
+    "methods": [
+      "POST"
+    ],
+    "controller_file": "",
+    "schema_imports": [],
+    "canonical_schemas": []
+  }
+]

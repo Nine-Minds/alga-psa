@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.10.0",
+  "version": "0.10.3",
   "private": true,
   "type": "module",
   "engines": {
@@ -52,6 +52,7 @@
     "migrate:ee": "node scripts/run-ee-migrations.js"
   },
   "dependencies": {
+    "@asteasolutions/zod-to-openapi": "^6.3.1",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
     "@aws-sdk/client-s3": "^3.744.0",
@@ -113,6 +114,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "cookie-parser": "^1.4.7",
+    "cookies-next": "^6.1.0",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.4.7",
@@ -124,6 +126,9 @@
     "google-auth-library": "^10.1.0",
     "googleapis": "^152.0.0",
     "handlebars": "^4.7.8",
+    "i18next": "^25.5.2",
+    "i18next-browser-languagedetector": "^8.2.0",
+    "i18next-http-backend": "^3.0.2",
     "jsondiffpatch": "^0.6.0",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
@@ -133,6 +138,7 @@
     "nestjs-knex": "^2.0.0",
     "next": "^15.5.3",
     "next-auth": "^5.0.0-beta.29",
+    "next-i18next": "^15.4.2",
     "node-quickbooks": "^2.0.45",
     "node-vault": "^0.10.2",
     "nodemailer": "^6.9.16",
@@ -156,6 +162,7 @@
     "react-error-boundary": "^5.0.0",
     "react-hook-form": "^7.54.2",
     "react-hot-toast": "^2.5.1",
+    "react-i18next": "^15.7.3",
     "react-markdown": "^9.0.3",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.1",

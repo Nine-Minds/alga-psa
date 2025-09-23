@@ -1,6 +1,8 @@
 "use client";
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider"; 
+import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
+import { I18nWrapper } from "server/src/components/i18n/I18nWrapper";
+import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
 
 export default function Layout({
   children,
@@ -9,9 +11,12 @@ export default function Layout({
 }>) {
   return (
     <AppSessionProvider>
-      <ClientPortalLayout>
-        {children}
-      </ClientPortalLayout>
+      <PostHogUserIdentifier />
+      <I18nWrapper portal="client">
+        <ClientPortalLayout>
+          {children}
+        </ClientPortalLayout>
+      </I18nWrapper>
     </AppSessionProvider>
   );
 }

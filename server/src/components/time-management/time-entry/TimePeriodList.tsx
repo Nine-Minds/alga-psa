@@ -33,6 +33,13 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
     router.push('/msp/settings?tab=time-entry&subtab=time-periods');
   };
 
+  const isCurrentPeriod = (start: string, end: string) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const s = start.slice(0, 10);
+    const e = end.slice(0, 10);
+    return today >= s && today <= e;
+  };
+
   return (
     <div className="space-y-4 w-full">
       <div className="flex justify-between items-center mb-4">
@@ -66,12 +73,19 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
             title: 'Status',
             dataIndex: 'timeSheetStatus',
             width: '25%',
-            render: (status: TimeSheetStatus) => {
+            render: (status: TimeSheetStatus, record) => {
               const { text, color } = getStatusDisplay(status);
               return (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800`}>
-                  {text}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium bg-${color}-100 text-${color}-800`}>
+                    {text}
+                  </span>
+                  {isCurrentPeriod(record.start_date, record.end_date) && (
+                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-800))]">
+                      Current
+                    </span>
+                  )}
+                </div>
               );
             }
           },
@@ -92,13 +106,25 @@ export function TimePeriodList({ timePeriods, onSelectTimePeriod }: TimePeriodLi
         ]}
         pagination={false}
         onRowClick={(row: ITimePeriodWithStatusView) => onSelectTimePeriod(row)}
-        rowClassName={(row: ITimePeriodWithStatusView) => 
-          row.timeSheetStatus === 'APPROVED' 
-            ? 'bg-green-50' 
-            : row.timeSheetStatus === 'CHANGES_REQUESTED'
-              ? 'bg-orange-100'
-              : ''
-        }
+        rowClassName={(row: ITimePeriodWithStatusView) => {
+          const classes: string[] = [];
+          if (row.timeSheetStatus === 'APPROVED') {
+            classes.push('bg-green-50');
+          } else if (row.timeSheetStatus === 'CHANGES_REQUESTED') {
+            classes.push('bg-orange-100');
+          }
+
+          if (isCurrentPeriod(row.start_date, row.end_date)) {
+            // Always add a primary left border to indicate current period
+            classes.push('border-l-4 border-[rgb(var(--color-primary-500))]');
+            // Only add a light primary background if no status-specific background present
+            if (!classes.some(c => c.startsWith('bg-'))) {
+              classes.push('bg-[rgb(var(--color-primary-50))]');
+            }
+          }
+
+          return classes.join(' ');
+        }}
       />
     </div>
   );

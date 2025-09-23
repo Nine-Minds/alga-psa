@@ -1,0 +1,232 @@
+{
+  "nav": {
+    "dashboard": "Tableau de bord",
+    "tickets": "Tickets",
+    "clients": "Clients",
+    "projects": "Projets",
+    "billing": "Facturation",
+    "reports": "Rapports",
+    "settings": "Paramètres",
+    "profile": "Profil",
+    "logout": "Déconnexion",
+    "help": "Aide"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "submit": "Envoyer",
+    "back": "Retour",
+    "next": "Suivant",
+    "previous": "Précédent",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "download": "Télécharger",
+    "upload": "Téléverser",
+    "refresh": "Actualiser",
+    "close": "Fermer"
+  },
+  "status": {
+    "loading": "Chargement...",
+    "saving": "Enregistrement...",
+    "success": "Succès",
+    "error": "Erreur",
+    "warning": "Avertissement",
+    "info": "Information",
+    "pending": "En attente",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "completed": "Terminé",
+    "cancelled": "Annulé"
+  },
+  "messages": {
+    "welcome": "Bienvenue",
+    "confirmDelete": "Voulez-vous vraiment supprimer cet élément ?",
+    "saveSuccess": "Modifications enregistrées avec succès",
+    "saveError": "Échec de l'enregistrement des modifications",
+    "loadError": "Échec du chargement des données",
+    "noData": "Aucune donnée disponible",
+    "required": "Ce champ est obligatoire",
+    "invalidEmail": "Adresse e-mail invalide",
+    "invalidPassword": "Mot de passe invalide",
+    "passwordMismatch": "Les mots de passe ne correspondent pas"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Non authentifié",
+      "accessDenied": "Accès refusé",
+      "clientPortalOnly": "Accès refusé : Les actions du portail client sont réservées aux utilisateurs clients",
+      "insufficientPermissions": "Permissions insuffisantes",
+      "userIdNotFound": "ID d'utilisateur non trouvé dans la session",
+      "tenantNotFound": "Locataire non trouvé dans la session. Veuillez vous déconnecter et vous reconnecter.",
+      "userNotFound": "Utilisateur non trouvé",
+      "contactNotFound": "Utilisateur non associé à un contact",
+      "companyNotFound": "Contact non associé à une entreprise"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Permissions insuffisantes pour afficher les tickets",
+        "readDetails": "Permissions insuffisantes pour afficher les détails du ticket",
+        "create": "Permissions insuffisantes pour créer des tickets",
+        "update": "Permissions insuffisantes pour mettre à jour les tickets",
+        "updateStatus": "Permissions insuffisantes pour mettre à jour le statut du ticket",
+        "addComments": "Permissions insuffisantes pour ajouter des commentaires",
+        "updateComments": "Permissions insuffisantes pour modifier les commentaires",
+        "deleteComments": "Permissions insuffisantes pour supprimer les commentaires"
+      }
+    }
+  },
+  "time": {
+    "today": "Aujourd'hui",
+    "yesterday": "Hier",
+    "tomorrow": "Demain",
+    "thisWeek": "Cette semaine",
+    "lastWeek": "La semaine dernière",
+    "thisMonth": "Ce mois-ci",
+    "lastMonth": "Le mois dernier",
+    "thisYear": "Cette année",
+    "lastYear": "L'année dernière",
+    "seconds": "secondes",
+    "minutes": "minutes",
+    "hours": "heures",
+    "days": "jours",
+    "weeks": "semaines",
+    "months": "mois",
+    "years": "années"
+  },
+  "language": {
+    "selectLanguage": "Sélectionner une langue",
+    "changeLanguage": "Changer de langue",
+    "currentLanguage": "Langue actuelle",
+    "preference": {
+      "label": "Préférence de langue",
+      "helper": "Sélectionnez la langue d'interface que vous préférez",
+      "placeholder": "Sélectionnez une langue",
+      "cleared": "Préférence de langue réinitialisée. Langue par défaut utilisée...",
+      "updating": "Mise à jour de la préférence de langue...",
+      "notSet": "Non défini",
+      "notSetWithSource": "Non défini (Utilise {{source}} : {{languageName}} - {{locale}})",
+      "source": {
+        "company": "paramètre par défaut de l'entreprise",
+        "tenant": "paramètre par défaut du locataire",
+        "system": "paramètre par défaut du système"
+      }
+    }
+  },
+  "yes": "Oui",
+  "no": "Non",
+  "companies": {
+    "locations": {
+      "sectionTitle": "Emplacements de l'entreprise",
+      "manageButton": "Gérer les emplacements",
+      "dialogTitle": "Gérer les emplacements - {{company}}",
+      "managerLabel": "Gestion des emplacements de l'entreprise",
+      "listTitle": "Emplacements",
+      "buttons": {
+        "add": "Ajouter un emplacement",
+        "save": "Enregistrer l'emplacement"
+      },
+      "card": {
+        "unnamed": "Emplacement sans nom",
+        "setDefault": "Définir par défaut",
+        "edit": "Modifier l'emplacement",
+        "delete": "Supprimer l'emplacement",
+        "addressLabel": "Adresse",
+        "addressHelper": "Adresse complète de cet emplacement",
+        "phoneLabel": "Téléphone",
+        "phoneHelper": "Numéro de téléphone de cet emplacement",
+        "phoneValue": "Téléphone : {{phone}}",
+        "emailLabel": "E-mail",
+        "emailHelper": "Adresse e-mail de cet emplacement",
+        "emailValue": "E-mail : {{email}}",
+        "billingTag": "Facturation",
+        "shippingTag": "Expédition",
+        "notesLabel": "Notes",
+        "notesHelper": "Notes supplémentaires pour cet emplacement"
+      },
+      "form": {
+        "locationName": "Nom de l'emplacement",
+        "locationNameHelper": "Nom de cet emplacement (ex. : siège, entrepôt)",
+        "addressLine1": "Adresse (ligne 1)",
+        "addressLine1Helper": "Première ligne d'adresse (obligatoire)",
+        "addressLine2": "Adresse (ligne 2)",
+        "addressLine2Helper": "Informations d'adresse supplémentaires (facultatif)",
+        "addressLine3": "Adresse (ligne 3)",
+        "city": "Ville",
+        "cityHelper": "Nom de la ville (obligatoire)",
+        "stateProvince": "État/Province",
+        "stateProvinceHelper": "Nom de l'état ou de la province",
+        "postalCode": "Code postal",
+        "postalCodeHelper": "Code postal ou ZIP",
+        "country": "Pays",
+        "countryHelper": "Sélectionnez un pays (obligatoire)",
+        "phone": "Téléphone",
+        "phoneHelper": "Numéro de téléphone pour cet emplacement",
+        "email": "E-mail",
+        "emailHelper": "Adresse e-mail pour cet emplacement",
+        "taxRegion": "Région fiscale",
+        "taxRegionHelper": "Sélectionnez la région fiscale applicable",
+        "notes": "Notes",
+        "notesHelper": "Notes supplémentaires sur cet emplacement",
+        "defaultLocation": "Emplacement par défaut",
+        "defaultLocationHelper": "Définir cet emplacement comme emplacement par défaut de l'entreprise",
+        "billingAddress": "Adresse de facturation",
+        "billingAddressHelper": "Utiliser cet emplacement comme adresse de facturation",
+        "shippingAddress": "Adresse de livraison",
+        "shippingAddressHelper": "Utiliser cet emplacement comme adresse de livraison",
+        "placeholder": {
+          "locationName": "ex. : siège, entrepôt",
+          "addressLine1": "Saisissez l'adresse *",
+          "city": "Saisissez la ville *",
+          "country": "Sélectionnez un pays *",
+          "loadingCountries": "Chargement des pays...",
+          "taxRegionOption": "Sélectionnez une région fiscale...",
+          "taxRegion": "Sélectionnez une région fiscale..."
+        }
+      },
+      "validation": {
+        "title": "Veuillez renseigner les champs obligatoires :"
+      },
+      "errors": {
+        "loadTaxRegions": "Échec du chargement des régions fiscales",
+        "loadCountries": "Échec du chargement des pays",
+        "loadLocations": "Échec du chargement des emplacements de l'entreprise",
+        "save": "Échec de l'enregistrement de l'emplacement",
+        "delete": "Échec de la suppression de l'emplacement",
+        "setDefault": "Échec de la définition de l'emplacement par défaut"
+      },
+      "success": {
+        "create": "Emplacement créé avec succès",
+        "update": "Emplacement mis à jour avec succès",
+        "delete": "Emplacement supprimé avec succès",
+        "setDefault": "Emplacement par défaut mis à jour"
+      },
+      "dialog": {
+        "addTitle": "Ajouter un nouvel emplacement",
+        "editTitle": "Modifier l'emplacement",
+        "deleteTitle": "Supprimer l'emplacement",
+        "deleteMessage": "Voulez-vous vraiment supprimer l'emplacement \"{{name}}\" ? Cette action est irréversible."
+      },
+      "empty": {
+        "title": "Aucun emplacement ajouté pour le moment",
+        "description": "Cliquez sur \"Ajouter un emplacement\" pour commencer"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Précédent",
+    "next": "Suivant",
+    "pageInfo": "Page {{current}} sur {{total}} ({{count}} enregistrements au total)",
+    "page": "Page",
+    "of": "sur",
+    "showing": "Affichage de {{from}} à {{to}} sur {{total}} résultats",
+    "rowsPerPage": "Lignes par page",
+    "first": "Première",
+    "last": "Dernière"
+  }
+}

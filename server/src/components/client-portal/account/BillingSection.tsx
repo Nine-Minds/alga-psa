@@ -6,14 +6,15 @@ import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent } from "server/src/components/ui/Dialog";
 import { Input } from "server/src/components/ui/Input";
 import { useState, useEffect } from 'react';
-import { 
-  getInvoices, 
-  getBillingCycles, 
+import { useTranslation } from '@/lib/i18n/client';
+import {
+  getInvoices,
+  getBillingCycles,
   getPaymentMethods,
   addPaymentMethod,
   removePaymentMethod,
   setDefaultPaymentMethod,
-  type Invoice, 
+  type Invoice,
   type BillingCycle,
   type PaymentMethod
 } from "server/src/lib/actions/account";
@@ -32,6 +33,7 @@ interface ValidationErrors {
 }
 
 export default function BillingSection() {
+  const { t } = useTranslation('clientPortal');
   const [billingCycles, setBillingCycles] = useState<BillingCycle[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -405,7 +407,7 @@ export default function BillingSection() {
             {invoices.length === 0 ? (
               <tr>
                 <td colSpan={5} className="text-center py-4 text-gray-500">
-                  No invoices found
+                  {t('billing.messages.noInvoices', 'No invoices found')}
                 </td>
               </tr>
             ) : (

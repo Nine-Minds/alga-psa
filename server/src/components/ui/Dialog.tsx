@@ -53,6 +53,29 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [dialogSize, setDialogSize] = useState({ width: 0, height: 0 });
 
+  // Prevent background scroll when dialog is open
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalPaddingRight = document.body.style.paddingRight;
+
+      // Account for potential layout shift when hiding the scrollbar
+      const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
+
+      document.body.style.overflow = 'hidden';
+      if (scrollbarWidth > 0) {
+        document.body.style.paddingRight = `${scrollbarWidth}px`;
+      }
+
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.paddingRight = originalPaddingRight;
+      };
+    }
+  }, [isOpen]);
+
   // Update dialog metadata when props change
   useEffect(() => {
     console.log(`🔍 [DIALOG] ${id}-dialog open state changed:`, isOpen);

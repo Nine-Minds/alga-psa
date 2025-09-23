@@ -24,6 +24,7 @@ import {
 import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '@/lib/i18n/client';
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {
@@ -77,7 +78,8 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
 // Flag to control visibility of advanced usage tabs and metrics
 const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
-  const [currentTab, setCurrentTab] = useState('Overview');
+  const { t } = useTranslation('clientPortal');
+  const [currentTab, setCurrentTab] = useState<string | null>(null);
   const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,14 +102,16 @@ export default function BillingOverview() {
     endDate: ''
   });
 
-  // Set date range after mount to avoid hydration issues
+  // Set date range and initial tab after mount to avoid hydration issues
   useEffect(() => {
     const now = new Date();
     setDateRange({
       startDate: format(subDays(now, 30), 'yyyy-MM-dd'),
       endDate: format(now, 'yyyy-MM-dd')
     });
-  }, []);
+    // Set the initial tab to the translated overview label
+    setCurrentTab(t('billing.tabs.overview'));
+  }, [t]);
 
   // Load billing data
   useEffect(() => {
@@ -295,7 +299,7 @@ export default function BillingOverview() {
   const tabs: TabContent[] = useMemo(() => {
     const tabsArray: TabContent[] = [
       {
-        label: 'Overview',
+        label: t('billing.tabs.overview'),
         content: (
           <div id="overview-tab">
             <BillingOverviewTab
@@ -316,7 +320,7 @@ export default function BillingOverview() {
     // Add Invoices tab only if user has access
     if (hasInvoiceAccess) {
       tabsArray.push({
-        label: 'Invoices',
+        label: t('billing.tabs.invoices'),
         content: (
           <div id="invoices-tab">
             <InvoicesTab
@@ -395,7 +399,7 @@ export default function BillingOverview() {
     <div id="client-billing-overview" className="space-y-6">
       <CustomTabs
         tabs={tabs}
-        defaultTab={currentTab}
+        defaultTab={currentTab || tabs[0]?.label}
         onTabChange={handleTabChange}
       />
 

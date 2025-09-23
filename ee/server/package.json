@@ -1,6 +1,5 @@
 {
   "name": "sebastian-ee",
-  "version": "0.9.0",
   "private": true,
   "scripts": {
     "dev": "NODE_OPTIONS='--max-old-space-size=8192' NODE_ENV=development nodemon",
