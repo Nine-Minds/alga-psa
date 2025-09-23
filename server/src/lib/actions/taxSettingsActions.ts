@@ -199,11 +199,14 @@ export async function createTaxRegion(data: {
  */
 export async function updateTaxRegion(
   region_code: string,
-  data: { region_name?: string; is_active?: boolean }
+  data: { region_code?: string; region_name?: string; is_active?: boolean }
 ): Promise<ITaxRegion> {
   const { knex, tenant } = await createTenantKnex();
-  const updateData: Partial<Pick<ITaxRegion, 'region_name' | 'is_active'>> = {};
+  const updateData: Partial<Pick<ITaxRegion, 'region_code' | 'region_name' | 'is_active'>> = {};
 
+  if (data.region_code !== undefined) {
+    updateData.region_code = data.region_code;
+  }
   if (data.region_name !== undefined) {
     updateData.region_name = data.region_name;
   }
@@ -227,6 +230,18 @@ export async function updateTaxRegion(
 
 
   try {
+    // If updating the region_code, check for uniqueness
+    if (data.region_code !== undefined && data.region_code !== region_code) {
+      const existingRegion = await knex<ITaxRegion>('tax_regions')
+        .where('tenant', tenant)
+        .andWhere('region_code', data.region_code)
+        .first();
+
+      if (existingRegion) {
+        throw new Error(`Tax region with code "${data.region_code}" already exists.`);
+      }
+    }
+
     const [updatedRegion] = await knex<ITaxRegion>('tax_regions')
       .where('tenant', tenant)
       .andWhere('region_code', region_code)
