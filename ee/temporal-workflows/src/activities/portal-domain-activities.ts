@@ -26,6 +26,33 @@ const DOMAIN_HOST_LABEL = 'portal.alga-psa.com/domain-host';
 
 const execFileAsync = promisify(execFile);
 
+export type CommandResult = { stdout: string; stderr: string };
+export type CommandRunner = (
+  command: string,
+  args: string[],
+  options: ExecFileOptions
+) => Promise<CommandResult>;
+
+const defaultCommandRunner: CommandRunner = async (command, args, options) => {
+  const result = await execFileAsync(command, args, options);
+  const stdout = typeof result.stdout === 'string' ? result.stdout : result.stdout.toString('utf8');
+  const stderr = typeof result.stderr === 'string' ? result.stderr : result.stderr.toString('utf8');
+  return { stdout, stderr };
+};
+
+let commandRunner: CommandRunner = defaultCommandRunner;
+
+export function __setCommandRunnerForTests(runner: CommandRunner | null): void {
+  commandRunner = runner ?? defaultCommandRunner;
+}
+
+type ConnectionFactory = () => Promise<Knex>;
+let connectionFactory: ConnectionFactory = () => getAdminConnection();
+
+export function __setConnectionFactoryForTests(factory: ConnectionFactory | null): void {
+  connectionFactory = factory ?? (() => getAdminConnection());
+}
+
 export interface PortalDomainConfig {
   certificateNamespace: string;
   certificateIssuerName: string;
@@ -112,7 +139,7 @@ function shouldManageStatus(status: string | null | undefined): boolean {
 }
 
 async function getConnection(): Promise<Knex> {
-  return getAdminConnection();
+  return connectionFactory();
 }
 
 export async function loadPortalDomain(args: { portalDomainId: string }): Promise<PortalDomainActivityRecord | null> {
@@ -357,8 +384,8 @@ interface CommandOptions extends ExecFileOptions {
   suppressOutput?: boolean;
 }
 
-function resolveGitConfiguration(): GitConfiguration {
-  const repoUrl = process.env.PORTAL_DOMAIN_GIT_REPO || 'https://github.com/Nine-Minds/nm-kube-config.git';
+export function resolveGitConfiguration(): GitConfiguration {
+  const repoUrl = process.env.PORTAL_DOMAIN_GIT_REPO;
   const branch = process.env.PORTAL_DOMAIN_GIT_BRANCH || 'main';
   const workspaceDir = process.env.PORTAL_DOMAIN_GIT_WORKDIR || '/tmp/portal-domain-sync';
   const relativePathPosix = process.env.PORTAL_DOMAIN_GIT_ROOT || 'alga-psa/portal-domains';
@@ -392,7 +419,7 @@ function resolveGitConfiguration(): GitConfiguration {
   };
 }
 
-async function prepareGitRepository(config: GitConfiguration): Promise<string> {
+export async function prepareGitRepository(config: GitConfiguration): Promise<string> {
   await ensureDirectory(config.workspaceDir);
   const gitEnv = { GIT_TERMINAL_PROMPT: '0' };
 
@@ -441,7 +468,7 @@ function resolveManifestRoot(repoDir: string, segments: string[]): string {
   return joinPath(repoDir, ...segments);
 }
 
-async function listYamlFiles(directory: string): Promise<string[]> {
+export async function listYamlFiles(directory: string): Promise<string[]> {
   try {
     const entries = await fs.readdir(directory, { withFileTypes: true });
     return entries
@@ -456,7 +483,7 @@ async function listYamlFiles(directory: string): Promise<string[]> {
   }
 }
 
-async function runGit(args: string[], config: GitConfiguration, options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
+export async function runGit(args: string[], config: GitConfiguration, options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
   return runCommand('git', args, {
     cwd: options.cwd || config.repoDir,
     env: { ...(options.env || {}), GIT_TERMINAL_PROMPT: '0' },
@@ -465,11 +492,11 @@ async function runGit(args: string[], config: GitConfiguration, options: Command
   });
 }
 
-async function runKubectl(args: string[]): Promise<{ stdout: string; stderr: string }> {
+export async function runKubectl(args: string[]): Promise<{ stdout: string; stderr: string }> {
   return runCommand('kubectl', args, { suppressOutput: true });
 }
 
-async function runCommand(command: string, args: string[], options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
+export async function runCommand(command: string, args: string[], options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
   const maskValues = options.maskValues?.filter(Boolean) ?? [];
   const execOptions: ExecFileOptions = {
     cwd: options.cwd,
@@ -479,9 +506,7 @@ async function runCommand(command: string, args: string[], options: CommandOptio
   };
 
   try {
-    const { stdout: rawStdout, stderr: rawStderr } = await execFileAsync(command, args, execOptions);
-    const stdout = typeof rawStdout === 'string' ? rawStdout : rawStdout.toString('utf8');
-    const stderr = typeof rawStderr === 'string' ? rawStderr : rawStderr.toString('utf8');
+    const { stdout, stderr } = await commandRunner(command, args, execOptions);
     if (!options.suppressOutput) {
       const sanitizedStdout = maskSecrets(stdout, maskValues).trim();
       const sanitizedStderr = maskSecrets(stderr, maskValues).trim();
@@ -499,7 +524,7 @@ async function runCommand(command: string, args: string[], options: CommandOptio
   }
 }
 
-function renderManifestYaml(manifest: RenderedPortalDomainResources): string {
+export function renderManifestYaml(manifest: RenderedPortalDomainResources): string {
   const documents = [manifest.certificate, manifest.gateway, manifest.virtualService];
   return documents
     .map((doc, index) => {
