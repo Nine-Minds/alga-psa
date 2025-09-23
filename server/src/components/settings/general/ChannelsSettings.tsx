@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, MoreVertical } from "lucide-react";
+import { Plus, MoreVertical, HelpCircle } from "lucide-react";
 import { IChannel, CategoryType, PriorityType } from 'server/src/interfaces/channel.interface';
 import { 
   getAllChannels, 
@@ -20,7 +20,6 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Switch } from 'server/src/components/ui/Switch';
-import CustomSelect from 'server/src/components/ui/CustomSelect';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -50,12 +49,16 @@ const ChannelsSettings: React.FC = () => {
     display_order: 0,
     is_inactive: false,
     category_type: 'custom' as CategoryType,
-    priority_type: 'custom' as PriorityType
+    priority_type: 'custom' as PriorityType,
+    is_itil_compliant: false
   });
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [availableReferenceChannels, setAvailableReferenceChannels] = useState<any[]>([]);
+
+  // State for ITIL Info Modal
+  const [showItilInfoModal, setShowItilInfoModal] = useState(false);
   const [selectedImportChannels, setSelectedImportChannels] = useState<string[]>([]);
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
@@ -82,7 +85,8 @@ const ChannelsSettings: React.FC = () => {
       display_order: channel.display_order || 0,
       is_inactive: channel.is_inactive,
       category_type: channel.category_type || 'custom',
-      priority_type: channel.priority_type || 'custom'
+      priority_type: channel.priority_type || 'custom',
+      is_itil_compliant: channel.category_type === 'itil' && channel.priority_type === 'itil'
     });
     setShowAddEditDialog(true);
     setError(null);
@@ -108,14 +112,18 @@ const ChannelsSettings: React.FC = () => {
         return;
       }
 
+      // For new channels, set category_type and priority_type based on ITIL compliance
+      const categoryType = editingChannel ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+      const priorityType = editingChannel ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+
       if (editingChannel) {
         await updateChannel(editingChannel.channel_id!, {
           channel_name: formData.channel_name,
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
-          category_type: formData.category_type,
-          priority_type: formData.priority_type
+          category_type: categoryType,
+          priority_type: priorityType
         });
         toast.success('Board updated successfully');
       } else {
@@ -124,15 +132,15 @@ const ChannelsSettings: React.FC = () => {
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
-          category_type: formData.category_type,
-          priority_type: formData.priority_type
+          category_type: categoryType,
+          priority_type: priorityType
         });
         toast.success('Board created successfully');
       }
-      
+
       setShowAddEditDialog(false);
       setEditingChannel(null);
-      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
+      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
       await fetchChannels();
     } catch (error) {
       console.error('Error saving channel:', error);
@@ -249,29 +257,16 @@ const ChannelsSettings: React.FC = () => {
       ),
     },
     {
-      title: 'Category Type',
+      title: 'ITIL Board',
       dataIndex: 'category_type',
-      render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value === 'itil'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-gray-100 text-gray-800'
-        }`}>
-          {value === 'itil' ? 'ITIL' : 'Custom'}
-        </span>
-      ),
-    },
-    {
-      title: 'Priority Type',
-      dataIndex: 'priority_type',
-      render: (value: string) => (
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-          value === 'itil'
-            ? 'bg-blue-100 text-blue-800'
-            : 'bg-gray-100 text-gray-800'
-        }`}>
-          {value === 'itil' ? 'ITIL' : 'Custom'}
-        </span>
+      render: (_, record: IChannel) => (
+        record.category_type === 'itil' && record.priority_type === 'itil' ? (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            ITIL
+          </span>
+        ) : (
+          <span className="text-gray-500">-</span>
+        )
       ),
     },
     {
@@ -332,7 +327,7 @@ const ChannelsSettings: React.FC = () => {
             id="add-channel-button"
             onClick={() => {
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -374,7 +369,7 @@ const ChannelsSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingChannel(null);
-          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
+          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
           setError(null);
         }} 
         title={editingChannel ? "Edit Board" : "Add Board"}
@@ -426,44 +421,32 @@ const ChannelsSettings: React.FC = () => {
               />
             </div>
 
-            <div className="border-t pt-4 space-y-4">
-              <h4 className="font-medium text-gray-800">Ticket Configuration</h4>
+            {/* ITIL Configuration - Only show for new channels */}
+            {!editingChannel && (
+              <div className="border-t pt-4 space-y-4">
+                <h4 className="font-medium text-gray-800">Board Configuration</h4>
 
-              <div>
-                <Label htmlFor="category_type">Category Type</Label>
-                <CustomSelect
-                  value={formData.category_type}
-                  onValueChange={(value) => setFormData({ ...formData, category_type: value as CategoryType })}
-                  options={[
-                    { value: 'custom', label: 'Custom Categories' },
-                    { value: 'itil', label: 'ITIL Categories' }
-                  ]}
-                  placeholder="Select category type"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Choose whether this board uses custom categories or ITIL-based categorization.
-                </p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="is_itil_compliant">Make this board ITIL compliant</Label>
+                    <button
+                      type="button"
+                      onClick={() => setShowItilInfoModal(true)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      title="View ITIL categories and priority matrix"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <Switch
+                    id="is_itil_compliant"
+                    checked={formData.is_itil_compliant}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_itil_compliant: checked })}
+                  />
+                </div>
+
               </div>
-
-              <div>
-                <Label htmlFor="priority_type">Priority Type</Label>
-                <CustomSelect
-                  value={formData.priority_type}
-                  onValueChange={(value) => setFormData({ ...formData, priority_type: value as PriorityType })}
-                  options={[
-                    { value: 'custom', label: 'Custom Priorities' },
-                    { value: 'itil', label: 'ITIL Priorities (Impact × Urgency)' }
-                  ]}
-                  placeholder="Select priority type"
-                  className="w-full"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Choose whether this board uses custom priorities or ITIL-based priority calculation from Impact and Urgency.
-                </p>
-              </div>
-
-            </div>
+            )}
           </div>
         </DialogContent>
         <DialogFooter>
@@ -473,7 +456,7 @@ const ChannelsSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom' });
+              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
               setError(null);
             }}
           >
@@ -700,6 +683,164 @@ const ChannelsSettings: React.FC = () => {
           </Button>
           <Button id="import-with-resolutions" onClick={handleImport}>
             Import with Resolutions
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* ITIL Information Modal */}
+      <Dialog
+        isOpen={showItilInfoModal}
+        onClose={() => setShowItilInfoModal(false)}
+        title="ITIL Standards Reference"
+      >
+        <DialogContent className="max-w-4xl">
+          <div className="space-y-6">
+            {/* ITIL Categories Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Standard Categories and Subcategories</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Hardware */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Hardware</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Server</li>
+                    <li>• Desktop/Laptop</li>
+                    <li>• Network Equipment</li>
+                    <li>• Printer</li>
+                    <li>• Storage</li>
+                    <li>• Mobile Device</li>
+                  </ul>
+                </div>
+
+                {/* Software */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Software</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Operating System</li>
+                    <li>• Business Application</li>
+                    <li>• Database</li>
+                    <li>• Email/Collaboration</li>
+                    <li>• Security Software</li>
+                    <li>• Custom Application</li>
+                  </ul>
+                </div>
+
+                {/* Network */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Network</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Connectivity</li>
+                    <li>• VPN</li>
+                    <li>• Wi-Fi</li>
+                    <li>• Internet Access</li>
+                    <li>• LAN/WAN</li>
+                    <li>• Firewall</li>
+                  </ul>
+                </div>
+
+                {/* Security */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Security</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Malware/Virus</li>
+                    <li>• Unauthorized Access</li>
+                    <li>• Data Breach</li>
+                    <li>• Phishing/Spam</li>
+                    <li>• Policy Violation</li>
+                    <li>• Account Lockout</li>
+                  </ul>
+                </div>
+
+                {/* Service Request */}
+                <div className="border rounded-lg p-4 md:col-span-2">
+                  <h4 className="font-medium text-blue-800 mb-2">Service Request</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Access Request</li>
+                      <li>• New User Setup</li>
+                      <li>• Software Installation</li>
+                    </ul>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Equipment Request</li>
+                      <li>• Information Request</li>
+                      <li>• Change Request</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ITIL Priority Matrix Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Priority Matrix (Impact × Urgency)</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-50"></th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">High<br/>Urgency (1)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-High<br/>Urgency (2)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium<br/>Urgency (3)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-Low<br/>Urgency (4)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Low<br/>Urgency (5)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">High Impact (1)</td>
+                      <td className="px-3 py-2 text-center bg-red-100 text-red-800 font-semibold border">Critical (1)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-High Impact (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium Impact (3)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-Low Impact (4)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Low Impact (5)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 text-sm text-gray-600 space-y-1">
+                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                <p><strong>Priority:</strong> Automatically calculated based on Impact × Urgency matrix above.</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
+            Close
           </Button>
         </DialogFooter>
       </Dialog>
