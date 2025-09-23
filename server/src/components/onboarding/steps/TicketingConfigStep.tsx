@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
-import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight } from 'lucide-react';
+import { Plus, Package, ChevronDown, ChevronUp, CheckCircle, Settings, Palette, Trash2, Star, AlertTriangle, CornerDownRight, HelpCircle } from 'lucide-react';
 import { StepProps } from '../types';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
@@ -24,6 +24,7 @@ import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { createPriority } from 'server/src/lib/actions/priorityActions';
 import toast from 'react-hot-toast';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 
 interface SectionState {
   numbering: boolean;
@@ -53,6 +54,7 @@ interface ChannelFormData {
   displayOrder: number;
   isActive: boolean;
   isDefault: boolean;
+  isItilCompliant: boolean;
 }
 
 interface CategoryFormData {
@@ -101,12 +103,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   });
 
   // Form data for adding new items
-  const [channelForm, setChannelForm] = useState<ChannelFormData>({ 
-    name: '', 
-    description: '', 
-    displayOrder: 0, 
-    isActive: true, 
-    isDefault: false 
+  const [channelForm, setChannelForm] = useState<ChannelFormData>({
+    name: '',
+    description: '',
+    displayOrder: 0,
+    isActive: true,
+    isDefault: false,
+    isItilCompliant: false
   });
   const [categoryForm, setCategoryForm] = useState<CategoryFormData>({ 
     name: '', 
@@ -157,6 +160,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [importedStatuses, setImportedStatuses] = useState<any[]>([]);
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
+
+  // ITIL configuration
+  const [showItilInfoModal, setShowItilInfoModal] = useState(false);
+  const [importChannelItilSettings, setImportChannelItilSettings] = useState<Record<string, boolean>>({});
 
   // Function to load existing ticketing data
   const loadExistingData = async () => {
@@ -290,26 +297,71 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const handleImportChannels = async () => {
     if (selectedChannels.length === 0) return;
-    
+
     setIsImporting(prev => ({ ...prev, channels: true }));
     try {
-      const result = await importReferenceData('channels', selectedChannels);
-      setImportResults(prev => ({ ...prev, channels: { 
-        imported: result.imported?.length || 0, 
-        skipped: result.skipped?.length || 0 
+      // Get the reference channels data first
+      const referenceChannels = availableChannels.filter(channel =>
+        selectedChannels.includes(channel.id)
+      );
+
+      // Separate ITIL and non-ITIL channels
+      const itilChannels = referenceChannels.filter(channel =>
+        importChannelItilSettings[channel.id]
+      );
+      const regularChannels = referenceChannels.filter(channel =>
+        !importChannelItilSettings[channel.id]
+      );
+
+      const allResults: any = { imported: [], skipped: [] };
+
+      // Import regular channels using the existing process
+      if (regularChannels.length > 0) {
+        const regularChannelIds = regularChannels.map(c => c.id);
+        const regularResult = await importReferenceData('channels', regularChannelIds);
+
+        if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
+        if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
+      }
+
+      // Create ITIL channels manually using the createChannel API
+      for (const channel of itilChannels) {
+        try {
+          const createdChannel = await createChannel({
+            channel_name: channel.channel_name,
+            description: channel.description || '',
+            display_order: channel.display_order,
+            is_inactive: channel.is_inactive || false,
+            category_type: 'itil',
+            priority_type: 'itil'
+          });
+
+          allResults.imported.push(createdChannel);
+        } catch (createError) {
+          console.error(`Failed to create ITIL channel ${channel.channel_name}:`, createError);
+          allResults.skipped.push({
+            name: channel.channel_name,
+            reason: 'Failed to create as ITIL channel'
+          });
+        }
+      }
+
+      setImportResults(prev => ({ ...prev, channels: {
+        imported: allResults.imported?.length || 0,
+        skipped: allResults.skipped?.length || 0
       }}));
-      
+
       // Track imported channels
-      if (result.imported?.length > 0) {
+      if (allResults.imported?.length > 0) {
         // Check if any imported channel is marked as default
-        const hasDefaultChannel = result.imported.some((ch: any) => ch.is_default);
-        
+        const hasDefaultChannel = allResults.imported.some((ch: any) => ch.is_default);
+
         // Check if there's already a default channel in existing channels
         const existingHasDefault = importedChannels.some(ch => ch.is_default);
-        
+
         // If no default channel exists, mark the first one as default
         if (!hasDefaultChannel && !existingHasDefault) {
-          const firstChannel: any = (result.imported as any[])[0];
+          const firstChannel: any = allResults.imported[0];
           // Update the channel to be default
           await updateChannel(firstChannel.channel_id, { is_default: true });
           firstChannel.is_default = true;
@@ -317,27 +369,32 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             duration: 3000
           });
         }
-        
+
         // Sort channels by display_order to maintain proper order
-        const allChannels = [...importedChannels, ...(result.imported as any[])].sort((a, b) => 
+        const allChannels = [...importedChannels, ...allResults.imported].sort((a, b) =>
           (a.display_order || 0) - (b.display_order || 0)
         );
         setImportedChannels(allChannels);
-        
+
         // If we don't have a channel set yet, use the first imported
         if (!data.channelId) {
-          updateData({ 
-            channelId: (result.imported as any[])[0].channel_id,
-            channelName: (result.imported as any[])[0].channel_name
+          const firstChannel = allResults.imported[0];
+          const isItilCompliant = firstChannel.category_type === 'itil' && firstChannel.priority_type === 'itil';
+          updateData({
+            channelId: firstChannel.channel_id,
+            channelName: firstChannel.channel_name,
+            is_itil_compliant: isItilCompliant
           });
         }
       }
-      
+
       setSelectedChannels([]);
+      setImportChannelItilSettings({});
       setShowImportDialogs(prev => ({ ...prev, channels: false }));
       await loadAvailableChannels();
     } catch (error) {
       console.error('Error importing boards:', error);
+      toast.error('Failed to import boards');
     } finally {
       setIsImporting(prev => ({ ...prev, channels: false }));
     }
@@ -1018,13 +1075,37 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </div>
                 </div>
 
+                {/* ITIL Configuration */}
+                <div className="border-t pt-4 space-y-4">
+                  <h4 className="font-medium text-gray-800">Board Configuration</h4>
+
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="channel-itil-compliant">Make this board ITIL compliant</Label>
+                      <button
+                        type="button"
+                        onClick={() => setShowItilInfoModal(true)}
+                        className="text-gray-400 hover:text-gray-600 transition-colors"
+                        title="View ITIL categories and priority matrix"
+                      >
+                        <HelpCircle className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <Switch
+                      id="channel-itil-compliant"
+                      checked={channelForm.isItilCompliant}
+                      onCheckedChange={(checked) => setChannelForm(prev => ({ ...prev, isItilCompliant: checked }))}
+                    />
+                  </div>
+                </div>
+
                 <div className="flex gap-2">
                   <Button
                     id="cancel-add-channel-form"
                     variant="outline"
                     onClick={() => {
                       setShowAddForms(prev => ({ ...prev, channel: false }));
-                      setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false });
+                      setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
                     }}
                     className="flex-1"
                   >
@@ -1067,7 +1148,9 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           description: channelForm.description || '',
                           display_order: displayOrder,
                           is_inactive: false,
-                          is_default: isDefault
+                          is_default: isDefault,
+                          category_type: channelForm.isItilCompliant ? 'itil' : 'custom',
+                          priority_type: channelForm.isItilCompliant ? 'itil' : 'custom'
                         });
                         
                         // Add to imported channels list and sort by display_order
@@ -1080,14 +1163,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         
                         // Update wizard data if this is the first channel
                         if (!data.channelId) {
-                          updateData({ 
+                          updateData({
                             channelId: createdChannel.channel_id,
-                            channelName: createdChannel.channel_name
+                            channelName: createdChannel.channel_name,
+                            is_itil_compliant: channelForm.isItilCompliant
                           });
                         }
                         
                         // Reset and close
-                        setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false });
+                        setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
                         setShowAddForms(prev => ({ ...prev, channel: false }));
                         
                         // Reload available channels for category creation
@@ -1143,6 +1227,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Default</th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Order</th>
+                          <th className="px-3 py-2 text-center text-sm font-medium text-gray-700">
+                            <div className="flex items-center justify-center gap-1">
+                              ITIL
+                              <button
+                                type="button"
+                                onClick={() => setShowItilInfoModal(true)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title="View ITIL categories and priority matrix"
+                              >
+                                <HelpCircle className="w-3 h-3" />
+                              </button>
+                            </div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -1166,6 +1263,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               {channel.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
                             </td>
                             <td className="px-3 py-2 text-sm text-gray-600">{channel.display_order || 0}</td>
+                            <td className="px-3 py-2 text-center">
+                              <Switch
+                                checked={importChannelItilSettings[channel.id] || false}
+                                onCheckedChange={(checked) => {
+                                  setImportChannelItilSettings(prev => ({
+                                    ...prev,
+                                    [channel.id]: checked
+                                  }));
+                                }}
+                                className="data-[state=checked]:bg-blue-500"
+                              />
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1181,6 +1290,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     onClick={() => {
                       setShowImportDialogs(prev => ({ ...prev, channels: false }));
                       setSelectedChannels([]);
+                      setImportChannelItilSettings({});
                     }}
                     className="flex-1"
                   >
@@ -1210,6 +1320,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">Name</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Default</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Order</th>
+                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">ITIL</th>
                         <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">Actions</th>
                       </tr>
                     </thead>
@@ -1233,6 +1344,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           </td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
+                            {channel.category_type === 'itil' && channel.priority_type === 'itil' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                ITIL
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-xs">-</span>
+                            )}
+                          </td>
+                          <td className="px-2 py-1 text-center">
                             <Button
                               id={`remove-channel-${channel.channel_id}-button`}
                               data-channel-id={channel.channel_id}
@@ -1254,6 +1374,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           <td className="px-2 py-1 text-xs">{data.channelName}</td>
                           <td className="px-2 py-1 text-center text-xs">-</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">1</td>
+                          <td className="px-2 py-1 text-center">
+                            {data.is_itil_compliant ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                ITIL
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 text-xs">-</span>
+                            )}
+                          </td>
                           <td className="px-2 py-1 text-center">-</td>
                         </tr>
                       )}
@@ -2397,6 +2526,164 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           Import standard configurations to quickly set up your ticketing system.
         </p>
       </div>
+
+      {/* ITIL Information Modal */}
+      <Dialog
+        isOpen={showItilInfoModal}
+        onClose={() => setShowItilInfoModal(false)}
+        title="ITIL Standards Reference"
+      >
+        <DialogContent className="max-w-4xl">
+          <div className="space-y-6">
+            {/* ITIL Categories Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Standard Categories and Subcategories</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                {/* Hardware */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Hardware</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Server</li>
+                    <li>• Desktop/Laptop</li>
+                    <li>• Network Equipment</li>
+                    <li>• Printer</li>
+                    <li>• Storage</li>
+                    <li>• Mobile Device</li>
+                  </ul>
+                </div>
+
+                {/* Software */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Software</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Operating System</li>
+                    <li>• Business Application</li>
+                    <li>• Database</li>
+                    <li>• Email/Collaboration</li>
+                    <li>• Security Software</li>
+                    <li>• Custom Application</li>
+                  </ul>
+                </div>
+
+                {/* Network */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Network</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Connectivity</li>
+                    <li>• VPN</li>
+                    <li>• Wi-Fi</li>
+                    <li>• Internet Access</li>
+                    <li>• LAN/WAN</li>
+                    <li>• Firewall</li>
+                  </ul>
+                </div>
+
+                {/* Security */}
+                <div className="border rounded-lg p-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Security</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Malware/Virus</li>
+                    <li>• Unauthorized Access</li>
+                    <li>• Data Breach</li>
+                    <li>• Phishing/Spam</li>
+                    <li>• Policy Violation</li>
+                    <li>• Account Lockout</li>
+                  </ul>
+                </div>
+
+                {/* Service Request */}
+                <div className="border rounded-lg p-4 md:col-span-2">
+                  <h4 className="font-medium text-blue-800 mb-2">Service Request</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Access Request</li>
+                      <li>• New User Setup</li>
+                      <li>• Software Installation</li>
+                    </ul>
+                    <ul className="text-sm text-gray-600 space-y-1">
+                      <li>• Equipment Request</li>
+                      <li>• Information Request</li>
+                      <li>• Change Request</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ITIL Priority Matrix Section */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">ITIL Priority Matrix (Impact × Urgency)</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-xs border border-gray-200">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2 text-left text-gray-600 border-b border-r bg-gray-50"></th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">High<br/>Urgency (1)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-High<br/>Urgency (2)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium<br/>Urgency (3)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Medium-Low<br/>Urgency (4)</th>
+                      <th className="px-3 py-2 text-center text-gray-600 border-b bg-gray-50">Low<br/>Urgency (5)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">High Impact (1)</td>
+                      <td className="px-3 py-2 text-center bg-red-100 text-red-800 font-semibold border">Critical (1)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-High Impact (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium Impact (3)</td>
+                      <td className="px-3 py-2 text-center bg-orange-100 text-orange-800 font-semibold border">High (2)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Medium-Low Impact (4)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-3 py-2 text-gray-600 border-r font-medium bg-gray-50">Low Impact (5)</td>
+                      <td className="px-3 py-2 text-center bg-yellow-100 text-yellow-800 font-semibold border">Medium (3)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-blue-100 text-blue-800 font-semibold border">Low (4)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                      <td className="px-3 py-2 text-center bg-gray-100 text-gray-800 font-semibold border">Planning (5)</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 text-sm text-gray-600 space-y-1">
+                <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                <p><strong>Priority:</strong> Automatically calculated based on Impact × Urgency matrix above.</p>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+        <DialogFooter>
+          <Button id="close-itil-info" onClick={() => setShowItilInfoModal(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </Dialog>
     </div>
   );
 }
