@@ -1,0 +1,232 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "clients": "Kunden",
+    "projects": "Projekte",
+    "billing": "Abrechnung",
+    "reports": "Berichte",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "logout": "Abmelden",
+    "help": "Hilfe"
+  },
+  "actions": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "create": "Erstellen",
+    "update": "Aktualisieren",
+    "submit": "Absenden",
+    "back": "Zurück",
+    "next": "Weiter",
+    "previous": "Vorherige",
+    "search": "Suchen",
+    "filter": "Filtern",
+    "export": "Exportieren",
+    "import": "Importieren",
+    "download": "Herunterladen",
+    "upload": "Hochladen",
+    "refresh": "Aktualisieren",
+    "close": "Schließen"
+  },
+  "status": {
+    "loading": "Wird geladen...",
+    "saving": "Wird gespeichert...",
+    "success": "Erfolg",
+    "error": "Fehler",
+    "warning": "Warnung",
+    "info": "Information",
+    "pending": "Ausstehend",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "completed": "Abgeschlossen",
+    "cancelled": "Abgebrochen"
+  },
+  "messages": {
+    "welcome": "Willkommen",
+    "confirmDelete": "Möchtest du dieses Element wirklich löschen?",
+    "saveSuccess": "Änderungen erfolgreich gespeichert",
+    "saveError": "Änderungen konnten nicht gespeichert werden",
+    "loadError": "Daten konnten nicht geladen werden",
+    "noData": "Keine Daten verfügbar",
+    "required": "Dieses Feld ist erforderlich",
+    "invalidEmail": "Ungültige E-Mail-Adresse",
+    "invalidPassword": "Ungültiges Passwort",
+    "passwordMismatch": "Passwörter stimmen nicht überein"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Nicht authentifiziert",
+      "accessDenied": "Zugriff verweigert",
+      "clientPortalOnly": "Zugriff verweigert: Aktionen im Kundenportal sind nur für Kundenbenutzer erlaubt",
+      "insufficientPermissions": "Unzureichende Berechtigungen",
+      "userIdNotFound": "Benutzer-ID wurde in der Sitzung nicht gefunden",
+      "tenantNotFound": "Mandant wurde in der Sitzung nicht gefunden. Bitte ab- und wieder anmelden.",
+      "userNotFound": "Benutzer nicht gefunden",
+      "contactNotFound": "Benutzer ist keinem Kontakt zugeordnet",
+      "companyNotFound": "Kontakt ist keinem Unternehmen zugeordnet"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Unzureichende Berechtigungen zum Anzeigen von Tickets",
+        "readDetails": "Unzureichende Berechtigungen zum Anzeigen von Ticketdetails",
+        "create": "Unzureichende Berechtigungen zum Erstellen von Tickets",
+        "update": "Unzureichende Berechtigungen zum Aktualisieren von Tickets",
+        "updateStatus": "Unzureichende Berechtigungen zum Aktualisieren des Ticketstatus",
+        "addComments": "Unzureichende Berechtigungen zum Hinzufügen von Kommentaren",
+        "updateComments": "Unzureichende Berechtigungen zum Aktualisieren von Kommentaren",
+        "deleteComments": "Unzureichende Berechtigungen zum Löschen von Kommentaren"
+      }
+    }
+  },
+  "time": {
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "tomorrow": "Morgen",
+    "thisWeek": "Diese Woche",
+    "lastWeek": "Letzte Woche",
+    "thisMonth": "Dieser Monat",
+    "lastMonth": "Letzter Monat",
+    "thisYear": "Dieses Jahr",
+    "lastYear": "Letztes Jahr",
+    "seconds": "Sekunden",
+    "minutes": "Minuten",
+    "hours": "Stunden",
+    "days": "Tage",
+    "weeks": "Wochen",
+    "months": "Monate",
+    "years": "Jahre"
+  },
+  "language": {
+    "selectLanguage": "Sprache auswählen",
+    "changeLanguage": "Sprache ändern",
+    "currentLanguage": "Aktuelle Sprache",
+    "preference": {
+      "label": "Sprachpräferenz",
+      "helper": "Wähle deine bevorzugte Sprache für die Oberfläche",
+      "placeholder": "Sprache auswählen",
+      "cleared": "Sprachpräferenz entfernt. Standardsprache wird verwendet...",
+      "updating": "Sprachpräferenz wird aktualisiert...",
+      "notSet": "Nicht festgelegt",
+      "notSetWithSource": "Nicht festgelegt (verwendet {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "company": "Unternehmensstandard",
+        "tenant": "Mandantenstandard",
+        "system": "Systemstandard"
+      }
+    }
+  },
+  "yes": "Ja",
+  "no": "Nein",
+  "companies": {
+    "locations": {
+      "sectionTitle": "Standorte des Unternehmens",
+      "manageButton": "Standorte verwalten",
+      "dialogTitle": "Standorte verwalten - {{company}}",
+      "managerLabel": "Standortmanager des Unternehmens",
+      "listTitle": "Standorte",
+      "buttons": {
+        "add": "Standort hinzufügen",
+        "save": "Standort speichern"
+      },
+      "card": {
+        "unnamed": "Unbenannter Standort",
+        "setDefault": "Als Standard festlegen",
+        "edit": "Standort bearbeiten",
+        "delete": "Standort löschen",
+        "addressLabel": "Adresse",
+        "addressHelper": "Vollständige Adresse für diesen Standort",
+        "phoneLabel": "Telefon",
+        "phoneHelper": "Telefonnummer für diesen Standort",
+        "phoneValue": "Telefon: {{phone}}",
+        "emailLabel": "E-Mail",
+        "emailHelper": "E-Mail-Adresse für diesen Standort",
+        "emailValue": "E-Mail: {{email}}",
+        "billingTag": "Abrechnung",
+        "shippingTag": "Versand",
+        "notesLabel": "Notizen",
+        "notesHelper": "Zusätzliche Notizen zu diesem Standort"
+      },
+      "form": {
+        "locationName": "Name des Standorts",
+        "locationNameHelper": "Name für diesen Standort (z. B. Hauptsitz, Lager)",
+        "addressLine1": "Adresszeile 1",
+        "addressLine1Helper": "Primäre Adresszeile (erforderlich)",
+        "addressLine2": "Adresszeile 2",
+        "addressLine2Helper": "Zusätzliche Adressinformationen (optional)",
+        "addressLine3": "Adresszeile 3",
+        "city": "Stadt",
+        "cityHelper": "Name der Stadt (erforderlich)",
+        "stateProvince": "Bundesland/Provinz",
+        "stateProvinceHelper": "Name des Bundeslands oder der Provinz",
+        "postalCode": "Postleitzahl",
+        "postalCodeHelper": "PLZ oder ZIP-Code",
+        "country": "Land",
+        "countryHelper": "Land auswählen (erforderlich)",
+        "phone": "Telefon",
+        "phoneHelper": "Telefonnummer für diesen Standort",
+        "email": "E-Mail",
+        "emailHelper": "E-Mail-Adresse für diesen Standort",
+        "taxRegion": "Steuerregion",
+        "taxRegionHelper": "Passende Steuerregion auswählen",
+        "notes": "Notizen",
+        "notesHelper": "Weitere Hinweise zu diesem Standort",
+        "defaultLocation": "Standardstandort",
+        "defaultLocationHelper": "Als Standardstandort für das Unternehmen markieren",
+        "billingAddress": "Rechnungsadresse",
+        "billingAddressHelper": "Diesen Standort als Rechnungsadresse verwenden",
+        "shippingAddress": "Versandadresse",
+        "shippingAddressHelper": "Diesen Standort als Versandadresse verwenden",
+        "placeholder": {
+          "locationName": "z. B. Hauptsitz, Lager",
+          "addressLine1": "Adresse eingeben *",
+          "city": "Stadt eingeben *",
+          "country": "Land auswählen *",
+          "loadingCountries": "Länder werden geladen...",
+          "taxRegionOption": "Steuerregion auswählen...",
+          "taxRegion": "Steuerregion auswählen..."
+        }
+      },
+      "validation": {
+        "title": "Bitte fülle die erforderlichen Felder aus:"
+      },
+      "errors": {
+        "loadTaxRegions": "Steuerregionen konnten nicht geladen werden",
+        "loadCountries": "Länder konnten nicht geladen werden",
+        "loadLocations": "Standorte des Unternehmens konnten nicht geladen werden",
+        "save": "Standort konnte nicht gespeichert werden",
+        "delete": "Standort konnte nicht gelöscht werden",
+        "setDefault": "Standardstandort konnte nicht festgelegt werden"
+      },
+      "success": {
+        "create": "Standort erfolgreich erstellt",
+        "update": "Standort erfolgreich aktualisiert",
+        "delete": "Standort erfolgreich gelöscht",
+        "setDefault": "Standardstandort aktualisiert"
+      },
+      "dialog": {
+        "addTitle": "Neuen Standort hinzufügen",
+        "editTitle": "Standort bearbeiten",
+        "deleteTitle": "Standort löschen",
+        "deleteMessage": "Möchtest du den Standort \"{{name}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+      },
+      "empty": {
+        "title": "Noch keine Standorte hinzugefügt",
+        "description": "Klicke auf \"Standort hinzufügen\", um zu beginnen"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Zurück",
+    "next": "Weiter",
+    "pageInfo": "Seite {{current}} von {{total}} ({{count}} Einträge insgesamt)",
+    "page": "Seite",
+    "of": "von",
+    "showing": "Zeige {{from}} bis {{to}} von {{total}} Ergebnissen",
+    "rowsPerPage": "Zeilen pro Seite",
+    "first": "Erste",
+    "last": "Letzte"
+  }
+}
