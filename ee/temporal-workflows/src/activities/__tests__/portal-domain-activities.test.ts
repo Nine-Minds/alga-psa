@@ -23,6 +23,7 @@ function createRecord(overrides: Partial<PortalDomainActivityRecord> = {}): Port
 }
 
 const baseConfig: PortalDomainConfig = {
+  certificateApiVersion: 'cert-manager.io/v1',
   certificateNamespace: 'msp',
   certificateIssuerName: 'letsencrypt-dns',
   certificateIssuerKind: 'ClusterIssuer',

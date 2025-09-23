@@ -13,8 +13,8 @@ import {
   listYamlFiles,
 } from '../portal-domain-activities';
 
-import type { PortalDomainActivityRecord, PortalDomainConfig } from '../../workflows/portal-domains/types';
-import type { CommandRunner } from '../portal-domain-activities';
+import type { PortalDomainActivityRecord } from '../../workflows/portal-domains/types.js';
+import type { PortalDomainConfig, CommandRunner } from '../portal-domain-activities.js';
 
 import { reconcilePortalDomains } from '../portal-domain-activities';
 import { promises as fs } from 'node:fs';
@@ -83,6 +83,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     };
 
     const config: PortalDomainConfig = {
+      certificateApiVersion: 'cert-manager.io/v1',
       certificateNamespace: 'msp',
       certificateIssuerName: 'letsencrypt',
       certificateIssuerKind: 'ClusterIssuer',

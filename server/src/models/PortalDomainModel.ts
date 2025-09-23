@@ -80,7 +80,23 @@ export function normalizeHostname(hostname: string): string {
 export function computeCanonicalHost(tenantId: string): string {
   const safeTenantId = tenantId.trim();
   const prefix = safeTenantId.slice(0, 7) || safeTenantId;
-  return `${prefix}.portal.algapsa.com`;
+
+  // Extract base domain from NEXTAUTH_URL
+  const nextAuthUrl = process.env.NEXTAUTH_URL;
+  if (!nextAuthUrl) {
+    // Fallback to default if NEXTAUTH_URL is not set
+    return `${prefix}.portal.algapsa.com`;
+  }
+
+  try {
+    const url = new URL(nextAuthUrl);
+    const baseDomain = url.hostname;
+    return `${prefix}.portal.${baseDomain}`;
+  } catch (error) {
+    // Fallback to default if URL parsing fails
+    console.warn('Failed to parse NEXTAUTH_URL for portal domain:', error);
+    return `${prefix}.portal.algapsa.com`;
+  }
 }
 
 function coerceLastCheckedAt(knex: Knex, value: Date | string | null): Date | Knex.Raw | null {
