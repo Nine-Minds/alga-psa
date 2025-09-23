@@ -275,7 +275,6 @@ const ClientPortalSettings = () => {
   };
 
   const badge = getStatusBadge(portalStatus?.status);
-  const expectedCname = portalStatus?.verificationDetails?.expected_cname ?? portalStatus?.canonicalHost;
   const existingDomain = portalStatus?.domain ?? null;
   const normalizedInput = domainInput.trim();
   const editingExistingDomain = Boolean(existingDomain);
@@ -438,7 +437,7 @@ const ClientPortalSettings = () => {
                 <div className="font-medium text-gray-700">Setup checklist</div>
                 <ol className="mt-2 list-decimal space-y-2 pl-4">
                   <li>
-                    Create a CNAME record for your chosen host pointing to <code className="rounded bg-gray-100 px-1 py-0.5">{expectedCname ?? portalStatus?.canonicalHost ?? 'canonical host'}</code>.
+                    Create a CNAME record for your chosen host pointing to <code className="rounded bg-gray-100 px-1 py-0.5">{portalStatus?.canonicalHost ?? 'canonical host'}</code>.
                   </li>
                   <li>Click "Save Domain" to trigger DNS verification and certificate provisioning.</li>
                   <li>
