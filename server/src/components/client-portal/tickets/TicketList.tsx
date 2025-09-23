@@ -217,7 +217,7 @@ export function TicketList() {
       width: '75px',
       render: (value: string, record: ITicketListItem) => (
         <div
-          className="font-medium cursor-pointer hover:text-blue-600"
+          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {
@@ -235,7 +235,7 @@ export function TicketList() {
       width: '25%',
       render: (value: string, record: ITicketListItem) => (
         <div 
-          className="font-medium cursor-pointer hover:text-blue-600"
+          className="font-medium cursor-pointer hover:text-[rgb(var(--color-secondary-600))]"
           onClick={(e) => {
             e.stopPropagation();
             if (record.ticket_id) {

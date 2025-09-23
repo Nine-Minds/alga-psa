@@ -11,6 +11,7 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
+import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
@@ -341,56 +342,60 @@ const ClientPortalSettings = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
                     Primary Color
                   </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-10 w-20 border border-[rgb(var(--color-border-400))] rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
-                      disabled={brandingLoading || brandingSaving}
-                    />
-                    <Input
-                      id="primary-color-hex"
-                      type="text"
-                      value={primaryColor}
-                      onChange={(e) => setPrimaryColor(e.target.value)}
-                      placeholder="#6366F1"
-                      disabled={brandingLoading || brandingSaving}
-                      className="text-sm"
-                      containerClassName="flex-1 mb-0"
-                    />
-                  </div>
+                  <ColorPicker
+                    currentBackgroundColor={primaryColor}
+                    onSave={(color) => {
+                      if (color) setPrimaryColor(color);
+                    }}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md hover:bg-gray-50 transition-colors w-full"
+                        disabled={brandingLoading || brandingSaving}
+                      >
+                        <div
+                          className="w-8 h-8 rounded border border-gray-300"
+                          style={{ backgroundColor: primaryColor }}
+                        />
+                        <span className="text-sm">{primaryColor}</span>
+                      </button>
+                    }
+                    showTextColor={false}
+                    previewType="circle"
+                  />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for buttons, links, and highlights
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                  <label className="block text-xs font-medium text-gray-600 mb-2">
                     Secondary Color
                   </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="color"
-                      value={secondaryColor}
-                      onChange={(e) => setSecondaryColor(e.target.value)}
-                      className="h-10 w-20 border border-[rgb(var(--color-border-400))] rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
-                      disabled={brandingLoading || brandingSaving}
-                    />
-                    <Input
-                      id="secondary-color-hex"
-                      type="text"
-                      value={secondaryColor}
-                      onChange={(e) => setSecondaryColor(e.target.value)}
-                      placeholder="#8B5CF6"
-                      disabled={brandingLoading || brandingSaving}
-                      className="text-sm"
-                      containerClassName="flex-1 mb-0"
-                    />
-                  </div>
+                  <ColorPicker
+                    currentBackgroundColor={secondaryColor}
+                    onSave={(color) => {
+                      if (color) setSecondaryColor(color);
+                    }}
+                    trigger={
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 px-3 py-2 border border-[rgb(var(--color-border-400))] rounded-md hover:bg-gray-50 transition-colors w-full"
+                        disabled={brandingLoading || brandingSaving}
+                      >
+                        <div
+                          className="w-8 h-8 rounded border border-gray-300"
+                          style={{ backgroundColor: secondaryColor }}
+                        />
+                        <span className="text-sm">{secondaryColor}</span>
+                      </button>
+                    }
+                    showTextColor={false}
+                    previewType="circle"
+                  />
                   <p className="text-xs text-gray-500 mt-1">
                     Used for accents and secondary actions
                   </p>
@@ -401,32 +406,141 @@ const ClientPortalSettings = () => {
             {/* Preview */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
-              <div className="border border-gray-200 rounded-lg p-4 bg-white">
-                <div className="flex items-center gap-3 mb-4">
-                  {logoUrl ? (
-                    <img src={logoUrl} alt="Logo" className="h-8 object-contain" />
-                  ) : (
-                    <div className="w-8 h-8 bg-gray-300 rounded" />
-                  )}
-                  <span className="text-lg font-semibold">
-                    {companyName || 'Your Company'} Portal
-                  </span>
+              <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                {/* Mock Navigation Bar */}
+                <div className="bg-white shadow-sm border-b border-gray-200">
+                  <div className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {logoUrl ? (
+                        <img src={logoUrl} alt="Logo" className="h-7 object-contain" />
+                      ) : (
+                        <div className="w-7 h-7 bg-gray-300 rounded" />
+                      )}
+                      <span className="text-base font-semibold text-gray-900">
+                        {companyName || 'Your Company'} Portal
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <nav className="hidden md:flex items-center gap-6">
+                        <span
+                          className="text-sm font-medium cursor-default"
+                          style={{ color: secondaryColor }}
+                        >
+                          Dashboard
+                        </span>
+                        <span className="text-sm text-gray-600 hover:text-gray-900 cursor-default">Tickets</span>
+                        <span className="text-sm text-gray-600 hover:text-gray-900 cursor-default">Projects</span>
+                      </nav>
+                      <div className="w-8 h-8 bg-gray-300 rounded-full" />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <button
-                    className="px-4 py-2 rounded text-white text-sm"
-                    style={{ backgroundColor: primaryColor }}
-                    disabled
-                  >
-                    Primary Button
-                  </button>
-                  <button
-                    className="px-4 py-2 rounded text-white text-sm"
-                    style={{ backgroundColor: secondaryColor }}
-                    disabled
-                  >
-                    Secondary Button
-                  </button>
+
+                {/* Mock Dashboard Content */}
+                <div className="p-4">
+                  {/* Welcome Section */}
+                  <div className="bg-white rounded-lg p-4 mb-3">
+                    <h2 className="text-base font-semibold text-gray-900 mb-1">Welcome back!</h2>
+                    <p className="text-xs text-gray-600">Here's an overview of your account activity</p>
+                  </div>
+
+                  {/* Stats Cards */}
+                  <div className="grid grid-cols-3 gap-3 mb-3">
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600">Open Tickets</span>
+                        <div
+                          className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: primaryColor }}
+                        >
+                          3
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold text-gray-900">3</div>
+                      <div className="text-xs text-gray-500">2 urgent</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600">Active Projects</span>
+                        <div
+                          className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: secondaryColor }}
+                        >
+                          5
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold text-gray-900">5</div>
+                      <div className="text-xs text-gray-500">1 near deadline</div>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 border border-gray-200">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600">Invoices</span>
+                        <div className="w-6 h-6 rounded bg-gray-300 flex items-center justify-center text-white text-xs font-bold">
+                          $
+                        </div>
+                      </div>
+                      <div className="text-lg font-semibold text-gray-900">$2,450</div>
+                      <div className="text-xs text-gray-500">Due this month</div>
+                    </div>
+                  </div>
+
+                  {/* Recent Activity */}
+                  <div className="bg-white rounded-lg p-4 mb-3">
+                    <h3 className="text-sm font-semibold text-gray-900 mb-3">Recent Activity</h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-xs">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
+                        <span className="text-gray-600">Ticket #1234 was updated</span>
+                        <span className="text-gray-400 ml-auto">2 hours ago</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: secondaryColor }}
+                        />
+                        <span className="text-gray-600">New invoice generated</span>
+                        <span className="text-gray-400 ml-auto">5 hours ago</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: primaryColor }}
+                        />
+                        <span className="text-gray-600">Project milestone completed</span>
+                        <span className="text-gray-400 ml-auto">1 day ago</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quick Actions */}
+                  <div className="flex gap-2">
+                    <button
+                      className="px-3 py-1.5 rounded text-white text-xs font-medium transition-opacity hover:opacity-90"
+                      style={{ backgroundColor: primaryColor }}
+                      disabled
+                    >
+                      Create Ticket
+                    </button>
+                    <button
+                      className="px-3 py-1.5 rounded text-xs font-medium border transition-colors"
+                      style={{
+                        borderColor: secondaryColor,
+                        color: secondaryColor
+                      }}
+                      disabled
+                    >
+                      View Projects
+                    </button>
+                    <button
+                      className="px-3 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-700 transition-colors"
+                      disabled
+                    >
+                      Download Reports
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

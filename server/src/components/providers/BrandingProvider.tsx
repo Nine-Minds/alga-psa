@@ -277,6 +277,20 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
           color: rgb(${secondaryShades[800]}) !important;
         }
 
+        /* Override hover states for blue text */
+        .hover\\:text-blue-600:hover,
+        .hover\\:text-blue-500:hover {
+          color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .hover\\:text-blue-700:hover {
+          color: rgb(${secondaryShades[700]}) !important;
+        }
+
+        .hover\\:text-blue-800:hover {
+          color: rgb(${secondaryShades[800]}) !important;
+        }
+
         .border-blue-600,
         .border-blue-500 {
           border-color: rgb(${secondaryShades[600]}) !important;
