@@ -5,16 +5,16 @@ use "utils.nu" *
 def load-local-env [] {
     let project_root = find-project-root
     let env_file = $"($project_root)/.env.local"
-    
+
     if ($env_file | path exists) {
         # Parse .env.local file and load variables
-        let env_vars = (open $env_file 
-            | lines 
+        let env_vars = (open $env_file
+            | lines
             | where ($it | str trim | str length) > 0
             | where not ($it | str starts-with "#")
             | parse "{key}={value}"
             | transpose -r -d)
-        
+
         # Load the environment variables
         load-env $env_vars
     }
@@ -188,7 +188,7 @@ export def hosted-env-create [
     load-local-env
     let env_cfg = (get-hosted-env-config $environment)
     ensure-hosted-env-context $env_cfg
-    
+
     let project_root = find-project-root
     let sanitized_branch = (sanitize-branch-name $branch)
     let namespace = $"($env_cfg.namespace_prefix)($sanitized_branch)"
@@ -339,12 +339,12 @@ spec:
 
     # Copy required secrets from msp namespace
     print $"($env.ALGA_COLOR_CYAN)Copying required secrets to ($namespace)...($env.ALGA_COLOR_RESET)"
-    
+
     # Copy nm-store-db-secret if it exists in msp namespace
     let nm_store_secret_exists = (kubectl -n msp get secret nm-store-db-secret | complete)
     if $nm_store_secret_exists.exit_code == 0 {
-        (kubectl -n msp get secret nm-store-db-secret -o yaml | 
-         sed $"s/namespace: msp/namespace: ($namespace)/" | 
+        (kubectl -n msp get secret nm-store-db-secret -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
          kubectl apply -f - | complete) | ignore
         print $"($env.ALGA_COLOR_GREEN)✓ Copied nm-store-db-secret($env.ALGA_COLOR_RESET)"
     } else {
@@ -371,6 +371,17 @@ spec:
         print $"($env.ALGA_COLOR_GREEN)✓ Copied temporal-worker-secret($env.ALGA_COLOR_RESET)"
     } else {
         print $"($env.ALGA_COLOR_YELLOW)⚠ temporal-worker-secret not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
+    # Copy redis-credentials if it exists in msp namespace
+    let redis_secret_exists = (kubectl -n msp get secret redis-credentials | complete)
+    if $redis_secret_exists.exit_code == 0 {
+        (kubectl -n msp get secret redis-credentials -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied redis-credentials($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ redis-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
     }
 
     let vault_enabled = ($env_cfg.vault_enabled? | default true)
