@@ -80,7 +80,7 @@ vi.mock('server/src/models/PortalDomainModel', async () => {
 
   return {
     ...actual,
-    computeCanonicalHost: vi.fn(() => 'tenant123.portal.algapsa.com'),
+    computeCanonicalHost: actual.computeCanonicalHost, // Use the real function to test NEXTAUTH_URL logic
     getPortalDomain: vi.fn(async () => (portalDomainStore ? { ...portalDomainStore } : null)),
     upsertPortalDomain: vi.fn(async (_knex: any, _tenant: string, input: any) => {
       const existing = portalDomainStore ?? {
@@ -186,5 +186,51 @@ describe('requestPortalDomainRegistrationAction', () => {
     }));
 
     expect(result.status.statusMessage).toContain('Waiting for DNS verification');
+  });
+});
+
+describe('portal domain canonical host with NEXTAUTH_URL', () => {
+  beforeEach(() => {
+    portalDomainStore = { ...baseRecord };
+    analyticsCapture.mockClear();
+    enqueueWorkflow.mockClear();
+    // Clear any existing NEXTAUTH_URL for clean test state
+    delete process.env.NEXTAUTH_URL;
+  });
+
+  it('uses domain from NEXTAUTH_URL for canonical host in staging environment', async () => {
+    // Set staging environment NEXTAUTH_URL
+    process.env.NEXTAUTH_URL = 'https://sebastian.9minds.ai';
+    portalDomainStore = null; // No existing domain
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+
+    // Verify canonical host uses domain from NEXTAUTH_URL
+    expect(result.status.canonicalHost).toBe('tenant-.portal.sebastian.9minds.ai');
+    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.sebastian.9minds.ai');
+  });
+
+  it('uses domain from NEXTAUTH_URL for canonical host in production environment', async () => {
+    // Set production environment NEXTAUTH_URL
+    process.env.NEXTAUTH_URL = 'https://app.algapsa.com';
+    portalDomainStore = null; // No existing domain
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+
+    // Verify canonical host uses domain from NEXTAUTH_URL
+    expect(result.status.canonicalHost).toBe('tenant-.portal.app.algapsa.com');
+    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.app.algapsa.com');
+  });
+
+  it('falls back to default domain when NEXTAUTH_URL is not set', async () => {
+    // Ensure NEXTAUTH_URL is not set
+    delete process.env.NEXTAUTH_URL;
+    portalDomainStore = null; // No existing domain
+
+    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+
+    // Verify canonical host falls back to default
+    expect(result.status.canonicalHost).toBe('tenant-.portal.algapsa.com');
+    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.algapsa.com');
   });
 });
