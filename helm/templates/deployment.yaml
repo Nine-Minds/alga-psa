@@ -100,9 +100,9 @@ spec:
           - name: NEXT_PUBLIC_APP_VERSION
             value: "{{ .Values.version }}"
           - name: APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
+            value: "{{ if .Values.build }}{{ .Values.build.sha | default .Values.server.image.tag }}{{ else }}{{ .Values.server.image.tag }}{{ end }}"
           - name: NEXT_PUBLIC_APP_BUILD_SHA
-            value: "{{ .Values.build.sha | default .Values.server.image.tag }}"
+            value: "{{ if .Values.build }}{{ .Values.build.sha | default .Values.server.image.tag }}{{ else }}{{ .Values.server.image.tag }}{{ end }}"
           - name: APP_NAME
             value: "{{ .Values.nameOverride }}"
           - name: APP_ENV
@@ -212,6 +212,13 @@ spec:
             {{- else }}
             value: {{ .Values.config.db.server_password | quote }}
             {{- end }}
+          {{- /* Add PGPASSFILE for Citus authentication */}}
+          {{- if .Values.config.db.citus }}
+          {{- if .Values.config.db.citus.pgpass_secret }}
+          - name: PGPASSFILE
+            value: "/home/postgres/.pgpass"
+          {{- end }}
+          {{- end }}
           {{- end }}
 
           # ----------- STORAGE ----------------
