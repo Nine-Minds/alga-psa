@@ -24,13 +24,22 @@ describe('portal domain git integration helpers', () => {
   let tmpDir: string;
   const originalEnv = { ...process.env };
 
-  const commandRunner: CommandRunner = async (command, args, options) => {
-    commands.push({ command, args, cwd: options.cwd });
-    if (command === 'git' && args[0] === 'status') {
+const commandRunner: CommandRunner = async (command, args, options) => {
+  commands.push({ command, args, cwd: options.cwd });
+  if (command === 'git') {
+    if (args[0] === 'clone') {
+      const targetDir = args[2];
+      await fs.mkdir(path.join(targetDir, '.git'), { recursive: true });
+      const manifestDir = path.join(targetDir, 'portal-domains');
+      await fs.mkdir(manifestDir, { recursive: true });
+      await fs.writeFile(path.join(manifestDir, 'stale.yaml'), 'kind: List\n', 'utf8');
+    }
+    if (args[0] === 'status') {
       return { stdout: ' M portal-domains/example.yaml\n', stderr: '' };
     }
-    return { stdout: '', stderr: '' };
-  };
+  }
+  return { stdout: '', stderr: '' };
+};
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), 'portal-domains-test-'));
@@ -47,7 +56,7 @@ describe('portal domain git integration helpers', () => {
 
   it('issues git setup commands during prepareGitRepository', async () => {
     process.env.GITHUB_ACCESS_TOKEN = 'test-token';
-    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/nm-kube-config.git';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/nm-mock-config.git';
     process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
 
     const config = resolveGitConfiguration();
@@ -103,16 +112,13 @@ describe('portal domain git integration helpers', () => {
 
   it('runs kubectl apply/delete when reconciling domains', async () => {
     process.env.GITHUB_ACCESS_TOKEN = 'test-token';
-    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/nm-kube-config.git';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
     process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
     process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
 
     const repoDir = path.join(tmpDir, 'nm-kube-config');
-    await fs.mkdir(path.join(repoDir, '.git'), { recursive: true });
     const manifestRoot = path.join(repoDir, 'portal-domains');
-    await fs.mkdir(manifestRoot, { recursive: true });
-    await fs.writeFile(path.join(manifestRoot, 'stale.yaml'), 'kind: List\n');
 
     const now = new Date().toISOString();
     const updates: any[] = [];

@@ -397,6 +397,10 @@ export function resolveGitConfiguration(): GitConfiguration {
     throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain reconciliation.');
   }
 
+  if (!repoUrl) {
+    throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain reconciliation.');
+  }
+
   const url = new URL(repoUrl);
   url.username = token;
   url.password = '';
