@@ -1,11 +1,11 @@
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import WorkflowTaskModel, { IWorkflowTask, WorkflowTaskStatus } from '../persistence/workflowTaskModel.js';
-import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInterfaces.js';
-import { getWorkflowRuntime } from './workflowRuntime.js';
-import { getFormRegistry } from './formRegistry.js';
-import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry.js';
-import type { TaskDetails } from '../persistence/taskInboxInterfaces.js';
+import WorkflowTaskModel, { IWorkflowTask, WorkflowTaskStatus } from '../persistence/workflowTaskModel';
+import { TaskCreationParams, TaskEventNames } from '../persistence/taskInboxInterfaces';
+import { getWorkflowRuntime } from './workflowRuntime';
+import { getFormRegistry } from './formRegistry';
+import { ActionRegistry, ActionExecutionContext, ActionParameterDefinition } from './actionRegistry';
+import type { TaskDetails } from '../persistence/taskInboxInterfaces';
 
 /**
  * Extended context for workflow actions with additional properties needed for task creation

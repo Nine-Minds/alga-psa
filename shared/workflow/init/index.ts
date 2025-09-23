@@ -1,10 +1,10 @@
-import { getActionRegistry, getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index.js';
+import { getActionRegistry, getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index';
 import { logger } from '@alga-psa/shared/core';
 
-export * from './serverInit.js';
+export * from './serverInit';
 
 // Export workflow action registration function
-export { registerWorkflowActions } from './registerWorkflowActions.js';
+export { registerWorkflowActions } from './registerWorkflowActions';
 
 /**
  * Register example workflows for testing and demonstration

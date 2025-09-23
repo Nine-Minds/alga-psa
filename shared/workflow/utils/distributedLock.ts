@@ -1,4 +1,4 @@
-import { getRedisStreamClient } from '../streams/redisStreamClient.js';
+import { getRedisStreamClient } from '../streams/redisStreamClient';
 import { logger } from '@alga-psa/shared/core';
 
 /**

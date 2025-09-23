@@ -10,7 +10,7 @@
  *   node dlq-util.js reprocess <executionId> <messageId>
  */
 
-import { getRedisStreamClient } from '../../shared/workflow/streams/redisStreamClient.js';
+import { getRedisStreamClient } from '../../shared/workflow/streams/redisStreamClient';
 import dotenv from 'dotenv';
 
 // Load environment variables

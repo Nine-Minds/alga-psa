@@ -23,6 +23,7 @@
       "@shared/*": ["../shared/*"],
       "@alga-psa/shared": ["../shared"],
       "@alga-psa/shared/*": ["../shared/*"],
+      "@shared/db": ["../shared/db"],
       "@shared/workflow": ["../shared/workflow"],
       "@shared/workflow/*": ["../shared/workflow/*"],
       "@shared/core": ["../shared/core"],

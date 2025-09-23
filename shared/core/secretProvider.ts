@@ -1,9 +1,9 @@
 /// <reference types="node" />
-import { ISecretProvider } from './ISecretProvider.js';
+import { ISecretProvider } from './ISecretProvider';
 // Dynamic import Node-only providers to keep Edge runtime clean
-import { EnvSecretProvider } from './EnvSecretProvider.js';
-import { CompositeSecretProvider } from './CompositeSecretProvider.js';
-import logger from './logger.js';
+import { EnvSecretProvider } from './EnvSecretProvider';
+import { CompositeSecretProvider } from './CompositeSecretProvider';
+import logger from './logger';
 
 // Safe process.env access
 const getEnvVar = (name: string): string | undefined => {
@@ -42,7 +42,7 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
     
     case 'filesystem':
       if (!filesystemProviderInstance) {
-        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider.js');
+        const { FileSystemSecretProvider } = await import('./FileSystemSecretProvider');
         filesystemProviderInstance = new FileSystemSecretProvider();
       }
       return filesystemProviderInstance;
@@ -51,9 +51,9 @@ async function getProviderInstance(providerType: ProviderType): Promise<ISecretP
       if (!vaultProviderInstance) {
         // Use direct vault provider
         try {
-          const { loadVaultSecretProvider } = await import('./vaultLoader.js');
+          const { loadVaultSecretProvider } = await import('./vaultLoader');
           vaultProviderInstance = await loadVaultSecretProvider();
-          logger.info('Using VaultSecretProvider for Node.js runtime');
+          logger.info('Using VaultSecretProvider for Node runtime');
         } catch (error) {
           logger.error('Failed to load VaultSecretProvider:', error);
           throw new Error('VaultSecretProvider unavailable in current runtime');
@@ -192,5 +192,5 @@ export async function getSecretProviderInstance(): Promise<ISecretProvider> {
 export type { ISecretProvider };
 
 // Optional: Export a ready-to-use instance directly
-// This simplifies usage in other modules: import { secrets } from '....js'
+// This simplifies usage in other modules: import { secrets } from '...'
 // export const secrets = getSecretProviderInstance();

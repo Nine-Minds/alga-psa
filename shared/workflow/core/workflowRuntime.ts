@@ -1,22 +1,22 @@
-import { WorkflowContext, WorkflowFunction, WorkflowEvent, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from './workflowContext.js';
-import { TaskEventNames } from '../persistence/taskInboxInterfaces.js';
+import { WorkflowContext, WorkflowFunction, WorkflowEvent, CreateTaskAndWaitForResultParams, CreateTaskAndWaitForResultReturn } from './workflowContext';
+import { TaskEventNames } from '../persistence/taskInboxInterfaces';
 import {
   WorkflowDefinition,
   deserializeWorkflowDefinition,
   SerializedWorkflowDefinition
-} from './workflowDefinition.js';
-import { ActionRegistry } from './actionRegistry.js';
-import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing.js';
+} from './workflowDefinition';
+import { ActionRegistry } from './actionRegistry';
+import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient.js';
-import { executeDistributedTransaction } from '@alga-psa/shared/workflow/utils/distributedTransaction.js';
-import { acquireDistributedLock, releaseDistributedLock } from '@alga-psa/shared/workflow/utils/distributedLock.js';
-import { toStreamEvent } from '@alga-psa/shared/workflow/streams/workflowEventSchema.js';
-import WorkflowEventModel from '@alga-psa/shared/workflow/persistence/workflowEventModel.js';
-import WorkflowExecutionModel from '@alga-psa/shared/workflow/persistence/workflowExecutionModel.js';
-import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel.js';
-import WorkflowRegistrationModel from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel.js';
+import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient';
+import { executeDistributedTransaction } from '@alga-psa/shared/workflow/utils/distributedTransaction';
+import { acquireDistributedLock, releaseDistributedLock } from '@alga-psa/shared/workflow/utils/distributedLock';
+import { toStreamEvent } from '@alga-psa/shared/workflow/streams/workflowEventSchema';
+import WorkflowEventModel from '@alga-psa/shared/workflow/persistence/workflowEventModel';
+import WorkflowExecutionModel from '@alga-psa/shared/workflow/persistence/workflowExecutionModel';
+import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel';
+import WorkflowRegistrationModel from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel';
 import { logger } from '@alga-psa/shared/core';
 
 // No configuration needed - all events are processed asynchronously

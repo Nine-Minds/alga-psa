@@ -3,8 +3,8 @@ export {
   RecoveryStrategy,
   classifyError,
   withRetry
-} from './errorClassification.js';
-export * from './distributedLock.js';
-export * from './distributedTransaction.js';
-export * from './errorClassification.js';
-export { default as logger } from './logger.js';
+} from './errorClassification';
+export * from './distributedLock';
+export * from './distributedTransaction';
+export * from './errorClassification';
+export { default as logger } from './logger';
