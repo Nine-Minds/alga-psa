@@ -286,9 +286,10 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     fetchTags();
   }, [tickets]);
 
-  const columns = useMemo(() => 
+  const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
+      channels: initialChannels,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
       onDeleteClick: handleDeleteTicket,
@@ -296,7 +297,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       onTagsChange: handleTagsChange,
       showClient: true, // Show client column in contact view
       onClientClick: handleCompanyClick,
-    }), [initialCategories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleCompanyClick]);
+    }), [initialCategories, initialChannels, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleCompanyClick]);
 
   const handleCategorySelect = (
     selectedCategories: string[],

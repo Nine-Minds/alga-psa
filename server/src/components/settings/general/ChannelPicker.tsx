@@ -171,7 +171,9 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
-            <span className={`flex-1 text-left ${!selectedChannel ? 'text-gray-400' : ''}`}>{selectedChannel?.channel_name || placeholder}</span>
+            <span className={`flex-1 text-left ${!selectedChannelId ? 'text-gray-400' : ''}`}>
+              {selectedChannel?.channel_name || (selectedChannelId ? `Loading...` : placeholder)}
+            </span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
         </Popover.Trigger>

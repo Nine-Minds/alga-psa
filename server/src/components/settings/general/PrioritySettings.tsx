@@ -171,8 +171,11 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             style={{ backgroundColor: record.color }}
           />
           <span>{value}</span>
+          {'is_from_itil_standard' in record && record.is_from_itil_standard && (
+            <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-800 rounded">ITIL</span>
+          )}
           {'tenant' in record ? null : (
-            <span className="text-xs text-gray-500 italic">(Standard)</span>
+            !('is_from_itil_standard' in record && record.is_from_itil_standard) && <span className="text-xs text-gray-500 italic">(Standard)</span>
           )}
         </div>
       ),
@@ -233,8 +236,10 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
         {/* Info box about priorities */}
         <div className="bg-blue-50 p-4 rounded-md mb-4">
           <p className="text-sm text-blue-700">
-            <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates. 
-            All priorities can be edited or deleted to fit your workflow.
+            <strong>Priority Management:</strong> Create custom priorities for your organization or import from standard templates.
+            {priorities.some(p => 'is_from_itil_standard' in p && p.is_from_itil_standard && p.item_type === selectedPriorityType) ?
+              ' ITIL standard priorities cannot be edited or deleted.' :
+              ' All priorities can be edited or deleted to fit your workflow.'}
           </p>
         </div>
 
@@ -247,44 +252,53 @@ const PrioritySettings = ({ onShowConflictDialog, initialPriorityType }: Priorit
             title: 'Actions',
             dataIndex: 'action',
             width: '5%',
-            render: (_, item) => (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-8 w-8 p-0"
-                    id={`priority-actions-menu-${item.priority_id}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <span className="sr-only">Open menu</span>
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    id={`edit-priority-${item.priority_id}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingPriority(item as IPriority);
-                      setPriorityColor(item.color || '#6B7280');
-                      setShowPriorityDialog(true);
-                    }}
-                  >
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    id={`delete-priority-${item.priority_id}`}
-                    className="text-red-600 focus:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeletePriorityRequest(item.priority_id);
-                    }}
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ),
+            render: (_, item) => {
+              // ITIL imported priorities cannot be edited or deleted
+              if ('is_from_itil_standard' in item && item.is_from_itil_standard) {
+                return (
+                  <span className="text-xs text-gray-400">Protected</span>
+                );
+              }
+
+              return (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      id={`priority-actions-menu-${item.priority_id}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="sr-only">Open menu</span>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      id={`edit-priority-${item.priority_id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPriority(item as IPriority);
+                        setPriorityColor(item.color || '#6B7280');
+                        setShowPriorityDialog(true);
+                      }}
+                    >
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      id={`delete-priority-${item.priority_id}`}
+                      className="text-red-600 focus:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeletePriorityRequest(item.priority_id);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            },
           }]}
         />
         
