@@ -65,18 +65,13 @@ export interface PortalDomainConfig {
   virtualServiceNamespace: string;
   serviceHost: string;
   servicePort: number;
-  challengeServiceHost?: string | null;
-  challengeServicePort?: number;
-  challengeRouteEnabled: boolean;
   manifestOutputDirectory: string | null;
 }
 
-const challengeHost = process.env.PORTAL_DOMAIN_CHALLENGE_HOST || null;
-const challengeEnabledEnv = process.env.PORTAL_DOMAIN_CHALLENGE_ENABLED;
 
 const DEFAULT_CONFIG: PortalDomainConfig = {
   certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || 'msp',
-  certificateIssuerName: process.env.PORTAL_DOMAIN_CERT_ISSUER || 'letsencrypt-dns',
+  certificateIssuerName: process.env.PORTAL_DOMAIN_CERT_ISSUER || 'letsencrypt-http01',
   certificateIssuerKind: process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || 'ClusterIssuer',
   certificateIssuerGroup: process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || 'cert-manager.io',
   gatewayNamespace: process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || 'istio-system',
@@ -86,13 +81,6 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || 'msp',
   serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST || 'sebastian.msp.svc.cluster.local',
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
-  challengeServiceHost: challengeHost,
-  challengeServicePort: process.env.PORTAL_DOMAIN_CHALLENGE_PORT
-    ? parseNumberEnv(process.env.PORTAL_DOMAIN_CHALLENGE_PORT, 8089)
-    : undefined,
-  challengeRouteEnabled: challengeEnabledEnv
-    ? challengeEnabledEnv.toLowerCase() === 'true'
-    : Boolean(challengeHost),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
 };
 
@@ -681,30 +669,6 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
   };
 
   const httpRoutes: any[] = [];
-
-  if (config.challengeRouteEnabled && config.challengeServiceHost) {
-    const challengeDestination: Record<string, any> = {
-      host: config.challengeServiceHost,
-    };
-    if (config.challengeServicePort) {
-      challengeDestination.port = { number: config.challengeServicePort };
-    }
-
-    httpRoutes.push({
-      match: [
-        {
-          uri: {
-            prefix: '/.well-known/acme-challenge/',
-          },
-        },
-      ],
-      route: [
-        {
-          destination: challengeDestination,
-        },
-      ],
-    });
-  }
 
   httpRoutes.push({
     route: [
