@@ -6,11 +6,13 @@ import { getTenantBrandingAction, type TenantBranding } from '@/lib/actions/tena
 interface BrandingContextType {
   branding: TenantBranding | null;
   isLoading: boolean;
+  refreshBranding: () => Promise<void>;
 }
 
 const BrandingContext = createContext<BrandingContextType>({
   branding: null,
   isLoading: true,
+  refreshBranding: async () => {},
 });
 
 export const useBranding = () => useContext(BrandingContext);
@@ -60,23 +62,26 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [styleElement, setStyleElement] = useState<HTMLStyleElement | null>(null);
 
-  useEffect(() => {
-    const loadBranding = async () => {
-      try {
-        const brandingData = await getTenantBrandingAction();
-        setBranding(brandingData);
-      } catch (error) {
-        console.error('Failed to load branding:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadBranding = async () => {
+    try {
+      const brandingData = await getTenantBrandingAction();
+      setBranding(brandingData);
+    } catch (error) {
+      console.error('Failed to load branding:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadBranding();
   }, []);
 
   useEffect(() => {
     console.log('BrandingProvider: Branding data:', branding);
+    if (branding?.logoUrl) {
+      console.log('BrandingProvider: Logo URL:', branding.logoUrl);
+    }
 
     // Clean up previous style element if it exists
     if (styleElement && document.head.contains(styleElement)) {
@@ -184,8 +189,70 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
           background-color: rgb(${secondaryShades[500]}) !important;
         }
 
+        .bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\] {
+          background-color: rgb(${secondaryShades[600]}) !important;
+        }
+
         .hover\\:bg-\\[rgb\\(var\\(--color-secondary-600\\)\\)\\]:hover {
           background-color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-secondary-50\\)\\)\\] {
+          background-color: rgb(${secondaryShades[50]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-secondary-100\\)\\)\\] {
+          background-color: rgb(${secondaryShades[100]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-secondary-200\\)\\)\\] {
+          background-color: rgb(${secondaryShades[200]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-secondary-300\\)\\)\\] {
+          background-color: rgb(${secondaryShades[300]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] {
+          background-color: rgb(${secondaryShades[400]}) !important;
+        }
+
+        .text-\\[rgb\\(var\\(--color-secondary-500\\)\\)\\] {
+          color: rgb(${secondaryShades[500]}) !important;
+        }
+
+        .text-\\[rgb\\(var\\(--color-secondary-700\\)\\)\\] {
+          color: rgb(${secondaryShades[700]}) !important;
+        }
+
+        .border-\\[rgb\\(var\\(--color-secondary-400\\)\\)\\] {
+          border-color: rgb(${secondaryShades[400]}) !important;
+        }
+
+        /* Override accent colors to use secondary */
+        .bg-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
+          background-color: rgb(${secondaryShades[500]}) !important;
+        }
+
+        .bg-\\[rgb\\(var\\(--color-accent-50\\)\\)\\] {
+          background-color: rgb(${secondaryShades[50]}) !important;
+        }
+
+        .text-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
+          color: rgb(${secondaryShades[500]}) !important;
+        }
+
+        .text-\\[rgb\\(var\\(--color-accent-700\\)\\)\\] {
+          color: rgb(${secondaryShades[700]}) !important;
+        }
+
+        .border-\\[rgb\\(var\\(--color-accent-500\\)\\)\\] {
+          border-color: rgb(${secondaryShades[500]}) !important;
+        }
+
+        /* Override navigation link hover text to use primary color */
+        a[class*="hover\\:text-\\[rgb\\(var\\(--color-primary"]:hover {
+          color: rgb(${primaryShades[500]}) !important;
         }
 
         /* Override any remaining purple/indigo classes */
@@ -194,6 +261,61 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
         .bg-indigo-600,
         .bg-indigo-500 {
           background-color: rgb(${primaryShades[500]}) !important;
+        }
+
+        /* Override blue colors to use secondary */
+        .text-blue-600,
+        .text-blue-500 {
+          color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .text-blue-700 {
+          color: rgb(${secondaryShades[700]}) !important;
+        }
+
+        .text-blue-800 {
+          color: rgb(${secondaryShades[800]}) !important;
+        }
+
+        .border-blue-600,
+        .border-blue-500 {
+          border-color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .bg-blue-600,
+        .bg-blue-500 {
+          background-color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .bg-blue-50 {
+          background-color: rgb(${secondaryShades[50]}) !important;
+        }
+
+        .bg-blue-100 {
+          background-color: rgb(${secondaryShades[100]}) !important;
+        }
+
+        .bg-blue-200 {
+          background-color: rgb(${secondaryShades[200]}) !important;
+        }
+
+        /* Override border-primary for tabs */
+        .border-primary {
+          border-color: rgb(${primaryShades[500]}) !important;
+        }
+
+        /* Override data attribute selectors for tabs */
+        [data-state="active"] {
+          color: rgb(${secondaryShades[600]}) !important;
+          border-color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .data-\\[state\\=active\\]\\:text-blue-600[data-state="active"] {
+          color: rgb(${secondaryShades[600]}) !important;
+        }
+
+        .data-\\[state\\=active\\]\\:border-blue-600[data-state="active"] {
+          border-color: rgb(${secondaryShades[600]}) !important;
         }
 
         .bg-purple-100,
@@ -286,7 +408,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   }, [branding]);
 
   return (
-    <BrandingContext.Provider value={{ branding, isLoading }}>
+    <BrandingContext.Provider value={{ branding, isLoading, refreshBranding: loadBranding }}>
       {children}
     </BrandingContext.Provider>
   );

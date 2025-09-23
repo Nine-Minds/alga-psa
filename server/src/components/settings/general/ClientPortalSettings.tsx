@@ -1,13 +1,19 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Globe, Upload, Palette, X } from 'lucide-react';
+import { Globe, Palette } from 'lucide-react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
 import { updateTenantBrandingAction, getTenantBrandingAction } from '@/lib/actions/tenant-actions/tenantBrandingActions';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
+import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
+import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
+import { useBranding } from 'server/src/components/providers/BrandingProvider';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
@@ -20,7 +26,8 @@ const ClientPortalSettings = () => {
   const [primaryColor, setPrimaryColor] = useState<string>('#6366F1');
   const [secondaryColor, setSecondaryColor] = useState<string>('#8B5CF6');
   const [companyName, setCompanyName] = useState<string>('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [tenantId, setTenantId] = useState<string>('');
+  const { refreshBranding } = useBranding();
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
@@ -33,10 +40,15 @@ const ClientPortalSettings = () => {
   useEffect(() => {
     const loadTenantSettings = async () => {
       try {
-        const [localeSettings, brandingSettings] = await Promise.all([
+        const [user, localeSettings, brandingSettings] = await Promise.all([
+          getCurrentUser(),
           getTenantLocaleSettingsAction(),
           getTenantBrandingAction()
         ]);
+
+        if (user) {
+          setTenantId(user.tenant);
+        }
 
         if (localeSettings) {
           setDefaultLocale(localeSettings.defaultLocale);
@@ -103,62 +115,14 @@ const ClientPortalSettings = () => {
     }
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Logo file size must be less than 2MB');
-      return;
-    }
-
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      return;
-    }
-
-    setBrandingSaving(true);
-    try {
-      // Convert to base64
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64String = reader.result as string;
-        setLogoUrl(base64String);
-        await saveBrandingSettings({ logoUrl: base64String });
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('Failed to upload logo:', error);
-      toast.error('Failed to upload logo');
-    } finally {
-      setBrandingSaving(false);
-    }
-  };
-
-  const handleRemoveLogo = async () => {
-    setBrandingSaving(true);
-    try {
-      setLogoUrl('');
-      await saveBrandingSettings({ logoUrl: '' });
-      toast.success('Logo removed');
-    } catch (error) {
-      console.error('Failed to remove logo:', error);
-      toast.error('Failed to remove logo');
-    } finally {
-      setBrandingSaving(false);
-    }
-  };
 
   const saveBrandingSettings = async (updates: Partial<{
-    logoUrl: string;
     primaryColor: string;
     secondaryColor: string;
     companyName: string;
   }>) => {
     const brandingData = {
-      logoUrl: updates.logoUrl !== undefined ? updates.logoUrl : logoUrl,
+      logoUrl: logoUrl, // Keep existing logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
       companyName: updates.companyName !== undefined ? updates.companyName : companyName,
@@ -176,12 +140,34 @@ const ClientPortalSettings = () => {
         secondaryColor,
         companyName,
       });
+      // Refresh branding context after saving
+      await refreshBranding();
     } catch (error) {
       console.error('Failed to save branding settings:', error);
       toast.error('Failed to save branding settings');
     } finally {
       setBrandingSaving(false);
     }
+  };
+
+  // Wrapper for logo upload that refreshes branding
+  const handleLogoUpload = async (entityId: string, formData: FormData) => {
+    const result = await uploadTenantLogo(entityId, formData);
+    if (result.success) {
+      // Refresh branding context after successful upload
+      await refreshBranding();
+    }
+    return result;
+  };
+
+  // Wrapper for logo delete that refreshes branding
+  const handleLogoDelete = async (entityId: string) => {
+    const result = await deleteTenantLogo(entityId);
+    if (result.success) {
+      // Refresh branding context after successful delete
+      await refreshBranding();
+    }
+    return result;
   };
 
   return (
@@ -308,66 +294,43 @@ const ClientPortalSettings = () => {
           <div className="space-y-6">
             {/* Company Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name
-              </label>
-              <input
+              <Input
+                id="company-name"
+                label="Company Name"
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
                 placeholder="Your Company Name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 disabled={brandingLoading || brandingSaving}
+                containerClassName="mb-1"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500">
                 This will be displayed in the client portal header
               </p>
             </div>
 
             {/* Logo Upload */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Company Logo
               </label>
-              <div className="mt-2">
-                {logoUrl ? (
-                  <div className="relative inline-block">
-                    <div className="w-48 h-24 border-2 border-gray-300 rounded-lg overflow-hidden bg-white">
-                      <img
-                        src={logoUrl}
-                        alt="Company logo"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <button
-                      onClick={handleRemoveLogo}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
-                      disabled={brandingSaving}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-48 h-24 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-gray-400 bg-gray-50"
-                  >
-                    <Upload className="h-6 w-6 text-gray-400" />
-                    <span className="text-sm text-gray-500 mt-1">Upload logo</span>
-                  </div>
-                )}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoUpload}
-                  className="hidden"
-                  disabled={brandingSaving}
+              {tenantId && (
+                <EntityImageUpload
+                  entityType="tenant"
+                  entityId={tenantId}
+                  entityName={companyName || 'Client Portal'}
+                  imageUrl={logoUrl}
+                  uploadAction={handleLogoUpload}
+                  deleteAction={handleLogoDelete}
+                  onImageChange={(newLogoUrl) => {
+                    setLogoUrl(newLogoUrl || '');
+                  }}
+                  size="lg"
                 />
-                <p className="text-sm text-gray-500 mt-2">
-                  Recommended: PNG or SVG, max 2MB, transparent background
-                </p>
-              </div>
+              )}
+              <p className="text-sm text-gray-500 mt-2">
+                Recommended: PNG or SVG, max 2MB, transparent background
+              </p>
             </div>
 
             {/* Color Palette */}
@@ -386,16 +349,18 @@ const ClientPortalSettings = () => {
                       type="color"
                       value={primaryColor}
                       onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
+                      className="h-10 w-20 border border-[rgb(var(--color-border-400))] rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
                       disabled={brandingLoading || brandingSaving}
                     />
-                    <input
+                    <Input
+                      id="primary-color-hex"
                       type="text"
                       value={primaryColor}
                       onChange={(e) => setPrimaryColor(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
                       placeholder="#6366F1"
                       disabled={brandingLoading || brandingSaving}
+                      className="text-sm"
+                      containerClassName="flex-1 mb-0"
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -412,16 +377,18 @@ const ClientPortalSettings = () => {
                       type="color"
                       value={secondaryColor}
                       onChange={(e) => setSecondaryColor(e.target.value)}
-                      className="h-10 w-20 border border-gray-300 rounded cursor-pointer"
+                      className="h-10 w-20 border border-[rgb(var(--color-border-400))] rounded cursor-pointer focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
                       disabled={brandingLoading || brandingSaving}
                     />
-                    <input
+                    <Input
+                      id="secondary-color-hex"
                       type="text"
                       value={secondaryColor}
                       onChange={(e) => setSecondaryColor(e.target.value)}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
                       placeholder="#8B5CF6"
                       disabled={brandingLoading || brandingSaving}
+                      className="text-sm"
+                      containerClassName="flex-1 mb-0"
                     />
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
@@ -466,13 +433,14 @@ const ClientPortalSettings = () => {
 
             {/* Save Button */}
             <div className="flex justify-end">
-              <button
+              <Button
+                id="save-branding-settings"
+                variant="default"
                 onClick={handleSaveBranding}
                 disabled={brandingLoading || brandingSaving}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {brandingSaving ? 'Saving...' : 'Save Branding Settings'}
-              </button>
+              </Button>
             </div>
           </div>
         </CardContent>

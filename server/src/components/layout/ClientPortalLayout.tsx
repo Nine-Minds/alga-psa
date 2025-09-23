@@ -87,11 +87,14 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
               <div className="flex-shrink-0">
                 <Link href="/client-portal/dashboard" className="flex items-center gap-2">
                   {branding?.logoUrl ? (
-                    <img
-                      src={branding.logoUrl}
-                      alt={branding.companyName || 'Company Logo'}
-                      className="h-8 object-contain"
-                    />
+                    <>
+                      {console.log('ClientPortalLayout: Rendering logo with URL:', branding.logoUrl)}
+                      <img
+                        src={branding.logoUrl}
+                        alt={branding.companyName || 'Company Logo'}
+                        className="h-8 object-contain"
+                      />
+                    </>
                   ) : (
                     <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                       <Image

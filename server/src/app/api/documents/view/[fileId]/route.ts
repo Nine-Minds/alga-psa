@@ -35,6 +35,7 @@ export async function GET(
     let userCompanyId: string | null = null;
     let associatedContactId: string | null = null;
     let associatedUserId: string | null = null;
+    let associatedTenantId: string | null = null;
 
     // 1. Check if user is internal - they have full access
     if (user.user_type === 'internal') {
@@ -64,11 +65,18 @@ export async function GET(
               associatedContactId = assoc.entity_id;
             } else if (assoc.entity_type === 'user') {
               associatedUserId = assoc.entity_id;
+            } else if (assoc.entity_type === 'tenant') {
+              associatedTenantId = assoc.entity_id;
             }
           }
 
+          // Check if this is a tenant logo - all users in the tenant can view it
+          if (associatedTenantId === user.tenant) {
+            hasPermission = true;
+            console.log(`User ${user.user_id} accessing tenant logo (file ${fileId})`);
+          }
           // Check if this is the user's own avatar
-          if (associatedUserId === user.user_id) {
+          else if (associatedUserId === user.user_id) {
             hasPermission = true;
             console.log(`User ${user.user_id} accessing their own avatar (file ${fileId})`);
           }
