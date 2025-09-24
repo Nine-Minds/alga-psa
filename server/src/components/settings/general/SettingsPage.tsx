@@ -11,8 +11,7 @@ import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
-import CEClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
-import EEClientPortalSettings from '@ee/components/settings/general/ClientPortalSettings';
+import ClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
@@ -52,10 +51,6 @@ const SettingsPage = (): JSX.Element =>  {
   // Extensions are conditionally available based on edition
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
-
-  const ClientPortalSettingsComponent = isEEAvailable
-    ? EEClientPortalSettings
-    : CEClientPortalSettings;
 
   // Dynamically load the Extensions (Manage) component using stable package paths
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
@@ -156,7 +151,7 @@ const SettingsPage = (): JSX.Element =>  {
     },
     {
       label: "Client Portal",
-      content: <ClientPortalSettingsComponent />,
+      content: <ClientPortalSettings />,
     },
     {
       label: "Users",
