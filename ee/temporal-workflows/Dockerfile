@@ -13,7 +13,7 @@ RUN curl -sSL "https://storage.googleapis.com/kubernetes-release/release/$(curl 
 WORKDIR /app
 
 COPY shared/ /app/shared
-COPY ee/temporal-workflows/ /app/ee/temporal-workflows
+COPY ee/temporal-workflows/package*.json /app/ee/temporal-workflows/
 COPY tsconfig.base.json /app/tsconfig.base.json
 
 WORKDIR /app/ee/temporal-workflows
@@ -34,9 +34,11 @@ RUN npm run build
 
 # Now build temporal-workflows
 WORKDIR /app
-COPY ee/temporal-workflows/ ./
+COPY ee/temporal-workflows/ /app/ee/temporal-workflows/
 
 WORKDIR /app/ee/temporal-workflows
+# Ensure tsc-alias is available for the build
+RUN npm install
 RUN npm run build
 
 # Copy onboarding seeds after build

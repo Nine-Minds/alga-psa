@@ -15,10 +15,8 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "baseUrl": "../..",
-    "paths": {
-      "@shared/*": ["shared/*"]
-    }
+    "baseUrl": ".",
+    "paths": {}
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
