@@ -48,7 +48,7 @@ COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/
 
 # Install dependencies
 WORKDIR /app/server
-RUN npm install
+RUN npm install --no-optional
 RUN npm install -g knex
 RUN npm install pg knex dotenv pg-boss
 

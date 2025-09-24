@@ -1955,7 +1955,8 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'format', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
-      { name: 'author_id', type: 'string', required: false }
+      { name: 'author_id', type: 'string', required: false },
+      { name: 'metadata', type: 'object', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
@@ -1966,7 +1967,8 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           format: params.format,
           source: params.source,
           author_type: params.author_type,
-          author_id: params.author_id
+          author_id: params.author_id,
+          metadata: params.metadata
         }, context.tenant);
 
         return {
@@ -1979,6 +1981,63 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           success: false,
           comment_id: null,
           message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'parse_email_reply',
+    'Parse inbound email reply content using heuristics',
+    [
+      { name: 'text', type: 'string', required: false },
+      { name: 'html', type: 'string', required: false },
+      { name: 'config', type: 'object', required: false }
+    ],
+    async (params: Record<string, any>) => {
+      try {
+        const { parseEmailReplyBody } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const parsed = await parseEmailReplyBody({
+          text: params.text,
+          html: params.html
+        }, params.config);
+
+        return {
+          success: true,
+          parsed
+        };
+      } catch (error: any) {
+        logger.error('[ACTION] parse_email_reply: Failed to parse inbound email', error);
+        return {
+          success: false,
+          parsed: null,
+          message: error?.message || 'Failed to parse email body'
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'find_ticket_by_reply_token',
+    'Find a ticket using a stored email reply token',
+    [
+      { name: 'token', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { findTicketByReplyToken } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const match = await findTicketByReplyToken(params.token, context.tenant);
+
+        return {
+          success: !!match,
+          match
+        };
+      } catch (error: any) {
+        logger.error('[ACTION] find_ticket_by_reply_token: Error looking up reply token', error);
+        return {
+          success: false,
+          match: null,
+          message: error?.message || 'Failed to locate reply token'
         };
       }
     }

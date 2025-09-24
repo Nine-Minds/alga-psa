@@ -86,7 +86,8 @@ export const createCommentSchema = z.object({
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional()
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
+  metadata: z.record(z.unknown()).optional()
 });
 
 // =============================================================================
@@ -196,6 +197,7 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CreateCommentOutput {
@@ -1070,14 +1072,14 @@ export class TicketModel {
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
-    // Map to DB enum/text values: prefer 'user' | 'contact' | 'unknown'
+    // Map to DB enum/text values that align with comment_author_type_new
     const dbAuthorType = (() => {
       switch (validatedData.author_type) {
         case 'internal':
         case 'system':
-          return 'user';
+          return 'internal';
         case 'contact':
-          return 'contact';
+          return 'client';
         default:
           return 'unknown';
       }
@@ -1092,6 +1094,7 @@ export class TicketModel {
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
+      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };

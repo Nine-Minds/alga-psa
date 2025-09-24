@@ -254,6 +254,9 @@ async function handleProjectCreated(event: ProjectCreatedEvent): Promise<void> {
           url: `/projects/${project.project_number}`,
           company: project.company_name || 'No Company'
         }
+      },
+      replyContext: {
+        projectId: project.project_id || payload.projectId
       }
     });
 
@@ -466,6 +469,9 @@ async function handleProjectUpdated(event: ProjectUpdatedEvent): Promise<void> {
           url: `/projects/${project.project_number}`,
           company: project.company_name || 'No Company'
         }
+      },
+      replyContext: {
+        projectId: project.project_id || payload.projectId
       }
     });
 
@@ -626,6 +632,9 @@ async function handleProjectClosed(event: ProjectClosedEvent): Promise<void> {
           url: `/projects/${project.project_number}`,
           company: project.company_name || 'No Company'
         }
+      },
+      replyContext: {
+        projectId: project.project_id || payload.projectId
       }
     });
 
@@ -733,6 +742,9 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
           url: `/projects/${project.project_number}`,
           company: project.company_name || 'No Company'
         }
+      },
+      replyContext: {
+        projectId: project.project_id || payload.projectId
       }
     });
 
@@ -837,6 +849,9 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Primary Assignee'
           }
+        },
+        replyContext: {
+          projectId: task.project_id || payload.projectId
         }
       });
     }
@@ -860,6 +875,9 @@ async function handleProjectTaskAssigned(event: ProjectTaskAssignedEvent): Promi
             url: `/projects/${task.project_number}/tasks/${task.task_id}`,
             role: 'Additional Agent'
           }
+        },
+        replyContext: {
+          projectId: task.project_id || payload.projectId
         }
       });
     }

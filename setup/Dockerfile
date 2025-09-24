@@ -34,7 +34,7 @@ COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/
 
 # Install all dependencies from root to properly set up workspaces
 WORKDIR /app
-RUN npm install --workspaces
+RUN npm install --workspaces --no-optional
 
 # Install additional tools
 RUN npm install -g knex
