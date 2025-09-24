@@ -525,7 +525,7 @@ export def hosted-env-list [
     for line in $environments {
         let parts = ($line | split column "\t")
         let namespace = ($parts | get column1 | get 0)
-        let branch = ($parts | get column2 -o | get 0? | default "Unknown")
+        let branch = ($parts | get column2? | get 0? | default "Unknown")
         print $"│ ($namespace | fill -w 28) │ ($branch | fill -w 24) │"
     }
     print "└────────────────────────────────────────────────────────────┘"
