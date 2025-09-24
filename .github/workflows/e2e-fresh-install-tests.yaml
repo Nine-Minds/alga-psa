@@ -352,17 +352,17 @@ jobs:
           ATTEMPT_NUM=1
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
           
-          # Use the simpler healthz endpoint that doesn't require authentication
-          HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/healthz"
+          # Hit the Next.js API health endpoints so database connectivity is exercised
+          HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/api/health"
           
-          # Additional readiness check - wait for the application to be fully ready
-          READINESS_CHECK_URL="http://localhost:${APP_PORT_VALUE}/readyz"
+          # Additional readiness check - verify the richer readiness probe
+          READINESS_CHECK_URL="http://localhost:${APP_PORT_VALUE}/api/readyz"
           
           echo "Using health check URL: $HEALTH_CHECK_URL"
           echo "Using readiness check URL: $READINESS_CHECK_URL"
 
-          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL && \
-                curl --output /dev/null --silent --head --fail $READINESS_CHECK_URL; do
+          until curl --output /dev/null --silent --fail "$HEALTH_CHECK_URL" && \
+                curl --output /dev/null --silent --fail "$READINESS_CHECK_URL"; do
             if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
               echo "Timeout: Server service did not become healthy within the allocated time."
               echo "=== FINAL SERVER LOGS ==="
