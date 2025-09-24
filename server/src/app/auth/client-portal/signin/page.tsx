@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
+import { getTenantBrandingByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
 
 export default async function ClientSignInPage({
   searchParams,
@@ -13,5 +15,13 @@ export default async function ClientSignInPage({
   if (session?.user) {
     redirect(callbackUrl);
   }
-  return <ClientPortalSignIn />;
+
+  // Get the current domain from headers
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+
+  // Fetch tenant branding based on domain
+  const branding = await getTenantBrandingByDomain(host);
+
+  return <ClientPortalSignIn branding={branding} />;
 }

@@ -2,16 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
-import { Badge } from 'server/src/components/ui/Badge';
-import { Globe, Palette } from 'lucide-react';
+import { Palette, Eye, EyeOff } from 'lucide-react';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
 import { updateTenantBrandingAction, getTenantBrandingAction } from '@/lib/actions/tenant-actions/tenantBrandingActions';
 import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
-import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
@@ -19,14 +16,14 @@ import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
+import ClientPortalDomainSettings from '@product/client-portal-domain/entry';
+import SignInPagePreview from './SignInPagePreview';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [portalStatus, setPortalStatus] = useState<PortalDomainStatusResponse | null>(null);
-  const [portalLoading, setPortalLoading] = useState(true);
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
@@ -34,6 +31,7 @@ const ClientPortalSettings = () => {
   const [secondaryColor, setSecondaryColor] = useState<string>('#8B5CF6');
   const [companyName, setCompanyName] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
+  const [showPreview, setShowPreview] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
 
   // Convert locale config to SelectOption format
@@ -77,22 +75,6 @@ const ClientPortalSettings = () => {
     };
 
     loadTenantSettings();
-  }, []);
-
-  useEffect(() => {
-    const loadPortalStatus = async () => {
-      setPortalLoading(true);
-      try {
-        const status = await getPortalDomainStatusAction();
-        setPortalStatus(status);
-      } catch (error) {
-        console.error('Failed to load portal domain status:', error);
-      } finally {
-        setPortalLoading(false);
-      }
-    };
-
-    loadPortalStatus();
   }, []);
 
   const handleDefaultLanguageChange = async (newLocale: string) => {
@@ -195,42 +177,7 @@ const ClientPortalSettings = () => {
 
   return (
     <div className="space-y-6">
-      {/* Custom Domain Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <div className="flex items-center gap-2">
-              <Globe className="h-5 w-5" />
-              Custom Domain
-              <Badge variant="secondary" className="uppercase text-[10px] tracking-wide">
-                Enterprise
-              </Badge>
-            </div>
-          </CardTitle>
-          <CardDescription>
-            Enterprise tenants can host the portal on a custom domain. Your default hosted address is shown below.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-6">
-              {portalLoading ? (
-                <div className="h-5 w-48 animate-pulse rounded bg-gray-200" />
-              ) : (
-                <div className="space-y-3 text-center">
-                  <div className="text-sm font-medium text-gray-600">Default portal address</div>
-                  <code className="inline-block rounded bg-white px-3 py-1 text-sm text-gray-900 shadow-sm">
-                    {portalStatus?.canonicalHost ?? '—'}
-                  </code>
-                  <p className="text-xs text-gray-500">
-                    Upgrade to Enterprise to configure a branded customer portal domain and automated certificates.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <ClientPortalDomainSettings />
 
       {/* Language Settings Card */}
       <Card>
@@ -576,8 +523,17 @@ const ClientPortalSettings = () => {
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end">
+            {/* Preview Toggle and Save Button */}
+            <div className="flex justify-between items-center">
+              <Button
+                id="toggle-preview"
+                variant="outline"
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center gap-2"
+              >
+                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPreview ? 'Hide Preview' : 'Preview Sign-in Page'}
+              </Button>
               <Button
                 id="save-branding-settings"
                 variant="default"
@@ -587,6 +543,22 @@ const ClientPortalSettings = () => {
                 {brandingSaving ? 'Saving...' : 'Save Branding Settings'}
               </Button>
             </div>
+
+            {/* Sign-in Page Preview */}
+            {showPreview && (
+              <div className="mt-6 space-y-4">
+                <div className="text-sm font-medium text-gray-700">Sign-in Page Preview</div>
+                <SignInPagePreview
+                  logoUrl={logoUrl}
+                  primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                  companyName={companyName}
+                />
+                <p className="text-xs text-gray-500">
+                  This preview shows how your sign-in page will appear when users visit your custom domain.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
