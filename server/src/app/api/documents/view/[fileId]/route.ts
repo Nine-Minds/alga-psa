@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTenantKnex } from 'server/src/lib/db';
+import { getConnection } from '@/lib/db/db';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import { FileStoreModel } from 'server/src/models/storage';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
@@ -16,16 +17,69 @@ export async function GET(
   }
 
   try {
-    const { knex, tenant } = await createTenantKnex();
-    const user = await getCurrentUser(); // Get authenticated user
+    // First, check if this is a public tenant logo using admin connection
+    let isTenantLogo = false;
+    let fileRecord: any = null;
+    let fileTenant: string | null = null;
 
-    if (!tenant || !user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+    // Use admin connection to check if this is a tenant logo (no auth required)
+    const adminKnex = await getConnection();
+
+    // Get file record to determine tenant
+    const fileRecordAdmin = await adminKnex('external_files')
+      .where({ file_id: fileId, is_deleted: false })
+      .first();
+
+    if (fileRecordAdmin) {
+      fileTenant = fileRecordAdmin.tenant;
+      fileRecord = fileRecordAdmin;
+
+      // Check if this is a tenant logo
+      const documentRecord = await adminKnex('documents')
+        .select('document_id')
+        .where({ file_id: fileId, tenant: fileTenant })
+        .first();
+
+      if (documentRecord) {
+        const tenantLogoAssoc = await adminKnex('document_associations')
+          .where({
+            document_id: documentRecord.document_id,
+            entity_type: 'tenant',
+            is_entity_logo: true,
+            tenant: fileTenant
+          })
+          .first();
+
+        if (tenantLogoAssoc) {
+          isTenantLogo = true;
+          console.log(`Public access granted for tenant logo (file ${fileId}) from tenant ${fileTenant}`);
+        }
+      }
     }
 
-    const fileRecord = await FileStoreModel.findById(knex, fileId);
+    // Now handle authentication and permissions
+    let user: any = null;
+    let tenant = fileTenant; // Use the tenant from the file for public logos
+    let knex = adminKnex;    // Use admin connection for public logos
 
-    if (!fileRecord || fileRecord.tenant !== tenant) {
+    // If it's not a tenant logo, we need authentication
+    if (!isTenantLogo) {
+      user = await getCurrentUser();
+      const tenantContext = await createTenantKnex();
+      knex = tenantContext.knex;
+      tenant = tenantContext.tenant;
+
+      if (!tenant || !user) {
+        return new NextResponse('Unauthorized', { status: 401 });
+      }
+
+      // Re-fetch file record with tenant context if needed
+      if (!fileRecord || fileRecord.tenant !== tenant) {
+        fileRecord = await FileStoreModel.findById(knex, fileId);
+      }
+    }
+
+    if (!fileRecord) {
       return new NextResponse('File not found', { status: 404 });
     }
 
@@ -37,11 +91,15 @@ export async function GET(
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
 
+    // 0. If it's a tenant logo, grant public access
+    if (isTenantLogo) {
+        hasPermission = true;
+    }
     // 1. Check if user is internal - they have full access
-    if (user.user_type === 'internal') {
+    else if (user && user.user_type === 'internal') {
         hasPermission = true;
         console.log(`Internal user ${user.user_id} granted access to file ${fileId}`);
-    } else {
+    } else if (user) {
         // 2. Find the document record linked to this file_id
         const documentRecord = await knex('documents')
           .select('document_id')
@@ -118,10 +176,14 @@ export async function GET(
     }
 
     if (!hasPermission) {
-      console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
-      console.warn(`AssociatedCompany: ${associatedCompanyId}, UserCompany: ${userCompanyId}`);
-      console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
-      console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
+      if (user) {
+        console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
+        console.warn(`AssociatedCompany: ${associatedCompanyId}, UserCompany: ${userCompanyId}`);
+        console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
+        console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
+      } else {
+        console.warn(`Unauthenticated user does not have permission to view file ${fileId}.`);
+      }
       return new NextResponse('Forbidden', { status: 403 });
     }
 

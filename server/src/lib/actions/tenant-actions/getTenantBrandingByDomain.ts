@@ -8,13 +8,18 @@ import { unstable_cache } from 'next/cache';
  * Get tenant branding by domain with caching
  */
 async function fetchTenantBrandingByDomain(domain: string): Promise<TenantBranding | null> {
+  console.log('[getTenantBrandingByDomain] Input domain:', domain);
+
   try {
-    // Normalize domain (remove protocol, www, trailing slash)
+    // Normalize domain (remove protocol, www, port, trailing slash)
     const normalizedDomain = domain
       .toLowerCase()
       .replace(/^https?:\/\//, '')
       .replace(/^www\./, '')
+      .replace(/:\d+$/, '') // Remove port number
       .replace(/\/$/, '');
+
+    console.log('[getTenantBrandingByDomain] Normalized domain:', normalizedDomain);
 
     // For default domains, extract tenant from subdomain
     if (normalizedDomain.includes('.algapsa.com') || normalizedDomain.includes('.9minds.ai')) {
@@ -33,6 +38,7 @@ async function fetchTenantBrandingByDomain(domain: string): Promise<TenantBrandi
           .first();
 
         if (!portalDomain) {
+          console.log('[getTenantBrandingByDomain] No portal found for subdomain:', tenantPrefix);
           return null;
         }
 
@@ -42,23 +48,38 @@ async function fetchTenantBrandingByDomain(domain: string): Promise<TenantBrandi
           .first();
 
         if (!tenantSettings?.settings?.branding) {
+          console.log('[getTenantBrandingByDomain] No branding settings found for tenant:', portalDomain.tenant);
           return null;
         }
 
+        console.log('[getTenantBrandingByDomain] Found branding for tenant:', portalDomain.tenant);
         return tenantSettings.settings.branding;
       }
       return null; // No portal found for subdomain
     } else {
       // Custom domain - look it up directly
+      console.log('[getTenantBrandingByDomain] Looking up custom domain:', normalizedDomain);
       const knex = await getConnection();
+
+      // First check all portal domains to debug
+      const allDomains = await knex('portal_domains').select('domain', 'status', 'tenant');
+      console.log('[getTenantBrandingByDomain] All portal domains in DB:', allDomains);
 
       const portalDomain = await knex('portal_domains')
         .whereRaw('lower(domain) = ?', [normalizedDomain])
-        .andWhere('status', 'active')
         .first();
 
+      console.log('[getTenantBrandingByDomain] Portal domain query result:', portalDomain);
+
       if (!portalDomain) {
+        console.log('[getTenantBrandingByDomain] No portal domain found for:', normalizedDomain);
         return null;
+      }
+
+      // Check status
+      if (portalDomain.status !== 'active') {
+        console.log('[getTenantBrandingByDomain] Portal domain not active. Status:', portalDomain.status);
+        // For pending domains, still try to show branding
       }
 
       // Get tenant's branding
@@ -68,9 +89,11 @@ async function fetchTenantBrandingByDomain(domain: string): Promise<TenantBrandi
         .first();
 
       if (!tenantSettings?.settings?.branding) {
+        console.log('[getTenantBrandingByDomain] No branding settings found for tenant:', portalDomain.tenant);
         return null;
       }
 
+      console.log('[getTenantBrandingByDomain] Found branding for custom domain:', normalizedDomain);
       return tenantSettings.settings.branding;
     }
   } catch (error) {

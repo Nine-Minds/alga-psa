@@ -72,6 +72,51 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
     } : null;
   };
 
+  // Helper function to generate color shades
+  const generateColorShades = (hex: string): Record<number, string> => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return {};
+
+    const shades: Record<number, string> = {};
+
+    // Base color (500)
+    shades[500] = `${rgb.r} ${rgb.g} ${rgb.b}`;
+
+    // Generate darker shade for hover (600)
+    shades[600] = `${Math.max(0, Math.round(rgb.r * 0.85))} ${Math.max(0, Math.round(rgb.g * 0.85))} ${Math.max(0, Math.round(rgb.b * 0.85))}`;
+
+    return shades;
+  };
+
+  // Apply branding colors to buttons
+  useEffect(() => {
+    if (branding?.secondaryColor) {
+      // For sign-in page, use secondary color for the primary button
+      const secondaryShades = generateColorShades(branding.secondaryColor);
+
+      const style = document.createElement('style');
+      style.setAttribute('data-signin-branding', 'true');
+      style.textContent = `
+        /* Override default button colors to use secondary color on sign-in page */
+        #client-sign-in-button {
+          background-color: rgb(${secondaryShades[500]}) !important;
+        }
+        #client-sign-in-button:hover:not(:disabled) {
+          background-color: rgb(${secondaryShades[600]}) !important;
+        }
+      `;
+
+      document.head.appendChild(style);
+
+      // Cleanup function
+      return () => {
+        if (document.head.contains(style)) {
+          document.head.removeChild(style);
+        }
+      };
+    }
+  }, [branding?.secondaryColor]);
+
   // Generate gradient based on branding colors or use defaults
   const gradientStyle = useMemo(() => {
     if (!branding?.primaryColor || !branding?.secondaryColor) {
