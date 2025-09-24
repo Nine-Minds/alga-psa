@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Badge } from 'server/src/components/ui/Badge';
-import { Globe, Palette } from 'lucide-react';
+import { Globe, Palette, Eye, EyeOff } from 'lucide-react';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
@@ -19,6 +19,7 @@ import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
+import SignInPagePreview from './SignInPagePreview';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
@@ -34,6 +35,7 @@ const ClientPortalSettings = () => {
   const [secondaryColor, setSecondaryColor] = useState<string>('#8B5CF6');
   const [companyName, setCompanyName] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
+  const [showPreview, setShowPreview] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
 
   // Convert locale config to SelectOption format
@@ -576,8 +578,17 @@ const ClientPortalSettings = () => {
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex justify-end">
+            {/* Preview Toggle and Save Button */}
+            <div className="flex justify-between items-center">
+              <Button
+                id="toggle-preview"
+                variant="outline"
+                onClick={() => setShowPreview(!showPreview)}
+                className="flex items-center gap-2"
+              >
+                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPreview ? 'Hide Preview' : 'Preview Sign-in Page'}
+              </Button>
               <Button
                 id="save-branding-settings"
                 variant="default"
@@ -587,6 +598,22 @@ const ClientPortalSettings = () => {
                 {brandingSaving ? 'Saving...' : 'Save Branding Settings'}
               </Button>
             </div>
+
+            {/* Sign-in Page Preview */}
+            {showPreview && (
+              <div className="mt-6 space-y-4">
+                <div className="text-sm font-medium text-gray-700">Sign-in Page Preview</div>
+                <SignInPagePreview
+                  logoUrl={logoUrl}
+                  primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                  companyName={companyName}
+                />
+                <p className="text-xs text-gray-500">
+                  This preview shows how your sign-in page will appear when users visit your custom domain.
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

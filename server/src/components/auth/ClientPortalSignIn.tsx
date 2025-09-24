@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
@@ -9,8 +9,13 @@ import Alert from 'server/src/components/auth/Alert';
 import { AlertProps } from 'server/src/interfaces';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
 import { useTranslation } from '@/lib/i18n/client';
+import { TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
 
-export default function ClientPortalSignIn() {
+interface ClientPortalSignInProps {
+  branding?: TenantBranding | null;
+}
+
+export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps) {
   const { t } = useTranslation('clientPortal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
@@ -40,7 +45,7 @@ export default function ClientPortalSignIn() {
     }
   }, [error, registered, t]);
 
-  const handle2FA = (twoFactorCode: string) => {
+  const handle2FA = (_twoFactorCode: string) => {
     setIsOpen2FA(false);
   };
 
@@ -57,8 +62,44 @@ export default function ClientPortalSignIn() {
     setIsAlertOpen(true);
   };
 
+  // Convert hex to RGB
+  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  // Generate gradient based on branding colors or use defaults
+  const gradientStyle = useMemo(() => {
+    if (!branding?.primaryColor || !branding?.secondaryColor) {
+      return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50';
+    }
+
+    // Create CSS gradient from hex colors with opacity
+    const primaryRgb = hexToRgb(branding.primaryColor);
+    const secondaryRgb = hexToRgb(branding.secondaryColor);
+
+    if (primaryRgb && secondaryRgb) {
+      return {
+        background: `linear-gradient(to bottom right,
+          rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.05),
+          rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.1),
+          rgba(${secondaryRgb.r}, ${secondaryRgb.g}, ${secondaryRgb.b}, 0.1))`
+      };
+    }
+
+    return 'bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50';
+  }, [branding]);
+
+  // Use branded colors for accents
+  const accentColor = branding?.primaryColor || '#6366F1';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className={typeof gradientStyle === 'string' ? `min-h-screen ${gradientStyle}` : 'min-h-screen'}
+         style={typeof gradientStyle === 'object' ? gradientStyle : undefined}>
       <TwoFactorInput
         isOpen={isOpen2FA}
         onClose={() => setIsOpen2FA(false)}
@@ -76,15 +117,29 @@ export default function ClientPortalSignIn() {
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 p-8 flex justify-between items-center">
         <div className="flex items-center">
-          <Image
-            src="/images/avatar-purple-background.png"
-            alt="Logo"
-            width={50}
-            height={50}
-            className="rounded-full mr-4"
-          />
+          {branding?.logoUrl ? (
+            <img
+              src={branding.logoUrl}
+              alt={branding.companyName || 'Company Logo'}
+              width={50}
+              height={50}
+              className="rounded-full mr-4 object-contain"
+            />
+          ) : (
+            <Image
+              src="/images/avatar-purple-background.png"
+              alt="Logo"
+              width={50}
+              height={50}
+              className="rounded-full mr-4"
+            />
+          )}
           <div>
-            <span className="text-2xl font-bold text-gray-800">{t('nav.clientPortal', 'Client Portal')}</span>
+            <span className="text-2xl font-bold text-gray-800">
+              {branding?.companyName ?
+                `${branding.companyName} ${t('nav.clientPortal', 'Client Portal')}` :
+                t('nav.clientPortal', 'Client Portal')}
+            </span>
           </div>
         </div>
       </div>
@@ -94,7 +149,15 @@ export default function ClientPortalSignIn() {
         <div className="hidden lg:flex lg:w-1/2 p-12 flex-col justify-center items-center">
           <div className="max-w-lg">
             <div className="bg-white rounded-full p-8 mb-8 mx-auto w-48 h-48 flex items-center justify-center shadow-lg">
-              <Ticket className="w-24 h-24 text-indigo-600" />
+              {branding?.logoUrl ? (
+                <img
+                  src={branding.logoUrl}
+                  alt={branding.companyName || 'Company Logo'}
+                  className="w-24 h-24 object-contain"
+                />
+              ) : (
+                <Ticket className="w-24 h-24" style={{ color: accentColor }} />
+              )}
             </div>
             <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
               {t('auth.welcomeTitle', 'Welcome to Your Client Portal')}
@@ -104,28 +167,28 @@ export default function ClientPortalSignIn() {
             </p>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
-                <Ticket className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
+                <Ticket className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
                   <h3 className="text-gray-800 font-semibold">{t('auth.features.submitTickets.title', 'Submit Support Tickets')}</h3>
                   <p className="text-gray-600 text-sm">{t('auth.features.submitTickets.description', 'Create and manage your support requests')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <Eye className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
+                <Eye className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
                   <h3 className="text-gray-800 font-semibold">{t('auth.features.trackStatus.title', 'Track Ticket Status')}</h3>
                   <p className="text-gray-600 text-sm">{t('auth.features.trackStatus.description', 'Monitor progress in real-time')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <History className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
+                <History className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
                   <h3 className="text-gray-800 font-semibold">{t('auth.features.ticketHistory.title', 'Ticket History')}</h3>
                   <p className="text-gray-600 text-sm">{t('auth.features.ticketHistory.description', 'Access your complete support history')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
-                <FileText className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
+                <FileText className="w-6 h-6 mt-1 flex-shrink-0" style={{ color: accentColor }} />
                 <div>
                   <h3 className="text-gray-800 font-semibold">{t('auth.features.documentation.title', 'Documentation Access')}</h3>
                   <p className="text-gray-600 text-sm">{t('auth.features.documentation.description', 'View shared documents and resources')}</p>

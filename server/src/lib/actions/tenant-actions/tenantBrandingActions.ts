@@ -2,6 +2,7 @@
 
 import { getConnection } from '@/lib/db/db';
 import { getCurrentUser } from '../user-actions/userActions';
+import { revalidateTag } from 'next/cache';
 
 export interface TenantBranding {
   logoUrl: string;
@@ -59,6 +60,9 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
       updated_at: knex.fn.now()
     });
   }
+
+  // Invalidate cache for tenant branding
+  revalidateTag('tenant-branding');
 
   return { success: true };
 }
