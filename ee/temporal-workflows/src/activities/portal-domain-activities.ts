@@ -16,6 +16,7 @@ import type {
   VerifyCnameResult,
   MarkStatusInput,
   ApplyPortalDomainResourcesResult,
+  PortalDomainStatusSnapshot,
 } from '../workflows/portal-domains/types.js';
 
 const TABLE_NAME = "portal_domains";
@@ -448,6 +449,206 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
   }
 
   return { success: true, appliedCount };
+}
+
+export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
+  const knex = await getConnection();
+  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
+    .where({ id: args.portalDomainId })
+    .first();
+
+  if (!record) {
+    return null;
+  }
+
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  if (terminalStatuses.has(record.status)) {
+    return { status: record.status, statusMessage: record.status_message };
+  }
+
+  if (!shouldManageStatus(record.status)) {
+    return { status: record.status, statusMessage: record.status_message };
+  }
+
+  const config = DEFAULT_CONFIG;
+  const manifest = renderPortalDomainResources(record, config);
+
+  const certificate = await inspectCertificateStatus(
+    manifest.secretName,
+    config.certificateNamespace,
+  );
+
+  let nextStatus = record.status;
+  let nextMessage = record.status_message ?? null;
+
+  if (certificate.failureMessage) {
+    nextStatus = 'certificate_failed';
+    nextMessage = certificate.failureMessage;
+  } else if (certificate.ready) {
+    const gatewayExists = await kubectlResourceExists(
+      'gateway',
+      manifest.gatewayName,
+      config.gatewayNamespace,
+    );
+    const virtualServiceExists = await kubectlResourceExists(
+      'virtualservice',
+      manifest.virtualServiceName,
+      config.virtualServiceNamespace,
+    );
+
+    if (gatewayExists && virtualServiceExists) {
+      nextStatus = 'active';
+      nextMessage = 'Certificate issued and Istio routing configured.';
+    } else {
+      nextStatus = 'deploying';
+      nextMessage = 'Certificate issued; waiting for Istio routing resources to become available.';
+    }
+  } else {
+    nextStatus = 'certificate_issuing';
+    nextMessage =
+      certificate.message ??
+      `Waiting for cert-manager to issue certificate ${manifest.secretName}.`;
+  }
+
+  if (certificate.recoverableError) {
+    nextMessage = certificate.recoverableError;
+  }
+
+  if (nextMessage && nextMessage.length > 1024) {
+    nextMessage = nextMessage.slice(0, 1024);
+  }
+
+  const currentMessage = record.status_message ?? null;
+
+  if (nextStatus !== record.status || nextMessage !== currentMessage) {
+    await markPortalDomainStatus({
+      portalDomainId: record.id,
+      status: nextStatus,
+      statusMessage: nextMessage,
+    });
+  }
+
+  return { status: nextStatus, statusMessage: nextMessage ?? null };
+}
+
+interface CertificateInspectionResult {
+  ready: boolean;
+  failureMessage?: string;
+  message?: string;
+  recoverableError?: string;
+}
+
+async function inspectCertificateStatus(
+  name: string,
+  namespace: string,
+): Promise<CertificateInspectionResult> {
+  try {
+    const { stdout } = await runKubectl([
+      'get',
+      'certificate',
+      name,
+      '-n',
+      namespace,
+      '-o',
+      'json',
+    ]);
+    const certificate = JSON.parse(stdout);
+    const conditions = Array.isArray(certificate?.status?.conditions)
+      ? certificate.status.conditions
+      : [];
+    const readyCondition = conditions.find(
+      (condition: any) => condition?.type === 'Ready',
+    );
+
+    if (!readyCondition) {
+      return {
+        ready: false,
+        message: 'Waiting for cert-manager to report readiness.',
+      };
+    }
+
+    const normalizedMessage =
+      typeof readyCondition.message === 'string'
+        ? readyCondition.message
+        : undefined;
+    const normalizedReason =
+      typeof readyCondition.reason === 'string'
+        ? readyCondition.reason
+        : undefined;
+
+    if (readyCondition.status === 'True') {
+      return { ready: true, message: normalizedMessage };
+    }
+
+    if (readyCondition.status === 'False') {
+      const failureMessage =
+        normalizedMessage ??
+        normalizedReason ??
+        'Certificate issuance failed.';
+      return { ready: false, failureMessage };
+    }
+
+    return {
+      ready: false,
+      message:
+        normalizedMessage ??
+        normalizedReason ??
+        'Certificate issuance in progress.',
+    };
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return {
+        ready: false,
+        message: 'Waiting for cert-manager to create certificate resource.',
+      };
+    }
+
+    const errorMessage = formatErrorMessage(
+      error,
+      'Failed to inspect certificate status',
+    );
+    console.warn('[portal-domains] certificate inspection error', {
+      name,
+      namespace,
+      error: errorMessage,
+    });
+    return {
+      ready: false,
+      recoverableError: errorMessage,
+    };
+  }
+}
+
+async function kubectlResourceExists(
+  kind: string,
+  name: string,
+  namespace: string,
+): Promise<boolean> {
+  try {
+    await runKubectl(['get', kind, name, '-n', namespace]);
+    return true;
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return false;
+    }
+
+    const errorMessage = formatErrorMessage(
+      error,
+      `Failed to verify ${kind}/${name}`,
+    );
+    console.warn('[portal-domains] resource existence check failed', {
+      kind,
+      name,
+      namespace,
+      error: errorMessage,
+    });
+    return false;
+  }
+}
+
+function isNotFoundError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /NotFound/i.test(message) || /not found/i.test(message);
 }
 
 interface GitConfiguration {

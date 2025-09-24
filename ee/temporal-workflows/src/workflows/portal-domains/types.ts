@@ -45,3 +45,8 @@ export interface ApplyPortalDomainResourcesResult {
   appliedCount: number;
   errors?: string[];
 }
+
+export interface PortalDomainStatusSnapshot {
+  status: string;
+  statusMessage: string | null;
+}

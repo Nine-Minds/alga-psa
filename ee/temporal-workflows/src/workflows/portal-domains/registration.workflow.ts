@@ -5,6 +5,7 @@ import type {
   PortalDomainActivityRecord,
   VerifyCnameResult,
   ApplyPortalDomainResourcesResult,
+  PortalDomainStatusSnapshot,
 } from './types';
 
 const {
@@ -12,11 +13,13 @@ const {
   markPortalDomainStatus,
   verifyCnameRecord,
   applyPortalDomainResources,
+  checkPortalDomainDeploymentStatus,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
   applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
+  checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
 }>(
   {
     startToCloseTimeout: '5 minutes',
@@ -134,24 +137,26 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       continue;
     }
 
-    const latestRecord = await loadPortalDomain({ portalDomainId: input.portalDomainId });
+    const deploymentStatus = await checkPortalDomainDeploymentStatus({ portalDomainId: input.portalDomainId });
 
-    if (!latestRecord) {
-      log.warn('Portal domain record missing during wait; ending workflow.', { portalDomainId: input.portalDomainId });
+    if (!deploymentStatus) {
+      log.warn('Portal domain record missing during deployment check; ending workflow.', {
+        portalDomainId: input.portalDomainId,
+      });
       return;
     }
 
-    if (terminalStatuses.has(latestRecord.status)) {
+    if (terminalStatuses.has(deploymentStatus.status)) {
       log.info('Portal domain reached terminal status; ending workflow.', {
         portalDomainId: input.portalDomainId,
-        status: latestRecord.status,
+        status: deploymentStatus.status,
       });
       return;
     }
 
     log.info('Portal domain still progressing; continuing wait.', {
       portalDomainId: input.portalDomainId,
-      status: latestRecord.status,
+      status: deploymentStatus.status,
     });
   }
 }
