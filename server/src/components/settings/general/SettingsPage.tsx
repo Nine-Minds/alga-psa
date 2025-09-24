@@ -53,12 +53,6 @@ const SettingsPage = (): JSX.Element =>  {
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
-  // eslint-disable-next-line no-console
-  console.log('[SettingsPage] edition', {
-    envEdition: process.env.NEXT_PUBLIC_EDITION,
-    isEEAvailable,
-  });
-
   const ClientPortalSettingsComponent = isEEAvailable
     ? EEClientPortalSettings
     : CEClientPortalSettings;
@@ -131,8 +125,6 @@ const SettingsPage = (): JSX.Element =>  {
       return;
     }
 
-    // eslint-disable-next-line no-console
-    console.log('[SettingsPage] tab change', { tab });
     setActiveTab(tab);
 
     const urlSlug = labelToSlugMap[tab];
@@ -341,17 +333,6 @@ const SettingsPage = (): JSX.Element =>  {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-3xl font-bold mb-6">Admin Settings</h1>
-      {process.env.NODE_ENV === 'development' && (
-        <pre className="mb-4 rounded bg-gray-50 p-2 text-xs text-gray-600">
-          {JSON.stringify({
-            activeTab,
-            initialTabLabel,
-            tabParam,
-            availableTabs: tabContent.map((tab) => tab.label),
-            isEEAvailable,
-          }, null, 2)}
-        </pre>
-      )}
       <CustomTabs
         tabs={tabContent}
         defaultTab={activeTab}

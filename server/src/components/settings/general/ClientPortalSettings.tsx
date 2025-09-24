@@ -12,9 +12,6 @@ import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portal
 import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
 
 const ClientPortalSettings = () => {
-  // eslint-disable-next-line no-console
-  console.log('[CE ClientPortalSettings] render');
-
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
