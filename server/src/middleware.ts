@@ -51,6 +51,9 @@ const _middleware = auth((request) => {
     }
   }
 
+  // Skip auth pages to prevent redirect loops
+  const isAuthPage = pathname.startsWith('/auth/');
+
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
@@ -68,8 +71,8 @@ const _middleware = auth((request) => {
     }
   }
 
-  // Protect Client Portal routes: validate user type
-  if (pathname.startsWith(clientPortalPrefix)) {
+  // Protect Client Portal routes: validate user type (but not auth pages)
+  if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     if (!request.auth) {
       // Redirect unauthenticated users to client portal signin
       const loginUrl = request.nextUrl.clone();
