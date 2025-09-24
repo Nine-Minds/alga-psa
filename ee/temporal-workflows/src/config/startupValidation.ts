@@ -1,4 +1,3 @@
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { createLogger } from 'winston';
 
 // Configure logger for startup validation
@@ -6,6 +5,39 @@ const logger = createLogger({
   level: 'info',
   transports: []
 });
+
+type SecretProvider = {
+  getAppSecret(key: string): Promise<string | undefined>;
+};
+
+let secretProviderPromise: Promise<SecretProvider> | null = null;
+
+async function getSecretProvider(): Promise<SecretProvider> {
+  if (!secretProviderPromise) {
+    secretProviderPromise = (async () => {
+      try {
+        const module = await import('@alga-psa/shared/core/secretProvider.js');
+        const factory = (module as { getSecretProviderInstance?: () => Promise<SecretProvider> })
+          .getSecretProviderInstance;
+        if (typeof factory === 'function') {
+          return await factory();
+        }
+      } catch (error) {
+        logger.warn('Secret provider module unavailable, defaulting to env-only provider', {
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+
+      return {
+        async getAppSecret(key: string): Promise<string | undefined> {
+          return process.env[key] ?? process.env[key.toUpperCase()] ?? process.env[key.toLowerCase()];
+        },
+      } satisfies SecretProvider;
+    })();
+  }
+
+  return secretProviderPromise;
+}
 
 /**
  * Critical configuration keys required for temporal worker startup
@@ -65,7 +97,7 @@ type OptionalConfigKey = keyof typeof OPTIONAL_CONFIGS;
 export async function validateRequiredConfiguration(): Promise<void> {
   logger.info('Validating required configuration for temporal worker...');
 
-  const secretProvider = await getSecretProviderInstance();
+  const secretProvider = await getSecretProvider();
   const missingConfigs: string[] = [];
   const validatedConfigs: Record<string, string> = {};
 
@@ -138,7 +170,7 @@ export async function validateRequiredConfiguration(): Promise<void> {
 export async function validateOptionalConfiguration(): Promise<void> {
   logger.info('Validating optional configuration for temporal worker...');
 
-  const secretProvider = await getSecretProviderInstance();
+  const secretProvider = await getSecretProvider();
   const configuredValues: Record<string, string> = {};
 
   // Check each optional configuration

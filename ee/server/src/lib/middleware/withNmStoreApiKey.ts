@@ -37,4 +37,3 @@ export function withNmStoreApiKey(
     return handler(req);
   };
 }
-

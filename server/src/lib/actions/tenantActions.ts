@@ -26,7 +26,10 @@ export async function getTenantDetails(): Promise<Tenant & { companies: TenantCo
       .where('tenant', tenantId);
 
     const companies = await trx('tenant_companies as tc')
-      .join('companies as c', 'tc.company_id', 'c.company_id')
+      .join('companies as c', function() {
+        this.on('tc.company_id', '=', 'c.company_id')
+            .andOn('tc.tenant', '=', 'c.tenant');
+      })
       .select(
         'c.company_id',
         'c.company_name',

@@ -3,7 +3,7 @@
  */
 
 import pg from 'pg';
-import { getSecretProviderInstance } from '../../../shared/dist/core/index.js';
+import { getSecretProviderInstance } from '../../../shared/dist/core/index';
 
 const { Client } = pg;
 

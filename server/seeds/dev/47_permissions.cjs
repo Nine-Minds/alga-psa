@@ -150,6 +150,12 @@ exports.seed = async function(knex) {
         { resource: 'billing_settings', action: 'read', msp: true, client: false, description: 'View billing settings' },
         { resource: 'billing_settings', action: 'update', msp: true, client: false, description: 'Update billing settings' },
         { resource: 'billing_settings', action: 'delete', msp: true, client: false, description: 'Delete billing settings' },
+
+        // both the MSP and Client have their own settings, but share the same permission structure
+        { resource: 'settings', action: 'read', msp: true, client: true, description: 'View portal settings' },
+        { resource: 'settings', action: 'create', msp: true, client: true, description: 'Create portal settings' },
+        { resource: 'settings', action: 'update', msp: true, client: true, description: 'Update portal settings' },
+        { resource: 'settings', action: 'delete', msp: true, client: true, description: 'Delete portal settings' },
         
         // Client Portal Permissions
         { resource: 'billing', action: 'read', msp: false, client: true, description: 'View billing information in client portal' },
@@ -181,11 +187,6 @@ exports.seed = async function(knex) {
         { resource: 'user', action: 'delete', msp: false, client: true, description: 'Delete users in client portal' },
         { resource: 'user', action: 'reset_password', msp: false, client: true, description: 'Reset passwords in client portal' },
         
-        { resource: 'settings', action: 'read', msp: false, client: true, description: 'View settings in client portal' },
-        { resource: 'settings', action: 'create', msp: false, client: true, description: 'Create settings in client portal' },
-        { resource: 'settings', action: 'update', msp: false, client: true, description: 'Update settings in client portal' },
-        { resource: 'settings', action: 'delete', msp: false, client: true, description: 'Delete settings in client portal' },
-        
         { resource: 'document', action: 'read', msp: false, client: true, description: 'View documents in client portal' },
         { resource: 'document', action: 'create', msp: false, client: true, description: 'Create documents in client portal' },
         { resource: 'document', action: 'update', msp: false, client: true, description: 'Update documents in client portal' }
@@ -197,15 +198,19 @@ exports.seed = async function(knex) {
         const existingPermissions = await knex('permissions').where({ tenant });
         const existingPermMap = new Map();
         existingPermissions.forEach(p => {
-            const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
+            const key = `${p.resource}:${p.action}`;
             existingPermMap.set(key, p);
         });
 
-        // Only insert permissions that don't exist
+        // Track inserts and any flag updates we need
         const permissionsToInsert = [];
+        const permissionsToUpdate = [];
+
         for (const perm of allPermissions) {
-            const key = `${perm.resource}:${perm.action}:${perm.msp ? 'msp' : 'client'}`;
-            if (!existingPermMap.has(key)) {
+            const key = `${perm.resource}:${perm.action}`;
+            const existing = existingPermMap.get(key);
+
+            if (!existing) {
                 permissionsToInsert.push({
                     tenant,
                     resource: perm.resource,
@@ -214,6 +219,26 @@ exports.seed = async function(knex) {
                     client: perm.client,
                     description: perm.description
                 });
+            } else {
+                const nextMsp = existing.msp || perm.msp;
+                const nextClient = existing.client || perm.client;
+                const nextDescription = existing.description || perm.description;
+
+                if (nextMsp !== existing.msp || nextClient !== existing.client || (!existing.description && perm.description)) {
+                    permissionsToUpdate.push({
+                        permission_id: existing.permission_id,
+                        msp: nextMsp,
+                        client: nextClient,
+                        description: nextDescription,
+                    });
+
+                    existingPermMap.set(key, {
+                        ...existing,
+                        msp: nextMsp,
+                        client: nextClient,
+                        description: nextDescription,
+                    });
+                }
             }
         }
 
@@ -222,6 +247,17 @@ exports.seed = async function(knex) {
             console.log(`Inserted ${permissionsToInsert.length} new permissions for tenant ${tenant}`);
         } else {
             console.log(`All permissions already exist for tenant ${tenant}`);
+        }
+
+        for (const update of permissionsToUpdate) {
+            await knex('permissions')
+                .where({ permission_id: update.permission_id })
+                .update({
+                    msp: update.msp,
+                    client: update.client,
+                    description: update.description,
+                    updated_at: knex.fn.now()
+                });
         }
     }
 };

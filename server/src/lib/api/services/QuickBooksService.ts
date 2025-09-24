@@ -47,7 +47,7 @@ import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider'
 export class QuickBooksService {
   private readonly qboApiUrl = 'https://quickbooks-api.intuit.com';
   private readonly discoveryDocumentUrl = 'https://appcenter.intuit.com/.well-known/connect/';
-  
+
   constructor(
     private db: DatabaseService,
     private eventBus: EventBusService,
@@ -149,7 +149,7 @@ export class QuickBooksService {
       lastSyncDate: undefined
     };
 
-    await this.db.upsert('qbo_connections', 
+    await this.db.upsert('qbo_connections',
       { tenant: tenantId },
       {
         tenant: tenantId,
@@ -227,10 +227,10 @@ export class QuickBooksService {
     await validateTenantAccess(tenantId);
 
     const credentials = await this.getValidCredentials(tenantId);
-    
+
     try {
       let testResult;
-      
+
       switch (data.testType) {
         case 'companyInfo':
           testResult = await this.getCompanyInfo(credentials);
@@ -322,7 +322,7 @@ export class QuickBooksService {
     try {
       // Get customers from PSA system
       const psaCustomers = await this.getPSACustomers(request, tenantId);
-      
+
       // Get customers from QBO
       const qboCustomers = await this.getQBOCustomers(credentials, request.include_inactive);
 
@@ -728,7 +728,7 @@ export class QuickBooksService {
     const overallStatus = this.calculateOverallHealthStatus(healthChecks);
 
     const connectionStatus = await this.getConnectionStatus(tenantId);
-    
+
     const health: IntegrationHealthResponse = {
       overall_status: overallStatus,
       last_health_check: new Date().toISOString(),
@@ -808,7 +808,7 @@ export class QuickBooksService {
         for (const operation of request.operations) {
           const result = await this.executeSyncOperation(operation, tenantId, userId);
           response.operation_results.push(result);
-          
+
           if (result.status === 'completed') {
             response.completed_operations++;
           } else {
@@ -873,7 +873,7 @@ export class QuickBooksService {
     const secretProvider = await getSecretProviderInstance();
     const clientId = await secretProvider.getAppSecret('QBO_CLIENT_ID') || process.env.QBO_CLIENT_ID!;
     const redirectUri = await secretProvider.getAppSecret('QBO_REDIRECT_URI') || process.env.QBO_REDIRECT_URI!;
-    
+
     const params = new URLSearchParams({
       client_id: clientId,
       scope: data.scope,
@@ -924,7 +924,7 @@ export class QuickBooksService {
 
   private async getStoredCredentials(tenantId: string): Promise<QboCredentials | null> {
     const stored = await this.db.findOne('qbo_credentials', { tenant: tenantId });
-    
+
     if (!stored) return null;
 
     return {
@@ -938,7 +938,7 @@ export class QuickBooksService {
 
   private async getValidCredentials(tenantId: string): Promise<QboCredentials> {
     const credentials = await this.getStoredCredentials(tenantId);
-    
+
     if (!credentials) {
       throw new Error('QuickBooks not connected');
     }
@@ -973,8 +973,8 @@ export class QuickBooksService {
   }
 
   private async createSyncStatusRecord(
-    syncId: string, 
-    operationType: SyncOperationType, 
+    syncId: string,
+    operationType: SyncOperationType,
     tenantId: string
   ): Promise<void> {
     const record: SyncStatusRecord = {

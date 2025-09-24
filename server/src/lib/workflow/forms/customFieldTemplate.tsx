@@ -13,7 +13,7 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
     required,
     displayLabel,
     schema, // Added schema
-    formData
+    formData // Added formContext
   } = props;
 
   // Log all props for debugging
@@ -91,10 +91,10 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
           }
           return null;
         }
-        if (props.registry.formContext?.formData?.[fieldKey] && schema.readOnly && fieldKey) {
+        if (formData?.[fieldKey] && schema.readOnly && fieldKey) {
           return (
             <div className="text-sm text-gray-500 mt-1">
-              {props.registry.formContext.formData[fieldKey]}
+              {formData[fieldKey]}
             </div>
           );
         } else if (description) {

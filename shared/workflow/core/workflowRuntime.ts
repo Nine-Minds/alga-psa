@@ -9,15 +9,15 @@ import { ActionRegistry } from './actionRegistry';
 import { WorkflowEventSourcing, EventReplayOptions } from './workflowEventSourcing';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getRedisStreamClient } from '@shared/workflow/streams/redisStreamClient';
-import { executeDistributedTransaction } from '@shared/workflow/utils/distributedTransaction';
-import { acquireDistributedLock, releaseDistributedLock } from '@shared/workflow/utils/distributedLock';
-import { toStreamEvent } from '@shared/workflow/streams/workflowEventSchema';
-import WorkflowEventModel from '@shared/workflow/persistence/workflowEventModel';
-import WorkflowExecutionModel from '@shared/workflow/persistence/workflowExecutionModel';
-import WorkflowEventProcessingModel from '@shared/workflow/persistence/workflowEventProcessingModel';
-import WorkflowRegistrationModel from '@shared/workflow/persistence/workflowRegistrationModel';
-import { logger } from '@shared/core';
+import { getRedisStreamClient } from '@alga-psa/shared/workflow/streams/redisStreamClient';
+import { executeDistributedTransaction } from '@alga-psa/shared/workflow/utils/distributedTransaction';
+import { acquireDistributedLock, releaseDistributedLock } from '@alga-psa/shared/workflow/utils/distributedLock';
+import { toStreamEvent } from '@alga-psa/shared/workflow/streams/workflowEventSchema';
+import WorkflowEventModel from '@alga-psa/shared/workflow/persistence/workflowEventModel';
+import WorkflowExecutionModel from '@alga-psa/shared/workflow/persistence/workflowExecutionModel';
+import WorkflowEventProcessingModel from '@alga-psa/shared/workflow/persistence/workflowEventProcessingModel';
+import WorkflowRegistrationModel from '@alga-psa/shared/workflow/persistence/workflowRegistrationModel';
+import { logger } from '@alga-psa/shared/core';
 
 // No configuration needed - all events are processed asynchronously
 

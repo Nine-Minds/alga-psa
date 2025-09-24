@@ -1,6 +1,6 @@
 /**
  * Shared Types Index
- * 
+ *
  * This file exports all shared type definitions that can be used across the application.
  */
 

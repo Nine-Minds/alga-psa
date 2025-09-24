@@ -1,5 +1,5 @@
-import { getActionRegistry, getWorkflowRuntime } from '@shared/workflow/core/index';
-import { logger } from '@shared/core';
+import { getActionRegistry, getWorkflowRuntime } from '@alga-psa/shared/workflow/core/index';
+import { logger } from '@alga-psa/shared/core';
 
 export * from './serverInit';
 

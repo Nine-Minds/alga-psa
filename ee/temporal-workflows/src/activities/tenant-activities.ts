@@ -1,15 +1,15 @@
-import { Context } from '@temporalio/activity';
+import { Context } from "@temporalio/activity";
 import {
   createTenantInDB,
   setupTenantDataInDB,
-  rollbackTenantInDB
-} from '../db/tenant-operations.js';
+  rollbackTenantInDB,
+} from "../db/tenant-operations";
 import type {
   CreateTenantActivityInput,
   CreateTenantActivityResult,
   SetupTenantDataActivityInput,
-  SetupTenantDataActivityResult
-} from '../types/workflow-types.js';
+  SetupTenantDataActivityResult,
+} from "../types/workflow-types";
 
 const logger = () => Context.current().log;
 
@@ -18,17 +18,17 @@ const logger = () => Context.current().log;
  * This activity handles the core tenant creation process
  */
 export async function createTenant(
-  input: CreateTenantActivityInput
+  input: CreateTenantActivityInput,
 ): Promise<CreateTenantActivityResult> {
   const log = logger();
-  log.info('Creating tenant', { tenantName: input.tenantName });
+  log.info("Creating tenant", { tenantName: input.tenantName });
 
   try {
     return await createTenantInDB(input);
   } catch (error) {
-    log.error('Failed to create tenant', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      tenantName: input.tenantName 
+    log.error("Failed to create tenant", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      tenantName: input.tenantName,
     });
     throw error;
   }
@@ -39,17 +39,17 @@ export async function createTenant(
  * This includes default settings, billing configuration, etc.
  */
 export async function setupTenantData(
-  input: SetupTenantDataActivityInput
+  input: SetupTenantDataActivityInput,
 ): Promise<SetupTenantDataActivityResult> {
   const log = logger();
-  log.info('Setting up tenant data', { tenantId: input.tenantId });
+  log.info("Setting up tenant data", { tenantId: input.tenantId });
 
   try {
     return await setupTenantDataInDB(input);
   } catch (error) {
-    log.error('Failed to setup tenant data', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      tenantId: input.tenantId 
+    log.error("Failed to setup tenant data", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      tenantId: input.tenantId,
     });
     throw error;
   }
@@ -60,15 +60,15 @@ export async function setupTenantData(
  */
 export async function rollbackTenant(tenantId: string): Promise<void> {
   const log = logger();
-  log.info('Rolling back tenant creation', { tenantId });
+  log.info("Rolling back tenant creation", { tenantId });
 
   try {
     await rollbackTenantInDB(tenantId);
-    log.info('Tenant rollback completed', { tenantId });
+    log.info("Tenant rollback completed", { tenantId });
   } catch (error) {
-    log.error('Failed to rollback tenant', { 
-      error: error instanceof Error ? error.message : 'Unknown error',
-      tenantId 
+    log.error("Failed to rollback tenant", {
+      error: error instanceof Error ? error.message : "Unknown error",
+      tenantId,
     });
     throw error;
   }

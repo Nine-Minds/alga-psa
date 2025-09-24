@@ -135,7 +135,7 @@ export class ActionRegistry {
       
       // Create Knex instance - assuming we can get it from a connection pool or similar
       // This would typically be passed in the context or obtained from a service locator
-      const { getAdminConnection } = await import('@shared/db/admin');
+      const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
       knex = await getAdminConnection();
       
       // Create action result record (pre-execution)
