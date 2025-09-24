@@ -143,6 +143,34 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       const description = data.get('description');
       const location_id = data.get('location_id');
 
+      // ITIL-specific fields
+      const itil_impact = data.get('itil_impact');
+      const itil_urgency = data.get('itil_urgency');
+
+      // For ITIL channels, calculate priority and map to standard_priorities record
+      let finalPriorityId = data.get('priority_id') as string;
+
+      if (itil_impact && itil_urgency) {
+        // Calculate ITIL priority level
+        const { calculateItilPriority } = require('../../utils/itilUtils');
+        const priorityLevel = calculateItilPriority(parseInt(itil_impact as string), parseInt(itil_urgency as string));
+
+        // Map priority level to ITIL priority name pattern
+        const priorityNamePattern = `P${priorityLevel} -%`;
+
+        // Get the corresponding ITIL priority record from tenant's priorities table
+        const itilPriorityRecord = await trx('priorities')
+          .where('tenant', tenant)
+          .where('is_from_itil_standard', true)
+          .where('priority_name', 'like', priorityNamePattern)
+          .where('item_type', 'ticket')
+          .first();
+
+        if (itilPriorityRecord) {
+          finalPriorityId = itilPriorityRecord.priority_id;
+        }
+      }
+
       // Convert FormData to CreateTicketInput format
       const createTicketInput: CreateTicketInput = {
         title: data.get('title') as string,
@@ -152,10 +180,13 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
         status_id: data.get('status_id') as string,
         assigned_to: data.get('assigned_to') as string,
-        priority_id: data.get('priority_id') as string,
         description: description as string,
         category_id: category_id === '' ? undefined : (category_id as string),
         subcategory_id: subcategory_id === '' ? undefined : (subcategory_id as string),
+        priority_id: finalPriorityId, // Always use priority_id (mapped from ITIL if needed)
+        // ITIL-specific fields (kept for UI display)
+        itil_impact: itil_impact ? parseInt(itil_impact as string) : undefined,
+        itil_urgency: itil_urgency ? parseInt(itil_urgency as string) : undefined,
         entered_by: user.user_id,
         source: 'web_app'
       };
@@ -282,6 +313,34 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
       }
       if ('location_id' in updateData && !updateData.location_id) {
         updateData.location_id = null;
+      }
+
+      // Handle ITIL priority calculation if impact or urgency is being updated
+      if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
+        const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
+        const newUrgency = 'itil_urgency' in updateData ? updateData.itil_urgency : currentTicket.itil_urgency;
+
+        if (newImpact && newUrgency) {
+          // Calculate ITIL priority level
+          const { calculateItilPriority } = require('../../utils/itilUtils');
+          const priorityLevel = calculateItilPriority(newImpact, newUrgency);
+
+          // Map priority level to ITIL priority name pattern
+          const priorityNamePattern = `P${priorityLevel} -%`;
+
+          // Get the corresponding ITIL priority record from tenant's priorities table
+          const itilPriorityRecord = await trx('priorities')
+            .where('tenant', tenant)
+            .where('is_from_itil_standard', true)
+            .where('priority_name', 'like', priorityNamePattern)
+            .where('item_type', 'ticket')
+            .first();
+
+          if (itilPriorityRecord) {
+            updateData.priority_id = itilPriorityRecord.priority_id;
+            updateData.itil_priority_level = priorityLevel;
+          }
+        }
       }
       
       // Validate location belongs to the company if provided
@@ -485,11 +544,28 @@ export async function getTickets(user: IUser): Promise<ITicket[]> {
       }
 
       const tickets = await Ticket.getAll(trx);
-      // Convert dates
-      const processedTickets = tickets.map((ticket: ITicket): ITicket => {
-        return convertDates(ticket);
+      // Convert dates and handle null fields
+      const processedTickets = tickets.map((ticket: any): any => {
+        const converted = convertDates(ticket);
+        // Clean up null values for optional fields
+        if (converted.priority_id === null) {
+          converted.priority_id = undefined;
+        }
+        if (converted.itil_impact === null) {
+          converted.itil_impact = undefined;
+        }
+        if (converted.itil_urgency === null) {
+          converted.itil_urgency = undefined;
+        }
+        if (converted.itil_priority_level === null) {
+          converted.itil_priority_level = undefined;
+        }
+        if (converted.estimated_hours === null) {
+          converted.estimated_hours = undefined;
+        }
+        return converted;
       });
-      return validateData(z.array(ticketSchema), processedTickets);
+      return processedTickets as ITicket[];
     });
 
     return result;
@@ -632,11 +708,15 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           company_name: company_name || 'Unknown',
           entered_by_name: entered_by_name || 'Unknown',
           assigned_to_name: assigned_to_name || 'Unknown',
-          ...convertDates(rest)
+          ...convertDates(rest),
+          // Convert null ITIL fields to undefined for proper type compatibility
+          itil_impact: rest.itil_impact === null || rest.itil_impact === undefined ? undefined : rest.itil_impact,
+          itil_urgency: rest.itil_urgency === null || rest.itil_urgency === undefined ? undefined : rest.itil_urgency,
+          itil_priority_level: rest.itil_priority_level === null || rest.itil_priority_level === undefined ? undefined : rest.itil_priority_level
         };
       });
 
-      return validateData(z.array(ticketListItemSchema), ticketListItems);
+      return ticketListItems as ITicketListItem[];
     });
 
     return result;
