@@ -867,7 +867,22 @@ export default function TaskForm({
       // Find target phase name from tree data (similar to move logic)
       const findPhaseName = (options: TreeSelectOption<ProjectTreeTypes>[], id: string): string | undefined => {
         for (const opt of options) {
-          if (opt.type === 'phase' && opt.value === id) return opt.label;
+          if (opt.type === 'phase' && opt.value === id) {
+            // Handle both string and ReactNode labels
+            if (typeof opt.label === 'string') {
+              return opt.label;
+            } else if (React.isValidElement(opt.label) && opt.label.props.children) {
+              // Extract text from JSX element
+              const children = opt.label.props.children;
+              if (typeof children === 'string') {
+                return children;
+              } else if (Array.isArray(children)) {
+                const textContent = children.find(child => typeof child === 'string');
+                if (textContent) return textContent;
+              }
+            }
+            return 'Unknown Phase';
+          }
           if (opt.children) {
             const found = findPhaseName(opt.children, id);
             if (found) return found;

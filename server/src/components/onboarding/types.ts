@@ -48,6 +48,10 @@ export interface WizardData {
   channelId?: string;
   statusesImported?: boolean;
   statuses?: any[];
+
+  // ITIL Configuration
+  is_itil_compliant?: boolean;
+  importChannelItilSettings?: Record<string, boolean>;
 }
 
 export interface TeamMember {

@@ -40,6 +40,7 @@ import { findCommentsByTicketId, deleteComment, createComment, updateComment, fi
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
 import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
 import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
+import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
@@ -189,6 +190,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
+
+    // ITIL-specific state for editing
+    const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
+    const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
+    // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer } = useDrawer();
     const router = useRouter();
@@ -1013,6 +1019,55 @@ const handleClose = () => {
         }
     };
 
+    const handleItilFieldChange = async (field: string, value: any) => {
+        try {
+            // First update local state immediately for UI responsiveness
+            switch (field) {
+                case 'itil_impact':
+                    setItilImpact(value);
+                    break;
+                case 'itil_urgency':
+                    setItilUrgency(value);
+                    break;
+                // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
+            }
+
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            // Create update object with the specific ITIL field
+            const updateData: any = {};
+            updateData[field] = value;
+
+            // If we're updating impact or urgency, calculate the new ITIL priority
+            if (field === 'itil_impact' || field === 'itil_urgency') {
+                const currentImpact = field === 'itil_impact' ? value : itilImpact;
+                const currentUrgency = field === 'itil_urgency' ? value : itilUrgency;
+
+                // NOTE: Priority mapping is now handled in the backend
+                // The backend will calculate and map ITIL priority to the correct priority_id
+            }
+
+            // NOTE: Category management is now unified through the CategoryPicker
+
+            await updateTicketWithCache(ticket.ticket_id!, updateData, user);
+
+            // Update local ticket state to reflect the change
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                ...updateData
+            }));
+
+            toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
+        } catch (error) {
+            console.error('Error updating ITIL field:', error);
+            toast.error(`Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+        }
+    };
+
     const handleCompanyChange = async (newCompanyId: string) => {
         try {
             const user = await getCurrentUser();
@@ -1225,6 +1280,9 @@ const handleClose = () => {
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
                                     isInDrawer={isInDrawer}
+                                    onItilFieldChange={handleItilFieldChange}
+                                    itilImpact={itilImpact}
+                                    itilUrgency={itilUrgency}
                                 />
                             </div>
                         </Suspense>
@@ -1310,6 +1368,7 @@ const handleClose = () => {
                                 tags={tags}
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
+                                onItilFieldChange={handleItilFieldChange}
                             />
                         </Suspense>
                         
