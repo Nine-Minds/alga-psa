@@ -478,7 +478,7 @@ export def dev-env-list [] {
     for env_line in $environments {
         let parts = ($env_line | split column "\t")
         let namespace = ($parts | get column1 | get 0)
-        let branch = ($parts | get column2 -o | get 0? | default "Unknown")
+        let branch = ($parts | get column2? | get 0? | default "Unknown")
         let status_result = do {
             kubectl get deployments -n $namespace -o jsonpath='{range .items[*]}{.status.readyReplicas}{" "}{.status.replicas}{"\n"}{end}' | complete
         }
