@@ -8,7 +8,8 @@
     "companySettings": "Company Settings",
     "profile": "Profile",
     "signOut": "Sign out",
-    "clientPortal": "Client Portal"
+    "clientPortal": "Client Portal",
+    "portal": "Portal"
   },
   "dashboard": {
     "title": "Dashboard",

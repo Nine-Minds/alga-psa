@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
 import { useTranslation } from '@/lib/i18n/client';
+import { useBranding } from 'server/src/components/providers/BrandingProvider';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -26,6 +27,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation('clientPortal');
+  const { branding } = useBranding();
   
 
   const handleSignOut = () => {
@@ -84,17 +86,30 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <Link href="/client-portal/dashboard" className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <Image
-                      src="/images/avatar-purple-background.png"
-                      alt="AlgaPSA Logo"
-                      width={200}
-                      height={200}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  {branding?.logoUrl ? (
+                    <>
+                      {console.log('ClientPortalLayout: Rendering logo with URL:', branding.logoUrl)}
+                      <img
+                        src={branding.logoUrl}
+                        alt={branding.companyName || 'Company Logo'}
+                        className="h-8 object-contain"
+                      />
+                    </>
+                  ) : (
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <Image
+                        src="/images/avatar-purple-background.png"
+                        alt="AlgaPSA Logo"
+                        width={200}
+                        height={200}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                   <span className="text-lg font-semibold flex items-center">
-                    <span className="text-[rgb(var(--color-text-900))]">{t('nav.clientPortal')}</span>
+                    <span className="text-[rgb(var(--color-text-900))]">
+                      {branding?.companyName ? `${branding.companyName} ${t('nav.portal')}` : t('nav.clientPortal')}
+                    </span>
                   </span>
                 </Link>
               </div>

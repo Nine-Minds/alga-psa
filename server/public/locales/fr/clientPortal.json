@@ -8,7 +8,8 @@
     "companySettings": "Paramètres de l'entreprise",
     "profile": "Profil",
     "signOut": "Déconnexion",
-    "clientPortal": "Portail client"
+    "clientPortal": "Portail client",
+    "portal": "Portail"
   },
   "dashboard": {
     "title": "Tableau de bord",
