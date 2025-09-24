@@ -52,9 +52,9 @@
     "migrate:ee": "node scripts/run-ee-migrations.js"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^6.3.1",
     "@anthropic-ai/sdk": "^0.36.3",
     "@assemblyscript/loader": "^0.27.36",
+    "@asteasolutions/zod-to-openapi": "^6.3.1",
     "@aws-sdk/client-s3": "^3.744.0",
     "@blocknote/core": "^0.22.0",
     "@blocknote/mantine": "^0.22.0",
@@ -134,6 +134,7 @@
     "lodash": "^4.17.21",
     "lucide-react": "^0.475.0",
     "marked": "^15.0.7",
+    "mkdirp": "^3.0.1",
     "monaco-editor": "^0.52.2",
     "nestjs-knex": "^2.0.0",
     "next": "^15.5.3",
