@@ -405,6 +405,19 @@ spec:
         print $"($env.ALGA_COLOR_YELLOW)⚠ harbor-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
     }
 
+    # Copy minio-credentials if it exists in msp namespace
+    let minio_secret_exists = (kubectl -n msp get secret minio-credentials | complete)
+    if $minio_secret_exists.exit_code == 0 {
+        # Delete existing secret first to avoid conflicts
+        (kubectl delete secret minio-credentials -n $namespace --ignore-not-found=true | complete) | ignore
+        (kubectl -n msp get secret minio-credentials -o yaml |
+         sed $"s/namespace: msp/namespace: ($namespace)/" |
+         kubectl apply -f - | complete) | ignore
+        print $"($env.ALGA_COLOR_GREEN)✓ Copied minio-credentials($env.ALGA_COLOR_RESET)"
+    } else {
+        print $"($env.ALGA_COLOR_YELLOW)⚠ minio-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
+    }
+
     # Create a simple override values file with dynamic branch information
     let branch_overrides = $"
 # Branch-specific overrides for hosted environment
