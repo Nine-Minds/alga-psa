@@ -1,11 +1,11 @@
-import mapReturnType from './map-return-type';
-import checkRequiredProps from './check-required-props';
-import noLegacyExtImports from './no-legacy-ext-imports';
+import mapReturnType from "./map-return-type.js";
+import checkRequiredProps from "./check-required-props.js";
+import noLegacyExtImports from "./no-legacy-ext-imports.js";
 
 export default {
   rules: {
-    'map-return-type': mapReturnType,
-    'check-required-props': checkRequiredProps,
-    'no-legacy-ext-imports': noLegacyExtImports,
-  }
+    "map-return-type": mapReturnType,
+    "check-required-props": checkRequiredProps,
+    "no-legacy-ext-imports": noLegacyExtImports,
+  },
 };
