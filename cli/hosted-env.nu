@@ -405,86 +405,19 @@ spec:
         print $"($env.ALGA_COLOR_YELLOW)⚠ harbor-credentials not found in msp namespace($env.ALGA_COLOR_RESET)"
     }
 
-    let vault_enabled = ($env_cfg.vault_enabled? | default true)
-    let vault_block = if $vault_enabled {
-        $"vaultAgent:\n  enabled: true\n  role: \"($role_name)\""
-    } else {
-        "vaultAgent:\n  enabled: false"
-    }
-
-    let values_content = $"
-# Generated values for hosted environment
+    # Create a simple override values file with dynamic branch information
+    let branch_overrides = $"
+# Branch-specific overrides for hosted environment
 hostedEnv:
   enabled: true
   branch: \"($branch)\"
   sanitizedBranch: \"($sanitized_branch)\"
   namespace: \"($namespace)\"
   repository:
-    url: \"https://github.com/Nine-Minds/alga-psa.git\"
     branch: \"($branch)\"
-  git:
-    authorName: \"Hosted Environment\"
-    authorEmail: \"hosted@alga.local\"
-  codeServer:
-    enabled: true
-    image:
-      repository: \"harbor.nineminds.com/nineminds/alga-code-server\"
-      tag: \"latest\"
-      pullPolicy: \"Always\"
-      is_private: true
-      credentials: \"harbor-credentials\"
-    service:
-      type: \"ClusterIP\"
-      port: 8080
-    password: \"alga-dev\"
-    resources:
-      limits:
-        cpu: \"4\"
-        memory: \"8Gi\"
-      requests:
-        cpu: \"500m\"
-        memory: \"2Gi\"
-  persistence:
-    enabled: false
-
-($vault_block)
-
-# Configure hosted environment to use shared external database
-db:
-  enabled: false  # Don't create local database pod
-
-redis:
-  enabled: false  # Don't create local redis pod
-
-config:
-  db:
-    host: \"cluster-0.alga-db.svc.cluster.local\"
-    user: \"app_user\"
-    port: 5432
-    type: \"postgres\"
-    # Use plain host value, not secret
-    hostSecret:
-      name: \"\"
-      key: \"\"
-    # Use existing db-credentials secret for external database
-    server_password_admin_secret:
-      name: \"db-credentials\"
-      key: \"DB_PASSWORD_SUPERUSER\"
-    server_password_secret:
-      name: \"db-credentials\"
-      key: \"DB_PASSWORD_SERVER\"
-  redis:
-    host: \"redis.msp.svc.cluster.local\"
-    port: 6379
-  hocuspocus:
-    hostFQDN: \"\"
-
-# Override storage class for Sebastian environment
-persistence:
-  storageClass: \"microk8s-hostpath\"
 "
 
-    $values_content | save -f $temp_values_file
+    $branch_overrides | save -f $temp_values_file
 
     try {
         print $"($env.ALGA_COLOR_CYAN)Deploying Helm chart...($env.ALGA_COLOR_RESET)"
@@ -500,11 +433,11 @@ persistence:
             print $"($env.ALGA_COLOR_YELLOW)Warning: ($user_values_path) not found. Proceeding with generated values only.($env.ALGA_COLOR_RESET)"
             print $"($env.ALGA_COLOR_YELLOW)Tip: Set ALGA_KUBE_CONFIG_PATH to your nm-kube-config directory or create the file if overrides are needed.($env.ALGA_COLOR_RESET)"
         }
-        let helm_cmd = if $user_values_exists {
-            $"helm upgrade --install ($release) ./helm -f ($user_values_path) -f ($temp_values_file) -n ($namespace)"
-        } else {
-            $"helm upgrade --install ($release) ./helm -f ($temp_values_file) -n ($namespace)"
+        if not $user_values_exists {
+            error make { msg: $"($env.ALGA_COLOR_RED)Required values file not found: ($user_values_path)($env.ALGA_COLOR_RESET)" }
         }
+
+        let helm_cmd = $"helm upgrade --install ($release) ./helm -f ($user_values_path) -f ($temp_values_file) -n ($namespace)"
         let helm_result = do {
             cd $project_root
             bash -c $helm_cmd | complete
@@ -526,11 +459,11 @@ persistence:
                     }
                     let retry_user_values = $"($kube_config_base)/($env_cfg.values_relative_path)"
                     let retry_exists = ($retry_user_values | path exists)
-                    let retry_cmd = if $retry_exists {
-                        $"helm upgrade --install ($release) ./helm -f ($retry_user_values) -f ($temp_values_file) -n ($namespace)"
-                    } else {
-                        $"helm upgrade --install ($release) ./helm -f ($temp_values_file) -n ($namespace)"
+                    if not $retry_exists {
+                        error make { msg: $"($env.ALGA_COLOR_RED)Required values file not found during retry: ($retry_user_values)($env.ALGA_COLOR_RESET)" }
                     }
+
+                    let retry_cmd = $"helm upgrade --install ($release) ./helm -f ($retry_user_values) -f ($temp_values_file) -n ($namespace)"
                     bash -c $retry_cmd | complete
                 }
                 if $retry_install.exit_code != 0 {
