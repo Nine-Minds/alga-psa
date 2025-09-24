@@ -112,6 +112,7 @@ export function TaxRegionsManager() {
       if (editingRegion) {
         // Update requires region_code separately
         await updateTaxRegion(editingRegion.region_code, {
+            region_code: data.region_code,
             region_name: data.region_name,
             is_active: data.is_active,
         });
@@ -270,7 +271,7 @@ export function TaxRegionsManager() {
               id="tax-region-code-field"
               placeholder="e.g., CA, NY, VAT-UK"
               {...form.register('region_code')} // Register field
-              disabled={!!editingRegion || isSubmitting}
+              disabled={isSubmitting}
               aria-invalid={form.formState.errors.region_code ? "true" : "false"}
             />
             {form.formState.errors.region_code && (
