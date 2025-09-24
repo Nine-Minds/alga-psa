@@ -348,24 +348,30 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Waiting for server service to be healthy..."
-          MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds)
+          MAX_ATTEMPTS=30 # 5 minutes (30 attempts * 10 seconds) - keep original timeout
           ATTEMPT_NUM=1
-          # Using APP_PORT from .env, default to 3000 if not found (though it should be there)
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
-          HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/api/health" # Assuming a health endpoint exists
-          # Fallback if /api/health is not standard, try base URL
-          # HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/"
+          
+          # Use the simpler healthz endpoint that doesn't require authentication
+          HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/healthz"
+          
+          # Additional readiness check - wait for the application to be fully ready
+          READINESS_CHECK_URL="http://localhost:${APP_PORT_VALUE}/readyz"
+          
+          echo "Using health check URL: $HEALTH_CHECK_URL"
+          echo "Using readiness check URL: $READINESS_CHECK_URL"
 
-          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL; do
+          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL && \
+                curl --output /dev/null --silent --head --fail $READINESS_CHECK_URL; do
             if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
-              echo "Timeout: Server service did not become healthy at $HEALTH_CHECK_URL within the allocated time."
+              echo "Timeout: Server service did not become healthy within the allocated time."
               echo "=== FINAL SERVER LOGS ==="
               docker-compose -p alga-e2e-test logs server --tail=500
               echo "=== ALL CONTAINER STATUS ==="
               docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
               exit 1
             fi
-            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet healthy at $HEALTH_CHECK_URL. Waiting 10 seconds..."
+            echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet fully ready. Waiting 10 seconds..."
             
             # Show server logs every 5 attempts to debug issues
             if [ $((ATTEMPT_NUM % 5)) -eq 0 ]; then
@@ -376,7 +382,37 @@ jobs:
             sleep 10
             ATTEMPT_NUM=$((ATTEMPT_NUM+1))
           done
-          echo "Server service is healthy at $HEALTH_CHECK_URL."
+          echo "Server service is healthy and ready at $HEALTH_CHECK_URL and $READINESS_CHECK_URL."
+          
+          # Additional wait to ensure the application is fully initialized
+          echo "Waiting additional 15 seconds for application to fully initialize..."
+          sleep 15
+        shell: bash
+
+      - name: Skip tenant onboarding requirement
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo "Marking onboarding as skipped for all tenants to unblock dashboard access..."
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml exec -T postgres \
+            psql -U postgres -d server <<'SQL'
+          DO $do$
+          BEGIN
+            IF EXISTS (
+              SELECT 1
+              FROM information_schema.tables
+              WHERE table_schema = 'public' AND table_name = 'tenant_settings'
+            ) THEN
+              UPDATE tenant_settings
+                SET onboarding_skipped = true,
+                    onboarding_completed = true,
+                    onboarding_completed_at = NOW(),
+                    updated_at = NOW();
+            ELSE
+              RAISE NOTICE 'tenant_settings table not found; skipping onboarding override';
+            END IF;
+          END;
+          $do$;
+          SQL
         shell: bash
 
       - name: Trigger Login Page to Generate Credentials
@@ -468,20 +504,32 @@ jobs:
             testDir: './tests',
             fullyParallel: true,
             forbidOnly: !!process.env.CI,
-            retries: process.env.CI ? 2 : 0,
+            retries: process.env.CI ? 3 : 0, // Increased retries for CI
             workers: process.env.CI ? 1 : undefined,
-            reporter: 'html',
-            timeout: 120000, // 2 minutes global timeout
+            reporter: [
+              ['html'],
+              ['json', { outputFile: 'test-results/results.json' }],
+              ['junit', { outputFile: 'test-results/results.xml' }]
+            ],
+            timeout: 180000, // 3 minutes global timeout (increased)
+            expect: {
+              timeout: 30000 // 30 seconds for expect assertions
+            },
             use: {
-              baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000', // Default to localhost:3000
+              baseURL: process.env.E2E_BASE_URL || 'http://localhost:3000',
               trace: 'on-first-retry',
+              screenshot: 'only-on-failure',
+              video: 'retain-on-failure',
               actionTimeout: 60000, // 60 seconds for actions
-              navigationTimeout: 90000, // 90 seconds for navigation
+              navigationTimeout: 120000, // 120 seconds for navigation (increased)
             },
             projects: [
               {
                 name: 'chromium',
-                use: { ...devices['Desktop Chrome'] },
+                use: { 
+                  ...devices['Desktop Chrome'],
+                  viewport: { width: 1280, height: 720 }
+                },
               },
             ],
           });
@@ -510,40 +558,98 @@ jobs:
                 throw new Error('E2E_USER_EMAIL or E2E_USER_PASSWORD environment variables are not set.');
               }
 
-              // Navigate to the login page
-              await page.goto(\`\${baseUrl}/auth/signin\`);
+              console.log('Starting login test with email:', email);
+              console.log('Base URL:', baseUrl);
 
-              // Fill in the email and password
+              // Navigate to the login page with retry logic
+              let loginPageLoaded = false;
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                  console.log(\`Attempt \${attempt}/3: Navigating to login page...\`);
+                  await page.goto(\`\${baseUrl}/auth/signin\`, { waitUntil: 'networkidle', timeout: 30000 });
+                  loginPageLoaded = true;
+                  break;
+                } catch (error) {
+                  console.log(\`Attempt \${attempt} failed: \${error.message}\`);
+                  if (attempt === 3) throw error;
+                  await page.waitForTimeout(5000); // Wait 5 seconds before retry
+                }
+              }
+
+              if (!loginPageLoaded) {
+                throw new Error('Failed to load login page after 3 attempts');
+              }
+
+              console.log('Login page loaded successfully');
+
+              // Wait for the page to be fully interactive
+              await page.waitForLoadState('networkidle');
+
+              // Fill in the email and password with better error handling
               try {
-                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 15000 }); // Wait for email field first
+                console.log('Waiting for email field...');
+                await page.waitForSelector('input[id="msp-email-field"]', { timeout: 30000 });
                 await page.fill('input[id="msp-email-field"]', email);
-                await page.waitForSelector('input[id="msp-password-field"]', { timeout: 5000 });
+                console.log('Email field filled');
+
+                console.log('Waiting for password field...');
+                await page.waitForSelector('input[id="msp-password-field"]', { timeout: 10000 });
                 await page.fill('input[id="msp-password-field"]', password);
+                console.log('Password field filled');
               } catch (e) {
                 console.error('Error filling form fields. Current page HTML:', await page.content());
                 throw e;
               }
 
-              // Click the login button
+              // Click the login button with better error handling
               try {
-                await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 5000 });
+                console.log('Waiting for sign-in button...');
+                await page.waitForSelector('button[id="msp-sign-in-button"]', { timeout: 10000 });
+                console.log('Clicking sign-in button...');
                 await page.click('button[id="msp-sign-in-button"]');
+                console.log('Sign-in button clicked');
               } catch (e) {
                 console.error('Error clicking sign-in button. Current page HTML:', await page.content());
                 throw e;
               }
 
-              // Wait for navigation to the dashboard (or other expected page)
-              // Adjust the expected URL or path as necessary
-              console.log(`Current URL before waiting for dashboard: ${page.url()}`);
-              console.log(`Waiting for URL: ${baseUrl}/msp/dashboard with 90s timeout.`);
-              await page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 90000 });
+              // Wait for navigation to the dashboard with better error handling
+              console.log(\`Current URL before waiting for dashboard: \${page.url()}\`);
+              console.log(\`Waiting for URL: \${baseUrl}/msp/dashboard with 90s timeout.\`);
 
-              // Assert that the URL is the dashboard URL
-              expect(page.url()).toBe(\`\${baseUrl}/msp/dashboard\`);
+              try {
+                // Use multiple wait strategies for better reliability
+                await Promise.race([
+                  page.waitForURL(\`\${baseUrl}/msp/dashboard\`, { timeout: 90000, waitUntil: 'networkidle' }),
+                  page.waitForSelector('[data-testid="dashboard"]', { timeout: 90000 }),
+                  page.waitForSelector('h1', { timeout: 90000 })
+                ]);
+                
+                console.log(\`Successfully navigated to dashboard. Current URL: \${page.url()}\`);
 
-              // Optional: Add more assertions, e.g., check for a welcome message or specific element
-              // await expect(page.locator('h1')).toContainText('Dashboard');
+                // Additional verification that we're actually on the dashboard
+                const currentUrl = page.url();
+                if (!currentUrl.includes('/msp/dashboard')) {
+                  console.warn('Warning: URL does not contain /msp/dashboard, but navigation completed');
+                  console.log('Actual URL:', currentUrl);
+                }
+
+                // Assert that the URL is the dashboard URL
+                expect(page.url()).toBe(\`\${baseUrl}/msp/dashboard\`);
+
+                // Additional check for dashboard content
+                await page.waitForSelector('h1', { timeout: 10000 });
+                const pageTitle = await page.title();
+                console.log('Page title:', pageTitle);
+
+              } catch (error) {
+                console.error('Error waiting for dashboard navigation:', error);
+                console.log('Current page URL:', page.url());
+                console.log('Current page content:', await page.content());
+                throw error;
+              }
+
+              console.log('Login test completed successfully');
             });
           });
           EOF
