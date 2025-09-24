@@ -8,9 +8,11 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { IChannel } from 'server/src/interfaces/channel.interface';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
+  channels: IChannel[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
@@ -25,6 +27,7 @@ interface CreateTicketColumnsOptions {
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
     categories,
+    channels,
     displaySettings,
     onTicketClick,
     onDeleteClick,
@@ -52,6 +55,11 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
 
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
+
+  // Helper function to get channel for a ticket
+  const getChannelForTicket = (ticket: ITicketListItem): IChannel | undefined => {
+    return channels.find(channel => channel.channel_id === ticket.channel_id);
+  };
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
 
@@ -121,15 +129,18 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         title: 'Priority',
         dataIndex: 'priority_name',
         width: '10%',
-        render: (value: string, record: ITicketListItem) => (
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full border border-gray-300" 
-              style={{ backgroundColor: record.priority_color || '#6B7280' }}
-            />
-            <span>{value}</span>
-          </div>
-        ),
+        render: (value: string, record: ITicketListItem) => {
+          // All tickets now use the unified priority system with priority_name and priority_color
+          return (
+            <div className="flex items-center gap-2">
+              <div
+                className="w-3 h-3 rounded-full border border-gray-300"
+                style={{ backgroundColor: record.priority_color || '#6B7280' }}
+              />
+              <span>{value || 'No Priority'}</span>
+            </div>
+          );
+        },
       }
     });
   }
@@ -155,6 +166,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'category_id',
         width: '10%',
         render: (value: string, record: ITicketListItem) => {
+          const channel = getChannelForTicket(record);
+
+          // Use unified category display for all channels (ITIL and custom)
           if (!value && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display

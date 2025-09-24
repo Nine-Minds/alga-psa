@@ -28,15 +28,17 @@ describe('portalDomainRegistrationWorkflow', () => {
 
     let currentStatus = record.status;
 
+    const markStatus = async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
+      currentStatus = status;
+      statusUpdates.push({ status, statusMessage: statusMessage ?? null });
+    };
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
         return { ...record, status: currentStatus };
       },
-      markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
-        currentStatus = status;
-        statusUpdates.push({ status, statusMessage: statusMessage ?? null });
-      },
+      markPortalDomainStatus: markStatus,
       verifyCnameRecord: async ({ expectedCname }: { expectedCname: string }) => ({
         matched: true,
         observed: [expectedCname],
@@ -46,6 +48,10 @@ describe('portalDomainRegistrationWorkflow', () => {
         success: false,
         appliedCount: 0,
         errors: ['cert-manager failed to register SSL certificate with the ACME server'],
+      }),
+      checkPortalDomainDeploymentStatus: async () => ({
+        status: currentStatus,
+        statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
       }),
     };
 
@@ -103,22 +109,21 @@ describe('portalDomainRegistrationWorkflow', () => {
     let currentStatus = record.status;
     let loadCount = 0;
 
+    const markStatus = async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
+      currentStatus = status;
+      if (status === 'deploying') {
+        loadCount = 0;
+      }
+      statusUpdates.push({ status, statusMessage: statusMessage ?? null });
+    };
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
         loadCount += 1;
-        if (currentStatus === 'deploying' && loadCount >= 1) {
-          currentStatus = 'active';
-        }
         return { ...record, status: currentStatus };
       },
-      markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
-        currentStatus = status;
-        if (status === 'deploying') {
-          loadCount = 0;
-        }
-        statusUpdates.push({ status, statusMessage: statusMessage ?? null });
-      },
+      markPortalDomainStatus: markStatus,
       verifyCnameRecord: async ({ expectedCname }: { expectedCname: string }) => ({
         matched: true,
         observed: [expectedCname],
@@ -129,6 +134,24 @@ describe('portalDomainRegistrationWorkflow', () => {
         appliedCount: 3,
         errors: [],
       }),
+      checkPortalDomainDeploymentStatus: async () => {
+        if (currentStatus === 'deploying') {
+          await markStatus({
+            status: 'certificate_issuing',
+            statusMessage: 'Certificate issuance in progress.',
+          });
+        } else if (currentStatus === 'certificate_issuing') {
+          await markStatus({
+            status: 'active',
+            statusMessage: 'Certificate issued and routing configured.',
+          });
+        }
+
+        return {
+          status: currentStatus,
+          statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
+        };
+      },
     };
 
     const worker = await Worker.create({
@@ -153,10 +176,12 @@ describe('portalDomainRegistrationWorkflow', () => {
         'verifying_dns',
         'pending_certificate',
         'deploying',
+        'certificate_issuing',
+        'active',
       ]);
 
-      const deployingStatus = statusUpdates[statusUpdates.length - 1];
-      expect(deployingStatus.statusMessage).toContain('Resources applied. Waiting for certificate and gateway readiness.');
+      const lastStatus = statusUpdates[statusUpdates.length - 1];
+      expect(lastStatus.statusMessage).toContain('Certificate issued');
     } finally {
       await env.teardown();
     }
@@ -189,26 +214,25 @@ describe('portalDomainRegistrationWorkflow', () => {
       resolveFailureSignal = resolve;
     });
 
+    const markStatus = async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
+      currentStatus = status;
+      if (status === 'deploying') {
+        loadCount = 0;
+      }
+      statusUpdates.push({ status, statusMessage: statusMessage ?? null });
+      if (status === 'certificate_failed' && resolveFailureSignal) {
+        resolveFailureSignal();
+        resolveFailureSignal = null;
+      }
+    };
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
         loadCount += 1;
-        if (currentStatus === 'deploying' && applyAttempts > 1 && loadCount >= 1) {
-          currentStatus = 'active';
-        }
         return { ...record, status: currentStatus };
       },
-      markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
-        currentStatus = status;
-        if (status === 'deploying') {
-          loadCount = 0;
-        }
-        statusUpdates.push({ status, statusMessage: statusMessage ?? null });
-        if (status === 'certificate_failed' && resolveFailureSignal) {
-          resolveFailureSignal();
-          resolveFailureSignal = null;
-        }
-      },
+      markPortalDomainStatus: markStatus,
       verifyCnameRecord: async ({ expectedCname }: { expectedCname: string }) => ({
         matched: true,
         observed: [expectedCname],
@@ -227,6 +251,24 @@ describe('portalDomainRegistrationWorkflow', () => {
           success: true,
           appliedCount: 3,
           errors: [],
+        };
+      },
+      checkPortalDomainDeploymentStatus: async () => {
+        if (currentStatus === 'deploying') {
+          await markStatus({
+            status: 'certificate_issuing',
+            statusMessage: 'Retrying certificate issuance.',
+          });
+        } else if (currentStatus === 'certificate_issuing') {
+          await markStatus({
+            status: 'active',
+            statusMessage: 'Certificate issued and routing configured after retry.',
+          });
+        }
+
+        return {
+          status: currentStatus,
+          statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
         };
       },
     };
@@ -260,10 +302,12 @@ describe('portalDomainRegistrationWorkflow', () => {
         'verifying_dns',
         'pending_certificate',
         'deploying',
+        'certificate_issuing',
+        'active',
       ]);
 
       const lastStatus = statusUpdates[statusUpdates.length - 1];
-      expect(lastStatus.statusMessage).toContain('Resources applied. Waiting for certificate and gateway readiness.');
+      expect(lastStatus.statusMessage).toContain('Certificate issued');
     } finally {
       await env.teardown();
     }

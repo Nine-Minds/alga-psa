@@ -33,7 +33,9 @@ import {
   UserCircle,
   Shield,
   HelpCircle,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Search,
+  GitBranch
 } from 'lucide-react';
 
 export interface MenuItem {
