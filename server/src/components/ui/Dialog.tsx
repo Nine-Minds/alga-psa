@@ -156,13 +156,13 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2 max-h-[90vh] overflow-hidden flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}
         >
           {/* Drag handle area - always present for consistent dragging */}
-          <div 
+          <div
             data-drag-handle
             className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
@@ -175,7 +175,7 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
               </div>
             )}
           </div>
-          <div className="px-6 pt-3 pb-6 flex-1 overflow-auto">
+          <div className="px-6 pt-3 pb-6 flex-1 overflow-y-auto overflow-x-visible min-h-0">
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>
