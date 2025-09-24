@@ -38,6 +38,7 @@
       "@product/extensions/*": ["../packages/product-extensions/*"],
       "@product/settings-extensions/*": ["../packages/product-settings-extensions/*"],
       "@product/email-providers/*": ["../packages/product-email-providers/*"],
+      "@product/client-portal-domain/*": ["../packages/product-client-portal-domain/*"],
       "@product/billing/*": ["../packages/product-billing/*"]
     }
   },

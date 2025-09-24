@@ -176,6 +176,9 @@ const nextConfig = {
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',
+      '@product/client-portal-domain/entry': isEE
+        ? '@product/client-portal-domain/ee/entry'
+        : '@product/client-portal-domain/oss/entry',
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
         : '@product/workflows/oss/entry',
@@ -218,6 +221,7 @@ const nextConfig = {
     '@product/extensions',
     '@product/settings-extensions',
     '@product/email-providers',
+    '@product/client-portal-domain',
     '@product/billing',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
