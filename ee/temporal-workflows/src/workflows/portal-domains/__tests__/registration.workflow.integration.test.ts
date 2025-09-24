@@ -26,12 +26,15 @@ describe('portalDomainRegistrationWorkflow', () => {
       updated_at: new Date().toISOString(),
     };
 
+    let currentStatus = record.status;
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
-        return record;
+        return { ...record, status: currentStatus };
       },
       markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
+        currentStatus = status;
         statusUpdates.push({ status, statusMessage: statusMessage ?? null });
       },
       verifyCnameRecord: async ({ expectedCname }: { expectedCname: string }) => ({
@@ -39,7 +42,7 @@ describe('portalDomainRegistrationWorkflow', () => {
         observed: [expectedCname],
         message: 'CNAME verified by test double.',
       }),
-      reconcilePortalDomains: async () => ({
+      applyPortalDomainResources: async () => ({
         success: false,
         appliedCount: 0,
         errors: ['cert-manager failed to register SSL certificate with the ACME server'],
@@ -71,14 +74,14 @@ describe('portalDomainRegistrationWorkflow', () => {
       ]);
 
       const failureStatus = statusUpdates[statusUpdates.length - 1];
-      expect(failureStatus.statusMessage).toContain('Failed to reconcile Kubernetes resources');
+      expect(failureStatus.statusMessage).toContain('Failed to apply Kubernetes resources');
       expect(failureStatus.statusMessage).toContain('ACME');
     } finally {
       await env.teardown();
     }
   });
 
-  it('moves the domain to deploying after successful reconciliation', async () => {
+  it('moves the domain to deploying after applying resources', async () => {
     const env = await TestWorkflowEnvironment.createTimeSkipping();
     const taskQueue = `test-portal-domain-${Date.now()}-success`;
     const statusUpdates: Array<{ status: string; statusMessage: string | null }> = [];
@@ -97,12 +100,23 @@ describe('portalDomainRegistrationWorkflow', () => {
       updated_at: new Date().toISOString(),
     };
 
+    let currentStatus = record.status;
+    let loadCount = 0;
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
-        return record;
+        loadCount += 1;
+        if (currentStatus === 'deploying' && loadCount >= 1) {
+          currentStatus = 'active';
+        }
+        return { ...record, status: currentStatus };
       },
       markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
+        currentStatus = status;
+        if (status === 'deploying') {
+          loadCount = 0;
+        }
         statusUpdates.push({ status, statusMessage: statusMessage ?? null });
       },
       verifyCnameRecord: async ({ expectedCname }: { expectedCname: string }) => ({
@@ -110,7 +124,7 @@ describe('portalDomainRegistrationWorkflow', () => {
         observed: [expectedCname],
         message: 'CNAME verified by test double.',
       }),
-      reconcilePortalDomains: async () => ({
+      applyPortalDomainResources: async () => ({
         success: true,
         appliedCount: 3,
         errors: [],
@@ -168,7 +182,8 @@ describe('portalDomainRegistrationWorkflow', () => {
     };
 
     let currentStatus = record.status;
-    let reconcileAttempts = 0;
+    let applyAttempts = 0;
+    let loadCount = 0;
     let resolveFailureSignal: (() => void) | null = null;
     const failureDetected = new Promise<void>((resolve) => {
       resolveFailureSignal = resolve;
@@ -177,10 +192,17 @@ describe('portalDomainRegistrationWorkflow', () => {
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
+        loadCount += 1;
+        if (currentStatus === 'deploying' && applyAttempts > 1 && loadCount >= 1) {
+          currentStatus = 'active';
+        }
         return { ...record, status: currentStatus };
       },
       markPortalDomainStatus: async ({ status, statusMessage }: { status: string; statusMessage?: string | null }) => {
         currentStatus = status;
+        if (status === 'deploying') {
+          loadCount = 0;
+        }
         statusUpdates.push({ status, statusMessage: statusMessage ?? null });
         if (status === 'certificate_failed' && resolveFailureSignal) {
           resolveFailureSignal();
@@ -192,9 +214,9 @@ describe('portalDomainRegistrationWorkflow', () => {
         observed: [expectedCname],
         message: 'CNAME verified by test double.',
       }),
-      reconcilePortalDomains: async () => {
-        reconcileAttempts += 1;
-        if (reconcileAttempts === 1) {
+      applyPortalDomainResources: async () => {
+        applyAttempts += 1;
+        if (applyAttempts === 1) {
           return {
             success: false,
             appliedCount: 0,

@@ -1,28 +1,28 @@
-import { promises as dns } from 'dns';
-import { promises as fs } from 'node:fs';
-import { join as joinPath, dirname } from 'node:path';
-import { setTimeout as delay } from 'timers/promises';
-import { execFile } from 'node:child_process';
-import type { ExecFileOptions } from 'node:child_process';
-import { promisify } from 'node:util';
-import type { Knex } from 'knex';
-import { dump as dumpYaml } from 'js-yaml';
+import { promises as dns } from "dns";
+import { promises as fs } from "node:fs";
+import { join as joinPath, dirname } from "node:path";
+import { setTimeout as delay } from "timers/promises";
+import { execFile } from "node:child_process";
+import type { ExecFileOptions } from "node:child_process";
+import { promisify } from "node:util";
+import type { Knex } from "knex";
+import { dump as dumpYaml } from "js-yaml";
 
-import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
+import { getAdminConnection } from "@alga-psa/shared/db/admin.js";
 
 import type {
   PortalDomainActivityRecord,
   VerifyCnameInput,
   VerifyCnameResult,
   MarkStatusInput,
-  ReconcileResult,
+  ApplyPortalDomainResourcesResult,
 } from '../workflows/portal-domains/types.js';
 
-const TABLE_NAME = 'portal_domains';
-const MANAGED_LABEL = 'portal.alga-psa.com/managed';
-const TENANT_LABEL = 'portal.alga-psa.com/tenant';
-const DOMAIN_ID_LABEL = 'portal.alga-psa.com/domain-id';
-const DOMAIN_HOST_LABEL = 'portal.alga-psa.com/domain-host';
+const TABLE_NAME = "portal_domains";
+const MANAGED_LABEL = "portal.alga-psa.com/managed";
+const TENANT_LABEL = "portal.alga-psa.com/tenant";
+const DOMAIN_ID_LABEL = "portal.alga-psa.com/domain-id";
+const DOMAIN_HOST_LABEL = "portal.alga-psa.com/domain-host";
 
 const execFileAsync = promisify(execFile);
 
@@ -30,13 +30,19 @@ export type CommandResult = { stdout: string; stderr: string };
 export type CommandRunner = (
   command: string,
   args: string[],
-  options: ExecFileOptions
+  options: ExecFileOptions,
 ) => Promise<CommandResult>;
 
 const defaultCommandRunner: CommandRunner = async (command, args, options) => {
   const result = await execFileAsync(command, args, options);
-  const stdout = typeof result.stdout === 'string' ? result.stdout : result.stdout.toString('utf8');
-  const stderr = typeof result.stderr === 'string' ? result.stderr : result.stderr.toString('utf8');
+  const stdout =
+    typeof result.stdout === "string"
+      ? result.stdout
+      : result.stdout.toString("utf8");
+  const stderr =
+    typeof result.stderr === "string"
+      ? result.stderr
+      : result.stderr.toString("utf8");
   return { stdout, stderr };
 };
 
@@ -49,7 +55,9 @@ export function __setCommandRunnerForTests(runner: CommandRunner | null): void {
 type ConnectionFactory = () => Promise<Knex>;
 let connectionFactory: ConnectionFactory = () => getAdminConnection();
 
-export function __setConnectionFactoryForTests(factory: ConnectionFactory | null): void {
+export function __setConnectionFactoryForTests(
+  factory: ConnectionFactory | null,
+): void {
   connectionFactory = factory ?? (() => getAdminConnection());
 }
 
@@ -68,47 +76,67 @@ export interface PortalDomainConfig {
   manifestOutputDirectory: string | null;
 }
 
-
 const DEFAULT_CONFIG: PortalDomainConfig = {
-  certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || 'msp',
-  certificateIssuerName: process.env.PORTAL_DOMAIN_CERT_ISSUER || 'letsencrypt-http01',
-  certificateIssuerKind: process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || 'ClusterIssuer',
-  certificateIssuerGroup: process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || 'cert-manager.io',
-  gatewayNamespace: process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || 'istio-system',
-  gatewaySelector: parseSelector(process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR) || { istio: 'ingressgateway' },
-  gatewayHttpPort: parseNumberEnv(process.env.PORTAL_DOMAIN_GATEWAY_HTTP_PORT, 80),
-  gatewayHttpsPort: parseNumberEnv(process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT, 443),
-  virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || 'msp',
-  serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST || 'sebastian.msp.svc.cluster.local',
+  certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || "msp",
+  certificateIssuerName:
+    process.env.PORTAL_DOMAIN_CERT_ISSUER || "letsencrypt-http01",
+  certificateIssuerKind:
+    process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || "ClusterIssuer",
+  certificateIssuerGroup:
+    process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || "cert-manager.io",
+  gatewayNamespace:
+    process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || "istio-system",
+  gatewaySelector: parseSelector(
+    process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR,
+  ) || { istio: "ingressgateway" },
+  gatewayHttpPort: parseNumberEnv(
+    process.env.PORTAL_DOMAIN_GATEWAY_HTTP_PORT,
+    80,
+  ),
+  gatewayHttpsPort: parseNumberEnv(
+    process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
+    443,
+  ),
+  virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
+  serviceHost:
+    process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
 };
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
-  'pending_certificate',
-  'certificate_issuing',
-  'certificate_failed',
-  'deploying',
-  'active',
+  "pending_certificate",
+  "certificate_issuing",
+  "certificate_failed",
+  "deploying",
+  "active",
 ]);
 
-function parseSelector(rawValue?: string | null): Record<string, string> | null {
+function parseSelector(
+  rawValue?: string | null,
+): Record<string, string> | null {
   if (!rawValue) {
     return null;
   }
 
   try {
     const parsed = JSON.parse(rawValue);
-    if (parsed && typeof parsed === 'object') {
-      return Object.entries(parsed).reduce<Record<string, string>>((acc, [key, value]) => {
-        if (typeof value === 'string') {
-          acc[key] = value;
-        }
-        return acc;
-      }, {});
+    if (parsed && typeof parsed === "object") {
+      return Object.entries(parsed).reduce<Record<string, string>>(
+        (acc, [key, value]) => {
+          if (typeof value === "string") {
+            acc[key] = value;
+          }
+          return acc;
+        },
+        {},
+      );
     }
   } catch (error) {
-    console.warn('[portal-domains] Failed to parse gateway selector JSON; falling back to default', { error });
+    console.warn(
+      "[portal-domains] Failed to parse gateway selector JSON; falling back to default",
+      { error },
+    );
   }
 
   return null;
@@ -130,7 +158,9 @@ async function getConnection(): Promise<Knex> {
   return connectionFactory();
 }
 
-export async function loadPortalDomain(args: { portalDomainId: string }): Promise<PortalDomainActivityRecord | null> {
+export async function loadPortalDomain(args: {
+  portalDomainId: string;
+}): Promise<PortalDomainActivityRecord | null> {
   const knex = await getConnection();
   const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
     .where({ id: args.portalDomainId })
@@ -139,7 +169,9 @@ export async function loadPortalDomain(args: { portalDomainId: string }): Promis
   return record || null;
 }
 
-export async function markPortalDomainStatus(args: MarkStatusInput): Promise<void> {
+export async function markPortalDomainStatus(
+  args: MarkStatusInput,
+): Promise<void> {
   const knex = await getConnection();
   const updates: Record<string, unknown> = {
     status: args.status,
@@ -155,12 +187,12 @@ export async function markPortalDomainStatus(args: MarkStatusInput): Promise<voi
     updates.verification_details = args.verificationDetails;
   }
 
-  await knex(TABLE_NAME)
-    .where({ id: args.portalDomainId })
-    .update(updates);
+  await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
 }
 
-export async function verifyCnameRecord(input: VerifyCnameInput): Promise<VerifyCnameResult> {
+export async function verifyCnameRecord(
+  input: VerifyCnameInput,
+): Promise<VerifyCnameResult> {
   const attempts = input.attempts ?? 6;
   const intervalSeconds = input.intervalSeconds ?? 10;
   const expected = normalizeHostname(input.expectedCname);
@@ -170,12 +202,18 @@ export async function verifyCnameRecord(input: VerifyCnameInput): Promise<Verify
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
       observed = await lookupCname(input.domain);
-      const matched = observed.some((candidate) => candidate === expected || candidate.endsWith(`.${expected}`));
+      const matched = observed.some(
+        (candidate) =>
+          candidate === expected || candidate.endsWith(`.${expected}`),
+      );
       if (matched) {
         return {
           matched: true,
           observed,
-          message: attempt === 0 ? 'CNAME record verified.' : `CNAME verified after ${attempt + 1} attempts.`,
+          message:
+            attempt === 0
+              ? "CNAME record verified."
+              : `CNAME verified after ${attempt + 1} attempts.`,
         };
       }
     } catch (error) {
@@ -187,7 +225,10 @@ export async function verifyCnameRecord(input: VerifyCnameInput): Promise<Verify
     }
   }
 
-  const errorMessage = lastError instanceof Error ? lastError.message : 'CNAME lookup did not match expected target.';
+  const errorMessage =
+    lastError instanceof Error
+      ? lastError.message
+      : "CNAME lookup did not match expected target.";
 
   return {
     matched: false,
@@ -196,27 +237,32 @@ export async function verifyCnameRecord(input: VerifyCnameInput): Promise<Verify
   };
 }
 
-export async function reconcilePortalDomains(args: { tenantId: string; portalDomainId: string }): Promise<ReconcileResult> {
+export async function applyPortalDomainResources(args: { tenantId: string; portalDomainId: string }): Promise<ApplyPortalDomainResourcesResult> {
   const knex = await getConnection();
   let rows: PortalDomainActivityRecord[] = [];
 
   try {
-    rows = await knex<PortalDomainActivityRecord>(TABLE_NAME).select('*');
+    rows = await knex<PortalDomainActivityRecord>(TABLE_NAME).select("*");
   } catch (error) {
-    const message = `Failed to load portal domains during reconciliation: ${formatErrorMessage(error)}`;
+    const message = `Failed to load portal domains during resource application: ${formatErrorMessage(error)}`;
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
   const config = DEFAULT_CONFIG;
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
-  const manifests = managedRows.map((row) => renderPortalDomainResources(row, config));
+  const manifests = managedRows.map((row) =>
+    renderPortalDomainResources(row, config),
+  );
   const errors: string[] = [];
 
   let gitConfig: GitConfiguration;
   try {
     gitConfig = resolveGitConfiguration();
   } catch (error) {
-    const message = formatErrorMessage(error, 'Failed to resolve Git configuration');
+    const message = formatErrorMessage(
+      error,
+      "Failed to resolve Git configuration",
+    );
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
@@ -224,15 +270,24 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
   try {
     repoDir = await prepareGitRepository(gitConfig);
   } catch (error) {
-    const message = formatErrorMessage(error, 'Failed to prepare Git repository');
+    const message = formatErrorMessage(
+      error,
+      "Failed to prepare Git repository",
+    );
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
-  const manifestRoot = resolveManifestRoot(repoDir, gitConfig.relativePathSegments);
+  const manifestRoot = resolveManifestRoot(
+    repoDir,
+    gitConfig.relativePathSegments,
+  );
   try {
     await ensureDirectory(manifestRoot);
   } catch (error) {
-    const message = formatErrorMessage(error, 'Failed to prepare manifest directory');
+    const message = formatErrorMessage(
+      error,
+      "Failed to prepare manifest directory",
+    );
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
@@ -245,7 +300,10 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
   try {
     existingFiles = await listYamlFiles(manifestRoot);
   } catch (error) {
-    const message = formatErrorMessage(error, 'Failed to enumerate existing manifest files');
+    const message = formatErrorMessage(
+      error,
+      "Failed to enumerate existing manifest files",
+    );
     errors.push(message);
   }
 
@@ -253,15 +311,25 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
     if (!desiredFiles.has(fileName)) {
       const fullPath = joinPath(manifestRoot, fileName);
       try {
-        await runKubectl(['delete', '-f', fullPath, '--ignore-not-found']);
+        await runKubectl(["delete", "-f", fullPath, "--ignore-not-found"]);
       } catch (error) {
-        errors.push(formatErrorMessage(error, `Failed to delete Kubernetes resources for ${fileName}`));
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to delete Kubernetes resources for ${fileName}`,
+          ),
+        );
       }
 
       try {
         await fs.rm(fullPath, { force: true });
       } catch (error) {
-        errors.push(formatErrorMessage(error, `Failed to remove manifest file ${fileName}`));
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to remove manifest file ${fileName}`,
+          ),
+        );
       }
     }
   }
@@ -271,76 +339,105 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
     try {
       await ensureDirectory(dirname(filePath));
       const yamlContent = renderManifestYaml(manifest);
-      await fs.writeFile(filePath, yamlContent, 'utf8');
+      await fs.writeFile(filePath, yamlContent, "utf8");
     } catch (error) {
-      errors.push(formatErrorMessage(error, `Failed to write manifest file ${fileName}`));
+      errors.push(
+        formatErrorMessage(error, `Failed to write manifest file ${fileName}`),
+      );
     }
   }
 
   try {
-    await runGit(['add', '--all', gitConfig.relativePathPosix], gitConfig, { suppressOutput: true });
+    await runGit(["add", "--all", gitConfig.relativePathPosix], gitConfig, {
+      suppressOutput: true,
+    });
   } catch (error) {
-    errors.push(formatErrorMessage(error, 'Failed to stage manifest changes'));
+    errors.push(formatErrorMessage(error, "Failed to stage manifest changes"));
   }
 
   if (desiredFiles.size > 0) {
     try {
-      await runKubectl(['apply', '-f', manifestRoot, '--recursive']);
+      await runKubectl(["apply", "-f", manifestRoot, "--recursive"]);
     } catch (error) {
-      errors.push(formatErrorMessage(error, 'Failed to apply manifest changes to cluster'));
+      errors.push(
+        formatErrorMessage(
+          error,
+          "Failed to apply manifest changes to cluster",
+        ),
+      );
     }
   }
 
   for (const manifest of manifests) {
     try {
-      await knex(TABLE_NAME)
-        .where({ id: manifest.record.id })
-        .update({
-          certificate_secret_name: manifest.secretName,
-          last_synced_resource_version: null,
-          updated_at: knex.fn.now(),
-          last_checked_at: knex.fn.now(),
-        });
+      await knex(TABLE_NAME).where({ id: manifest.record.id }).update({
+        certificate_secret_name: manifest.secretName,
+        last_synced_resource_version: null,
+        updated_at: knex.fn.now(),
+        last_checked_at: knex.fn.now(),
+      });
     } catch (error) {
-      errors.push(formatErrorMessage(error, `Failed to update portal_domains row ${manifest.record.id}`));
+      errors.push(
+        formatErrorMessage(
+          error,
+          `Failed to update portal_domains row ${manifest.record.id}`,
+        ),
+      );
     }
   }
 
   const cleanupIds = rows
-    .filter((row) => row.status === 'disabled' && (row.certificate_secret_name || row.last_synced_resource_version))
+    .filter(
+      (row) =>
+        row.status === "disabled" &&
+        (row.certificate_secret_name || row.last_synced_resource_version),
+    )
     .map((row) => row.id);
 
   if (cleanupIds.length > 0) {
     try {
-      await knex(TABLE_NAME)
-        .whereIn('id', cleanupIds)
-        .update({
-          certificate_secret_name: null,
-          last_synced_resource_version: null,
-          updated_at: knex.fn.now(),
-          last_checked_at: knex.fn.now(),
-        });
+      await knex(TABLE_NAME).whereIn("id", cleanupIds).update({
+        certificate_secret_name: null,
+        last_synced_resource_version: null,
+        updated_at: knex.fn.now(),
+        last_checked_at: knex.fn.now(),
+      });
     } catch (error) {
-      errors.push(formatErrorMessage(error, 'Failed to clear metadata for disabled domains'));
+      errors.push(
+        formatErrorMessage(
+          error,
+          "Failed to clear metadata for disabled domains",
+        ),
+      );
     }
   }
 
   try {
-    const status = await runGit(['status', '--porcelain'], gitConfig, { suppressOutput: true });
+    const status = await runGit(["status", "--porcelain"], gitConfig, {
+      suppressOutput: true,
+    });
     if (status.stdout.trim()) {
-      await runGit(['config', 'user.name', gitConfig.authorName], gitConfig, { suppressOutput: true });
-      await runGit(['config', 'user.email', gitConfig.authorEmail], gitConfig, { suppressOutput: true });
+      await runGit(["config", "user.name", gitConfig.authorName], gitConfig, {
+        suppressOutput: true,
+      });
+      await runGit(["config", "user.email", gitConfig.authorEmail], gitConfig, {
+        suppressOutput: true,
+      });
       const commitMessage = buildCommitMessage(manifests);
-      await runGit(['commit', '-m', commitMessage], gitConfig, { suppressOutput: true });
-      await runGit(['push', 'origin', gitConfig.branch], gitConfig);
+      await runGit(["commit", "-m", commitMessage], gitConfig, {
+        suppressOutput: true,
+      });
+      await runGit(["push", "origin", gitConfig.branch], gitConfig);
     }
   } catch (error) {
-    errors.push(formatErrorMessage(error, 'Failed to commit or push manifest changes'));
+    errors.push(
+      formatErrorMessage(error, "Failed to commit or push manifest changes"),
+    );
   }
 
   const appliedCount = desiredFiles.size;
 
-  console.info('[portal-domains] reconcile complete', {
+  console.info('[portal-domains] resource apply complete', {
     tenantId: args.tenantId,
     appliedCount,
     errors: errors.length,
@@ -374,27 +471,31 @@ interface CommandOptions extends ExecFileOptions {
 
 export function resolveGitConfiguration(): GitConfiguration {
   const repoUrl = process.env.PORTAL_DOMAIN_GIT_REPO;
-  const branch = process.env.PORTAL_DOMAIN_GIT_BRANCH || 'main';
-  const workspaceDir = process.env.PORTAL_DOMAIN_GIT_WORKDIR || '/tmp/portal-domain-sync';
-  const relativePathPosix = process.env.PORTAL_DOMAIN_GIT_ROOT || 'alga-psa/portal-domains';
-  const authorName = process.env.PORTAL_DOMAIN_GIT_AUTHOR_NAME || 'Portal Domains Bot';
-  const authorEmail = process.env.PORTAL_DOMAIN_GIT_AUTHOR_EMAIL || 'platform@nineminds.ai';
+  const branch = process.env.PORTAL_DOMAIN_GIT_BRANCH || "main";
+  const workspaceDir =
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR || "/tmp/portal-domain-sync";
+  const relativePathPosix =
+    process.env.PORTAL_DOMAIN_GIT_ROOT || "alga-psa/portal-domains";
+  const authorName =
+    process.env.PORTAL_DOMAIN_GIT_AUTHOR_NAME || "Portal Domains Bot";
+  const authorEmail =
+    process.env.PORTAL_DOMAIN_GIT_AUTHOR_EMAIL || "platform@nineminds.ai";
   const token = process.env.GITHUB_ACCESS_TOKEN;
 
   if (!token) {
-    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain reconciliation.');
+    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain resource application.');
   }
 
   if (!repoUrl) {
-    throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain reconciliation.');
+    throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain resource application.');
   }
 
   const url = new URL(repoUrl);
   url.username = token;
-  url.password = '';
+  url.password = "";
 
-  const repoDir = joinPath(workspaceDir, 'nm-kube-config');
-  const relativePathSegments = relativePathPosix.split('/').filter(Boolean);
+  const repoDir = joinPath(workspaceDir, "nm-kube-config");
+  const relativePathSegments = relativePathPosix.split("/").filter(Boolean);
 
   return {
     repoUrl,
@@ -411,42 +512,52 @@ export function resolveGitConfiguration(): GitConfiguration {
   };
 }
 
-export async function prepareGitRepository(config: GitConfiguration): Promise<string> {
+export async function prepareGitRepository(
+  config: GitConfiguration,
+): Promise<string> {
   await ensureDirectory(config.workspaceDir);
-  const gitEnv = { GIT_TERMINAL_PROMPT: '0' };
+  const gitEnv = { GIT_TERMINAL_PROMPT: "0" };
 
-  const gitDirExists = await pathExists(joinPath(config.repoDir, '.git'));
+  const gitDirExists = await pathExists(joinPath(config.repoDir, ".git"));
   if (!gitDirExists) {
-    await runCommand('git', ['clone', config.authenticatedRepoUrl, config.repoDir], {
-      cwd: config.workspaceDir,
+    await runCommand(
+      "git",
+      ["clone", config.authenticatedRepoUrl, config.repoDir],
+      {
+        cwd: config.workspaceDir,
+        env: gitEnv,
+        maskValues: config.maskValues,
+        suppressOutput: true,
+      },
+    );
+  }
+
+  await runCommand(
+    "git",
+    ["remote", "set-url", "origin", config.authenticatedRepoUrl],
+    {
+      cwd: config.repoDir,
       env: gitEnv,
       maskValues: config.maskValues,
       suppressOutput: true,
-    });
-  }
+    },
+  );
 
-  await runCommand('git', ['remote', 'set-url', 'origin', config.authenticatedRepoUrl], {
+  await runCommand("git", ["fetch", "origin", config.branch], {
     cwd: config.repoDir,
     env: gitEnv,
     maskValues: config.maskValues,
     suppressOutput: true,
   });
 
-  await runCommand('git', ['fetch', 'origin', config.branch], {
+  await runCommand("git", ["checkout", config.branch], {
     cwd: config.repoDir,
     env: gitEnv,
     maskValues: config.maskValues,
     suppressOutput: true,
   });
 
-  await runCommand('git', ['checkout', config.branch], {
-    cwd: config.repoDir,
-    env: gitEnv,
-    maskValues: config.maskValues,
-    suppressOutput: true,
-  });
-
-  await runCommand('git', ['pull', 'origin', config.branch], {
+  await runCommand("git", ["pull", "origin", config.branch], {
     cwd: config.repoDir,
     env: gitEnv,
     maskValues: config.maskValues,
@@ -468,32 +579,42 @@ export async function listYamlFiles(directory: string): Promise<string[]> {
       .map((entry) => entry.name)
       .sort();
   } catch (error: any) {
-    if (error?.code === 'ENOENT') {
+    if (error?.code === "ENOENT") {
       return [];
     }
     throw error;
   }
 }
 
-export async function runGit(args: string[], config: GitConfiguration, options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
-  return runCommand('git', args, {
+export async function runGit(
+  args: string[],
+  config: GitConfiguration,
+  options: CommandOptions = {},
+): Promise<{ stdout: string; stderr: string }> {
+  return runCommand("git", args, {
     cwd: options.cwd || config.repoDir,
-    env: { ...(options.env || {}), GIT_TERMINAL_PROMPT: '0' },
+    env: { ...(options.env || {}), GIT_TERMINAL_PROMPT: "0" },
     maskValues: config.maskValues,
     suppressOutput: options.suppressOutput,
   });
 }
 
-export async function runKubectl(args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return runCommand('kubectl', args, { suppressOutput: true });
+export async function runKubectl(
+  args: string[],
+): Promise<{ stdout: string; stderr: string }> {
+  return runCommand("kubectl", args, { suppressOutput: true });
 }
 
-export async function runCommand(command: string, args: string[], options: CommandOptions = {}): Promise<{ stdout: string; stderr: string }> {
+export async function runCommand(
+  command: string,
+  args: string[],
+  options: CommandOptions = {},
+): Promise<{ stdout: string; stderr: string }> {
   const maskValues = options.maskValues?.filter(Boolean) ?? [];
   const execOptions: ExecFileOptions = {
     cwd: options.cwd,
     env: { ...process.env, ...(options.env || {}) },
-    encoding: 'utf8',
+    encoding: "utf8",
     maxBuffer: options.maxBuffer ?? 1024 * 1024 * 10,
   };
 
@@ -516,25 +637,36 @@ export async function runCommand(command: string, args: string[], options: Comma
   }
 }
 
-export function renderManifestYaml(manifest: RenderedPortalDomainResources): string {
-  const documents = [manifest.certificate, manifest.gateway, manifest.virtualService];
+export function renderManifestYaml(
+  manifest: RenderedPortalDomainResources,
+): string {
+  const documents = [
+    manifest.certificate,
+    manifest.gateway,
+    manifest.virtualService,
+  ];
   return documents
     .map((doc, index) => {
       const yaml = dumpYaml(doc, { sortKeys: true, noRefs: true });
       return index === 0 ? yaml : `---\n${yaml}`;
     })
-    .join('')
-    .concat('\n');
+    .join("")
+    .concat("\n");
 }
 
-function buildCommitMessage(manifests: RenderedPortalDomainResources[]): string {
+function buildCommitMessage(
+  manifests: RenderedPortalDomainResources[],
+): string {
   if (manifests.length === 0) {
-    return 'chore(portal-domains): sync empty state';
+    return "chore(portal-domains): sync empty state";
   }
 
-  const slugs = Array.from(new Set(manifests.map((manifest) => manifest.tenantSlug)));
-  const preview = slugs.slice(0, 5).join(', ');
-  const suffix = slugs.length > 5 ? `${preview}, +${slugs.length - 5} more` : preview;
+  const slugs = Array.from(
+    new Set(manifests.map((manifest) => manifest.tenantSlug)),
+  );
+  const preview = slugs.slice(0, 5).join(", ");
+  const suffix =
+    slugs.length > 5 ? `${preview}, +${slugs.length - 5} more` : preview;
   return `chore(portal-domains): sync ${suffix}`;
 }
 
@@ -543,7 +675,7 @@ function maskSecrets(value: string, secrets: string[]): string {
     if (!secret) {
       return acc;
     }
-    return acc.split(secret).join('***');
+    return acc.split(secret).join("***");
   }, value);
 }
 
@@ -560,11 +692,14 @@ async function lookupCname(domain: string): Promise<string[]> {
   const normalized = normalizeHostname(domain);
   const results = await dns.resolveCname(normalized).catch(async (error) => {
     // Some providers return CNAME via resolveAny
-    if ((error as any)?.code === 'ENODATA' || (error as any)?.code === 'ENOTFOUND') {
+    if (
+      (error as any)?.code === "ENODATA" ||
+      (error as any)?.code === "ENOTFOUND"
+    ) {
       try {
         const anyRecords = await dns.resolveAny(normalized);
         const aliases = anyRecords
-          .filter((record) => 'value' in record)
+          .filter((record) => "value" in record)
           .map((record: any) => String(record.value));
         if (aliases.length > 0) {
           return aliases;
@@ -580,7 +715,7 @@ async function lookupCname(domain: string): Promise<string[]> {
 }
 
 function normalizeHostname(hostname: string): string {
-  return hostname.trim().replace(/\.$/, '').toLowerCase();
+  return hostname.trim().replace(/\.$/, "").toLowerCase();
 }
 
 export interface RenderedPortalDomainResources {
@@ -594,7 +729,10 @@ export interface RenderedPortalDomainResources {
   virtualServiceName: string;
 }
 
-export function renderPortalDomainResources(record: PortalDomainActivityRecord, config: PortalDomainConfig): RenderedPortalDomainResources {
+export function renderPortalDomainResources(
+  record: PortalDomainActivityRecord,
+  config: PortalDomainConfig,
+): RenderedPortalDomainResources {
   const normalizedDomain = normalizeHostname(record.domain);
   const tenantSlug = createTenantSlug(record);
   const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
@@ -606,8 +744,8 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
   const labels = buildBaseLabels(record, normalizedDomain);
 
   const certificate: Record<string, any> = {
-    apiVersion: 'cert-manager.io/v1',
-    kind: 'Certificate',
+    apiVersion: "cert-manager.io/v1",
+    kind: "Certificate",
     metadata: {
       name: secretName,
       namespace: config.certificateNamespace,
@@ -622,17 +760,17 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
         group: config.certificateIssuerGroup,
       },
       privateKey: {
-        rotationPolicy: 'Always',
+        rotationPolicy: "Always",
       },
-      usages: ['digital signature', 'key encipherment'],
+      usages: ["digital signature", "key encipherment"],
     },
   };
 
   const hosts = [normalizedDomain];
 
   const gateway: Record<string, any> = {
-    apiVersion: 'networking.istio.io/v1beta1',
-    kind: 'Gateway',
+    apiVersion: "networking.istio.io/v1beta1",
+    kind: "Gateway",
     metadata: {
       name: gatewayName,
       namespace: config.gatewayNamespace,
@@ -645,7 +783,7 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
           port: {
             number: config.gatewayHttpPort,
             name: httpServerName,
-            protocol: 'HTTP',
+            protocol: "HTTP",
           },
           tls: {
             httpsRedirect: true,
@@ -656,10 +794,10 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
           port: {
             number: config.gatewayHttpsPort,
             name: httpsServerName,
-            protocol: 'HTTPS',
+            protocol: "HTTPS",
           },
           tls: {
-            mode: 'SIMPLE',
+            mode: "SIMPLE",
             credentialName: secretName,
           },
           hosts,
@@ -684,8 +822,8 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
   });
 
   const virtualService: Record<string, any> = {
-    apiVersion: 'networking.istio.io/v1beta1',
-    kind: 'VirtualService',
+    apiVersion: "networking.istio.io/v1beta1",
+    kind: "VirtualService",
     metadata: {
       name: virtualServiceName,
       namespace: config.virtualServiceNamespace,
@@ -710,39 +848,46 @@ export function renderPortalDomainResources(record: PortalDomainActivityRecord, 
   };
 }
 
-function buildBaseLabels(record: PortalDomainActivityRecord, domainHost: string): Record<string, string> {
+function buildBaseLabels(
+  record: PortalDomainActivityRecord,
+  domainHost: string,
+): Record<string, string> {
   return {
-    [MANAGED_LABEL]: 'true',
-    [TENANT_LABEL]: sanitizeLabelValue(record.tenant, 'tenant'),
-    [DOMAIN_ID_LABEL]: sanitizeLabelValue(record.id, 'domain'),
-    [DOMAIN_HOST_LABEL]: sanitizeLabelValue(domainHost, 'host'),
+    [MANAGED_LABEL]: "true",
+    [TENANT_LABEL]: sanitizeLabelValue(record.tenant, "tenant"),
+    [DOMAIN_ID_LABEL]: sanitizeLabelValue(record.id, "domain"),
+    [DOMAIN_HOST_LABEL]: sanitizeLabelValue(domainHost, "host"),
   };
 }
 
 function createTenantSlug(record: PortalDomainActivityRecord): string {
-  const canonical = normalizeHostname(record.canonical_host || '');
-  const prefix = canonical.split('.')[0];
+  const canonical = normalizeHostname(record.canonical_host || "");
+  const prefix = canonical.split(".")[0];
   if (prefix) {
     return sanitizeName(prefix);
   }
-  const tenant = record.tenant || '';
-  const sanitized = tenant.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const tenant = record.tenant || "";
+  const sanitized = tenant.replace(/[^a-z0-9]/gi, "").toLowerCase();
   if (sanitized) {
     return sanitized.slice(0, 32);
   }
-  return 'tenant';
+  return "tenant";
 }
 
 function sanitizeName(input: string): string {
-  return input.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return input
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function sanitizeLabelValue(input: string, fallback: string): string {
   const normalized = input
     .toLowerCase()
-    .replace(/[^a-z0-9.-]/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^[-.]+|[-.]+$/g, '');
+    .replace(/[^a-z0-9.-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^[-.]+|[-.]+$/g, "");
 
   if (normalized.length === 0) {
     return fallback;
@@ -763,20 +908,20 @@ async function ensureDirectory(directoryPath: string): Promise<void> {
 }
 
 function formatErrorMessage(error: unknown, prefix?: string): string {
-  let base = 'Unknown error';
+  let base = "Unknown error";
 
   if (error instanceof Error) {
     base = error.message;
-  } else if (typeof error === 'string') {
+  } else if (typeof error === "string") {
     base = error;
-  } else if (error && typeof error === 'object') {
+  } else if (error && typeof error === "object") {
     const anyError = error as any;
     const status = anyError?.response?.status ?? anyError?.status;
     const body = anyError?.response?.body ?? anyError?.body;
     if (body) {
-      if (typeof body === 'string') {
+      if (typeof body === "string") {
         base = body;
-      } else if (typeof body.message === 'string') {
+      } else if (typeof body.message === "string") {
         base = body.message;
       } else {
         try {
@@ -785,7 +930,7 @@ function formatErrorMessage(error: unknown, prefix?: string): string {
           base = String(body);
         }
       }
-    } else if (typeof anyError.message === 'string') {
+    } else if (typeof anyError.message === "string") {
       base = anyError.message;
     } else {
       try {

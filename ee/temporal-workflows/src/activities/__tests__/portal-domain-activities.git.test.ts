@@ -16,7 +16,7 @@ import {
 import type { PortalDomainActivityRecord } from '../../workflows/portal-domains/types.js';
 import type { PortalDomainConfig, CommandRunner } from '../portal-domain-activities.js';
 
-import { reconcilePortalDomains } from '../portal-domain-activities';
+import { applyPortalDomainResources } from '../portal-domain-activities';
 import { promises as fs } from 'node:fs';
 
 describe('portal domain git integration helpers', () => {
@@ -111,7 +111,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(yaml).toContain('portal.acme.example');
   });
 
-  it('runs kubectl apply/delete when reconciling domains', async () => {
+  it('runs kubectl apply/delete when applying domain resources', async () => {
     process.env.GITHUB_ACCESS_TOKEN = 'test-token';
     process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
     process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
@@ -182,7 +182,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
 
-    await reconcilePortalDomains({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
     const kubectlCommands = commands.filter((entry) => entry.command === 'kubectl').map((entry) => entry.args[0]);
     expect(kubectlCommands).toContain('delete');
