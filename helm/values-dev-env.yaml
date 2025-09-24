@@ -213,6 +213,8 @@ config:
   llm:
     openai: 'dev-key-here'
     anthropic: 'dev-key-here'
+  extensions:
+    domainRoot: ""
   
   # Local storage for development (disabled to avoid PVC issues)
   storage:

@@ -1,2 +1,2 @@
-export { default as DnDFlow } from '../../../server/src/components/flow/DnDFlow';
+export { default as DnDFlow } from '../../../server/src/empty/components/flow/DnDFlow';
 

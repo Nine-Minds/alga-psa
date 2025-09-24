@@ -53,6 +53,8 @@ import { toast } from 'react-hot-toast';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
+import { CompanyLanguagePreference } from './CompanyLanguagePreference';
+import { useTranslation } from '@/lib/i18n/client';
 
 
 const SwitchDetailItem: React.FC<{
@@ -154,6 +156,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   isInDrawer = false,
   quickView = false
 }) => {
+  const { t } = useTranslation('common');
   const featureFlag = useFeatureFlag('billing-enabled');
   const isBillingEnabled = typeof featureFlag === 'boolean' ? featureFlag : featureFlag?.enabled;
   const [editedCompany, setEditedCompany] = useState<ICompany>(company);
@@ -576,6 +579,15 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 automationId="annual-revenue-field"
               />
 
+              {/* Language Preference */}
+              <div className="space-y-2">
+                <CompanyLanguagePreference
+                  companyId={editedCompany.company_id}
+                  companyName={editedCompany.company_name}
+                  showCard={false}
+                />
+              </div>
+
               {/* Status and Client Type in 2 columns */}
               <div className="grid grid-cols-5 gap-4">
 
@@ -620,7 +632,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Right Column - Company Locations Only */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">{t('companies.locations.sectionTitle', 'Company Locations')}</Text>
                 <Button
                   id="locations-button"
                   size="sm"
@@ -628,7 +640,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                   onClick={() => setIsLocationsDialogOpen(true)}
                   className="text-sm"
                 >
-                  Manage Locations
+                  {t('companies.locations.manageButton', 'Manage Locations')}
                 </Button>
               </div>
               <div>
@@ -970,7 +982,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         <Dialog 
           isOpen={isLocationsDialogOpen} 
           onClose={() => setIsLocationsDialogOpen(false)} 
-          title={`Manage Locations - ${editedCompany.company_name}`}
+          title={t('companies.locations.dialogTitle', 'Manage Locations - {{company}}', { company: editedCompany.company_name })}
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <CompanyLocations 

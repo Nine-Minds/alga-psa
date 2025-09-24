@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
+import { Card, CardContent } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
 import { Label } from "server/src/components/ui/Label";
@@ -118,21 +118,21 @@ const GeneralSettings = () => {
     <Card>
       <CardContent className="space-y-6">
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="tenantName">Organization Name</Label>
-            <Input
-              id="tenantName"
-              value={tenantName}
-              onChange={(e) => setTenantName(e.target.value)}
-            />
+            <div>
+              <Label htmlFor="tenantName">Organization Name</Label>
+              <Input
+                id="tenantName"
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
+              />
+            </div>
+            <Button
+              id="save-tenant-name-button"
+              onClick={handleSaveTenantName}
+            >
+              Save Organization Name
+            </Button>
           </div>
-          <Button 
-            id="save-tenant-name-button"
-            onClick={handleSaveTenantName}
-          >
-            Save Organization Name
-          </Button>
-        </div>
 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Companies</h3>

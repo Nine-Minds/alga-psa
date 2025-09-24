@@ -1,9 +1,9 @@
-import { Context } from '@temporalio/activity';
-import { emailService, type EmailParams } from '../services/email-service.js';
+import { Context } from "@temporalio/activity";
+import { emailService, type EmailParams } from "../services/email-service";
 import type {
   SendWelcomeEmailActivityInput,
-  SendWelcomeEmailActivityResult
-} from '../types/workflow-types.js';
+  SendWelcomeEmailActivityResult,
+} from "../types/workflow-types";
 
 const logger = () => Context.current().log;
 
@@ -11,59 +11,65 @@ const logger = () => Context.current().log;
  * Generate a secure temporary password
  * This is an activity because it involves non-deterministic random number generation
  */
-export async function generateTemporaryPassword(length: number = 12): Promise<string> {
-  const charset = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*';
-  let password = '';
-  
+export async function generateTemporaryPassword(
+  length: number = 12,
+): Promise<string> {
+  const charset =
+    "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%^&*";
+  let password = "";
+
   // Ensure at least one character from each category
-  const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
-  const lowercase = 'abcdefghijkmnpqrstuvwxyz';
-  const numbers = '23456789';
-  const special = '!@#$%^&*';
-  
+  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lowercase = "abcdefghijkmnpqrstuvwxyz";
+  const numbers = "23456789";
+  const special = "!@#$%^&*";
+
   password += uppercase[Math.floor(Math.random() * uppercase.length)];
   password += lowercase[Math.floor(Math.random() * lowercase.length)];
   password += numbers[Math.floor(Math.random() * numbers.length)];
   password += special[Math.floor(Math.random() * special.length)];
-  
+
   // Fill remaining length
   for (let i = 4; i < length; i++) {
     password += charset[Math.floor(Math.random() * charset.length)];
   }
-  
+
   // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  return password
+    .split("")
+    .sort(() => Math.random() - 0.5)
+    .join("");
 }
 
 // Email template color scheme
 const COLORS = {
   // Brand colors
-  primary: '#8a4dea',
-  primaryDark: '#7c3aed',
-  primaryLight: '#a366f0',
-  primarySubtle: '#faf8ff',
-  primaryAccent: '#f3f0ff',
-  
+  primary: "#8a4dea",
+  primaryDark: "#7c3aed",
+  primaryLight: "#a366f0",
+  primarySubtle: "#faf8ff",
+  primaryAccent: "#f3f0ff",
+
   // Neutral colors
-  textPrimary: '#0f172a',
-  textSecondary: '#334155',
-  textMuted: '#64748b',
-  textLight: '#94a3b8',
-  textOnDark: '#cbd5e1',
-  
+  textPrimary: "#0f172a",
+  textSecondary: "#334155",
+  textMuted: "#64748b",
+  textLight: "#94a3b8",
+  textOnDark: "#cbd5e1",
+
   // Background colors
-  bgPrimary: '#ffffff',
-  bgSecondary: '#f8fafc',
-  bgDark: '#1e293b',
-  
+  bgPrimary: "#ffffff",
+  bgSecondary: "#f8fafc",
+  bgDark: "#1e293b",
+
   // Border colors
-  borderLight: '#e2e8f0',
-  borderSubtle: '#e9e5f5',
-  
+  borderLight: "#e2e8f0",
+  borderSubtle: "#e9e5f5",
+
   // State colors
-  warning: '#f59e0b',
-  warningBg: '#fffbeb',
-  warningText: '#92400e',
+  warning: "#f59e0b",
+  warningBg: "#fffbeb",
+  warningText: "#92400e",
 };
 
 /**
@@ -76,12 +82,12 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
 } {
   const { tenantName, adminUser, temporaryPassword } = input;
   const defaultLoginUrl = process.env.APPLICATION_URL;
-  const baseUrl = defaultLoginUrl?.replace(/\/$/, '') || '';
+  const baseUrl = defaultLoginUrl?.replace(/\/$/, "") || "";
   const clientPortalLoginUrl = `${baseUrl}/auth/client-portal/signin`;
   const currentYear = new Date().getFullYear();
-  
+
   const subject = `Welcome to Alga PSA - Your Account is Ready`;
-  
+
   const htmlBody = `
   <!DOCTYPE html>
   <html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" lang="en">
@@ -106,20 +112,20 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
     <style type="text/css">
       /* Web fonts for modern clients */
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@600;700&display=swap');
-      
+
       /* Reset styles for better email client compatibility */
       table {border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt;}
       a {text-decoration: none; color: #8a4dea;}
       h1, h2, h3, h4, h5, h6 {color: #0f172a; margin: 0; padding: 0; mso-line-height-rule: exactly;}
       p {margin: 0; padding: 0; mso-line-height-rule: exactly;}
-      
+
       /* Ensure proper spacing */
       td {mso-line-height-rule: exactly;}
-      
+
       /* Outlook.com specific fix */
       .ExternalClass {width: 100%;}
       .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td {line-height: 100%;}
-      
+
       /* Rounded corners for all modern clients - not just WebKit */
       .email-container {border-radius: 12px !important; overflow: hidden !important;}
       .rounded-top {border-radius: 12px 12px 0 0 !important;}
@@ -130,7 +136,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
       .tagline-box {border-radius: 6px !important;}
       .warning-box {border-radius: 6px !important;}
       .shadow {box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07) !important;}
-      
+
       /* Progressive enhancement for modern clients */
       @media screen and (-webkit-min-device-pixel-ratio:0) {
         /* WebKit specific enhancements */
@@ -138,7 +144,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         /* Keep Nine Minds button blue on hover using secondary-300 */
         .button-hover-blue:hover {background-color: rgb(58, 186, 224) !important; box-shadow: 0 4px 8px rgba(64, 207, 249, 0.3) !important;}
       }
-      
+
       /* Support for non-WebKit modern browsers */
       @supports (border-radius: 12px) {
         .email-container {border-radius: 12px !important; overflow: hidden !important;}
@@ -147,7 +153,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
         .rounded {border-radius: 8px !important;}
         .rounded-small {border-radius: 6px !important;}
       }
-      
+
       /* Dark mode support */
       @media (prefers-color-scheme: dark) {
         /* Dark mode styles kept minimal for safety */
@@ -177,9 +183,9 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                   <tr>
                     <td bgcolor="#ffffff" style="background-color: #ffffff; padding: 40px 32px;">
                       <h2 style="color: #0f172a; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 24px; font-weight: 600; margin-bottom: 16px; line-height: 1.3;">Hello ${adminUser.firstName} ${adminUser.lastName},</h2>
-                      
+
                       <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 16px; margin-bottom: 24px;">Congratulations! Your new account for <b style="color: #0f172a; font-weight: 600;">${tenantName}</b> has been successfully set up. You now have access to two powerful portals designed to streamline your operations.</p>
-                      
+
                       <!-- Tagline with spacing -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
                         <tr>
@@ -194,10 +200,10 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- Two Portal Access Section -->
                       <h3 style="color: #0f172a; font-size: 20px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 32px 0 20px 0;">Your Two Portal Access</h3>
-                      
+
                       <!-- MSP Portal -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 16px;">
                         <tr>
@@ -214,7 +220,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- NineMinds Portal -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin-bottom: 24px;">
                         <tr>
@@ -231,7 +237,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- Shared Credentials -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
                         <tr>
@@ -248,7 +254,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- Warning with spacing -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; margin: 24px 0;">
                         <tr>
@@ -267,7 +273,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- Buttons - VML Bulletproof Pattern -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 32px 0;">
                         <tr>
@@ -305,7 +311,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <!-- Divider -->
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse;">
                         <tr>
@@ -318,7 +324,7 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 16px 0;">What's Next?</h3>
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin-bottom: 24px;">
                         <tr>
@@ -342,21 +348,21 @@ function createWelcomeEmailContent(input: SendWelcomeEmailActivityInput): {
                           </td>
                         </tr>
                       </table>
-                      
+
                       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: collapse; margin: 24px 0;">
                         <tr>
                           <td>
                             <h3 style="color: #0f172a; font-size: 18px; font-weight: 600; font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0 0 12px 0;">Need Help?</h3>
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">If you have any questions or need assistance getting started, please don't hesitate to contact our support team.</p>
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 0 0 16px 0;">For support, use the <a href="${clientPortalLoginUrl}" style="color: #0284c7; text-decoration: underline;"> Nine Minds Client Portal</a></p>
-                            
+
                             <p style="color: #334155; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; font-size: 15px; margin: 24px 0 0 0;">Welcome aboard!</p>
                           </td>
                         </tr>
                       </table>
                     </td>
                   </tr>
-                  
+
                   <!-- Footer -->
                   <tr>
                     <td align="center" bgcolor="#1e293b" class="rounded-bottom" style="background-color: #1e293b; color: #cbd5e1; padding: 32px 24px; text-align: center; font-size: 14px; line-height: 1.6; border-radius: 0 0 12px 12px;">
@@ -410,7 +416,7 @@ What's Next?
 
 Need help?
 If you have any questions or need assistance getting started, please don't hesitate to contact our support team.
-For support, use the Nine Minds Client Portal: ${clientPortalLoginUrl} 
+For support, use the Nine Minds Client Portal: ${clientPortalLoginUrl}
 
 Welcome aboard!
 
@@ -429,22 +435,22 @@ If you did not request this account, please contact support.
  * This integrates with the existing email service infrastructure
  */
 export async function sendWelcomeEmail(
-  input: SendWelcomeEmailActivityInput
+  input: SendWelcomeEmailActivityInput,
 ): Promise<SendWelcomeEmailActivityResult> {
   const log = logger();
-  log.info('Sending welcome email', { 
+  log.info("Sending welcome email", {
     tenantId: input.tenantId,
     email: input.adminUser.email,
-    userId: input.adminUser.userId
+    userId: input.adminUser.userId,
   });
 
   try {
     // Get the email service instance
     const emailServiceInstance = await emailService;
-    
+
     // Create email content
     const { subject, htmlBody, textBody } = createWelcomeEmailContent(input);
-    
+
     // Prepare email parameters
     const emailParams: EmailParams = {
       to: input.adminUser.email,
@@ -454,10 +460,10 @@ export async function sendWelcomeEmail(
       metadata: {
         tenantId: input.tenantId,
         userId: input.adminUser.userId,
-        emailType: 'tenant_welcome',
+        emailType: "tenant_welcome",
         temporary: true,
-        workflowType: 'tenant_creation'
-      }
+        workflowType: "tenant_creation",
+      },
     };
 
     // Validate email before sending
@@ -468,31 +474,31 @@ export async function sendWelcomeEmail(
     // Send the email
     const emailResult = await emailServiceInstance.sendEmail(emailParams);
 
-    log.info('Welcome email sent successfully', {
+    log.info("Welcome email sent successfully", {
       tenantId: input.tenantId,
       email: input.adminUser.email,
-      messageId: emailResult?.messageId
+      messageId: emailResult?.messageId,
     });
 
     return {
       emailSent: true,
-      messageId: emailResult?.messageId
+      messageId: emailResult?.messageId,
     };
-
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    log.error('Failed to send welcome email', {
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+
+    log.error("Failed to send welcome email", {
       tenantId: input.tenantId,
       email: input.adminUser.email,
-      error: errorMessage
+      error: errorMessage,
     });
 
     // Don't throw the error - we don't want email failure to fail the entire workflow
     // The workflow can still complete successfully even if the email fails
     return {
       emailSent: false,
-      error: errorMessage
+      error: errorMessage,
     };
   }
 }
@@ -504,26 +510,25 @@ export async function sendTenantCreationNotification(
   tenantId: string,
   tenantName: string,
   adminEmail: string,
-  success: boolean
+  success: boolean,
 ): Promise<void> {
   const log = logger();
-  
+
   try {
     // This would send a notification to system administrators
     // about the tenant creation completion
-    log.info('Tenant creation notification', {
+    log.info("Tenant creation notification", {
       tenantId,
       tenantName,
       adminEmail,
-      success
+      success,
     });
 
     // Implementation would depend on your notification system
     // Could be email, Slack, webhook, etc.
-    
   } catch (error) {
-    log.warn('Failed to send tenant creation notification', {
-      error: error instanceof Error ? error.message : 'Unknown error'
+    log.warn("Failed to send tenant creation notification", {
+      error: error instanceof Error ? error.message : "Unknown error",
     });
     // Don't throw - this is just a notification
   }

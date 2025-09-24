@@ -13,11 +13,16 @@ import { Knex } from 'knex';
 const END_OF_PERIOD = 0;
 
 export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings[]> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('User is not logged in');
+  }
 
   const activeSettings = await withTransaction(db, async (trx: Knex.Transaction) => {
     return await trx<ITimePeriodSettings>('time_period_settings')
       .where({ is_active: true })
+      .andWhere('tenant', tenant)
       .orderBy('effective_from', 'desc')
       .then(settings => settings.map((setting):ITimePeriodSettings => ({
         ...setting,
@@ -36,7 +41,11 @@ export async function getActiveTimePeriodSettings(): Promise<ITimePeriodSettings
 }
 
 export async function updateTimePeriodSettings(settings: ITimePeriodSettings): Promise<void> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('User is not logged in');
+  }
 
   // Validate input settings
   const validatedSettings = validateData(timePeriodSettingsSchema, {
@@ -49,10 +58,11 @@ export async function updateTimePeriodSettings(settings: ITimePeriodSettings): P
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     // Validate business rules and check for overlaps
-    await validateTimePeriodSettings(validatedSettings, trx, settings.time_period_settings_id);
+    await validateTimePeriodSettings({ ...validatedSettings, tenant }, trx, settings.time_period_settings_id);
 
     await trx('time_period_settings')
       .where({ time_period_settings_id: validatedSettings.time_period_settings_id })
+      .andWhere('tenant', tenant)
       .update({
         frequency: validatedSettings.frequency,
         frequency_unit: validatedSettings.frequency_unit,
@@ -128,11 +138,16 @@ export async function createTimePeriodSettings(settings: Partial<ITimePeriodSett
 }
 
 export async function deleteTimePeriodSettings(settingId: string): Promise<void> {
-  const { knex: db } = await createTenantKnex();
+  const { knex: db, tenant } = await createTenantKnex();
+
+  if (!tenant) {
+    throw new Error('User is not logged in');
+  }
 
   await withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('time_period_settings')
       .where({ time_period_settings_id: settingId })
+      .andWhere('tenant', tenant)
       .delete();
   });
 }
@@ -214,6 +229,10 @@ function doPeriodsOverlap(period1: ITimePeriodSettings, period2: ITimePeriodSett
 }
 
 async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>, db: Knex | Knex.Transaction, excludeId?: string): Promise<void> {
+  // Ensure we have tenant context for validation
+  if (!settings.tenant) {
+    throw new Error('Tenant context is required for time period settings validation');
+  }
   if (settings.frequency && settings.frequency <= 0) {
     throw new Error('Frequency must be a positive number');
   }
@@ -250,9 +269,10 @@ async function validateTimePeriodSettings(settings: Partial<ITimePeriodSettings>
   const effectiveFrom = new Date(settings.effective_from!);
   const effectiveTo = settings.effective_to ? new Date(settings.effective_to) : null;
 
-  // Check for overlapping periods
+  // Check for overlapping periods within the same tenant
   let query = db<ITimePeriodSettings>('time_period_settings')
-    .where('is_active', true);
+    .where('is_active', true)
+    .andWhere('tenant', settings.tenant);
 
   // Add conditions for overlapping effective dates
   query = query.andWhere(builder => {

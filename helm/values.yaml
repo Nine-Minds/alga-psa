@@ -82,6 +82,11 @@ hocuspocus:
     type: "ClusterIP"
     port: 1234
 
+temporal:
+  address: "temporal-frontend.temporal.svc.cluster.local:7233"
+  namespace: "default"
+  portalDomainTaskQueue: "portal-domain-workflows"
+
 # Development Pod Configuration
 devPod:
   enabled: false
@@ -142,6 +147,9 @@ config:
   llm:
     openai: 'key-here'
     anthropic: 'key-here'
+  extensions:
+    # Root wildcard domain used for extension apps (e.g., ext.example.com)
+    domainRoot: ""
   # Storage configuration
   storage:
     # Default storage provider configuration

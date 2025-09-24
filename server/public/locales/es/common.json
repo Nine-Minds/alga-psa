@@ -1,0 +1,232 @@
+{
+  "nav": {
+    "dashboard": "Panel",
+    "tickets": "Tickets",
+    "clients": "Clientes",
+    "projects": "Proyectos",
+    "billing": "Facturación",
+    "reports": "Informes",
+    "settings": "Configuración",
+    "profile": "Perfil",
+    "logout": "Cerrar sesión",
+    "help": "Ayuda"
+  },
+  "actions": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "create": "Crear",
+    "update": "Actualizar",
+    "submit": "Enviar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "previous": "Anterior",
+    "search": "Buscar",
+    "filter": "Filtrar",
+    "export": "Exportar",
+    "import": "Importar",
+    "download": "Descargar",
+    "upload": "Subir",
+    "refresh": "Actualizar",
+    "close": "Cerrar"
+  },
+  "status": {
+    "loading": "Cargando...",
+    "saving": "Guardando...",
+    "success": "Éxito",
+    "error": "Error",
+    "warning": "Advertencia",
+    "info": "Información",
+    "pending": "Pendiente",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "completed": "Completado",
+    "cancelled": "Cancelado"
+  },
+  "messages": {
+    "welcome": "Bienvenido",
+    "confirmDelete": "¿Seguro que deseas eliminar este elemento?",
+    "saveSuccess": "Cambios guardados correctamente",
+    "saveError": "No se pudieron guardar los cambios",
+    "loadError": "No se pudieron cargar los datos",
+    "noData": "No hay datos disponibles",
+    "required": "Este campo es obligatorio",
+    "invalidEmail": "Correo electrónico no válido",
+    "invalidPassword": "Contraseña inválida",
+    "passwordMismatch": "Las contraseñas no coinciden"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "No autenticado",
+      "accessDenied": "Acceso denegado",
+      "clientPortalOnly": "Acceso denegado: las acciones del portal del cliente están restringidas a usuarios cliente",
+      "insufficientPermissions": "Permisos insuficientes",
+      "userIdNotFound": "ID de usuario no encontrada en la sesión",
+      "tenantNotFound": "Inquilino no encontrado en la sesión. Cierra sesión y vuelve a entrar.",
+      "userNotFound": "Usuario no encontrado",
+      "contactNotFound": "Usuario no asociado a un contacto",
+      "companyNotFound": "El contacto no está asociado a una empresa"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Permisos insuficientes para ver los tickets",
+        "readDetails": "Permisos insuficientes para ver los detalles del ticket",
+        "create": "Permisos insuficientes para crear tickets",
+        "update": "Permisos insuficientes para actualizar tickets",
+        "updateStatus": "Permisos insuficientes para actualizar el estado del ticket",
+        "addComments": "Permisos insuficientes para agregar comentarios",
+        "updateComments": "Permisos insuficientes para actualizar comentarios",
+        "deleteComments": "Permisos insuficientes para eliminar comentarios"
+      }
+    }
+  },
+  "time": {
+    "today": "Hoy",
+    "yesterday": "Ayer",
+    "tomorrow": "Mañana",
+    "thisWeek": "Esta semana",
+    "lastWeek": "La semana pasada",
+    "thisMonth": "Este mes",
+    "lastMonth": "El mes pasado",
+    "thisYear": "Este año",
+    "lastYear": "El año pasado",
+    "seconds": "segundos",
+    "minutes": "minutos",
+    "hours": "horas",
+    "days": "días",
+    "weeks": "semanas",
+    "months": "meses",
+    "years": "años"
+  },
+  "language": {
+    "selectLanguage": "Seleccionar idioma",
+    "changeLanguage": "Cambiar idioma",
+    "currentLanguage": "Idioma actual",
+    "preference": {
+      "label": "Preferencia de idioma",
+      "helper": "Selecciona tu idioma preferido para la interfaz",
+      "placeholder": "Selecciona un idioma",
+      "cleared": "Preferencia de idioma eliminada. Usando el idioma predeterminado...",
+      "updating": "Actualizando preferencia de idioma...",
+      "notSet": "Sin definir",
+      "notSetWithSource": "Sin definir (Usa {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "company": "predeterminado de la empresa",
+        "tenant": "predeterminado del inquilino",
+        "system": "predeterminado del sistema"
+      }
+    }
+  },
+  "yes": "Sí",
+  "no": "No",
+  "companies": {
+    "locations": {
+      "sectionTitle": "Ubicaciones de la empresa",
+      "manageButton": "Gestionar ubicaciones",
+      "dialogTitle": "Gestionar ubicaciones - {{company}}",
+      "managerLabel": "Gestor de ubicaciones de la empresa",
+      "listTitle": "Ubicaciones",
+      "buttons": {
+        "add": "Agregar ubicación",
+        "save": "Guardar ubicación"
+      },
+      "card": {
+        "unnamed": "Ubicación sin nombre",
+        "setDefault": "Establecer como predeterminada",
+        "edit": "Editar ubicación",
+        "delete": "Eliminar ubicación",
+        "addressLabel": "Dirección",
+        "addressHelper": "Dirección completa de esta ubicación",
+        "phoneLabel": "Teléfono",
+        "phoneHelper": "Número telefónico de esta ubicación",
+        "phoneValue": "Teléfono: {{phone}}",
+        "emailLabel": "Correo electrónico",
+        "emailHelper": "Correo electrónico de esta ubicación",
+        "emailValue": "Correo: {{email}}",
+        "billingTag": "Facturación",
+        "shippingTag": "Envío",
+        "notesLabel": "Notas",
+        "notesHelper": "Notas adicionales para esta ubicación"
+      },
+      "form": {
+        "locationName": "Nombre de la ubicación",
+        "locationNameHelper": "Nombre para esta ubicación (p. ej., Oficina principal, Almacén)",
+        "addressLine1": "Dirección línea 1",
+        "addressLine1Helper": "Línea de dirección principal (obligatorio)",
+        "addressLine2": "Dirección línea 2",
+        "addressLine2Helper": "Información adicional de dirección (opcional)",
+        "addressLine3": "Dirección línea 3",
+        "city": "Ciudad",
+        "cityHelper": "Nombre de la ciudad (obligatorio)",
+        "stateProvince": "Estado/Provincia",
+        "stateProvinceHelper": "Nombre del estado o provincia",
+        "postalCode": "Código postal",
+        "postalCodeHelper": "Código postal o ZIP",
+        "country": "País",
+        "countryHelper": "Selecciona un país (obligatorio)",
+        "phone": "Teléfono",
+        "phoneHelper": "Número telefónico de esta ubicación",
+        "email": "Correo electrónico",
+        "emailHelper": "Correo electrónico de esta ubicación",
+        "taxRegion": "Región fiscal",
+        "taxRegionHelper": "Selecciona la región fiscal aplicable",
+        "notes": "Notas",
+        "notesHelper": "Notas adicionales sobre esta ubicación",
+        "defaultLocation": "Ubicación predeterminada",
+        "defaultLocationHelper": "Marcar como ubicación predeterminada de la empresa",
+        "billingAddress": "Dirección de facturación",
+        "billingAddressHelper": "Usar esta ubicación como dirección de facturación",
+        "shippingAddress": "Dirección de envío",
+        "shippingAddressHelper": "Usar esta ubicación como dirección de envío",
+        "placeholder": {
+          "locationName": "p. ej., Oficina principal, Almacén",
+          "addressLine1": "Ingresa la dirección *",
+          "city": "Ingresa la ciudad *",
+          "country": "Selecciona un país *",
+          "loadingCountries": "Cargando países...",
+          "taxRegionOption": "Selecciona una región fiscal...",
+          "taxRegion": "Selecciona una región fiscal..."
+        }
+      },
+      "validation": {
+        "title": "Completa los campos obligatorios:"
+      },
+      "errors": {
+        "loadTaxRegions": "No se pudieron cargar las regiones fiscales",
+        "loadCountries": "No se pudieron cargar los países",
+        "loadLocations": "No se pudieron cargar las ubicaciones de la empresa",
+        "save": "No se pudo guardar la ubicación",
+        "delete": "No se pudo eliminar la ubicación",
+        "setDefault": "No se pudo establecer la ubicación predeterminada"
+      },
+      "success": {
+        "create": "Ubicación creada correctamente",
+        "update": "Ubicación actualizada correctamente",
+        "delete": "Ubicación eliminada correctamente",
+        "setDefault": "Ubicación predeterminada actualizada"
+      },
+      "dialog": {
+        "addTitle": "Agregar nueva ubicación",
+        "editTitle": "Editar ubicación",
+        "deleteTitle": "Eliminar ubicación",
+        "deleteMessage": "¿Seguro que deseas eliminar la ubicación \"{{name}}\"? Esta acción no se puede deshacer."
+      },
+      "empty": {
+        "title": "Aún no hay ubicaciones",
+        "description": "Haz clic en \"Agregar ubicación\" para comenzar"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "pageInfo": "Página {{current}} de {{total}} ({{count}} registros en total)",
+    "page": "Página",
+    "of": "de",
+    "showing": "Mostrando {{from}} a {{to}} de {{total}} resultados",
+    "rowsPerPage": "Filas por página",
+    "first": "Primera",
+    "last": "Última"
+  }
+}

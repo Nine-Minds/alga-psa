@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
+import { useTranslation } from '@/lib/i18n/client';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import { getCurrentUser, getUserRolesWithPermissions, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
@@ -54,6 +55,7 @@ const TextDetailItem: React.FC<{
 };
 
 export function CompanyDetailsSettings() {
+  const { t } = useTranslation('clientPortal');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,19 +82,19 @@ export function CompanyDetailsSettings() {
         );
 
         if (!hasRequiredPermissions) {
-          setError('You do not have permission to access company settings');
+          setError(t('companySettings.messages.noPermission', 'You do not have permission to access company settings'));
           return;
         }
 
         const userCompanyId = await getUserCompanyId(user.user_id);
         if (!userCompanyId) {
-          setError('Company not found');
+          setError(t('companySettings.messages.companyNotFound', 'Company not found'));
           return;
         }
 
         const company = await getCompanyById(userCompanyId);
         if (!company) {
-          setError('Failed to load company details');
+          setError(t('companySettings.messages.failedToLoad'));
           return;
         }
 
@@ -159,10 +161,10 @@ export function CompanyDetailsSettings() {
       });
       setCompanyDetails(updatedCompany);
       setHasUnsavedChanges(false);
-      toast.success('Company details updated successfully');
+      toast.success(t('companySettings.messages.updateSuccess'));
     } catch (error) {
       console.error('Failed to update company details:', error);
-      toast.error('Failed to update company details');
+      toast.error(t('companySettings.messages.updateError', 'Failed to update company details'));
     } finally {
       setIsLoading(false);
     }
@@ -189,7 +191,7 @@ export function CompanyDetailsSettings() {
     <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
       {/* Logo Upload Section */}
       <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4">Company Logo</h3>
+        <h3 className="text-lg font-medium mb-4">{t('companySettings.fields.companyLogo')}</h3>
         <div className="flex items-center space-x-4">
           <EntityImageUpload
             entityType="company"
@@ -223,35 +225,35 @@ export function CompanyDetailsSettings() {
         {/* Left Column - All Form Fields */}
         <div className="space-y-6">
           <TextDetailItem
-            label="Company Name"
+            label={t('companySettings.fields.companyName')}
             value={companyDetails.company_name}
             onEdit={(value) => handleFieldChange('company_name', value)}
             automationId="company-name-field"
           />
 
           <TextDetailItem
-            label="Website"
+            label={t('companySettings.fields.website')}
             value={companyDetails.properties?.website || companyDetails.url || ''}
             onEdit={(value) => handleFieldChange('properties.website', value)}
             automationId="website-field"
           />
 
           <TextDetailItem
-            label="Industry"
+            label={t('companySettings.fields.industry')}
             value={companyDetails.properties?.industry || ''}
             onEdit={(value) => handleFieldChange('properties.industry', value)}
             automationId="industry-field"
           />
 
           <TextDetailItem
-            label="Company Size"
+            label={t('companySettings.fields.companySize')}
             value={companyDetails.properties?.company_size || ''}
             onEdit={(value) => handleFieldChange('properties.company_size', value)}
             automationId="company-size-field"
           />
           
           <TextDetailItem
-            label="Annual Revenue"
+            label={t('companySettings.fields.annualRevenue')}
             value={companyDetails.properties?.annual_revenue || ''}
             onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
             automationId="annual-revenue-field"
@@ -261,7 +263,7 @@ export function CompanyDetailsSettings() {
         {/* Right Column - Company Locations */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Text as="label" size="2" className="text-gray-700 font-medium">Company Locations</Text>
+            <Text as="label" size="2" className="text-gray-700 font-medium">{t('companySettings.fields.companyLocations')}</Text>
             <Button
               id="locations-button"
               size="sm"
@@ -269,7 +271,7 @@ export function CompanyDetailsSettings() {
               onClick={() => setIsLocationsDialogOpen(true)}
               className="text-sm"
             >
-              Manage Locations
+              {t('companySettings.fields.manageLocations')}
             </Button>
           </div>
           <div>
@@ -288,14 +290,14 @@ export function CompanyDetailsSettings() {
           disabled={isLoading || !hasUnsavedChanges}
           className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isLoading ? 'Saving...' : 'Save Changes'}
+          {isLoading ? t('common.loading') : t('companySettings.messages.saveChanges')}
         </Button>
       </Flex>
 
       <Dialog 
         isOpen={isLocationsDialogOpen} 
         onClose={() => setIsLocationsDialogOpen(false)}
-        title={`Manage Locations - ${companyDetails.company_name}`}
+        title={`${t('companySettings.fields.manageLocations')} - ${companyDetails.company_name}`}
       >
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <CompanyLocations 

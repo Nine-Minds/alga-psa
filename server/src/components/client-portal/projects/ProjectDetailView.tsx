@@ -6,12 +6,16 @@ import DonutChart from 'server/src/components/projects/DonutChart';
 import HoursProgressBar from 'server/src/components/projects/HoursProgressBar';
 import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src/lib/utils/projectUtils';
 import { formatDistanceToNow } from 'date-fns';
+import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface ProjectDetailViewProps {
   project: IProject;
 }
 
 export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
+  const { t, i18n } = useTranslation('clientPortal');
+  const dateLocale = getDateFnsLocale(i18n.language);
   const [metrics, setMetrics] = useState<ProjectCompletionMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,12 +59,12 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
     <div className="p-6 bg-white rounded-lg shadow">
       <h2 className="text-2xl font-bold mb-2">{project.project_name}</h2>
       <p className="text-gray-600 mb-6">
-        {project.description || 'No description provided'}
+        {project.description || t('projects.messages.noDescription', 'No description provided')}
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Task Completion</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('projects.taskCompletion', 'Task Completion')}</h3>
             <div className="flex items-center">
               <div className="mr-4">
                 <DonutChart 
@@ -69,23 +73,23 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
                 />
               </div>
               <div>
-                <p className="font-medium">{Math.round(metrics?.taskCompletionPercentage || 0)}% Complete</p>
+                <p className="font-medium">{t('projects.percentComplete', '{{percent}}% Complete', { percent: Math.round(metrics?.taskCompletionPercentage || 0) })}</p>
                 <p className="text-sm text-gray-600">
-                  {metrics?.completedTasks || 0} of {metrics?.totalTasks || 0} tasks completed
+                  {t('projects.tasksCompleted', '{{completed}} of {{total}} tasks completed', { completed: metrics?.completedTasks || 0, total: metrics?.totalTasks || 0 })}
                 </p>
               </div>
             </div>
         </div>
 
         <div className="bg-gray-50 p-4 rounded-lg">
-          <h3 className="text-lg font-semibold mb-4">Budget Hours</h3>
+          <h3 className="text-lg font-semibold mb-4">{t('projects.budgetHours', 'Budget Hours')}</h3>
           <div className="flex flex-col">
             {/* Make this a column flex container */}
             <div className="flex flex-col mb-1">
-              <p className="font-medium">{Math.round(metrics?.hoursCompletionPercentage || 0)}% of Budget Used</p>
+              <p className="font-medium">{t('projects.budgetUsed', '{{percent}}% of Budget Used', { percent: Math.round(metrics?.hoursCompletionPercentage || 0) })}</p>
               {/* Put hours on a new line */}
               <p className="text-sm text-gray-600">
-                {(metrics?.spentHours || 0).toFixed(1)} of {(metrics?.budgetedHours || 0).toFixed(1)} hours
+                {t('projects.hoursUsed', '{{spent}} of {{budgeted}} hours', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}
               </p>
             </div>
             <HoursProgressBar 
@@ -95,10 +99,10 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
               showTooltip={true}
               tooltipContent={
                 <div className="p-2">
-                  <p className="font-medium">Hours Usage</p>
+                  <p className="font-medium">{t('projects.hoursUsage', 'Hours Usage')}</p>
                   {/* Display hours directly from metrics */}
-                  <p className="text-sm">{(metrics?.spentHours || 0).toFixed(1)} of {(metrics?.budgetedHours || 0).toFixed(1)} hours used</p>
-                  <p className="text-sm">{(metrics?.remainingHours || 0).toFixed(1)} hours remaining</p>
+                  <p className="text-sm">{t('projects.hoursUsedDetail', '{{spent}} of {{budgeted}} hours used', { spent: (metrics?.spentHours || 0).toFixed(1), budgeted: (metrics?.budgetedHours || 0).toFixed(1) })}</p>
+                  <p className="text-sm">{t('projects.hoursRemaining', '{{remaining}} hours remaining', { remaining: (metrics?.remainingHours || 0).toFixed(1) })}</p>
                 </div>
               }
             />
@@ -107,35 +111,35 @@ export default function ProjectDetailView({ project }: ProjectDetailViewProps) {
       </div>
 
       <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Project Details</h3>
+        <h3 className="text-lg font-semibold mb-2">{t('projects.details')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <p className="text-sm text-gray-600">Start Date</p>
+            <p className="text-sm text-gray-600">{t('projects.startDate')}</p>
             <p className="font-medium">
-              {project.start_date 
-                ? new Date(project.start_date).toLocaleDateString() 
-                : 'Not specified'}
+              {project.start_date
+                ? new Date(project.start_date).toLocaleDateString()
+                : t('common.notSpecified', 'Not specified')}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">End Date</p>
+            <p className="text-sm text-gray-600">{t('projects.endDate')}</p>
             <p className="font-medium">
-              {project.end_date 
-                ? new Date(project.end_date).toLocaleDateString() 
-                : 'Not specified'}
+              {project.end_date
+                ? new Date(project.end_date).toLocaleDateString()
+                : t('common.notSpecified', 'Not specified')}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Last Updated</p>
+            <p className="text-sm text-gray-600">{t('projects.lastUpdated', 'Last Updated')}</p>
             <p className="font-medium">
-              {project.updated_at 
-                ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true }) 
-                : 'Unknown'}
+              {project.updated_at
+                ? formatDistanceToNow(new Date(project.updated_at), { addSuffix: true, locale: dateLocale })
+                : t('common.unknown', 'Unknown')}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Status</p>
-            <p className="font-medium">{project.status || 'Active'}</p>
+            <p className="text-sm text-gray-600">{t('projects.fields.status')}</p>
+            <p className="font-medium">{project.status ? t(`projects.status.${project.status.toLowerCase().replace(/\s+/g, '')}`, project.status) : t('projects.status.active', 'Active')}</p>
           </div>
         </div>
       </div>

@@ -69,6 +69,7 @@ interface TicketPropertiesProps {
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  onItilFieldChange?: (field: string, value: any) => void;
 }
 
 // Helper function to format location display
@@ -139,6 +140,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   tags = [],
   allTagTexts = [],
   onTagsChange,
+  onItilFieldChange,
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -740,6 +742,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
+
 
     </div>
   );

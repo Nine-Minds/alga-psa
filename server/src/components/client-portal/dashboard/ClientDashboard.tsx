@@ -6,12 +6,14 @@ import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/
 import { Button } from 'server/src/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
+import { useTranslation } from '@/lib/i18n/client';
 
 // Flag to control visibility of the recent activity section
 const SHOW_RECENT_ACTIVITY = false;
 
 export function ClientDashboard() {
   const router = useRouter();
+  const { t } = useTranslation('clientPortal');
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [metrics, setMetrics] = useState<any>(null);
   const [activities, setActivities] = useState<RecentActivity[]>([]);
@@ -42,7 +44,7 @@ export function ClientDashboard() {
         <Card>
           <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
-              <p>There was an error loading the dashboard. Please try again later.</p>
+              <p>{t('dashboard.error')}</p>
             </div>
           </CardContent>
         </Card>
@@ -56,7 +58,7 @@ export function ClientDashboard() {
         <Card>
           <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
-              <p>Loading dashboard...</p>
+              <p>{t('dashboard.loading')}</p>
             </div>
           </CardContent>
         </Card>
@@ -68,9 +70,9 @@ export function ClientDashboard() {
     <div className="space-y-8">
       {/* Welcome Section */}
       <div>
-        <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">{t('dashboard.title')}</h1>
         <p className="mt-1 text-sm text-[rgb(var(--color-text-600))]">
-          Welcome back! Here's an overview of your account.
+          {t('dashboard.welcome')}
         </p>
       </div>
 
@@ -79,14 +81,14 @@ export function ClientDashboard() {
         <Card className="bg-white">
           <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
-              Open Support Tickets
+              {t('dashboard.metrics.openTickets')}
             </div>
             <div className="mt-2 text-4xl font-bold text-[rgb(var(--color-primary-500))]">
               {metrics.openTickets}
             </div>
             <div className="mt-4">
               <a href="/client-portal/tickets" className="text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] text-sm font-medium">
-                View all tickets →
+                {t('dashboard.viewAll', { item: t('nav.tickets').toLowerCase() })}
               </a>
             </div>
           </CardContent>
@@ -95,14 +97,14 @@ export function ClientDashboard() {
         <Card className="bg-white">
           <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
-              Open Projects
+              {t('dashboard.metrics.activeProjects')}
             </div>
             <div className="mt-2 text-4xl font-bold text-[rgb(var(--color-primary-500))]">
               {metrics.activeProjects}
             </div>
             <div className="mt-4">
               <a href="/client-portal/projects" className="text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] text-sm font-medium">
-                View all projects →
+                {t('dashboard.viewAll', { item: t('nav.projects').toLowerCase() })}
               </a>
             </div>
           </CardContent>
@@ -111,14 +113,14 @@ export function ClientDashboard() {
         <Card className="bg-white">
           <CardContent className="p-8 pt-8">
             <div className="text-lg font-medium text-[rgb(var(--color-text-600))] truncate">
-              Pending Invoices
+              {t('dashboard.metrics.pendingInvoices')}
             </div>
             <div className="mt-2 text-4xl font-bold text-[rgb(var(--color-secondary-500))]">
               {metrics.pendingInvoices}
             </div>
             <div className="mt-4">
               <a href="/client-portal/billing" className="text-[rgb(var(--color-secondary-500))] hover:text-[rgb(var(--color-secondary-600))] text-sm font-medium">
-                View billing →
+                {t('dashboard.viewAll', { item: t('nav.billing').toLowerCase() })}
               </a>
             </div>
           </CardContent>
@@ -147,7 +149,7 @@ export function ClientDashboard() {
       {SHOW_RECENT_ACTIVITY && (
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle>{t('dashboard.recentActivity.title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-5">
@@ -191,7 +193,7 @@ export function ClientDashboard() {
       {/* Quick Actions */}
       <Card className="bg-white">
         <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
+          <CardTitle>{t('dashboard.quickActions.title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
@@ -200,7 +202,7 @@ export function ClientDashboard() {
               variant="default"
               onClick={() => setIsTicketDialogOpen(true)}
             >
-              Create Support Ticket
+              {t('dashboard.quickActions.createTicket')}
             </Button>
             <ClientAddTicket 
               open={isTicketDialogOpen} 
@@ -212,7 +214,7 @@ export function ClientDashboard() {
               variant="soft"
               onClick={() => router.push('/client-portal/billing')}
             >
-              View Latest Invoice
+              {t('dashboard.quickActions.viewLatestInvoice')}
             </Button>
           </div>
         </CardContent>

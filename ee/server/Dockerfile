@@ -46,6 +46,9 @@ COPY .env.example /app/server/.env
 COPY ./shared/dist/ ./shared/dist/
 COPY ./shared/package.json ./shared/package.json
 
+# Copy packages directory for webpack aliases
+COPY ./packages/ ./packages/
+
 # Copy pre-built Next.js artifacts (must exist locally with EE features)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
 COPY ./server/.next ./server/.next

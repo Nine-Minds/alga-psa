@@ -4,8 +4,7 @@
 
 import { z } from 'zod';
 import logger from '@alga-psa/shared/core/logger';
-import * as ts from 'typescript';
-import { Project, Node, SyntaxKind, ObjectLiteralExpression } from 'ts-morph';
+import { Project, Node, SyntaxKind, ObjectLiteralExpression, ts } from 'ts-morph';
 
 // Zod schema for workflow metadata
 export const WorkflowMetadataSchema = z.object({
@@ -36,7 +35,7 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
       useInMemoryFileSystem: true,
       compilerOptions: {
         target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.ESNext,
+        module: 1, // CommonJS
         moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files
@@ -221,7 +220,7 @@ export function validateWorkflowCode(code: string): {
       useInMemoryFileSystem: true,
       compilerOptions: {
         target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.ESNext,
+        module: 1, // CommonJS
         moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files
@@ -426,7 +425,7 @@ export function checkWorkflowSecurity(code: string): string[] {
       useInMemoryFileSystem: true,
       compilerOptions: {
         target: ts.ScriptTarget.ES2020,
-        module: ts.ModuleKind.ESNext,
+        module: 1, // CommonJS
         moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files

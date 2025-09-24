@@ -9,7 +9,7 @@ import {
   TimeSheetStatus 
 } from 'server/src/interfaces/timeEntry.interfaces';
 import { addCommentToTimeSheet, fetchTimeSheetComments } from 'server/src/lib/actions/timeSheetActions';
-import { FaCheck, FaTimes, FaClock, FaUndo, FaChevronDown, FaChevronUp } from 'react-icons/fa';
+import { Check, Clock, Undo, ChevronDown, ChevronUp } from 'lucide-react';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
@@ -46,12 +46,12 @@ const StatusIcon: React.FC<StatusIconProps> = ({ status }) => {
 
   switch (status) {
     case 'APPROVED':
-      return <FaCheck {...iconProps} className={`${iconProps.className} text-green-500`} />;
+      return <Check {...iconProps} className={`${iconProps.className} text-green-500`} />;
     case 'CHANGES_REQUESTED':
-      return <FaUndo {...iconProps} className={`${iconProps.className} text-orange-500`} />;
+      return <Undo {...iconProps} className={`${iconProps.className} text-orange-500`} />;
     case 'DRAFT':
     default:
-      return <FaClock {...iconProps} className={`${iconProps.className} text-gray-500`} />;
+      return <Clock {...iconProps} className={`${iconProps.className} text-gray-500`} />;
   }
 };
 const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUpdateApprovalStatus }) => {
@@ -76,9 +76,9 @@ const TimeEntryDetailPanel: React.FC<TimeEntryDetailPanelProps> = ({ entry, onUp
   };
 
   const statusButtons = [
-    { status: 'APPROVED' as TimeSheetStatus, icon: FaCheck, label: 'Approve' },
-    { status: 'CHANGES_REQUESTED' as TimeSheetStatus, icon: FaUndo, label: 'Request Changes' },
-    { status: 'DRAFT' as TimeSheetStatus, icon: FaClock, label: 'Set to Draft' },
+    { status: 'APPROVED' as TimeSheetStatus, icon: Check, label: 'Approve' },
+    { status: 'CHANGES_REQUESTED' as TimeSheetStatus, icon: Undo, label: 'Request Changes' },
+    { status: 'DRAFT' as TimeSheetStatus, icon: Clock, label: 'Set to Draft' },
   ];
 
   return (
@@ -345,9 +345,9 @@ export function TimeSheetApproval({
                         title={expandedEntryId === entry.entry_id ? "Hide Details" : "Show Details"}
                       >
                         {expandedEntryId === entry.entry_id ? (
-                          <FaChevronUp className="h-4 w-4" />
+                          <ChevronUp className="h-4 w-4" />
                         ) : (
-                          <FaChevronDown className="h-4 w-4" />
+                          <ChevronDown className="h-4 w-4" />
                         )}
                       </Button>
                     </td>

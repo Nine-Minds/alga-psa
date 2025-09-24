@@ -12,6 +12,8 @@ import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
+import { useTranslation } from '@/lib/i18n/client';
+import { useBranding } from 'server/src/components/providers/BrandingProvider';
 
 interface ClientPortalLayoutProps {
   children: ReactNode;
@@ -24,6 +26,8 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const router = useRouter();
+  const { t } = useTranslation('clientPortal');
+  const { branding } = useBranding();
   
 
   const handleSignOut = () => {
@@ -31,32 +35,46 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
     console.log('Signing out...');
   };
 
+  const fetchAvatarUrl = async (contactId: string, tenant: string) => {
+    try {
+      const contactAvatarUrl = await getContactAvatarUrlAction(contactId, tenant);
+      setAvatarUrl(contactAvatarUrl);
+    } catch (error) {
+      console.error('Error fetching contact avatar:', error);
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
-      const user = await getCurrentUser();      
+      const user = await getCurrentUser();
       if (user) {
         setUserData(user);
-        
+
         // Check permissions using the server action
         const permissions = await checkClientPortalPermissions();
         setHasCompanySettingsAccess(permissions.hasCompanySettingsAccess);
         setHasBillingAccess(permissions.hasBillingAccess);
         setHasUserManagementAccess(permissions.hasUserManagementAccess);
-        
+
         if (user.contact_id) {
-          try {
-            // For client users, use the contact avatar
-            const contactAvatarUrl = await getContactAvatarUrlAction(user.contact_id, user.tenant);
-            setAvatarUrl(contactAvatarUrl);
-          } catch (error) {
-            console.error('Error fetching contact avatar:', error);
-          }
+          await fetchAvatarUrl(user.contact_id, user.tenant);
         }
       }
     };
 
     fetchUserData();
   }, []);
+
+  // Poll for avatar changes every 5 seconds when the component is visible
+  useEffect(() => {
+    if (!userData?.contact_id || !userData?.tenant) return;
+
+    const intervalId = setInterval(() => {
+      fetchAvatarUrl(userData.contact_id!, userData.tenant);
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [userData?.contact_id, userData?.tenant]);
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -68,45 +86,58 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <Link href="/client-portal/dashboard" className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <Image
-                      src="/images/avatar-purple-background.png"
-                      alt="AlgaPSA Logo"
-                      width={200}
-                      height={200}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
+                  {branding?.logoUrl ? (
+                    <>
+                      {console.log('ClientPortalLayout: Rendering logo with URL:', branding.logoUrl)}
+                      <img
+                        src={branding.logoUrl}
+                        alt={branding.companyName || 'Company Logo'}
+                        className="h-8 object-contain"
+                      />
+                    </>
+                  ) : (
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <Image
+                        src="/images/avatar-purple-background.png"
+                        alt="AlgaPSA Logo"
+                        width={200}
+                        height={200}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
                   <span className="text-lg font-semibold flex items-center">
-                    <span className="text-[rgb(var(--color-text-900))]">Client Portal</span>
+                    <span className="text-[rgb(var(--color-text-900))]">
+                      {branding?.companyName ? `${branding.companyName} ${t('nav.portal')}` : t('nav.clientPortal')}
+                    </span>
                   </span>
                 </Link>
               </div>
               <div className="ml-10 flex items-baseline space-x-4">
-                <Link 
-                  href="/client-portal/dashboard" 
+                <Link
+                  href="/client-portal/dashboard"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Dashboard
+                  {t('nav.dashboard')}
                 </Link>
-                <Link 
-                  href="/client-portal/tickets" 
+                <Link
+                  href="/client-portal/tickets"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Support Tickets
+                  {t('nav.tickets')}
                 </Link>
-                <Link 
-                  href="/client-portal/projects" 
+                <Link
+                  href="/client-portal/projects"
                   className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                 >
-                  Projects
+                  {t('nav.projects')}
                 </Link>
                 {hasBillingAccess && (
                   <Link 
                     href="/client-portal/billing" 
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
-                    Billing
+                    {t('nav.billing')}
                   </Link>
                 )}
                 {/*
@@ -122,7 +153,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                     href="/client-portal/company-settings" 
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
-                    Company Settings
+                    {t('nav.companySettings')}
                   </Link>
                 )}
               </div>
@@ -155,14 +186,14 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                         onSelect={() => router.push('/client-portal/profile')}
                       >
                         <User className="mr-2 h-3.5 w-3.5" />
-                        <span>Profile</span>
+                        <span>{t('nav.profile')}</span>
                       </DropdownMenu.Item>
                       <DropdownMenu.Item
                         className="text-[13px] leading-none text-subMenu-text rounded-[3px] flex items-center h-[25px] px-[5px] relative pl-[25px] select-none outline-none cursor-pointer"
                         onSelect={handleSignOut}
                       >
                         <LogOut className="mr-2 h-3.5 w-3.5" />
-                        <span>Sign out</span>
+                        <span>{t('nav.signOut')}</span>
                       </DropdownMenu.Item>
                     </DropdownMenu.Content>
                   </DropdownMenu.Portal>

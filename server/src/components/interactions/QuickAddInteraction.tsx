@@ -463,7 +463,7 @@ export function QuickAddInteraction({
         className="max-w-2xl"
         hideCloseButton={false}
       >
-        <DialogContent className="max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-h-[80vh]">
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>

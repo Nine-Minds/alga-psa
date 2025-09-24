@@ -35,7 +35,7 @@
     "./*": "./dist/*"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc-alias -f",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -58,7 +58,8 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "@types/react": "^18.0.0",
-    "@types/uuid": "^9.0.7"
+    "@types/uuid": "^9.0.7",
+    "tsc-alias": "^1.8.11"
   },
   "peerDependencies": {
     "react": "^18.0.0"

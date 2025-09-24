@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
+import { useTranslation } from '@/lib/i18n/client';
 import {
     Download,
     Trash2,
@@ -36,6 +37,7 @@ interface VideoPreviewProps {
 }
 
 function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
+    const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -108,6 +110,7 @@ interface VideoModalProps {
 }
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
+    const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -148,7 +151,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     className="mb-2"
                 >
                     <Download className="w-4 h-4 mr-2" />
-                    Download to Play
+                    {t('documents.downloadToPlay', 'Download to Play')}
                 </Button>
                 <div className="text-xs text-[rgb(var(--color-text-400))] mt-2">
                     The video will be downloaded and can be played with your system's default video player
@@ -179,9 +182,50 @@ export interface DocumentStorageCardProps {
     showDisassociate?: boolean;
     onClick?: () => void;
     isContentDocument?: boolean;
+    forceRefresh?: number; // Timestamp to trigger preview refresh
 }
 
-export default function DocumentStorageCard({
+// Lazy loading queue to prevent too many concurrent preview generations
+class PreviewLoadingQueue {
+    private queue: (() => Promise<void>)[] = [];
+    private running = 0;
+    private maxConcurrent = 3; // Limit concurrent preview generations
+
+    async add(task: () => Promise<void>) {
+        return new Promise<void>((resolve, reject) => {
+            const wrappedTask = async () => {
+                try {
+                    this.running++;
+                    await task();
+                    resolve();
+                } catch (error) {
+                    reject(error);
+                } finally {
+                    this.running--;
+                    this.processNext();
+                }
+            };
+
+            if (this.running < this.maxConcurrent) {
+                wrappedTask();
+            } else {
+                this.queue.push(wrappedTask);
+            }
+        });
+    }
+
+    private processNext() {
+        if (this.queue.length > 0 && this.running < this.maxConcurrent) {
+            const task = this.queue.shift();
+            if (task) task();
+        }
+    }
+}
+
+// Singleton instance of the queue
+const previewQueue = new PreviewLoadingQueue();
+
+function DocumentStorageCardComponent({
     id,
     document,
     onDelete,
@@ -189,8 +233,10 @@ export default function DocumentStorageCard({
     hideActions = false,
     showDisassociate = false,
     onClick,
-    isContentDocument = false
+    isContentDocument = false,
+    forceRefresh
 }: DocumentStorageCardProps): JSX.Element {
+    const { t } = useTranslation('clientPortal');
     const [previewContent, setPreviewContent] = useState<{
         content?: string;
         previewImage?: string;
@@ -200,11 +246,14 @@ export default function DocumentStorageCard({
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [showDisassociateConfirmation, setShowDisassociateConfirmation] = useState(false);
     const [showFullSizeModal, setShowFullSizeModal] = useState(false);
+    const [isInView, setIsInView] = useState(false);
+    const [hasLoadedPreview, setHasLoadedPreview] = useState(false);
+    const cardRef = useRef<HTMLDivElement>(null);
 
 
     const loadPreview = async () => {
         const identifierForPreview = document.file_id || document.document_id;
-        
+
         if (!identifierForPreview) {
             console.warn('DocumentStorageCard: No identifier available for preview (document_id or file_id). Document:', document);
             setPreviewContent({ error: 'Preview not available (no identifier)' });
@@ -212,21 +261,73 @@ export default function DocumentStorageCard({
             return;
         }
 
-        try {
-            setIsLoading(true);
-            const preview = await getDocumentPreview(identifierForPreview);
-            setPreviewContent(preview);
-        } catch (error) {
-            console.error('Error getting document preview:', error);
-            setPreviewContent({ error: 'Failed to load preview' });
-        } finally {
-            setIsLoading(false);
-        }
+
+        // Add to queue to prevent overloading
+        previewQueue.add(async () => {
+            try {
+                setIsLoading(true);
+                const preview = await getDocumentPreview(identifierForPreview);
+                setPreviewContent(preview);
+                setHasLoadedPreview(true);
+            } catch (error) {
+                console.error('Error getting document preview:', error);
+                setPreviewContent({ error: 'Failed to load preview' });
+            } finally {
+                setIsLoading(false);
+            }
+        });
     };
 
+    // Set up Intersection Observer for lazy loading
     useEffect(() => {
-        loadPreview();
-    }, [document.document_id, document.file_id]);
+        if (!cardRef.current) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsInView(true);
+                    }
+                });
+            },
+            {
+                // Start loading when card is 100px away from viewport
+                rootMargin: '100px',
+                threshold: 0.01
+            }
+        );
+
+        observer.observe(cardRef.current);
+
+        return () => {
+            if (cardRef.current) {
+                observer.unobserve(cardRef.current);
+            }
+        };
+    }, []);
+
+    // Load preview only when in view and hasn't been loaded yet
+    useEffect(() => {
+        if (isInView && !hasLoadedPreview && !isLoading) {
+            loadPreview();
+        }
+        // Only depend on isInView and hasLoadedPreview to prevent unnecessary reloads
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isInView, hasLoadedPreview]);
+
+    // Force refresh preview when forceRefresh prop changes for THIS document
+    useEffect(() => {
+        if (forceRefresh && forceRefresh > 0 && hasLoadedPreview && isInView) {
+            // Clear existing preview and reload
+            setPreviewContent({});
+            setHasLoadedPreview(false);
+            // Add small delay to ensure cache is cleared
+            setTimeout(() => {
+                loadPreview();
+            }, 100);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [forceRefresh]);
 
     const handleDelete = async () => {
         if (!onDelete) return;
@@ -238,7 +339,7 @@ export default function DocumentStorageCard({
         
         try {
             setIsLoading(true);
-            await onDelete(document);
+            onDelete(document);
         } catch (error) {
             console.error('Error deleting document:', error);
         } finally {
@@ -257,7 +358,7 @@ export default function DocumentStorageCard({
         
         try {
             setIsLoading(true);
-            await onDisassociate(document);
+            onDisassociate(document);
         } catch (error) {
             console.error('Error disassociating document:', error);
         } finally {
@@ -320,7 +421,9 @@ export default function DocumentStorageCard({
 
     return (<>
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
-            <div className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
+            <div
+                ref={cardRef}
+                className={`bg-white rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
                 }`}
                 onClick={(isContentDocument || !document.file_id) && onClick ? (e) => {
                     // Prevent click event if it's coming from the delete button
@@ -379,19 +482,23 @@ export default function DocumentStorageCard({
                     </div>
 
                     {/* Preview Content */}
-                    {isLoading ? (
+                    {!isInView ? (
+                        <div className="mt-4 flex justify-center h-48 items-center bg-gray-50 rounded">
+                            <span className="text-sm text-gray-400">Loading...</span>
+                        </div>
+                    ) : isLoading ? (
                         <div className="mt-4 flex justify-center">
                             <Spinner size="sm" />
                         </div>
                     ) : previewContent.error ? (
                         <div className="mt-4 flex items-center space-x-2 text-[rgb(var(--color-text-500))]">
                             <EyeOff className="w-4 h-4" />
-                            <p className="text-sm">Preview unavailable</p>
+                            <p className="text-sm">{t('documents.previewUnavailable', 'Preview unavailable')}</p>
                         </div>
                     ) : (
                         <div className="mt-4 preview-container">
                             {document.mime_type?.startsWith('video/') ? (
-                                <VideoPreviewComponent 
+                                <VideoPreviewComponent
                                     fileId={document.file_id || ''}
                                     mimeType={document.mime_type || ''}
                                     fileName={document.document_name}
@@ -470,7 +577,7 @@ export default function DocumentStorageCard({
                             className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-text-900))] hover:bg-[rgb(var(--color-border-100))] inline-flex items-center"
                         >
                             <Download className="w-4 h-4 mr-2" />
-                            Download
+                            {t('documents.download', 'Download')}
                         </Button>
                         {showDisassociate && onDisassociate && (
                             <Button
@@ -485,7 +592,7 @@ export default function DocumentStorageCard({
                                 className="text-[rgb(var(--color-text-600))] hover:text-orange-600 hover:bg-orange-50 inline-flex items-center"
                             >
                                 <Unlink className="w-4 h-4 mr-2" />
-                                {isLoading ? 'Removing...' : 'Remove'}
+                                {isLoading ? t('common.loading') : t('documents.remove', 'Remove')}
                             </Button>
                         )}
                         {onDelete && (
@@ -501,7 +608,7 @@ export default function DocumentStorageCard({
                                 className="text-[rgb(var(--color-text-600))] hover:text-red-600 hover:bg-red-50 inline-flex items-center"
                             >
                                 <Trash2 className="w-4 h-4 mr-2" />
-                                {isLoading ? 'Deleting...' : 'Delete'}
+                                {isLoading ? t('common.loading') : t('documents.delete', 'Delete')}
                             </Button>
                         )}
                     </div>
@@ -610,5 +717,21 @@ export default function DocumentStorageCard({
         )}
         </>
     );
-
 }
+
+// Memoize the component to prevent unnecessary re-renders
+// Only re-render if document, forceRefresh, or callback props change
+const DocumentStorageCard = memo(DocumentStorageCardComponent, (prevProps, nextProps) => {
+    return (
+        prevProps.document.document_id === nextProps.document.document_id &&
+        prevProps.forceRefresh === nextProps.forceRefresh &&
+        prevProps.onDelete === nextProps.onDelete &&
+        prevProps.onDisassociate === nextProps.onDisassociate &&
+        prevProps.onClick === nextProps.onClick &&
+        prevProps.hideActions === nextProps.hideActions &&
+        prevProps.showDisassociate === nextProps.showDisassociate &&
+        prevProps.isContentDocument === nextProps.isContentDocument
+    );
+});
+
+export default DocumentStorageCard;

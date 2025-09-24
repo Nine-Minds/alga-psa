@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import dynamic from 'next/dynamic';
+import { useTranslation } from '@/lib/i18n/client';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import { ArrowUpDown } from 'lucide-react';
@@ -88,6 +89,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   isSubmitting = false,
   overrides = {},
 }) => {
+  const { t } = useTranslation('clientPortal');
   // Ensure we have a stable id for interactive element ids
   const compId = id || `ticket-${ticket.ticket_id || 'unknown'}-conversation`;
   const [showEditor, setShowEditor] = useState(false);
@@ -245,7 +247,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Build tab content array based on hideInternalTab
   const baseTabs = [
     {
-      label: "Client",
+      label: t('tickets.conversation.client', 'Client'),
       content: (
         <ReflectionContainer id={`${id}-client-visible-comments`} label="Client Comments">
           {renderComments(conversations.filter(conversation => !conversation.is_internal))}
@@ -253,19 +255,19 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
-      label: "Internal",
+      label: t('tickets.conversation.internal', 'Internal'),
       content: (
         <ReflectionContainer id={`${id}-internal-comments`} label="Internal Comments">
-          <h3 className="text-lg font-medium mb-4">Internal Comments</h3>
+          <h3 className="text-lg font-medium mb-4">{t('tickets.conversation.internalComments', 'Internal Comments')}</h3>
           {renderComments(conversations.filter(conversation => conversation.is_internal))}
         </ReflectionContainer>
       )
     },
     {
-      label: "Resolution",
+      label: t('tickets.conversation.resolution', 'Resolution'),
       content: (
         <ReflectionContainer id={`${id}-resolution-comments`} label="Resolution Comments">
-          <h3 className="text-lg font-medium mb-4">Resolution Comments</h3>
+          <h3 className="text-lg font-medium mb-4">{t('tickets.conversation.resolutionComments', 'Resolution Comments')}</h3>
           {renderComments(conversations.filter(conversation => 
             conversation.is_resolution && (!hideInternalTab || !conversation.is_internal)
           ))}
@@ -273,7 +275,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       )
     },
     {
-      label: "All Comments",
+      label: t('tickets.conversation.allComments', 'All Comments'),
       content: (
         <ReflectionContainer id={`${id}-all-comments`} label="All Comments">
           {renderComments(hideInternalTab
@@ -289,10 +291,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   // Filter and order tabs based on hideInternalTab
   let tabContent;
   if (hideInternalTab) {
-    // For client portal, only show "All Comments" and "Resolution" tabs
+    // For client portal, only show "All Comments" (index 3) and "Resolution" (index 2) tabs
     tabContent = [
-      baseTabs.find(tab => tab.label === "All Comments")!,
-      baseTabs.find(tab => tab.label === "Resolution")!
+      baseTabs[3], // All Comments
+      baseTabs[2]  // Resolution
     ];
   } else {
     // For MSP portal, show all tabs
@@ -309,13 +311,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     <div {...withDataAutomationId({ id })} className={`${styles['card']}`}>
       <div className="p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">Comments</h2>
+          <h2 className="text-xl font-bold">{t('tickets.conversation.comments', 'Comments')}</h2>
           {!showEditor && (
             <Button
               id={`${compId}-show-comment-editor-btn`}
               onClick={handleAddCommentClick}
             >
-              Add Comment
+              {t('tickets.conversation.addComment', 'Add Comment')}
             </Button>
           )}
         </div>
@@ -343,7 +345,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                         onCheckedChange={setIsInternalToggle}
                       />
                       <Label htmlFor={`${id}-internal-toggle`}>
-                        {isInternalToggle ? "Marked as Internal" : "Mark as Internal"}
+                        {isInternalToggle ? t('tickets.conversation.markedAsInternal', 'Marked as Internal') : t('tickets.conversation.markAsInternal', 'Mark as Internal')}
                       </Label>
                     </div>
                   )}
@@ -354,7 +356,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                       onCheckedChange={setIsResolutionToggle}
                     />
                     <Label htmlFor={`${id}-resolution-toggle`}>
-                      {isResolutionToggle ? "Marked as Resolution" : "Mark as Resolution"}
+                      {isResolutionToggle ? t('tickets.conversation.markedAsResolution', 'Marked as Resolution') : t('tickets.conversation.markAsResolution', 'Mark as Resolution')}
                     </Label>
                   </div>
                 </div>
@@ -373,7 +375,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     onClick={handleSubmitComment}
                     disabled={isSubmitting}
                   >
-                    {isSubmitting ? 'Adding...' : 'Add Comment'}
+                    {isSubmitting ? t('common.loading') : t('tickets.conversation.addComment', 'Add Comment')}
                   </Button>
                   <Button
                     id={`${compId}-cancel-comment-btn`}
@@ -381,7 +383,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                     variant="outline"
                     disabled={isSubmitting}
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </Button>
                 </div>
               </div>
@@ -390,7 +392,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         </div>
         <CustomTabs
           tabs={tabContent}
-          defaultTab={hideInternalTab ? "All Comments" : "Client"}
+          defaultTab={hideInternalTab ? t('tickets.conversation.allComments', 'All Comments') : t('tickets.conversation.client', 'Client')}
           tabStyles={tabStyles}
           onTabChange={onTabChange}
           extraContent={
@@ -400,7 +402,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               className="flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent px-4 py-2 ml-auto"
             >
               <ArrowUpDown className="w-4 h-4" />
-              <span>{reverseOrder ? "Newest first" : "Oldest first"}</span>
+              <span>{reverseOrder ? t('tickets.conversation.newestFirst', 'Newest first') : t('tickets.conversation.oldestFirst', 'Oldest first')}</span>
             </button>
           }
         />

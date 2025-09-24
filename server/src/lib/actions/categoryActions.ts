@@ -136,25 +136,5 @@ export async function deleteServiceCategory(categoryId: string): Promise<void> {
   }
 }
 
-export async function getTicketCategoriesByChannel(channelId: string): Promise<ITicketCategory[]> {
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
-    }
-
-    const categories = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('categories')
-        .where({
-          channel_id: channelId,
-          tenant: tenant
-        })
-        .orderBy('category_name', 'asc');
-    });
-
-    return categories;
-  } catch (error) {
-    console.error('Error fetching ticket categories:', error);
-    throw new Error('Failed to fetch ticket categories');
-  }
-}
+// Removed getTicketCategoriesByChannel - this function has been moved to ticketCategoryActions.ts
+// and updated to return both categories and channel configuration

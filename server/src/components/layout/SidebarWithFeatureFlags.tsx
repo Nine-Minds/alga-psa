@@ -8,6 +8,7 @@ import { menuItems as originalMenuItems, bottomMenuItems, MenuItem } from '../..
 interface SidebarWithFeatureFlagsProps {
   sidebarOpen: boolean;
   setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  disableTransition?: boolean;
 }
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -57,5 +58,12 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     });
   }, [isBillingEnabled, isAdvancedFeaturesEnabled]);
 
-  return <Sidebar {...props} menuItems={menuItems} bottomMenuItems={bottomMenuItems} />;
+  return (
+    <Sidebar
+      {...props}
+      menuItems={menuItems}
+      bottomMenuItems={bottomMenuItems}
+      disableTransition={props.disableTransition}
+    />
+  );
 }

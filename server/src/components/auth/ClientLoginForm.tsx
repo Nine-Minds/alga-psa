@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -19,6 +20,7 @@ interface ClientLoginFormProps {
 }
 
 export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired }: ClientLoginFormProps) {
+  const { t } = useTranslation('clientPortal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -36,7 +38,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     id: 'client-email-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Email',
+    label: t('auth.email', 'Email'),
     value: email,
     required: true,
     parentId: 'client-login-form'
@@ -47,7 +49,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     id: 'client-password-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Password',
+    label: t('auth.password', 'Password'),
     value: password,
     required: true,
     parentId: 'client-login-form'
@@ -57,7 +59,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const updateSignInButton = useRegisterUIComponent<ButtonComponent>({
     id: 'client-sign-in-button',
     type: 'button',
-    label: isLoading ? 'Signing in...' : 'Sign In',
+    label: isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In'),
     disabled: isLoading,
     parentId: 'client-login-form'
   });
@@ -69,7 +71,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
     updateEmailField({ value: email });
     updatePasswordField({ value: password });
     updateSignInButton({ 
-      label: isLoading ? 'Signing in...' : 'Sign In',
+      label: isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In'),
       disabled: isLoading 
     });
   }, [email, password, isLoading, updateEmailField, updatePasswordField, updateSignInButton]);
@@ -91,13 +93,13 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         if (result.error === '2FA_REQUIRED') {
           onTwoFactorRequired();
         } else {
-          onError('Invalid email or password')
+          onError(t('auth.invalidCredentials', 'Invalid email or password'))
         }
       } else if (result?.url) {
         window.location.href = result.url
       }
     } catch (error) {
-      onError('An error occurred during login')
+      onError(t('auth.loginError', 'An error occurred during login'))
       console.error('Login error:', error)
     } finally {
       setIsLoading(false)
@@ -112,12 +114,12 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       {...withDataAutomationId({ id: 'client-login-form' })}
     >
       <div className="space-y-2">
-        <Label htmlFor="client-email-field">Email</Label>
+        <Label htmlFor="client-email-field">{t('auth.email', 'Email')}</Label>
         <Input
           id="client-email-field"
           name="email"
           type="email"
-          placeholder="Enter your email"
+          placeholder={t('auth.emailPlaceholder', 'Enter your email')}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
@@ -128,13 +130,13 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
       </div>
 
       <div className="space-y-2 relative">
-        <Label htmlFor="client-password-field">Password</Label>
+        <Label htmlFor="client-password-field">{t('auth.password', 'Password')}</Label>
         <div className="relative">
           <Input
             id="client-password-field"
             name="password"
             type={showPassword ? "text" : "password"}
-            placeholder="Enter your password"
+            placeholder={t('auth.passwordPlaceholder', 'Enter your password')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             disabled={isLoading}
@@ -165,7 +167,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
           {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >
-          Forgot your password?
+          {t('auth.forgotPassword', 'Forgot your password?')}
         </Link>
       </div>
 
@@ -175,7 +177,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
         className="w-full"
         disabled={isLoading}
       >
-        {isLoading ? 'Signing in...' : 'Sign In'}
+        {isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In')}
       </Button>
     </form>
   )

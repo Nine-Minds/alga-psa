@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
 import { IWorkflowActionDependency } from './workflowInterfaces';
-import { withTransaction } from '@shared/db/index';
+import { withTransaction } from '@alga-psa/shared/db/index';
 
 /**
  * Model for workflow_action_dependencies table

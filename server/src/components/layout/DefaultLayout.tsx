@@ -7,25 +7,54 @@ import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import Drawer from 'server/src/components/ui/Drawer';
 import { DrawerProvider } from "server/src/context/DrawerContext";
-import { useUserPreference } from 'server/src/hooks/useUserPreference';
+import { getPreferenceWithFallback, savePreference } from 'server/src/lib/utils/cookies';
 
+interface DefaultLayoutProps {
+  children: React.ReactNode;
+}
 
-export default function DefaultLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function DefaultLayout({ children }: DefaultLayoutProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerContent] = useState<React.ReactNode>(null);
+  const [mounted, setMounted] = useState(false);
 
-  // Use the custom hook for sidebar preference
-  const { value: sidebarCollapsed, setValue: setSidebarCollapsed } = useUserPreference<boolean>(
-    'sidebar_collapsed',
-    {
-      defaultValue: false,
-      localStorageKey: 'sidebar_collapsed',
-      debounceMs: 300 // Faster feedback for UI preferences
-    }
-  );
+  // Always start with default state during SSR to avoid hydration mismatch
+  const [sidebarCollapsed, setSidebarCollapsedState] = useState<boolean>(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isHidden, setIsHidden] = useState(true); // Hide sidebar until we know the preference
 
-  // Convert collapsed state to open state for component compatibility
-  const sidebarOpen = !sidebarCollapsed;
+  // Load the actual preference after mount
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Get the actual preference using the helper
+    const preferredState = getPreferenceWithFallback('sidebar_collapsed', 'false') === 'true';
+
+    // Update state without transition
+    setSidebarCollapsedState(preferredState);
+
+    // Show sidebar and enable transitions after next frame
+    requestAnimationFrame(() => {
+      setIsHidden(false);
+      requestAnimationFrame(() => {
+        setIsInitialLoad(false);
+      });
+    });
+  }, []);
+
+  const setSidebarCollapsed = (value: boolean | ((prev: boolean) => boolean)) => {
+    setSidebarCollapsedState(prev => {
+      const newValue = typeof value === 'function' ? value(prev) : value;
+
+      // Save using the helper
+      savePreference('sidebar_collapsed', String(newValue));
+
+      return newValue;
+    });
+  };
+
+  // Prevent hydration mismatch by using default value until mounted
+  const sidebarOpen = mounted ? !sidebarCollapsed : false;
   const setSidebarOpen = (open: boolean | ((prev: boolean) => boolean)) => {
     if (typeof open === 'function') {
       setSidebarCollapsed(prev => !open(!prev));
@@ -45,6 +74,10 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   const [auth_token, setAuthToken] = useState('');
   const [isTitleLocked] = useState(false);
 
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -88,7 +121,13 @@ export default function DefaultLayout({ children }: Readonly<{ children: React.R
   return (
     <DrawerProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100">
-        <SidebarWithFeatureFlags sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+        <div style={{ opacity: isHidden ? 0 : 1, pointerEvents: isHidden ? 'none' : 'auto' }}>
+          <SidebarWithFeatureFlags
+            sidebarOpen={sidebarOpen}
+            setSidebarOpen={setSidebarOpen}
+            disableTransition={isInitialLoad}
+          />
+        </div>
         <div className="flex-1 flex flex-col overflow-hidden">
           <Header
             sidebarOpen={sidebarOpen}

@@ -8,7 +8,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
-export type EntityType = 'user' | 'contact' | 'company';
+export type EntityType = 'user' | 'contact' | 'company' | 'tenant';
 
 interface UploadResult {
   success: boolean;

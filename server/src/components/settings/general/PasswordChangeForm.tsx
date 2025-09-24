@@ -8,6 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
 import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;
@@ -15,6 +16,7 @@ interface PasswordChangeFormProps {
 }
 
 export default function PasswordChangeForm({ onSuccess, className }: PasswordChangeFormProps) {
+  const { t } = useTranslation('clientPortal');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,36 +47,36 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
     setPasswordSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
+      setPasswordError(t('profile.changePassword.passwordMismatch', 'New passwords do not match'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError(t('profile.changePassword.requirements', 'Password must be at least 8 characters'));
       return;
     }
 
     try {
       const result = await changeOwnPassword(currentPassword, newPassword);
       if (result.success) {
-        setPasswordSuccess('Password changed successfully');
+        setPasswordSuccess(t('profile.changePassword.success', 'Password changed successfully'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setNeedsPasswordReset(false);
         onSuccess?.();
       } else {
-        setPasswordError(result.error || 'Failed to change password');
+        setPasswordError(result.error || t('profile.changePassword.error', 'Failed to change password'));
       }
     } catch (err) {
-      setPasswordError('An error occurred while changing password');
+      setPasswordError(t('profile.changePassword.error', 'Failed to change password'));
     }
   };
 
   return (
     <Card className={className}>
       <CardHeader>
-        <CardTitle>Change Password</CardTitle>
+        <CardTitle>{t('profile.changePassword.title', 'Change Password')}</CardTitle>
       </CardHeader>
       <CardContent>
         {needsPasswordReset && (
@@ -82,7 +84,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
         )}
         <form onSubmit={handleChangePassword} className="space-y-4">
           <div>
-            <Label htmlFor="currentPassword">Current Password</Label>
+            <Label htmlFor="currentPassword">{t('profile.changePassword.current', 'Current Password')}</Label>
             <div className="relative">
               <Input
                 id="currentPassword"
@@ -107,7 +109,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             </div>
           </div>
           <div>
-            <Label htmlFor="newPassword">New Password</Label>
+            <Label htmlFor="newPassword">{t('profile.changePassword.new', 'New Password')}</Label>
             <div className="relative">
               <Input
                 id="newPassword"
@@ -132,7 +134,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             </div>
           </div>
           <div>
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Label htmlFor="confirmPassword">{t('profile.changePassword.confirm', 'Confirm New Password')}</Label>
             <div className="relative">
               <Input
                 id="confirmPassword"
@@ -163,7 +165,7 @@ export default function PasswordChangeForm({ onSuccess, className }: PasswordCha
             <div className="text-green-500 text-sm">{passwordSuccess}</div>
           )}
           <Button id="change-password-button" type="submit" variant="default">
-            Change Password
+            {t('profile.changePassword.submit', 'Change Password')}
           </Button>
         </form>
       </CardContent>

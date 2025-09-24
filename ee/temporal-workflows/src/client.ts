@@ -1,6 +1,6 @@
 import { Client, Connection } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
-import { tenantCreationWorkflow, healthCheckWorkflow } from './workflows/index.js';
+import { tenantCreationWorkflow, healthCheckWorkflow } from './workflows/index';
 import type { 
   TenantCreationInput, 
   TenantCreationResult,

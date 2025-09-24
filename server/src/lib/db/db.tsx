@@ -95,13 +95,13 @@ async function destroySharedPool() {
   }
 }
 
-process.on('SIGTERM', async () => {
-  await destroySharedPool();
-  process.exit(0);
-});
+// process.on('SIGTERM', async () => {
+//   await destroySharedPool();
+//   process.exit(0);
+// });
 
-process.on('SIGINT', async () => {
-  await destroySharedPool();
-  process.exit(0);
-});
+// process.on('SIGINT', async () => {
+//   await destroySharedPool();
+//   process.exit(0);
+// });
 // --- End Simplified Architecture ---

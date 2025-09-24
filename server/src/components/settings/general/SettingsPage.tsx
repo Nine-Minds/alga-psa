@@ -1,7 +1,7 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
@@ -11,6 +11,8 @@ import { Input } from "server/src/components/ui/Input";
 import { Button } from "server/src/components/ui/Button";
 import GeneralSettings from 'server/src/components/settings/general/GeneralSettings';
 import UserManagement from 'server/src/components/settings/general/UserManagement';
+import CEClientPortalSettings from 'server/src/components/settings/general/ClientPortalSettings';
+import EEClientPortalSettings from '@ee/components/settings/general/ClientPortalSettings';
 import SettingsTabSkeleton from 'server/src/components/ui/skeletons/SettingsTabSkeleton';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
@@ -51,6 +53,10 @@ const SettingsPage = (): JSX.Element =>  {
   // The webpack alias will resolve to either the EE component or empty component
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+  const ClientPortalSettingsComponent = isEEAvailable
+    ? EEClientPortalSettings
+    : CEClientPortalSettings;
+
   // Dynamically load the Extensions (Manage) component using stable package paths
   const DynamicExtensionsComponent = isEEAvailable ? dynamic(() =>
     import('@product/settings-extensions/entry').then(mod => mod.DynamicExtensionsComponent),
@@ -70,37 +76,66 @@ const SettingsPage = (): JSX.Element =>  {
   ) : () => null;
 
   // Map URL slugs (kebab-case) to Tab Labels
-  const slugToLabelMap: Record<string, string> = {
-    'general': 'General',
-    'users': 'Users',
-    'teams': 'Teams',
-    'ticketing': 'Ticketing',
+  const slugToLabelMap = useMemo<Record<string, string>>(() => ({
+    general: 'General',
+    'client-portal': 'Client Portal',
+    users: 'Users',
+    teams: 'Teams',
+    ticketing: 'Ticketing',
     'interaction-types': 'Interaction Types',
-    'notifications': 'Notifications',
+    notifications: 'Notifications',
     'time-entry': 'Time Entry',
-    'billing': 'Billing',
-    'tax': 'Tax',
-    'email': 'Email',
-    'integrations': 'Integrations',
-    ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
-  };
+    billing: 'Billing',
+    tax: 'Tax',
+    email: 'Email',
+    integrations: 'Integrations',
+    ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
+  }), [isEEAvailable]);
 
-  // Determine initial active tab based on URL parameter
-  // Hooks are now valid again
-  const [activeTab, setActiveTab] = React.useState<string>(() => {
-    const initialLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    return initialLabel || 'General'; // Default to 'General' if param is missing or invalid
-  });
+  const labelToSlugMap = useMemo<Record<string, string>>(() => (
+    Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>)
+  ), [slugToLabelMap]);
 
-  // Update active tab when URL parameter changes
-  React.useEffect(() => {
-    const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'General';
-    // Only update state if the derived tab is different from the current state
-    if (targetTab !== activeTab) {
-       setActiveTab(targetTab);
+  const initialTabLabel = useMemo(() => {
+    const mappedLabel = tabParam
+      ? slugToLabelMap[tabParam.toLowerCase()]
+      : undefined;
+
+    return mappedLabel ?? 'General';
+  }, [tabParam, slugToLabelMap]);
+
+  // Initialize with URL-aware default so SSR and hydration stay aligned
+  const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
+  const hydrationReadyRef = useRef(false);
+
+  // Handle client-side initialization
+  useEffect(() => {
+    hydrationReadyRef.current = true;
+
+    const targetLabel = initialTabLabel;
+
+    setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
+  }, [initialTabLabel]);
+
+  const handleTabChange = useCallback((tab: string) => {
+    if (!hydrationReadyRef.current) {
+      return;
     }
-  }, [tabParam]); // Correct dependency array
+
+    setActiveTab(tab);
+
+    const urlSlug = labelToSlugMap[tab];
+    const newUrl = urlSlug && urlSlug !== 'general'
+      ? `/msp/settings?tab=${urlSlug}`
+      : '/msp/settings';
+
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', newUrl);
+    }
+  }, [labelToSlugMap]);
 
   const baseTabContent: TabContent[] = [
     {
@@ -118,6 +153,10 @@ const SettingsPage = (): JSX.Element =>  {
           </CardContent>
         </Card>
       ),
+    },
+    {
+      label: "Client Portal",
+      content: <ClientPortalSettingsComponent />,
     },
     {
       label: "Users",
@@ -297,25 +336,7 @@ const SettingsPage = (): JSX.Element =>  {
       <CustomTabs
         tabs={tabContent}
         defaultTab={activeTab}
-        onTabChange={(tab) => {
-          // Map Tab Labels back to URL slugs (kebab-case)
-          const labelToSlugMap: Record<string, string> = Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-            acc[label] = slug;
-            return acc;
-          }, {} as Record<string, string>);
-
-          // Re-add immediate state update on tab change
-          setActiveTab(tab);
-
-          const urlSlug = labelToSlugMap[tab];
-          // Update URL using pushState to avoid full page reload
-          // Default to '/msp/settings' if the slug is 'general' or not found
-          const newUrl = urlSlug && urlSlug !== 'general'
-            ? `/msp/settings?tab=${urlSlug}`
-            : '/msp/settings';
-
-          window.history.pushState({}, '', newUrl);
-        }}
+        onTabChange={handleTabChange}
       />
     </div>
   );

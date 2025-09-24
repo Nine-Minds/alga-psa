@@ -30,6 +30,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ReflectionParentContext } from 'server/src/types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface CompanyLocationsProps {
   companyId: string;
@@ -101,18 +102,21 @@ const LocationDetailField: React.FC<{
 };
 
 const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete, onSetDefault, formatAddress, showActions = true }) => {
+  const { t } = useTranslation('common');
+  const locationLabel = location.location_name || t('companies.locations.card.unnamed', 'Unnamed Location');
+  const formattedAddress = formatAddress(location);
 
   return (
     <ReflectionContainer 
       id={`location-card-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
-      label={location.location_name || 'Unnamed Location'}
+      label={locationLabel}
     >
       <Card className="relative">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              {location.location_name || 'Unnamed Location'}
+              {locationLabel}
               {location.is_default && (
                 <Star className="h-4 w-4 text-yellow-500 fill-current" />
               )}
@@ -127,7 +131,8 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                     variant="ghost"
                     size="sm"
                     onClick={() => onSetDefault(location.location_id)}
-                    title="Set as default"
+                    title={t('companies.locations.card.setDefault', 'Set as default')}
+                    aria-label={t('companies.locations.card.setDefault', 'Set as default')}
                   >
                     <Star className="h-4 w-4" />
                   </Button>
@@ -139,6 +144,8 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                   variant="ghost"
                   size="sm"
                   onClick={() => onEdit(location)}
+                  title={t('companies.locations.card.edit', 'Edit location')}
+                  aria-label={t('companies.locations.card.edit', 'Edit location')}
                 >
                   <Edit2 className="h-4 w-4" />
                 </Button>
@@ -150,6 +157,8 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                   size="sm"
                   onClick={() => onDelete(location.location_id)}
                   className="text-red-600 hover:text-red-700"
+                  title={t('companies.locations.card.delete', 'Delete location')}
+                  aria-label={t('companies.locations.card.delete', 'Delete location')}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -162,44 +171,46 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
           <div className="text-sm text-gray-600">
             <LocationDetailField
               id={`address-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
-              label="Address"
-              value={formatAddress(location)}
-              helperText="Full address for this location"
+              label={t('companies.locations.card.addressLabel', 'Address')}
+              value={formattedAddress}
+              helperText={t('companies.locations.card.addressHelper', 'Full address for this location')}
             >
-              {formatAddress(location)}
+              {formattedAddress}
             </LocationDetailField>
             
             {location.phone && (
               <LocationDetailField
                 id={`phone-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
-                label="Phone"
+                label={t('companies.locations.card.phoneLabel', 'Phone')}
                 value={location.phone}
-                helperText="Phone number for this location"
+                helperText={t('companies.locations.card.phoneHelper', 'Phone number for this location')}
               >
-                <div className="mt-1">Phone: {location.phone}</div>
+                <div className="mt-1">
+                  {t('companies.locations.card.phoneValue', 'Phone: {{phone}}', { phone: location.phone })}
+                </div>
               </LocationDetailField>
             )}
             
             {location.email && (
               <LocationDetailField
                 id={`email-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
-                label="Email"
+                label={t('companies.locations.card.emailLabel', 'Email')}
                 value={location.email}
-                helperText="Email address for this location"
+                helperText={t('companies.locations.card.emailHelper', 'Email address for this location')}
               >
-                Email: {location.email}
+                {t('companies.locations.card.emailValue', 'Email: {{email}}', { email: location.email })}
               </LocationDetailField>
             )}
             
             <div className="flex gap-4 mt-2">
               {location.is_billing_address && (
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
-                  Billing
+                  {t('companies.locations.card.billingTag', 'Billing')}
                 </span>
               )}
               {location.is_shipping_address && (
                 <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">
-                  Shipping
+                  {t('companies.locations.card.shippingTag', 'Shipping')}
                 </span>
               )}
             </div>
@@ -207,9 +218,9 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
             {location.notes && (
               <LocationDetailField
                 id={`notes-display-${location.location_name ? sanitizeIdString(location.location_name) : location.location_id}`}
-                label="Notes"
+                label={t('companies.locations.card.notesLabel', 'Notes')}
                 value={location.notes}
-                helperText="Additional notes for this location"
+                helperText={t('companies.locations.card.notesHelper', 'Additional notes for this location')}
               >
                 <div className="mt-2 text-xs text-gray-500">
                   {location.notes}
@@ -244,6 +255,7 @@ const initialFormData: LocationFormData = {
 };
 
 export default function CompanyLocations({ companyId, isEditing }: CompanyLocationsProps) {
+  const { t } = useTranslation('common');
   const [locations, setLocations] = useState<ICompanyLocation[]>([]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingLocation, setEditingLocation] = useState<ICompanyLocation | null>(null);
@@ -263,126 +275,126 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     id: 'location-name-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Location Name',
+    label: t('companies.locations.form.locationName', 'Location Name'),
     value: formData.location_name,
-    helperText: 'Name for this location (e.g., Main Office, Warehouse)'
+    helperText: t('companies.locations.form.locationNameHelper', 'Name for this location (e.g., Main Office, Warehouse)')
   });
 
   const { automationIdProps: addressLine1FieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'address-line1-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Address Line 1',
+    label: t('companies.locations.form.addressLine1', 'Address Line 1'),
     value: formData.address_line1,
-    helperText: 'Primary address line (required)'
+    helperText: t('companies.locations.form.addressLine1Helper', 'Primary address line (required)')
   });
 
   const { automationIdProps: addressLine2FieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'address-line2-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Address Line 2',
+    label: t('companies.locations.form.addressLine2', 'Address Line 2'),
     value: formData.address_line2,
-    helperText: 'Additional address information (optional)'
+    helperText: t('companies.locations.form.addressLine2Helper', 'Additional address information (optional)')
   });
 
   const { automationIdProps: cityFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'city-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'City',
+    label: t('companies.locations.form.city', 'City'),
     value: formData.city,
-    helperText: 'City name (required)'
+    helperText: t('companies.locations.form.cityHelper', 'City name (required)')
   });
 
   const { automationIdProps: stateProvinceFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'state-province-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'State/Province',
+    label: t('companies.locations.form.stateProvince', 'State/Province'),
     value: formData.state_province,
-    helperText: 'State or province name'
+    helperText: t('companies.locations.form.stateProvinceHelper', 'State or province name')
   });
 
   const { automationIdProps: postalCodeFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'postal-code-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Postal Code',
+    label: t('companies.locations.form.postalCode', 'Postal Code'),
     value: formData.postal_code,
-    helperText: 'ZIP or postal code'
+    helperText: t('companies.locations.form.postalCodeHelper', 'ZIP or postal code')
   });
 
   const { automationIdProps: countryPickerFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'country-picker-field',
     type: 'formField',
     fieldType: 'select',
-    label: 'Country',
+    label: t('companies.locations.form.country', 'Country'),
     value: formData.country_code,
-    helperText: 'Select country (required)'
+    helperText: t('companies.locations.form.countryHelper', 'Select country (required)')
   });
 
   const { automationIdProps: phoneFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'phone-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Phone',
+    label: t('companies.locations.form.phone', 'Phone'),
     value: formData.phone,
-    helperText: 'Phone number for this location'
+    helperText: t('companies.locations.form.phoneHelper', 'Phone number for this location')
   });
 
   const { automationIdProps: emailFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'email-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Email',
+    label: t('companies.locations.form.email', 'Email'),
     value: formData.email,
-    helperText: 'Email address for this location'
+    helperText: t('companies.locations.form.emailHelper', 'Email address for this location')
   });
 
   const { automationIdProps: taxRegionFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'tax-region-field',
     type: 'formField',
     fieldType: 'select',
-    label: 'Tax Region',
+    label: t('companies.locations.form.taxRegion', 'Tax Region'),
     value: formData.region_code || 'none',
-    helperText: 'Select the applicable tax region'
+    helperText: t('companies.locations.form.taxRegionHelper', 'Select the applicable tax region')
   });
 
   const { automationIdProps: notesFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'notes-field',
     type: 'formField',
     fieldType: 'textField',
-    label: 'Notes',
+    label: t('companies.locations.form.notes', 'Notes'),
     value: formData.notes,
-    helperText: 'Additional notes about this location'
+    helperText: t('companies.locations.form.notesHelper', 'Additional notes about this location')
   });
 
   const { automationIdProps: isDefaultFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'is-default-field',
     type: 'formField',
     fieldType: 'checkbox',
-    label: 'Default Location',
-    value: formData.is_default ? 'Yes' : 'No',
-    helperText: 'Mark this as the default location for the company'
+    label: t('companies.locations.form.defaultLocation', 'Default Location'),
+    value: formData.is_default ? t('common.yes', 'Yes') : t('common.no', 'No'),
+    helperText: t('companies.locations.form.defaultLocationHelper', 'Mark this as the default location for the company')
   });
 
   const { automationIdProps: isBillingAddressFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'is-billing-address-field',
     type: 'formField',
     fieldType: 'checkbox',
-    label: 'Billing Address',
-    value: formData.is_billing_address ? 'Yes' : 'No',
-    helperText: 'Use this location as the billing address'
+    label: t('companies.locations.form.billingAddress', 'Billing Address'),
+    value: formData.is_billing_address ? t('common.yes', 'Yes') : t('common.no', 'No'),
+    helperText: t('companies.locations.form.billingAddressHelper', 'Use this location as the billing address')
   });
 
   const { automationIdProps: isShippingAddressFieldProps } = useAutomationIdAndRegister<FormFieldComponent>({
     id: 'is-shipping-address-field',
     type: 'formField',
     fieldType: 'checkbox',
-    label: 'Shipping Address',
-    value: formData.is_shipping_address ? 'Yes' : 'No',
-    helperText: 'Use this location as the shipping address'
+    label: t('companies.locations.form.shippingAddress', 'Shipping Address'),
+    value: formData.is_shipping_address ? t('common.yes', 'Yes') : t('common.no', 'No'),
+    helperText: t('companies.locations.form.shippingAddressHelper', 'Use this location as the shipping address')
   });
 
 
@@ -399,8 +411,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     } catch (error) {
       console.error('Error loading tax regions:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load tax regions',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.loadTaxRegions', 'Failed to load tax regions'),
         variant: 'destructive',
       });
     }
@@ -415,8 +427,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     } catch (error) {
       console.error('Error loading countries:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load countries',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.loadCountries', 'Failed to load countries'),
         variant: 'destructive',
       });
     } finally {
@@ -431,8 +443,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     } catch (error) {
       console.error('Error loading locations:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load company locations',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.loadLocations', 'Failed to load company locations'),
         variant: 'destructive',
       });
     }
@@ -485,13 +497,13 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     
     // Validate required fields
     if (!formData.address_line1.trim()) {
-      errors.push('Address Line 1');
+      errors.push(t('companies.locations.form.addressLine1', 'Address Line 1'));
     }
     if (!formData.city.trim()) {
-      errors.push('City');
+      errors.push(t('companies.locations.form.city', 'City'));
     }
     if (!formData.country_code || !formData.country_name) {
-      errors.push('Country');
+      errors.push(t('companies.locations.form.country', 'Country'));
     }
     
     if (errors.length > 0) {
@@ -513,14 +525,14 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         const { company_id, ...updateData } = locationData;
         await updateCompanyLocation(editingLocation.location_id, updateData);
         toast({
-          title: 'Success',
-          description: 'Location updated successfully',
+          title: t('status.success', 'Success'),
+          description: t('companies.locations.success.update', 'Location updated successfully'),
         });
       } else {
         await createCompanyLocation(companyId, locationData);
         toast({
-          title: 'Success',
-          description: 'Location created successfully',
+          title: t('status.success', 'Success'),
+          description: t('companies.locations.success.create', 'Location created successfully'),
         });
       }
       
@@ -529,8 +541,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     } catch (error) {
       console.error('Error saving location:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to save location',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.save', 'Failed to save location'),
         variant: 'destructive',
       });
     } finally {
@@ -552,15 +564,15 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     try {
       await deleteCompanyLocation(locationToDelete.location_id);
       toast({
-        title: 'Success',
-        description: 'Location deleted successfully',
+        title: t('status.success', 'Success'),
+        description: t('companies.locations.success.delete', 'Location deleted successfully'),
       });
       await loadLocations();
     } catch (error) {
       console.error('Error deleting location:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to delete location',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.delete', 'Failed to delete location'),
         variant: 'destructive',
       });
     } finally {
@@ -573,15 +585,15 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
     try {
       await setDefaultCompanyLocation(locationId);
       toast({
-        title: 'Success',
-        description: 'Default location updated',
+        title: t('status.success', 'Success'),
+        description: t('companies.locations.success.setDefault', 'Default location updated'),
       });
       await loadLocations();
     } catch (error) {
       console.error('Error setting default location:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to set default location',
+        title: t('status.error', 'Error'),
+        description: t('companies.locations.errors.setDefault', 'Failed to set default location'),
         variant: 'destructive',
       });
     }
@@ -641,7 +653,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
       return (
         <div className="text-center py-4 text-gray-500">
           <MapPin className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-          <p className="text-sm">No locations added yet</p>
+          <p className="text-sm">{t('companies.locations.empty.title', 'No locations added yet')}</p>
         </div>
       );
     }
@@ -665,10 +677,10 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
 
   // Editing mode - show full management interface
   return (
-    <ReflectionContainer id="company-locations-manager" label="Company Locations Manager">
+    <ReflectionContainer id="company-locations-manager" label={t('companies.locations.managerLabel', 'Company Locations Manager')}>
       <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium">Locations</h3>
+          <h3 className="text-lg font-medium">{t('companies.locations.listTitle', 'Locations')}</h3>
           <Button 
             id="add-company-location-button"
             variant="default"
@@ -677,7 +689,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             size="sm"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Add Location
+            {t('companies.locations.buttons.add', 'Add Location')}
           </Button>
         </div>
       </div>
@@ -690,8 +702,10 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
         }}
-        className="max-w-2xl max-h-[90vh] overflow-y-auto"
-        title={editingLocation ? 'Edit Location' : 'Add New Location'}
+        className="max-w-2xl max-h-[90vh]"
+        title={editingLocation
+          ? t('companies.locations.dialog.editTitle', 'Edit Location')
+          : t('companies.locations.dialog.addTitle', 'Add New Location')}
       >
         <DialogContent>
           
@@ -699,7 +713,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             {hasAttemptedSubmit && validationErrors.length > 0 && (
               <Alert variant="destructive" className="mb-4">
                 <AlertDescription>
-                  <p className="font-medium mb-2">Please fill in the required fields:</p>
+                  <p className="font-medium mb-2">{t('companies.locations.validation.title', 'Please fill in the required fields:')}</p>
                   <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((err, index) => (
                       <li key={index}>{err}</li>
@@ -709,7 +723,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               </Alert>
             )}
             <div {...locationNameFieldProps}>
-              <Label htmlFor="location-name-input">Location Name</Label>
+              <Label htmlFor="location-name-input">{t('companies.locations.form.locationName', 'Location Name')}</Label>
               <Input
                 id="location-name-input"
                 value={formData.location_name}
@@ -717,12 +731,12 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   setFormData(prev => ({ ...prev, location_name: e.target.value }));
                   clearErrorIfSubmitted();
                 }}
-                placeholder="e.g., Main Office, Warehouse"
+                placeholder={t('companies.locations.form.placeholder.locationName', 'e.g., Main Office, Warehouse')}
               />
             </div>
             
             <div {...addressLine1FieldProps}>
-              <Label htmlFor="address-line1-input">Address Line 1 *</Label>
+              <Label htmlFor="address-line1-input">{t('companies.locations.form.addressLine1', 'Address Line 1')} *</Label>
               <Input
                 id="address-line1-input"
                 value={formData.address_line1}
@@ -730,14 +744,14 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   setFormData(prev => ({ ...prev, address_line1: e.target.value }));
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Enter address *"
+                placeholder={t('companies.locations.form.placeholder.addressLine1', 'Enter address *')}
                 className={hasAttemptedSubmit && !formData.address_line1.trim() ? 'border-red-500' : ''}
                 required
               />
             </div>
             
             <div {...addressLine2FieldProps}>
-              <Label htmlFor="address-line2-input">Address Line 2</Label>
+              <Label htmlFor="address-line2-input">{t('companies.locations.form.addressLine2', 'Address Line 2')}</Label>
               <Input
                 id="address-line2-input"
                 value={formData.address_line2}
@@ -746,7 +760,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             </div>
             
             <div>
-              <Label htmlFor="address-line3-input">Address Line 3</Label>
+              <Label htmlFor="address-line3-input">{t('companies.locations.form.addressLine3', 'Address Line 3')}</Label>
               <Input
                 id="address-line3-input"
                 value={formData.address_line3}
@@ -756,7 +770,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             
             <div className="grid grid-cols-2 gap-4">
               <div {...cityFieldProps}>
-                <Label htmlFor="city-input">City *</Label>
+                <Label htmlFor="city-input">{t('companies.locations.form.city', 'City')} *</Label>
                 <Input
                   id="city-input"
                   value={formData.city}
@@ -764,14 +778,14 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                     setFormData(prev => ({ ...prev, city: e.target.value }));
                     clearErrorIfSubmitted();
                   }}
-                  placeholder="Enter city *"
+                  placeholder={t('companies.locations.form.placeholder.city', 'Enter city *')}
                   className={hasAttemptedSubmit && !formData.city.trim() ? 'border-red-500' : ''}
                   required
                 />
               </div>
               
               <div {...stateProvinceFieldProps}>
-                <Label htmlFor="state-province-input">State/Province</Label>
+                <Label htmlFor="state-province-input">{t('companies.locations.form.stateProvince', 'State/Province')}</Label>
                 <Input
                   id="state-province-input"
                   value={formData.state_province}
@@ -780,7 +794,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               </div>
               
               <div {...postalCodeFieldProps}>
-                <Label htmlFor="postal-code-input">Postal Code</Label>
+                <Label htmlFor="postal-code-input">{t('companies.locations.form.postalCode', 'Postal Code')}</Label>
                 <Input
                   id="postal-code-input"
                   value={formData.postal_code}
@@ -789,7 +803,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               </div>
               
               <div {...countryPickerFieldProps}>
-                <Label htmlFor="country-picker">Country *</Label>
+                <Label htmlFor="country-picker">{t('companies.locations.form.country', 'Country')} *</Label>
                 <div className={hasAttemptedSubmit && (!formData.country_code || !formData.country_name) ? 'ring-1 ring-red-500 rounded-lg' : ''}>
                   <CountryPicker
                     data-automation-id="country-picker"
@@ -800,7 +814,9 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                     }}
                     countries={countries}
                     disabled={isLoadingCountries || isLoading}
-                    placeholder={isLoadingCountries ? "Loading countries..." : "Select Country *"}
+                    placeholder={isLoadingCountries
+                      ? t('companies.locations.form.placeholder.loadingCountries', 'Loading countries...')
+                      : t('companies.locations.form.placeholder.country', 'Select Country *')}
                     buttonWidth="full"
                   />
                 </div>
@@ -808,7 +824,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               
               <div {...phoneFieldProps}>
                 <PhoneInput
-                  label="Phone"
+                  label={t('companies.locations.form.phone', 'Phone')}
                   value={formData.phone || ''}
                   onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
                   countryCode={formData.country_code}
@@ -818,7 +834,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
               </div>
               
               <div {...emailFieldProps}>
-                <Label htmlFor="email-input">Email</Label>
+                <Label htmlFor="email-input">{t('companies.locations.form.email', 'Email')}</Label>
                 <Input
                   id="email-input"
                   type="email"
@@ -829,24 +845,24 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
             </div>
             
             <div {...taxRegionFieldProps}>
-              <Label htmlFor="tax-region-select">Tax Region</Label>
+              <Label htmlFor="tax-region-select">{t('companies.locations.form.taxRegion', 'Tax Region')}</Label>
               <CustomSelect
                 id="tax-region-select"
                 value={formData.region_code || 'none'}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, region_code: value === 'none' ? null : value }))}
                 options={[
-                  { value: 'none', label: 'Select a tax region...' },
+                  { value: 'none', label: t('companies.locations.form.placeholder.taxRegionOption', 'Select a tax region...') },
                   ...taxRegions.map(region => ({
                     value: region.region_code,
                     label: region.region_name
                   }))
                 ]}
-                placeholder="Select a tax region..."
+                placeholder={t('companies.locations.form.placeholder.taxRegion', 'Select a tax region...')}
               />
             </div>
             
             <div {...notesFieldProps}>
-              <Label htmlFor="notes-input">Notes</Label>
+              <Label htmlFor="notes-input">{t('companies.locations.form.notes', 'Notes')}</Label>
               <TextArea
                 id="notes-input"
                 value={formData.notes}
@@ -862,7 +878,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   checked={formData.is_default}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_default: checked }))}
                 />
-                <Label htmlFor="is-default-switch">Default Location</Label>
+                <Label htmlFor="is-default-switch">{t('companies.locations.form.defaultLocation', 'Default Location')}</Label>
               </div>
               
               <div className="flex items-center space-x-2" {...isBillingAddressFieldProps}>
@@ -871,7 +887,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   checked={formData.is_billing_address}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_billing_address: checked }))}
                 />
-                <Label htmlFor="is-billing-address-switch">Billing Address</Label>
+                <Label htmlFor="is-billing-address-switch">{t('companies.locations.form.billingAddress', 'Billing Address')}</Label>
               </div>
               
               <div className="flex items-center space-x-2" {...isShippingAddressFieldProps}>
@@ -880,7 +896,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                   checked={formData.is_shipping_address}
                   onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_shipping_address: checked }))}
                 />
-                <Label htmlFor="is-shipping-address-switch">Shipping Address</Label>
+                <Label htmlFor="is-shipping-address-switch">{t('companies.locations.form.shippingAddress', 'Shipping Address')}</Label>
               </div>
             </div>
             
@@ -897,7 +913,7 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 disabled={isLoading}
                 type="button"
               >
-                Cancel
+                {t('actions.cancel', 'Cancel')}
               </Button>
               <Button 
                 id="save-location-button"
@@ -906,7 +922,9 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
                 disabled={isLoading}
                 className={!formData.address_line1 || !formData.city || !formData.country_name ? 'opacity-50' : ''}
               >
-                {isLoading ? 'Saving...' : 'Save Location'}
+                {isLoading
+                  ? t('status.saving', 'Saving...')
+                  : t('companies.locations.buttons.save', 'Save Location')}
               </Button>
             </DialogFooter>
           </form>
@@ -922,10 +940,18 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
           setLocationToDelete(null);
         }}
         onConfirm={confirmDeleteLocation}
-        title="Delete Location"
-        message={locationToDelete ? `Are you sure you want to delete the location "${locationToDelete.location_name || 'Unnamed Location'}"? This action cannot be undone.` : ""}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
+        title={t('companies.locations.dialog.deleteTitle', 'Delete Location')}
+        message={locationToDelete
+          ? t(
+              'companies.locations.dialog.deleteMessage',
+              'Are you sure you want to delete the location "{{name}}"? This action cannot be undone.',
+              {
+                name: locationToDelete.location_name || t('companies.locations.card.unnamed', 'Unnamed Location'),
+              }
+            )
+          : ''}
+        confirmLabel={t('actions.delete', 'Delete')}
+        cancelLabel={t('actions.cancel', 'Cancel')}
       />
       
       {/* Locations List */}
@@ -944,8 +970,8 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         {locations.length === 0 && (
           <div className="text-center py-8 text-gray-500">
             <MapPin className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No locations added yet</p>
-            <p className="text-sm">Click "Add Location" to get started</p>
+            <p>{t('companies.locations.empty.title', 'No locations added yet')}</p>
+            <p className="text-sm">{t('companies.locations.empty.description', 'Click "Add Location" to get started')}</p>
           </div>
         )}
       </div>

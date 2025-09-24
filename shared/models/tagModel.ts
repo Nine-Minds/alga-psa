@@ -7,7 +7,7 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
-import { 
+import {
   TaggedEntityType,
   TagDefinition,
   TagMapping,
@@ -57,7 +57,7 @@ export const tagMappingSchema = z.object({
 // Re-export interfaces for backward compatibility
 // =============================================================================
 
-export type { 
+export type {
   TaggedEntityType,
   TagDefinition,
   TagMapping,
@@ -80,20 +80,20 @@ export function generateTagColors(text: string): { background: string; text: str
   for (let i = 0; i < text.length; i++) {
     hash = text.charCodeAt(i) + ((hash << 5) - hash);
   }
-  
+
   // Generate background color
   const hue = Math.abs(hash) % 360;
   const saturation = 70; // Fixed saturation for consistency
   const lightness = 85; // Light background
-  
+
   const background = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-  
+
   // Convert to hex for storage
   const backgroundHex = hslToHex(hue, saturation, lightness);
-  
+
   // Text color should be dark for light backgrounds
   const textHex = '#2C3E50'; // Dark gray for readability
-  
+
   return {
     background: backgroundHex,
     text: textHex
@@ -140,18 +140,18 @@ export function validateTagText(tagText: string): ValidationResult {
   if (!tagText || !tagText.trim()) {
     return { valid: false, errors: ['Tag text is required'] };
   }
-  
+
   const trimmedText = tagText.trim();
-  
+
   if (trimmedText.length > 50) {
     return { valid: false, errors: ['Tag text too long (max 50 characters)'] };
   }
-  
+
   // Allow letters, numbers, spaces, and common punctuation
   if (!/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\[\]{};':",./<>?]+$/.test(trimmedText)) {
     return { valid: false, errors: ['Tag text contains invalid characters'] };
   }
-  
+
   return { valid: true, data: trimmedText };
 }
 
@@ -170,13 +170,13 @@ export class TagModel {
       if (!textValidation.valid) {
         return textValidation;
       }
-      
+
       // Validate with schema
       const validatedData = validateData(tagFormSchema, {
         ...input,
         tag_text: textValidation.data
       });
-      
+
       return { valid: true, data: validatedData };
     } catch (error) {
       return {
@@ -208,25 +208,25 @@ export class TagModel {
         tenant
       })
       .first();
-    
+
     if (existing) {
       return existing;
     }
-    
+
     // Generate colors if not provided
     let backgroundColor = options?.background_color;
     let textColor = options?.text_color;
-    
+
     if (!backgroundColor || !textColor) {
       const colors = generateTagColors(tagText);
       backgroundColor = backgroundColor || colors.background;
       textColor = textColor || colors.text;
     }
-    
+
     // Create new definition
     const tagId = uuidv4();
     const now = new Date().toISOString();
-    
+
     const definition: TagDefinition = {
       tag_id: tagId,
       tenant,
@@ -237,9 +237,9 @@ export class TagModel {
       text_color: textColor,
       created_at: now
     };
-    
+
     await trx('tag_definitions').insert(definition);
-    
+
     return definition;
   }
 
@@ -256,7 +256,7 @@ export class TagModel {
   ): Promise<TagMapping> {
     const mappingId = uuidv4();
     const now = new Date().toISOString();
-    
+
     const mapping: TagMapping = {
       mapping_id: mappingId,
       tenant,
@@ -266,9 +266,9 @@ export class TagModel {
       created_by: createdBy || null,
       created_at: now
     };
-    
+
     await trx('tag_mappings').insert(mapping);
-    
+
     return mapping;
   }
 
@@ -285,9 +285,9 @@ export class TagModel {
     if (!validation.valid) {
       throw new Error(`Tag validation failed: ${validation.errors?.join('; ')}`);
     }
-    
+
     const tagData = validation.data;
-    
+
     // Get or create tag definition
     const definition = await this.getOrCreateTagDefinition(
       tagData.tag_text,
@@ -300,7 +300,7 @@ export class TagModel {
         text_color: tagData.text_color
       }
     );
-    
+
     // Check if mapping already exists
     const existingMapping = await trx('tag_mappings')
       .where({
@@ -310,7 +310,7 @@ export class TagModel {
         tenant
       })
       .first();
-    
+
     if (existingMapping) {
       return {
         tag_id: definition.tag_id,
@@ -322,7 +322,7 @@ export class TagModel {
         created_at: existingMapping.created_at
       };
     }
-    
+
     // Create mapping
     const mapping = await this.createTagMapping(
       definition.tag_id,
@@ -332,7 +332,7 @@ export class TagModel {
       trx,
       tagData.created_by
     );
-    
+
     return {
       tag_id: definition.tag_id,
       mapping_id: mapping.mapping_id,
@@ -424,7 +424,7 @@ export class TagModel {
     trx: Knex.Transaction
   ): Promise<void> {
     const now = new Date().toISOString();
-    
+
     await trx('tag_definitions')
       .where({
         tag_id: tagId,
@@ -459,7 +459,7 @@ export class TagModel {
       })
       .count('* as count')
       .first();
-    
+
     return parseInt(String(result?.count || 0), 10) > 0;
   }
 

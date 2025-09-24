@@ -1,4 +1,4 @@
-import { getAdminConnection } from '@shared/db/admin.js';
+import { getAdminConnection } from '@shared/db/admin';
 
 async function testConnection() {
   console.log('Environment variables:');

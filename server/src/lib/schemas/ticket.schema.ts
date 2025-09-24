@@ -8,10 +8,14 @@ export const ticketFormSchema = z.object({
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
     assigned_to: z.string().uuid().nullable(),
-    priority_id: z.string().uuid(),
+    priority_id: z.string().uuid().nullable(), // Required - used for both custom and ITIL priorities
     description: z.string(),
     category_id: z.string().uuid().nullable(),
     subcategory_id: z.string().uuid().nullable(),
+    // ITIL-specific fields (for priority calculation)
+    itil_impact: z.number().int().min(1).max(5).optional(),
+    itil_urgency: z.number().int().min(1).max(5).optional(),
+    itil_priority_level: z.number().int().min(1).max(5).optional(),
 });
 
 export const createTicketFromAssetSchema = z.object({
@@ -43,7 +47,11 @@ export const ticketSchema = z.object({
     updated_at: z.string().nullable(),
     closed_at: z.string().nullable(),
     attributes: z.record(z.unknown()).nullable(),
-    priority_id: z.string().uuid()
+    priority_id: z.string().uuid().nullable(), // Used for both custom and ITIL priorities
+    // ITIL-specific fields (for priority calculation)
+    itil_impact: z.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
 });
 
 export const ticketUpdateSchema = ticketSchema.partial().omit({
@@ -92,7 +100,11 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     category_name: z.string(),
     company_name: z.string(),
     entered_by_name: z.string(),
-    assigned_to_name: z.string().nullable()
+    assigned_to_name: z.string().nullable(),
+    // ITIL-specific fields for list items (for priority calculation)
+    itil_impact: z.number().int().min(1).max(5).nullable().optional(),
+    itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+    itil_priority_level: z.number().int().min(1).max(5).nullable().optional()
 });
 
 export const ticketListFiltersSchema = z.object({

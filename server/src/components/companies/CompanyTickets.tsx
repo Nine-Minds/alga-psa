@@ -184,8 +184,8 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       }
 
       openDrawer(
-        <TicketDetails 
-          isInDrawer={true} 
+        <TicketDetails
+          isInDrawer={true}
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
           initialChannel={ticketData.channel}
@@ -202,6 +202,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           initialCategories={ticketData.categories}
           initialCompanies={ticketData.companies}
           initialLocations={ticketData.locations}
+          currentUser={currentUser}
         />
       );
     } catch (error) {
@@ -258,16 +259,17 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   }, [tickets]);
 
 
-  const columns = useMemo(() => 
+  const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
+      channels: initialChannels,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on company page
-    }), [initialCategories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
+    }), [initialCategories, initialChannels, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {

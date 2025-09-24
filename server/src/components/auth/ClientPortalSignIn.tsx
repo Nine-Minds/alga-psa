@@ -8,8 +8,10 @@ import TwoFactorInput from 'server/src/components/auth/TwoFA';
 import Alert from 'server/src/components/auth/Alert';
 import { AlertProps } from 'server/src/interfaces';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
+import { useTranslation } from '@/lib/i18n/client';
 
 export default function ClientPortalSignIn() {
+  const { t } = useTranslation('clientPortal');
   const [isAlertOpen, setIsAlertOpen] = useState(false);
   const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
   const [isOpen2FA, setIsOpen2FA] = useState(false);
@@ -24,19 +26,19 @@ export default function ClientPortalSignIn() {
     if (error === 'AccessDenied') {
       setAlertInfo({
         type: 'error',
-        title: 'Access Denied',
-        message: 'You do not have permission to access the client portal.'
+        title: t('auth.accessDeniedTitle', 'Access Denied'),
+        message: t('auth.accessDeniedMessage', 'You do not have permission to access the client portal.')
       });
       setIsAlertOpen(true);
     } else if (registered === 'true') {
       setAlertInfo({
         type: 'success',
-        title: 'Registration Successful',
-        message: 'Your account has been created. Please sign in.'
+        title: t('auth.registrationSuccessTitle', 'Registration Successful'),
+        message: t('auth.registrationSuccessMessage', 'Your account has been created. Please sign in.')
       });
       setIsAlertOpen(true);
     }
-  }, [error, registered]);
+  }, [error, registered, t]);
 
   const handle2FA = (twoFactorCode: string) => {
     setIsOpen2FA(false);
@@ -82,7 +84,7 @@ export default function ClientPortalSignIn() {
             className="rounded-full mr-4"
           />
           <div>
-            <span className="text-2xl font-bold text-gray-800">Client Portal</span>
+            <span className="text-2xl font-bold text-gray-800">{t('nav.clientPortal', 'Client Portal')}</span>
           </div>
         </div>
       </div>
@@ -95,38 +97,38 @@ export default function ClientPortalSignIn() {
               <Ticket className="w-24 h-24 text-indigo-600" />
             </div>
             <h1 className="text-4xl font-bold text-gray-800 mb-4 text-center">
-              Welcome to Your Client Portal
+              {t('auth.welcomeTitle', 'Welcome to Your Client Portal')}
             </h1>
             <p className="text-lg text-gray-600 mb-8 text-center">
-              Manage your support tickets and stay connected
+              {t('auth.welcomeSubtitle', 'Manage your support tickets and stay connected')}
             </p>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <Ticket className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">Submit Support Tickets</h3>
-                  <p className="text-gray-600 text-sm">Create and manage your support requests</p>
+                  <h3 className="text-gray-800 font-semibold">{t('auth.features.submitTickets.title', 'Submit Support Tickets')}</h3>
+                  <p className="text-gray-600 text-sm">{t('auth.features.submitTickets.description', 'Create and manage your support requests')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <Eye className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">Track Ticket Status</h3>
-                  <p className="text-gray-600 text-sm">Monitor progress in real-time</p>
+                  <h3 className="text-gray-800 font-semibold">{t('auth.features.trackStatus.title', 'Track Ticket Status')}</h3>
+                  <p className="text-gray-600 text-sm">{t('auth.features.trackStatus.description', 'Monitor progress in real-time')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <History className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">Ticket History</h3>
-                  <p className="text-gray-600 text-sm">Access your complete support history</p>
+                  <h3 className="text-gray-800 font-semibold">{t('auth.features.ticketHistory.title', 'Ticket History')}</h3>
+                  <p className="text-gray-600 text-sm">{t('auth.features.ticketHistory.description', 'Access your complete support history')}</p>
                 </div>
               </div>
               <div className="flex items-start space-x-3">
                 <FileText className="w-6 h-6 text-indigo-600 mt-1 flex-shrink-0" />
                 <div>
-                  <h3 className="text-gray-800 font-semibold">Documentation Access</h3>
-                  <p className="text-gray-600 text-sm">View shared documents and resources</p>
+                  <h3 className="text-gray-800 font-semibold">{t('auth.features.documentation.title', 'Documentation Access')}</h3>
+                  <p className="text-gray-600 text-sm">{t('auth.features.documentation.description', 'View shared documents and resources')}</p>
                 </div>
               </div>
             </div>
@@ -138,10 +140,10 @@ export default function ClientPortalSignIn() {
           <Card className="max-w-md w-full bg-white shadow-xl">
             <CardHeader className="space-y-1">
               <CardTitle className="text-2xl font-bold text-center">
-                Client Portal Login
+                {t('auth.signIn', 'Sign In')}
               </CardTitle>
               <CardDescription className="text-center">
-                Please enter your credentials to access your account.
+                {t('auth.signInDescription', 'Please enter your credentials to access your account.')}
               </CardDescription>
             </CardHeader>
             <CardContent>
