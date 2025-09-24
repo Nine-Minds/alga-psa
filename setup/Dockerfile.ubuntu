@@ -30,7 +30,7 @@ COPY server/package.json ./server/
 
 # 4) Install root workspaces (will create node_modules and workspace links)
 #    Use npm ci if lockfile is present
-RUN npm ci --workspaces || npm install --workspaces
+RUN npm ci --workspaces --no-optional || npm install --workspaces --no-optional
 
 # 5) Build the shared package so dist/* is available for setup scripts
 COPY shared/ ./shared/
@@ -67,4 +67,3 @@ ENV APP_ENV=development \
     DB_PORT=5432
 
 ENTRYPOINT ["./entrypoint.sh"]
-

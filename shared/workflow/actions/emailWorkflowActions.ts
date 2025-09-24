@@ -635,7 +635,7 @@ export async function parseEmailReplyBody(
   },
   config?: Record<string, any>
 ): Promise<any> {
-  const module = await import('../../../server/src/lib/email/replyParser');
+  const module = await import('@shared/lib/email/replyParser');
   const parseEmailReply = module.parseEmailReply as (input: { text: string; html?: string }, cfg?: Record<string, any>) => any;
   return parseEmailReply({
     text: body?.text || '',

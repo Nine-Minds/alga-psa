@@ -13,9 +13,10 @@
       "@shared/workflow/*": ["./workflow/*"],
       "@shared/core/*": ["./core/*"],
       "@shared/types/*": ["./types/*"],
+      "@shared/lib/*": ["./lib/*"],
       "@alga-psa/shared/*": ["./*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "lib/**/*.ts"],
   "exclude": ["node_modules", "dist", "workflow/workflows/system-email-processing-workflow.ts"]
 }
