@@ -20,26 +20,45 @@ exports.up = function(knex) {
     })
     .alterTable('standard_channels', function(table) {
       // Configuration for standard channel templates
-      table.enum('category_type', ['custom', 'itil']).defaultTo('custom').comment('Type of categories: custom or ITIL');
-      table.enum('priority_type', ['custom', 'itil']).defaultTo('custom').comment('Type of priorities: custom or ITIL');
-
-      table.index(['category_type']);
-      table.index(['priority_type']);
+      // Citus requires adding columns and constraints separately
+      table.text('category_type').defaultTo('custom').comment('Type of categories: custom or ITIL');
+      table.text('priority_type').defaultTo('custom').comment('Type of priorities: custom or ITIL');
     })
+    .raw(`
+      ALTER TABLE standard_channels
+      ADD CONSTRAINT standard_channels_category_type_check
+      CHECK (category_type IN ('custom', 'itil'));
+    `)
+    .raw(`
+      ALTER TABLE standard_channels
+      ADD CONSTRAINT standard_channels_priority_type_check
+      CHECK (priority_type IN ('custom', 'itil'));
+    `)
+    .raw('CREATE INDEX idx_standard_channels_category_type ON standard_channels(category_type);')
+    .raw('CREATE INDEX idx_standard_channels_priority_type ON standard_channels(priority_type);')
     // Add ITIL configuration to tenant channels (distributed table)
     .alterTable('channels', function(table) {
       // Category and Priority type configuration
-      table.enum('category_type', ['custom', 'itil']).defaultTo('custom').comment('Type of categories: custom or ITIL');
-      table.enum('priority_type', ['custom', 'itil']).defaultTo('custom').comment('Type of priorities: custom or ITIL');
+      // Citus requires adding columns and constraints separately
+      table.text('category_type').defaultTo('custom').comment('Type of categories: custom or ITIL');
+      table.text('priority_type').defaultTo('custom').comment('Type of priorities: custom or ITIL');
 
       // ITIL-specific display configuration
       table.boolean('display_itil_impact').defaultTo(false).comment('Show ITIL Impact field in forms');
       table.boolean('display_itil_urgency').defaultTo(false).comment('Show ITIL Urgency field in forms');
-
-      // Add indexes with tenant column for Citus distribution
-      table.index(['tenant', 'category_type']);
-      table.index(['tenant', 'priority_type']);
     })
+    .raw(`
+      ALTER TABLE channels
+      ADD CONSTRAINT channels_category_type_check
+      CHECK (category_type IN ('custom', 'itil'));
+    `)
+    .raw(`
+      ALTER TABLE channels
+      ADD CONSTRAINT channels_priority_type_check
+      CHECK (priority_type IN ('custom', 'itil'));
+    `)
+    .raw('CREATE INDEX idx_channels_tenant_category_type ON channels(tenant, category_type);')
+    .raw('CREATE INDEX idx_channels_tenant_priority_type ON channels(tenant, priority_type);')
     // Mark tenant priorities and categories that came from ITIL standards (distributed tables)
     .alterTable('priorities', function(table) {
       table.boolean('is_from_itil_standard').defaultTo(false).comment('Whether copied from ITIL standard');
@@ -72,20 +91,22 @@ exports.down = function(knex) {
       table.dropColumn('is_from_itil_standard');
       table.dropColumn('itil_priority_level');
     })
+    .raw('DROP INDEX IF EXISTS idx_channels_tenant_category_type;')
+    .raw('DROP INDEX IF EXISTS idx_channels_tenant_priority_type;')
+    .raw('ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_category_type_check;')
+    .raw('ALTER TABLE channels DROP CONSTRAINT IF EXISTS channels_priority_type_check;')
     .alterTable('channels', function(table) {
-      table.dropIndex(['tenant', 'category_type']);
-      table.dropIndex(['tenant', 'priority_type']);
-
       table.dropColumn('category_type');
       table.dropColumn('priority_type');
       table.dropColumn('display_itil_impact');
       table.dropColumn('display_itil_urgency');
     })
     // Remove from standard tables
+    .raw('DROP INDEX IF EXISTS idx_standard_channels_category_type;')
+    .raw('DROP INDEX IF EXISTS idx_standard_channels_priority_type;')
+    .raw('ALTER TABLE standard_channels DROP CONSTRAINT IF EXISTS standard_channels_category_type_check;')
+    .raw('ALTER TABLE standard_channels DROP CONSTRAINT IF EXISTS standard_channels_priority_type_check;')
     .alterTable('standard_channels', function(table) {
-      table.dropIndex(['category_type']);
-      table.dropIndex(['priority_type']);
-
       table.dropColumn('category_type');
       table.dropColumn('priority_type');
     })
