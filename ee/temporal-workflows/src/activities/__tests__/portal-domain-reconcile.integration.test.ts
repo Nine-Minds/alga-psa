@@ -165,7 +165,7 @@ vi.mock('@kubernetes/client-node', () => {
   };
 });
 
-describe('reconcilePortalDomains', () => {
+describe('applyPortalDomainResources', () => {
   beforeEach(() => {
     virtualServices.length = 0;
     certificates.length = 0;
@@ -173,9 +173,9 @@ describe('reconcilePortalDomains', () => {
   });
 
   it('routes virtual service traffic to the app once certificate succeeds', async () => {
-    const { reconcilePortalDomains } = await import('../portal-domain-activities.js');
+    const { applyPortalDomainResources } = await import('../portal-domain-activities.js');
 
-    const result = await reconcilePortalDomains({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
+    const result = await applyPortalDomainResources({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
 
     expect(result.success).toBe(true);
     expect(virtualServices).toHaveLength(1);
@@ -189,9 +189,9 @@ describe('reconcilePortalDomains', () => {
   });
 
   it('creates new manifests and prunes legacy virtual services when the domain changes', async () => {
-    const { reconcilePortalDomains } = await import('../portal-domain-activities.js');
+    const { applyPortalDomainResources } = await import('../portal-domain-activities.js');
 
-    const result = await reconcilePortalDomains({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
+    const result = await applyPortalDomainResources({ tenantId: 'tenant-success', portalDomainId: 'domain-success' });
 
     expect(result.success).toBe(true);
 

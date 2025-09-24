@@ -4,19 +4,19 @@ import type {
   PortalDomainWorkflowTrigger,
   PortalDomainActivityRecord,
   VerifyCnameResult,
-  ReconcileResult,
+  ApplyPortalDomainResourcesResult,
 } from './types';
 
 const {
   loadPortalDomain,
   markPortalDomainStatus,
   verifyCnameRecord,
-  reconcilePortalDomains,
+  applyPortalDomainResources,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
-  reconcilePortalDomains: (args: { tenantId: string; portalDomainId: string }) => Promise<ReconcileResult>;
+  applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
 }>(
   {
     startToCloseTimeout: '5 minutes',
@@ -55,13 +55,13 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       : record.canonical_host;
 
     if (record.status === 'disabled') {
-      log.info('Domain disabled, ensuring reconciliation for cleanup');
+      log.info('Domain disabled, ensuring resource cleanup');
       await markPortalDomainStatus({
         portalDomainId: record.id,
         status: 'disabled',
-        statusMessage: 'Custom domain disabled. Awaiting reconciliation cleanup.',
+        statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
       });
-      await reconcilePortalDomains({ tenantId: record.tenant, portalDomainId: record.id });
+      await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
       return;
     }
 
@@ -98,13 +98,13 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       statusMessage: 'DNS verified. Preparing Kubernetes resources and HTTP-01 challenge.',
     });
 
-    const reconcile = await reconcilePortalDomains({ tenantId: record.tenant, portalDomainId: record.id });
+    const applyResult = await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
 
-    if (!reconcile.success) {
+    if (!applyResult.success) {
       await markPortalDomainStatus({
         portalDomainId: record.id,
         status: 'certificate_failed',
-        statusMessage: `Failed to reconcile Kubernetes resources: ${reconcile.errors?.join('; ') ?? 'Unknown error'}`,
+        statusMessage: `Failed to apply Kubernetes resources: ${applyResult.errors?.join('; ') ?? 'Unknown error'}`,
       });
       return;
     }
@@ -116,20 +116,42 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     });
   }
 
-  await runOnce(pendingTrigger);
+  const initialTrigger = pendingTrigger;
+  pendingTrigger = undefined;
+  await runOnce(initialTrigger);
+
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
 
   while (true) {
-    const timeoutPromise = sleep('5 minutes');
+    const timeoutPromise = sleep('1 minute');
     await Promise.race([timeoutPromise, reconcileTrigger]);
 
-    if (!pendingTrigger) {
-    log.info('No pending trigger after wake; ending workflow.');
+    if (pendingTrigger) {
+      const triggerToProcess = pendingTrigger;
+      pendingTrigger = undefined;
+      reconcileTrigger = new Trigger<void>();
+      await runOnce(triggerToProcess);
+      continue;
+    }
+
+    const latestRecord = await loadPortalDomain({ portalDomainId: input.portalDomainId });
+
+    if (!latestRecord) {
+      log.warn('Portal domain record missing during wait; ending workflow.', { portalDomainId: input.portalDomainId });
       return;
     }
 
-    const triggerToProcess = pendingTrigger;
-    pendingTrigger = undefined;
-    reconcileTrigger = new Trigger<void>();
-    await runOnce(triggerToProcess);
+    if (terminalStatuses.has(latestRecord.status)) {
+      log.info('Portal domain reached terminal status; ending workflow.', {
+        portalDomainId: input.portalDomainId,
+        status: latestRecord.status,
+      });
+      return;
+    }
+
+    log.info('Portal domain still progressing; continuing wait.', {
+      portalDomainId: input.portalDomainId,
+      status: latestRecord.status,
+    });
   }
 }

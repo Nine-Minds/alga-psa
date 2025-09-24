@@ -15,7 +15,7 @@ import type {
   VerifyCnameInput,
   VerifyCnameResult,
   MarkStatusInput,
-  ReconcileResult,
+  ApplyPortalDomainResourcesResult,
 } from '../workflows/portal-domains/types.js';
 
 const TABLE_NAME = 'portal_domains';
@@ -196,14 +196,14 @@ export async function verifyCnameRecord(input: VerifyCnameInput): Promise<Verify
   };
 }
 
-export async function reconcilePortalDomains(args: { tenantId: string; portalDomainId: string }): Promise<ReconcileResult> {
+export async function applyPortalDomainResources(args: { tenantId: string; portalDomainId: string }): Promise<ApplyPortalDomainResourcesResult> {
   const knex = await getConnection();
   let rows: PortalDomainActivityRecord[] = [];
 
   try {
     rows = await knex<PortalDomainActivityRecord>(TABLE_NAME).select('*');
   } catch (error) {
-    const message = `Failed to load portal domains during reconciliation: ${formatErrorMessage(error)}`;
+    const message = `Failed to load portal domains during resource application: ${formatErrorMessage(error)}`;
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
@@ -340,7 +340,7 @@ export async function reconcilePortalDomains(args: { tenantId: string; portalDom
 
   const appliedCount = desiredFiles.size;
 
-  console.info('[portal-domains] reconcile complete', {
+  console.info('[portal-domains] resource apply complete', {
     tenantId: args.tenantId,
     appliedCount,
     errors: errors.length,
@@ -382,11 +382,11 @@ export function resolveGitConfiguration(): GitConfiguration {
   const token = process.env.GITHUB_ACCESS_TOKEN;
 
   if (!token) {
-    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain reconciliation.');
+    throw new Error('GITHUB_ACCESS_TOKEN environment variable is required for portal domain resource application.');
   }
 
   if (!repoUrl) {
-    throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain reconciliation.');
+    throw new Error('PORTAL_DOMAIN_GIT_REPO environment variable is required for portal domain resource application.');
   }
 
   const url = new URL(repoUrl);

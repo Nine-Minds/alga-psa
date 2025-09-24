@@ -40,7 +40,7 @@ export interface MarkStatusInput {
   verificationDetails?: Record<string, unknown> | null;
 }
 
-export interface ReconcileResult {
+export interface ApplyPortalDomainResourcesResult {
   success: boolean;
   appliedCount: number;
   errors?: string[];
