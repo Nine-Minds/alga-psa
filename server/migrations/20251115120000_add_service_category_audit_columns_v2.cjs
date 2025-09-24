@@ -105,6 +105,8 @@ exports.up = async function up(knex) {
     `);
   }
 
+  // Citus doesn't support ON DELETE SET NULL with distribution key in FK
+  // We'll create the foreign keys without ON DELETE clause
   if (
     (await hasColumn(knex, 'service_categories', 'created_by')) &&
     !(await constraintExists(knex, CREATED_BY_FK))
@@ -113,8 +115,7 @@ exports.up = async function up(knex) {
       ALTER TABLE service_categories
       ADD CONSTRAINT ${CREATED_BY_FK}
       FOREIGN KEY (tenant, created_by)
-      REFERENCES users (tenant, user_id)
-      ON DELETE SET NULL;
+      REFERENCES users (tenant, user_id);
     `);
   }
 
@@ -126,8 +127,7 @@ exports.up = async function up(knex) {
       ALTER TABLE service_categories
       ADD CONSTRAINT ${UPDATED_BY_FK}
       FOREIGN KEY (tenant, updated_by)
-      REFERENCES users (tenant, user_id)
-      ON DELETE SET NULL;
+      REFERENCES users (tenant, user_id);
     `);
   }
 };
