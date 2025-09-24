@@ -5,6 +5,7 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
 const protectedPrefix = '/msp';
+const clientPortalPrefix = '/client-portal';
 
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
@@ -50,13 +51,37 @@ const _middleware = auth((request) => {
     }
   }
 
-  // Protect MSP app routes: redirect unauthenticated users to sign-in
+  // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
+      return NextResponse.redirect(loginUrl);
+    } else if (request.auth.user?.user_type !== 'internal') {
+      // Prevent non-internal users (clients) from accessing MSP portal
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/signin';
+      loginUrl.searchParams.set('error', 'AccessDenied');
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Protect Client Portal routes: validate user type
+  if (pathname.startsWith(clientPortalPrefix)) {
+    if (!request.auth) {
+      // Redirect unauthenticated users to client portal signin
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
+      loginUrl.searchParams.set('callbackUrl', callbackUrl);
+      return NextResponse.redirect(loginUrl);
+    } else if (request.auth.user?.user_type !== 'client') {
+      // Prevent non-client users (internal) from accessing client portal
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      loginUrl.searchParams.set('error', 'AccessDenied');
       return NextResponse.redirect(loginUrl);
     }
   }
