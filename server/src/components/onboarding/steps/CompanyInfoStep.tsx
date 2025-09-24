@@ -5,11 +5,13 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Eye, EyeOff, AlertTriangle } from 'lucide-react';
 import { StepProps } from '../types';
+import { validateEmailAddress, validateContactName, validateCompanyName } from 'server/src/lib/utils/clientFormValidation';
 
 export function CompanyInfoStep({ data, updateData }: StepProps) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   
   // Use a local variable for cleaner code
   const password = data.newPassword || '';
@@ -94,11 +96,29 @@ export function CompanyInfoStep({ data, updateData }: StepProps) {
           id="email"
           type="email"
           value={data.email}
-          onChange={(e) => updateData({ email: e.target.value })}
+          onChange={(e) => {
+            updateData({ email: e.target.value });
+            // Clear error when user starts typing
+            if (fieldErrors.email) {
+              setFieldErrors(prev => ({ ...prev, email: '' }));
+            }
+            // Immediately validate if user enters only spaces
+            if (/^\s+$/.test(e.target.value)) {
+              setFieldErrors(prev => ({ ...prev, email: 'Email address cannot contain only spaces' }));
+            }
+          }}
+          onBlur={() => {
+            const error = validateEmailAddress(data.email || '');
+            setFieldErrors(prev => ({ ...prev, email: error || '' }));
+          }}
           placeholder="john@acmeit.com"
           required
           disabled
+          className={fieldErrors.email ? 'border-red-500' : ''}
         />
+        {fieldErrors.email && (
+          <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
+        )}
         <p className="text-xs text-gray-500">
           This will be used for signing in to your account.
         </p>

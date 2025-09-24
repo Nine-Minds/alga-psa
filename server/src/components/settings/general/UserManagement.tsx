@@ -528,7 +528,14 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="first-name"
                       value={newUser.firstName}
-                      onChange={(e) => handleFieldChange('first_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('first_name', e.target.value);
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, first_name: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('first_name', e.target.value);
+                      }}
                       className={fieldErrors.first_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.first_name.length > 0 && (
@@ -544,7 +551,14 @@ const fetchContacts = async (): Promise<void> => {
                     <Input
                       id="last-name"
                       value={newUser.lastName}
-                      onChange={(e) => handleFieldChange('last_name', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('last_name', e.target.value);
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, last_name: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('last_name', e.target.value);
+                      }}
                       className={fieldErrors.last_name.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.last_name.length > 0 && (
@@ -561,7 +575,14 @@ const fetchContacts = async (): Promise<void> => {
                       id="email"
                       type="email"
                       value={newUser.email}
-                      onChange={(e) => handleFieldChange('email', e.target.value)}
+                      onChange={(e) => {
+                        handleFieldChange('email', e.target.value);
+                        // Professional SaaS approach: Clear errors while typing, don't show new ones
+                        setFieldErrors(prev => ({ ...prev, email: [] }));
+                      }}
+                      onBlur={(e) => {
+                        validateField('email', e.target.value);
+                      }}
                       className={fieldErrors.email.length > 0 ? 'border-red-500' : ''}
                     />
                     {fieldErrors.email.length > 0 && (

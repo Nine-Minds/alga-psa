@@ -18,6 +18,8 @@ interface ConfirmationDialogProps {
   id?: string;
   className?: string;
   dialogClassName?: string;
+  confirmVariant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+  confirmClassName?: string;
 }
 
 export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationProps> = ({
@@ -31,7 +33,9 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
   isConfirming,
   options,
   id,
-  className
+  className,
+  confirmVariant = 'default',
+  confirmClassName
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedValue, setSelectedValue] = useState('');
@@ -96,6 +100,8 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps & AutomationPr
           </Button>
           {/* Render Confirm button second (last focusable element) */}
           <Button
+            variant={confirmVariant}
+            className={confirmClassName}
             onClick={handleConfirm}
             disabled={isConfirming || isProcessing}
             id={`${id}-confirm`}

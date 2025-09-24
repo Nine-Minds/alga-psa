@@ -109,6 +109,19 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     notes: '',
   };
 
+  // Separate country code state for contact phone (independent from location)
+  const [contactCountryCode, setContactCountryCode] = useState(() => {
+    // Default to same locale detection as other forms
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+      return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+    } catch (e) {
+      return 'US';
+    }
+  });
+
   const [formData, setFormData] = useState<CreateCompanyData>(initialFormData);
   const [locationData, setLocationData] = useState<CreateLocationData>(initialLocationData);
   const [contactData, setContactData] = useState<CreateContactData>(initialContactData);
@@ -162,6 +175,17 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
       setFormData(initialFormData);
       setLocationData(initialLocationData);
       setContactData(initialContactData);
+      setContactCountryCode(() => {
+        // Reset to locale detection
+        try {
+          const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+          const parts = locale.split('-');
+          const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+          return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+        } catch (e) {
+          return 'US';
+        }
+      });
       setIsSubmitting(false);
       setError(null);
       setHasAttemptedSubmit(false);
@@ -170,15 +194,41 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }
   }, [open]);
 
-  // Real-time field validation function
-  const validateField = (fieldName: string, value: string, additionalData?: any) => {
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string, additionalData?: any, isSubmitting: boolean = false) => {
     let error: string | null = null;
-    
-    // If field is empty, only validate if it's a required field
-    if (!value || !value.trim()) {
-      // Only company name is required, all other fields are optional
-      if (fieldName === 'company_name') {
-        error = 'Company name is required';
+    const trimmedValue = value.trim();
+
+    // Handle spaces-only input for all fields
+    if (/^\s+$/.test(value)) {
+      const fieldDisplayNames: Record<string, string> = {
+        'company_name': 'Company name',
+        'url': 'Website URL',
+        'industry': 'Industry',
+        'location_email': 'Email address',
+        'location_phone': 'Phone number',
+        'postal_code': 'Postal code',
+        'city': 'City',
+        'state_province': 'State/Province',
+        'address_line1': 'Address',
+        'contact_name': 'Contact name',
+        'contact_email': 'Contact email',
+        'contact_phone': 'Contact phone',
+        'notes': 'Notes'
+      };
+      const displayName = fieldDisplayNames[fieldName] || 'Field';
+      error = `${displayName} cannot contain only spaces`;
+      setFieldErrors(prev => ({
+        ...prev,
+        [fieldName]: error || ''
+      }));
+      return error;
+    }
+
+    // If field is empty, only validate required fields
+    if (!trimmedValue) {
+      if (fieldName === 'company_name' && isSubmitting) {
+        error = 'Please enter a company name to continue';
       }
       // For optional fields, clear any existing errors when empty
       setFieldErrors(prev => ({
@@ -202,7 +252,67 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         error = validateEmailAddress(value);
         break;
       case 'location_phone':
-        error = validatePhoneNumber(value);
+        // Enterprise phone validation - Unicode international support
+        if (trimmedValue) {
+          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+          if (countryCodeOnlyPattern.test(trimmedValue)) {
+            // Don't validate if it's just a country code - user hasn't started typing yet
+            break;
+          }
+
+          // Extract all Unicode digits (supports international number systems)
+          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+          const digitCount = unicodeDigits.length;
+
+          // International phone number validation (ITU-T E.164)
+          if (digitCount > 0 && digitCount < 7) {
+            error = 'Please enter a complete phone number (at least 7 digits)';
+          } else if (digitCount > 15) {
+            error = 'Phone number cannot exceed 15 digits';
+          } else if (digitCount > 0) {
+            // Check for obviously fake patterns using Unicode digits
+            const unicodeDigitString = unicodeDigits.join('');
+            if (/^(.)\1+$/u.test(unicodeDigitString)) {
+              error = 'Please enter a valid phone number';
+            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
+              error = 'Please enter a valid phone number';
+            } else {
+              // Use the existing validator for more complex validation
+              error = validatePhoneNumber(trimmedValue);
+            }
+          }
+        }
+        break;
+      case 'contact_phone':
+        // Same enterprise phone validation for contact phone - Unicode support
+        if (trimmedValue) {
+          // Check if this is just a country code (like "+1 " or "+44 ") with no actual phone number
+          const countryCodeOnlyPattern = /^\+\d{1,4}\s*$/;
+          if (countryCodeOnlyPattern.test(trimmedValue)) {
+            // Don't validate if it's just a country code - user hasn't started typing yet
+            break;
+          }
+
+          // Extract all Unicode digits (supports international number systems)
+          const unicodeDigits = trimmedValue.replace(/[\s\-\(\)\+\.\p{P}\p{S}]/gu, '').match(/\p{N}/gu) || [];
+          const digitCount = unicodeDigits.length;
+
+          if (digitCount > 0 && digitCount < 7) {
+            error = 'Please enter a complete phone number (at least 7 digits)';
+          } else if (digitCount > 15) {
+            error = 'Phone number cannot exceed 15 digits';
+          } else if (digitCount > 0) {
+            const unicodeDigitString = unicodeDigits.join('');
+            if (/^(.)\1+$/u.test(unicodeDigitString)) {
+              error = 'Please enter a valid phone number';
+            } else if (/^(123|111|000|999)/u.test(unicodeDigitString) && digitCount >= 7) {
+              error = 'Please enter a valid phone number';
+            } else {
+              error = validatePhoneNumber(trimmedValue);
+            }
+          }
+        }
         break;
       case 'postal_code':
         error = validatePostalCode(value, additionalData?.countryCode);
@@ -243,36 +353,128 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     if (isSubmitting) return;
 
     setHasAttemptedSubmit(true);
-    
-    // Comprehensive validation
-    const validationResult = validateClientForm({
-      companyName: formData.company_name,
-      websiteUrl: formData.url,
-      industry: formData.properties?.industry,
-      email: locationData.email,
-      phone: locationData.phone,
-      address: locationData.address_line1,
-      city: locationData.city,
-      stateProvince: locationData.state_province,
-      postalCode: locationData.postal_code,
-      countryCode: locationData.country_code,
-      contactName: contactData.full_name,
-      contactEmail: contactData.email,
-      contactPhone: contactData.phone_number,
-      notes: formData.notes
-    });
-    
-    // Early return if validation fails - prevent async operations
-    if (!validationResult.isValid) {
-      setFieldErrors(validationResult.errors);
-      const errorMessages = Object.values(validationResult.errors).filter(Boolean);
-      setValidationErrors(errorMessages);
+
+    // Professional SaaS validation - only essential fields and fields with content
+    const fieldValidationErrors: Record<string, string> = {};
+    const validationMessages: string[] = [];
+
+    // Essential field validation
+    const companyNameError = validateCompanyName(formData.company_name);
+    if (companyNameError) {
+      fieldValidationErrors.company_name = companyNameError;
+      validationMessages.push(companyNameError);
+    }
+
+    // Primary Contact Name - Required
+    const contactNameError = validateContactName(contactData.full_name);
+    if (contactNameError) {
+      fieldValidationErrors.contact_name = contactNameError;
+      validationMessages.push(contactNameError);
+    }
+
+    // Primary Contact Email - Required
+    const contactEmailError = validateEmailAddress(contactData.email);
+    if (contactEmailError) {
+      fieldValidationErrors.contact_email = contactEmailError;
+      validationMessages.push(contactEmailError);
+    }
+
+    // Account Manager is optional - UserPicker has "Not assigned" option
+
+    // Optional fields - only validate if they have content
+    if (formData.url && formData.url.trim()) {
+      const urlError = validateWebsiteUrl(formData.url);
+      if (urlError) {
+        fieldValidationErrors.url = urlError;
+        validationMessages.push(urlError);
+      }
+    }
+
+    if (formData.properties?.industry && formData.properties.industry.trim()) {
+      const industryError = validateIndustry(formData.properties.industry);
+      if (industryError) {
+        fieldValidationErrors.industry = industryError;
+        validationMessages.push(industryError);
+      }
+    }
+
+    if (locationData.email && locationData.email.trim()) {
+      const emailError = validateEmailAddress(locationData.email);
+      if (emailError) {
+        fieldValidationErrors.location_email = emailError;
+        validationMessages.push(emailError);
+      }
+    }
+
+    if (locationData.phone && locationData.phone.trim()) {
+      const phoneError = validatePhoneNumber(locationData.phone);
+      if (phoneError) {
+        fieldValidationErrors.location_phone = phoneError;
+        validationMessages.push(phoneError);
+      }
+    }
+
+    if (locationData.address_line1 && locationData.address_line1.trim()) {
+      const addressError = validateAddress(locationData.address_line1);
+      if (addressError) {
+        fieldValidationErrors.address_line1 = addressError;
+        validationMessages.push(addressError);
+      }
+    }
+
+    if (locationData.city && locationData.city.trim()) {
+      const cityError = validateCityName(locationData.city);
+      if (cityError) {
+        fieldValidationErrors.city = cityError;
+        validationMessages.push(cityError);
+      }
+    }
+
+    if (locationData.state_province && locationData.state_province.trim()) {
+      const stateError = validateStateProvince(locationData.state_province);
+      if (stateError) {
+        fieldValidationErrors.state_province = stateError;
+        validationMessages.push(stateError);
+      }
+    }
+
+    if (locationData.postal_code && locationData.postal_code.trim()) {
+      const postalError = validatePostalCode(locationData.postal_code, locationData.country_code);
+      if (postalError) {
+        fieldValidationErrors.postal_code = postalError;
+        validationMessages.push(postalError);
+      }
+    }
+
+    // Contact name and email are now required fields - validation moved to Essential field validation section above
+
+    if (contactData.phone_number && contactData.phone_number.trim()) {
+      const contactPhoneError = validatePhoneNumber(contactData.phone_number);
+      if (contactPhoneError) {
+        fieldValidationErrors.contact_phone = contactPhoneError;
+        validationMessages.push(contactPhoneError);
+      }
+    }
+
+    if (formData.notes && formData.notes.trim()) {
+      const notesError = validateNotes(formData.notes);
+      if (notesError) {
+        fieldValidationErrors.notes = notesError;
+        validationMessages.push(notesError);
+      }
+    }
+
+    // Only block submission if there are validation errors
+    if (validationMessages.length > 0) {
+      setFieldErrors(fieldValidationErrors);
+      setValidationErrors(validationMessages);
       return; // Stop here - don't proceed with async submit logic
     }
 
     setIsSubmitting(true);
     setError(null);
     setValidationErrors([]);
+    setFieldErrors({}); // Clear field errors when validation passes
     try {
       const dataToSend = {
         ...formData,
@@ -427,6 +629,51 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
     }));
   };
 
+  const handleContactCountryChange = (countryCode: string) => {
+    setContactCountryCode(countryCode);
+  };
+
+  // Professional SaaS form validation - only essential fields required (Microsoft/Meta standard)
+  const isFormValid = () => {
+    // Only required field: Company name (essential for business identification)
+    if (!formData.company_name || !formData.company_name.trim()) {
+      return false;
+    }
+
+    // Company name must be valid if provided
+    const companyNameError = validateCompanyName(formData.company_name);
+    if (companyNameError) return false;
+
+    // All other fields are optional - user can submit with just company name
+    // This follows Microsoft/SaaS pattern where users aren't blocked from proceeding
+    // Field validation errors only prevent submission if there are actual validation issues with provided content
+
+    // Check for any existing field errors (but only for fields that have content)
+    const relevantErrors = Object.entries(fieldErrors).filter(([fieldName, error]) => {
+      if (!error || error.trim() === '') return false;
+
+      // Only consider errors for fields that actually have content
+      switch (fieldName) {
+        case 'url': return formData.url && formData.url.trim();
+        case 'industry': return formData.properties?.industry && formData.properties.industry.trim();
+        case 'location_email': return locationData.email && locationData.email.trim();
+        case 'location_phone': return locationData.phone && locationData.phone.trim();
+        case 'postal_code': return locationData.postal_code && locationData.postal_code.trim();
+        case 'city': return locationData.city && locationData.city.trim();
+        case 'state_province': return locationData.state_province && locationData.state_province.trim();
+        case 'address_line1': return locationData.address_line1 && locationData.address_line1.trim();
+        case 'contact_name': return contactData.full_name && contactData.full_name.trim();
+        case 'contact_email': return contactData.email && contactData.email.trim();
+        case 'contact_phone': return contactData.phone_number && contactData.phone_number.trim();
+        case 'notes': return formData.notes && formData.notes.trim();
+        default: return true; // For unknown fields, consider errors
+      }
+    });
+
+    // Only block submission if there are validation errors for fields with content
+    return relevantErrors.length === 0;
+  };
+
 
   return (
     <>
@@ -440,19 +687,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
         <form onSubmit={handleSubmit} id="quick-add-company-form" noValidate>
           <div className="max-h-[60vh] overflow-y-auto px-1 py-4 space-y-6">
             
-            {/* Validation Errors */}
-            {hasAttemptedSubmit && validationErrors.length > 0 && (
-              <Alert variant="destructive" className="mb-4">
-                <AlertDescription>
-                  <p className="font-medium mb-2">Please correct the following errors:</p>
-                  <ul className="list-disc list-inside space-y-1">
-                    {validationErrors.map((err, index) => (
-                      <li key={index}>{err}</li>
-                    ))}
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
+            {/* Removed top validation errors - now showing inline near action button */}
             
             {/* Error Alert */}
             {error && (
@@ -512,13 +747,17 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="industry" className="block text-sm font-medium text-gray-700 mb-1">
-                    Industry
+                    Industry (optional)
                   </Label>
                   <Input
                     id="industry"
                     data-automation-id="industry"
                     value={formData.properties?.industry || ''}
-                    onChange={(e) => handleCompanyChange('properties.industry', e.target.value)}
+                    onChange={(e) => {
+                      handleCompanyChange('properties.industry', e.target.value);
+                      // Professional SaaS approach: Clear errors while typing, don't show new ones
+                      setFieldErrors(prev => ({ ...prev, industry: '' }));
+                    }}
                     onBlur={() => {
                       validateField('industry', formData.properties?.industry || '');
                     }}
@@ -534,7 +773,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-1">
-                    Website URL
+                    Website URL (optional)
                   </Label>
                   <Input
                     id="url"
@@ -555,7 +794,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="account-manager-picker" className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Manager
+                    Account Manager (optional)
                   </Label>
                   <UserPicker
                     id="account-manager-picker"
@@ -567,6 +806,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     placeholder={isLoadingUsers ? "Loading users..." : "Select Account Manager"}
                     buttonWidth="full"
                   />
+                  {fieldErrors.account_manager && (
+                    <p className="text-sm text-red-600 mt-1">{fieldErrors.account_manager}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -579,7 +821,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               
               <div>
                 <Label htmlFor="address-line-1" className="block text-sm font-medium text-gray-700 mb-1">
-                  Street Address
+                  Street Address (optional)
                 </Label>
                 <Input
                   id="address-line-1"
@@ -600,7 +842,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    City
+                    City (optional)
                   </Label>
                   <Input
                     id="city"
@@ -620,7 +862,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="state-province" className="block text-sm font-medium text-gray-700 mb-1">
-                    State
+                    State (optional)
                   </Label>
                   <Input
                     id="state-province"
@@ -640,7 +882,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="company-postal-code" className="block text-sm font-medium text-gray-700 mb-1">
-                    Zip Code
+                    Zip Code (optional)
                   </Label>
                   <Input
                     id="company-postal-code"
@@ -657,7 +899,9 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     <p className="text-sm text-red-600 mt-1">{fieldErrors.postal_code}</p>
                   )}
                 </div>
+              </div>
 
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="country-picker" className="block text-sm font-medium text-gray-700 mb-1">
                     Country
@@ -677,15 +921,27 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 <div>
                   <PhoneInput
                     id="company-location-phone"
-                    label="Phone"
+                    label="Phone (optional)"
                     value={locationData.phone || ''}
-                    onChange={(value) => handleLocationChange('phone', value)}
+                    onChange={(value) => {
+                      handleLocationChange('phone', value);
+                      // Clear error when user starts typing, clears the field, or has only country code
+                      const trimmedValue = value.trim();
+                      const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                      if (fieldErrors.location_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                        setFieldErrors(prev => ({ ...prev, location_phone: '' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('location_phone', locationData.phone || '');
                     }}
                     countryCode={locationData.country_code}
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    countries={countries}
+                    onCountryChange={(countryCode) => handleCountryChange(countryCode, countries.find(c => c.code === countryCode)?.name || '')}
                     disabled={isSubmitting}
+                    error={!!fieldErrors.location_phone}
                     data-automation-id="company-location-phone"
                   />
                   {fieldErrors.location_phone && (
@@ -695,14 +951,20 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
 
                 <div>
                   <Label htmlFor="company-location-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    Email (optional)
                   </Label>
                   <Input
                     id="company-location-email"
                     data-automation-id="company-location-email"
                     type="email"
                     value={locationData.email || ''}
-                    onChange={(e) => handleLocationChange('email', e.target.value)}
+                    onChange={(e) => {
+                      handleLocationChange('email', e.target.value);
+                      // Immediately validate if user enters only spaces
+                      if (/^\s+$/.test(e.target.value)) {
+                        setFieldErrors(prev => ({ ...prev, location_email: 'Email address cannot contain only spaces' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('location_email', locationData.email || '');
                     }}
@@ -725,7 +987,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               
               <div>
                 <Label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
+                  Primary Contact Name *
                 </Label>
                 <Input
                   id="contact-name"
@@ -746,14 +1008,20 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="company-contact-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                    Primary Contact Email *
                   </Label>
                   <Input
                     id="company-contact-email"
                     data-automation-id="company-contact-email"
                     type="email"
                     value={contactData.email}
-                    onChange={(e) => handleContactChange('email', e.target.value)}
+                    onChange={(e) => {
+                      handleContactChange('email', e.target.value);
+                      // Immediately validate if user enters only spaces
+                      if (/^\s+$/.test(e.target.value)) {
+                        setFieldErrors(prev => ({ ...prev, contact_email: 'Email address cannot contain only spaces' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('contact_email', contactData.email);
                     }}
@@ -768,15 +1036,27 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                 <div>
                   <PhoneInput
                     id="company-contact-phone"
-                    label="Phone"
+                    label="Phone (optional)"
                     value={contactData.phone_number}
-                    onChange={(value) => handleContactChange('phone_number', value)}
+                    onChange={(value) => {
+                      handleContactChange('phone_number', value);
+                      // Clear error when user starts typing, clears the field, or has only country code
+                      const trimmedValue = value.trim();
+                      const isCountryCodeOnly = /^\+\d{1,4}\s*$/.test(trimmedValue);
+
+                      if (fieldErrors.contact_phone && (trimmedValue === '' || isCountryCodeOnly)) {
+                        setFieldErrors(prev => ({ ...prev, contact_phone: '' }));
+                      }
+                    }}
                     onBlur={() => {
                       validateField('contact_phone', contactData.phone_number);
                     }}
-                    countryCode={locationData.country_code}
-                    phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
+                    countryCode={contactCountryCode}
+                    phoneCode={countries.find(c => c.code === contactCountryCode)?.phone_code}
+                    countries={countries}
+                    onCountryChange={handleContactCountryChange}
                     disabled={isSubmitting}
+                    error={!!fieldErrors.contact_phone}
                     data-automation-id="company-contact-phone"
                   />
                   {fieldErrors.contact_phone && (
@@ -790,7 +1070,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             <div className="space-y-4">
               <div>
                 <Label htmlFor="company-notes-input" className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                  Notes (optional)
                 </Label>
                 <TextArea
                   id="company-notes-input"
@@ -829,15 +1109,21 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
             >
               Cancel
             </Button>
-            <Button
-              id="create-company-btn"
-              type="submit"
-              form="quick-add-company-form"
-              disabled={isSubmitting || !formData.company_name.trim()}
-              className={(!formData.company_name.trim() || Object.values(fieldErrors).some(error => error)) ? 'opacity-50' : ''}
-            >
-              {isSubmitting ? 'Creating...' : 'Create Client'}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              {hasAttemptedSubmit && Object.keys(fieldErrors).length > 0 && (
+                <p className="text-sm text-red-600 text-right">
+                  Please fill in all required fields
+                </p>
+              )}
+              <Button
+                id="create-company-btn"
+                type="submit"
+                form="quick-add-company-form"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Creating...' : 'Create Client'}
+              </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>

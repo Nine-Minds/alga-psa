@@ -15,15 +15,16 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
+import { validateCompanyName, validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateTaxId, validateParentCompany, validateLastContactDate, validatePaymentTerms } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, deleteCompany, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -55,6 +56,7 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { CompanyLanguagePreference } from './CompanyLanguagePreference';
 import { useTranslation } from '@/lib/i18n/client';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 
 
 const SwitchDetailItem: React.FC<{
@@ -97,7 +99,10 @@ const TextDetailItem: React.FC<{
   value: string;
   onEdit: (value: string) => void;
   automationId?: string;
-}> = ({ label, value, onEdit, automationId }) => {
+  fieldName?: string;
+  validateField?: (fieldName: string, value: string) => void;
+  error?: string;
+}> = ({ label, value, onEdit, automationId, fieldName, validateField, error }) => {
   const [localValue, setLocalValue] = useState(value);
 
   // Register for UI automation with meaningful label
@@ -120,7 +125,20 @@ const TextDetailItem: React.FC<{
     }
   }, [localValue, updateMetadata, label]);
 
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear errors when user starts typing (professional SaaS pattern)
+    if (error && fieldName && validateField) {
+      validateField(fieldName, ''); // Clear the error
+    }
+  };
+
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validateField && fieldName) {
+      validateField(fieldName, localValue);
+    }
+
     // Always call onEdit to allow parent to determine if changes should be tracked
     onEdit(localValue);
   };
@@ -129,12 +147,20 @@ const TextDetailItem: React.FC<{
     <div className="space-y-2" {...automationIdProps}>
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
+        id={automationId ? `${automationId}-input` : undefined}
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
+          error
+            ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
+            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+        }`}
       />
+      {error && (
+        <p className="text-sm text-red-600 mt-1">{error}</p>
+      )}
     </div>
   );
 };
@@ -188,11 +214,54 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   } | null>(null);
   const [isLocationsDialogOpen, setIsLocationsDialogOpen] = useState(false);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { tags: allTags } = useTags();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Enterprise-grade field validation function (Microsoft/Meta/Salesforce style)
+  const validateField = (fieldName: string, value: string) => {
+    let error: string | null = null;
+
+    switch (fieldName) {
+      case 'website':
+        error = validateWebsiteUrl(value);
+        break;
+      case 'industry':
+        error = validateIndustry(value);
+        break;
+      case 'company_size':
+        error = validateCompanySize(value);
+        break;
+      case 'annual_revenue':
+        error = validateAnnualRevenue(value);
+        break;
+      case 'tax_id':
+        error = validateTaxId(value);
+        break;
+      case 'parent_company_name':
+        error = validateParentCompany(value);
+        break;
+      case 'last_contact_date':
+        error = validateLastContactDate(value);
+        break;
+      case 'payment_terms':
+        error = validatePaymentTerms(value);
+        break;
+      default:
+        break;
+    }
+
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: error || ''
+    }));
+  };
   const drawer = useDrawer();
 
 
@@ -391,15 +460,79 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
     });
   };
 
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteCompany(company.company_id);
+      if (result.success) {
+        toast.success('Client deleted successfully');
+        setIsDeleteDialogOpen(false);
+        router.push('/msp/companies');
+        return;
+      } else {
+        if (result.code === 'DEFAULT_COMPANY_PROTECTED') {
+          toast.error(result.message || 'Cannot delete the default company');
+        } else if (result.dependencies && result.dependencies.length > 0) {
+          // Only show blocking message for actual blockers (open tickets/projects)
+          if (result.dependencies.includes('ticket')) {
+            const ticketCount = result.counts?.ticket || 1;
+            const ticketText = ticketCount === 1 ? 'ticket' : 'tickets';
+            toast.error(`Cannot delete client. It has ${ticketCount} open ${ticketText} that must be closed or resolved first.`);
+          } else if (result.dependencies.includes('project')) {
+            const projectCount = result.counts?.project || 1;
+            const projectText = projectCount === 1 ? 'project' : 'projects';
+            toast.error(`Cannot delete client. It has ${projectCount} active ${projectText} that must be completed first.`);
+          } else {
+            const pluralize = (word: string) => word.endsWith('s') ? word : `${word}s`;
+            const dependencyText = result.dependencies.map(pluralize).join(', ');
+            toast.error(`Cannot delete client. It has associated ${dependencyText} that must be removed first.`);
+          }
+        } else {
+          toast.error(result.message || 'Failed to delete client. Please try again.');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      toast.error('Failed to delete client. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSave = async () => {
     if (isSaving) return;
-    
+    setHasAttemptedSubmit(true);
     setIsSaving(true);
+
     try {
+      // Professional PSA validation pattern: Check required fields
+      const requiredFields = {
+        company_name: editedCompany.company_name?.trim() || ''
+      };
+
+      // Clear previous errors and validate required fields
+      const newErrors: Record<string, string> = {};
+      let hasValidationErrors = false;
+
+      Object.entries(requiredFields).forEach(([field, value]) => {
+        if (field === 'company_name') {
+          const error = validateCompanyName(value);
+          if (error) {
+            newErrors[field] = error;
+            hasValidationErrors = true;
+          }
+        }
+      });
+
+      setFieldErrors(newErrors);
+
+      if (hasValidationErrors) {
+        return;
+      }
       // Prepare data for update, removing computed fields
-      const { 
+      const {
         account_manager_full_name,
-        ...restOfEditedCompany 
+        ...restOfEditedCompany
       } = editedCompany;
       const dataToUpdate: Partial<Omit<ICompany, 'account_manager_full_name'>> = {
         ...restOfEditedCompany,
@@ -411,6 +544,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       const updatedCompany = updatedCompanyResult as ICompany; // Cast if necessary, or adjust based on actual return type
       setEditedCompany(updatedCompany);
       setHasUnsavedChanges(false);
+      setHasAttemptedSubmit(false);
       toast.success("Company details saved successfully.");
     } catch (error) {
       console.error('Error saving company:', error);
@@ -421,6 +555,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   const handleBillingConfigSave = async (updatedBillingConfig: Partial<ICompany>) => {
+    setIsSaving(true);
     try {
       const updatedCompany = await updateCompany(company.company_id, updatedBillingConfig);
       setEditedCompany(prevCompany => {
@@ -432,6 +567,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
       });
     } catch (error) {
       console.error('Error updating company:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -458,6 +595,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   };
 
   const handleSaveNote = async () => {
+    setIsSaving(true);
     try {
       if (!currentUser) {
         console.error('Cannot save note: No current user');
@@ -466,14 +604,14 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
       // Convert blocks to JSON string
       const blockData = JSON.stringify(currentContent);
-      
+
       if (editedCompany.notes_document_id) {
         // Update existing note document
         await updateBlockContent(editedCompany.notes_document_id, {
           block_data: blockData,
           user_id: currentUser.user_id
         });
-        
+
         // Refresh document metadata to show updated timestamp
         const updatedDocument = await getDocument(editedCompany.notes_document_id);
         setNoteDocument(updatedDocument);
@@ -486,28 +624,30 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           entityId: editedCompany.company_id,
           entityType: 'company'
         });
-        
+
         // Update company with the new notes_document_id
         await updateCompany(editedCompany.company_id, {
           notes_document_id: document_id
         });
-        
+
         // Update local state
         setEditedCompany(prev => ({
           ...prev,
           notes_document_id: document_id
         }));
-        
+
         // Get the newly created document metadata
         const newDocument = await getDocument(document_id);
         setNoteDocument(newDocument);
       }
-      
+
       setHasUnsavedNoteChanges(false);
       toast.success("Note saved successfully.");
     } catch (error) {
       console.error('Error saving note:', error);
       toast.error("Failed to save note. Please try again.");
+    } finally {
+      setIsSaving(false);
     }
   };
   
@@ -527,7 +667,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             {/* Left Column - All Form Fields */}
             <div className="space-y-6">
               <TextDetailItem
-                label="Client Name"
+                label="Client Name *"
                 value={editedCompany.company_name}
                 onEdit={(value) => handleFieldChange('company_name', value)}
                 automationId="client-name-field"
@@ -540,7 +680,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 helperText="Select the account manager for this company"
                 automationId="account-manager-field"
               >
-                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Account Manager (optional)</Text>
                 <UserPicker
                   value={editedCompany.account_manager_id || ''}
                   onValueChange={(value) => handleFieldChange('account_manager_id', value)}
@@ -552,31 +692,43 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               </FieldContainer>
               
               <TextDetailItem
-                label="Website"
+                label="Website (optional)"
                 value={editedCompany.properties?.website || ''}
                 onEdit={(value) => handleFieldChange('properties.website', value)}
                 automationId="website-field"
+                fieldName="website"
+                validateField={validateField}
+                error={fieldErrors.website}
               />
 
               <TextDetailItem
-                label="Industry"
+                label="Industry (optional)"
                 value={editedCompany.properties?.industry || ''}
                 onEdit={(value) => handleFieldChange('properties.industry', value)}
                 automationId="industry-field"
+                fieldName="industry"
+                validateField={validateField}
+                error={fieldErrors.industry}
               />
 
               <TextDetailItem
-                label="Company Size"
+                label="Company Size (optional)"
                 value={editedCompany.properties?.company_size || ''}
                 onEdit={(value) => handleFieldChange('properties.company_size', value)}
                 automationId="company-size-field"
+                fieldName="company_size"
+                validateField={validateField}
+                error={fieldErrors.company_size}
               />
               
               <TextDetailItem
-                label="Annual Revenue"
+                label="Annual Revenue (optional)"
                 value={editedCompany.properties?.annual_revenue || ''}
                 onEdit={(value) => handleFieldChange('properties.annual_revenue', value)}
                 automationId="annual-revenue-field"
+                fieldName="annual_revenue"
+                validateField={validateField}
+                error={fieldErrors.annual_revenue}
               />
 
               {/* Language Preference */}
@@ -593,7 +745,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
                 {/* Client Type */}
                 <div className="space-y-2 col-span-2">
-                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type</Text>
+                  <Text as="label" size="2" className="text-gray-700 font-medium">Client Type (optional)</Text>
                   <CustomSelect
                     id="client-type-select"
                     value={editedCompany.client_type || 'company'}
@@ -617,7 +769,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
 
               {/* Tags */}
               <div className="space-y-2">
-                <Text as="label" size="2" className="text-gray-700 font-medium">Tags</Text>
+                <Text as="label" size="2" className="text-gray-700 font-medium">Tags (optional)</Text>
                 <TagManager
                   id={`${id}-tags`}
                   entityId={editedCompany.company_id}
@@ -653,20 +805,35 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           </div>
           
           <Flex gap="4" justify="end" align="center" className="pt-6">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2" role="alert">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
-              id="save-company-changes-btn"
+              id="save-company-changes-button"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
             </Button>
             <Button
-              id="add-ticket-btn"
+              id="add-ticket-button"
               onClick={() => setIsQuickAddTicketOpen(true)}
               variant="default"
             >
               Add Ticket
+            </Button>
+            <Button
+              id="delete-company-button"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              variant="outline"
+              className="text-red-600 border-red-600 hover:bg-red-50"
+              disabled={isDeleting}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Client
             </Button>
           </Flex>
         </div>
@@ -779,22 +946,31 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
             <TextDetailItem
-              label="Tax ID"
+              label="Tax ID (optional)"
               value={editedCompany.properties?.tax_id ?? ""}
               onEdit={(value) => handleFieldChange('properties.tax_id', value)}
               automationId="tax-id-field"
+              fieldName="tax_id"
+              validateField={validateField}
+              error={fieldErrors.tax_id}
             />
             <TextDetailItem
-              label="Payment Terms"
+              label="Payment Terms (optional)"
               value={editedCompany.properties?.payment_terms ?? ""}
               onEdit={(value) => handleFieldChange('properties.payment_terms', value)}
               automationId="payment-terms-field"
+              fieldName="payment_terms"
+              validateField={validateField}
+              error={fieldErrors.payment_terms}
             />
             <TextDetailItem
-              label="Parent Company"
+              label="Parent Company (optional)"
               value={editedCompany.properties?.parent_company_name ?? ""}
               onEdit={(value) => handleFieldChange('properties.parent_company_name', value)}
               automationId="parent-company-field"
+              fieldName="parent_company_name"
+              validateField={validateField}
+              error={fieldErrors.parent_company_name}
             />
             <FieldContainer
               label="Timezone"
@@ -803,25 +979,33 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               helperText="Select the timezone for this company"
               automationId="timezone-field"
             >
-              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone</Text>
+              <Text as="label" size="2" className="text-gray-700 font-medium">Timezone (optional)</Text>
               <TimezonePicker
                 value={editedCompany.timezone ?? ""}
                 onValueChange={(value) => handleFieldChange('timezone', value)}
               />
             </FieldContainer>
             <TextDetailItem
-              label="Last Contact Date"
+              label="Last Contact Date (optional)"
               value={editedCompany.properties?.last_contact_date ?? ""}
               onEdit={(value) => handleFieldChange('properties.last_contact_date', value)}
               automationId="last-contact-date-field"
+              fieldName="last_contact_date"
+              validateField={validateField}
+              error={fieldErrors.last_contact_date}
             />
           </div>
-          
+
           <Flex gap="4" justify="end" align="center">
+            {hasAttemptedSubmit && Object.keys(fieldErrors).some(key => fieldErrors[key]) && (
+              <Text size="2" className="text-red-600 mr-2" role="alert">
+                Please fill in all required fields
+              </Text>
+            )}
             <Button
-              id="save-additional-info-btn"
+              id="save-additional-info-button"
               onClick={handleSave}
-              disabled={isSaving || !hasUnsavedChanges}
+              disabled={isSaving}
               className="bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isSaving ? 'Saving...' : 'Save Changes'}
@@ -862,7 +1046,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
           />
           <div className="flex justify-end space-x-2">
             <Button
-              id={`${id}-save-note-btn`}
+              id={`${id}-save-note-button`}
               onClick={handleSaveNote}
               disabled={!hasUnsavedNoteChanges}
               className={`text-white transition-colors ${
@@ -991,6 +1175,21 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-company-confirmation-dialog"
+          isOpen={isDeleteDialogOpen}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={handleDelete}
+          title="Delete Client"
+          message={`Are you sure you want to delete "${editedCompany.company_name}"? This action cannot be undone and will remove all associated data.`}
+          confirmLabel={isDeleting ? 'Deleting...' : 'Delete Client'}
+          cancelLabel="Cancel"
+          isConfirming={isDeleting}
+          confirmVariant="outline"
+          confirmClassName="text-red-600 border-red-600 hover:bg-red-50"
+        />
       </div>
     </ReflectionContainer>
   );

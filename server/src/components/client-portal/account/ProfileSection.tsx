@@ -4,8 +4,10 @@ import { Card } from "server/src/components/ui/Card";
 import { Input } from "server/src/components/ui/Input";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
+import { PhoneInput } from "server/src/components/ui/PhoneInput";
 import { useState, useEffect } from 'react';
 import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
+import { validateCompanyName, validateEmailAddress, validatePhoneNumber, validateAddress } from "server/src/lib/utils/clientFormValidation";
 
 interface ValidationErrors {
   name?: string;
@@ -21,6 +23,17 @@ export default function ProfileSection() {
     phone: '',
     address: '',
     notes: ''
+  });
+  const [phoneCountryCode, setPhoneCountryCode] = useState(() => {
+    // Default country detection for phone input
+    try {
+      const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+      const parts = locale.split('-');
+      const detectedCountry = parts[parts.length - 1]?.toUpperCase();
+      return detectedCountry && detectedCountry.length === 2 && /^[A-Z]{2}$/.test(detectedCountry) ? detectedCountry : 'US';
+    } catch (e) {
+      return 'US';
+    }
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -47,35 +60,36 @@ export default function ProfileSection() {
     const errors: ValidationErrors = {};
     let isValid = true;
 
-    // Required fields
-    if (!profile.name.trim()) {
-      errors.name = 'Company name is required';
+    // Required fields - enterprise validation
+    const nameError = validateCompanyName(profile.name);
+    if (nameError) {
+      errors.name = nameError;
       isValid = false;
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!profile.email.trim()) {
-      errors.email = 'Email is required';
-      isValid = false;
-    } else if (!emailRegex.test(profile.email)) {
-      errors.email = 'Please enter a valid email address';
+    // Email validation - enterprise grade
+    const emailError = validateEmailAddress(profile.email);
+    if (emailError) {
+      errors.email = emailError;
       isValid = false;
     }
 
-    // Phone validation (optional but must be valid if provided)
-    if (profile.phone) {
-      const phoneRegex = /^\+?[\d\s-()]{10,}$/;
-      if (!phoneRegex.test(profile.phone)) {
-        errors.phone = 'Please enter a valid phone number';
+    // Phone validation - enterprise grade (optional but must be valid if provided)
+    if (profile.phone && profile.phone.trim()) {
+      const phoneError = validatePhoneNumber(profile.phone);
+      if (phoneError) {
+        errors.phone = phoneError;
         isValid = false;
       }
     }
 
-    // Address validation (optional but must be non-empty if provided)
-    if (profile.address && !profile.address.trim()) {
-      errors.address = 'Address cannot be empty if provided';
-      isValid = false;
+    // Address validation - enterprise grade (optional but must be valid if provided)
+    if (profile.address && profile.address.trim()) {
+      const addressError = validateAddress(profile.address);
+      if (addressError) {
+        errors.address = addressError;
+        isValid = false;
+      }
     }
 
     setValidationErrors(errors);
@@ -185,16 +199,18 @@ export default function ProfileSection() {
             <label htmlFor="phone" className="block text-sm font-medium mb-1">
               Phone Number
             </label>
-            <Input
-              id="phone"
+            <PhoneInput
+              id="profile-phone-input"
               value={profile.phone}
-              onChange={(e) => {
-                setProfile(prev => ({ ...prev, phone: e.target.value }));
+              onChange={(value) => {
+                setProfile(prev => ({ ...prev, phone: value }));
                 if (validationErrors.phone) {
                   setValidationErrors(prev => ({ ...prev, phone: undefined }));
                 }
               }}
-              className={validationErrors.phone ? 'border-red-500' : ''}
+              countryCode={phoneCountryCode}
+              onCountryChange={(countryCode) => setPhoneCountryCode(countryCode)}
+              error={!!validationErrors.phone}
             />
             {validationErrors.phone && (
               <p className="mt-1 text-sm text-red-500">{validationErrors.phone}</p>

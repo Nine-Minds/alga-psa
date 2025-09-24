@@ -9,6 +9,7 @@ import { StepProps } from '../types';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { getAvailableRoles, addSingleTeamMember } from '@/lib/actions/onboarding-actions/onboardingActions';
+import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
   const [licenseInfo, setLicenseInfo] = useState<{
@@ -127,16 +128,30 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const saveMember = async (index: number) => {
     const member = data.teamMembers[index];
     
-    // Validate fields
+    // Validate fields using enterprise validators
     if (!member.firstName || !member.lastName || !member.email || !member.password) {
       setSaveErrors(prev => ({ ...prev, [index]: 'Please fill in all required fields including password' }));
       return;
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(member.email)) {
-      setSaveErrors(prev => ({ ...prev, [index]: 'Please enter a valid email address' }));
+    // Validate first name using enterprise validator
+    const firstNameError = validateContactName(member.firstName);
+    if (firstNameError) {
+      setSaveErrors(prev => ({ ...prev, [index]: `First name: ${firstNameError}` }));
+      return;
+    }
+
+    // Validate last name using enterprise validator
+    const lastNameError = validateContactName(member.lastName);
+    if (lastNameError) {
+      setSaveErrors(prev => ({ ...prev, [index]: `Last name: ${lastNameError}` }));
+      return;
+    }
+
+    // Validate email using enterprise validator
+    const emailError = validateEmailAddress(member.email);
+    if (emailError) {
+      setSaveErrors(prev => ({ ...prev, [index]: emailError }));
       return;
     }
 
@@ -315,7 +330,11 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               <Label>First Name</Label>
               <Input
                 value={member.firstName}
-                onChange={(e) => updateTeamMember(index, 'firstName', e.target.value)}
+                onChange={(e) => {
+                  updateTeamMember(index, 'firstName', e.target.value);
+                  // Professional SaaS approach: Clear errors while typing, don't show new ones
+                  setSaveErrors(prev => ({ ...prev, [index]: '' }));
+                }}
                 placeholder="Jane"
                 disabled={isAlreadyCreated}
               />
@@ -325,7 +344,11 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               <Label>Last Name</Label>
               <Input
                 value={member.lastName}
-                onChange={(e) => updateTeamMember(index, 'lastName', e.target.value)}
+                onChange={(e) => {
+                  updateTeamMember(index, 'lastName', e.target.value);
+                  // Professional SaaS approach: Clear errors while typing, don't show new ones
+                  setSaveErrors(prev => ({ ...prev, [index]: '' }));
+                }}
                 placeholder="Smith"
                 disabled={isAlreadyCreated}
               />
@@ -338,7 +361,11 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               <Input
                 type="email"
                 value={member.email}
-                onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
+                onChange={(e) => {
+                  updateTeamMember(index, 'email', e.target.value);
+                  // Professional SaaS approach: Clear errors while typing, don't show new ones
+                  setSaveErrors(prev => ({ ...prev, [index]: '' }));
+                }}
                 placeholder="jane@company.com"
                 disabled={isAlreadyCreated}
                 autoComplete="off"
