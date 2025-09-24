@@ -396,7 +396,39 @@ export class UserService extends BaseService<IUser> {
         .where({ user_id: id, tenant: context.tenant })
         .delete();
 
-      // 4. Finally delete the user
+      // 4. Set audit columns to NULL for tables with foreign keys to users
+      // This is needed because Citus doesn't support ON DELETE SET NULL with distribution key
+      const auditTablesToUpdate = [
+        'service_categories',
+        // Add other tables here as they get audit columns with FKs to users
+      ];
+
+      for (const tableName of auditTablesToUpdate) {
+        // Check if table exists and has the columns
+        const hasTable = await trx.schema.hasTable(tableName);
+        if (hasTable) {
+          const [hasCreatedBy, hasUpdatedBy] = await Promise.all([
+            trx.schema.hasColumn(tableName, 'created_by'),
+            trx.schema.hasColumn(tableName, 'updated_by')
+          ]);
+
+          if (hasCreatedBy || hasUpdatedBy) {
+            const updates: Record<string, null> = {};
+            if (hasCreatedBy) updates.created_by = null;
+            if (hasUpdatedBy) updates.updated_by = null;
+
+            await trx(tableName)
+              .where({ tenant: context.tenant })
+              .where(function() {
+                if (hasCreatedBy) this.orWhere('created_by', id);
+                if (hasUpdatedBy) this.orWhere('updated_by', id);
+              })
+              .update(updates);
+          }
+        }
+      }
+
+      // 5. Finally delete the user
       await trx('users')
         .where({ user_id: id, tenant: context.tenant })
         .delete();
