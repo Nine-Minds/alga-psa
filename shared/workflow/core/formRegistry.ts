@@ -19,7 +19,7 @@ import {
   FormSearchParams,
   FormValidationResult,
   FormWithSchema
-} from '../persistence/formRegistryInterfaces.js';
+} from '../persistence/formRegistryInterfaces';
 
 export class FormRegistry {
   /**

@@ -11,7 +11,7 @@ import {
   IContact, 
   CreateContactInput, 
   UpdateContactInput 
-} from '../interfaces/contact.interfaces.js';
+} from '../interfaces/contact.interfaces';
 import { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
@@ -59,8 +59,8 @@ export type {
   IContact, 
   CreateContactInput, 
   UpdateContactInput 
-} from '../interfaces/contact.interfaces.js';
-export type { ValidationResult } from '../interfaces/validation.interfaces.js';
+} from '../interfaces/contact.interfaces';
+export type { ValidationResult } from '../interfaces/validation.interfaces';
 
 // =============================================================================
 // VALIDATION HELPER FUNCTIONS

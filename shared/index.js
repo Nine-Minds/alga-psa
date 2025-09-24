@@ -7,7 +7,7 @@
  */
 
 // Re-export all public modules
-export * from './types/index.js';
+export * from './types/index';
 
 // These will be implemented as we extract code
 // export * from './core/index.js';
