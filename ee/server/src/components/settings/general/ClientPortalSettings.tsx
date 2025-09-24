@@ -4,15 +4,15 @@ import React, { useState, useEffect, useMemo, useCallback, FormEvent } from 'rea
 import { Globe } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge, type BadgeVariant } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import CustomSelect, { SelectOption } from '@/components/ui/CustomSelect';
-import { Alert, AlertDescription } from '@/components/ui/Alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
+import { Badge, type BadgeVariant } from 'server/src/components/ui/Badge';
+import { Button } from 'server/src/components/ui/Button';
+import { Input } from 'server/src/components/ui/Input';
+import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
+import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
-import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
-import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
+import { LOCALE_CONFIG, type SupportedLocale } from 'server/src/lib/i18n/config';
+import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from 'server/src/lib/actions/tenant-actions/tenantLocaleActions';
 import {
   getPortalDomainStatusAction,
   requestPortalDomainRegistrationAction,
@@ -20,7 +20,7 @@ import {
   disablePortalDomainAction,
   retryPortalDomainRegistrationAction,
 } from '@ee/lib/actions/tenant-actions/portalDomainActions';
-import type { PortalDomainStatusResponse } from '@/lib/actions/tenant-actions/portalDomain.types';
+import type { PortalDomainStatusResponse } from 'server/src/lib/actions/tenant-actions/portalDomain.types';
 import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
 
 interface StatusBadgeConfig {
@@ -76,6 +76,12 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
 }
 
 const ClientPortalSettings = () => {
+  const logDebug = useCallback((message: string, payload?: unknown) => {
+    // Wrap logging to keep signal focused while debugging blank render
+    // eslint-disable-next-line no-console
+    console.log('[ClientPortalSettings]', message, payload ?? '');
+  }, []);
+
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
   const [enabledLocales, setEnabledLocales] = useState<SupportedLocale[]>([...LOCALE_CONFIG.supportedLocales]);
   const [loading, setLoading] = useState(true);
@@ -103,37 +109,45 @@ const ClientPortalSettings = () => {
   useEffect(() => {
     const loadTenantSettings = async () => {
       try {
+        logDebug('Fetching tenant locale settings');
         const settings = await getTenantLocaleSettingsAction();
         if (settings) {
           setDefaultLocale(settings.defaultLocale);
           setEnabledLocales(settings.enabledLocales);
+          logDebug('Loaded tenant locale settings', settings);
         }
       } catch (error) {
         console.error('Failed to load tenant language settings:', error);
+        logDebug('Failed to load tenant language settings', error);
       } finally {
         setLoading(false);
+        logDebug('Locale settings load complete');
       }
     };
 
     loadTenantSettings();
-  }, []);
+  }, [logDebug]);
 
   const syncPortalStatus = useCallback(async () => {
     setPortalLoading(true);
     try {
+      logDebug('Fetching portal domain status');
       const status = await getPortalDomainStatusAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);
+      logDebug('Portal domain status loaded', status);
     } catch (error) {
       const message = resolveErrorMessage(error, 'Unable to load portal domain status.');
       setPortalError(message);
       console.error('Failed to load portal domain status:', error);
+      logDebug('Failed to load portal domain status', error);
       toast.error(message);
     } finally {
       setPortalLoading(false);
+      logDebug('Portal domain status load complete');
     }
-  }, []);
+  }, [logDebug]);
 
   useEffect(() => {
     syncPortalStatus();
@@ -151,24 +165,28 @@ const ClientPortalSettings = () => {
 
     setSubmitting(true);
     try {
+      logDebug('Submitting portal domain request', { domain: domainInput.trim() });
       const result = await requestPortalDomainRegistrationAction({ domain: domainInput.trim() });
       setPortalStatus(result.status);
       setDomainInput(result.status.domain ?? domainInput.trim());
-       setPortalError(null);
+      setPortalError(null);
       toast.success('Custom domain request submitted.');
     } catch (error: any) {
       const message = resolveErrorMessage(error, 'Failed to register custom domain.');
       setPortalError(message);
       console.error('Failed to register portal domain:', error);
+      logDebug('Portal domain request failed', error);
       toast.error(message);
     } finally {
       setSubmitting(false);
+      logDebug('Portal domain request complete');
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
+      logDebug('Refreshing portal domain status');
       const status = await refreshPortalDomainStatusAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
@@ -177,15 +195,18 @@ const ClientPortalSettings = () => {
       const message = resolveErrorMessage(error, 'Failed to refresh domain status.');
       setPortalError(message);
       console.error('Failed to refresh portal domain status:', error);
+      logDebug('Refresh portal domain status failed', error);
       toast.error(message);
     } finally {
       setRefreshing(false);
+      logDebug('Portal domain refresh complete');
     }
   };
 
   const handleRetry = async () => {
     setRetrying(true);
     try {
+      logDebug('Retrying portal domain registration');
       const status = await retryPortalDomainRegistrationAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
@@ -195,9 +216,11 @@ const ClientPortalSettings = () => {
       const message = resolveErrorMessage(error, 'Retry failed.');
       setPortalError(message);
       console.error('Failed to retry custom domain provisioning:', error);
+      logDebug('Retry portal domain failed', error);
       toast.error(message);
     } finally {
       setRetrying(false);
+      logDebug('Portal domain retry complete');
     }
   };
 
@@ -216,6 +239,7 @@ const ClientPortalSettings = () => {
 
     setSubmitting(true);
     try {
+      logDebug('Disabling portal domain');
       const status = await disablePortalDomainAction();
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
@@ -225,9 +249,11 @@ const ClientPortalSettings = () => {
       const message = resolveErrorMessage(error, 'Failed to disable custom domain.');
       setPortalError(message);
       console.error('Failed to disable custom domain:', error);
+      logDebug('Disable portal domain failed', error);
       toast.error(message);
     } finally {
       setSubmitting(false);
+      logDebug('Disable portal domain complete');
     }
   };
 
@@ -243,6 +269,7 @@ const ClientPortalSettings = () => {
         ? enabledLocales
         : [...enabledLocales, locale];
 
+      logDebug('Updating tenant default locale', { locale, updatedEnabledLocales });
       await updateTenantDefaultLocaleAction(locale, updatedEnabledLocales);
       setDefaultLocale(locale);
       setEnabledLocales(updatedEnabledLocales);
@@ -263,6 +290,7 @@ const ClientPortalSettings = () => {
 
     setSaving(true);
     try {
+      logDebug('Updating enabled tenant locales', { defaultLocale, selectedLocales });
       await updateTenantDefaultLocaleAction(defaultLocale, selectedLocales);
       setEnabledLocales(selectedLocales);
       toast.success('Available languages updated');
@@ -282,8 +310,42 @@ const ClientPortalSettings = () => {
 
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
+  useEffect(() => {
+    logDebug('Render state snapshot', {
+      loading,
+      saving,
+      portalLoading,
+      submitting,
+      refreshing,
+      retrying,
+      portalStatus,
+      portalError,
+      domainInput,
+      defaultLocale,
+      enabledLocales,
+    });
+  }, [loading, saving, portalLoading, submitting, refreshing, retrying, portalStatus, portalError, domainInput, defaultLocale, enabledLocales, logDebug]);
+
+  // eslint-disable-next-line no-console
+  console.log('[ClientPortalSettings] render', { portalLoading, portalStatus });
+
   return (
     <div className="space-y-6">
+      {process.env.NODE_ENV === 'development' && (
+        <pre className="rounded bg-gray-50 p-3 text-xs text-gray-600">
+          {JSON.stringify({
+            portalLoading,
+            portalStatus,
+            portalError,
+            submitting,
+            refreshing,
+            retrying,
+            defaultLocale,
+            enabledLocales,
+          }, null, 2)}
+        </pre>
+      )}
+
       {/* Custom Domain Card */}
       <Card>
         <CardHeader>

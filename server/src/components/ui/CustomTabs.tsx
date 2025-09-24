@@ -33,6 +33,15 @@ export const CustomTabs: React.FC<CustomTabsProps & AutomationProps> = ({
   const [value, setValue] = React.useState(defaultTab || tabs[0].label);
 
   React.useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log('[CustomTabs] render', {
+      tabLabels: tabs.map((tab) => tab.label),
+      value,
+      defaultTab,
+    });
+  }, [tabs, value, defaultTab]);
+
+  React.useEffect(() => {
     if (defaultTab) {
       setValue(defaultTab);
     }

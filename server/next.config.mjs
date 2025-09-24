@@ -139,6 +139,10 @@ const nextConfig = {
       '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
       // Base app alias
       '@': './src',
+      '@ee': isEE ? '../ee/server/src' : './src/empty',
+      '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
+      'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
+      'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
