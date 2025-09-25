@@ -18,6 +18,7 @@ import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 import ClientPortalDomainSettings from '@product/client-portal-domain/entry';
 import SignInPagePreview from './SignInPagePreview';
+import { getPortalDomainStatusAction } from '@/lib/actions/tenant-actions/portalDomainActions';
 
 const ClientPortalSettings = () => {
   const [defaultLocale, setDefaultLocale] = useState<SupportedLocale>(LOCALE_CONFIG.defaultLocale as SupportedLocale);
@@ -32,7 +33,31 @@ const ClientPortalSettings = () => {
   const [companyName, setCompanyName] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
   const [showPreview, setShowPreview] = useState<boolean>(false);
+  const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
+  const [hasCustomDomain, setHasCustomDomain] = useState<boolean>(false);
   const { refreshBranding } = useBranding();
+
+  // Check if custom domain is configured
+  useEffect(() => {
+    const checkCustomDomain = async () => {
+      try {
+        const status = await getPortalDomainStatusAction();
+        // Enable preview if there's a domain value (regardless of status)
+        setHasCustomDomain(!!status?.domain);
+      } catch (error) {
+        console.error('Failed to check custom domains:', error);
+        setHasCustomDomain(false);
+      }
+    };
+
+    // Check initially
+    checkCustomDomain();
+
+    // Check periodically every 5 seconds to detect domain changes
+    const interval = setInterval(checkCustomDomain, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Convert locale config to SelectOption format
   const languageOptions = useMemo((): SelectOption[] => {
@@ -147,6 +172,14 @@ const ClientPortalSettings = () => {
       });
       // Refresh branding context after saving
       await refreshBranding();
+
+      // Re-check custom domain status
+      try {
+        const status = await getPortalDomainStatusAction();
+        setHasCustomDomain(!!status?.domain);
+      } catch (error) {
+        console.error('Failed to re-check custom domain:', error);
+      }
     } catch (error) {
       console.error('Failed to save branding settings:', error);
       toast.error('Failed to save branding settings');
@@ -381,9 +414,34 @@ const ClientPortalSettings = () => {
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Preview Selection Buttons */}
             <div className="border-t pt-4">
               <h4 className="text-sm font-medium text-gray-700 mb-3">Preview</h4>
+              <div className="flex gap-2 mb-3">
+                <Button
+                  id="preview-dashboard"
+                  type="button"
+                  variant={previewMode === 'dashboard' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPreviewMode(previewMode === 'dashboard' ? null : 'dashboard')}
+                >
+                  {previewMode === 'dashboard' ? 'Hide' : 'Preview'} Client Dashboard
+                </Button>
+                <Button
+                  id="preview-signin"
+                  type="button"
+                  variant={previewMode === 'signin' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
+                  disabled={!hasCustomDomain}
+                  title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
+                >
+                  {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
+                </Button>
+              </div>
+
+              {/* Dashboard Preview */}
+              {previewMode === 'dashboard' && (
               <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
                 {/* Mock Navigation Bar */}
                 <div className="bg-white shadow-sm border-b border-gray-200">
@@ -512,28 +570,26 @@ const ClientPortalSettings = () => {
                     >
                       View Projects
                     </button>
-                    <button
-                      className="px-3 py-1.5 rounded text-xs font-medium bg-gray-100 text-gray-700 transition-colors"
-                      disabled
-                    >
-                      Download Reports
-                    </button>
                   </div>
                 </div>
               </div>
+              )}
+
+              {/* Sign-in Page Preview */}
+              {previewMode === 'signin' && (
+                <SignInPagePreview
+                  branding={{
+                    logoUrl,
+                    primaryColor,
+                    secondaryColor,
+                    companyName
+                  }}
+                />
+              )}
             </div>
 
-            {/* Preview Toggle and Save Button */}
-            <div className="flex justify-between items-center">
-              <Button
-                id="toggle-preview"
-                variant="outline"
-                onClick={() => setShowPreview(!showPreview)}
-                className="flex items-center gap-2"
-              >
-                {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                {showPreview ? 'Hide Preview' : 'Preview Sign-in Page'}
-              </Button>
+            {/* Save Button */}
+            <div className="flex justify-end">
               <Button
                 id="save-branding-settings"
                 variant="default"
@@ -543,22 +599,6 @@ const ClientPortalSettings = () => {
                 {brandingSaving ? 'Saving...' : 'Save Branding Settings'}
               </Button>
             </div>
-
-            {/* Sign-in Page Preview */}
-            {showPreview && (
-              <div className="mt-6 space-y-4">
-                <div className="text-sm font-medium text-gray-700">Sign-in Page Preview</div>
-                <SignInPagePreview
-                  logoUrl={logoUrl}
-                  primaryColor={primaryColor}
-                  secondaryColor={secondaryColor}
-                  companyName={companyName}
-                />
-                <p className="text-xs text-gray-500">
-                  This preview shows how your sign-in page will appear when users visit your custom domain.
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
