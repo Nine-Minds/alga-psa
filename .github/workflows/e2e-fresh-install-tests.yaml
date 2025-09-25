@@ -421,12 +421,9 @@ jobs:
           echo "Attempting to trigger login page to generate credentials in server logs..."
           APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
           LOGIN_PAGE_URL="http://localhost:${APP_PORT_VALUE}/auth/signin"
-          # Perform a curl request to the login page. We don't need the output, just the action of hitting the page.
-          # Allow failure as the page might not return 200 immediately or might redirect,
-          # but the act of requesting it should trigger the log.
           curl -s -o /dev/null -w "%{http_code}" "${LOGIN_PAGE_URL}" || echo "Curl to login page finished (ignore exit code here)."
           echo "Login page triggered. Waiting a few seconds for logs to propagate..."
-          sleep 3 # Wait for server to process the request and log credentials
+          sleep 3
         shell: bash
 
       - name: Capture Credentials from Server Logs
@@ -436,7 +433,7 @@ jobs:
           echo "Attempting to capture credentials from server logs..."
           sleep 5
 
-          SERVER_LOGS=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs server)
+          SERVER_LOGS=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --no-color server)
 
           USER_EMAIL=$(printf '%s\n' "$SERVER_LOGS" | grep 'User Email is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
           USER_PASSWORD=$(printf '%s\n' "$SERVER_LOGS" | grep 'Password is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
