@@ -432,26 +432,42 @@ jobs:
         id: capture_creds
         run: |
           echo "Attempting to capture credentials from server logs..."
-          sleep 5
 
-          CREDENTIAL_LINES=$(timeout 60 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --no-color --tail 0 --follow server | \
-            sed -E $'s/\x1B\[[0-9;]*[[:alpha:]]//g' | tr -d '\r' | \
-            awk '
-              /User Email is ->/ {
-                if (match($0, /\[ ([^ ]+) \]/, m)) email=m[1];
-              }
-              /Password is ->/ {
-                if (match($0, /\[ ([^ ]+) \]/, m)) password=m[1];
-              }
-              email != "" && password != "" {
-                print email "\n" password;
-                exit 0;
-              }
-            ')
+          APP_PORT_VALUE=$(grep APP_PORT .env | cut -d '=' -f2 | head -n 1 || echo "3000")
+          LOGIN_PAGE_URL="http://localhost:${APP_PORT_VALUE}/auth/signin"
+
+          CREDENTIAL_LINES=$(LOGIN_PAGE_URL="$LOGIN_PAGE_URL" timeout 90 bash -s <<'EOS'
+            set -euo pipefail
+
+            email=""
+            password=""
+
+            (curl -s -o /dev/null "$LOGIN_PAGE_URL" || true) &
+            trigger_pid=$!
+
+            while IFS= read -r raw_line; do
+              cleaned=$(printf "%s" "$raw_line" | tr -d "\r" | sed -E "s/\\x1B\\[[0-9;]*[[:alpha:]]//g")
+
+              if [[ $cleaned == *"User Email is ->"* ]]; then
+                email=$(printf "%s\n" "$cleaned" | sed -E "s/.*\\[ ([^ ]+) \\].*/\\1/")
+              elif [[ $cleaned == *"Password is ->"* ]]; then
+                password=$(printf "%s\n" "$cleaned" | sed -E "s/.*\\[ ([^ ]+) \\].*/\\1/")
+              fi
+
+              if [[ -n $email && -n $password ]]; then
+                printf "%s\n%s\n" "$email" "$password"
+                kill $trigger_pid >/dev/null 2>&1 || true
+                exit 0
+              fi
+            done < <(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --no-color --tail 0 --follow server)
+
+            exit 1
+          EOS
+          )
 
           STATUS=$?
           if [ $STATUS -ne 0 ] || [ -z "$CREDENTIAL_LINES" ]; then
-            echo "Failed to capture credentials from live server logs within timeout."
+            echo "Failed to capture credentials from server logs within timeout."
             exit 1
           fi
 
