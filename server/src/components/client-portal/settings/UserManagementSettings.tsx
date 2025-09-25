@@ -29,7 +29,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function UserManagementSettings() {
   const { t } = useTranslation('clientPortal');
@@ -72,14 +72,14 @@ export function UserManagementSettings() {
       );
 
       if (!hasRequiredPermissions) {
-        setError('You do not have permission to manage users');
+        setError(t('companySettings.users.permissionError', 'You do not have permission to manage users'));
         return;
       }
 
       // Get company ID
       const userCompanyId = await getUserCompanyId(user.user_id);
       if (!userCompanyId) {
-        setError('Company not found');
+        setError(t('companySettings.users.companyNotFound', 'Company not found'));
         return;
       }
 
@@ -104,7 +104,7 @@ export function UserManagementSettings() {
       setLoading(false);
     } catch (error) {
       console.error('Error loading users:', error);
-      setError('Failed to load users');
+      setError(t('companySettings.users.loadError', 'Failed to load users'));
       setLoading(false);
     }
   }
@@ -154,9 +154,9 @@ export function UserManagementSettings() {
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error && error.message.includes('EMAIL_EXISTS')) {
-        setError('A contact with this email address already exists');
+        setError(t('companySettings.users.emailExists', 'A contact with this email address already exists'));
       } else {
-        setError('Failed to create user');
+        setError(t('companySettings.users.createError', 'Failed to create user'));
       }
     }
   };
@@ -183,7 +183,7 @@ export function UserManagementSettings() {
       setUserToDelete(null);
     } catch (error) {
       console.error('Error deleting user:', error);
-      setError('Failed to delete user');
+      setError(t('companySettings.users.deleteError', 'Failed to delete user'));
     }
   };
 

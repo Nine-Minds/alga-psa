@@ -117,10 +117,12 @@
       "ticketCreated": "Ticket erfolgreich erstellt",
       "ticketUpdated": "Ticket erfolgreich aktualisiert",
       "ticketClosed": "Ticket erfolgreich geschlossen",
+      "statusUpdateSuccess": "Ticketstatus erfolgreich auf \"{{status}}\" aktualisiert.",
       "error": "Beim Verarbeiten deiner Anfrage ist ein Fehler aufgetreten",
       "loadError": "Ticketdetails konnten nicht geladen werden",
       "emptyComment": "Ein leerer Kommentar kann nicht hinzugefügt werden",
       "commentError": "Kommentar konnte nicht hinzugefügt werden",
+      "commentDeleteSuccess": "Kommentar erfolgreich gelöscht",
       "emptyNote": "Eine leere Notiz kann nicht gespeichert werden",
       "noDescription": "Keine Beschreibung gefunden.",
       "filtersError": "Filteroptionen konnten nicht geladen werden.",
@@ -139,6 +141,7 @@
       "failedToAddComment": "Kommentar konnte nicht hinzugefügt werden",
       "failedToUpdateComment": "Kommentar konnte nicht aktualisiert werden",
       "failedToDeleteComment": "Kommentar konnte nicht gelöscht werden",
+      "deleteOwnCommentError": "Du kannst nur deine eigenen Kommentare löschen",
       "failedToUpdateTicketStatus": "Ticketstatus konnte nicht aktualisiert werden"
     },
     "conversation": {
@@ -216,6 +219,8 @@
       "finalized": "Finalisiert",
       "sendEmail": "Als E-Mail senden",
       "sendEmailFailed": "Rechnung konnte nicht per E-Mail gesendet werden. Bitte versuche es erneut.",
+      "loadFailed": "Rechnungsdetails konnten nicht geladen werden. Bitte versuche es erneut.",
+      "downloadFailed": "PDF konnte nicht heruntergeladen werden. Bitte versuche es erneut.",
       "download": "PDF herunterladen",
       "view": "Details anzeigen",
       "pay": "Jetzt bezahlen",
@@ -356,7 +361,8 @@
       "submit": "Passwort aktualisieren",
       "success": "Passwort erfolgreich aktualisiert",
       "error": "Passwort konnte nicht aktualisiert werden",
-      "passwordMismatch": "Die neuen Passwörter stimmen nicht überein"
+      "passwordMismatch": "Die neuen Passwörter stimmen nicht überein",
+      "unknownError": "Beim Ändern des Passworts ist ein Fehler aufgetreten"
     },
     "twoFactorAuth": {
       "title": "Zwei-Faktor-Authentifizierung",
@@ -411,6 +417,13 @@
       "deleteSuccess": "Erfolgreich gelöscht.",
       "deleteError": "Löschen fehlgeschlagen.",
       "deleteConfirm": "Möchtest du dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    },
+    "validation": {
+      "companyNameRequired": "Firmenname ist erforderlich",
+      "emailRequired": "E-Mail ist erforderlich",
+      "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein",
+      "phoneInvalid": "Bitte gib eine gültige Telefonnummer ein",
+      "addressInvalid": "Adresse darf nicht leer sein, falls angegeben"
     }
   },
   "companySettings": {
@@ -470,7 +483,13 @@
       "statusDescription": "Status des Benutzerkontos festlegen",
       "noRolesAssigned": "Keine Rollen zugewiesen",
       "assignRole": "Rolle zuweisen",
-      "resetPassword": "Benutzerpasswort zurücksetzen"
+      "resetPassword": "Benutzerpasswort zurücksetzen",
+      "companyNotFound": "Unternehmen nicht gefunden",
+      "permissionError": "Sie haben keine Berechtigung, Benutzer zu verwalten",
+      "loadError": "Benutzer konnten nicht geladen werden",
+      "emailExists": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits",
+      "createError": "Benutzer konnte nicht erstellt werden",
+      "deleteError": "Benutzer konnte nicht gelöscht werden"
     },
     "messages": {
       "saveChanges": "Änderungen speichern",
@@ -481,7 +500,27 @@
       "inviteSent": "Einladung erfolgreich gesendet",
       "noPermission": "Du hast keine Berechtigung, auf die Unternehmenseinstellungen zuzugreifen",
       "companyNotFound": "Unternehmen nicht gefunden",
+      "detailsLoadError": "Unternehmensdetails konnten nicht geladen werden",
       "updateError": "Unternehmensdetails konnten nicht aktualisiert werden"
+    }
+  },
+  "account": {
+    "services": {
+      "loadError": "Dienste konnten nicht geladen werden",
+      "loadPlansError": "Servicepläne konnten nicht geladen werden",
+      "updateError": "Service konnte nicht aktualisiert werden"
+    },
+    "billing": {
+      "loadError": "Abrechnungsdaten konnten nicht geladen werden",
+      "addPaymentError": "Zahlungsmethode konnte nicht hinzugefügt werden",
+      "removePaymentError": "Zahlungsmethode konnte nicht entfernt werden",
+      "setDefaultError": "Standard-Zahlungsmethode konnte nicht festgelegt werden",
+      "validation": {
+        "cardNumber": "Bitte gib eine gültige 16-stellige Kartennummer ein",
+        "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
+        "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
+        "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
+      }
     }
   },
   "documents": {

@@ -24,7 +24,7 @@ import {
 import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import dynamic from 'next/dynamic';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Lazy load components that aren't immediately visible
 const InvoiceDetailsDialog = dynamic(() => import('./InvoiceDetailsDialog'), {

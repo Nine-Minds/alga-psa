@@ -23,7 +23,7 @@ import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions
 import { LanguagePreference } from 'server/src/components/ui/LanguagePreference';
 import { SupportedLocale } from '@/lib/i18n/config';
 import { updateUserLocaleAction, getUserLocaleAction } from 'server/src/lib/actions/user-actions/localeActions';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function ClientProfile() {
   const { t } = useTranslation('clientPortal');

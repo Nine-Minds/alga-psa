@@ -21,7 +21,7 @@ import { ChevronDown, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function TicketList() {
   const { t } = useTranslation('clientPortal');
@@ -185,13 +185,13 @@ export function TicketList() {
     try {
       await updateTicketStatus(ticketId, newStatus);
 
-      toast.success(`Ticket status successfully updated to "${newStatusLabel}".`);
+      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusLabel }));
 
       // Refresh tickets by calling loadTickets
       loadTickets(); 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
-      toast.error('Failed to update ticket status.');
+      toast.error(t('tickets.messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }

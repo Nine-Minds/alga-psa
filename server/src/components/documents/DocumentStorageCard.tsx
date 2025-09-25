@@ -7,7 +7,7 @@ import Spinner from 'server/src/components/ui/Spinner';
 import { getDocumentPreview } from 'server/src/lib/actions/document-actions/documentActions';
 import { getDocumentDownloadUrl, downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { Button } from 'server/src/components/ui/Button';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import {
     Download,
     Trash2,

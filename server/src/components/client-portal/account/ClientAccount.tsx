@@ -5,7 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/
 import { Table } from 'server/src/components/ui/Table';
 import { getClientCompany } from 'server/src/lib/actions/client-portal-actions/client-company';
 import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 import type { ICompany } from 'server/src/interfaces/company.interfaces';
 import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';

@@ -8,6 +8,7 @@ import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { Download, X, Mail } from 'lucide-react';
 import { getClientInvoiceById, getClientInvoiceLineItems, downloadClientInvoicePdf, sendClientInvoiceEmail } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { useTranslation } from '@/lib/i18n/client';
 
 interface InvoiceDetailsDialogProps {
   invoiceId: string | null;
@@ -28,6 +29,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
+  const { t } = useTranslation('clientPortal');
 
   // Fetch invoice details when dialog opens
   useEffect(() => {
@@ -44,7 +46,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         setInvoice(invoiceData);
       } catch (err) {
         console.error('Error fetching invoice details:', err);
-        setError('Failed to load invoice details. Please try again.');
+        setError(t('billing.invoice.loadFailed', 'Failed to load invoice details. Please try again.'));
       } finally {
         setIsLoading(false);
       }
@@ -64,7 +66,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError('Failed to download PDF. Please try again.');
+      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     }
   };
 
@@ -79,7 +81,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to send email:', error);
-      setError('Failed to send invoice email. Please try again.');
+      setError(t('billing.invoice.sendEmailFailed', 'Failed to send invoice email. Please try again.'));
     }
   };
 

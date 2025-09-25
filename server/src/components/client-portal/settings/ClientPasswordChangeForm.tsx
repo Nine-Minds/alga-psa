@@ -7,6 +7,7 @@ import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
+import { useTranslation } from '@/lib/i18n/client';
 import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
 
 interface ClientPasswordChangeFormProps {
@@ -15,6 +16,7 @@ interface ClientPasswordChangeFormProps {
 }
 
 export default function ClientPasswordChangeForm({ onSuccess, className }: ClientPasswordChangeFormProps) {
+  const { t } = useTranslation('clientPortal');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -45,29 +47,29 @@ export default function ClientPasswordChangeForm({ onSuccess, className }: Clien
     setPasswordSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setPasswordError('New passwords do not match');
+      setPasswordError(t('profile.changePassword.passwordMismatch', 'New passwords do not match'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setPasswordError(t('profile.changePassword.requirements', 'Password must be at least 8 characters long'));
       return;
     }
 
     try {
       const result = await changeOwnPassword(currentPassword, newPassword);
       if (result.success) {
-        setPasswordSuccess('Password changed successfully');
+        setPasswordSuccess(t('profile.changePassword.success', 'Password changed successfully'));
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
         setNeedsPasswordReset(false);
         onSuccess?.();
       } else {
-        setPasswordError(result.error || 'Failed to change password');
+        setPasswordError(result.error || t('profile.changePassword.error', 'Failed to change password'));
       }
     } catch (err) {
-      setPasswordError('An error occurred while changing password');
+      setPasswordError(t('profile.changePassword.unknownError', 'An error occurred while changing password'));
     }
   };
 

@@ -13,8 +13,10 @@ import {
   type Service,
   type ServicePlan
 } from "server/src/lib/actions/account";
+import { useTranslation } from '@/lib/i18n/client';
 
 export default function ServicesSection() {
+  const { t } = useTranslation('clientPortal');
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,7 +32,7 @@ export default function ServicesSection() {
         const data = await getActiveServices();
         setServices(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load services');
+        setError(err instanceof Error ? err.message : t('account.services.loadError', 'Failed to load services'));
       } finally {
         setIsLoading(false);
       }
@@ -49,7 +51,7 @@ export default function ServicesSection() {
       setAvailablePlans(plans);
       setIsManaging(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load service plans');
+      setError(err instanceof Error ? err.message : t('account.services.loadPlansError', 'Failed to load service plans'));
     }
   };
 
@@ -75,7 +77,7 @@ export default function ServicesSection() {
       setSelectedService(null);
       setAvailablePlans([]);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update service');
+      setActionError(err instanceof Error ? err.message : t('account.services.updateError', 'Failed to update service'));
     } finally {
       setIsProcessing(false);
     }

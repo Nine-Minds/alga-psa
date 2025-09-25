@@ -110,7 +110,7 @@
       "cleared": "Préférence de langue réinitialisée. Langue par défaut utilisée...",
       "updating": "Mise à jour de la préférence de langue...",
       "notSet": "Non défini",
-      "notSetWithSource": "Non défini (Utilise {{source}} : {{languageName}} - {{locale}})",
+      "notSetWithSource": "Non défini (Paramètre par défaut du {{source}} : {{languageName}} - {{locale}})",
       "source": {
         "company": "paramètre par défaut de l'entreprise",
         "tenant": "paramètre par défaut du locataire",

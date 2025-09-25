@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number) => string;
@@ -106,7 +106,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError('Failed to download PDF. Please try again.');
+      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     }
   };
 

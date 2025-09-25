@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useI18n } from '@/lib/i18n/client';
+import { useI18n } from 'server/src/lib/i18n/client';
 import type { SupportedLocale } from '@/lib/i18n/config';
 
 interface LanguageSwitcherProps {

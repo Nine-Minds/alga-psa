@@ -54,7 +54,7 @@ import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { CompanyLanguagePreference } from './CompanyLanguagePreference';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 
 const SwitchDetailItem: React.FC<{

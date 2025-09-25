@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import { getCurrentUser, getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
