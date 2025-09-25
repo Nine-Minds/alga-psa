@@ -434,26 +434,27 @@ jobs:
         id: capture_creds
         run: |
           echo "Attempting to capture credentials from server logs..."
-          # Wait a few seconds for logs to flush if needed
           sleep 5
-          SERVER_LOGS=$(docker-compose -p alga-e2e-test logs server)
 
-          # Extract email (should be glinda@emeraldcity.oz)
-          USER_EMAIL=$(echo "$SERVER_LOGS" | grep -oP 'User Email is -> \[ \K[^ ]+' || echo "")
-          # Extract password
-          USER_PASSWORD=$(echo "$SERVER_LOGS" | grep -oP 'Password is -> \[ \K[^ ]+' || echo "")
+          SERVER_LOGS=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs server)
+
+          USER_EMAIL=$(printf '%s\n' "$SERVER_LOGS" | grep 'User Email is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
+          USER_PASSWORD=$(printf '%s\n' "$SERVER_LOGS" | grep 'Password is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
 
           if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
             echo "Failed to extract credentials from server logs."
-            echo "Server Logs:"
-            echo "$SERVER_LOGS"
+            echo "Server logs (last 200 lines):"
+            printf '%s\n' "$SERVER_LOGS" | tail -n 200
             exit 1
           fi
 
+          {
+            echo "e2e_user_email=$USER_EMAIL"
+            echo "e2e_user_password=$USER_PASSWORD"
+          } >> "$GITHUB_OUTPUT"
+
           echo "Successfully extracted credentials."
-          echo "::set-output name=e2e_user_email::$USER_EMAIL"
-          echo "::set-output name=e2e_user_password::$USER_PASSWORD"
-          # Mask the password in logs
+          echo "E2E email: $USER_EMAIL"
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
 
@@ -661,10 +662,9 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.capture_creds.outputs.e2e_user_email != ''
         working-directory: ./e2e-tests
         run: |
-          # Pass credentials as environment variables to Playwright tests
-          # Ensure variables are properly quoted to handle special characters
-          E2E_USER_EMAIL="${{ steps.capture_creds.outputs.e2e_user_email }}" \
-          E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}" \
+          export E2E_USER_EMAIL="${{ steps.capture_creds.outputs.e2e_user_email }}"
+          export E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}"
+
           npx playwright test
         shell: bash
 
