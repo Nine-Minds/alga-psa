@@ -53,6 +53,15 @@ describe('portalDomainRegistrationWorkflow', () => {
         status: currentStatus,
         statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
       }),
+      waitForHttpChallenge: async () => {
+        throw new Error('HTTP challenge should not be requested when apply fails');
+      },
+      ensureHttpChallengeRoute: async () => {
+        throw new Error('Should not ensure challenge route when apply fails');
+      },
+      removeHttpChallengeRoute: async () => {
+        return;
+      },
     };
 
     const worker = await Worker.create({
@@ -117,6 +126,9 @@ describe('portalDomainRegistrationWorkflow', () => {
       statusUpdates.push({ status, statusMessage: statusMessage ?? null });
     };
 
+    let challengeAppliedCount = 0;
+    let challengeRemovedCount = 0;
+
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
         expect(portalDomainId).toBe(record.id);
@@ -152,6 +164,18 @@ describe('portalDomainRegistrationWorkflow', () => {
           statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
         };
       },
+      waitForHttpChallenge: async () => ({
+        challengeName: 'portal-domain-tenant-success-1',
+        serviceName: 'cm-acme-http-solver-test',
+        servicePort: 8089,
+        token: 'test-token',
+      }),
+      ensureHttpChallengeRoute: async () => {
+        challengeAppliedCount += 1;
+      },
+      removeHttpChallengeRoute: async () => {
+        challengeRemovedCount += 1;
+      },
     };
 
     const worker = await Worker.create({
@@ -176,12 +200,15 @@ describe('portalDomainRegistrationWorkflow', () => {
         'verifying_dns',
         'pending_certificate',
         'deploying',
+        'deploying',
         'certificate_issuing',
         'active',
       ]);
 
       const lastStatus = statusUpdates[statusUpdates.length - 1];
       expect(lastStatus.statusMessage).toContain('Certificate issued');
+      expect(challengeAppliedCount).toBeGreaterThanOrEqual(1);
+      expect(challengeRemovedCount).toBe(1);
     } finally {
       await env.teardown();
     }
@@ -225,6 +252,10 @@ describe('portalDomainRegistrationWorkflow', () => {
         resolveFailureSignal = null;
       }
     };
+
+    let waitCalls = 0;
+    let ensureCalls = 0;
+    let removeCalls = 0;
 
     const activities = {
       loadPortalDomain: async ({ portalDomainId }: { portalDomainId: string }) => {
@@ -271,6 +302,21 @@ describe('portalDomainRegistrationWorkflow', () => {
           statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
         };
       },
+      waitForHttpChallenge: async () => {
+        waitCalls += 1;
+        return {
+          challengeName: `portal-domain-tenant-retry-${waitCalls}`,
+          serviceName: 'cm-acme-http-solver-test',
+          servicePort: 8089,
+          token: `retry-token-${waitCalls}`,
+        };
+      },
+      ensureHttpChallengeRoute: async () => {
+        ensureCalls += 1;
+      },
+      removeHttpChallengeRoute: async () => {
+        removeCalls += 1;
+      },
     };
 
     const worker = await Worker.create({
@@ -302,12 +348,16 @@ describe('portalDomainRegistrationWorkflow', () => {
         'verifying_dns',
         'pending_certificate',
         'deploying',
+        'deploying',
         'certificate_issuing',
         'active',
       ]);
 
       const lastStatus = statusUpdates[statusUpdates.length - 1];
       expect(lastStatus.statusMessage).toContain('Certificate issued');
+      expect(waitCalls).toBeGreaterThanOrEqual(1);
+      expect(ensureCalls).toBeGreaterThanOrEqual(1);
+      expect(removeCalls).toBeGreaterThanOrEqual(1);
     } finally {
       await env.teardown();
     }
