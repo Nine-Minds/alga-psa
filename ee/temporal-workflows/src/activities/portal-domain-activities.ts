@@ -980,11 +980,16 @@ export async function waitForHttpChallenge(args: {
           ? challenge.spec.token
           : "";
 
+        const key = typeof challenge?.spec?.key === "string"
+          ? challenge.spec.key
+          : "";
+
         return {
           challengeName: String(challenge.metadata?.name ?? ""),
           serviceName: String(service.metadata?.name ?? ""),
           servicePort,
           token,
+          key,
         };
       }
     }
@@ -1367,19 +1372,15 @@ function renderPortalDomainChallengeResources(
         {
           match: [
             {
-              uri: { prefix: "/.well-known/acme-challenge/" },
+              uri: { exact: `/.well-known/acme-challenge/${challenge.token}` },
             },
           ],
-          route: [
-            {
-              destination: {
-                host: `${challenge.serviceName}.${config.virtualServiceNamespace}.svc.cluster.local`,
-                port: {
-                  number: challenge.servicePort,
-                },
-              },
+          directResponse: {
+            status: 200,
+            body: {
+              string: challenge.key,
             },
-          ],
+          },
         },
       ],
     },

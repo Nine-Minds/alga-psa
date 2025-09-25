@@ -56,4 +56,5 @@ export interface HttpChallengeDetails {
   serviceName: string;
   servicePort: number;
   token: string;
+  key: string;
 }
