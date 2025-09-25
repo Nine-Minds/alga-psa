@@ -298,9 +298,15 @@ const nextConfig = {
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/client-portal-domain/entry': isEE
+          ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
         '@product/workflows/entry': isEE
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
           : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+        '@product/billing/entry': isEE
+          ? path.join(__dirname, '../packages/product-billing/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
         // Point stable specifiers to exact entry files to avoid conditional exports in package index
         '@alga-psa/product-extension-initialization': isEE
           ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
