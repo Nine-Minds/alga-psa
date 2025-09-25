@@ -11,6 +11,7 @@ import { toast } from 'react-hot-toast';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import EntityImageUpload from 'server/src/components/ui/EntityImageUpload';
 import ColorPicker from 'server/src/components/ui/ColorPicker';
 import { uploadTenantLogo, deleteTenantLogo } from '@/lib/actions/tenant-actions/tenantLogoActions';
@@ -28,8 +29,8 @@ const ClientPortalSettings = () => {
   const [brandingLoading, setBrandingLoading] = useState(true);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string>('');
-  const [primaryColor, setPrimaryColor] = useState<string>('#6366F1');
-  const [secondaryColor, setSecondaryColor] = useState<string>('#8B5CF6');
+  const [primaryColor, setPrimaryColor] = useState<string>('');
+  const [secondaryColor, setSecondaryColor] = useState<string>('');
   const [companyName, setCompanyName] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
   const [showPreview, setShowPreview] = useState<boolean>(false);
@@ -87,8 +88,8 @@ const ClientPortalSettings = () => {
 
         if (brandingSettings) {
           setLogoUrl(brandingSettings.logoUrl || '');
-          setPrimaryColor(brandingSettings.primaryColor || '#6366F1');
-          setSecondaryColor(brandingSettings.secondaryColor || '#8B5CF6');
+          setPrimaryColor(brandingSettings.primaryColor || '');
+          setSecondaryColor(brandingSettings.secondaryColor || '');
           setCompanyName(brandingSettings.companyName || '');
         }
       } catch (error) {
@@ -248,30 +249,21 @@ const ClientPortalSettings = () => {
               </p>
               <div className="space-y-2">
                 {LOCALE_CONFIG.supportedLocales.map((locale) => (
-                  <label
+                  <Checkbox
                     key={locale}
-                    className="flex items-center space-x-3 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                      checked={enabledLocales.includes(locale)}
-                      disabled={locale === defaultLocale || loading || saving}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          handleEnabledLanguagesChange([...enabledLocales, locale]);
-                        } else {
-                          handleEnabledLanguagesChange(enabledLocales.filter(l => l !== locale));
-                        }
-                      }}
-                    />
-                    <span className={`text-sm ${locale === defaultLocale ? 'font-medium' : ''}`}>
-                      {LOCALE_CONFIG.localeNames[locale]} ({locale.toUpperCase()})
-                      {locale === defaultLocale && (
-                        <span className="ml-2 text-xs text-gray-500">(default)</span>
-                      )}
-                    </span>
-                  </label>
+                    id={`locale-${locale}`}
+                    label={`${LOCALE_CONFIG.localeNames[locale]} (${locale.toUpperCase()})${locale === defaultLocale ? ' (default)' : ''}`}
+                    checked={enabledLocales.includes(locale)}
+                    disabled={locale === defaultLocale || loading || saving}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        handleEnabledLanguagesChange([...enabledLocales, locale]);
+                      } else {
+                        handleEnabledLanguagesChange(enabledLocales.filter(l => l !== locale));
+                      }
+                    }}
+                    className={locale === defaultLocale ? 'font-medium' : ''}
+                  />
                 ))}
               </div>
             </div>
@@ -357,9 +349,10 @@ const ClientPortalSettings = () => {
                     Primary Color
                   </label>
                   <ColorPicker
-                    currentBackgroundColor={primaryColor}
+                    currentBackgroundColor={primaryColor || '#8B5CF6'}
                     onSave={(color) => {
-                      if (color) setPrimaryColor(color);
+                      // Set color or empty string to clear tenant override
+                      setPrimaryColor(color || '');
                     }}
                     trigger={
                       <button
@@ -369,9 +362,9 @@ const ClientPortalSettings = () => {
                       >
                         <div
                           className="w-8 h-8 rounded border border-gray-300"
-                          style={{ backgroundColor: primaryColor }}
+                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         />
-                        <span className="text-sm">{primaryColor}</span>
+                        <span className="text-sm">{primaryColor || '#8B5CF6'}</span>
                       </button>
                     }
                     showTextColor={false}
@@ -387,9 +380,10 @@ const ClientPortalSettings = () => {
                     Secondary Color
                   </label>
                   <ColorPicker
-                    currentBackgroundColor={secondaryColor}
+                    currentBackgroundColor={secondaryColor || '#6366F1'}
                     onSave={(color) => {
-                      if (color) setSecondaryColor(color);
+                      // Set color or empty string to clear tenant override
+                      setSecondaryColor(color || '');
                     }}
                     trigger={
                       <button
@@ -399,9 +393,9 @@ const ClientPortalSettings = () => {
                       >
                         <div
                           className="w-8 h-8 rounded border border-gray-300"
-                          style={{ backgroundColor: secondaryColor }}
+                          style={{ backgroundColor: secondaryColor || '#6366F1' }}
                         />
-                        <span className="text-sm">{secondaryColor}</span>
+                        <span className="text-sm">{secondaryColor || '#6366F1'}</span>
                       </button>
                     }
                     showTextColor={false}
@@ -460,7 +454,7 @@ const ClientPortalSettings = () => {
                       <nav className="hidden md:flex items-center gap-6">
                         <span
                           className="text-sm font-medium cursor-default"
-                          style={{ color: secondaryColor }}
+                          style={{ color: secondaryColor || '#6366F1' }}
                         >
                           Dashboard
                         </span>
@@ -487,7 +481,7 @@ const ClientPortalSettings = () => {
                         <span className="text-xs text-gray-600">Open Tickets</span>
                         <div
                           className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: primaryColor }}
+                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         >
                           3
                         </div>
@@ -500,7 +494,7 @@ const ClientPortalSettings = () => {
                         <span className="text-xs text-gray-600">Active Projects</span>
                         <div
                           className="w-6 h-6 rounded flex items-center justify-center text-white text-xs font-bold"
-                          style={{ backgroundColor: secondaryColor }}
+                          style={{ backgroundColor: secondaryColor || '#6366F1' }}
                         >
                           5
                         </div>
@@ -527,7 +521,7 @@ const ClientPortalSettings = () => {
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: primaryColor }}
+                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         />
                         <span className="text-gray-600">Ticket #1234 was updated</span>
                         <span className="text-gray-400 ml-auto">2 hours ago</span>
@@ -535,7 +529,7 @@ const ClientPortalSettings = () => {
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: secondaryColor }}
+                          style={{ backgroundColor: secondaryColor || '#6366F1' }}
                         />
                         <span className="text-gray-600">New invoice generated</span>
                         <span className="text-gray-400 ml-auto">5 hours ago</span>
@@ -543,7 +537,7 @@ const ClientPortalSettings = () => {
                       <div className="flex items-center gap-2 text-xs">
                         <div
                           className="w-2 h-2 rounded-full"
-                          style={{ backgroundColor: primaryColor }}
+                          style={{ backgroundColor: primaryColor || '#8B5CF6' }}
                         />
                         <span className="text-gray-600">Project milestone completed</span>
                         <span className="text-gray-400 ml-auto">1 day ago</span>
@@ -563,8 +557,8 @@ const ClientPortalSettings = () => {
                     <button
                       className="px-3 py-1.5 rounded text-xs font-medium border transition-colors"
                       style={{
-                        borderColor: secondaryColor,
-                        color: secondaryColor
+                        borderColor: secondaryColor || '#6366F1',
+                        color: secondaryColor || '#6366F1'
                       }}
                       disabled
                     >
@@ -580,8 +574,8 @@ const ClientPortalSettings = () => {
                 <SignInPagePreview
                   branding={{
                     logoUrl,
-                    primaryColor,
-                    secondaryColor,
+                    primaryColor: primaryColor || '#8B5CF6',
+                    secondaryColor: secondaryColor || '#6366F1',
                     companyName
                   }}
                 />
