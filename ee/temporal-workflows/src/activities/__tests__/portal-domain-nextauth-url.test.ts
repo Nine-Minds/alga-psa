@@ -50,8 +50,9 @@ const baseConfig: PortalDomainConfig = {
   serviceHost: "sebastian.msp.svc.cluster.local",
   servicePort: 3000,
   challengeServiceHost: null,
-  challengeServicePort: undefined,
-  challengeRouteEnabled: false,
+  challengeServicePort: null,
+  challengeRouteEnabled: true,
+  redirectHttpToHttps: true,
   manifestOutputDirectory: null,
 };
 
@@ -106,15 +107,29 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
       "istio-system/portal-domain-gw-tenant",
     ]);
 
-    // Verify destination service
-    expect(manifests.virtualService.spec.http).toHaveLength(1);
-    expect(
-      manifests.virtualService.spec.http?.[0]?.route?.[0]?.destination?.host,
-    ).toBe(baseConfig.serviceHost);
-    expect(
-      manifests.virtualService.spec.http?.[0]?.route?.[0]?.destination?.port
-        ?.number,
-    ).toBe(3000);
+    // Verify HTTP challenge + redirect and HTTPS routing
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
+
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
+
+    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
+      "/.well-known/acme-challenge/",
+    );
+    expect(challengeRoute?.match?.[0]?.port).toBe(80);
+    expect(challengeRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
+
+    expect(redirectRoute?.match?.[0]?.port).toBe(80);
+    expect(redirectRoute?.redirect?.scheme).toBe("https");
+    expect(redirectRoute?.redirect?.port).toBe(443);
+
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
+    expect(httpsRoute?.route?.[0]?.destination?.port?.number).toBe(3000);
 
     // Verify labels contain correct domain information
     const labels = manifests.gateway.metadata.labels ?? {};
@@ -150,6 +165,19 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     expect(manifests.virtualService.spec.gateways).toEqual([
       "istio-system/portal-domain-gw-tenant",
     ]);
+
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
+
+    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
+      "/.well-known/acme-challenge/",
+    );
+    expect(redirectRoute?.redirect?.scheme).toBe("https");
+    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
   });
 
   it("generates certificate with fallback domain when NEXTAUTH_URL is not set", async () => {
@@ -178,6 +206,19 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     expect(manifests.virtualService.spec.gateways).toEqual([
       "istio-system/portal-domain-gw-tenant",
     ]);
+
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
+
+    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
+      "/.well-known/acme-challenge/",
+    );
+    expect(redirectRoute?.redirect?.scheme).toBe("https");
+    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
   });
 
   it("includes HTTP-01 challenge routing when enabled with staging domain", async () => {
@@ -198,9 +239,10 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     const manifests = renderPortalDomainResources(record, config);
 
     // Verify challenge route is first in the list
-    expect(manifests.virtualService.spec.http).toHaveLength(2);
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
 
-    const challengeRoute = manifests.virtualService.spec.http?.[0];
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
     expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
       "/.well-known/acme-challenge/",
     );
@@ -209,11 +251,13 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     );
     expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
 
-    // Verify primary route still works
-    const primaryRoute = manifests.virtualService.spec.http?.[1];
-    expect(primaryRoute?.route?.[0]?.destination?.host).toBe(
+    expect(redirectRoute?.redirect?.scheme).toBe("https");
+    expect(redirectRoute?.redirect?.port).toBe(443);
+
+    // Verify primary route still works for HTTPS
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,
     );
-    expect(primaryRoute?.route?.[0]?.destination?.port?.number).toBe(3000);
+    expect(httpsRoute?.route?.[0]?.destination?.port?.number).toBe(3000);
   });
 });

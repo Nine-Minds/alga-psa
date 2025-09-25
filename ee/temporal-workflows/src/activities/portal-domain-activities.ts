@@ -74,6 +74,10 @@ export interface PortalDomainConfig {
   virtualServiceNamespace: string;
   serviceHost: string;
   servicePort: number;
+  challengeRouteEnabled?: boolean;
+  challengeServiceHost?: string | null;
+  challengeServicePort?: number | null;
+  redirectHttpToHttps?: boolean;
   manifestOutputDirectory: string | null;
 }
 
@@ -102,6 +106,19 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   serviceHost:
     process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
+  challengeRouteEnabled: parseBooleanEnv(
+    process.env.PORTAL_DOMAIN_CHALLENGE_ROUTE_ENABLED,
+    true,
+  ),
+  challengeServiceHost:
+    process.env.PORTAL_DOMAIN_CHALLENGE_SERVICE_HOST || null,
+  challengeServicePort: parseOptionalNumberEnv(
+    process.env.PORTAL_DOMAIN_CHALLENGE_SERVICE_PORT,
+  ),
+  redirectHttpToHttps: parseBooleanEnv(
+    process.env.PORTAL_DOMAIN_REDIRECT_HTTP_TO_HTTPS,
+    true,
+  ),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
 };
 
@@ -149,6 +166,33 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+function parseOptionalNumberEnv(value: string | undefined): number | null {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function parseBooleanEnv(
+  value: string | undefined,
+  fallback: boolean,
+): boolean {
+  if (value === undefined) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "on"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(normalized)) {
+    return false;
+  }
+
+  return fallback;
 }
 
 function shouldManageStatus(status: string | null | undefined): boolean {
@@ -986,9 +1030,6 @@ export function renderPortalDomainResources(
             name: httpServerName,
             protocol: "HTTP",
           },
-          tls: {
-            httpsRedirect: true,
-          },
           hosts,
         },
         {
@@ -1008,18 +1049,76 @@ export function renderPortalDomainResources(
   };
 
   const httpRoutes: any[] = [];
+  const primaryDestination = {
+    destination: {
+      host: config.serviceHost,
+      port: {
+        number: config.servicePort,
+      },
+    },
+  };
 
-  httpRoutes.push({
-    route: [
-      {
-        destination: {
-          host: config.serviceHost,
-          port: {
-            number: config.servicePort,
-          },
+  const challengeRouteEnabled = config.challengeRouteEnabled !== false;
+  const challengeHost = config.challengeServiceHost || config.serviceHost;
+  const challengePort =
+    config.challengeServicePort ?? config.servicePort;
+
+  if (challengeRouteEnabled) {
+    const challengeDestination = {
+      destination: {
+        host: challengeHost,
+        port: {
+          number: challengePort,
         },
       },
+    };
+
+    httpRoutes.push({
+      match: [
+        {
+          uri: { prefix: "/.well-known/acme-challenge/" },
+          port: config.gatewayHttpPort,
+        },
+      ],
+      route: [challengeDestination],
+    });
+  }
+
+  const redirectHttpToHttps = config.redirectHttpToHttps !== false;
+
+  if (redirectHttpToHttps) {
+    httpRoutes.push({
+      match: [
+        {
+          uri: { prefix: "/" },
+          port: config.gatewayHttpPort,
+        },
+      ],
+      redirect: {
+        scheme: "https",
+        port: config.gatewayHttpsPort,
+      },
+    });
+  } else {
+    httpRoutes.push({
+      match: [
+        {
+          uri: { prefix: "/" },
+          port: config.gatewayHttpPort,
+        },
+      ],
+      route: [primaryDestination],
+    });
+  }
+
+  httpRoutes.push({
+    match: [
+      {
+        uri: { prefix: "/" },
+        port: config.gatewayHttpsPort,
+      },
     ],
+    route: [primaryDestination],
   });
 
   const virtualService: Record<string, any> = {

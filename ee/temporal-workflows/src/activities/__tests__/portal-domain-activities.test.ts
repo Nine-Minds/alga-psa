@@ -36,8 +36,9 @@ const baseConfig: PortalDomainConfig = {
   serviceHost: 'sebastian.msp.svc.cluster.local',
   servicePort: 3000,
   challengeServiceHost: null,
-  challengeServicePort: undefined,
-  challengeRouteEnabled: false,
+  challengeServicePort: null,
+  challengeRouteEnabled: true,
+  redirectHttpToHttps: true,
   manifestOutputDirectory: null,
 };
 
@@ -55,8 +56,27 @@ describe('renderPortalDomainResources', () => {
     expect(manifests.gateway.spec.servers[1].tls.credentialName).toBe(manifests.secretName);
     expect(manifests.virtualService.metadata.namespace).toBe('msp');
     expect(manifests.virtualService.spec.gateways).toEqual(['istio-system/portal-domain-gw-123e456']);
-    expect(manifests.virtualService.spec.http).toHaveLength(1);
-    expect(manifests.virtualService.spec.http?.[0]?.route?.[0]?.destination?.host).toBe(baseConfig.serviceHost);
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
+
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
+
+    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
+      '/.well-known/acme-challenge/',
+    );
+    expect(challengeRoute?.match?.[0]?.port).toBe(80);
+    expect(challengeRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
+
+    expect(redirectRoute?.match?.[0]?.port).toBe(80);
+    expect(redirectRoute?.redirect?.scheme).toBe('https');
+    expect(redirectRoute?.redirect?.port).toBe(443);
+
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
 
     const labels = manifests.gateway.metadata.labels ?? {};
     expect(labels['portal.alga-psa.com/domain-host']).toBe('example.com');
@@ -74,13 +94,18 @@ describe('renderPortalDomainResources', () => {
 
     const manifests = renderPortalDomainResources(record, config);
 
-    expect(manifests.virtualService.spec.http).toHaveLength(2);
-    const challengeRoute = manifests.virtualService.spec.http?.[0];
+    expect(manifests.virtualService.spec.http).toHaveLength(3);
+    const [challengeRoute, redirectRoute, httpsRoute] =
+      manifests.virtualService.spec.http ?? [];
     expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe('/.well-known/acme-challenge/');
     expect(challengeRoute?.route?.[0]?.destination?.host).toBe('challenge-svc.msp.svc.cluster.local');
     expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
 
-    const primaryRoute = manifests.virtualService.spec.http?.[1];
-    expect(primaryRoute?.route?.[0]?.destination?.host).toBe(baseConfig.serviceHost);
+    expect(redirectRoute?.redirect?.scheme).toBe('https');
+    expect(redirectRoute?.redirect?.port).toBe(443);
+
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
   });
 });
