@@ -30,15 +30,10 @@ const baseConfig: PortalDomainConfig = {
   certificateIssuerGroup: 'cert-manager.io',
   gatewayNamespace: 'istio-system',
   gatewaySelector: { istio: 'ingressgateway' },
-  gatewayHttpPort: 80,
   gatewayHttpsPort: 443,
   virtualServiceNamespace: 'msp',
   serviceHost: 'sebastian.msp.svc.cluster.local',
   servicePort: 3000,
-  challengeServiceHost: null,
-  challengeServicePort: null,
-  challengeRouteEnabled: false,
-  redirectHttpToHttps: false,
   manifestOutputDirectory: null,
 };
 
@@ -52,8 +47,8 @@ describe('renderPortalDomainResources', () => {
     expect(manifests.certificate.spec.secretName).toBe(manifests.secretName);
     expect(manifests.certificate.spec.dnsNames).toEqual(['example.com']);
     expect(manifests.gateway.metadata.name).toBe('portal-domain-gw-123e456');
-    expect(manifests.gateway.spec.servers).toHaveLength(2);
-    expect(manifests.gateway.spec.servers[1].tls.credentialName).toBe(manifests.secretName);
+    expect(manifests.gateway.spec.servers).toHaveLength(1);
+    expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(manifests.secretName);
     expect(manifests.virtualService.metadata.namespace).toBe('msp');
     expect(manifests.virtualService.spec.gateways).toEqual(['istio-system/portal-domain-gw-123e456']);
     expect(manifests.virtualService.spec.http).toHaveLength(1);
@@ -66,32 +61,5 @@ describe('renderPortalDomainResources', () => {
     const labels = manifests.gateway.metadata.labels ?? {};
     expect(labels['portal.alga-psa.com/domain-host']).toBe('example.com');
     expect(labels['portal.alga-psa.com/tenant']).toBe('123e4567-e89b-12d3-a456-426614174000');
-  });
-
-  it('adds HTTP-01 challenge routing when enabled', () => {
-    const config: PortalDomainConfig = {
-      ...baseConfig,
-      challengeRouteEnabled: true,
-      challengeServiceHost: 'challenge-svc.msp.svc.cluster.local',
-      challengeServicePort: 8089,
-    };
-    const record = createRecord({ domain: 'customer.portal.example.com' });
-
-    const manifests = renderPortalDomainResources(record, config);
-
-    expect(manifests.virtualService.spec.http).toHaveLength(3);
-    const [challengeRoute, httpFallbackRoute, httpsRoute] =
-      manifests.virtualService.spec.http ?? [];
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe('/.well-known/acme-challenge/');
-    expect(challengeRoute?.route?.[0]?.destination?.host).toBe('challenge-svc.msp.svc.cluster.local');
-    expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
-
-    expect(httpFallbackRoute?.route?.[0]?.destination?.host).toBe(
-      baseConfig.serviceHost,
-    );
-
-    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
-      baseConfig.serviceHost,
-    );
   });
 });
