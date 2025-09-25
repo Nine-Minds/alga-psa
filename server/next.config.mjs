@@ -59,6 +59,16 @@ const describeMappingTarget = (resolved = '') => {
   return 'unknown';
 };
 
+const aliasEeEntryVariants = (aliasMap, pairs) => {
+  pairs.forEach(({ fromCandidates = [], to }) => {
+    fromCandidates
+      .filter(Boolean)
+      .forEach((candidate) => {
+        aliasMap[candidate] = to;
+      });
+  });
+};
+
 const logAliasSnapshot = (aliasMap) => {
   const flag = String(process.env.LOG_MODULE_RESOLUTION || '').toLowerCase();
   if (flag !== '1' && flag !== 'true') {
@@ -427,6 +437,71 @@ const nextConfig = {
       const pkgClientPortalEeEntry = path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx');
       config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
       config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
+
+      aliasEeEntryVariants(config.resolve.alias, [
+        {
+          to: pkgExtensionsEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extensions/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: pkgSettingsEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: pkgClientPortalEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-providers/entry.ts'),
+            path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
+            path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-billing/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-billing/entry.ts'),
+            path.join(__dirname, '../packages/product-billing/entry.tsx'),
+            path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-chat/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-chat/entry.ts'),
+            path.join(__dirname, '../packages/product-chat/entry.tsx'),
+            path.join(__dirname, '../packages/product-chat/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-chat/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extension-actions/entry.ts'),
+            path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-extension-initialization/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extension-initialization/entry.ts'),
+            path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
+          ],
+        },
+      ]);
     }
 
     logAliasSnapshot(config.resolve.alias);
