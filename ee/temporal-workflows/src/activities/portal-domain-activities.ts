@@ -148,6 +148,54 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+interface RetryOptions {
+  attempts?: number;
+  delayMs?: number;
+}
+
+function isTransientError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const anyError = error as any;
+  const code = typeof anyError?.code === "string" ? anyError.code.toUpperCase() : "";
+  const message = typeof anyError?.message === "string" ? anyError.message.toLowerCase() : "";
+
+  if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "ECONNREFUSED") {
+    return true;
+  }
+
+  if (message.includes("econnreset") || message.includes("connection reset") || message.includes("timeout")) {
+    return true;
+  }
+
+  return false;
+}
+
+async function withTransientRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? 3);
+  const delayMs = Math.max(0, options.delayMs ?? 1000);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+      await delay(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error('Transient operation failed');
+}
+
 function shouldManageStatus(status: string | null | undefined): boolean {
   return status ? ACTIVE_RECONCILE_STATUSES.has(status) : false;
 }
@@ -450,9 +498,13 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
 export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
   const knex = await getConnection();
-  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
-    .where({ id: args.portalDomainId })
-    .first();
+  const record = await withTransientRetry(
+    () =>
+      knex<PortalDomainActivityRecord>(TABLE_NAME)
+        .where({ id: args.portalDomainId })
+        .first(),
+    { attempts: 3, delayMs: 1000 }
+  );
 
   if (!record) {
     return null;
@@ -551,15 +603,19 @@ async function inspectCertificateStatus(
   namespace: string,
 ): Promise<CertificateInspectionResult> {
   try {
-    const { stdout } = await runKubectl([
-      'get',
-      'certificate',
-      name,
-      '-n',
-      namespace,
-      '-o',
-      'json',
-    ]);
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'certificate',
+          name,
+          '-n',
+          namespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 5, delayMs: 2000 }
+    );
     const certificate = JSON.parse(stdout);
     const conditions = Array.isArray(certificate?.status?.conditions)
       ? certificate.status.conditions
@@ -633,7 +689,10 @@ async function kubectlResourceExists(
   namespace: string,
 ): Promise<boolean> {
   try {
-    await runKubectl(['get', kind, name, '-n', namespace]);
+    await withTransientRetry(
+      () => runKubectl(['get', kind, name, '-n', namespace]),
+      { attempts: 3, delayMs: 1000 }
+    );
     return true;
   } catch (error) {
     if (isNotFoundError(error)) {
