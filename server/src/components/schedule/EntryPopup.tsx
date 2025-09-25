@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
+import { Dialog } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { TextArea } from 'server/src/components/ui/TextArea';
@@ -788,17 +788,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       {content}
     </EntryPopupContext.Provider>
   ) : (
-    <Dialog 
-      isOpen={true} 
-      onClose={onClose} 
-      hideCloseButton={false} 
+    <Dialog
+      isOpen={true}
+      onClose={onClose}
+      hideCloseButton={false}
       title={viewOnly ? 'View Entry' : (event ? 'Edit Entry' : 'New Entry')}
     >
-      <DialogContent>
-        <EntryPopupContext.Provider value={contextValue}>
-          {content}
-        </EntryPopupContext.Provider>
-      </DialogContent>
+      <EntryPopupContext.Provider value={contextValue}>
+        {content}
+      </EntryPopupContext.Provider>
       
       <ConfirmationDialog
         className="max-w-[450px]"

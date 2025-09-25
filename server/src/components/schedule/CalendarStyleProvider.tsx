@@ -158,6 +158,61 @@ export const CalendarStyleProvider: React.FC = () => {
         width: 1px;
         background: rgb(var(--color-border-200));
       }
+
+      /* Multi-day event styles */
+      .rbc-event-continues-prior {
+        border-top-left-radius: 0 !important;
+        border-bottom-left-radius: 0 !important;
+        position: relative;
+      }
+
+      .rbc-event-continues-prior::before {
+        content: '\u2190';
+        position: absolute;
+        left: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+        opacity: 0.6;
+      }
+
+      .rbc-event-continues-after {
+        border-top-right-radius: 0 !important;
+        border-bottom-right-radius: 0 !important;
+        position: relative;
+      }
+
+      .rbc-event-continues-after::after {
+        content: '\u2192';
+        position: absolute;
+        right: 2px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 10px;
+        opacity: 0.6;
+      }
+
+      /* Month view multi-day event styling */
+      .rbc-month-view .rbc-event-continues-prior,
+      .rbc-month-view .rbc-event-continues-after {
+        background: linear-gradient(90deg,
+          var(--event-bg-color, rgb(var(--color-primary-200))) 0%,
+          var(--event-bg-color, rgb(var(--color-primary-200))) 85%,
+          rgba(var(--color-primary-200), 0.6) 100%);
+      }
+
+      /* Week/day view multi-day in all-day section */
+      .rbc-allday-cell .rbc-event {
+        min-height: 20px;
+        line-height: 20px;
+        font-size: 12px;
+      }
+
+      /* Visual connector for multi-day events */
+      .rbc-row-segment .rbc-event-continues-prior,
+      .rbc-row-segment .rbc-event-continues-after {
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
+      }
     `}</style>
   );
 };

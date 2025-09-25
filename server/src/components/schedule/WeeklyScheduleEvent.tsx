@@ -49,6 +49,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   technicianMap = {}
 }) => {
   const eventRef = useRef<HTMLDivElement>(null);
+
+  // Check if event spans multiple days
+  const isMultiDay = React.useMemo(() => {
+    const start = new Date(event.scheduled_start);
+    const end = new Date(event.scheduled_end);
+    return start.toDateString() !== end.toDateString();
+  }, [event.scheduled_start, event.scheduled_end]);
   
   // Use the compact event hook
   const { isCompact, compactClasses } = useIsCompactEvent(event, eventRef);
@@ -70,9 +77,6 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   
   const backgroundColor = isHovered ? hoverColor : baseColor;
   const opacity = isPrimary ? 1 : (isComparison ? 0.6 : 1);
-  const border = isPrimary ? '2px solid rgb(var(--color-primary-500))' : 'none';
-  
-  const isTicketOrTask = event.work_item_type === 'ticket' || event.work_item_type === 'project_task';
   
   // Determine text color based on background color
   const textColor = event.work_item_type === 'ticket' ? 'text-primary-950' : 'text-gray-950';
@@ -90,7 +94,9 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
   // Construct detailed tooltip
-  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+  const endDate = endMoment.toLocaleDateString();
+  const dateDisplay = formattedDate === endDate ? formattedDate : `${formattedDate} - ${endDate}`;
+  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nDate: ${dateDisplay}\nTime: ${formattedTime}${isMultiDay ? ' (Multi-day)' : ''}`;
 
   const titleParts = event.title?.split(':') || ['Untitled'];
   const mainTitle = titleParts[0];
@@ -166,11 +172,19 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
           <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
             {mainTitle}
           </div>
+          {isMultiDay && (
+            <div className="ml-1 text-[10px] opacity-70" title="Multi-day event">📅</div>
+          )}
         </div>
       ) : (
         // For normal events, show two lines
         <>
-          <div className="font-semibold truncate">{mainTitle}</div>
+          <div className="font-semibold truncate flex items-center">
+            {mainTitle}
+            {isMultiDay && (
+              <span className="ml-1 text-xs opacity-70" title="Multi-day event">📅</span>
+            )}
+          </div>
           {subtitle && <div className="truncate text-xs">{subtitle}</div>}
         </>
       )}
