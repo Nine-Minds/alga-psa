@@ -108,7 +108,7 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   challengeRouteEnabled: parseBooleanEnv(
     process.env.PORTAL_DOMAIN_CHALLENGE_ROUTE_ENABLED,
-    true,
+    false,
   ),
   challengeServiceHost:
     process.env.PORTAL_DOMAIN_CHALLENGE_SERVICE_HOST || null,
@@ -117,7 +117,7 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   ),
   redirectHttpToHttps: parseBooleanEnv(
     process.env.PORTAL_DOMAIN_REDIRECT_HTTP_TO_HTTPS,
-    true,
+    false,
   ),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
 };
@@ -1058,12 +1058,13 @@ export function renderPortalDomainResources(
     },
   };
 
-  const challengeRouteEnabled = config.challengeRouteEnabled !== false;
-  const challengeHost = config.challengeServiceHost || config.serviceHost;
-  const challengePort =
-    config.challengeServicePort ?? config.servicePort;
+  const challengeRouteEnabled = config.challengeRouteEnabled === true;
 
   if (challengeRouteEnabled) {
+    const challengeHost =
+      config.challengeServiceHost || config.serviceHost;
+    const challengePort =
+      config.challengeServicePort ?? config.servicePort;
     const challengeDestination = {
       destination: {
         host: challengeHost,
@@ -1084,7 +1085,7 @@ export function renderPortalDomainResources(
     });
   }
 
-  const redirectHttpToHttps = config.redirectHttpToHttps !== false;
+  const redirectHttpToHttps = config.redirectHttpToHttps === true;
 
   if (redirectHttpToHttps) {
     httpRoutes.push({
@@ -1100,15 +1101,17 @@ export function renderPortalDomainResources(
       },
     });
   } else {
-    httpRoutes.push({
-      match: [
-        {
-          uri: { prefix: "/" },
-          port: config.gatewayHttpPort,
-        },
-      ],
-      route: [primaryDestination],
-    });
+    if (challengeRouteEnabled) {
+      httpRoutes.push({
+        match: [
+          {
+            uri: { prefix: "/" },
+            port: config.gatewayHttpPort,
+          },
+        ],
+        route: [primaryDestination],
+      });
+    }
   }
 
   httpRoutes.push({

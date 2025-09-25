@@ -51,8 +51,8 @@ const baseConfig: PortalDomainConfig = {
   servicePort: 3000,
   challengeServiceHost: null,
   challengeServicePort: null,
-  challengeRouteEnabled: true,
-  redirectHttpToHttps: true,
+  challengeRouteEnabled: false,
+  redirectHttpToHttps: false,
   manifestOutputDirectory: null,
 };
 
@@ -107,23 +107,10 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
       "istio-system/portal-domain-gw-tenant",
     ]);
 
-    // Verify HTTP challenge + redirect and HTTPS routing
-    expect(manifests.virtualService.spec.http).toHaveLength(3);
+    // Verify HTTPS routing only (HTTP handled by cert-manager solver)
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
 
-    const [challengeRoute, redirectRoute, httpsRoute] =
-      manifests.virtualService.spec.http ?? [];
-
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
-      "/.well-known/acme-challenge/",
-    );
-    expect(challengeRoute?.match?.[0]?.port).toBe(80);
-    expect(challengeRoute?.route?.[0]?.destination?.host).toBe(
-      baseConfig.serviceHost,
-    );
-
-    expect(redirectRoute?.match?.[0]?.port).toBe(80);
-    expect(redirectRoute?.redirect?.scheme).toBe("https");
-    expect(redirectRoute?.redirect?.port).toBe(443);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
 
     expect(httpsRoute?.match?.[0]?.port).toBe(443);
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
@@ -166,15 +153,10 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
       "istio-system/portal-domain-gw-tenant",
     ]);
 
-    expect(manifests.virtualService.spec.http).toHaveLength(3);
-    const [challengeRoute, redirectRoute, httpsRoute] =
-      manifests.virtualService.spec.http ?? [];
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
 
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
-      "/.well-known/acme-challenge/",
-    );
-    expect(redirectRoute?.redirect?.scheme).toBe("https");
-    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,
     );
@@ -207,15 +189,10 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
       "istio-system/portal-domain-gw-tenant",
     ]);
 
-    expect(manifests.virtualService.spec.http).toHaveLength(3);
-    const [challengeRoute, redirectRoute, httpsRoute] =
-      manifests.virtualService.spec.http ?? [];
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
 
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
-      "/.well-known/acme-challenge/",
-    );
-    expect(redirectRoute?.redirect?.scheme).toBe("https");
-    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,
     );
@@ -241,7 +218,7 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     // Verify challenge route is first in the list
     expect(manifests.virtualService.spec.http).toHaveLength(3);
 
-    const [challengeRoute, redirectRoute, httpsRoute] =
+    const [challengeRoute, httpFallbackRoute, httpsRoute] =
       manifests.virtualService.spec.http ?? [];
     expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
       "/.well-known/acme-challenge/",
@@ -251,8 +228,9 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     );
     expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
 
-    expect(redirectRoute?.redirect?.scheme).toBe("https");
-    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpFallbackRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
 
     // Verify primary route still works for HTTPS
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(

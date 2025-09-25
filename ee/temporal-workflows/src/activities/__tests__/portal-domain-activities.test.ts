@@ -37,8 +37,8 @@ const baseConfig: PortalDomainConfig = {
   servicePort: 3000,
   challengeServiceHost: null,
   challengeServicePort: null,
-  challengeRouteEnabled: true,
-  redirectHttpToHttps: true,
+  challengeRouteEnabled: false,
+  redirectHttpToHttps: false,
   manifestOutputDirectory: null,
 };
 
@@ -56,23 +56,8 @@ describe('renderPortalDomainResources', () => {
     expect(manifests.gateway.spec.servers[1].tls.credentialName).toBe(manifests.secretName);
     expect(manifests.virtualService.metadata.namespace).toBe('msp');
     expect(manifests.virtualService.spec.gateways).toEqual(['istio-system/portal-domain-gw-123e456']);
-    expect(manifests.virtualService.spec.http).toHaveLength(3);
-
-    const [challengeRoute, redirectRoute, httpsRoute] =
-      manifests.virtualService.spec.http ?? [];
-
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
-      '/.well-known/acme-challenge/',
-    );
-    expect(challengeRoute?.match?.[0]?.port).toBe(80);
-    expect(challengeRoute?.route?.[0]?.destination?.host).toBe(
-      baseConfig.serviceHost,
-    );
-
-    expect(redirectRoute?.match?.[0]?.port).toBe(80);
-    expect(redirectRoute?.redirect?.scheme).toBe('https');
-    expect(redirectRoute?.redirect?.port).toBe(443);
-
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
     expect(httpsRoute?.match?.[0]?.port).toBe(443);
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,
@@ -95,14 +80,15 @@ describe('renderPortalDomainResources', () => {
     const manifests = renderPortalDomainResources(record, config);
 
     expect(manifests.virtualService.spec.http).toHaveLength(3);
-    const [challengeRoute, redirectRoute, httpsRoute] =
+    const [challengeRoute, httpFallbackRoute, httpsRoute] =
       manifests.virtualService.spec.http ?? [];
     expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe('/.well-known/acme-challenge/');
     expect(challengeRoute?.route?.[0]?.destination?.host).toBe('challenge-svc.msp.svc.cluster.local');
     expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
 
-    expect(redirectRoute?.redirect?.scheme).toBe('https');
-    expect(redirectRoute?.redirect?.port).toBe(443);
+    expect(httpFallbackRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
 
     expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,

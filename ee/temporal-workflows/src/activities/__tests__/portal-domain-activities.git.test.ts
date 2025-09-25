@@ -97,8 +97,8 @@ const commandRunner: CommandRunner = async (command, args, options) => {
   servicePort: 3000,
   challengeServiceHost: null,
   challengeServicePort: null,
-  challengeRouteEnabled: true,
-  redirectHttpToHttps: true,
+  challengeRouteEnabled: false,
+  redirectHttpToHttps: false,
   manifestOutputDirectory: null,
 };
 
