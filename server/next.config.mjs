@@ -23,81 +23,6 @@ console.log('=== END DEBUG ===');
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
-const WATCHED_REQUEST_PATTERNS = [
-  '@ee',
-  'ee/server/src',
-  '@product/',
-  '../packages/product-extensions',
-  '../packages/product-settings-extensions',
-  '../packages/product-client-portal-domain',
-  '../packages/product-email-providers',
-  '../packages/product-extension-actions',
-  '../packages/product-extension-initialization',
-  '../packages/product-chat',
-];
-
-const stripLoaders = (value = '') => {
-  if (!value || typeof value !== 'string') return value || '';
-  const parts = value.split('!');
-  return parts[parts.length - 1];
-};
-
-const shouldTraceRequest = (value = '') => {
-  const flag = String(process.env.LOG_MODULE_RESOLUTION || '').toLowerCase();
-  if (flag !== '1' && flag !== 'true') {
-    return false;
-  }
-  return WATCHED_REQUEST_PATTERNS.some((token) => value.includes(token));
-};
-
-const describeMappingTarget = (resolved = '') => {
-  if (!resolved) return 'unknown';
-  if (resolved.includes('/ee/server/src/')) return 'EE';
-  if (resolved.includes('/server/src/empty/')) return 'CE-stub';
-  if (resolved.includes('/packages/product-') && !resolved.includes('/oss/')) return 'package-ee-candidate';
-  if (resolved.includes('/packages/product-') && resolved.includes('/oss/')) return 'package-oss';
-  return 'unknown';
-};
-
-const aliasEeEntryVariants = (aliasMap, pairs) => {
-  pairs.forEach(({ fromCandidates = [], to }) => {
-    fromCandidates
-      .filter(Boolean)
-      .forEach((candidate) => {
-        aliasMap[candidate] = to;
-      });
-  });
-};
-
-const logAliasSnapshot = (aliasMap) => {
-  const flag = String(process.env.LOG_MODULE_RESOLUTION || '').toLowerCase();
-  if (flag !== '1' && flag !== 'true') {
-    return;
-  }
-  const tracked = [
-    '@ee',
-    '@product/extensions/entry',
-    '@product/settings-extensions/entry',
-    '@product/client-portal-domain/entry',
-    '@product/email-providers/entry',
-    '@product/workflows/entry',
-    '@product/billing/entry',
-    '@product/chat/entry',
-    '@product/extension-actions/entry',
-    '@product/extension-initialization/entry',
-    '@alga-psa/product-extension-actions',
-    '@alga-psa/product-extension-initialization',
-  ];
-
-  const snapshot = Object.fromEntries(
-    tracked
-      .filter((key) => Object.prototype.hasOwnProperty.call(aliasMap, key))
-      .map((key) => [key, aliasMap[key]])
-  );
-
-  console.log('[edition-aliases] active', snapshot);
-};
-
 // Optional verbose module resolution logging (enable with LOG_MODULE_RESOLUTION=1)
 class LogModuleResolutionPlugin {
   apply(compiler) {
@@ -105,34 +30,27 @@ class LogModuleResolutionPlugin {
       nmf.hooks.beforeResolve.tap('LogModuleResolutionPlugin', (data) => {
         try {
           if (!data) return;
-          const rawRequest = data.request || '';
-          const normalizedRequest = stripLoaders(rawRequest);
-          if (!shouldTraceRequest(normalizedRequest) && !shouldTraceRequest(rawRequest)) {
-            return;
+          const req = data.request || '';
+          if (process.env.LOG_MODULE_RESOLUTION === '1' && (req.startsWith('@ee') || req.includes('ee/server/src'))) {
+            console.log('[resolve:before]', {
+              request: req,
+              issuer: data.contextInfo?.issuer,
+              context: data.context,
+            });
           }
-          console.log('[resolve:before]', {
-            request: rawRequest,
-            normalizedRequest,
-            issuer: data.contextInfo?.issuer,
-            context: data.context,
-          });
         } catch {}
       });
       nmf.hooks.afterResolve.tap('LogModuleResolutionPlugin', (result) => {
         try {
           if (!result) return;
           const req = result.createData?.request || result.request || result.rawRequest || '';
-          const normalizedRequest = stripLoaders(req);
           const res = result.resource || '';
-          const normalizedResource = stripLoaders(res);
-          const hit = shouldTraceRequest(req) || shouldTraceRequest(normalizedRequest) || shouldTraceRequest(res) || shouldTraceRequest(normalizedResource);
-          if (!hit) return;
-          const mappedTo = describeMappingTarget(res || normalizedResource);
+          const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/server/src/empty/');
+          if (!hit || process.env.LOG_MODULE_RESOLUTION !== '1') return;
+          const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/server/src/empty/') ? 'CE-stub' : 'unknown');
           console.log('[resolve:after]', {
             request: req,
-            normalizedRequest,
             resource: res,
-            normalizedResource,
             mappedTo,
             context: result.context,
             issuer: result.createData?.issuer || result.contextInfo?.issuer,
@@ -431,80 +349,7 @@ const nextConfig = {
       const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
       config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
       config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
-
-      const pkgClientPortalEntry = path.join(__dirname, '../packages/product-client-portal-domain/entry.ts');
-      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/product-client-portal-domain/entry.tsx');
-      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx');
-      config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
-      config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
-
-      aliasEeEntryVariants(config.resolve.alias, [
-        {
-          to: pkgExtensionsEeEntry,
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-extensions/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: pkgSettingsEeEntry,
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: pkgClientPortalEeEntry,
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx'),
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-email-providers/entry.ts'),
-            path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
-            path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: path.join(__dirname, '../packages/product-billing/ee/entry.ts'),
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-billing/entry.ts'),
-            path.join(__dirname, '../packages/product-billing/entry.tsx'),
-            path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: path.join(__dirname, '../packages/product-chat/ee/entry.tsx'),
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-chat/entry.ts'),
-            path.join(__dirname, '../packages/product-chat/entry.tsx'),
-            path.join(__dirname, '../packages/product-chat/oss/entry.ts'),
-            path.join(__dirname, '../packages/product-chat/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts'),
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-extension-actions/entry.ts'),
-            path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
-          ],
-        },
-        {
-          to: path.join(__dirname, '../packages/product-extension-initialization/ee/entry.ts'),
-          fromCandidates: [
-            path.join(__dirname, '../packages/product-extension-initialization/entry.ts'),
-            path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
-          ],
-        },
-      ]);
     }
-
-    logAliasSnapshot(config.resolve.alias);
 
     console.log('[next.config] aliases', {
       at: __dirname,
@@ -648,36 +493,31 @@ const nextConfig = {
             compiler.resolverFactory.hooks.resolver.for('normal').tap('LogResolverPlugin', (resolver) => {
               resolver.hooks.resolve.tapAsync('LogResolverPlugin', (request, ctx, done) => {
                 try {
-          const req = request.request || '';
-          const normalizedRequest = stripLoaders(req);
-          if (!shouldTraceRequest(req) && !shouldTraceRequest(normalizedRequest)) {
-            return;
-          }
-          console.log('[resolver:resolve]', {
-            request: req,
-            normalizedRequest,
-            path: request.path,
-            context: request.context?.issuer || ctx.issuer,
-          });
-        } catch {}
-        done();
-      });
-      resolver.hooks.result.tap('LogResolverPlugin', (result) => {
-        try {
-          if (!result) return;
-          const resPath = result.path || '';
-          const req = result.request || '';
-          const normalizedRequest = stripLoaders(req);
-          const hit = shouldTraceRequest(req) || shouldTraceRequest(normalizedRequest) || shouldTraceRequest(resPath);
-          if (!hit) return;
-          console.log('[resolver:result]', {
-            request: req,
-            normalizedRequest,
-            resolvedPath: resPath,
-            mappedTo: describeMappingTarget(resPath),
-          });
-        } catch {}
-      });
+                  const req = request.request || '';
+                  if (req.startsWith('@ee') || req.includes('ee/server/src')) {
+                    console.log('[resolver:resolve]', {
+                      request: req,
+                      path: request.path,
+                      context: request.context?.issuer || ctx.issuer,
+                    });
+                  }
+                } catch {}
+                done();
+              });
+              resolver.hooks.result.tap('LogResolverPlugin', (result) => {
+                try {
+                  if (!result) return;
+                  const resPath = result.path || '';
+                  const req = result.request || '';
+                  const hit = req?.startsWith?.('@ee') || req?.includes?.('ee/server/src') || resPath.includes('/ee/server/src/') || resPath.includes('/server/src/empty/');
+                  if (!hit) return;
+                  console.log('[resolver:result]', {
+                    request: req,
+                    resolvedPath: resPath,
+                    mappedTo: resPath.includes('/ee/server/src/') ? 'EE' : (resPath.includes('/server/src/empty/') ? 'CE-stub' : 'unknown'),
+                  });
+                } catch {}
+              });
             });
             console.log('[next.config] LogModuleResolutionPlugin enabled');
           } catch (e) {
