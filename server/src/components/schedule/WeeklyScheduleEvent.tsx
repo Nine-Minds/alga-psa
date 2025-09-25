@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import { Trash } from 'lucide-react';
+import { Trash, CalendarDays } from 'lucide-react';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { useIsCompactEvent } from 'server/src/hooks/useIsCompactEvent';
 
@@ -84,7 +84,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
     const tech = technicianMap[userId];
-    return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+    return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
   }).join(', ') || 'Unassigned';
 
   // Format date and time for tooltip
@@ -105,12 +105,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${textColor}`}
+      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${textColor} group`}
       style={{
         backgroundColor,
         opacity,
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',
+        minHeight: isMultiDay ? '30px' : undefined,
         margin: 0,
         padding: compactClasses.padding,
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
@@ -146,13 +147,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
 
-      <div className={`flex justify-end ${compactClasses.buttonContainer}`} style={{ zIndex: 200 }}>
+      <div className="absolute top-1 right-1" style={{ zIndex: 200 }}>
         {isPrimary && (
           <Button
             id={`delete-entry-${event.entry_id}-btn`}
             variant="icon"
             size="icon"
-            className={`${compactClasses.button} delete-button`}
+            className={`${compactClasses.button} delete-button opacity-0 group-hover:opacity-100 transition-opacity`}
             onClick={(e) => {
               e.stopPropagation();
               onDeleteEvent(event);
@@ -169,21 +170,21 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       {isCompact ? (
         // For short events, show text with minimal padding
         <div className="flex items-center px-0.5 pb-0.5">
+          {isMultiDay && (
+            <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
+          )}
           <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
             {mainTitle}
           </div>
-          {isMultiDay && (
-            <div className="ml-1 text-[10px] opacity-70" title="Multi-day event">📅</div>
-          )}
         </div>
       ) : (
         // For normal events, show two lines
         <>
           <div className="font-semibold truncate flex items-center">
-            {mainTitle}
             {isMultiDay && (
-              <span className="ml-1 text-xs opacity-70" title="Multi-day event">📅</span>
+              <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
             )}
+            <span className="truncate">{mainTitle}</span>
           </div>
           {subtitle && <div className="truncate text-xs">{subtitle}</div>}
         </>

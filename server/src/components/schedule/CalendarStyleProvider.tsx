@@ -115,7 +115,7 @@ export const CalendarStyleProvider: React.FC = () => {
       }
       .rbc-allday-cell {
         border-bottom: 1px solid rgb(var(--color-border-200));
-        max-height: 40px;
+        min-height: 36px;
         overflow: auto;
       }
       .rbc-time-header.rbc-overflowing {
@@ -193,6 +193,13 @@ export const CalendarStyleProvider: React.FC = () => {
       }
 
       /* Month view multi-day event styling */
+      .rbc-month-view .rbc-event {
+        min-height: 30px;
+        height: auto;
+        display: flex;
+        align-items: center;
+      }
+
       .rbc-month-view .rbc-event-continues-prior,
       .rbc-month-view .rbc-event-continues-after {
         background: linear-gradient(90deg,
@@ -203,9 +210,13 @@ export const CalendarStyleProvider: React.FC = () => {
 
       /* Week/day view multi-day in all-day section */
       .rbc-allday-cell .rbc-event {
-        min-height: 20px;
+        min-height: 30px;
+        height: 30px;
         line-height: 20px;
         font-size: 12px;
+        display: flex;
+        align-items: center;
+        padding: 2px 4px;
       }
 
       /* Visual connector for multi-day events */

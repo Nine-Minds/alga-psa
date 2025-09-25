@@ -30,7 +30,7 @@ import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { Trash, ChevronLeft, ChevronRight, CalendarDays, Layers, Layers2 } from 'lucide-react';
+import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';
 import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Label } from 'server/src/components/ui/Label';
@@ -773,29 +773,30 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     if (view === 'month') {
       const titleParts = scheduleEvent.title?.split(':') || ['Untitled'];
       const mainTitle = titleParts[0];
-      
+
       const assignedTechnicians = scheduleEvent.assigned_user_ids?.map(userId => {
         const tech = technicianMap[userId];
-        return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+        return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
       }).join(', ') || 'Unassigned';
 
       const startMoment = new Date(scheduleEvent.scheduled_start);
       const endMoment = new Date(scheduleEvent.scheduled_end);
+      const isMultiDay = startMoment.toDateString() !== endMoment.toDateString();
       const formattedDate = startMoment.toLocaleDateString();
+      const endDate = endMoment.toLocaleDateString();
+      const dateDisplay = formattedDate === endDate ? formattedDate : `${formattedDate} - ${endDate}`;
       const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 
-      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
-      
+      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nDate: ${dateDisplay}\nTime: ${formattedTime}${isMultiDay ? ' (Multi-day)' : ''}`;
+
       const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
-      
+
       return (
-        <div 
-          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''}`}
+        <div
+          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''} flex items-center`}
           style={{
             backgroundColor: workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            minHeight: '30px',
             cursor: 'pointer',
             opacity
           }}
@@ -804,7 +805,10 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           onMouseLeave={() => setHoveredEventId(null)}
           title={tooltipTitle}
         >
-          {mainTitle}
+          {isMultiDay && (
+            <CalendarDaysIcon className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
+          )}
+          <span className="truncate">{mainTitle}</span>
         </div>
       );
     }
