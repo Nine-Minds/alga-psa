@@ -7,6 +7,7 @@ import type { ExecFileOptions } from "node:child_process";
 import { promisify } from "node:util";
 import type { Knex } from "knex";
 import { dump as dumpYaml } from "js-yaml";
+import os from "os";
 
 import { getAdminConnection } from "@alga-psa/shared/db/admin.js";
 
@@ -17,6 +18,7 @@ import type {
   MarkStatusInput,
   ApplyPortalDomainResourcesResult,
   PortalDomainStatusSnapshot,
+  HttpChallengeDetails,
 } from '../workflows/portal-domains/types.js';
 
 const TABLE_NAME = "portal_domains";
@@ -69,12 +71,12 @@ export interface PortalDomainConfig {
   certificateIssuerGroup: string;
   gatewayNamespace: string;
   gatewaySelector: Record<string, string>;
-  gatewayHttpPort: number;
   gatewayHttpsPort: number;
   virtualServiceNamespace: string;
   serviceHost: string;
   servicePort: number;
   manifestOutputDirectory: string | null;
+  portalDomainRoot: string;
 }
 
 const DEFAULT_CONFIG: PortalDomainConfig = {
@@ -90,19 +92,15 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   gatewaySelector: parseSelector(
     process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR,
   ) || { istio: "ingressgateway" },
-  gatewayHttpPort: parseNumberEnv(
-    process.env.PORTAL_DOMAIN_GATEWAY_HTTP_PORT,
-    80,
-  ),
   gatewayHttpsPort: parseNumberEnv(
     process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
     443,
   ),
   virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
-  serviceHost:
-    process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
+  serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
+  portalDomainRoot: process.env.EXT_DOMAIN_ROOT ?? "",
 };
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
@@ -149,6 +147,54 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+interface RetryOptions {
+  attempts?: number;
+  delayMs?: number;
+}
+
+function isTransientError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const anyError = error as any;
+  const code = typeof anyError?.code === "string" ? anyError.code.toUpperCase() : "";
+  const message = typeof anyError?.message === "string" ? anyError.message.toLowerCase() : "";
+
+  if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "ECONNREFUSED") {
+    return true;
+  }
+
+  if (message.includes("econnreset") || message.includes("connection reset") || message.includes("timeout")) {
+    return true;
+  }
+
+  return false;
+}
+
+async function withTransientRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? 3);
+  const delayMs = Math.max(0, options.delayMs ?? 1000);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+      await delay(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error('Transient operation failed');
 }
 
 function shouldManageStatus(status: string | null | undefined): boolean {
@@ -453,17 +499,32 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
 export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
   const knex = await getConnection();
-  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
-    .where({ id: args.portalDomainId })
-    .first();
+  const record = await withTransientRetry(
+    () =>
+      knex<PortalDomainActivityRecord>(TABLE_NAME)
+        .where({ id: args.portalDomainId })
+        .first(),
+    { attempts: 3, delayMs: 1000 }
+  );
 
   if (!record) {
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
+  }
+
+  if (record.status === 'certificate_failed') {
+    const message = record.status_message ?? '';
+    const recoverable =
+      typeof message === 'string' &&
+      message.toLowerCase().includes('secret does not exist');
+
+    if (!recoverable) {
+      return { status: record.status, statusMessage: record.status_message };
+    }
   }
 
   if (!shouldManageStatus(record.status)) {
@@ -543,15 +604,19 @@ async function inspectCertificateStatus(
   namespace: string,
 ): Promise<CertificateInspectionResult> {
   try {
-    const { stdout } = await runKubectl([
-      'get',
-      'certificate',
-      name,
-      '-n',
-      namespace,
-      '-o',
-      'json',
-    ]);
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'certificate',
+          name,
+          '-n',
+          namespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 5, delayMs: 2000 }
+    );
     const certificate = JSON.parse(stdout);
     const conditions = Array.isArray(certificate?.status?.conditions)
       ? certificate.status.conditions
@@ -625,7 +690,10 @@ async function kubectlResourceExists(
   namespace: string,
 ): Promise<boolean> {
   try {
-    await runKubectl(['get', kind, name, '-n', namespace]);
+    await withTransientRetry(
+      () => runKubectl(['get', kind, name, '-n', namespace]),
+      { attempts: 3, delayMs: 1000 }
+    );
     return true;
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -855,6 +923,145 @@ export function renderManifestYaml(
     .concat("\n");
 }
 
+interface RenderedChallengeResources {
+  gateway: Record<string, any>;
+  virtualService: Record<string, any>;
+  tenantSlug: string;
+  gatewayName: string;
+  virtualServiceName: string;
+}
+
+function renderChallengeManifestYaml(
+  manifest: RenderedChallengeResources,
+): string {
+  const documents = [manifest.gateway, manifest.virtualService];
+  return documents
+    .map((doc, index) => {
+      const yaml = dumpYaml(doc, { sortKeys: true, noRefs: true });
+      return index === 0 ? yaml : `---\n${yaml}`;
+    })
+    .join("")
+    .concat("\n");
+}
+
+export async function waitForHttpChallenge(args: {
+  portalDomainId: string;
+  timeoutSeconds?: number;
+  pollIntervalSeconds?: number;
+}): Promise<HttpChallengeDetails> {
+  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
+
+  if (!record) {
+    throw new Error(`Portal domain ${args.portalDomainId} not found while waiting for HTTP challenge.`);
+  }
+
+  const tenantSlug = createTenantSlug(record);
+  const namespace = DEFAULT_CONFIG.virtualServiceNamespace;
+  const prefix = `portal-domain-${tenantSlug}`;
+  const timeoutSeconds = args.timeoutSeconds ?? 300;
+  const pollIntervalSeconds = args.pollIntervalSeconds ?? 5;
+  const attempts = Math.max(1, Math.ceil(timeoutSeconds / pollIntervalSeconds));
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const challenge = await findLatestChallenge(prefix, namespace);
+
+    if (challenge) {
+      const service = await findSolverService(challenge.metadata?.name, namespace);
+      if (service) {
+        const portEntry = Array.isArray(service?.spec?.ports)
+          ? service.spec.ports.find((p: any) => typeof p?.port === "number") ?? service.spec.ports[0]
+          : null;
+        const servicePort = typeof portEntry?.port === "number"
+          ? portEntry.port
+          : typeof portEntry?.targetPort === "number"
+            ? portEntry.targetPort
+            : 80;
+
+        const token = typeof challenge?.spec?.token === "string"
+          ? challenge.spec.token
+          : "";
+
+        const key = typeof challenge?.spec?.key === "string"
+          ? challenge.spec.key
+          : "";
+
+        return {
+          challengeName: String(challenge.metadata?.name ?? ""),
+          serviceName: String(service.metadata?.name ?? ""),
+          servicePort,
+          token,
+          key,
+        };
+      }
+    }
+
+    if (attempt < attempts - 1) {
+      await delay(pollIntervalSeconds * 1000);
+    }
+  }
+
+  throw new Error(
+    `Timed out waiting for cert-manager HTTP-01 challenge resources for ${record.domain}.`,
+  );
+}
+
+export async function ensureHttpChallengeRoute(args: {
+  portalDomainId: string;
+  challenge: HttpChallengeDetails;
+}): Promise<void> {
+  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
+
+  if (!record) {
+    throw new Error(`Portal domain ${args.portalDomainId} not found while ensuring HTTP challenge route.`);
+  }
+
+  const config = DEFAULT_CONFIG;
+  const resources = renderPortalDomainChallengeResources(record, args.challenge, config);
+  const yaml = renderChallengeManifestYaml(resources);
+  const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), "portal-domain-challenge-"));
+  const manifestPath = joinPath(tempDir, `${resources.tenantSlug}-challenge.yaml`);
+
+  try {
+    await fs.writeFile(manifestPath, yaml, "utf8");
+    await runKubectl(["apply", "-f", manifestPath]);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+export async function removeHttpChallengeRoute(args: {
+  portalDomainId: string;
+}): Promise<void> {
+  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
+
+  if (!record) {
+    return;
+  }
+
+  const config = DEFAULT_CONFIG;
+  const tenantSlug = createTenantSlug(record);
+  const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
+  const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
+
+  await runKubectl([
+    "delete",
+    "virtualservice",
+    virtualServiceName,
+    "-n",
+    config.virtualServiceNamespace,
+    "--ignore-not-found",
+  ]).catch(() => undefined);
+
+  await runKubectl([
+    "delete",
+    "gateway",
+    gatewayName,
+    "-n",
+    config.gatewayNamespace,
+    "--ignore-not-found",
+  ]).catch(() => undefined);
+}
+
 function buildCommitMessage(
   manifests: RenderedPortalDomainResources[],
 ): string {
@@ -919,6 +1126,76 @@ function normalizeHostname(hostname: string): string {
   return hostname.trim().replace(/\.$/, "").toLowerCase();
 }
 
+async function findLatestChallenge(
+  prefix: string,
+  namespace: string,
+): Promise<any | null> {
+  try {
+    const { stdout } = await runKubectl([
+      "get",
+      "challenge",
+      "-n",
+      namespace,
+      "-o",
+      "json",
+    ]);
+    const parsed = JSON.parse(stdout);
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    const matches = items.filter((item: any) => {
+      const name = item?.metadata?.name;
+      return typeof name === "string" && name.startsWith(prefix);
+    });
+
+    if (matches.length === 0) {
+      return null;
+    }
+
+    matches.sort((a: any, b: any) => {
+      const aTime = Date.parse(a?.metadata?.creationTimestamp ?? "0");
+      const bTime = Date.parse(b?.metadata?.creationTimestamp ?? "0");
+      return bTime - aTime;
+    });
+
+    return matches[0];
+  } catch (error) {
+    return null;
+  }
+}
+
+async function findSolverService(
+  challengeName: string | undefined,
+  namespace: string,
+): Promise<any | null> {
+  if (!challengeName) {
+    return null;
+  }
+
+  try {
+    const { stdout } = await runKubectl([
+      "get",
+      "service",
+      "-n",
+      namespace,
+      "-o",
+      "json",
+    ]);
+    const parsed = JSON.parse(stdout);
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
+    return (
+      items.find((item: any) => {
+        const owners = Array.isArray(item?.metadata?.ownerReferences)
+          ? item.metadata.ownerReferences
+          : [];
+        return owners.some(
+          (owner: any) => owner?.kind === "Challenge" && owner?.name === challengeName,
+        );
+      }) ?? null
+    );
+  } catch (error) {
+    return null;
+  }
+}
+
 export interface RenderedPortalDomainResources {
   record: PortalDomainActivityRecord;
   certificate: Record<string, any>;
@@ -969,6 +1246,21 @@ export function renderPortalDomainResources(
 
   const hosts = [normalizedDomain];
 
+  const servers: any[] = [
+    {
+      port: {
+        number: config.gatewayHttpsPort,
+        name: httpsServerName,
+        protocol: "HTTPS",
+      },
+      tls: {
+        mode: "SIMPLE",
+        credentialName: secretName,
+      },
+      hosts,
+    },
+  ];
+
   const gateway: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
     kind: "Gateway",
@@ -979,48 +1271,37 @@ export function renderPortalDomainResources(
     },
     spec: {
       selector: config.gatewaySelector,
-      servers: [
-        {
-          port: {
-            number: config.gatewayHttpPort,
-            name: httpServerName,
-            protocol: "HTTP",
-          },
-          tls: {
-            httpsRedirect: true,
-          },
-          hosts,
-        },
-        {
-          port: {
-            number: config.gatewayHttpsPort,
-            name: httpsServerName,
-            protocol: "HTTPS",
-          },
-          tls: {
-            mode: "SIMPLE",
-            credentialName: secretName,
-          },
-          hosts,
-        },
-      ],
+      servers,
     },
   };
 
-  const httpRoutes: any[] = [];
+  const serviceHost = config.serviceHost;
+  if (!serviceHost) {
+    throw new Error(
+      "Portal domain service host is not configured. Set PORTAL_DOMAIN_SERVICE_HOST.",
+    );
+  }
 
-  httpRoutes.push({
-    route: [
-      {
-        destination: {
-          host: config.serviceHost,
-          port: {
-            number: config.servicePort,
-          },
-        },
+  const primaryDestination = {
+    destination: {
+      host: serviceHost,
+      port: {
+        number: config.servicePort,
       },
-    ],
-  });
+    },
+  };
+
+  const httpRoutes: any[] = [
+    {
+      match: [
+        {
+          uri: { prefix: "/" },
+          port: config.gatewayHttpsPort,
+        },
+      ],
+      route: [primaryDestination],
+    },
+  ];
 
   const virtualService: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
@@ -1043,6 +1324,87 @@ export function renderPortalDomainResources(
     gateway,
     virtualService,
     secretName,
+    tenantSlug,
+    gatewayName,
+    virtualServiceName,
+  };
+}
+
+function renderPortalDomainChallengeResources(
+  record: PortalDomainActivityRecord,
+  challenge: HttpChallengeDetails,
+  config: PortalDomainConfig,
+): RenderedChallengeResources {
+  const normalizedDomain = normalizeHostname(record.domain);
+  const tenantSlug = createTenantSlug(record);
+  const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
+  const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
+  const portalDomainRoot = config.portalDomainRoot;
+  if (!portalDomainRoot) {
+    throw new Error(
+      "Portal domain root is not configured. Set EXT_DOMAIN_ROOT.",
+    );
+  }
+  const portalWildcard = `*.portal.${portalDomainRoot}`;
+
+  const labels = buildBaseLabels(record, normalizedDomain);
+
+  const gateway: Record<string, any> = {
+    apiVersion: "networking.istio.io/v1beta1",
+    kind: "Gateway",
+    metadata: {
+      name: gatewayName,
+      namespace: config.gatewayNamespace,
+      labels,
+    },
+    spec: {
+      selector: config.gatewaySelector,
+      servers: [
+        {
+          port: {
+            number: 80,
+            name: truncateName(`http-${tenantSlug}-challenge`, 63),
+            protocol: "HTTP",
+          },
+          hosts: [portalWildcard],
+        },
+      ],
+    },
+  };
+
+  const virtualService: Record<string, any> = {
+    apiVersion: "networking.istio.io/v1beta1",
+    kind: "VirtualService",
+    metadata: {
+      name: virtualServiceName,
+      namespace: config.virtualServiceNamespace,
+      labels,
+    },
+    spec: {
+      hosts: [portalWildcard],
+      gateways: [`${config.gatewayNamespace}/${gatewayName}`],
+      http: [
+        {
+          match: [
+            {
+              uri: { exact: `/.well-known/acme-challenge/${challenge.token}` },
+              port: 80,
+            },
+          ],
+          directResponse: {
+            status: 200,
+            body: {
+              string: challenge.key,
+            },
+          },
+        },
+      ],
+    },
+  };
+
+  return {
+    gateway,
+    virtualService,
     tenantSlug,
     gatewayName,
     virtualServiceName,

@@ -44,14 +44,10 @@ const baseConfig: PortalDomainConfig = {
   certificateIssuerGroup: "cert-manager.io",
   gatewayNamespace: "istio-system",
   gatewaySelector: { istio: "ingressgateway" },
-  gatewayHttpPort: 80,
   gatewayHttpsPort: 443,
   virtualServiceNamespace: "msp",
   serviceHost: "sebastian.msp.svc.cluster.local",
   servicePort: 3000,
-  challengeServiceHost: null,
-  challengeServicePort: undefined,
-  challengeRouteEnabled: false,
   manifestOutputDirectory: null,
 };
 
@@ -92,10 +88,10 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     // Verify Gateway resource uses correct domain
     expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
     expect(manifests.gateway.metadata.namespace).toBe("istio-system");
-    expect(manifests.gateway.spec.servers).toHaveLength(2);
+    expect(manifests.gateway.spec.servers).toHaveLength(1);
 
     // Check HTTPS server configuration
-    const httpsServer = manifests.gateway.spec.servers[1];
+    const httpsServer = manifests.gateway.spec.servers[0];
     expect(httpsServer.hosts).toEqual(["custom.example.com"]);
     expect(httpsServer.tls.credentialName).toBe("portal-domain-tenant");
 
@@ -106,15 +102,16 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
       "istio-system/portal-domain-gw-tenant",
     ]);
 
-    // Verify destination service
+    // Verify HTTPS routing only (HTTP handled by cert-manager solver)
     expect(manifests.virtualService.spec.http).toHaveLength(1);
-    expect(
-      manifests.virtualService.spec.http?.[0]?.route?.[0]?.destination?.host,
-    ).toBe(baseConfig.serviceHost);
-    expect(
-      manifests.virtualService.spec.http?.[0]?.route?.[0]?.destination?.port
-        ?.number,
-    ).toBe(3000);
+
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
+
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
+    expect(httpsRoute?.route?.[0]?.destination?.port?.number).toBe(3000);
 
     // Verify labels contain correct domain information
     const labels = manifests.gateway.metadata.labels ?? {};
@@ -141,7 +138,7 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
 
     // Verify Gateway uses production domain reference in naming
     expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
-    expect(manifests.gateway.spec.servers[1].tls.credentialName).toBe(
+    expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(
       "portal-domain-tenant",
     );
 
@@ -150,6 +147,14 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     expect(manifests.virtualService.spec.gateways).toEqual([
       "istio-system/portal-domain-gw-tenant",
     ]);
+
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
+
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
   });
 
   it("generates certificate with fallback domain when NEXTAUTH_URL is not set", async () => {
@@ -169,7 +174,7 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
 
     // Verify Gateway uses fallback domain reference
     expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
-    expect(manifests.gateway.spec.servers[1].tls.credentialName).toBe(
+    expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(
       "portal-domain-tenant",
     );
 
@@ -178,42 +183,14 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
     expect(manifests.virtualService.spec.gateways).toEqual([
       "istio-system/portal-domain-gw-tenant",
     ]);
-  });
 
-  it("includes HTTP-01 challenge routing when enabled with staging domain", async () => {
-    // Set staging environment
-    process.env.NEXTAUTH_URL = "https://sebastian.9minds.ai";
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
 
-    const config: PortalDomainConfig = {
-      ...baseConfig,
-      challengeRouteEnabled: true,
-      challengeServiceHost: "challenge-svc.msp.svc.cluster.local",
-      challengeServicePort: 8089,
-    };
-
-    const record = createRecord({
-      canonical_host: "tenant-.portal.sebastian.9minds.ai",
-    });
-
-    const manifests = renderPortalDomainResources(record, config);
-
-    // Verify challenge route is first in the list
-    expect(manifests.virtualService.spec.http).toHaveLength(2);
-
-    const challengeRoute = manifests.virtualService.spec.http?.[0];
-    expect(challengeRoute?.match?.[0]?.uri?.prefix).toBe(
-      "/.well-known/acme-challenge/",
-    );
-    expect(challengeRoute?.route?.[0]?.destination?.host).toBe(
-      "challenge-svc.msp.svc.cluster.local",
-    );
-    expect(challengeRoute?.route?.[0]?.destination?.port?.number).toBe(8089);
-
-    // Verify primary route still works
-    const primaryRoute = manifests.virtualService.spec.http?.[1];
-    expect(primaryRoute?.route?.[0]?.destination?.host).toBe(
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
       baseConfig.serviceHost,
     );
-    expect(primaryRoute?.route?.[0]?.destination?.port?.number).toBe(3000);
   });
+
 });

@@ -6,6 +6,7 @@ import type {
   VerifyCnameResult,
   ApplyPortalDomainResourcesResult,
   PortalDomainStatusSnapshot,
+  HttpChallengeDetails,
 } from './types';
 
 const {
@@ -14,12 +15,18 @@ const {
   verifyCnameRecord,
   applyPortalDomainResources,
   checkPortalDomainDeploymentStatus,
+  waitForHttpChallenge,
+  ensureHttpChallengeRoute,
+  removeHttpChallengeRoute,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
   applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
   checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
+  waitForHttpChallenge: (args: { portalDomainId: string }) => Promise<HttpChallengeDetails>;
+  ensureHttpChallengeRoute: (args: { portalDomainId: string; challenge: HttpChallengeDetails }) => Promise<void>;
+  removeHttpChallengeRoute: (args: { portalDomainId: string }) => Promise<void>;
 }>(
   {
     startToCloseTimeout: '5 minutes',
@@ -36,6 +43,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
 
   let pendingTrigger: PortalDomainWorkflowTrigger | undefined = input.trigger;
   let reconcileTrigger = new Trigger<void>();
+  let challengeRoutePrepared = false;
 
   setHandler(reconcileSignal, (payload?: PortalDomainWorkflowInput) => {
     pendingTrigger = payload?.trigger ?? 'refresh';
@@ -65,6 +73,10 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
         statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
       });
       await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
+      if (challengeRoutePrepared) {
+        await removeHttpChallengeRoute({ portalDomainId: record.id }).catch(() => undefined);
+        challengeRoutePrepared = false;
+      }
       return;
     }
 
@@ -109,13 +121,48 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
         status: 'certificate_failed',
         statusMessage: `Failed to apply Kubernetes resources: ${applyResult.errors?.join('; ') ?? 'Unknown error'}`,
       });
+      if (challengeRoutePrepared) {
+        await removeHttpChallengeRoute({ portalDomainId: record.id }).catch(() => undefined);
+        challengeRoutePrepared = false;
+      }
       return;
     }
 
     await markPortalDomainStatus({
       portalDomainId: record.id,
       status: 'deploying',
-      statusMessage: 'Resources applied. Waiting for certificate and gateway readiness.',
+      statusMessage: 'Resources applied. Waiting for ACME HTTP-01 challenge.',
+    });
+
+    try {
+      const challenge = await waitForHttpChallenge({ portalDomainId: record.id });
+      await ensureHttpChallengeRoute({ portalDomainId: record.id, challenge });
+      challengeRoutePrepared = true;
+      await markPortalDomainStatus({
+        portalDomainId: record.id,
+        status: 'deploying',
+        statusMessage: 'ACME challenge detected. Waiting for certificate issuance.',
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      log.error('Failed to prepare HTTP-01 challenge routing', {
+        portalDomainId: record.id,
+        error: message,
+      });
+      await markPortalDomainStatus({
+        portalDomainId: record.id,
+        status: 'certificate_failed',
+        statusMessage: `Failed to prepare HTTP-01 challenge routing: ${message}`,
+      });
+      if (challengeRoutePrepared) {
+        await removeHttpChallengeRoute({ portalDomainId: record.id }).catch(() => undefined);
+        challengeRoutePrepared = false;
+      }
+      return;
+    }
+
+    log.info('HTTP-01 challenge routing prepared, continuing to monitor certificate.', {
+      portalDomainId: record.id,
     });
   }
 
@@ -123,7 +170,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   pendingTrigger = undefined;
   await runOnce(initialTrigger);
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
 
   while (true) {
     const timeoutPromise = sleep('1 minute');
@@ -146,12 +193,39 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       return;
     }
 
+    const isRecoverableCertificateFailure =
+      deploymentStatus.status === 'certificate_failed' &&
+      typeof deploymentStatus.statusMessage === 'string' &&
+      deploymentStatus.statusMessage.toLowerCase().includes('secret does not exist');
+
     if (terminalStatuses.has(deploymentStatus.status)) {
       log.info('Portal domain reached terminal status; ending workflow.', {
         portalDomainId: input.portalDomainId,
         status: deploymentStatus.status,
       });
+      if (challengeRoutePrepared) {
+        await removeHttpChallengeRoute({ portalDomainId: input.portalDomainId }).catch(() => undefined);
+        challengeRoutePrepared = false;
+      }
       return;
+    }
+
+    if (deploymentStatus.status === 'certificate_failed' && !isRecoverableCertificateFailure) {
+      log.info('Certificate failed with non-recoverable error; ending workflow.', {
+        portalDomainId: input.portalDomainId,
+        statusMessage: deploymentStatus.statusMessage,
+      });
+      if (challengeRoutePrepared) {
+        await removeHttpChallengeRoute({ portalDomainId: input.portalDomainId }).catch(() => undefined);
+        challengeRoutePrepared = false;
+      }
+      return;
+    }
+
+    if (deploymentStatus.status === 'certificate_failed' && isRecoverableCertificateFailure) {
+      log.info('Certificate secret missing; continuing to monitor.', {
+        portalDomainId: input.portalDomainId,
+      });
     }
 
     log.info('Portal domain still progressing; continuing wait.', {
