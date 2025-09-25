@@ -18,7 +18,7 @@
     "dev:with-ngrok": "echo 'Set NGROK_URL and run: NGROK_URL=https://your-url.ngrok.io npm run dev'",
     "build": "next build",
     "build:turbo": "next build --turbo",
-    "build:enterprise": "NEXT_PUBLIC_EDITION=enterprise next build",
+    "build:enterprise": "LOG_MODULE_RESOLUTION=1 EDITION=ee NEXT_PUBLIC_EDITION=enterprise next build",
     "build:enterprise:turbo": "NEXT_PUBLIC_EDITION=enterprise next build --turbo",
     "build:enterprise-script": "../scripts/build-enterprise.sh",
     "analyze": "ANALYZE=true next build",
