@@ -76,6 +76,7 @@ export interface PortalDomainConfig {
   serviceHost: string;
   servicePort: number;
   manifestOutputDirectory: string | null;
+  portalDomainRoot: string;
 }
 
 const DEFAULT_CONFIG: PortalDomainConfig = {
@@ -100,6 +101,7 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
     process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
+  portalDomainRoot: process.env.EXT_DOMAIN_ROOT || "sebastian.9minds.ai",
 };
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
@@ -1331,6 +1333,7 @@ function renderPortalDomainChallengeResources(
   const tenantSlug = createTenantSlug(record);
   const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
   const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
+  const portalWildcard = `*.portal.${config.portalDomainRoot}`;
 
   const labels = buildBaseLabels(record, normalizedDomain);
 
@@ -1351,7 +1354,7 @@ function renderPortalDomainChallengeResources(
             name: truncateName(`http-${tenantSlug}-challenge`, 63),
             protocol: "HTTP",
           },
-          hosts: [normalizedDomain],
+          hosts: [portalWildcard],
         },
       ],
     },
@@ -1366,13 +1369,14 @@ function renderPortalDomainChallengeResources(
       labels,
     },
     spec: {
-      hosts: [normalizedDomain],
+      hosts: [portalWildcard],
       gateways: [`${config.gatewayNamespace}/${gatewayName}`],
       http: [
         {
           match: [
             {
               uri: { exact: `/.well-known/acme-challenge/${challenge.token}` },
+              port: 80,
             },
           ],
           directResponse: {
