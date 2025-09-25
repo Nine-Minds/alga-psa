@@ -65,7 +65,7 @@ export default function BillingSection() {
         setBillingCycles(cyclesData);
         setPaymentMethods(methodsData);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load billing data');
+        setError(err instanceof Error ? err.message : t('account.billing.loadError', 'Failed to load billing data'));
       } finally {
         setIsLoading(false);
       }
@@ -79,22 +79,22 @@ export default function BillingSection() {
     let isValid = true;
 
     if (!CARD_NUMBER_REGEX.test(paymentForm.cardNumber)) {
-      errors.cardNumber = 'Please enter a valid 16-digit card number';
+      errors.cardNumber = t('account.billing.validation.cardNumber', 'Please enter a valid 16-digit card number');
       isValid = false;
     }
 
     if (!MONTH_REGEX.test(paymentForm.expMonth)) {
-      errors.expMonth = 'Please enter a valid month (01-12)';
+      errors.expMonth = t('account.billing.validation.expMonth', 'Please enter a valid month (01-12)');
       isValid = false;
     }
 
     if (!YEAR_REGEX.test(paymentForm.expYear)) {
-      errors.expYear = 'Please enter a valid year (2024-2099)';
+      errors.expYear = t('account.billing.validation.expYear', 'Please enter a valid year (2024-2099)');
       isValid = false;
     }
 
     if (!CVV_REGEX.test(paymentForm.cvv)) {
-      errors.cvv = 'Please enter a valid CVV';
+      errors.cvv = t('account.billing.validation.cvv', 'Please enter a valid CVV');
       isValid = false;
     }
 
@@ -136,7 +136,7 @@ export default function BillingSection() {
       });
       setIsAddingPayment(false);
     } catch (err) {
-      setAddPaymentError(err instanceof Error ? err.message : 'Failed to add payment method');
+      setAddPaymentError(err instanceof Error ? err.message : t('account.billing.addPaymentError', 'Failed to add payment method'));
     } finally {
       setIsProcessing(false);
     }
@@ -148,7 +148,7 @@ export default function BillingSection() {
       const updatedMethods = await getPaymentMethods();
       setPaymentMethods(updatedMethods);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove payment method');
+      setError(err instanceof Error ? err.message : t('account.billing.removePaymentError', 'Failed to remove payment method'));
     }
   };
 
@@ -158,7 +158,7 @@ export default function BillingSection() {
       const updatedMethods = await getPaymentMethods();
       setPaymentMethods(updatedMethods);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to set default payment method');
+      setError(err instanceof Error ? err.message : t('account.billing.setDefaultError', 'Failed to set default payment method'));
     }
   };
 

@@ -298,8 +298,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       });
     } catch (error) {
       console.error('Failed to update comment:', error);
-      setError('Failed to update comment');
-      toast.error('Failed to update comment');
+      setError(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
+      toast.error(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
     }
   };
 
@@ -314,8 +314,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       
       // Check if the comment belongs to the current user
       if (comment.user_id !== currentUser?.id) {
-        setError('You can only delete your own comments');
-        toast.error('You can only delete your own comments');
+        setError(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
+        toast.error(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
         return;
       }
       
@@ -326,8 +326,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       toast.success('Comment deleted successfully');
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      setError('Failed to delete comment');
-      toast.error('Failed to delete comment');
+      setError(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
+      toast.error(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
     }
   };
 

@@ -6,6 +6,7 @@ import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
 import { useState, useEffect } from 'react';
 import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
+import { useTranslation } from '@/lib/i18n/client';
 
 interface ValidationErrors {
   name?: string;
@@ -15,6 +16,7 @@ interface ValidationErrors {
 }
 
 export default function ProfileSection() {
+  const { t } = useTranslation('clientPortal');
   const [profile, setProfile] = useState<CompanyProfile>({
     name: '',
     email: '',
@@ -34,7 +36,7 @@ export default function ProfileSection() {
         const data = await getCompanyProfile();
         setProfile(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load profile');
+        setError(err instanceof Error ? err.message : t('profile.messages.loadError', 'Failed to load profile'));
       } finally {
         setIsLoading(false);
       }
@@ -49,17 +51,17 @@ export default function ProfileSection() {
 
     // Required fields
     if (!profile.name.trim()) {
-      errors.name = 'Company name is required';
+      errors.name = t('profile.validation.companyNameRequired', 'Company name is required');
       isValid = false;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!profile.email.trim()) {
-      errors.email = 'Email is required';
+      errors.email = t('profile.validation.emailRequired', 'Email is required');
       isValid = false;
     } else if (!emailRegex.test(profile.email)) {
-      errors.email = 'Please enter a valid email address';
+      errors.email = t('profile.validation.emailInvalid', 'Please enter a valid email address');
       isValid = false;
     }
 
@@ -67,14 +69,14 @@ export default function ProfileSection() {
     if (profile.phone) {
       const phoneRegex = /^\+?[\d\s-()]{10,}$/;
       if (!phoneRegex.test(profile.phone)) {
-        errors.phone = 'Please enter a valid phone number';
+        errors.phone = t('profile.validation.phoneInvalid', 'Please enter a valid phone number');
         isValid = false;
       }
     }
 
     // Address validation (optional but must be non-empty if provided)
     if (profile.address && !profile.address.trim()) {
-      errors.address = 'Address cannot be empty if provided';
+      errors.address = t('profile.validation.addressInvalid', 'Address cannot be empty if provided');
       isValid = false;
     }
 
@@ -123,10 +125,10 @@ export default function ProfileSection() {
       };
 
       await updateCompanyProfile(sanitizedProfile);
-      setSuccessMessage('Profile updated successfully');
+      setSuccessMessage(t('profile.messages.updateSuccess', 'Profile updated successfully'));
       setProfile(sanitizedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update profile');
+      setError(err instanceof Error ? err.message : t('profile.messages.updateError', 'Failed to update profile'));
     } finally {
       setIsSaving(false);
     }

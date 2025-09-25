@@ -101,7 +101,7 @@ export function CompanyDetailsSettings() {
         setCompanyDetails(company);
       } catch (error) {
         console.error('Error loading company details:', error);
-        setError('Failed to load company details');
+        setError(t('companySettings.messages.detailsLoadError', 'Failed to load company details'));
       }
     }
 

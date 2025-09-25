@@ -140,6 +140,7 @@
       "failedToAddComment": "Failed to add comment",
       "failedToUpdateComment": "Failed to update comment",
       "failedToDeleteComment": "Failed to delete comment",
+      "deleteOwnCommentError": "You can only delete your own comments",
       "failedToUpdateTicketStatus": "Failed to update ticket status"
     },
     "conversation": {
@@ -217,6 +218,8 @@
       "finalized": "Finalized",
       "sendEmail": "Send as Email",
       "sendEmailFailed": "Failed to send invoice email. Please try again.",
+      "loadFailed": "Failed to load invoice details. Please try again.",
+      "downloadFailed": "Failed to download PDF. Please try again.",
       "download": "Download PDF",
       "view": "View Details",
       "pay": "Pay Now",
@@ -357,7 +360,8 @@
       "submit": "Update Password",
       "success": "Password updated successfully",
       "error": "Failed to update password",
-      "passwordMismatch": "New passwords do not match"
+      "passwordMismatch": "New passwords do not match",
+      "unknownError": "An error occurred while changing password"
     },
     "twoFactorAuth": {
       "title": "Two-Factor Authentication",
@@ -412,6 +416,13 @@
       "deleteSuccess": "Deleted successfully.",
       "deleteError": "Failed to delete.",
       "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone."
+    },
+    "validation": {
+      "companyNameRequired": "Company name is required",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "phoneInvalid": "Please enter a valid phone number",
+      "addressInvalid": "Address cannot be empty if provided"
     }
   },
   "companySettings": {
@@ -471,7 +482,13 @@
       "statusDescription": "Set user account status",
       "noRolesAssigned": "No roles assigned",
       "assignRole": "Assign Role",
-      "resetPassword": "Reset User Password"
+      "resetPassword": "Reset User Password",
+      "companyNotFound": "Company not found",
+      "permissionError": "You do not have permission to manage users",
+      "loadError": "Failed to load users",
+      "emailExists": "A contact with this email address already exists",
+      "createError": "Failed to create user",
+      "deleteError": "Failed to delete user"
     },
     "messages": {
       "saveChanges": "Save Changes",
@@ -482,7 +499,27 @@
       "inviteSent": "Invitation sent successfully",
       "noPermission": "You do not have permission to access company settings",
       "companyNotFound": "Company not found",
+      "detailsLoadError": "Failed to load company details",
       "updateError": "Failed to update company details"
+    }
+  },
+  "account": {
+    "services": {
+      "loadError": "Failed to load services",
+      "loadPlansError": "Failed to load service plans",
+      "updateError": "Failed to update service"
+    },
+    "billing": {
+      "loadError": "Failed to load billing data",
+      "addPaymentError": "Failed to add payment method",
+      "removePaymentError": "Failed to remove payment method",
+      "setDefaultError": "Failed to set default payment method",
+      "validation": {
+        "cardNumber": "Please enter a valid 16-digit card number",
+        "expMonth": "Please enter a valid month (01-12)",
+        "expYear": "Please enter a valid year (2024-2099)",
+        "cvv": "Please enter a valid CVV"
+      }
     }
   },
   "documents": {

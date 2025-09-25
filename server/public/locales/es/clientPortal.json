@@ -139,6 +139,7 @@
       "failedToAddComment": "No se pudo agregar el comentario",
       "failedToUpdateComment": "No se pudo actualizar el comentario",
       "failedToDeleteComment": "No se pudo eliminar el comentario",
+      "deleteOwnCommentError": "Solo puedes eliminar tus propios comentarios",
       "failedToUpdateTicketStatus": "No se pudo actualizar el estado del ticket"
     },
     "conversation": {
@@ -216,6 +217,8 @@
       "finalized": "Finalizada",
       "sendEmail": "Enviar por correo",
       "sendEmailFailed": "No se pudo enviar la factura por correo. Inténtalo de nuevo.",
+      "loadFailed": "No se pudieron cargar los detalles de la factura. Inténtalo de nuevo.",
+      "downloadFailed": "No se pudo descargar el PDF. Inténtalo de nuevo.",
       "download": "Descargar PDF",
       "view": "Ver detalles",
       "pay": "Pagar ahora",
@@ -356,7 +359,8 @@
       "submit": "Actualizar contraseña",
       "success": "Contraseña actualizada correctamente",
       "error": "No se pudo actualizar la contraseña",
-      "passwordMismatch": "Las nuevas contraseñas no coinciden"
+      "passwordMismatch": "Las nuevas contraseñas no coinciden",
+      "unknownError": "Se produjo un error al cambiar la contraseña"
     },
     "twoFactorAuth": {
       "title": "Autenticación de dos factores",
@@ -411,6 +415,13 @@
       "deleteSuccess": "Eliminado correctamente.",
       "deleteError": "No se pudo eliminar.",
       "deleteConfirm": "¿Seguro que quieres eliminar esto? Esta acción no se puede deshacer."
+    },
+    "validation": {
+      "companyNameRequired": "El nombre de la empresa es obligatorio",
+      "emailRequired": "El correo electrónico es obligatorio",
+      "emailInvalid": "Introduce una dirección de correo electrónico válida",
+      "phoneInvalid": "Introduce un número de teléfono válido",
+      "addressInvalid": "La dirección no puede estar vacía si se proporciona"
     }
   },
   "companySettings": {
@@ -470,7 +481,13 @@
       "statusDescription": "Configura el estado de la cuenta del usuario",
       "noRolesAssigned": "Sin roles asignados",
       "assignRole": "Asignar rol",
-      "resetPassword": "Restablecer contraseña del usuario"
+      "resetPassword": "Restablecer contraseña del usuario",
+      "companyNotFound": "Empresa no encontrada",
+      "permissionError": "No tienes permiso para administrar usuarios",
+      "loadError": "No se pudieron cargar los usuarios",
+      "emailExists": "Ya existe un contacto con esta dirección de correo electrónico",
+      "createError": "No se pudo crear el usuario",
+      "deleteError": "No se pudo eliminar el usuario"
     },
     "messages": {
       "saveChanges": "Guardar cambios",
@@ -481,7 +498,27 @@
       "inviteSent": "Invitación enviada correctamente",
       "noPermission": "No tienes permiso para acceder a la configuración de la empresa",
       "companyNotFound": "Empresa no encontrada",
+      "detailsLoadError": "No se pudieron cargar los detalles de la empresa",
       "updateError": "No se pudieron actualizar los detalles de la empresa"
+    }
+  },
+  "account": {
+    "services": {
+      "loadError": "No se pudieron cargar los servicios",
+      "loadPlansError": "No se pudieron cargar los planes de servicio",
+      "updateError": "No se pudo actualizar el servicio"
+    },
+    "billing": {
+      "loadError": "No se pudieron cargar los datos de facturación",
+      "addPaymentError": "No se pudo agregar el método de pago",
+      "removePaymentError": "No se pudo eliminar el método de pago",
+      "setDefaultError": "No se pudo establecer el método de pago predeterminado",
+      "validation": {
+        "cardNumber": "Introduce un número de tarjeta válido de 16 dígitos",
+        "expMonth": "Introduce un mes válido (01-12)",
+        "expYear": "Introduce un año válido (2024-2099)",
+        "cvv": "Introduce un CVV válido"
+      }
     }
   },
   "documents": {

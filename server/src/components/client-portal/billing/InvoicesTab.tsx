@@ -106,7 +106,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError('Failed to download PDF. Please try again.');
+      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     }
   };
 

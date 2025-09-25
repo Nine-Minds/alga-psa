@@ -191,7 +191,7 @@ export function TicketList() {
       loadTickets(); 
     } catch (error) {
       console.error('Failed to update ticket status:', error);
-      toast.error('Failed to update ticket status.');
+      toast.error(t('tickets.messages.statusUpdateError', 'Failed to update ticket status.'));
     } finally {
       setTicketToUpdateStatus(null);
     }

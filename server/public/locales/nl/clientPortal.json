@@ -139,6 +139,7 @@
       "failedToAddComment": "Reactie toevoegen is mislukt",
       "failedToUpdateComment": "Reactie bijwerken is mislukt",
       "failedToDeleteComment": "Reactie verwijderen is mislukt",
+      "deleteOwnCommentError": "Je kunt alleen je eigen reacties verwijderen",
       "failedToUpdateTicketStatus": "Ticketstatus bijwerken is mislukt"
     },
     "conversation": {
@@ -216,6 +217,8 @@
       "finalized": "Afgerond",
       "sendEmail": "Als e-mail verzenden",
       "sendEmailFailed": "Het verzenden van de factuur per e-mail is mislukt. Probeer het opnieuw.",
+      "loadFailed": "Kan factuurdetails niet laden. Probeer het opnieuw.",
+      "downloadFailed": "PDF kon niet worden gedownload. Probeer het opnieuw.",
       "download": "PDF downloaden",
       "view": "Details bekijken",
       "pay": "Nu betalen",
@@ -356,7 +359,8 @@
       "submit": "Wachtwoord bijwerken",
       "success": "Wachtwoord succesvol bijgewerkt",
       "error": "Wachtwoord bijwerken is mislukt",
-      "passwordMismatch": "Nieuwe wachtwoorden komen niet overeen"
+      "passwordMismatch": "Nieuwe wachtwoorden komen niet overeen",
+      "unknownError": "Er is een fout opgetreden bij het wijzigen van het wachtwoord"
     },
     "twoFactorAuth": {
       "title": "Twee-factor-authenticatie",
@@ -411,6 +415,13 @@
       "deleteSuccess": "Succesvol verwijderd.",
       "deleteError": "Verwijderen is mislukt.",
       "deleteConfirm": "Weet je zeker dat je dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+    },
+    "validation": {
+      "companyNameRequired": "Bedrijfsnaam is verplicht",
+      "emailRequired": "E-mail is verplicht",
+      "emailInvalid": "Voer een geldig e-mailadres in",
+      "phoneInvalid": "Voer een geldig telefoonnummer in",
+      "addressInvalid": "Adres mag niet leeg zijn als het wordt ingevuld"
     }
   },
   "companySettings": {
@@ -470,7 +481,13 @@
       "statusDescription": "Stel de accountstatus van de gebruiker in",
       "noRolesAssigned": "Geen rollen toegewezen",
       "assignRole": "Rol toewijzen",
-      "resetPassword": "Wachtwoord resetten"
+      "resetPassword": "Wachtwoord resetten",
+      "companyNotFound": "Bedrijf niet gevonden",
+      "permissionError": "Je hebt geen toestemming om gebruikers te beheren",
+      "loadError": "Gebruikers konden niet worden geladen",
+      "emailExists": "Er bestaat al een contact met dit e-mailadres",
+      "createError": "Gebruiker kon niet worden aangemaakt",
+      "deleteError": "Gebruiker kon niet worden verwijderd"
     },
     "messages": {
       "saveChanges": "Wijzigingen opslaan",
@@ -481,7 +498,27 @@
       "inviteSent": "Uitnodiging succesvol verzonden",
       "noPermission": "Je hebt geen toestemming voor toegang tot bedrijfsinstellingen",
       "companyNotFound": "Bedrijf niet gevonden",
+      "detailsLoadError": "Bedrijfsgegevens laden is mislukt",
       "updateError": "Bijwerken van bedrijfsgegevens is mislukt"
+    }
+  },
+  "account": {
+    "services": {
+      "loadError": "Services konden niet worden geladen",
+      "loadPlansError": "Serviceplannen konden niet worden geladen",
+      "updateError": "Service kon niet worden bijgewerkt"
+    },
+    "billing": {
+      "loadError": "Factureringsgegevens konden niet worden geladen",
+      "addPaymentError": "Betalingsmethode kon niet worden toegevoegd",
+      "removePaymentError": "Betalingsmethode kon niet worden verwijderd",
+      "setDefaultError": "Standaardbetalingsmethode kon niet worden ingesteld",
+      "validation": {
+        "cardNumber": "Voer een geldig kaartnummer van 16 cijfers in",
+        "expMonth": "Voer een geldige maand in (01-12)",
+        "expYear": "Voer een geldig jaar in (2024-2099)",
+        "cvv": "Voer een geldige CVV in"
+      }
     }
   },
   "documents": {
