@@ -458,9 +458,20 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
+  }
+
+  if (record.status === 'certificate_failed') {
+    const message = record.status_message ?? '';
+    const recoverable =
+      typeof message === 'string' &&
+      message.toLowerCase().includes('secret does not exist');
+
+    if (!recoverable) {
+      return { status: record.status, statusMessage: record.status_message };
+    }
   }
 
   if (!shouldManageStatus(record.status)) {
