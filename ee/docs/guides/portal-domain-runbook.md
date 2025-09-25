@@ -7,6 +7,7 @@ Operational checklist for supporting enterprise tenants that register branded cl
 
 ## Prerequisites
 - Access to the production Temporal namespace and task queue (`portal-domain-workflows`).
+- Temporal worker Helm release upgraded with portal-domain RBAC (service account must manage cert-manager and Istio resources).
 - `kubectl` context configured for the hosting cluster.
 - Ability to query the `portal_domains` table (admin connection).
 

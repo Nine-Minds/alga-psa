@@ -68,10 +68,16 @@ secrets:
 
 # Service Account configuration
 serviceAccount:
+  create: true
+  name: ""
   # Annotations to add to the service account
   annotations: {}
   # Automatically mount service account token
   automountServiceAccountToken: true
+
+rbac:
+  create: true
+  extraRules: []
 
 # Resource limits and requests
 resources:

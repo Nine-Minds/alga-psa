@@ -1,0 +1,35 @@
+{{- if and .Values.enabled .Values.rbac.create }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-portal-domains
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+rules:
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["networking.istio.io"]
+    resources: ["gateways", "virtualservices"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  {{- with .Values.rbac.extraRules }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-portal-domains
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "temporal-worker.serviceAccountName" . }}
+    namespace: {{ include "temporal-worker.namespace" . }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "temporal-worker.fullname" . }}-portal-domains
+{{- end }}
