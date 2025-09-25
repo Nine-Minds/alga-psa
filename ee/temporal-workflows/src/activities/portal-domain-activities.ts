@@ -97,11 +97,10 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
     443,
   ),
   virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
-  serviceHost:
-    process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
+  serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
-  portalDomainRoot: process.env.EXT_DOMAIN_ROOT || "sebastian.9minds.ai",
+  portalDomainRoot: process.env.EXT_DOMAIN_ROOT ?? "",
 };
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
@@ -1276,9 +1275,16 @@ export function renderPortalDomainResources(
     },
   };
 
+  const serviceHost = config.serviceHost;
+  if (!serviceHost) {
+    throw new Error(
+      "Portal domain service host is not configured. Set PORTAL_DOMAIN_SERVICE_HOST.",
+    );
+  }
+
   const primaryDestination = {
     destination: {
-      host: config.serviceHost,
+      host: serviceHost,
       port: {
         number: config.servicePort,
       },
@@ -1333,7 +1339,13 @@ function renderPortalDomainChallengeResources(
   const tenantSlug = createTenantSlug(record);
   const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
   const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
-  const portalWildcard = `*.portal.${config.portalDomainRoot}`;
+  const portalDomainRoot = config.portalDomainRoot;
+  if (!portalDomainRoot) {
+    throw new Error(
+      "Portal domain root is not configured. Set EXT_DOMAIN_ROOT.",
+    );
+  }
+  const portalWildcard = `*.portal.${portalDomainRoot}`;
 
   const labels = buildBaseLabels(record, normalizedDomain);
 
