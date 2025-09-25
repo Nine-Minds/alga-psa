@@ -253,7 +253,7 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
-    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
       cwd: process.cwd(),
       dirname: __dirname,
