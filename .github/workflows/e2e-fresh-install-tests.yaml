@@ -402,10 +402,11 @@ jobs:
               FROM information_schema.tables
               WHERE table_schema = 'public' AND table_name = 'tenant_settings'
             ) THEN
-              UPDATE tenant_settings
+              INSERT INTO tenant_settings (tenant, onboarding_skipped, onboarding_completed, onboarding_completed_at, updated_at)
+              SELECT tenant, true, false, NULL, NOW()
+                FROM tenants
+              ON CONFLICT (tenant) DO UPDATE
                 SET onboarding_skipped = true,
-                    onboarding_completed = true,
-                    onboarding_completed_at = NOW(),
                     updated_at = NOW();
             ELSE
               RAISE NOTICE 'tenant_settings table not found; skipping onboarding override';
@@ -434,9 +435,10 @@ jobs:
           sleep 5
 
           SERVER_LOGS=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --no-color server)
+          CLEAN_LOGS=$(printf '%s\n' "$SERVER_LOGS" | sed -E $'s/\x1B\[[0-9;]*[[:alpha:]]//g' | tr -d '\r')
 
-          USER_EMAIL=$(printf '%s\n' "$SERVER_LOGS" | grep 'User Email is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
-          USER_PASSWORD=$(printf '%s\n' "$SERVER_LOGS" | grep 'Password is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
+          USER_EMAIL=$(printf '%s\n' "$CLEAN_LOGS" | grep 'User Email is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
+          USER_PASSWORD=$(printf '%s\n' "$CLEAN_LOGS" | grep 'Password is ->' | tail -n 1 | sed -E 's/.*\[ ([^ ]+) \].*/\1/')
 
           if [ -z "$USER_EMAIL" ] || [ -z "$USER_PASSWORD" ]; then
             echo "Failed to extract credentials from server logs."
@@ -445,13 +447,16 @@ jobs:
             exit 1
           fi
 
+          USER_PASSWORD_B64=$(printf '%s' "$USER_PASSWORD" | base64)
+
           {
             echo "e2e_user_email=$USER_EMAIL"
-            echo "e2e_user_password=$USER_PASSWORD"
+            echo "e2e_user_password_b64=$USER_PASSWORD_B64"
           } >> "$GITHUB_OUTPUT"
 
           echo "Successfully extracted credentials."
           echo "E2E email: $USER_EMAIL"
+          echo "Password length: ${#USER_PASSWORD}"
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
 
@@ -660,7 +665,7 @@ jobs:
         working-directory: ./e2e-tests
         run: |
           export E2E_USER_EMAIL="${{ steps.capture_creds.outputs.e2e_user_email }}"
-          export E2E_USER_PASSWORD="${{ steps.capture_creds.outputs.e2e_user_password }}"
+          export E2E_USER_PASSWORD="$(printf '%s' "${{ steps.capture_creds.outputs.e2e_user_password_b64 }}" | base64 --decode)"
 
           npx playwright test
         shell: bash
