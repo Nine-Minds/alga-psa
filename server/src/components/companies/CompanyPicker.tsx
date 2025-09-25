@@ -313,13 +313,10 @@ export const CompanyPicker: React.FC<CompanyPickerProps & AutomationProps> = ({
                   />
                 </div>
               </div>
-              <div
+              <div 
                 className="border-t bg-white max-h-[300px] overflow-y-auto"
                 role="listbox"
                 aria-label="Companies"
-                onWheel={(e) => {
-                  e.stopPropagation();
-                }}
               >
                 {/* Add clear/none option */}
                 <OptionButton
