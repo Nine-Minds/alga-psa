@@ -12,7 +12,7 @@ import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { useRouter } from 'next/navigation';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { checkClientPortalPermissions } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { useBranding } from 'server/src/components/providers/BrandingProvider';
 
 interface ClientPortalLayoutProps {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { ChevronDown } from 'lucide-react';

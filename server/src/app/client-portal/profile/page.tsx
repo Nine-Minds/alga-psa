@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ClientProfile } from 'server/src/components/client-portal/profile/ClientProfile';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export default function ProfilePage() {
   const { t } = useTranslation('clientPortal');

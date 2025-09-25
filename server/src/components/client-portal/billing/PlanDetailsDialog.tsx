@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface PlanDetailsDialogProps {
   plan: ICompanyBillingPlan | null;

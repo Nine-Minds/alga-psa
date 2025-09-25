@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/
 import { Button } from 'server/src/components/ui/Button';
 import { getDashboardMetrics, getRecentActivity, type RecentActivity } from 'server/src/lib/actions/client-portal-actions/dashboard';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Flag to control visibility of the recent activity section
 const SHOW_RECENT_ACTIVITY = false;

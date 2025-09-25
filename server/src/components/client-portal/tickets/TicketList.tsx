@@ -21,7 +21,7 @@ import { ChevronDown, XCircle } from 'lucide-react';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ClientAddTicket } from 'server/src/components/client-portal/tickets/ClientAddTicket';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function TicketList() {
   const { t } = useTranslation('clientPortal');

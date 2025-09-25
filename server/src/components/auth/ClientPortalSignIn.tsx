@@ -8,7 +8,7 @@ import TwoFactorInput from 'server/src/components/auth/TwoFA';
 import Alert from 'server/src/components/auth/Alert';
 import { AlertProps } from 'server/src/interfaces';
 import { Ticket, FileText, Eye, History } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { TenantBranding } from 'server/src/lib/actions/tenant-actions/tenantBrandingActions';
 
 interface ClientPortalSignInProps {

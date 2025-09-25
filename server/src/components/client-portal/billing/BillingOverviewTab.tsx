@@ -12,7 +12,7 @@ import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces'
 import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import PlanDetailsDialog from './PlanDetailsDialog';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Flag to control visibility of bucket usage metrics
 const SHOW_USAGE_FEATURES = false;

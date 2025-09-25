@@ -6,7 +6,7 @@ import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent } from "server/src/components/ui/Dialog";
 import { Input } from "server/src/components/ui/Input";
 import { useState, useEffect } from 'react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import {
   getInvoices,
   getBillingCycles,

@@ -29,7 +29,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function UserManagementSettings() {
   const { t } = useTranslation('clientPortal');

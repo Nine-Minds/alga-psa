@@ -30,7 +30,7 @@ import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAu
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { ReflectionParentContext } from 'server/src/types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface CompanyLocationsProps {
   companyId: string;

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import Documents from 'server/src/components/documents/Documents';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { getDocumentByTicketId } from 'server/src/lib/actions/document-actions/documentActions';
 import styles from './TicketDetails.module.css';

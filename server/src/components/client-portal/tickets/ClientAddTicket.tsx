@@ -11,7 +11,7 @@ import { IPriority } from 'server/src/interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ClientAddTicketProps {
   open: boolean;

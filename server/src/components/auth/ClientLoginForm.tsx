@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ClientLoginFormProps {
   callbackUrl: string;

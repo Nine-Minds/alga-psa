@@ -10,7 +10,7 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface EntityImageUploadProps {
   entityType: EntityType;
