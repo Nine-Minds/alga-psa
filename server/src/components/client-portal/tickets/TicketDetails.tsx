@@ -323,7 +323,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       // Refresh ticket details to remove deleted comment
       const details = await getClientTicketDetails(ticketId);
       setTicket(details);
-      toast.success('Comment deleted successfully');
+      toast.success(t('tickets.messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
       console.error('Failed to delete comment:', error);
       setError(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
@@ -347,7 +347,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
     try {
       await updateTicketStatus(ticketId, newStatusId);
-      toast.success(`Ticket status successfully updated to "${newStatusName}".`);
+      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
 
       setTicket(prevTicket => prevTicket ? { ...prevTicket, status_id: newStatusId, status_name: newStatusName } : null);
 

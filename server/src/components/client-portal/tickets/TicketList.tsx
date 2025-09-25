@@ -185,7 +185,7 @@ export function TicketList() {
     try {
       await updateTicketStatus(ticketId, newStatus);
 
-      toast.success(`Ticket status successfully updated to "${newStatusLabel}".`);
+      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusLabel }));
 
       // Refresh tickets by calling loadTickets
       loadTickets(); 
