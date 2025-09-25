@@ -419,6 +419,7 @@ spec:
     }
 
     # Create a simple override values file with dynamic branch information
+    let vault_role = $"($env_cfg.vault_role_prefix)($namespace)"
     let branch_overrides = $"
 # Branch-specific overrides for hosted environment
 hostedEnv:
@@ -428,6 +429,8 @@ hostedEnv:
   namespace: \"($namespace)\"
   repository:
     branch: \"($branch)\"
+vaultAgent:
+  role: \"($vault_role)\"
 "
 
     $branch_overrides | save -f $temp_values_file
