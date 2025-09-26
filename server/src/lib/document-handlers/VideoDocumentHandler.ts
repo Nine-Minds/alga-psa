@@ -280,6 +280,28 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
     return ext ? ext.substring(1) : '';
   }
 
+  private mapMimeToFormat(mimeType: string | null | undefined): string | null {
+    if (!mimeType) {
+      return null;
+    }
+
+    const map: Record<string, string> = {
+      'video/mp4': 'mp4',
+      'video/webm': 'webm',
+      'video/ogg': 'ogg',
+      'video/quicktime': 'mov',
+      'video/x-msvideo': 'avi',
+      'video/x-ms-wmv': 'asf',
+      'video/mpeg': 'mpeg',
+      'video/3gpp': '3gp',
+      'video/3gpp2': '3gp',
+      'video/x-matroska': 'matroska',
+      'video/x-flv': 'flv'
+    };
+
+    return map[mimeType] || null;
+  }
+
   private async generateThumbnail(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<Buffer | null> {
     if (!ffmpegExecutable) {
       return null;
@@ -301,73 +323,65 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       }
 
       const provider = await StorageProviderFactory.createProvider();
-      const { tempFilePath, tempDir } = await this.downloadToTempFile(
-        provider,
-        fileRecord.storage_path
+      const videoStream = await provider.getReadStream(fileRecord.storage_path);
+
+      const buffer = await this.extractFrameFromStream(
+        videoStream,
+        fileRecord.mime_type || document.mime_type || null
       );
 
-      try {
-        const buffer = await this.extractFrameFromFile(
-          tempFilePath,
-          tempDir
-        );
-
-        return buffer;
-      } finally {
-        await fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
-      }
+      return buffer;
     } catch (error) {
       console.error(`[VideoDocumentHandler] Failed to generate thumbnail for ${document.file_id}:`, error);
       return null;
     }
   }
 
-  private async downloadToTempFile(
-    provider: StorageProviderInterface,
-    storagePath: string
-  ): Promise<{ tempFilePath: string; tempDir: string }> {
-    const tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'video-thumb-'));
-    const tempFilePath = path.join(tempDir, 'source');
-
-    const videoStream = await provider.getReadStream(storagePath);
-    const writeStream = createWriteStream(tempFilePath);
-
-    await pipeline(videoStream, writeStream);
-
-    return { tempFilePath, tempDir };
-  }
-
-  private async extractFrameFromFile(filePath: string, workingDir: string): Promise<Buffer | null> {
+  private async extractFrameFromStream(stream: Readable, mimeType: string | null): Promise<Buffer | null> {
     return await new Promise((resolve, reject) => {
-      const outputPath = path.join(workingDir, 'thumbnail.png');
-      const command = ffmpeg(filePath)
-        .noAudio()
-        .outputOptions(['-frames:v 1', '-vf', 'thumbnail,scale=640:-1'])
-        .output(outputPath)
-        .format('image2')
-        .on('error', (err) => {
-          reject(err);
-        })
-        .on('end', async () => {
-          try {
-            const exists = await fsPromises
-              .access(outputPath)
-              .then(() => true)
-              .catch(() => false);
+      const chunks: Buffer[] = [];
+      const command = ffmpeg(stream);
 
-            if (!exists) {
-              resolve(null);
-              return;
-            }
+      command.noAudio();
+      command.inputOptions(['-ss', '00:00:01']);
+      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
 
-            const buffer = await fsPromises.readFile(outputPath);
-            resolve(buffer);
-          } catch (err) {
-            reject(err);
-          }
-        });
+      const format = this.mapMimeToFormat(mimeType);
+      if (format) {
+        command.inputFormat(format);
+      }
 
-      command.run();
+      command.format('png');
+
+      command.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
+
+      const ffmpegStream = command.pipe();
+
+      ffmpegStream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      ffmpegStream.on('end', () => {
+        stream.destroy();
+        if (chunks.length === 0) {
+          resolve(null);
+        } else {
+          resolve(Buffer.concat(chunks));
+        }
+      });
+
+      ffmpegStream.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
+
+      stream.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
     });
   }
 }
