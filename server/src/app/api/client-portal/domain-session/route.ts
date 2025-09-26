@@ -21,13 +21,25 @@ function sanitizeReturnPath(returnPath: unknown, fallback: string): string {
   return returnPath;
 }
 
-function extractHost(hostHeader: string | null): string | null {
+interface HostParts {
+  hostname: string;
+  port?: string | null;
+}
+
+function extractHost(hostHeader: string | null): HostParts | null {
   if (!hostHeader) {
     return null;
   }
 
-  const [host] = hostHeader.split(':');
-  return host ? host.toLowerCase() : null;
+  const [hostname, port] = hostHeader.split(':');
+  if (!hostname) {
+    return null;
+  }
+
+  return {
+    hostname: hostname.toLowerCase(),
+    port: port ?? null,
+  };
 }
 
 async function verifyCnameTarget(host: string, expected: string): Promise<{
@@ -56,6 +68,21 @@ async function verifyCnameTarget(host: string, expected: string): Promise<{
   }
 }
 
+function shouldVerifyCname(): boolean {
+  const preference = process.env.PORTAL_DOMAIN_DNS_CHECK?.toLowerCase();
+
+  if (preference === 'true') {
+    return true;
+  }
+
+  if (preference === 'false') {
+    return false;
+  }
+
+  const environment = process.env.NODE_ENV ?? 'development';
+  return environment === 'production';
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     const body = await request.json().catch(() => null);
@@ -67,27 +94,40 @@ export async function POST(request: Request): Promise<Response> {
     }
 
     const hostHeader = request.headers.get('host');
-    const host = extractHost(hostHeader);
+    const hostParts = extractHost(hostHeader);
 
-    if (!host) {
+    if (!hostParts) {
       return NextResponse.json({ error: 'host_missing' }, { status: 400 });
     }
 
     const knex = await getAdminConnection();
-    const portalDomain = await getPortalDomainByHostname(knex, host);
+    const hostCandidates = [hostParts.hostname];
+    if (hostParts.port && hostParts.port !== '80' && hostParts.port !== '443') {
+      hostCandidates.unshift(`${hostParts.hostname}:${hostParts.port}`);
+    }
+
+    const portalDomain = await (async () => {
+      for (const candidate of hostCandidates) {
+        const match = await getPortalDomainByHostname(knex, candidate);
+        if (match) {
+          return match;
+        }
+      }
+      return null;
+    })();
 
     if (!portalDomain) {
-      logger.warn('OTT exchange attempted on unknown host', { host });
+      logger.warn('OTT exchange attempted on unknown host', { host: hostHeader });
       await analytics.capture('portal_domain.ott_failed', {
         reason: 'domain_not_found',
-        host,
+        host: hostHeader ?? undefined,
       });
       return NextResponse.json({ error: 'domain_not_found' }, { status: 404 });
     }
 
     if (portalDomain.status !== 'active') {
       logger.warn('OTT exchange attempted for inactive domain', {
-        host,
+        host: hostHeader,
         tenant: portalDomain.tenant,
         status: portalDomain.status,
       });
@@ -103,10 +143,12 @@ export async function POST(request: Request): Promise<Response> {
       }, { status: 403 });
     }
 
-    const normalizedHost = normalizeHostname(host);
-    if (portalDomain.domain !== normalizedHost) {
+    const normalizedHost = normalizeHostname(hostParts.hostname);
+    const normalizedPortalDomain = normalizeHostname(portalDomain.domain.split(':')[0] ?? portalDomain.domain);
+
+    if (normalizedPortalDomain !== normalizedHost) {
       logger.warn('Host mismatch during OTT exchange', {
-        host,
+        host: hostHeader,
         tenant: portalDomain.tenant,
         domain: portalDomain.domain,
       });
@@ -114,7 +156,7 @@ export async function POST(request: Request): Promise<Response> {
         reason: 'host_mismatch',
         tenant: portalDomain.tenant,
         portal_domain_id: portalDomain.id,
-        host,
+        host: hostHeader,
         domain: portalDomain.domain,
       });
       return NextResponse.json({
@@ -129,11 +171,15 @@ export async function POST(request: Request): Promise<Response> {
       return typeof candidate === 'string' ? candidate : null;
     })();
 
-    if (expectedCname) {
-      const { matched, observed } = await verifyCnameTarget(host, expectedCname);
+    const enforceCname = shouldVerifyCname();
+
+    const cnameHost = hostParts.hostname;
+
+    if (expectedCname && enforceCname) {
+      const { matched, observed } = await verifyCnameTarget(cnameHost, expectedCname);
       if (!matched) {
         logger.warn('CNAME mismatch detected during OTT exchange', {
-          host,
+          host: cnameHost,
           expected: expectedCname,
           observed,
           tenant: portalDomain.tenant,
@@ -142,7 +188,7 @@ export async function POST(request: Request): Promise<Response> {
           reason: 'dns_mismatch',
           tenant: portalDomain.tenant,
           portal_domain_id: portalDomain.id,
-          host,
+          host: cnameHost,
           expected_cname: expectedCname,
           observed,
         });
@@ -151,6 +197,13 @@ export async function POST(request: Request): Promise<Response> {
           canonicalHost: portalDomain.canonicalHost,
         }, { status: 409 });
       }
+    } else if (expectedCname) {
+      logger.debug('Skipping CNAME verification for portal domain exchange', {
+        host: cnameHost,
+        tenant: portalDomain.tenant,
+        expected: expectedCname,
+        enforceCname,
+      });
     }
 
     const ottRecord = await consumePortalDomainOtt({
@@ -169,12 +222,19 @@ export async function POST(request: Request): Promise<Response> {
     const userSnapshot = ottRecord.metadata.userSnapshot;
     const sessionToken = await encodePortalSessionToken(userSnapshot);
     const sessionCookie = buildSessionCookie(sessionToken);
+    const forwardedProto = request.headers.get('x-forwarded-proto');
+    const requestUrl = new URL(request.url);
+    const requestScheme = forwardedProto?.split(',')[0]?.trim().toLowerCase() ?? requestUrl.protocol.replace(/:$/, '');
+    const cookieOptions = {
+      ...sessionCookie.options,
+      secure: requestScheme === 'https' ? sessionCookie.options?.secure ?? true : false,
+    };
 
     cookies().set({
       name: sessionCookie.name,
       value: sessionCookie.value,
       maxAge: sessionCookie.maxAge,
-      ...sessionCookie.options,
+      ...cookieOptions,
     });
 
     const redirectTo = sanitizeReturnPath(

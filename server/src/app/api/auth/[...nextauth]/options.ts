@@ -14,6 +14,21 @@ import {
 } from "server/src/lib/auth/sessionCookies";
 import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
 
+function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, protocol: string): void {
+    if (!portCandidate || portCandidate.length === 0) {
+        return;
+    }
+
+    const isHttpsDefault = protocol === 'https:' && portCandidate === '443';
+    const isHttpDefault = protocol === 'http:' && portCandidate === '80';
+
+    if (isHttpsDefault || isHttpDefault) {
+        return;
+    }
+
+    url.port = portCandidate;
+}
+
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
@@ -27,6 +42,7 @@ async function computeVanityRedirect({
     token?: Record<string, unknown> | null;
 }): Promise<string | null> {
     if (!token) {
+        console.log('[computeVanityRedirect] missing token', { url, baseUrl });
         return null;
     }
 
@@ -34,40 +50,95 @@ async function computeVanityRedirect({
     const tenantId = token.tenant;
 
     if (userType !== 'client' || typeof tenantId !== 'string' || tenantId.length === 0) {
+        console.log('[computeVanityRedirect] token not eligible', { userType, tenantId });
         return null;
     }
 
     const base = new URL(baseUrl);
     const target = new URL(url, baseUrl);
 
-    if (target.origin !== base.origin) {
-        return null;
-    }
-
-    if (!target.pathname.startsWith('/client-portal')) {
-        return null;
-    }
-
-    if (target.pathname.startsWith('/auth/client-portal/handoff')) {
-        return null;
-    }
-
     const userIdCandidate = token.id ?? token.sub;
     if (typeof userIdCandidate !== 'string' || userIdCandidate.length === 0) {
+        console.log('[computeVanityRedirect] missing user id', { tokenKeys: Object.keys(token) });
         return null;
     }
 
     try {
+        console.log('[computeVanityRedirect] begin lookup', {
+            tenantId,
+            userIdCandidate,
+            base: baseUrl,
+            target: target.toString(),
+        });
         const { getAdminConnection } = await import('@shared/db/admin');
-        const { getPortalDomain } = await import('server/src/models/PortalDomainModel');
+        const {
+            getPortalDomain,
+            getPortalDomainByHostname,
+        } = await import('server/src/models/PortalDomainModel');
         const knex = await getAdminConnection();
-        const portalDomain = await getPortalDomain(knex, tenantId);
 
-        if (!portalDomain || portalDomain.status !== 'active') {
+        const isSameOrigin = target.origin === base.origin;
+
+        const fetchPortalDomainForTenant = async () => {
+            const portalDomain = await getPortalDomain(knex, tenantId);
+            if (!portalDomain || portalDomain.status !== 'active') {
+                return null;
+            }
+            return portalDomain;
+        };
+
+        const fetchPortalDomainForHost = async (hostname: string, port?: string) => {
+            const candidates = [hostname];
+            if (port && port.length > 0 && port !== '80' && port !== '443') {
+                candidates.unshift(`${hostname}:${port}`);
+            }
+
+            for (const candidate of candidates) {
+                const portalDomain = await getPortalDomainByHostname(knex, candidate);
+                if (!portalDomain || portalDomain.status !== 'active') {
+                    continue;
+                }
+                if (portalDomain.tenant !== tenantId) {
+                    continue;
+                }
+                return portalDomain;
+            }
+
+            return null;
+        };
+
+        const returnPath = `${target.pathname}${target.search ?? ''}`;
+        const protocol = isSameOrigin ? base.protocol : target.protocol;
+        const portalDomain = isSameOrigin
+            ? await fetchPortalDomainForTenant()
+            : await fetchPortalDomainForHost(target.hostname, target.port);
+
+        if (!portalDomain) {
+            console.log('[computeVanityRedirect] portal domain not found', {
+                tenant: tenantId,
+                targetHost: target.hostname,
+                isSameOrigin,
+            });
             return null;
         }
 
-        const returnPath = `${target.pathname}${target.search ?? ''}`;
+        if (!isSameOrigin && target.pathname.startsWith('/auth/client-portal/handoff')) {
+            console.log('[computeVanityRedirect] target already handoff', { target: target.toString() });
+            return null;
+        }
+
+        if (isSameOrigin) {
+            console.log('[computeVanityRedirect] same origin target', { target: target.toString() });
+            if (!target.pathname.startsWith('/client-portal')) {
+                console.log('[computeVanityRedirect] same origin but not client portal', { pathname: target.pathname });
+                return null;
+            }
+
+            if (target.pathname.startsWith('/auth/client-portal/handoff')) {
+                console.log('[computeVanityRedirect] same origin and already handoff', { target: target.toString() });
+                return null;
+            }
+        }
 
         const userSnapshot: PortalSessionTokenPayload = {
             id: userIdCandidate,
@@ -89,9 +160,19 @@ async function computeVanityRedirect({
             returnPath,
         });
 
-        const vanityUrl = new URL(`https://${portalDomain.domain}/auth/client-portal/handoff`);
+        const vanityUrl = new URL(`${protocol}//${portalDomain.domain}/auth/client-portal/handoff`);
+        const desiredPort = isSameOrigin ? base.port : target.port;
+        applyPortToVanityUrl(vanityUrl, desiredPort, protocol);
         vanityUrl.searchParams.set('ott', ott);
         vanityUrl.searchParams.set('return', returnPath);
+
+        console.log('[computeVanityRedirect] redirecting to vanity host', {
+            base: base.origin,
+            target: target.toString(),
+            vanity: vanityUrl.toString(),
+            tenant: tenantId,
+            user: userIdCandidate,
+        });
 
         return vanityUrl.toString();
     } catch (error) {
@@ -116,7 +197,7 @@ interface ExtendedUser {
 
 // Helper function to get OAuth secrets from secret provider with env fallback
 async function getOAuthSecrets() {
-    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
+    const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
     const secretProvider = await getSecretProviderInstance();
     
     const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
@@ -415,17 +496,61 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
         sessionToken: SESSION_COOKIE,
     },
     callbacks: {
-        async signIn({ user, account, profile }) {
-            // Track successful login
-            // const extendedUser = user as ExtendedUser;
-            // const { analytics } = await import('server/src/lib/analytics/posthog');
-            // analytics.capture(AnalyticsEvents.USER_LOGGED_IN, {
-            //     provider: account?.provider || 'credentials',
-            //     user_type: extendedUser.user_type,
-            //     has_two_factor: false, // We'd need to check this from the user object
-            //     login_method: account?.provider || 'email',
-            // }, extendedUser.id);
-            
+        async signIn({ user, account, credentials }) {
+            const providerId = account?.provider;
+
+            if (providerId === 'credentials') {
+                const extendedUser = user as ExtendedUser | undefined;
+                const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
+                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                console.log('[signIn] credentials outcome', {
+                    email: extendedUser?.email,
+                    tenant: extendedUser?.tenant,
+                    userType: extendedUser?.user_type,
+                    hasCallback: Boolean(callbackUrl),
+                    canonicalBaseUrl,
+                });
+
+                if (extendedUser?.user_type === 'client' && callbackUrl && canonicalBaseUrl) {
+                    try {
+                        console.log('[signIn] computing vanity redirect', {
+                            email: extendedUser.email,
+                            tenant: extendedUser.tenant,
+                            callbackUrl,
+                            canonicalBaseUrl,
+                        });
+                        const vanityRedirect = await computeVanityRedirect({
+                            url: callbackUrl,
+                            baseUrl: canonicalBaseUrl,
+                            token: {
+                                id: extendedUser.id,
+                                email: extendedUser.email,
+                                name: extendedUser.name,
+                                tenant: extendedUser.tenant,
+                                user_type: extendedUser.user_type,
+                                companyId: extendedUser.companyId,
+                                contactId: extendedUser.contactId,
+                            },
+                        });
+
+                        if (vanityRedirect) {
+                            console.log('[signIn] returning vanity redirect', {
+                                redirect: vanityRedirect,
+                            });
+                            return vanityRedirect;
+                        }
+                    } catch (error) {
+                        console.warn('[signIn] failed to compute client portal redirect', {
+                            email: extendedUser.email,
+                            tenant: extendedUser.tenant,
+                            callbackUrl,
+                            error,
+                        });
+                    }
+                }
+            }
+
             return true; // Allow sign in
         },
         async jwt({ token, user }) {
@@ -556,6 +681,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             return session;
         },
         async redirect({ url, baseUrl, token }) {
+            if (url.includes('/auth/client-portal/handoff')) {
+                return url;
+            }
+
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
             return vanityUrl ?? url;
         },
@@ -820,7 +949,7 @@ export const options: NextAuthConfig = {
         sessionToken: SESSION_COOKIE,
     },
     callbacks: {
-        async signIn({ user, account, profile }) {
+        async signIn({ user, account, credentials }) {
             // Track successful login
             // const extendedUser = user as ExtendedUser;
             // const { analytics } = await import('server/src/lib/analytics/posthog');
@@ -830,7 +959,44 @@ export const options: NextAuthConfig = {
             //     has_two_factor: false, // We'd need to check this from the user object
             //     login_method: account?.provider || 'email',
             // }, extendedUser.id);
-            
+
+            const providerId = account?.provider;
+
+            if (providerId === 'credentials') {
+                const extendedUser = user as ExtendedUser | undefined;
+                const callbackUrl = typeof credentials?.callbackUrl === 'string' ? credentials.callbackUrl : undefined;
+                const canonicalBaseUrl = process.env.NEXTAUTH_URL;
+
+                if (extendedUser?.user_type === 'client' && callbackUrl && canonicalBaseUrl) {
+                    try {
+                        const vanityRedirect = await computeVanityRedirect({
+                            url: callbackUrl,
+                            baseUrl: canonicalBaseUrl,
+                            token: {
+                                id: extendedUser.id,
+                                email: extendedUser.email,
+                                name: extendedUser.name,
+                                tenant: extendedUser.tenant,
+                                user_type: extendedUser.user_type,
+                                companyId: extendedUser.companyId,
+                                contactId: extendedUser.contactId,
+                            },
+                        });
+
+                        if (vanityRedirect) {
+                            return vanityRedirect;
+                        }
+                    } catch (error) {
+                        console.warn('[signIn] failed to compute client portal redirect', {
+                            email: extendedUser?.email,
+                            tenant: extendedUser?.tenant,
+                            callbackUrl,
+                            error,
+                        });
+                    }
+                }
+            }
+
             return true; // Allow sign in
         },
         async jwt({ token, user }) {
@@ -906,7 +1072,7 @@ export const options: NextAuthConfig = {
                 companyId: companyId, // Use fetched or preserved companyId
                 contactId: contactId  // Use fetched or preserved contactId
             };
-
+            
             console.log('JWT callback - final token:', {
                 id: result.id,
                 email: result.email,
@@ -961,6 +1127,10 @@ export const options: NextAuthConfig = {
             return session;
         },
         async redirect({ url, baseUrl, token }) {
+            if (url.includes('/auth/client-portal/handoff')) {
+                return url;
+            }
+
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
             return vanityUrl ?? url;
         },

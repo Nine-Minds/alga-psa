@@ -38,6 +38,30 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+function getRequestOrigin(req: Request): string {
+  const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim();
+  const forwardedHost = (req.headers['x-forwarded-host'] as string)?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = req.get('host') || forwardedHost || 'localhost';
+  return `${protocol}://${host}`;
+}
+
+function buildClientPortalSigninUrl(req: Request, extraParams?: Record<string, string>): string {
+  const canonicalOrigin = process.env.NEXTAUTH_URL || getRequestOrigin(req);
+  const loginUrl = new URL('/auth/client-portal/signin', canonicalOrigin);
+  const callbackAbsolute = `${getRequestOrigin(req)}${req.originalUrl}`;
+  loginUrl.searchParams.set('callbackUrl', callbackAbsolute);
+
+  if (extraParams) {
+    for (const [key, value] of Object.entries(extraParams)) {
+      loginUrl.searchParams.set(key, value);
+    }
+  }
+
+  return loginUrl.toString();
+}
+
+
 /**
  * Helper function to adapt Express request for NextAuth getToken compatibility
  * NextAuth's getToken expects a Next.js-style request with cookies in a specific format
@@ -69,7 +93,13 @@ async function getNextAuthToken(expressReq: Request, secret: string): Promise<an
   const cookies = expressReq.cookies || {};
 
   // Get the session token cookie
-  const sessionToken = cookies['next-auth.session-token'] || cookies['__Secure-next-auth.session-token'];
+  const sessionToken =
+    cookies['authjs.session-token'] ||
+    cookies['__Secure-authjs.session-token'] ||
+    cookies['next-auth.session-token'] ||
+    cookies['__Secure-next-auth.session-token'];
+
+  console.log("Cookies: " + cookies);
 
   if (!sessionToken) {
     return null;
@@ -315,13 +345,11 @@ export async function sessionAuthMiddleware(
 
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect to appropriate login page based on the path
       if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+        return res.redirect(buildClientPortalSigninUrl(req));
       }
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
     }
 
     // Try alternative token parsing first
@@ -337,14 +365,11 @@ export async function sessionAuthMiddleware(
     }
 
     if (!token) {
-      // No session token, redirect to login
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect to appropriate login page based on the path
       if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+        return res.redirect(buildClientPortalSigninUrl(req));
       }
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
     }
 
     const userType = token.user_type as string;
@@ -354,24 +379,15 @@ export async function sessionAuthMiddleware(
     // Enforce access rules based on user type
     if (isClientPortal && userType !== 'client') {
       // Non-client users cannot access client portal
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect with error to appropriate login page
-      if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      }
+      return res.redirect(
+        buildClientPortalSigninUrl(req, { error: 'AccessDenied' })
+      );
     }
 
     if (!isClientPortal && userType === 'client') {
       // Client users cannot access MSP routes
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect with error to appropriate login page
-      if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      }
+      return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
     }
 
     // Store user info for downstream middleware

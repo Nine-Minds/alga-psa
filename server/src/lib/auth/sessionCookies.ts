@@ -22,7 +22,8 @@ export function getSessionCookieName(): string {
 }
 
 export function getSessionCookieConfig(): CookieOption {
-  const secure = process.env.NODE_ENV !== 'development';
+  const environment = process.env.NODE_ENV ?? 'development';
+  const secure = environment === 'production';
 
   return {
     name: getSessionCookieName(),
@@ -40,21 +41,21 @@ export async function getNextAuthSecret(): Promise<string> {
     return cachedSecret;
   }
 
-  try {
-    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
-    const provider = await getSecretProviderInstance();
-    const secret = await provider.getAppSecret('NEXTAUTH_SECRET');
+  // try {
+  //   const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
+  //   const provider = await getSecretProviderInstance();
+  //   const secret = await provider.getAppSecret('NEXTAUTH_SECRET');
 
-    if (secret) {
-      cachedSecret = secret;
-      return secret;
-    }
-  } catch (error) {
-    // Fallback to environment variable if secret provider is unavailable
-    console.warn('[auth] Falling back to NEXTAUTH_SECRET from environment', {
-      error: error instanceof Error ? error.message : 'unknown',
-    });
-  }
+  //   if (secret) {
+  //     cachedSecret = secret;
+  //     return secret;
+  //   }
+  // } catch (error) {
+  //   // Fallback to environment variable if secret provider is unavailable
+  //   console.warn('[auth] Falling back to NEXTAUTH_SECRET from environment', {
+  //     error: error instanceof Error ? error.message : 'unknown',
+  //   });
+  // }
 
   const envSecret = process.env.NEXTAUTH_SECRET;
   if (!envSecret) {
@@ -94,6 +95,7 @@ export interface PortalSessionTokenPayload {
 export async function encodePortalSessionToken(payload: PortalSessionTokenPayload): Promise<string> {
   const secret = await getNextAuthSecret();
   const maxAge = getSessionMaxAge();
+  const salt = getSessionCookieName();
   const issuedAt = Math.floor(Date.now() / 1000);
 
   const token = {
@@ -103,7 +105,7 @@ export async function encodePortalSessionToken(payload: PortalSessionTokenPayloa
     exp: issuedAt + maxAge,
   };
 
-  return encode({ token, secret, maxAge });
+  return encode({ token, secret, maxAge, salt });
 }
 
 export function buildSessionCookie(value: string): {

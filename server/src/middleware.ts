@@ -6,9 +6,12 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
 const protectedPrefix = '/msp';
 const clientPortalPrefix = '/client-portal';
+const canonicalUrlEnv = process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
 
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
+  const requestHost = request.headers.get('host') || '';
+  const requestHostname = requestHost.split(':')[0];
 
   // Create a response that will be modified throughout the middleware chain
   let response = NextResponse.next();
@@ -75,11 +78,30 @@ const _middleware = auth((request) => {
   // Protect Client Portal routes: validate user type (but not auth pages)
   if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     if (!request.auth) {
-      // Redirect unauthenticated users to client portal signin
+      const callbackUrlAbsolute = new URL(request.nextUrl.pathname + (request.nextUrl.search || ''), request.nextUrl);
+
+      if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
+        const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
+        const hostHeader = request.headers.get('host') || requestHostname;
+        const protocol = request.nextUrl.protocol.replace(/:$/, '');
+        const callbackUrl = `${protocol}://${hostHeader}${request.nextUrl.pathname}${request.nextUrl.search}`;
+        canonicalLogin.searchParams.set('callbackUrl', callbackUrl);
+        console.log('[middleware] vanity redirect', {
+          requestHost: requestHostname,
+          callback: callbackUrl,
+          redirect: canonicalLogin.toString(),
+        });
+        return NextResponse.redirect(canonicalLogin);
+      }
+
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/client-portal/signin';
-      const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
-      loginUrl.searchParams.set('callbackUrl', callbackUrl);
+      const existingCallback = request.nextUrl.searchParams.get('callbackUrl');
+      if (existingCallback) {
+        loginUrl.searchParams.set('callbackUrl', existingCallback);
+      } else {
+        loginUrl.searchParams.set('callbackUrl', callbackUrlAbsolute.pathname + callbackUrlAbsolute.search);
+      }
       return NextResponse.redirect(loginUrl);
     } else if (request.auth.user?.user_type !== 'client') {
       // Prevent non-client users (internal) from accessing client portal
