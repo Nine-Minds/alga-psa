@@ -56,6 +56,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
     const end = new Date(event.scheduled_end);
     return start.toDateString() !== end.toDateString();
   }, [event.scheduled_start, event.scheduled_end]);
+
   
   // Use the compact event hook
   const { isCompact, compactClasses } = useIsCompactEvent(event, eventRef);
@@ -90,17 +91,35 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
   const endMoment = new Date(event.scheduled_end);
-  const formattedDate = startMoment.toLocaleDateString();
-  const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Format start and end date/time
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleString([], {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Construct detailed tooltip
-  const endDate = endMoment.toLocaleDateString();
-  const dateDisplay = formattedDate === endDate ? formattedDate : `${formattedDate} - ${endDate}`;
-  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nDate: ${dateDisplay}\nTime: ${formattedTime}${isMultiDay ? ' (Multi-day)' : ''}`;
+  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}${isMultiDay ? ' (Multi-day)' : ''}`;
 
   const titleParts = event.title?.split(':') || ['Untitled'];
   const mainTitle = titleParts[0];
   const subtitle = titleParts.slice(1).join(':').trim();
+
+  // Check if we should show continuation indicator
+  const [showContinuationIndicator, setShowContinuationIndicator] = React.useState(false);
+
+  React.useEffect(() => {
+    if (eventRef.current) {
+      const parentElement = eventRef.current.closest('.rbc-event');
+      const isContinuation = parentElement?.classList.contains('rbc-event-continues-prior') || false;
+      setShowContinuationIndicator(isContinuation);
+    }
+  }, []);
 
   return (
     <div
@@ -171,23 +190,31 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         {isCompact ? (
           // For short events, show text with minimal padding
           <div className="flex items-center">
-            {isMultiDay && (
+            {showContinuationIndicator && (
+              <span className="text-[10px] mr-1 opacity-60" title="Continues from previous week">...</span>
+            )}
+            {isMultiDay && !showContinuationIndicator && (
               <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
             )}
             <div className="font-medium truncate flex-1 text-xs">
-              {mainTitle}
+              {mainTitle.length > 15 && showContinuationIndicator ? mainTitle.substring(0, 12) + '...' : mainTitle}
             </div>
           </div>
         ) : (
           // For normal events, show two lines
           <>
             <div className="font-semibold truncate flex items-center text-sm">
-              {isMultiDay && (
+              {showContinuationIndicator && (
+                <span className="text-xs mr-1 opacity-60" title="Continues from previous week">...</span>
+              )}
+              {isMultiDay && !showContinuationIndicator && (
                 <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
               )}
-              <span className="truncate">{mainTitle}</span>
+              <span className="truncate">
+                {mainTitle.length > 20 && showContinuationIndicator ? mainTitle.substring(0, 17) + '...' : mainTitle}
+              </span>
             </div>
-            {subtitle && <div className="truncate text-xs mt-0.5">{subtitle}</div>}
+            {subtitle && !showContinuationIndicator && <div className="truncate text-xs mt-0.5">{subtitle}</div>}
           </>
         )}
       </div>

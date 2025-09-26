@@ -164,10 +164,11 @@ export const CalendarStyleProvider: React.FC = () => {
         border-top-left-radius: 0 !important;
         border-bottom-left-radius: 0 !important;
         position: relative;
+        padding-left: 12px !important;
       }
 
       .rbc-event-continues-prior::before {
-        content: '\u2190';
+        content: '←';
         position: absolute;
         left: 2px;
         top: 50%;
@@ -176,14 +177,23 @@ export const CalendarStyleProvider: React.FC = () => {
         opacity: 0.6;
       }
 
+      /* Show abbreviated title for events continuing from previous week */
+      .rbc-week-view .rbc-event-continues-prior .rbc-event-label,
+      .rbc-day-view .rbc-event-continues-prior .rbc-event-label {
+        display: block !important;
+        font-size: 10px;
+        opacity: 0.8;
+      }
+
       .rbc-event-continues-after {
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
         position: relative;
+        padding-right: 12px !important;
       }
 
       .rbc-event-continues-after::after {
-        content: '\u2192';
+        content: '→';
         position: absolute;
         right: 2px;
         top: 50%;
@@ -217,6 +227,64 @@ export const CalendarStyleProvider: React.FC = () => {
         display: flex;
         align-items: center;
         padding: 2px 4px;
+      }
+
+      /* Restrict multi-day event dragging to horizontal only */
+      .rbc-allday-cell .rbc-addons-dnd-dragging {
+        cursor: ew-resize !important;
+      }
+
+      /* Visual feedback for multi-day event dragging */
+      .rbc-allday-cell .rbc-event.rbc-addons-dnd-dragging {
+        opacity: 0.7;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+      }
+
+      /* Ensure multi-day events maintain their size during drag */
+      .rbc-allday-cell .rbc-addons-dnd-dragging.rbc-event {
+        height: 30px !important;
+        min-height: 30px !important;
+      }
+
+      /* Drag preview for all-day/multi-day events only */
+      .rbc-allday-cell .rbc-addons-dnd-drag-preview {
+        height: 30px !important;
+        opacity: 0.8;
+      }
+
+      /* Week boundary indicators during drag */
+      .rbc-week-view.dragging-near-boundary::before,
+      .rbc-week-view.dragging-near-boundary::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 50px;
+        pointer-events: none;
+        z-index: 999;
+      }
+
+      .rbc-week-view.dragging-to-previous::before {
+        left: 0;
+        background: linear-gradient(90deg,
+          rgba(var(--color-primary-500), 0.2) 0%,
+          transparent 100%);
+        border-left: 2px dashed rgb(var(--color-primary-500));
+      }
+
+      .rbc-week-view.dragging-to-next::after {
+        right: 0;
+        background: linear-gradient(270deg,
+          rgba(var(--color-primary-500), 0.2) 0%,
+          transparent 100%);
+        border-right: 2px dashed rgb(var(--color-primary-500));
+      }
+
+      /* Week view specific dragging styles */
+      .rbc-week-view .rbc-addons-dnd-dragging,
+      .rbc-day-view .rbc-addons-dnd-dragging {
+        pointer-events: none;
       }
 
       /* Visual connector for multi-day events */

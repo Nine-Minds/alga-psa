@@ -1,9 +1,6 @@
 import React from 'react';
 import * as RadixIcons from '@radix-ui/react-icons';
 import { MenuItem } from '../../config/menuConfig';
-import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
-import { ButtonComponent } from 'server/src/types/ui-reflection/types';
-import { CommonActions } from 'server/src/types/ui-reflection/actionBuilders';
 import { Construction } from 'lucide-react';
 
 interface SidebarMenuItemProps {
@@ -23,19 +20,13 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   openSubmenu,
   onToggleSubmenu,
 }) => {
-  const { automationIdProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({
-    id: id,
-    type: 'button',
-    label: item.name,
-    variant: isActive(item.href || '#') ? 'active' : 'default'
-  }, [CommonActions.click()]);
 
   if (item.subItems) {
     return (
       <div
         className="flex items-center px-4 py-2 hover:bg-[#2a2b32] cursor-pointer"
         onClick={() => onToggleSubmenu(item.name)}
-        {...automationIdProps}
+        data-automation-id={`sidebar-menu-${id}`}
       >
         <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
         {sidebarOpen && (
@@ -53,10 +44,10 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
   }
 
   return (
-      <a 
-        href={item.href || '#'} 
+      <a
+        href={item.href || '#'}
         className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
-        {...automationIdProps}
+        data-automation-id={`sidebar-menu-${id}`}
       >
       <item.icon className="h-5 w-5 mr-2 flex-shrink-0" />
       {sidebarOpen && (

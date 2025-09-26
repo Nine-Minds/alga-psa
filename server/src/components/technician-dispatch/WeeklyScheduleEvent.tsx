@@ -138,18 +138,27 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
   const endMoment = new Date(event.scheduled_end);
-  const formattedDate = startMoment.toLocaleDateString();
-  const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Format start and end date/time
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleString([], {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Check if this is a private event that the user doesn't own
   const isPrivateEvent = event.is_private;
   const isCreator = isPrimary && event.assigned_user_ids?.length === 1;
   const isPrivateNonOwner = isPrivateEvent && !isCreator;
-  
+
   // Construct detailed tooltip - show limited info for private events
   const tooltipTitle = isPrivateNonOwner
-    ? `Busy\nDate: ${formattedDate}\nTime: ${formattedTime}`
-    : `${event.title}\nAssigned to: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+    ? `Busy\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`
+    : `${event.title}\nAssigned to: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`;
 
   return (
     <div
