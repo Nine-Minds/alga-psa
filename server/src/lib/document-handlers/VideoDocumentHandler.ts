@@ -1,6 +1,19 @@
 import { IDocument, PreviewResponse } from 'server/src/interfaces/document.interface';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import path from 'path';
+import ffmpeg from 'fluent-ffmpeg';
+import ffmpegStatic from 'ffmpeg-static';
+import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
+import { Readable } from 'stream';
+import type { Knex } from 'knex';
+
+const ffmpegExecutable = typeof ffmpegStatic === 'string' ? ffmpegStatic : null;
+
+if (ffmpegExecutable) {
+  ffmpeg.setFfmpegPath(ffmpegExecutable);
+} else {
+  console.warn('[VideoDocumentHandler] ffmpeg-static executable not available; video thumbnails disabled');
+}
 
 /**
  * Handler for video file types
@@ -31,7 +44,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
    * @param knex The Knex instance
    * @returns A promise that resolves to a PreviewResponse
    */
-  async generatePreview(document: IDocument, tenant: string, knex: any): Promise<PreviewResponse> {
+  async generatePreview(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<PreviewResponse> {
     try {
       if (!document.file_id) {
         return {
@@ -46,24 +59,31 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
         return cachedPreview;
       }
 
+      const thumbnailBuffer = await this.generateThumbnail(document, tenant, knex);
+
       // For videos, we don't generate a preview image
       // Instead, we return success without a preview image
       // The client-side video component will handle the preview
       const fileName = document.document_name || 'Unknown';
       const fileSize = document.file_size ? Math.round(Number(document.file_size) / 1024) + ' KB' : 'Unknown size';
-      const mimeType = document.mime_type || 'Unknown';
-      
       const content = `Video File: ${fileName} (${fileSize})`;
+
+      if (thumbnailBuffer) {
+        const base64Image = `data:image/png;base64,${thumbnailBuffer.toString('base64')}`;
+        await this.saveToCache(document.file_id, thumbnailBuffer, tenant);
+        return {
+          success: true,
+          previewImage: base64Image,
+          content
+        };
+      }
       
       const result = { 
         success: true, 
         content: content,
         // No previewImage - let the client handle video preview
       };
-      
-      // Cache the result (without image data)
-      await this.saveToCache(document.file_id, Buffer.from(JSON.stringify(result)), tenant);
-      
+
       return result;
     } catch (error) {
       console.error(`[VideoDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
@@ -81,7 +101,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
    * @param knex The Knex instance
    * @returns A promise that resolves to an HTML string
    */
-  async generateHTML(document: IDocument, tenant: string, knex: any): Promise<string> {
+  async generateHTML(document: IDocument, tenant: string, _knex: Knex | Knex.Transaction): Promise<string> {
     try {
       const fileName = document.document_name || 'Unknown';
       const fileSize = document.file_size ? Math.round(Number(document.file_size) / 1024) + ' KB' : 'Unknown size';
@@ -114,5 +134,110 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
   private getFileExtension(filename: string): string {
     const ext = path.extname(filename).toLowerCase();
     return ext ? ext.substring(1) : '';
+  }
+
+  private mapMimeToFormat(mimeType: string | null | undefined): string | null {
+    if (!mimeType) {
+      return null;
+    }
+
+    const map: Record<string, string> = {
+      'video/mp4': 'mp4',
+      'video/webm': 'webm',
+      'video/ogg': 'ogg',
+      'video/quicktime': 'mov',
+      'video/x-msvideo': 'avi',
+      'video/x-ms-wmv': 'asf',
+      'video/mpeg': 'mpeg',
+      'video/3gpp': '3gp',
+      'video/3gpp2': '3gp',
+      'video/x-matroska': 'matroska',
+      'video/x-flv': 'flv'
+    };
+
+    return map[mimeType] || null;
+  }
+
+  private async generateThumbnail(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<Buffer | null> {
+    if (!ffmpegExecutable) {
+      return null;
+    }
+
+    if (!document.file_id) {
+      return null;
+    }
+
+    try {
+      const fileRecord = await knex('external_files')
+        .select('storage_path', 'mime_type')
+        .where({ tenant, file_id: document.file_id, is_deleted: false })
+        .first();
+
+      if (!fileRecord) {
+        console.warn(`[VideoDocumentHandler] File record not found for ${document.file_id}`);
+        return null;
+      }
+
+      const provider = await StorageProviderFactory.createProvider();
+      const videoStream = await provider.getReadStream(fileRecord.storage_path);
+
+      const buffer = await this.extractFrameFromStream(
+        videoStream,
+        fileRecord.mime_type || document.mime_type || null
+      );
+
+      return buffer;
+    } catch (error) {
+      console.error(`[VideoDocumentHandler] Failed to generate thumbnail for ${document.file_id}:`, error);
+      return null;
+    }
+  }
+
+  private async extractFrameFromStream(stream: Readable, mimeType: string | null): Promise<Buffer | null> {
+    return await new Promise((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const command = ffmpeg(stream);
+
+      command.noAudio();
+      command.inputOptions(['-ss', '00:00:01']);
+      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
+
+      const format = this.mapMimeToFormat(mimeType);
+      if (format) {
+        command.inputFormat(format);
+      }
+
+      command.format('png');
+
+      command.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
+
+      const ffmpegStream = command.pipe();
+
+      ffmpegStream.on('data', (chunk: Buffer) => {
+        chunks.push(chunk);
+      });
+
+      ffmpegStream.on('end', () => {
+        stream.destroy();
+        if (chunks.length === 0) {
+          resolve(null);
+        } else {
+          resolve(Buffer.concat(chunks));
+        }
+      });
+
+      ffmpegStream.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
+
+      stream.on('error', (err) => {
+        stream.destroy();
+        reject(err);
+      });
+    });
   }
 }
