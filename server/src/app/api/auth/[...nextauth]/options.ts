@@ -5,8 +5,100 @@ import type { NextAuthConfig } from "next-auth";
 import "server/src/types/next-auth";
 import { AnalyticsEvents } from "server/src/lib/analytics/events";
 // import { getAdminConnection } from "server/src/lib/db/admin";
+import {
+    getNextAuthSecret,
+    getNextAuthSecretSync,
+    getSessionCookieConfig,
+    getSessionMaxAge,
+    type PortalSessionTokenPayload,
+} from "server/src/lib/auth/sessionCookies";
+import { issuePortalDomainOtt } from "server/src/lib/models/PortalDomainSessionToken";
 
-const NEXTAUTH_SESSION_EXPIRES = Number(process.env.NEXTAUTH_SESSION_EXPIRES) || 60 * 60 * 24; // 1 day
+const SESSION_MAX_AGE = getSessionMaxAge();
+const SESSION_COOKIE = getSessionCookieConfig();
+
+async function computeVanityRedirect({
+    url,
+    baseUrl,
+    token,
+}: {
+    url: string;
+    baseUrl: string;
+    token?: Record<string, unknown> | null;
+}): Promise<string | null> {
+    if (!token) {
+        return null;
+    }
+
+    const userType = token.user_type;
+    const tenantId = token.tenant;
+
+    if (userType !== 'client' || typeof tenantId !== 'string' || tenantId.length === 0) {
+        return null;
+    }
+
+    const base = new URL(baseUrl);
+    const target = new URL(url, baseUrl);
+
+    if (target.origin !== base.origin) {
+        return null;
+    }
+
+    if (!target.pathname.startsWith('/client-portal')) {
+        return null;
+    }
+
+    if (target.pathname.startsWith('/auth/client-portal/handoff')) {
+        return null;
+    }
+
+    const userIdCandidate = token.id ?? token.sub;
+    if (typeof userIdCandidate !== 'string' || userIdCandidate.length === 0) {
+        return null;
+    }
+
+    try {
+        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getPortalDomain } = await import('server/src/models/PortalDomainModel');
+        const knex = await getAdminConnection();
+        const portalDomain = await getPortalDomain(knex, tenantId);
+
+        if (!portalDomain || portalDomain.status !== 'active') {
+            return null;
+        }
+
+        const returnPath = `${target.pathname}${target.search ?? ''}`;
+
+        const userSnapshot: PortalSessionTokenPayload = {
+            id: userIdCandidate,
+            email: typeof token.email === 'string' ? token.email : undefined,
+            name: typeof token.name === 'string' ? token.name : undefined,
+            tenant: tenantId,
+            user_type: userType,
+            companyId: typeof token.companyId === 'string' ? token.companyId : undefined,
+            contactId: typeof token.contactId === 'string' ? token.contactId : undefined,
+        };
+
+        const { token: ott } = await issuePortalDomainOtt({
+            tenant: portalDomain.tenant,
+            portalDomainId: portalDomain.id,
+            userId: userIdCandidate,
+            targetDomain: portalDomain.domain,
+            userSnapshot,
+            issuedFromHost: base.host,
+            returnPath,
+        });
+
+        const vanityUrl = new URL(`https://${portalDomain.domain}/auth/client-portal/handoff`);
+        vanityUrl.searchParams.set('ott', ott);
+        vanityUrl.searchParams.set('return', returnPath);
+
+        return vanityUrl.toString();
+    } catch (error) {
+        console.warn('Failed to prepare vanity redirect for client portal', error);
+        return null;
+    }
+}
 
 // Extend the User type to include tenant
 interface ExtendedUser {
@@ -49,12 +141,8 @@ async function getOAuthSecrets() {
 // Build NextAuth options dynamically with secrets
 export async function buildAuthOptions(): Promise<NextAuthConfig> {
     const secrets = await getOAuthSecrets();
-    
-    // Get NextAuth secret from provider
-    const { getSecretProviderInstance } = await import('@alga-psa/shared/core');
-    const secretProvider = await getSecretProviderInstance();
-    const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
-    
+    const nextAuthSecret = await getNextAuthSecret();
+
     return {
     trustHost: true,
     secret: nextAuthSecret,
@@ -321,7 +409,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
     },
     session: {
         strategy: "jwt",
-        maxAge: NEXTAUTH_SESSION_EXPIRES,
+        maxAge: SESSION_MAX_AGE,
+    },
+    cookies: {
+        sessionToken: SESSION_COOKIE,
     },
     callbacks: {
         async signIn({ user, account, profile }) {
@@ -464,6 +555,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             });
             return session;
         },
+        async redirect({ url, baseUrl, token }) {
+            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
+            return vanityUrl ?? url;
+        },
     },
     };
 }
@@ -481,7 +576,7 @@ export async function getAuthOptions(): Promise<NextAuthConfig> {
 // Synchronous fallback that uses environment variables
 export const options: NextAuthConfig = {
     trustHost: true,
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: getNextAuthSecretSync(),
     providers: [
         GoogleProvider({
             clientId: process.env.GOOGLE_OAUTH_CLIENT_ID as string,
@@ -719,7 +814,10 @@ export const options: NextAuthConfig = {
     },
     session: {
         strategy: "jwt",
-        maxAge: NEXTAUTH_SESSION_EXPIRES,
+        maxAge: SESSION_MAX_AGE,
+    },
+    cookies: {
+        sessionToken: SESSION_COOKIE,
     },
     callbacks: {
         async signIn({ user, account, profile }) {
@@ -861,6 +959,10 @@ export const options: NextAuthConfig = {
                 companyId: session.user?.companyId
             });
             return session;
+        },
+        async redirect({ url, baseUrl, token }) {
+            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
+            return vanityUrl ?? url;
         },
     },
 };

@@ -34,7 +34,8 @@ const _middleware = auth((request) => {
       '/api/documents/download/',
       '/api/documents/view/',
       '/api/email/webhooks/',
-      '/api/email/oauth/'
+      '/api/email/oauth/',
+      '/api/client-portal/domain-session'
     ];
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {
@@ -103,4 +104,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
   ]
 };
-

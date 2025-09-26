@@ -95,10 +95,18 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       return;
     }
 
+    const verificationDetails = {
+      ...(record.verification_details ?? {}),
+      expected_cname: expectedCname,
+      last_verified_at: new Date().toISOString(),
+      last_verified_cnames: dns.observed,
+    };
+
     await markPortalDomainStatus({
       portalDomainId: record.id,
       status: 'pending_certificate',
       statusMessage: 'DNS verified. Preparing Kubernetes resources for certificate issuance.',
+      verificationDetails,
     });
 
     const applyResult = await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });

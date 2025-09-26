@@ -1,10 +1,25 @@
 import NextAuth from "next-auth";
+import {
+  getNextAuthSecretSync,
+  getSessionCookieConfig,
+  getSessionMaxAge,
+} from "server/src/lib/auth/sessionCookies";
+
+const EDGE_SESSION_MAX_AGE = getSessionMaxAge();
+const EDGE_SESSION_COOKIE = getSessionCookieConfig();
+const EDGE_SECRET = getNextAuthSecretSync();
 
 // Minimal Edge-safe auth instance for middleware and server components
 export const { auth } = NextAuth({
   trustHost: true,
-  session: { strategy: 'jwt' },
-  secret: process.env.NEXTAUTH_SECRET,
+  session: {
+    strategy: 'jwt',
+    maxAge: EDGE_SESSION_MAX_AGE,
+  },
+  secret: EDGE_SECRET,
+  cookies: {
+    sessionToken: EDGE_SESSION_COOKIE,
+  },
   providers: [],
   callbacks: {
     async session({ session, token }) {

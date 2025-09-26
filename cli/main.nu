@@ -12,6 +12,7 @@ use "hosted-env.nu" *
 use "build.nu" *
 use "config.nu" *
 use "tenant.nu" *
+use "portal-domain.nu" *
 
 # Main CLI entry point function
 def --wrapped main [
@@ -276,11 +277,11 @@ def --wrapped main [
        "dev-down" => {
            dev-down
        }
-       "dev-env-create" => {
-           let branch = ($args | get 1? | default null)
-           if $branch == null {
-               error make { msg: $"($env.ALGA_COLOR_RED)dev-env-create command requires a branch name($env.ALGA_COLOR_RESET)" }
-           }
+      "dev-env-create" => {
+          let branch = ($args | get 1? | default null)
+          if $branch == null {
+              error make { msg: $"($env.ALGA_COLOR_RED)dev-env-create command requires a branch name($env.ALGA_COLOR_RESET)" }
+          }
            
            # Parse flags
            let command_args = ($args | skip 2)
@@ -317,8 +318,36 @@ def --wrapped main [
            let checkout = not ($command_args | any { |arg| $arg == "--no-checkout" })
            
            # Call the dev-env-create command
-           dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag --author-name $author_name --author-email $author_email
-       }
+          dev-env-create $branch --edition $edition --use-latest=$use_latest --checkout=$checkout --from-tag $from_tag --author-name $author_name --author-email $author_email
+      }
+      "portal-domain" => {
+          let subcommand = ($args | get 1? | default null)
+          if $subcommand == null {
+              error make { msg: $"($env.ALGA_COLOR_RED)portal-domain command requires a subcommand (e.g., sessions)($env.ALGA_COLOR_RESET)" }
+          }
+
+          match $subcommand {
+              "sessions" => {
+                  let action = ($args | get 2? | default null)
+                  if $action == null {
+                      error make { msg: $"($env.ALGA_COLOR_RED)portal-domain sessions requires an action (e.g., prune)($env.ALGA_COLOR_RESET)" }
+                  }
+
+                  match $action {
+                      "prune" => {
+                          let command_args = ($args | skip 3)
+                          portal-domain-sessions-prune ...$command_args
+                      }
+                      _ => {
+                          error make { msg: $"($env.ALGA_COLOR_RED)Unsupported portal-domain sessions action: ($action)($env.ALGA_COLOR_RESET)" }
+                      }
+                  }
+              }
+              _ => {
+                  error make { msg: $"($env.ALGA_COLOR_RED)Unsupported portal-domain subcommand: ($subcommand)($env.ALGA_COLOR_RESET)" }
+              }
+          }
+      }
        "dev-env-list" => {
            dev-env-list
        }

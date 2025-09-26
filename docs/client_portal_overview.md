@@ -22,6 +22,7 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 - `/auth/client-portal/forgot-password` - Password reset initiation
 - `/auth/password-reset/set-new-password` - Password reset completion
 - `/auth/portal/setup` - Account setup for invited users
+- `/auth/client-portal/handoff` - Vanity domain session handoff after canonical login
 
 ### Key Components
 
@@ -40,15 +41,17 @@ The Client Portal is a secure, multi-tenant web application that allows MSP clie
 
 ### Authentication Flow
 
-1. **User Access**: Client navigates to `/auth/client-portal/signin`
-2. **Form Submission**: Email/password submitted via NextAuth credentials provider
+1. **User Access**: Client navigates to `/auth/client-portal/signin` (or is redirected there from a vanity hostname)
+2. **Form Submission**: Email/password submitted via NextAuth credentials provider on the canonical host
 3. **Backend Validation**: 
    - [`authenticateUser()`](server/src/lib/actions/auth.tsx:14) validates credentials
    - User type checked (`client` vs `internal`)
    - Password verified against hashed value
-4. **Session Creation**: JWT token generated with user context
-5. **Access Control**: Middleware validates user type for protected routes
-6. **Redirect**: Successful login redirects to `/client-portal/dashboard`
+4. **Session Creation**: JWT token generated with user context on the canonical host
+5. **Vanity Redirect**: If the tenant has an active custom domain, NextAuth issues a one-time transfer token (OTT) and redirects the browser to `https://<vanity-host>/auth/client-portal/handoff?ott=...`
+6. **Session Exchange**: The handoff page calls `/api/client-portal/domain-session` to validate the OTT, verify DNS alignment, and mint a vanity-domain Auth.js cookie
+7. **Access Control**: Middleware validates user type for protected routes on both canonical and vanity domains
+8. **Redirect**: Successful exchange forwards the user to the requested `/client-portal/*` destination
 
 ### Security Features
 
@@ -121,6 +124,14 @@ if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
     }
 }
 ```
+
+### Vanity Domain Session Handoff
+
+- **OTT Issuance**: Successful logins on the canonical host call `issuePortalDomainOtt()` to generate a short-lived, single-use token that stores the client user's session snapshot.
+- **Handoff Page**: `/auth/client-portal/handoff` displays a lightweight loading state while exchanging the OTT for an Auth.js cookie via `/api/client-portal/domain-session`.
+- **DNS Verification**: The exchange endpoint compares the vanity host's active CNAME records against `verification_details.expected_cname` and rejects handoffs when drift is detected.
+- **Cookie Minting**: `buildSessionCookie()` guarantees Auth.js-compatible cookie attributes (`__Secure-` prefix, `Lax` SameSite, `Secure`, `HttpOnly`).
+- **Cleanup**: Expired or consumed OTTs can be pruned with `pnpm cli portal-domain sessions prune [--tenant <tenantId>] [--minutes 10] [--dry-run]`.
 
 ## Features & Capabilities
 

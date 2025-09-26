@@ -152,6 +152,15 @@ export async function getPortalDomain(knex: Knex, tenant: string): Promise<Porta
   return mapRow(record);
 }
 
+export async function getPortalDomainByHostname(knex: Knex, domain: string): Promise<PortalDomain | null> {
+  const normalized = normalizeHostname(domain);
+  const record = await knex<PortalDomainRecord>(PORTAL_DOMAIN_TABLE)
+    .where({ domain: normalized })
+    .first();
+
+  return record ? mapRow(record) : null;
+}
+
 export async function getCurrentTenantPortalDomain(): Promise<PortalDomain | null> {
   const { knex, tenant } = await getTenantAndKnex();
   return getPortalDomain(knex, tenant);
