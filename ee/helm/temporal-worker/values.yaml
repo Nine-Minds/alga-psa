@@ -161,6 +161,8 @@ extraEnv: []
 
 # Portal domain management configuration
 portalDomain:
+  # Namespace where TLS certificates are issued (source secrets)
+  certificateNamespace: msp
   # Namespace where Istio gateway resources (and replicated TLS secrets) live
   gatewayNamespace: istio-system
   # Whether to create RBAC bindings that allow the worker to sync TLS secrets
