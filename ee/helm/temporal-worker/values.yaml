@@ -159,6 +159,13 @@ extraEnv: []
   # - name: EXTRA_VAR
   #   value: "extra-value"
 
+# Portal domain management configuration
+portalDomain:
+  # Namespace where Istio gateway resources (and replicated TLS secrets) live
+  gatewayNamespace: istio-system
+  # Whether to create RBAC bindings that allow the worker to sync TLS secrets
+  secretReplicationEnabled: true
+
 # Additional volumes
 extraVolumes: []
   # - name: extra-volume
