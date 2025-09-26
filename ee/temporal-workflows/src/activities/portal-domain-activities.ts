@@ -18,7 +18,6 @@ import type {
   MarkStatusInput,
   ApplyPortalDomainResourcesResult,
   PortalDomainStatusSnapshot,
-  HttpChallengeDetails,
 } from '../workflows/portal-domains/types.js';
 
 const TABLE_NAME = "portal_domains";
@@ -26,6 +25,10 @@ const MANAGED_LABEL = "portal.alga-psa.com/managed";
 const TENANT_LABEL = "portal.alga-psa.com/tenant";
 const DOMAIN_ID_LABEL = "portal.alga-psa.com/domain-id";
 const DOMAIN_HOST_LABEL = "portal.alga-psa.com/domain-host";
+const ORIGIN_SECRET_NAME_LABEL = "portal.alga-psa.com/origin-secret-name";
+const ORIGIN_SECRET_NAMESPACE_LABEL = "portal.alga-psa.com/origin-secret-namespace";
+const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
+  "portal.alga-psa.com/origin-resource-version";
 
 const execFileAsync = promisify(execFile);
 
@@ -76,7 +79,6 @@ export interface PortalDomainConfig {
   serviceHost: string;
   servicePort: number;
   manifestOutputDirectory: string | null;
-  portalDomainRoot: string;
 }
 
 const DEFAULT_CONFIG: PortalDomainConfig = {
@@ -100,7 +102,6 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
-  portalDomainRoot: process.env.EXT_DOMAIN_ROOT ?? "",
 };
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
@@ -368,6 +369,23 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
         );
       }
 
+      if (config.gatewayNamespace !== config.certificateNamespace) {
+        const tenantSlug = fileName.replace(/\.ya?ml$/i, "");
+        if (tenantSlug) {
+          const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
+          try {
+            await deleteGatewaySecret(secretName, config.gatewayNamespace);
+          } catch (error) {
+            errors.push(
+              formatErrorMessage(
+                error,
+                `Failed to remove replicated TLS secret ${secretName}`,
+              ),
+            );
+          }
+        }
+      }
+
       try {
         await fs.rm(fullPath, { force: true });
       } catch (error) {
@@ -412,6 +430,24 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           "Failed to apply manifest changes to cluster",
         ),
       );
+    }
+  }
+
+  if (
+    config.gatewayNamespace !== config.certificateNamespace &&
+    manifests.length > 0
+  ) {
+    for (const manifest of manifests) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to sync gateway TLS secret for ${manifest.secretName}`,
+          ),
+        );
+      }
     }
   }
 
@@ -923,145 +959,6 @@ export function renderManifestYaml(
     .concat("\n");
 }
 
-interface RenderedChallengeResources {
-  gateway: Record<string, any>;
-  virtualService: Record<string, any>;
-  tenantSlug: string;
-  gatewayName: string;
-  virtualServiceName: string;
-}
-
-function renderChallengeManifestYaml(
-  manifest: RenderedChallengeResources,
-): string {
-  const documents = [manifest.gateway, manifest.virtualService];
-  return documents
-    .map((doc, index) => {
-      const yaml = dumpYaml(doc, { sortKeys: true, noRefs: true });
-      return index === 0 ? yaml : `---\n${yaml}`;
-    })
-    .join("")
-    .concat("\n");
-}
-
-export async function waitForHttpChallenge(args: {
-  portalDomainId: string;
-  timeoutSeconds?: number;
-  pollIntervalSeconds?: number;
-}): Promise<HttpChallengeDetails> {
-  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
-
-  if (!record) {
-    throw new Error(`Portal domain ${args.portalDomainId} not found while waiting for HTTP challenge.`);
-  }
-
-  const tenantSlug = createTenantSlug(record);
-  const namespace = DEFAULT_CONFIG.virtualServiceNamespace;
-  const prefix = `portal-domain-${tenantSlug}`;
-  const timeoutSeconds = args.timeoutSeconds ?? 300;
-  const pollIntervalSeconds = args.pollIntervalSeconds ?? 5;
-  const attempts = Math.max(1, Math.ceil(timeoutSeconds / pollIntervalSeconds));
-
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    const challenge = await findLatestChallenge(prefix, namespace);
-
-    if (challenge) {
-      const service = await findSolverService(challenge.metadata?.name, namespace);
-      if (service) {
-        const portEntry = Array.isArray(service?.spec?.ports)
-          ? service.spec.ports.find((p: any) => typeof p?.port === "number") ?? service.spec.ports[0]
-          : null;
-        const servicePort = typeof portEntry?.port === "number"
-          ? portEntry.port
-          : typeof portEntry?.targetPort === "number"
-            ? portEntry.targetPort
-            : 80;
-
-        const token = typeof challenge?.spec?.token === "string"
-          ? challenge.spec.token
-          : "";
-
-        const key = typeof challenge?.spec?.key === "string"
-          ? challenge.spec.key
-          : "";
-
-        return {
-          challengeName: String(challenge.metadata?.name ?? ""),
-          serviceName: String(service.metadata?.name ?? ""),
-          servicePort,
-          token,
-          key,
-        };
-      }
-    }
-
-    if (attempt < attempts - 1) {
-      await delay(pollIntervalSeconds * 1000);
-    }
-  }
-
-  throw new Error(
-    `Timed out waiting for cert-manager HTTP-01 challenge resources for ${record.domain}.`,
-  );
-}
-
-export async function ensureHttpChallengeRoute(args: {
-  portalDomainId: string;
-  challenge: HttpChallengeDetails;
-}): Promise<void> {
-  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
-
-  if (!record) {
-    throw new Error(`Portal domain ${args.portalDomainId} not found while ensuring HTTP challenge route.`);
-  }
-
-  const config = DEFAULT_CONFIG;
-  const resources = renderPortalDomainChallengeResources(record, args.challenge, config);
-  const yaml = renderChallengeManifestYaml(resources);
-  const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), "portal-domain-challenge-"));
-  const manifestPath = joinPath(tempDir, `${resources.tenantSlug}-challenge.yaml`);
-
-  try {
-    await fs.writeFile(manifestPath, yaml, "utf8");
-    await runKubectl(["apply", "-f", manifestPath]);
-  } finally {
-    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
-  }
-}
-
-export async function removeHttpChallengeRoute(args: {
-  portalDomainId: string;
-}): Promise<void> {
-  const record = await loadPortalDomain({ portalDomainId: args.portalDomainId });
-
-  if (!record) {
-    return;
-  }
-
-  const config = DEFAULT_CONFIG;
-  const tenantSlug = createTenantSlug(record);
-  const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
-  const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
-
-  await runKubectl([
-    "delete",
-    "virtualservice",
-    virtualServiceName,
-    "-n",
-    config.virtualServiceNamespace,
-    "--ignore-not-found",
-  ]).catch(() => undefined);
-
-  await runKubectl([
-    "delete",
-    "gateway",
-    gatewayName,
-    "-n",
-    config.gatewayNamespace,
-    "--ignore-not-found",
-  ]).catch(() => undefined);
-}
-
 function buildCommitMessage(
   manifests: RenderedPortalDomainResources[],
 ): string {
@@ -1124,76 +1021,6 @@ async function lookupCname(domain: string): Promise<string[]> {
 
 function normalizeHostname(hostname: string): string {
   return hostname.trim().replace(/\.$/, "").toLowerCase();
-}
-
-async function findLatestChallenge(
-  prefix: string,
-  namespace: string,
-): Promise<any | null> {
-  try {
-    const { stdout } = await runKubectl([
-      "get",
-      "challenge",
-      "-n",
-      namespace,
-      "-o",
-      "json",
-    ]);
-    const parsed = JSON.parse(stdout);
-    const items = Array.isArray(parsed?.items) ? parsed.items : [];
-    const matches = items.filter((item: any) => {
-      const name = item?.metadata?.name;
-      return typeof name === "string" && name.startsWith(prefix);
-    });
-
-    if (matches.length === 0) {
-      return null;
-    }
-
-    matches.sort((a: any, b: any) => {
-      const aTime = Date.parse(a?.metadata?.creationTimestamp ?? "0");
-      const bTime = Date.parse(b?.metadata?.creationTimestamp ?? "0");
-      return bTime - aTime;
-    });
-
-    return matches[0];
-  } catch (error) {
-    return null;
-  }
-}
-
-async function findSolverService(
-  challengeName: string | undefined,
-  namespace: string,
-): Promise<any | null> {
-  if (!challengeName) {
-    return null;
-  }
-
-  try {
-    const { stdout } = await runKubectl([
-      "get",
-      "service",
-      "-n",
-      namespace,
-      "-o",
-      "json",
-    ]);
-    const parsed = JSON.parse(stdout);
-    const items = Array.isArray(parsed?.items) ? parsed.items : [];
-    return (
-      items.find((item: any) => {
-        const owners = Array.isArray(item?.metadata?.ownerReferences)
-          ? item.metadata.ownerReferences
-          : [];
-        return owners.some(
-          (owner: any) => owner?.kind === "Challenge" && owner?.name === challengeName,
-        );
-      }) ?? null
-    );
-  } catch (error) {
-    return null;
-  }
 }
 
 export interface RenderedPortalDomainResources {
@@ -1330,85 +1157,125 @@ export function renderPortalDomainResources(
   };
 }
 
-function renderPortalDomainChallengeResources(
-  record: PortalDomainActivityRecord,
-  challenge: HttpChallengeDetails,
+async function syncGatewaySecret(
+  manifest: RenderedPortalDomainResources,
   config: PortalDomainConfig,
-): RenderedChallengeResources {
-  const normalizedDomain = normalizeHostname(record.domain);
-  const tenantSlug = createTenantSlug(record);
-  const gatewayName = truncateName(`portal-domain-challenge-gw-${tenantSlug}`, 63);
-  const virtualServiceName = truncateName(`portal-domain-challenge-vs-${tenantSlug}`, 63);
-  const portalDomainRoot = config.portalDomainRoot;
-  if (!portalDomainRoot) {
+): Promise<void> {
+  if (config.gatewayNamespace === config.certificateNamespace) {
+    return;
+  }
+
+  const sourceNamespace = config.certificateNamespace;
+  const targetNamespace = config.gatewayNamespace;
+  const secretName = manifest.secretName;
+
+  let sourceSecret: any;
+  try {
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'secret',
+          secretName,
+          '-n',
+          sourceNamespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 3, delayMs: 1000 }
+    );
+    sourceSecret = JSON.parse(stdout);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return;
+    }
     throw new Error(
-      "Portal domain root is not configured. Set EXT_DOMAIN_ROOT.",
+      formatErrorMessage(
+        error,
+        `Failed to load source TLS secret ${sourceNamespace}/${secretName}`,
+      ),
     );
   }
-  const portalWildcard = `*.portal.${portalDomainRoot}`;
 
-  const labels = buildBaseLabels(record, normalizedDomain);
+  const data = (sourceSecret?.data ?? {}) as Record<string, string>;
+  const tlsCrt = data['tls.crt'];
+  const tlsKey = data['tls.key'];
 
-  const gateway: Record<string, any> = {
-    apiVersion: "networking.istio.io/v1beta1",
-    kind: "Gateway",
+  if (!tlsCrt || !tlsKey) {
+    throw new Error(
+      `Source TLS secret ${sourceNamespace}/${secretName} is missing tls.crt or tls.key`,
+    );
+  }
+
+  const baseLabels = buildBaseLabels(
+    manifest.record,
+    normalizeHostname(manifest.record.domain),
+  );
+
+  const labels: Record<string, string> = {
+    ...baseLabels,
+    [ORIGIN_SECRET_NAME_LABEL]: secretName,
+    [ORIGIN_SECRET_NAMESPACE_LABEL]: sourceNamespace,
+  };
+
+  const annotations: Record<string, string> = {};
+  const resourceVersion = sourceSecret?.metadata?.resourceVersion;
+  if (resourceVersion) {
+    annotations[ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION] = String(
+      resourceVersion,
+    );
+  }
+
+  const replica: Record<string, any> = {
+    apiVersion: 'v1',
+    kind: 'Secret',
     metadata: {
-      name: gatewayName,
-      namespace: config.gatewayNamespace,
+      name: secretName,
+      namespace: targetNamespace,
       labels,
+      ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
     },
-    spec: {
-      selector: config.gatewaySelector,
-      servers: [
-        {
-          port: {
-            number: 80,
-            name: truncateName(`http-${tenantSlug}-challenge`, 63),
-            protocol: "HTTP",
-          },
-          hosts: [portalWildcard],
-        },
-      ],
+    type:
+      typeof sourceSecret?.type === 'string'
+        ? sourceSecret.type
+        : 'kubernetes.io/tls',
+    data: {
+      'tls.crt': tlsCrt,
+      'tls.key': tlsKey,
     },
   };
 
-  const virtualService: Record<string, any> = {
-    apiVersion: "networking.istio.io/v1beta1",
-    kind: "VirtualService",
-    metadata: {
-      name: virtualServiceName,
-      namespace: config.virtualServiceNamespace,
-      labels,
-    },
-    spec: {
-      hosts: [portalWildcard],
-      gateways: [`${config.gatewayNamespace}/${gatewayName}`],
-      http: [
-        {
-          match: [
-            {
-              uri: { exact: `/.well-known/acme-challenge/${challenge.token}` },
-              port: 80,
-            },
-          ],
-          directResponse: {
-            status: 200,
-            body: {
-              string: challenge.key,
-            },
-          },
-        },
-      ],
-    },
-  };
+  const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), 'portal-gateway-secret-'));
+  const filePath = joinPath(tempDir, `${manifest.tenantSlug}-gateway-secret.yaml`);
 
-  return {
-    gateway,
-    virtualService,
-    tenantSlug,
-    gatewayName,
-    virtualServiceName,
-  };
+  try {
+    const yaml = dumpYaml(replica, { sortKeys: true, noRefs: true });
+    await fs.writeFile(filePath, yaml, 'utf8');
+    await runKubectl(['apply', '-f', filePath]);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to apply replicated TLS secret ${targetNamespace}/${secretName}`,
+      ),
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function deleteGatewaySecret(
+  secretName: string,
+  namespace: string,
+): Promise<void> {
+  await runKubectl([
+    'delete',
+    'secret',
+    secretName,
+    '-n',
+    namespace,
+    '--ignore-not-found',
+  ]);
 }
 
 function buildBaseLabels(
