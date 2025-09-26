@@ -147,13 +147,13 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
 
-      <div className="absolute top-1 right-1" style={{ zIndex: 200 }}>
+      <div className="absolute top-2 right-1" style={{ zIndex: 200 }}>
         {isPrimary && (
           <Button
             id={`delete-entry-${event.entry_id}-btn`}
             variant="icon"
             size="icon"
-            className={`${compactClasses.button} delete-button opacity-0 group-hover:opacity-100 transition-opacity`}
+            className={`${compactClasses.button} delete-button`}
             onClick={(e) => {
               e.stopPropagation();
               onDeleteEvent(event);
@@ -167,28 +167,30 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       </div>
 
       {/* Only display the title, not any time information */}
-      {isCompact ? (
-        // For short events, show text with minimal padding
-        <div className="flex items-center px-0.5 pb-0.5">
-          {isMultiDay && (
-            <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
-          )}
-          <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
-            {mainTitle}
-          </div>
-        </div>
-      ) : (
-        // For normal events, show two lines
-        <>
-          <div className="font-semibold truncate flex items-center">
+      <div className="pt-1.5 px-1">
+        {isCompact ? (
+          // For short events, show text with minimal padding
+          <div className="flex items-center">
             {isMultiDay && (
-              <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
+              <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
             )}
-            <span className="truncate">{mainTitle}</span>
+            <div className="font-medium truncate flex-1 text-xs">
+              {mainTitle}
+            </div>
           </div>
-          {subtitle && <div className="truncate text-xs">{subtitle}</div>}
-        </>
-      )}
+        ) : (
+          // For normal events, show two lines
+          <>
+            <div className="font-semibold truncate flex items-center text-sm">
+              {isMultiDay && (
+                <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
+              )}
+              <span className="truncate">{mainTitle}</span>
+            </div>
+            {subtitle && <div className="truncate text-xs mt-0.5">{subtitle}</div>}
+          </>
+        )}
+      </div>
     </div>
   );
 };

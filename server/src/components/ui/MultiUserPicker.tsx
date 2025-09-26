@@ -105,7 +105,7 @@ const MultiUserPicker: React.FC<MultiUserPickerProps & AutomationProps> = ({
     (props, forwardedRef) => (
       <RadixSelect.Trigger
         ref={forwardedRef}
-        className="inline-flex items-center justify-between border border-gray-200 rounded-lg p-2 bg-white cursor-pointer min-h-[38px] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm w-full"
+        className="inline-flex items-center justify-between border border-gray-200 rounded-lg p-2 bg-white cursor-pointer min-h-[38px] hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent text-sm w-full"
         {...props}
       >
         <div className="flex items-center gap-2 flex-wrap flex-1">

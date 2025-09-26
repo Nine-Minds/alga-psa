@@ -100,7 +100,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
     <div>
       <div
         ref={eventRef}
-        className={`text-xs ${bg} ${text} p-1 shadow-md rounded absolute
+        className={`${bg} ${text} p-1 shadow-md rounded absolute
         ${!isResizing ? hover : ''}
         ${isDragging ? 'opacity-70 shadow-lg' : ''}
         ${isResizing ? 'cursor-ew-resize pointer-events-none' : 'cursor-move'}`}
@@ -134,7 +134,7 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
         {/* Main flex container */}
         <div className="flex flex-col h-full w-full px-1 relative">
           {/* Buttons container */}
-          <div className="flex justify-end gap-1 mt-0.5" style={{ zIndex: 100 }}>
+          <div className="absolute top-2 right-1" style={{ zIndex: 100 }}>
             {/* Show individual buttons if not narrow */}
             {!isNarrow && (
               <div className="flex gap-1">
@@ -237,9 +237,11 @@ const ScheduleEvent: React.FC<ScheduleEventProps> = ({
           </div>
 
           {/* Text container */}
-          <div className="flex flex-col justify-center items-start text-left overflow-hidden flex-grow min-w-0 mt-1">
-            <div className="font-bold w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[0]}</div>
-            <div className="w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[1]}</div>
+          <div className="flex flex-col justify-center items-start text-left overflow-hidden flex-grow min-w-0 pt-1.5 px-1">
+            <div className="font-bold text-sm w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[0]}</div>
+            {event.title.split(':')[1] && (
+              <div className="text-xs mt-0.5 w-full overflow-hidden whitespace-nowrap text-ellipsis">{event.title.split(':')[1]}</div>
+            )}
           </div>
         </div>
 

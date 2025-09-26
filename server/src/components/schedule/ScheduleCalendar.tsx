@@ -931,12 +931,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           })()}
         </div>
       </div>
-      <Dialog
-        isOpen={showEntryPopup}
-        onClose={handleEntryPopupClose}
-      >
-        {renderEntryPopup()}
-      </Dialog>
+      {renderEntryPopup()}
 
       <ConfirmationDialog
         className="max-w-[450px]"

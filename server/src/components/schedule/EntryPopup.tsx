@@ -528,7 +528,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               name="title"
               value={entryData.title}
               onChange={handleInputChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className=""
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
@@ -608,7 +608,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               value={entryData.notes}
               onChange={handleInputChange}
               rows={3}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className=""
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
@@ -648,7 +648,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   }}
                   min={1}
                   max={100}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className=""
                   disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
@@ -675,7 +675,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                     if (prev === null) return null;
                     return { ...prev, endDate: new Date(e.target.value) };
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className=""
                   disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
@@ -702,7 +702,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   }}
                   min={1}
                   max={100}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className=""
                   disabled={!canEditFields} // Disable based on permissions
                 />
               </div>
@@ -783,11 +783,18 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     viewOnly
   };
 
-  return isInDrawer ? (
-    <EntryPopupContext.Provider value={contextValue}>
-      {content}
-    </EntryPopupContext.Provider>
-  ) : (
+  // When already in a drawer or dialog context, don't wrap in another Dialog
+  const shouldWrapInDialog = !isInDrawer;
+
+  if (!shouldWrapInDialog) {
+    return (
+      <EntryPopupContext.Provider value={contextValue}>
+        {content}
+      </EntryPopupContext.Provider>
+    );
+  }
+
+  return (
     <Dialog
       isOpen={true}
       onClose={onClose}
