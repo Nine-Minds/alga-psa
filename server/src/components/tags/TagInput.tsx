@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus } from 'lucide-react';
 import { generateEntityColor } from 'server/src/utils/colorUtils';
@@ -36,11 +36,13 @@ export const TagInput: React.FC<TagInputProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Memoize current tag texts to prevent infinite loops
+  const currentTagTexts = useMemo(() => {
+    return currentTags.map(tag => tag.tag_text.toLowerCase());
+  }, [currentTags]);
+
   useEffect(() => {
     if (inputValue.trim()) {
-      // Get current tag texts (case-insensitive for comparison)
-      const currentTagTexts = currentTags.map(tag => tag.tag_text.toLowerCase());
-      
       // Filter existing tags that:
       // 1. Include the input value
       // 2. Are not already on the current entity
@@ -48,7 +50,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         tag && tag.tag_text && tag.tag_text.toLowerCase().includes(inputValue.toLowerCase()) &&
         !currentTagTexts.includes(tag.tag_text.toLowerCase())
       );
-      
+
       // Remove duplicates by tag_text (case-insensitive)
       const uniqueSuggestions = filtered.reduce((acc: ITag[], current) => {
         const exists = acc.find(tag => tag.tag_text.toLowerCase() === current.tag_text.toLowerCase());
@@ -57,12 +59,12 @@ export const TagInput: React.FC<TagInputProps> = ({
         }
         return acc;
       }, []);
-      
+
       setSuggestions(uniqueSuggestions);
     } else {
       setSuggestions([]);
     }
-  }, [inputValue, existingTags, currentTags]);
+  }, [inputValue, existingTags, currentTagTexts]);
 
   // Update dropdown position when suggestions change or input is focused
   useLayoutEffect(() => {

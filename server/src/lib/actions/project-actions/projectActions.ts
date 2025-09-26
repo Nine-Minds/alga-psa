@@ -503,10 +503,8 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
   contact_name_id?: string | null;
 }): Promise<IProject> {
     try {
-        const [standardTaskStatuses, projectStatuses] = await Promise.all([
-            getStandardProjectTaskStatuses(),
-            getProjectStatuses()
-        ]);
+        // Get project statuses first
+        const projectStatuses = await getProjectStatuses();
 
         if (projectStatuses.length === 0) {
             throw new Error('No project statuses found');
@@ -519,11 +517,26 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
         if (!currentUser.tenant) {
             throw new Error("tenant context not found");
         }
+
+        const {knex} = await createTenantKnex();
+
+        // Try to get both standard statuses and regular statuses for backward compatibility
+        const [standardTaskStatuses, projectTaskStatuses] = await withTransaction(knex, async (trx: Knex.Transaction) => {
+            const standardStatuses = await ProjectModel.getStandardStatusesByType(trx, 'project_task').catch(() => []);
+            const regularStatuses = await ProjectModel.getStatusesByType(trx, 'project_task').catch(() => []);
+            return [standardStatuses, regularStatuses];
+        });
+
+        // Use standard statuses if available (backward compatibility), otherwise use regular statuses
+        const taskStatusesToUse = standardTaskStatuses.length > 0 ? standardTaskStatuses : projectTaskStatuses;
+
+        if (taskStatusesToUse.length === 0) {
+            throw new Error('No project task statuses found. Please ensure task statuses are configured.');
+        }
+
         const validatedData = validateData(createProjectSchema, projectData);
 
         // Ensure we're passing all fields including assigned_to and contact_name_id
-        const {knex} = await createTenantKnex();
-        
         const fullProject = await withTransaction(knex, async (trx: Knex.Transaction) => {
             await checkPermission(currentUser, 'project', 'create', trx);
             const wbsCode = await ProjectModel.generateNextWbsCode(trx, '');
@@ -550,14 +563,29 @@ export async function createProject(projectData: Omit<IProject, 'project_id' | '
                 contact_name_id: validatedData.contact_name_id || null
             });
 
-            for (const status of standardTaskStatuses) {
-                await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
-                    standard_status_id: status.standard_status_id,
-                    is_standard: true,
-                    custom_name: null,
-                    display_order: status.display_order,
-                    is_visible: true,
-                });
+            // Create project status mappings - handle both standard and regular statuses
+            const isUsingStandardStatuses = standardTaskStatuses.length > 0;
+
+            for (const status of taskStatusesToUse) {
+                if (isUsingStandardStatuses) {
+                    // Using standard_statuses table (backward compatibility)
+                    await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
+                        standard_status_id: (status as IStandardStatus).standard_status_id,
+                        is_standard: true,
+                        custom_name: null,
+                        display_order: (status as IStandardStatus).display_order,
+                        is_visible: true,
+                    });
+                } else {
+                    // Using regular statuses table (new approach)
+                    await ProjectModel.addProjectStatusMapping(trx, newProject.project_id, {
+                        status_id: (status as IStatus).status_id,
+                        is_standard: false,
+                        custom_name: (status as IStatus).name,
+                        display_order: (status as IStatus).order_number || 0,
+                        is_visible: true,
+                    });
+                }
             }
 
             // Fetch the full project details including contact and assigned user
