@@ -475,46 +475,52 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
   };
 
   const handleEventDrop = async ({ event, start, end, isAllDay }: any) => {
-    // Get original event details
+    // Get original event details - these are the source of truth
     const originalStart = new Date(event.scheduled_start);
     const originalEnd = new Date(event.scheduled_end);
     const originalDuration = originalEnd.getTime() - originalStart.getTime();
-    const isMultiDay = originalStart.toDateString() !== originalEnd.toDateString();
+    const isOriginallyMultiDay = originalStart.toDateString() !== originalEnd.toDateString();
 
-    // Always preserve the original times for multi-day events
-    // The isAllDay flag from react-big-calendar is not reliable for our multi-day events
+    // CRITICAL: Always preserve exact original times for multi-day events
     let finalStart: Date;
     let finalEnd: Date;
 
-    if (isMultiDay) {
-      // For multi-day events, calculate the day offset and preserve exact times
-      const dropDate = new Date(start);
-      const originalDate = new Date(originalStart);
+    // Calculate the day offset - use only the date part, ignore times from drop
+    const dropDate = new Date(start);
+    const originalDateOnly = new Date(originalStart.getFullYear(), originalStart.getMonth(), originalStart.getDate());
+    const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
+    const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Get just the date parts for comparison
-      const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
-      const originalDateOnly = new Date(originalDate.getFullYear(), originalDate.getMonth(), originalDate.getDate());
-
-      const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
-
-      // Apply the day difference while preserving the original times
-      finalStart = new Date(originalStart);
-      finalStart.setDate(finalStart.getDate() + dayDifference);
-
-      // Maintain exact duration
+    if (isOriginallyMultiDay || isAllDay) {
+      // Multi-day event or event in all-day section: IGNORE drop times completely
+      // Only use the day difference to shift the original times
+      finalStart = new Date(
+        originalStart.getFullYear(),
+        originalStart.getMonth(),
+        originalStart.getDate() + dayDifference,
+        originalStart.getHours(),
+        originalStart.getMinutes(),
+        originalStart.getSeconds(),
+        originalStart.getMilliseconds()
+      );
       finalEnd = new Date(finalStart.getTime() + originalDuration);
     } else {
-      // For single-day events
-      const newDuration = end.getTime() - start.getTime();
+      // For single-day events, check if we're dropping in the same day
+      if (dayDifference === 0 && !isAllDay) {
+        // Same day - use the actual drop time
+        const newDuration = end.getTime() - start.getTime();
 
-      // Check if duration was modified by the calendar (e.g., expanded to all day)
-      const durationChanged = Math.abs(newDuration - originalDuration) > 60000;
-
-      if (isAllDay || durationChanged) {
-        // If marked as all-day or duration changed significantly, preserve original times
-        const dropDate = new Date(start);
-
-        // Use the dropped date but preserve original times
+        // Only use the new times if duration is preserved (within 1 minute tolerance)
+        if (Math.abs(newDuration - originalDuration) < 60000) {
+          finalStart = new Date(start);
+          finalEnd = new Date(end);
+        } else {
+          // Duration changed - preserve original duration
+          finalStart = new Date(start);
+          finalEnd = new Date(finalStart.getTime() + originalDuration);
+        }
+      } else {
+        // Different day or marked as all-day - preserve original time of day
         finalStart = new Date(
           dropDate.getFullYear(),
           dropDate.getMonth(),
@@ -523,12 +529,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           originalStart.getMinutes(),
           originalStart.getSeconds()
         );
-
         finalEnd = new Date(finalStart.getTime() + originalDuration);
-      } else {
-        // Use the provided times if they seem reasonable
-        finalStart = new Date(start);
-        finalEnd = new Date(end);
       }
     }
 
@@ -941,20 +942,12 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                     const start = new Date(scheduleEvent.scheduled_start);
                     const end = new Date(scheduleEvent.scheduled_end);
 
-                    // Check if it's truly an all-day event (00:00 to 23:59 or 00:00 to 00:00 next day)
-                    const isAllDay =
-                      start.getHours() === 0 &&
-                      start.getMinutes() === 0 &&
-                      (
-                        (end.getHours() === 23 && end.getMinutes() === 59) ||
-                        (end.getHours() === 0 && end.getMinutes() === 0)
-                      );
-
-                    // Multi-day events that aren't truly all-day should NOT go in the all-day section
+                    // Check if event spans multiple days
                     const isMultiDay = start.toDateString() !== end.toDateString();
 
-                    // Only return true if it's genuinely an all-day event
-                    return isAllDay && isMultiDay;
+                    // Place multi-day events in the all-day section
+                    // They will maintain their visual height of 30px via CSS
+                    return isMultiDay;
                   }}
                   eventPropGetter={() => ({
                     style: {

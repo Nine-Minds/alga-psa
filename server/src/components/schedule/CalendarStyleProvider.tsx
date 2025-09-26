@@ -185,6 +185,17 @@ export const CalendarStyleProvider: React.FC = () => {
         opacity: 0.8;
       }
 
+      /* Add visual indicator for events that span multiple weeks */
+      .rbc-event-allday.rbc-event-continues-prior.rbc-event-continues-after {
+        background: repeating-linear-gradient(
+          45deg,
+          var(--event-bg-color, rgb(var(--color-primary-200))),
+          var(--event-bg-color, rgb(var(--color-primary-200))) 10px,
+          rgba(var(--color-primary-300), 0.3) 10px,
+          rgba(var(--color-primary-300), 0.3) 20px
+        );
+      }
+
       .rbc-event-continues-after {
         border-top-right-radius: 0 !important;
         border-bottom-right-radius: 0 !important;
@@ -241,16 +252,40 @@ export const CalendarStyleProvider: React.FC = () => {
         z-index: 1000;
       }
 
-      /* Ensure multi-day events maintain their size during drag */
-      .rbc-allday-cell .rbc-addons-dnd-dragging.rbc-event {
-        height: 30px !important;
-        min-height: 30px !important;
-      }
+      /* === Multi-day event drag styling === */
+      /* Only apply 30px height to multi-day events, not single-day events */
 
-      /* Drag preview for all-day/multi-day events only */
+      /* Multi-day events in all-day section maintain size during drag */
+      .rbc-allday-cell .rbc-addons-dnd-dragging.rbc-event,
       .rbc-allday-cell .rbc-addons-dnd-drag-preview {
         height: 30px !important;
+        min-height: 30px !important;
+        max-height: 30px !important;
+      }
+
+      /* Visual feedback for dragging */
+      .rbc-allday-cell .rbc-addons-dnd-drag-preview {
         opacity: 0.8;
+      }
+
+      /* Multi-day events in month view during drag */
+      .rbc-month-view .rbc-row-segment .rbc-event.rbc-addons-dnd-dragging {
+        height: 30px !important;
+        max-height: 30px !important;
+      }
+
+      /* Single-day events in time grid should NOT be constrained to 30px */
+      /* They maintain their duration-based height */
+      .rbc-time-slot .rbc-event.rbc-addons-dnd-dragging {
+        /* Let the calendar determine height based on duration */
+        height: auto;
+        max-height: none;
+      }
+
+      /* Prevent the resize handle during drag */
+      .rbc-addons-dnd-dragging .rbc-addons-dnd-resize-ns-icon,
+      .rbc-addons-dnd-dragging .rbc-addons-dnd-resize-ew-icon {
+        display: none !important;
       }
 
       /* Week boundary indicators during drag */
