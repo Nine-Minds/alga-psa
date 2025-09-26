@@ -595,16 +595,16 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
 
     if (gatewayExists && virtualServiceExists) {
       nextStatus = 'active';
-      nextMessage = 'Certificate issued and Istio routing configured.';
+      nextMessage = 'Your domain is live and protected by HTTPS.';
     } else {
       nextStatus = 'deploying';
-      nextMessage = 'Certificate issued; waiting for Istio routing resources to become available.';
+      nextMessage = 'SSL is ready. Finishing the domain routing setup...';
     }
   } else {
     nextStatus = 'certificate_issuing';
     nextMessage =
       certificate.message ??
-      `Waiting for cert-manager to issue certificate ${manifest.secretName}.`;
+      'Requesting an HTTPS certificate. This usually takes a couple of minutes.';
   }
 
   if (certificate.recoverableError) {
@@ -664,7 +664,7 @@ async function inspectCertificateStatus(
     if (!readyCondition) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to report readiness.',
+        message: "Requesting an HTTPS certificate from Let's Encrypt...",
       };
     }
 
@@ -682,10 +682,11 @@ async function inspectCertificateStatus(
     }
 
     if (readyCondition.status === 'False') {
-      const failureMessage =
-        normalizedMessage ??
-        normalizedReason ??
-        'Certificate issuance failed.';
+      const failureMessage = normalizedMessage
+        ? `We couldn’t finish the HTTPS setup: ${normalizedMessage}`
+        : normalizedReason
+          ? `We couldn’t finish the HTTPS setup: ${normalizedReason}`
+          : 'We couldn’t finish the HTTPS setup. Please double-check DNS and try again.';
       return { ready: false, failureMessage };
     }
 
@@ -694,13 +695,13 @@ async function inspectCertificateStatus(
       message:
         normalizedMessage ??
         normalizedReason ??
-        'Certificate issuance in progress.',
+        "Waiting for Let's Encrypt to finish verifying your domain...",
     };
   } catch (error) {
     if (isNotFoundError(error)) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to create certificate resource.',
+        message: 'Preparing HTTPS resources...',
       };
     }
 
