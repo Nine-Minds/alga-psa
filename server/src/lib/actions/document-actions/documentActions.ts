@@ -468,13 +468,18 @@ export async function getDocumentPreview(
       const cachedPreview = await cache.get(identifier);
       if (cachedPreview) {
         console.log(`[getDocumentPreview] Cache hit for file ID: ${identifier}`);
-        const imageBuffer = await sharp(cachedPreview).toBuffer();
-        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-        return {
-          success: true,
-          previewImage: base64Image,
-          content: 'Cached Preview'
-        };
+        try {
+          const imageBuffer = await sharp(cachedPreview).toBuffer();
+          const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+          return {
+            success: true,
+            previewImage: base64Image,
+            content: 'Cached Preview'
+          };
+        } catch (error) {
+          console.warn(`[getDocumentPreview] Cached preview invalid for file ID ${identifier}, clearing`, error);
+          await cache.delete(identifier);
+        }
       }
       
       // Try to download the file to get metadata

@@ -34,9 +34,10 @@ interface VideoPreviewProps {
     mimeType: string;
     fileName: string;
     onClick: (e: React.MouseEvent) => void;
+    thumbnailUrl?: string;
 }
 
-function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
+function VideoPreviewComponent({ fileId, mimeType, fileName, onClick, thumbnailUrl }: VideoPreviewProps) {
     const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
@@ -52,8 +53,30 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
                                mimeType === 'video/webm' || 
                                mimeType === 'video/ogg';
 
-    if (canPlay === false || !isBrowserSupported) {
-        // Show fallback for unsupported formats
+    const shouldShowNativeVideo = !thumbnailUrl && canPlay !== false && isBrowserSupported;
+
+    if (thumbnailUrl && thumbnailUrl.startsWith('data:image')) {
+        return (
+            <div className="relative group max-w-full" onClick={onClick}>
+                <img
+                    src={thumbnailUrl}
+                    alt={fileName}
+                    className="max-w-full h-auto rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-opacity group-hover:opacity-80"
+                    style={{ maxHeight: '200px', objectFit: 'cover', width: '100%' }}
+                />
+                <div 
+                    className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    <div className="bg-black bg-opacity-50 text-white p-3 rounded-full">
+                        <Play className="w-5 h-5" />
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!shouldShowNativeVideo) {
+        // Show fallback for unsupported formats or when thumbnail generation failed
         return (
             <div 
                 className="max-w-full h-48 rounded-md border border-[rgb(var(--color-border-200))] cursor-pointer transition-all hover:border-[rgb(var(--color-border-300))] bg-gray-50 flex flex-col items-center justify-center group"
@@ -64,7 +87,7 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
                     {fileName}
                 </p>
                 <p className="text-xs text-gray-500 mt-1">
-                    {mimeType}
+                    {mimeType || t('documents.videoUnknownType', { defaultValue: 'Unknown video format' })}
                 </p>
                 <div className="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="bg-black bg-opacity-50 text-white p-2 rounded-full">
@@ -107,9 +130,10 @@ interface VideoModalProps {
     documentId: string;
     mimeType: string;
     fileName: string;
+    thumbnailUrl?: string;
 }
 
-function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
+function VideoModalComponent({ fileId, documentId, mimeType, fileName, thumbnailUrl }: VideoModalProps) {
     const { t } = useTranslation('documents');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
@@ -129,7 +153,15 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
         // Show download option for unsupported formats
         return (
             <div className="text-center p-8">
-                <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                {thumbnailUrl ? (
+                    <img
+                        src={thumbnailUrl}
+                        alt={fileName}
+                        className="mx-auto mb-4 max-w-full max-h-[40vh] object-contain rounded-md border border-[rgb(var(--color-border-200))]"
+                    />
+                ) : (
+                    <Video className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                )}
                 <p className="text-[rgb(var(--color-text-700))] mb-2 font-medium">
                     {fileName}
                 </p>
@@ -503,6 +535,7 @@ function DocumentStorageCardComponent({
                                     mimeType={document.mime_type || ''}
                                     fileName={document.document_name}
                                     onClick={handleFullSizeView}
+                                    thumbnailUrl={previewContent.previewImage}
                                 />
                             ) : previewContent.previewImage ? (
                                 <div className="relative group">
@@ -681,6 +714,7 @@ function DocumentStorageCardComponent({
                                     documentId={document.document_id}
                                     mimeType={document.mime_type || ''}
                                     fileName={document.document_name}
+                                    thumbnailUrl={previewContent.previewImage}
                                 />
                             ) : document.mime_type === 'application/pdf' ? (
                                 <iframe

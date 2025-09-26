@@ -45,13 +45,18 @@ export abstract class BaseDocumentHandler implements DocumentTypeHandler {
     
     if (cachedPreview) {
       console.log(`[DocumentHandler] Cache hit for identifier: ${identifier}`);
-      const imageBuffer = await sharp(cachedPreview).toBuffer();
-      const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      return {
-        success: true,
-        previewImage: base64Image,
-        content: 'Cached Preview'
-      };
+      try {
+        const imageBuffer = await sharp(cachedPreview).toBuffer();
+        const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
+        return {
+          success: true,
+          previewImage: base64Image,
+          content: 'Cached Preview'
+        };
+      } catch (error) {
+        console.warn(`[DocumentHandler] Failed to load cached preview for ${identifier}, invalidating`, error);
+        await cache.delete(identifier);
+      }
     }
     
     return null;
