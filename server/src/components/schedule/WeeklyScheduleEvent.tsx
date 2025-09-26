@@ -194,7 +194,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
               <span className="text-[10px] mr-1 opacity-60" title="Continues from previous week">...</span>
             )}
             {isMultiDay && !showContinuationIndicator && (
-              <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
+              <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
             )}
             <div className="font-medium truncate flex-1 text-xs">
               {mainTitle.length > 15 && showContinuationIndicator ? mainTitle.substring(0, 12) + '...' : mainTitle}
@@ -208,7 +208,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
                 <span className="text-xs mr-1 opacity-60" title="Continues from previous week">...</span>
               )}
               {isMultiDay && !showContinuationIndicator && (
-                <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0" title="Multi-day event" />
+                <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0"/>
               )}
               <span className="truncate">
                 {mainTitle.length > 20 && showContinuationIndicator ? mainTitle.substring(0, 17) + '...' : mainTitle}

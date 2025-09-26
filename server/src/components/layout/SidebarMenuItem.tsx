@@ -1,7 +1,6 @@
 import React from 'react';
-import * as RadixIcons from '@radix-ui/react-icons';
 import { MenuItem } from '../../config/menuConfig';
-import { Construction } from 'lucide-react';
+import { Construction, ChevronDown } from 'lucide-react';
 
 interface SidebarMenuItemProps {
   id: string;
@@ -32,7 +31,7 @@ const SidebarMenuItem: React.FC<SidebarMenuItemProps> = ({
         {sidebarOpen && (
           <>
             <span className="truncate">{item.name}</span>
-            <RadixIcons.ChevronDownIcon
+            <ChevronDown
               className={`h-4 w-4 ml-auto flex-shrink-0 transition-transform ${
                 openSubmenu === item.name ? 'transform rotate-180' : ''
               }`}
