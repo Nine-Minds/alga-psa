@@ -213,7 +213,7 @@ const SetNewPasswordContent: React.FC = () => {
                       type={showPassword ? "text" : "password"}
                       required
                       placeholder="••••••••"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
                       value={formData.password}
                       onChange={handleInputChange}
                     />
@@ -248,7 +248,7 @@ const SetNewPasswordContent: React.FC = () => {
                       type={showConfirmPassword ? "text" : "password"}
                       required
                       placeholder="Confirm your new password"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-purple-500 focus:border-purple-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                     />

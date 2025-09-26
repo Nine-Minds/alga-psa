@@ -30,7 +30,7 @@ import { useUserPreference } from 'server/src/hooks/useUserPreference';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { WorkItemDrawer } from 'server/src/components/time-management/time-entry/time-sheet/WorkItemDrawer';
 import { useDrawer } from "server/src/context/DrawerContext";
-import { Trash, ChevronLeft, ChevronRight, CalendarDays, Layers, Layers2 } from 'lucide-react';
+import { Trash, ChevronLeft, ChevronRight, CalendarDays as CalendarDaysIcon, Layers, Layers2 } from 'lucide-react';
 import ViewSwitcher from 'server/src/components/ui/ViewSwitcher';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Label } from 'server/src/components/ui/Label';
@@ -474,11 +474,129 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     }
   };
 
-  const handleEventDrop = async ({ event, start, end }: any) => {
+  const handleEventDrop = async ({ event, start, end, isAllDay }: any) => {
+    // Get original event details - these are the source of truth
+    const originalStart = new Date(event.scheduled_start);
+    const originalEnd = new Date(event.scheduled_end);
+    const originalDuration = originalEnd.getTime() - originalStart.getTime();
+    const isOriginallyMultiDay = originalStart.toDateString() !== originalEnd.toDateString();
+
+    // CRITICAL: Always preserve exact original times for multi-day events
+    let finalStart: Date;
+    let finalEnd: Date;
+
+    // Calculate the day offset - use only the date part, ignore times from drop
+    const dropDate = new Date(start);
+    const originalDateOnly = new Date(originalStart.getFullYear(), originalStart.getMonth(), originalStart.getDate());
+    const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
+    const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (isOriginallyMultiDay || isAllDay) {
+      // Multi-day event or event in all-day section: IGNORE drop times completely
+      // Only use the day difference to shift the original times
+      finalStart = new Date(
+        originalStart.getFullYear(),
+        originalStart.getMonth(),
+        originalStart.getDate() + dayDifference,
+        originalStart.getHours(),
+        originalStart.getMinutes(),
+        originalStart.getSeconds(),
+        originalStart.getMilliseconds()
+      );
+      finalEnd = new Date(finalStart.getTime() + originalDuration);
+    } else {
+      // For single-day events, check if we're dropping in the same day
+      if (dayDifference === 0 && !isAllDay) {
+        // Same day - use the actual drop time
+        const newDuration = end.getTime() - start.getTime();
+
+        // Only use the new times if duration is preserved (within 1 minute tolerance)
+        if (Math.abs(newDuration - originalDuration) < 60000) {
+          finalStart = new Date(start);
+          finalEnd = new Date(end);
+        } else {
+          // Duration changed - preserve original duration
+          finalStart = new Date(start);
+          finalEnd = new Date(finalStart.getTime() + originalDuration);
+        }
+      } else {
+        // Different day or marked as all-day - preserve original time of day
+        finalStart = new Date(
+          dropDate.getFullYear(),
+          dropDate.getMonth(),
+          dropDate.getDate(),
+          originalStart.getHours(),
+          originalStart.getMinutes(),
+          originalStart.getSeconds()
+        );
+        finalEnd = new Date(finalStart.getTime() + originalDuration);
+      }
+    }
+
+    // Check if we need to navigate to a different week
+    if (view === 'week' && finalStart) {
+      const currentWeekStart = moment(date).startOf('week').toDate();
+      const currentWeekEnd = moment(date).endOf('week').toDate();
+
+      if (finalStart < currentWeekStart) {
+        // Calculate weeks to go back
+        const weeksBack = Math.ceil((currentWeekStart.getTime() - finalStart.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        const newDate = moment(date).subtract(weeksBack, 'weeks').toDate();
+
+        // Navigate to the new week
+        setDate(newDate);
+
+        // Delay the update slightly to allow navigation to complete
+        setTimeout(async () => {
+          const updatedEvent = {
+            ...event,
+            scheduled_start: finalStart,
+            scheduled_end: finalEnd,
+            assigned_user_ids: event.assigned_user_ids,
+            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
+          };
+
+          const result = await updateScheduleEntry(event.entry_id, updatedEvent);
+          if (result.success) {
+            await fetchEvents();
+          } else {
+            console.error("Drop failed:", result.error);
+            await fetchEvents();
+          }
+        }, 150);
+        return; // Exit early since we're handling the update asynchronously
+      } else if (finalStart > currentWeekEnd) {
+        // Calculate weeks to go forward
+        const weeksForward = Math.ceil((finalStart.getTime() - currentWeekEnd.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        const newDate = moment(date).add(weeksForward, 'weeks').toDate();
+
+        setDate(newDate);
+
+        setTimeout(async () => {
+          const updatedEvent = {
+            ...event,
+            scheduled_start: finalStart,
+            scheduled_end: finalEnd,
+            assigned_user_ids: event.assigned_user_ids,
+            ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
+          };
+
+          const result = await updateScheduleEntry(event.entry_id, updatedEvent);
+          if (result.success) {
+            await fetchEvents();
+          } else {
+            console.error("Drop failed:", result.error);
+            await fetchEvents();
+          }
+        }, 150);
+        return;
+      }
+    }
+
     const updatedEvent = {
       ...event,
-      scheduled_start: start,
-      scheduled_end: end,
+      scheduled_start: finalStart,
+      scheduled_end: finalEnd,
       assigned_user_ids: event.assigned_user_ids,
       ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
     };
@@ -492,74 +610,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
     }
   };
 
-  const eventStyleGetter = (event: IScheduleEntry) => {
-    const isFocusedUserEvent = event.assigned_user_ids.includes(focusedTechnicianId ?? '');
-    const baseColor = workItemColors[event.work_item_type] || 'rgb(var(--color-border-200))';
 
-    const style: React.CSSProperties = {
-      backgroundColor: baseColor,
-      borderRadius: '6px',
-      opacity: isFocusedUserEvent ? 1 : 0.6, 
-      color: 'rgb(var(--color-text-900))',
-      border: isFocusedUserEvent ? '2px solid rgb(var(--color-primary-500))' : 'none',
-      padding: '2px 5px',
-      fontWeight: 500,
-      fontSize: '0.875rem',
-      transition: 'opacity 0.2s, border 0.2s, background-color 0.2s',
-      position: 'relative',
-      overflow: 'hidden',
-    };
-
-    return {
-      style,
-      className: `hover:opacity-100 ${isFocusedUserEvent ? 'focused-event' : 'comparison-event'}`
-    };
-  };
-
-  const EventWrapper = ({ event: calendarEvent, children }: { event: object; children?: React.ReactNode }) => {
-    const event = calendarEvent as IScheduleEntry;
-    const isTicketOrTask = event.work_item_type === 'ticket' || event.work_item_type === 'project_task';
-
-    const assignedUsersDetails = useMemo(() => {
-      if (!allTechnicians) return [];
-      return event.assigned_user_ids
-        .map(userId => allTechnicians.find(tech => tech.user_id === userId))
-        .filter(user => !!user);
-    }, [event.assigned_user_ids, allTechnicians]);
-
-    const userInitials = assignedUsersDetails.map(user =>
-      `${user?.first_name?.[0] ?? ''}${user?.last_name?.[0] ?? ''}`.toUpperCase()
-    ).join(', ');
-
-    const canDeleteThisEvent = canModifySchedule || (event.assigned_user_ids.length === 1 && event.assigned_user_ids[0] === currentUserId);
-
-    return (
-      <div style={{ height: '100%' }} className="relative group">
-        <div className="flex flex-col h-full p-1">
-          <div className="flex justify-between items-start">
-            <div className={`event-title flex-grow mr-1 ${isTicketOrTask ? 'cursor-pointer hover:underline' : ''} text-xs leading-tight`}>
-              {event.title}
-            </div>
-            {canDeleteThisEvent && (
-              <Button
-                id={`delete-entry-${event.entry_id}-btn`}
-                variant="icon"
-                size="icon"
-                className="delete-entry-btn absolute top-0 right-0 p-0.5 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                title="Delete Entry"
-                onClick={(e) => handleDeleteClick(event, e)}
-              >
-                <Trash className="w-3 h-3" />
-              </Button>
-            )}
-          </div>
-          <div className="text-xs font-semibold mt-auto text-right opacity-80">
-            {userInitials}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   const handleFocusTechnicianChange = (newFocusId: string) => {
     setFocusedTechnicianId(newFocusId);
@@ -765,37 +816,42 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                          scheduleEvent.assigned_user_ids?.some(id => comparisonTechnicianIds.includes(id));
     
     const isHovered = hoveredEventId === scheduleEvent.entry_id;
-    const canDeleteThisEvent = canModifySchedule ||
-                              (scheduleEvent.assigned_user_ids.length === 1 &&
-                               scheduleEvent.assigned_user_ids[0] === currentUserId);
 
     // For month view, use a different component to show more details
     if (view === 'month') {
       const titleParts = scheduleEvent.title?.split(':') || ['Untitled'];
       const mainTitle = titleParts[0];
-      
+
       const assignedTechnicians = scheduleEvent.assigned_user_ids?.map(userId => {
         const tech = technicianMap[userId];
-        return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+        return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
       }).join(', ') || 'Unassigned';
 
       const startMoment = new Date(scheduleEvent.scheduled_start);
       const endMoment = new Date(scheduleEvent.scheduled_end);
-      const formattedDate = startMoment.toLocaleDateString();
-      const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      const isMultiDay = startMoment.toDateString() !== endMoment.toDateString();
 
-      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
-      
+      // Format start and end date/time
+      const formatDateTime = (date: Date) => {
+        return date.toLocaleString([], {
+          month: 'numeric',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      };
+
+      const tooltipTitle = `${scheduleEvent.title}\nScheduled for: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}${isMultiDay ? ' (Multi-day)' : ''}`;
+
       const opacity = isPrimary ? 1 : (isComparison ? 0.3 : 1);
-      
+
       return (
-        <div 
-          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''}`}
+        <div
+          className={`h-full w-full p-1 rounded text-xs ${isPrimary ? 'font-semibold' : ''} flex items-center`}
           style={{
             backgroundColor: workItemColors[scheduleEvent.work_item_type] || 'rgb(var(--color-border-200))',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            minHeight: '30px',
             cursor: 'pointer',
             opacity
           }}
@@ -804,7 +860,10 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           onMouseLeave={() => setHoveredEventId(null)}
           title={tooltipTitle}
         >
-          {mainTitle}
+          {isMultiDay && (
+            <CalendarDaysIcon className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
+          )}
+          <span className="truncate">{mainTitle}</span>
         </div>
       );
     }
@@ -878,7 +937,19 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
                   events={events}
                   startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
                   endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-                  eventPropGetter={(event: object) => ({
+                  allDayAccessor={(event: object) => {
+                    const scheduleEvent = event as IScheduleEntry;
+                    const start = new Date(scheduleEvent.scheduled_start);
+                    const end = new Date(scheduleEvent.scheduled_end);
+
+                    // Check if event spans multiple days
+                    const isMultiDay = start.toDateString() !== end.toDateString();
+
+                    // Place multi-day events in the all-day section
+                    // They will maintain their visual height of 30px via CSS
+                    return isMultiDay;
+                  }}
+                  eventPropGetter={() => ({
                     style: {
                       backgroundColor: 'transparent',
                       border: 'none',
@@ -927,12 +998,7 @@ const ScheduleCalendar: React.FC = (): React.ReactElement | null => {
           })()}
         </div>
       </div>
-      <Dialog
-        isOpen={showEntryPopup}
-        onClose={handleEntryPopupClose}
-      >
-        {renderEntryPopup()}
-      </Dialog>
+      {renderEntryPopup()}
 
       <ConfirmationDialog
         className="max-w-[450px]"

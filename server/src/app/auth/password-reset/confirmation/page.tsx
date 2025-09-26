@@ -35,7 +35,7 @@ const PasswordResetConfirmation: React.FC = () => {
           id="proceed-to-sign-in-btn"
           variant="default"
           onClick={handleContinue}
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          className="w-full px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--color-primary-600))] rounded-md hover:bg-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
         >
           Continue
         </Button>

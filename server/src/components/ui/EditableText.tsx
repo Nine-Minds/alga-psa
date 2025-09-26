@@ -41,7 +41,7 @@ const EditableText: React.FC<EditableTextProps & AutomationProps> = ({ value, on
           onChange={(e) => setTempValue(e.target.value)}
           onBlur={handleBlur}
           onKeyDown={handleKeyDown}
-          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
           placeholder={placeholder}
         />
       ) : (
