@@ -50,11 +50,3 @@ export interface PortalDomainStatusSnapshot {
   status: string;
   statusMessage: string | null;
 }
-
-export interface HttpChallengeDetails {
-  challengeName: string;
-  serviceName: string;
-  servicePort: number;
-  token: string;
-  key: string;
-}

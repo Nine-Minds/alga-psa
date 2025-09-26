@@ -1,0 +1,68 @@
+{{- $replicationEnabled := default true .Values.portalDomain.secretReplicationEnabled -}}
+{{- $gatewayNamespace := default "" .Values.portalDomain.gatewayNamespace -}}
+{{- $certificateNamespace := default "" .Values.portalDomain.certificateNamespace -}}
+{{- if and .Values.enabled $replicationEnabled }}
+{{- if $gatewayNamespace }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-secret-sync
+  namespace: {{ $gatewayNamespace }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-secret-sync
+  namespace: {{ $gatewayNamespace }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "temporal-worker.fullname" . }}-secret-sync
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "temporal-worker.serviceAccountName" . }}
+    namespace: {{ include "temporal-worker.namespace" . }}
+{{- end }}
+{{- if and $certificateNamespace (ne $certificateNamespace $gatewayNamespace) }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-secret-reader
+  namespace: {{ $certificateNamespace }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "temporal-worker.fullname" . }}-secret-reader
+  namespace: {{ $certificateNamespace }}
+  labels:
+    {{- include "temporal-worker.labels" . | nindent 4 }}
+    app.kubernetes.io/component: temporal-worker
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "temporal-worker.fullname" . }}-secret-reader
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "temporal-worker.serviceAccountName" . }}
+    namespace: {{ include "temporal-worker.namespace" . }}
+{{- end }}
+{{- end }}
