@@ -444,33 +444,37 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               <>
                 <div>
                   <h5 className="font-bold mb-2">Impact</h5>
-                  <CustomSelect
-                    options={[
-                      { value: '1', label: '1 - High (Critical business function affected)' },
-                      { value: '2', label: '2 - Medium-High (Important function affected)' },
-                      { value: '3', label: '3 - Medium (Minor function affected)' },
-                      { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-                      { value: '5', label: '5 - Low (No business impact)' }
-                    ]}
-                    value={itilImpact?.toString() || null}
-                    onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
-                    placeholder="Select Impact"
-                  />
+                  <div className="w-fit">
+                    <CustomSelect
+                      options={[
+                        { value: '1', label: '1 - High (Critical business function affected)' },
+                        { value: '2', label: '2 - Medium-High (Important function affected)' },
+                        { value: '3', label: '3 - Medium (Minor function affected)' },
+                        { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+                        { value: '5', label: '5 - Low (No business impact)' }
+                      ]}
+                      value={itilImpact?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
+                      placeholder="Select Impact"
+                    />
+                  </div>
                 </div>
                 <div>
                   <h5 className="font-bold mb-2">Urgency</h5>
-                  <CustomSelect
-                    options={[
-                      { value: '1', label: '1 - High (Work cannot continue)' },
-                      { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-                      { value: '3', label: '3 - Medium (Work continues with limitations)' },
-                      { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-                      { value: '5', label: '5 - Low (Work continues normally)' }
-                    ]}
-                    value={itilUrgency?.toString() || null}
-                    onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
-                    placeholder="Select Urgency"
-                  />
+                  <div className="w-fit">
+                    <CustomSelect
+                      options={[
+                        { value: '1', label: '1 - High (Work cannot continue)' },
+                        { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+                        { value: '3', label: '3 - Medium (Work continues with limitations)' },
+                        { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+                        { value: '5', label: '5 - Low (Work continues normally)' }
+                      ]}
+                      value={itilUrgency?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
+                      placeholder="Select Urgency"
+                    />
+                  </div>
                 </div>
               </>
             )}
