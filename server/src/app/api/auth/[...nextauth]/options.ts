@@ -686,6 +686,10 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             }
 
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
+            // if the url doesn't include the host, add it
+            if (url.startsWith('/')) {
+                return process.env.NEXTAUTH_URL + url;
+            }
             return vanityUrl ?? url;
         },
     },
