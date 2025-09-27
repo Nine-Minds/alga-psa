@@ -1,15 +1,13 @@
 Title: Client Portal Custom Domain Authentication Plan
 Date: 2025-09-25
 
-## Status – 2025-09-26
-- **Phases 1–3 complete**: shared session helpers live in `server/src/lib/auth/sessionCookies.ts`, the OTT model/migration plus unit coverage landed, and `/api/client-portal/domain-session` now mints Auth.js cookies (verified by `vitest` + new Playwright coverage).
-- **Phase 4 in progress**: canonical login now redirects vanity traffic via middleware + NextAuth `redirect` callback, and the handoff UI exchanges OTTs end-to-end. We added `client-portal-handoff` Playwright smoke tests and a new `client-portal-redirects` test to safeguard the canonical redirect.
-- **Phase 5 partially addressed**: logging was added around OTT issuance/consumption and middleware; additional telemetry + docs refresh remain outstanding.
+## Status – 2025-10-01
+- **Phases 1–4 complete**: shared session helpers, OTT persistence, and the `/api/client-portal/domain-session` cookie minting flow are live with unit coverage. Canonical logins now issue vanity OTTs even when domains include a port, the handoff page redeems them, and new Playwright journeys (`client-portal-login-e2e`, `client-portal-vanity-session`, `client-portal-redirects`) cover the canonical ➔ vanity loop end-to-end.
+- **Phase 5 underway**: expanded logging is in place around OTT issuance/consumption, but telemetry wiring and documentation refresh are still pending.
 
 ### Outstanding Issues
-- **Vanity callback loop after login**: logging in on the canonical host still lands on `canonical.localhost` instead of returning to `portal.acme.local`. Express `sessionAuthMiddleware` and our callback propagation need to preserve the original vanity host during the NextAuth redirect.
-- **Cookie confirmation**: ensure the Auth.js session cookie is visible to the vanity domain once the redirect issue above is resolved (no automated regression yet).
 - **Telemetry & docs**: finish documenting the new middleware behaviour, add runbooks, and wire PostHog events for OTT redemption failures/success.
+- **Operational polishing**: surface vanity handoff metrics/dashboards and confirm production ingress honours the updated host+port matching.
 
 ## TODO – Phased Delivery
 - **Phase 1 – Auth Foundations**: Extract shared session settings helpers, align NextAuth/edge-auth configs, and confirm `NEXTAUTH_SECRET` parity across environments.
