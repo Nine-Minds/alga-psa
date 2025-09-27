@@ -118,7 +118,7 @@ export default function PortalSessionHandoff({
           </p>
 
           <div className="mt-6 space-y-3">
-            <Button className="w-full" onClick={handleReturnToSignin}>
+            <Button id="return-to-signin-button" className="w-full" onClick={handleReturnToSignin}>
               Return to Sign In
             </Button>
             <p className="text-sm text-gray-500 text-center">
