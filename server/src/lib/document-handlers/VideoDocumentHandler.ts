@@ -4,12 +4,15 @@ import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
-import { Readable } from 'stream';
+import type { StorageProviderInterface } from 'server/src/lib/storage/providers/StorageProvider';
 import type { Knex } from 'knex';
-import { existsSync } from 'fs';
+import { existsSync, createWriteStream } from 'fs';
 import { createRequire } from 'module';
 import process from 'process';
 import { Buffer } from 'buffer';
+import { promises as fsPromises } from 'fs';
+import os from 'os';
+import { pipeline } from 'stream/promises';
 
 const moduleRequire = createRequire(import.meta.url);
 
@@ -57,13 +60,102 @@ function resolveFfmpegPath(): string | null {
   return null;
 }
 
+function resolveFfprobePath(): string | null {
+  const candidateFromEnv = process.env.FFPROBE_PATH;
+  if (candidateFromEnv && existsSync(candidateFromEnv)) {
+    return candidateFromEnv;
+  }
+
+  let ffprobeStaticModule: any = null;
+  try {
+    ffprobeStaticModule = moduleRequire('ffprobe-static');
+  } catch (error) {
+    console.warn('[VideoDocumentHandler] Unable to require ffprobe-static module', error);
+  }
+
+  const staticCandidates: Array<string | undefined> = [];
+  if (ffprobeStaticModule) {
+    if (typeof ffprobeStaticModule === 'string') {
+      staticCandidates.push(ffprobeStaticModule);
+    }
+
+    const moduleWithPath = ffprobeStaticModule?.path ?? ffprobeStaticModule?.default?.path;
+    if (typeof moduleWithPath === 'string') {
+      staticCandidates.push(moduleWithPath);
+    }
+  }
+
+  for (const candidate of staticCandidates) {
+    if (candidate && existsSync(candidate)) {
+      return candidate;
+    }
+    if (candidate) {
+      console.warn(`[VideoDocumentHandler] ffprobe candidate missing: ${candidate}`);
+    }
+  }
+
+  try {
+    const packagePath = moduleRequire.resolve('ffprobe-static/package.json');
+    const binRoot = path.join(path.dirname(packagePath), 'bin');
+    const binaryName = process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe';
+    const derivedPath = path.join(binRoot, process.platform, process.arch, binaryName);
+    const candidates = [derivedPath];
+
+    if (derivedPath.startsWith('/ROOT')) {
+      const adjustedPath = path.join(process.cwd(), derivedPath.replace('/ROOT', '').replace(/^\//, ''));
+      candidates.push(adjustedPath);
+    }
+
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+      console.warn(`[VideoDocumentHandler] ffprobe candidate missing: ${candidate}`);
+    }
+  } catch (error) {
+    console.warn('[VideoDocumentHandler] Unable to resolve ffprobe-static module path', error);
+  }
+
+  const projectCandidate = path.join(
+    process.cwd(),
+    'node_modules',
+    'ffprobe-static',
+    'bin',
+    process.platform,
+    process.arch,
+    process.platform === 'win32' ? 'ffprobe.exe' : 'ffprobe'
+  );
+  if (existsSync(projectCandidate)) {
+    return projectCandidate;
+  }
+  console.warn(`[VideoDocumentHandler] ffprobe candidate missing: ${projectCandidate}`);
+
+  const fallbacks = ['/usr/bin/ffprobe', '/usr/local/bin/ffprobe'];
+  for (const fallback of fallbacks) {
+    if (existsSync(fallback)) {
+      return fallback;
+    }
+    console.warn(`[VideoDocumentHandler] ffprobe candidate missing: ${fallback}`);
+  }
+
+  return null;
+}
+
 const ffmpegExecutable = resolveFfmpegPath();
+const ffprobeExecutable = resolveFfprobePath();
 
 if (ffmpegExecutable) {
   ffmpeg.setFfmpegPath(ffmpegExecutable);
   console.log(`[VideoDocumentHandler] Using ffmpeg executable at ${ffmpegExecutable}`);
 } else {
   console.warn('[VideoDocumentHandler] ffmpeg executable not found; video thumbnails disabled');
+}
+
+if (ffprobeExecutable) {
+  ffmpeg.setFfprobePath(ffprobeExecutable);
+  console.log(`[VideoDocumentHandler] Using ffprobe executable at ${ffprobeExecutable}`);
+} else {
+  console.warn('[VideoDocumentHandler] ffprobe executable not found; some video thumbnails may fail');
 }
 
 /**
@@ -120,6 +212,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       const content = `Video File: ${fileName} (${fileSize})`;
 
       if (thumbnailBuffer) {
+        console.log(`[VideoDocumentHandler] Generated thumbnail for ${document.file_id}, size=${thumbnailBuffer.length}`);
         const base64Image = `data:image/png;base64,${thumbnailBuffer.toString('base64')}`;
         await this.saveToCache(document.file_id, thumbnailBuffer, tenant);
         return {
@@ -187,28 +280,6 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
     return ext ? ext.substring(1) : '';
   }
 
-  private mapMimeToFormat(mimeType: string | null | undefined): string | null {
-    if (!mimeType) {
-      return null;
-    }
-
-    const map: Record<string, string> = {
-      'video/mp4': 'mp4',
-      'video/webm': 'webm',
-      'video/ogg': 'ogg',
-      'video/quicktime': 'mov',
-      'video/x-msvideo': 'avi',
-      'video/x-ms-wmv': 'asf',
-      'video/mpeg': 'mpeg',
-      'video/3gpp': '3gp',
-      'video/3gpp2': '3gp',
-      'video/x-matroska': 'matroska',
-      'video/x-flv': 'flv'
-    };
-
-    return map[mimeType] || null;
-  }
-
   private async generateThumbnail(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<Buffer | null> {
     if (!ffmpegExecutable) {
       return null;
@@ -230,65 +301,73 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       }
 
       const provider = await StorageProviderFactory.createProvider();
-      const videoStream = await provider.getReadStream(fileRecord.storage_path);
-
-      const buffer = await this.extractFrameFromStream(
-        videoStream,
-        fileRecord.mime_type || document.mime_type || null
+      const { tempFilePath, tempDir } = await this.downloadToTempFile(
+        provider,
+        fileRecord.storage_path
       );
 
-      return buffer;
+      try {
+        const buffer = await this.extractFrameFromFile(
+          tempFilePath,
+          tempDir
+        );
+
+        return buffer;
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+      }
     } catch (error) {
       console.error(`[VideoDocumentHandler] Failed to generate thumbnail for ${document.file_id}:`, error);
       return null;
     }
   }
 
-  private async extractFrameFromStream(stream: Readable, mimeType: string | null): Promise<Buffer | null> {
+  private async downloadToTempFile(
+    provider: StorageProviderInterface,
+    storagePath: string
+  ): Promise<{ tempFilePath: string; tempDir: string }> {
+    const tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'video-thumb-'));
+    const tempFilePath = path.join(tempDir, 'source');
+
+    const videoStream = await provider.getReadStream(storagePath);
+    const writeStream = createWriteStream(tempFilePath);
+
+    await pipeline(videoStream, writeStream);
+
+    return { tempFilePath, tempDir };
+  }
+
+  private async extractFrameFromFile(filePath: string, workingDir: string): Promise<Buffer | null> {
     return await new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const command = ffmpeg(stream);
+      const outputPath = path.join(workingDir, 'thumbnail.png');
+      const command = ffmpeg(filePath)
+        .noAudio()
+        .outputOptions(['-frames:v 1', '-vf', 'thumbnail,scale=640:-1'])
+        .output(outputPath)
+        .format('image2')
+        .on('error', (err) => {
+          reject(err);
+        })
+        .on('end', async () => {
+          try {
+            const exists = await fsPromises
+              .access(outputPath)
+              .then(() => true)
+              .catch(() => false);
 
-      command.noAudio();
-      command.inputOptions(['-ss', '00:00:01']);
-      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
+            if (!exists) {
+              resolve(null);
+              return;
+            }
 
-      const format = this.mapMimeToFormat(mimeType);
-      if (format) {
-        command.inputFormat(format);
-      }
+            const buffer = await fsPromises.readFile(outputPath);
+            resolve(buffer);
+          } catch (err) {
+            reject(err);
+          }
+        });
 
-      command.format('png');
-
-      command.on('error', (err) => {
-        stream.destroy();
-        reject(err);
-      });
-
-      const ffmpegStream = command.pipe();
-
-      ffmpegStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
-
-      ffmpegStream.on('end', () => {
-        stream.destroy();
-        if (chunks.length === 0) {
-          resolve(null);
-        } else {
-          resolve(Buffer.concat(chunks));
-        }
-      });
-
-      ffmpegStream.on('error', (err) => {
-        stream.destroy();
-        reject(err);
-      });
-
-      stream.on('error', (err) => {
-        stream.destroy();
-        reject(err);
-      });
+      command.run();
     });
   }
 }
