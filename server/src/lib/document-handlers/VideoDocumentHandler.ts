@@ -6,13 +6,64 @@ import ffmpegStatic from 'ffmpeg-static';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import { Readable } from 'stream';
 import type { Knex } from 'knex';
+import { existsSync } from 'fs';
+import { createRequire } from 'module';
+import process from 'process';
+import { Buffer } from 'buffer';
 
-const ffmpegExecutable = typeof ffmpegStatic === 'string' ? ffmpegStatic : null;
+const moduleRequire = createRequire(import.meta.url);
+
+function resolveFfmpegPath(): string | null {
+  const candidateFromEnv = process.env.FFMPEG_PATH;
+  if (candidateFromEnv && existsSync(candidateFromEnv)) {
+    return candidateFromEnv;
+  }
+
+  if (typeof ffmpegStatic === 'string' && existsSync(ffmpegStatic)) {
+    return ffmpegStatic;
+  }
+
+  try {
+    const modulePath = moduleRequire.resolve('ffmpeg-static');
+    const derivedPath = path.join(path.dirname(modulePath), 'ffmpeg');
+    const candidates = [derivedPath];
+
+    if (derivedPath.startsWith('/ROOT')) {
+      const adjustedPath = path.join(process.cwd(), derivedPath.replace('/ROOT', '').replace(/^\//, ''));
+      candidates.push(adjustedPath);
+    }
+
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+  } catch (error) {
+    console.warn('[VideoDocumentHandler] Unable to resolve ffmpeg-static module path', error);
+  }
+
+  const projectNodeModulesCandidate = path.join(process.cwd(), 'node_modules', 'ffmpeg-static', 'ffmpeg');
+  if (existsSync(projectNodeModulesCandidate)) {
+    return projectNodeModulesCandidate;
+  }
+
+  const fallbacks = ['/usr/bin/ffmpeg', '/usr/local/bin/ffmpeg'];
+  for (const fallback of fallbacks) {
+    if (existsSync(fallback)) {
+      return fallback;
+    }
+  }
+
+  return null;
+}
+
+const ffmpegExecutable = resolveFfmpegPath();
 
 if (ffmpegExecutable) {
   ffmpeg.setFfmpegPath(ffmpegExecutable);
+  console.log(`[VideoDocumentHandler] Using ffmpeg executable at ${ffmpegExecutable}`);
 } else {
-  console.warn('[VideoDocumentHandler] ffmpeg-static executable not available; video thumbnails disabled');
+  console.warn('[VideoDocumentHandler] ffmpeg executable not found; video thumbnails disabled');
 }
 
 /**
