@@ -339,8 +339,8 @@ export async function pruneExpiredPortalDomainOtts(options: PruneOttOptions = {}
   }
 
   if (options.dryRun) {
-    const expiredIds = await expiredQuery.clone().pluck<string>('id');
-    const consumedIds = await consumedQuery.clone().pluck<string>('id');
+    const expiredIds = await expiredQuery.clone().pluck('id');
+    const consumedIds = await consumedQuery.clone().pluck('id');
     const uniqueIds = new Set<string>();
     expiredIds.forEach((id) => {
       if (typeof id === 'string') uniqueIds.add(id);

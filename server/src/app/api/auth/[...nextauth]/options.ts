@@ -199,7 +199,7 @@ interface ExtendedUser {
 async function getOAuthSecrets() {
     const { getSecretProviderInstance } = await import('@alga-psa/shared/core/secretProvider');
     const secretProvider = await getSecretProviderInstance();
-    
+
     const [googleClientId, googleClientSecret, keycloakClientId, keycloakClientSecret, keycloakUrl, keycloakRealm] = await Promise.all([
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_ID'),
         secretProvider.getAppSecret('GOOGLE_OAUTH_CLIENT_SECRET'),
@@ -240,7 +240,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     logger.warn("User not found with email", profile.email);
                     throw new Error("User not found");
                 }
-                
+
                 // Check if user is inactive
                 if (user.is_inactive) {
                     logger.warn(`Inactive user attempted to login via Google: ${profile.email}`);
@@ -252,7 +252,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     // });
                     throw new Error("User not found");
                 }
-                
+
                 logger.info("User sign in successful with email", profile.email);
                 return {
                     id: user.user_id.toString(),
@@ -680,12 +680,12 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             });
             return session;
         },
-        async redirect({ url, baseUrl, token }) {
+        async redirect({ url, baseUrl }) {
             if (url.includes('/auth/client-portal/handoff')) {
                 return url;
             }
 
-            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
+            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             return vanityUrl ?? url;
         },
     },
@@ -1072,7 +1072,7 @@ export const options: NextAuthConfig = {
                 companyId: companyId, // Use fetched or preserved companyId
                 contactId: contactId  // Use fetched or preserved contactId
             };
-            
+
             console.log('JWT callback - final token:', {
                 id: result.id,
                 email: result.email,
@@ -1126,12 +1126,12 @@ export const options: NextAuthConfig = {
             });
             return session;
         },
-        async redirect({ url, baseUrl, token }) {
+        async redirect({ url, baseUrl }) {
             if (url.includes('/auth/client-portal/handoff')) {
                 return url;
             }
 
-            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token });
+            const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             return vanityUrl ?? url;
         },
     },
@@ -1152,7 +1152,7 @@ async function validateUser(token: any) {
             logger.warn(`User not found for email: ${token.email}`);
             return null;
         }
-        
+
         // Log validation details for debugging
         if (user.user_id !== token.id || user.username !== token.username) {
             logger.warn(`User validation mismatch for email: ${token.email}`, {

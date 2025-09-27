@@ -10,10 +10,19 @@ const encodeSessionMock = vi.fn();
 const buildSessionCookieMock = vi.fn();
 const analyticsCaptureMock = vi.fn();
 
-vi.mock('next/headers', () => ({
-  cookies: () => ({
-    set: setCookieMock,
-  }),
+vi.mock('next/server', () => ({
+  NextResponse: {
+    json: vi.fn((data, init) => {
+      const response = {
+        json: vi.fn().mockResolvedValue(data),
+        status: init?.status || 200,
+        cookies: {
+          set: setCookieMock,
+        },
+      };
+      return response;
+    }),
+  },
 }));
 
 vi.mock('node:dns', () => ({

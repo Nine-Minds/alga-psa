@@ -25,14 +25,14 @@ describe('encodePortalSessionToken', () => {
     }
 
     if (originalNodeEnv === undefined) {
-      delete process.env.NODE_ENV;
+      delete (process.env as any).NODE_ENV;
     } else {
-      process.env.NODE_ENV = originalNodeEnv;
+      (process.env as any).NODE_ENV = originalNodeEnv;
     }
   });
 
   it('passes the authjs cookie name as the salt in development', async () => {
-    process.env.NODE_ENV = 'development';
+    (process.env as any).NODE_ENV = 'development';
     const { encodePortalSessionToken } = await import('./sessionCookies');
 
     await encodePortalSessionToken({
@@ -49,7 +49,7 @@ describe('encodePortalSessionToken', () => {
   });
 
   it('uses the secure cookie name as the salt in production', async () => {
-    process.env.NODE_ENV = 'production';
+    (process.env as any).NODE_ENV = 'production';
     const { encodePortalSessionToken } = await import('./sessionCookies');
 
     await encodePortalSessionToken({

@@ -135,7 +135,7 @@ export async function POST(request: Request): Promise<Response> {
         reason: 'domain_inactive',
         tenant: portalDomain.tenant,
         portal_domain_id: portalDomain.id,
-        host,
+        host: hostHeader,
       });
       return NextResponse.json({
         error: 'domain_inactive',
@@ -225,24 +225,25 @@ export async function POST(request: Request): Promise<Response> {
     const forwardedProto = request.headers.get('x-forwarded-proto');
     const requestUrl = new URL(request.url);
     const requestScheme = forwardedProto?.split(',')[0]?.trim().toLowerCase() ?? requestUrl.protocol.replace(/:$/, '');
+    const redirectTo = sanitizeReturnPath(
+      requestedReturnPath ?? ottRecord.metadata.returnPath,
+      '/client-portal/dashboard',
+    );
+
     const cookieOptions = {
       ...sessionCookie.options,
       secure: requestScheme === 'https' ? sessionCookie.options?.secure ?? true : false,
     };
 
-    cookies().set({
+    const response = NextResponse.json({ redirectTo, canonicalHost: portalDomain.canonicalHost }, { status: 200 });
+    response.cookies.set({
       name: sessionCookie.name,
       value: sessionCookie.value,
       maxAge: sessionCookie.maxAge,
       ...cookieOptions,
     });
 
-    const redirectTo = sanitizeReturnPath(
-      requestedReturnPath ?? ottRecord.metadata.returnPath,
-      '/client-portal/dashboard',
-    );
-
-    return NextResponse.json({ redirectTo, canonicalHost: portalDomain.canonicalHost }, { status: 200 });
+    return response;
   } catch (error) {
     logger.error('Failed to process portal domain session exchange', error);
     return NextResponse.json({ error: 'exchange_failed' }, { status: 500 });
