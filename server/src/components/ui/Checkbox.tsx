@@ -47,7 +47,7 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
     <div className="flex items-center mb-4">
       <input
         type="checkbox"
-        className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${className}`}
+        className={`h-4 w-4 border-gray-300 rounded ${className || ''}`}
         checked={checked}
         disabled={disabled}
         required={required}

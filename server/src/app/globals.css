@@ -616,3 +616,25 @@ body,
   min-width: 40vw !important;
   max-width: 60vw !important;
 }
+
+/* Branded checkbox styles */
+input[type="checkbox"] {
+  accent-color: rgb(var(--color-primary-500));
+}
+
+input[type="checkbox"]:checked {
+  background-color: rgb(var(--color-primary-500));
+  border-color: rgb(var(--color-primary-500));
+}
+
+input[type="checkbox"]:focus {
+  ring-color: rgb(var(--color-primary-500));
+  border-color: rgb(var(--color-primary-500));
+  outline-color: rgb(var(--color-primary-500));
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px rgb(var(--color-primary-500));
+}
