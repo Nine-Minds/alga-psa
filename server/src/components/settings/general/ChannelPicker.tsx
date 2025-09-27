@@ -224,6 +224,9 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
               className="max-h-60 overflow-y-auto border-t bg-white"
               role="listbox"
               aria-label="Boards"
+              onWheel={(e) => {
+                e.stopPropagation();
+              }}
             >
               {filteredChannels.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No boards found</div>

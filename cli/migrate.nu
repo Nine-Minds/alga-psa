@@ -1,9 +1,35 @@
 # Manage database migrations
 export def run-migrate [
     action: string # The migration action to perform: up, latest, down, or status
+    --ee           # Run combined CE + EE migrations (latest only)
 ] {
     let project_root = find-project-root
-    
+
+    if $ee {
+        if $action != "latest" {
+            error make { msg: $"($env.ALGA_COLOR_RED)--ee is only supported with the 'latest' action($env.ALGA_COLOR_RESET)" }
+        }
+
+        print $"($env.ALGA_COLOR_CYAN)Running CE + EE migrations to latest...($env.ALGA_COLOR_RESET)"
+        let result = do {
+            cd $project_root
+            npm -w server run migrate:ee | complete
+        }
+
+        if $result.exit_code == 0 {
+            if not ($result.stdout | is-empty) {
+                print $result.stdout
+            }
+            print $"($env.ALGA_COLOR_GREEN)CE + EE migrations completed successfully.($env.ALGA_COLOR_RESET)"
+            return
+        }
+
+        if not ($result.stderr | is-empty) {
+            print $"($env.ALGA_COLOR_RED)($result.stderr)($env.ALGA_COLOR_RESET)"
+        }
+        error make { msg: $"($env.ALGA_COLOR_RED)CE + EE migrations failed($env.ALGA_COLOR_RESET)", code: $result.exit_code }
+    }
+
     match $action {
         "up" => {
             print $"($env.ALGA_COLOR_CYAN)Running next pending database migration...($env.ALGA_COLOR_RESET)"

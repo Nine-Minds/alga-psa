@@ -90,16 +90,12 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       certificateIssuerGroup: 'cert-manager.io',
       gatewayNamespace: 'istio-system',
       gatewaySelector: { istio: 'ingressgateway' },
-      gatewayHttpPort: 80,
       gatewayHttpsPort: 443,
-      virtualServiceNamespace: 'msp',
-      serviceHost: 'sebastian.msp.svc.cluster.local',
-      servicePort: 3000,
-      challengeServiceHost: null,
-      challengeServicePort: undefined,
-      challengeRouteEnabled: false,
-      manifestOutputDirectory: null,
-    };
+  virtualServiceNamespace: 'msp',
+  serviceHost: 'sebastian.msp.svc.cluster.local',
+  servicePort: 3000,
+  manifestOutputDirectory: null,
+};
 
     const rendered = renderPortalDomainResources(record, config);
     const yaml = renderManifestYaml(rendered);

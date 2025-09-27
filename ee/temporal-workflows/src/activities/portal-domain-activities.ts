@@ -7,6 +7,7 @@ import type { ExecFileOptions } from "node:child_process";
 import { promisify } from "node:util";
 import type { Knex } from "knex";
 import { dump as dumpYaml } from "js-yaml";
+import os from "os";
 
 import { getAdminConnection } from "@alga-psa/shared/db/admin.js";
 
@@ -24,6 +25,10 @@ const MANAGED_LABEL = "portal.alga-psa.com/managed";
 const TENANT_LABEL = "portal.alga-psa.com/tenant";
 const DOMAIN_ID_LABEL = "portal.alga-psa.com/domain-id";
 const DOMAIN_HOST_LABEL = "portal.alga-psa.com/domain-host";
+const ORIGIN_SECRET_NAME_LABEL = "portal.alga-psa.com/origin-secret-name";
+const ORIGIN_SECRET_NAMESPACE_LABEL = "portal.alga-psa.com/origin-secret-namespace";
+const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
+  "portal.alga-psa.com/origin-resource-version";
 
 const execFileAsync = promisify(execFile);
 
@@ -69,7 +74,6 @@ export interface PortalDomainConfig {
   certificateIssuerGroup: string;
   gatewayNamespace: string;
   gatewaySelector: Record<string, string>;
-  gatewayHttpPort: number;
   gatewayHttpsPort: number;
   virtualServiceNamespace: string;
   serviceHost: string;
@@ -90,17 +94,12 @@ const DEFAULT_CONFIG: PortalDomainConfig = {
   gatewaySelector: parseSelector(
     process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR,
   ) || { istio: "ingressgateway" },
-  gatewayHttpPort: parseNumberEnv(
-    process.env.PORTAL_DOMAIN_GATEWAY_HTTP_PORT,
-    80,
-  ),
   gatewayHttpsPort: parseNumberEnv(
     process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
     443,
   ),
   virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
-  serviceHost:
-    process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
+  serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
   servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
   manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
 };
@@ -149,6 +148,54 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+interface RetryOptions {
+  attempts?: number;
+  delayMs?: number;
+}
+
+function isTransientError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const anyError = error as any;
+  const code = typeof anyError?.code === "string" ? anyError.code.toUpperCase() : "";
+  const message = typeof anyError?.message === "string" ? anyError.message.toLowerCase() : "";
+
+  if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "ECONNREFUSED") {
+    return true;
+  }
+
+  if (message.includes("econnreset") || message.includes("connection reset") || message.includes("timeout")) {
+    return true;
+  }
+
+  return false;
+}
+
+async function withTransientRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? 3);
+  const delayMs = Math.max(0, options.delayMs ?? 1000);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+      await delay(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error('Transient operation failed');
 }
 
 function shouldManageStatus(status: string | null | undefined): boolean {
@@ -322,6 +369,23 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
         );
       }
 
+      if (config.gatewayNamespace !== config.certificateNamespace) {
+        const tenantSlug = fileName.replace(/\.ya?ml$/i, "");
+        if (tenantSlug) {
+          const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
+          try {
+            await deleteGatewaySecret(secretName, config.gatewayNamespace);
+          } catch (error) {
+            errors.push(
+              formatErrorMessage(
+                error,
+                `Failed to remove replicated TLS secret ${secretName}`,
+              ),
+            );
+          }
+        }
+      }
+
       try {
         await fs.rm(fullPath, { force: true });
       } catch (error) {
@@ -366,6 +430,24 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           "Failed to apply manifest changes to cluster",
         ),
       );
+    }
+  }
+
+  if (
+    config.gatewayNamespace !== config.certificateNamespace &&
+    manifests.length > 0
+  ) {
+    for (const manifest of manifests) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to sync gateway TLS secret for ${manifest.secretName}`,
+          ),
+        );
+      }
     }
   }
 
@@ -453,17 +535,32 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
 export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
   const knex = await getConnection();
-  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
-    .where({ id: args.portalDomainId })
-    .first();
+  const record = await withTransientRetry(
+    () =>
+      knex<PortalDomainActivityRecord>(TABLE_NAME)
+        .where({ id: args.portalDomainId })
+        .first(),
+    { attempts: 3, delayMs: 1000 }
+  );
 
   if (!record) {
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
+  }
+
+  if (record.status === 'certificate_failed') {
+    const message = record.status_message ?? '';
+    const recoverable =
+      typeof message === 'string' &&
+      message.toLowerCase().includes('secret does not exist');
+
+    if (!recoverable) {
+      return { status: record.status, statusMessage: record.status_message };
+    }
   }
 
   if (!shouldManageStatus(record.status)) {
@@ -498,16 +595,16 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
 
     if (gatewayExists && virtualServiceExists) {
       nextStatus = 'active';
-      nextMessage = 'Certificate issued and Istio routing configured.';
+      nextMessage = 'Your domain is live and protected by HTTPS.';
     } else {
       nextStatus = 'deploying';
-      nextMessage = 'Certificate issued; waiting for Istio routing resources to become available.';
+      nextMessage = 'SSL is ready. Finishing the domain routing setup...';
     }
   } else {
     nextStatus = 'certificate_issuing';
     nextMessage =
       certificate.message ??
-      `Waiting for cert-manager to issue certificate ${manifest.secretName}.`;
+      'Requesting an HTTPS certificate. This usually takes a couple of minutes.';
   }
 
   if (certificate.recoverableError) {
@@ -543,15 +640,19 @@ async function inspectCertificateStatus(
   namespace: string,
 ): Promise<CertificateInspectionResult> {
   try {
-    const { stdout } = await runKubectl([
-      'get',
-      'certificate',
-      name,
-      '-n',
-      namespace,
-      '-o',
-      'json',
-    ]);
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'certificate',
+          name,
+          '-n',
+          namespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 5, delayMs: 2000 }
+    );
     const certificate = JSON.parse(stdout);
     const conditions = Array.isArray(certificate?.status?.conditions)
       ? certificate.status.conditions
@@ -563,7 +664,7 @@ async function inspectCertificateStatus(
     if (!readyCondition) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to report readiness.',
+        message: "Requesting an HTTPS certificate from Let's Encrypt...",
       };
     }
 
@@ -581,10 +682,11 @@ async function inspectCertificateStatus(
     }
 
     if (readyCondition.status === 'False') {
-      const failureMessage =
-        normalizedMessage ??
-        normalizedReason ??
-        'Certificate issuance failed.';
+      const failureMessage = normalizedMessage
+        ? `We couldn’t finish the HTTPS setup: ${normalizedMessage}`
+        : normalizedReason
+          ? `We couldn’t finish the HTTPS setup: ${normalizedReason}`
+          : 'We couldn’t finish the HTTPS setup. Please double-check DNS and try again.';
       return { ready: false, failureMessage };
     }
 
@@ -593,13 +695,13 @@ async function inspectCertificateStatus(
       message:
         normalizedMessage ??
         normalizedReason ??
-        'Certificate issuance in progress.',
+        "Waiting for Let's Encrypt to finish verifying your domain...",
     };
   } catch (error) {
     if (isNotFoundError(error)) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to create certificate resource.',
+        message: 'Preparing HTTPS resources...',
       };
     }
 
@@ -625,7 +727,10 @@ async function kubectlResourceExists(
   namespace: string,
 ): Promise<boolean> {
   try {
-    await runKubectl(['get', kind, name, '-n', namespace]);
+    await withTransientRetry(
+      () => runKubectl(['get', kind, name, '-n', namespace]),
+      { attempts: 3, delayMs: 1000 }
+    );
     return true;
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -969,6 +1074,21 @@ export function renderPortalDomainResources(
 
   const hosts = [normalizedDomain];
 
+  const servers: any[] = [
+    {
+      port: {
+        number: config.gatewayHttpsPort,
+        name: httpsServerName,
+        protocol: "HTTPS",
+      },
+      tls: {
+        mode: "SIMPLE",
+        credentialName: secretName,
+      },
+      hosts,
+    },
+  ];
+
   const gateway: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
     kind: "Gateway",
@@ -979,48 +1099,37 @@ export function renderPortalDomainResources(
     },
     spec: {
       selector: config.gatewaySelector,
-      servers: [
-        {
-          port: {
-            number: config.gatewayHttpPort,
-            name: httpServerName,
-            protocol: "HTTP",
-          },
-          tls: {
-            httpsRedirect: true,
-          },
-          hosts,
-        },
-        {
-          port: {
-            number: config.gatewayHttpsPort,
-            name: httpsServerName,
-            protocol: "HTTPS",
-          },
-          tls: {
-            mode: "SIMPLE",
-            credentialName: secretName,
-          },
-          hosts,
-        },
-      ],
+      servers,
     },
   };
 
-  const httpRoutes: any[] = [];
+  const serviceHost = config.serviceHost;
+  if (!serviceHost) {
+    throw new Error(
+      "Portal domain service host is not configured. Set PORTAL_DOMAIN_SERVICE_HOST.",
+    );
+  }
 
-  httpRoutes.push({
-    route: [
-      {
-        destination: {
-          host: config.serviceHost,
-          port: {
-            number: config.servicePort,
-          },
-        },
+  const primaryDestination = {
+    destination: {
+      host: serviceHost,
+      port: {
+        number: config.servicePort,
       },
-    ],
-  });
+    },
+  };
+
+  const httpRoutes: any[] = [
+    {
+      match: [
+        {
+          uri: { prefix: "/" },
+          port: config.gatewayHttpsPort,
+        },
+      ],
+      route: [primaryDestination],
+    },
+  ];
 
   const virtualService: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
@@ -1047,6 +1156,127 @@ export function renderPortalDomainResources(
     gatewayName,
     virtualServiceName,
   };
+}
+
+async function syncGatewaySecret(
+  manifest: RenderedPortalDomainResources,
+  config: PortalDomainConfig,
+): Promise<void> {
+  if (config.gatewayNamespace === config.certificateNamespace) {
+    return;
+  }
+
+  const sourceNamespace = config.certificateNamespace;
+  const targetNamespace = config.gatewayNamespace;
+  const secretName = manifest.secretName;
+
+  let sourceSecret: any;
+  try {
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'secret',
+          secretName,
+          '-n',
+          sourceNamespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 3, delayMs: 1000 }
+    );
+    sourceSecret = JSON.parse(stdout);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return;
+    }
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to load source TLS secret ${sourceNamespace}/${secretName}`,
+      ),
+    );
+  }
+
+  const data = (sourceSecret?.data ?? {}) as Record<string, string>;
+  const tlsCrt = data['tls.crt'];
+  const tlsKey = data['tls.key'];
+
+  if (!tlsCrt || !tlsKey) {
+    throw new Error(
+      `Source TLS secret ${sourceNamespace}/${secretName} is missing tls.crt or tls.key`,
+    );
+  }
+
+  const baseLabels = buildBaseLabels(
+    manifest.record,
+    normalizeHostname(manifest.record.domain),
+  );
+
+  const labels: Record<string, string> = {
+    ...baseLabels,
+    [ORIGIN_SECRET_NAME_LABEL]: secretName,
+    [ORIGIN_SECRET_NAMESPACE_LABEL]: sourceNamespace,
+  };
+
+  const annotations: Record<string, string> = {};
+  const resourceVersion = sourceSecret?.metadata?.resourceVersion;
+  if (resourceVersion) {
+    annotations[ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION] = String(
+      resourceVersion,
+    );
+  }
+
+  const replica: Record<string, any> = {
+    apiVersion: 'v1',
+    kind: 'Secret',
+    metadata: {
+      name: secretName,
+      namespace: targetNamespace,
+      labels,
+      ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
+    },
+    type:
+      typeof sourceSecret?.type === 'string'
+        ? sourceSecret.type
+        : 'kubernetes.io/tls',
+    data: {
+      'tls.crt': tlsCrt,
+      'tls.key': tlsKey,
+    },
+  };
+
+  const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), 'portal-gateway-secret-'));
+  const filePath = joinPath(tempDir, `${manifest.tenantSlug}-gateway-secret.yaml`);
+
+  try {
+    const yaml = dumpYaml(replica, { sortKeys: true, noRefs: true });
+    await fs.writeFile(filePath, yaml, 'utf8');
+    await runKubectl(['apply', '-f', filePath]);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to apply replicated TLS secret ${targetNamespace}/${secretName}`,
+      ),
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function deleteGatewaySecret(
+  secretName: string,
+  namespace: string,
+): Promise<void> {
+  await runKubectl([
+    'delete',
+    'secret',
+    secretName,
+    '-n',
+    namespace,
+    '--ignore-not-found',
+  ]);
 }
 
 function buildBaseLabels(

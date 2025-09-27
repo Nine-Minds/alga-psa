@@ -96,6 +96,9 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           onError(t('auth.invalidCredentials', 'Invalid email or password'))
         }
       } else if (result?.url) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[client-login-form] navigating to', result.url);
+        }
         window.location.href = result.url
       }
     } catch (error) {
