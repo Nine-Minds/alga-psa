@@ -90,6 +90,7 @@ export async function GET(
     let associatedContactId: string | null = null;
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
+    const associatedTicketIds: string[] = [];
 
     // 0. If it's a tenant logo, grant public access
     if (isTenantLogo) {
@@ -125,7 +126,18 @@ export async function GET(
               associatedUserId = assoc.entity_id;
             } else if (assoc.entity_type === 'tenant') {
               associatedTenantId = assoc.entity_id;
+            } else if (assoc.entity_type === 'ticket') {
+              associatedTicketIds.push(assoc.entity_id);
             }
+          }
+
+          if (!userCompanyId && user.contact_id) {
+            const contactRecord = await knex('contacts')
+              .select('company_id')
+              .where({ contact_name_id: user.contact_id, tenant })
+              .first();
+
+            userCompanyId = contactRecord?.company_id ?? null;
           }
 
           // Check if this is a tenant logo - all users in the tenant can view it
@@ -144,15 +156,7 @@ export async function GET(
             console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
           }
           // Check company association
-          else if (associatedCompanyId && user.contact_id) {
-            // Fetch the user's company_id via their contact record
-            const contactRecord = await knex('contacts')
-              .select('company_id')
-              .where({ contact_name_id: user.contact_id, tenant })
-              .first();
-
-            userCompanyId = contactRecord?.company_id ?? null;
-
+          else if (associatedCompanyId && userCompanyId) {
             // Allow access if the user's company matches the document's associated company
             if (userCompanyId === associatedCompanyId) {
               hasPermission = true;
@@ -171,6 +175,19 @@ export async function GET(
                   hasPermission = true;
                   console.log(`User ${user.user_id} granted access to user avatar ${fileId} within the same tenant`);
               }
+          }
+
+          if (!hasPermission && associatedTicketIds.length > 0 && userCompanyId) {
+            const ticketAccess = await knex('tickets')
+              .select('ticket_id')
+              .whereIn('ticket_id', associatedTicketIds)
+              .andWhere({ tenant, company_id: userCompanyId })
+              .first();
+
+            if (ticketAccess) {
+              hasPermission = true;
+              console.log(`User ${user.user_id} granted access to ticket-associated file ${fileId} via ticket ${ticketAccess.ticket_id}`);
+            }
           }
         }
     }
