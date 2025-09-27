@@ -67,11 +67,11 @@ const _middleware = auth((request) => {
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
       return NextResponse.redirect(loginUrl);
     } else if (request.auth.user?.user_type !== 'internal') {
-      // Prevent non-internal users (clients) from accessing MSP portal
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = '/auth/signin';
-      loginUrl.searchParams.set('error', 'AccessDenied');
-      return NextResponse.redirect(loginUrl);
+      // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
+      const redirectTarget = canonicalUrlEnv
+        ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
+        : new URL('/client-portal/dashboard', request.nextUrl);
+      return NextResponse.redirect(redirectTarget);
     }
   }
 
