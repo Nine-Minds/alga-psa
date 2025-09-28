@@ -12,9 +12,10 @@ interface Props {
   children: React.ReactNode;
   session: Session | null;
   needsOnboarding: boolean;
+  initialSidebarCollapsed: boolean;
 }
 
-export function MspLayoutClient({ children, session, needsOnboarding }: Props) {
+export function MspLayoutClient({ children, session, needsOnboarding, initialSidebarCollapsed }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const isOnboardingPage = pathname === "/msp/onboarding";
@@ -33,7 +34,7 @@ export function MspLayoutClient({ children, session, needsOnboarding }: Props) {
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
       <TagProvider>
-        {isOnboardingPage ? children : <DefaultLayout>{children}</DefaultLayout>}
+        {isOnboardingPage ? children : <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>{children}</DefaultLayout>}
       </TagProvider>
     </AppSessionProvider>
   );

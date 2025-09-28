@@ -9,16 +9,17 @@ import type { Session } from "next-auth";
 interface Props {
   children: React.ReactNode;
   session: Session | null;
+  initialSidebarCollapsed: boolean;
 }
 
-export function MspLayoutClient({ children, session }: Props) {
+export function MspLayoutClient({ children, session, initialSidebarCollapsed }: Props) {
   return (
     <AppSessionProvider session={session}>
       <TenantProvider>
         <ClientUIStateProvider
           initialPageState={{ id: 'ee-msp', title: 'EE MSP', components: [] }}
         >
-          <DefaultLayout>
+          <DefaultLayout initialSidebarCollapsed={initialSidebarCollapsed}>
             {children}
           </DefaultLayout>
         </ClientUIStateProvider>
