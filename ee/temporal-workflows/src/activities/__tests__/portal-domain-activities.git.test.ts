@@ -15,6 +15,7 @@ import {
 
 import type { PortalDomainActivityRecord } from '../../workflows/portal-domains/types.js';
 import type { PortalDomainConfig, CommandRunner } from '../portal-domain-activities.js';
+import type { Knex } from 'knex';
 
 import { applyPortalDomainResources } from '../portal-domain-activities';
 import { promises as fs } from 'node:fs';
@@ -23,6 +24,9 @@ describe('portal domain git integration helpers', () => {
   const commands: Array<{ command: string; args: string[]; cwd?: string }> = [];
   let tmpDir: string;
   const originalEnv = { ...process.env };
+  let baseVirtualService: any;
+  let baseVirtualServicePatches: Array<Record<string, any>>;
+  const secretStore = new Map<string, any>();
 
 const commandRunner: CommandRunner = async (command, args, options) => {
   commands.push({ command, args, cwd: options.cwd });
@@ -38,12 +42,76 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       return { stdout: ' M portal-domains/example.yaml\n', stderr: '' };
     }
   }
+  if (command === 'kubectl') {
+    if (args[0] === 'get' && args[1] === 'virtualservice') {
+      return {
+        stdout: JSON.stringify(baseVirtualService ?? {}),
+        stderr: '',
+      };
+    }
+    if (args[0] === 'patch' && args[1] === 'virtualservice') {
+      const payloadIndex = args.indexOf('-p');
+      if (payloadIndex >= 0) {
+        const patch = JSON.parse(args[payloadIndex + 1] ?? '{}');
+        baseVirtualServicePatches.push(patch);
+        if (patch?.spec?.hosts) {
+          baseVirtualService.spec = baseVirtualService.spec || {};
+          baseVirtualService.spec.hosts = patch.spec.hosts;
+        }
+        if (patch?.spec?.gateways) {
+          baseVirtualService.spec = baseVirtualService.spec || {};
+          baseVirtualService.spec.gateways = patch.spec.gateways;
+        }
+      }
+      return { stdout: '', stderr: '' };
+    }
+    if (args[0] === 'get' && args[1] === 'secret') {
+      const name = args[2];
+      const namespaceIndex = args.indexOf('-n');
+      const namespace = namespaceIndex >= 0 ? args[namespaceIndex + 1] : 'default';
+      const key = `${namespace}/${name}`;
+      if (!secretStore.has(key)) {
+        const secret = {
+          apiVersion: 'v1',
+          kind: 'Secret',
+          metadata: {
+            name,
+            namespace,
+            resourceVersion: '1',
+          },
+          type: 'kubernetes.io/tls',
+          data: {
+            'tls.crt': Buffer.from('certificate').toString('base64'),
+            'tls.key': Buffer.from('key').toString('base64'),
+          },
+        };
+        secretStore.set(key, secret);
+      }
+
+      return { stdout: JSON.stringify(secretStore.get(key)), stderr: '' };
+    }
+  }
   return { stdout: '', stderr: '' };
 };
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), 'portal-domains-test-'));
     commands.length = 0;
+    baseVirtualService = {
+      apiVersion: 'networking.istio.io/v1beta1',
+      kind: 'VirtualService',
+      metadata: {
+        name: 'alga-psa-vs',
+        namespace: 'msp',
+      },
+      spec: {
+        hosts: ['apps.algapsa.com'],
+        gateways: ['istio-system/alga-psa-gw'],
+        http: [],
+      },
+    };
+    baseVirtualServicePatches = [];
+    secretStore.clear();
     __setCommandRunnerForTests(commandRunner);
   });
 
@@ -113,6 +181,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
     process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
 
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
@@ -189,5 +258,74 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(newFiles).not.toContain('stale.yaml');
 
     expect(updates.length).toBeGreaterThan(0);
+  });
+
+  it('adds the new portal domain host and gateway to the base virtual service', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'active-id',
+        tenant: 'Tenant One',
+        domain: 'portal.mspmind.com',
+        canonical_host: 'tenantone.portal.algapsa.com',
+        status: 'active',
+        status_message: null,
+        verification_details: null,
+        certificate_secret_name: null,
+        last_synced_resource_version: null,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+    const renderedFiles = await listYamlFiles(manifestRoot);
+    expect(renderedFiles).toContain('tenantone.yaml');
+
+    expect(baseVirtualService.spec.hosts).toContain('portal.mspmind.com');
+    expect(baseVirtualService.spec.gateways).toContain(
+      'istio-system/portal-domain-gw-tenantone',
+    );
+    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 });
