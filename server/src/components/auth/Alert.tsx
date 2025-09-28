@@ -1,9 +1,9 @@
-import React from 'react'; 
+import React from 'react';
 
-import * as AlertDialog from '@radix-ui/react-alert-dialog'; 
+import * as AlertDialog from '@radix-ui/react-alert-dialog';
 import { ExclamationTriangleIcon, CheckCircledIcon, Cross2Icon, ExclamationTriangleIcon as ErrorIcon } from '@radix-ui/react-icons';
 
-import { AlertProps } from 'server/src/interfaces'; 
+import { AlertProps } from 'server/src/interfaces';
 
 
 const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) => {
@@ -19,14 +19,15 @@ const Alert: React.FC<AlertProps> = ({ type, title, message, isOpen, onClose }) 
             return { bgColor: 'bg-gray-100', textColor: 'bg-gray-600', hoverColor: 'hover:bg-gray-700', icon: <ExclamationTriangleIcon className="w-12 h-12 text-gray-500" /> };
         }
       };
-    
+
       const { bgColor, textColor, hoverColor, icon } = getAlertStyles();
-    
+
       return (
         <AlertDialog.Root open={isOpen}>
           <AlertDialog.Portal>
             <AlertDialog.Overlay className="fixed inset-0 bg-black/50" />
             <AlertDialog.Content className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+              <AlertDialog.Title className="sr-only">{title}</AlertDialog.Title>
               <div className="rounded-lg shadow-lg overflow-hidden min-w-52 max-w-80 w-full bg-gray-50 relative">
                 <div className={`p-4 ${bgColor} relative`}>
                   <AlertDialog.Action asChild>

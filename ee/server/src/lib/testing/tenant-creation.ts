@@ -5,7 +5,24 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
-import { hashPassword, generateSecurePassword } from '@/utils/encryption/encryption';
+import { hashPassword, generateSecurePassword } from '@shared/utils/encryption';
+
+async function deleteTenantScopedRows(
+  trx: Knex.Transaction,
+  table: string,
+  tenantId: string
+): Promise<void> {
+  const hasTenantColumn = await trx.schema.hasColumn(table, 'tenant');
+  if (hasTenantColumn) {
+    await trx(table).where('tenant', tenantId).del();
+    return;
+  }
+
+  const hasTenantIdColumn = await trx.schema.hasColumn(table, 'tenant_id');
+  if (hasTenantIdColumn) {
+    await trx(table).where('tenant_id', tenantId).del();
+  }
+}
 
 export interface TenantCreationInput {
   tenantName: string;
@@ -268,13 +285,15 @@ export async function createTenantComplete(
 export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> {
   return await db.transaction(async (trx) => {
     // Delete in proper order to avoid foreign key violations
-    await trx('user_roles').where('tenant', tenantId).del();
-    await trx('users').where('tenant', tenantId).del();
-    await trx('roles').where('tenant', tenantId).del();
-    await trx('tenant_companies').where('tenant', tenantId).del();
-    await trx('tenant_email_settings').where('tenant', tenantId).del();
-    await trx('companies').where('tenant', tenantId).del();
-    await trx('tenants').where('tenant', tenantId).del();
+    await deleteTenantScopedRows(trx, 'portal_domain_session_otts', tenantId);
+    await deleteTenantScopedRows(trx, 'portal_domains', tenantId);
+    await deleteTenantScopedRows(trx, 'user_roles', tenantId);
+    await deleteTenantScopedRows(trx, 'users', tenantId);
+    await deleteTenantScopedRows(trx, 'roles', tenantId);
+    await deleteTenantScopedRows(trx, 'tenant_companies', tenantId);
+    await deleteTenantScopedRows(trx, 'tenant_email_settings', tenantId);
+    await deleteTenantScopedRows(trx, 'companies', tenantId);
+    await deleteTenantScopedRows(trx, 'tenants', tenantId);
   });
 }
 

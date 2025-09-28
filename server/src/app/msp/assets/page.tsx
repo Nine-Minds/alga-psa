@@ -1,14 +1,14 @@
 import { listAssets } from 'server/src/lib/actions/asset-actions/assetActions';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { AssetListResponse } from 'server/src/interfaces/asset.interfaces';
 import AssetDashboard from 'server/src/components/assets/AssetDashboard';
 import { getConnection } from 'server/src/lib/db/db';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export default async function AssetsPage() {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
   }

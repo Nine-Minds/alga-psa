@@ -1,10 +1,10 @@
 import { getAsset } from 'server/src/lib/actions/asset-actions/assetActions';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import User from 'server/src/lib/models/user';
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import AssetDetails from 'server/src/components/assets/AssetDetails';
 import { getConnection } from 'server/src/lib/db/db';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 interface Props {
   params: Promise<{
@@ -14,7 +14,7 @@ interface Props {
 
 export default async function AssetPage({ params }: Props) {
   const resolvedParams = await params;
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
   }

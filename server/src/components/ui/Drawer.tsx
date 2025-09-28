@@ -2,7 +2,6 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
 import { Theme } from '@radix-ui/themes';
 
 import { useRegisterUIComponent } from "server/src/types/ui-reflection/useRegisterUIComponent";
@@ -57,13 +56,11 @@ const Drawer: React.FC<DrawerProps & AutomationProps> = ({
           <Dialog.Title className="sr-only">
             Dialog Content
           </Dialog.Title>
-          <AppSessionProvider>
-            <Theme>
-              <div className="p-6">
-                {children}
-              </div>
-            </Theme>
-          </AppSessionProvider>
+          <Theme>
+            <div className="p-6">
+              {children}
+            </div>
+          </Theme>
           {!hideCloseButton && (
             <button
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"

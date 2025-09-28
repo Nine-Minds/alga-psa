@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export default async function SignIn({
   searchParams,
@@ -9,7 +9,7 @@ export default async function SignIn({
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '';
 
-  const session = await auth();
+  const session = await getSession();
   if (session?.user) {
     redirect(callbackUrl || '/msp/dashboard');
   }

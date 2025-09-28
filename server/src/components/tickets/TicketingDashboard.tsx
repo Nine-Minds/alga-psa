@@ -186,6 +186,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return params.toString();
   }, [selectedChannel, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
 
+  const hasSyncedInitialFilters = useRef(false);
+
   useEffect(() => {
     const currentFilters: Partial<ITicketListFilters> = {
       channelId: selectedChannel === null ? undefined : selectedChannel,
@@ -198,7 +200,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
-    onFiltersChanged(currentFilters);
+    if (hasSyncedInitialFilters.current) {
+      onFiltersChanged(currentFilters);
+    } else {
+      hasSyncedInitialFilters.current = true;
+    }
   }, [
     selectedChannel, 
     selectedStatus, 

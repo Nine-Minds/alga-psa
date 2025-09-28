@@ -4,7 +4,6 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { Temporal } from '@js-temporal/polyfill';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { createTenantKnex } from 'server/src/lib/db';
 import { toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // import { auditLog } from 'server/src/lib/logging/auditLog';
@@ -21,6 +20,7 @@ import { getEventBus } from 'server/src/lib/eventBus'; // Import EventBus
 import { EventType as BusEventType } from '@alga-psa/shared/workflow/streams'; // For type safety
 import { EventSubmissionOptions } from '@alga-psa/shared/workflow/core'; // Import type directly via package export
 import { getSecretProviderInstance } from '@alga-psa/shared/core';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 // Interface definitions specific to manual updates (might move to interfaces file later)
 export interface ManualInvoiceUpdate {
@@ -46,7 +46,7 @@ interface ManualItemsUpdate {
 
 export async function finalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await auth();
+  const session = await getSession();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -259,7 +259,7 @@ export async function finalizeInvoiceWithKnex(
 
 export async function unfinalizeInvoice(invoiceId: string): Promise<void> {
   const { knex, tenant } = await createTenantKnex();
-  const session = await auth();
+  const session = await getSession();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -320,7 +320,7 @@ export async function updateInvoiceManualItems(
     throw new Error('No tenant found');
   }
 
-  const session = await auth();
+  const session = await getSession();
   const billingEngine = new BillingEngine();
 
   console.log('[updateInvoiceManualItems] session:', session);
@@ -624,7 +624,7 @@ export async function addManualItemsToInvoice(
   if (!tenant) {
     throw new Error('No tenant found');
   }
-  const session = await auth();
+  const session = await getSession();
 
   if (!session?.user?.id) {
     throw new Error('Unauthorized');

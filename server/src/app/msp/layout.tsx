@@ -1,33 +1,33 @@
-"use client";
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
-import DefaultLayout from "server/src/components/layout/DefaultLayout";
-import { TagProvider } from "server/src/context/TagContext";
-import { OnboardingProvider } from "server/src/components/onboarding/OnboardingProvider";
-import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
-import { usePathname } from 'next/navigation';
+import { cookies } from "next/headers";
+import { getSession } from "server/src/lib/auth/getSession";
+import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
+import { MspLayoutClient } from "./MspLayoutClient";
 
-export default function MspLayout({
+export default async function MspLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const pathname = usePathname();
-  const isOnboardingPage = pathname === '/msp/onboarding';
-
+  const session = await getSession();
+  const cookieStore = await cookies();
+  const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
+  const initialSidebarCollapsed = sidebarCookie === 'true';
+  let needsOnboarding = false;
+  try {
+    const tenantSettings = await getTenantSettings();
+    if (tenantSettings) {
+      needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+    }
+  } catch (error) {
+    console.error('Failed to load tenant settings for onboarding check:', error);
+  }
   return (
-    <AppSessionProvider>
-      <PostHogUserIdentifier />
-      <TagProvider>
-        <OnboardingProvider>
-          {isOnboardingPage ? (
-            children
-          ) : (
-            <DefaultLayout>
-              {children}
-            </DefaultLayout>
-          )}
-        </OnboardingProvider>
-      </TagProvider>
-    </AppSessionProvider>
+    <MspLayoutClient
+      session={session}
+      needsOnboarding={needsOnboarding}
+      initialSidebarCollapsed={initialSidebarCollapsed}
+    >
+      {children}
+    </MspLayoutClient>
   );
 }

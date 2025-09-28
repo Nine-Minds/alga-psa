@@ -3,10 +3,10 @@
 import { withTransaction } from '@shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { ICompanyBillingPlan } from '../../../interfaces/billing.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate, toISODate } from '../../utils/dateTimeUtils';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper function to get the latest invoiced end date
 async function getLatestInvoicedEndDate(db: any, tenant: string, companyBillingPlanId: string): Promise<Date | null> {
@@ -104,7 +104,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, companyBillingP
 
 
 export async function getCompanyBillingPlan(companyId: string): Promise<ICompanyBillingPlan[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -135,7 +135,7 @@ export async function getCompanyBillingPlan(companyId: string): Promise<ICompany
 }
 
 export async function updateCompanyBillingPlan(companyBillingPlanId: string, updates: Partial<ICompanyBillingPlan>): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -161,7 +161,7 @@ export async function updateCompanyBillingPlan(companyBillingPlanId: string, upd
 }
 
 export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan, 'company_billing_plan_id' | 'tenant'>): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -225,7 +225,7 @@ export async function addCompanyBillingPlan(newBilling: Omit<ICompanyBillingPlan
 }
 
 export async function removeCompanyBillingPlan(companyBillingPlanId: string): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -275,7 +275,7 @@ export async function removeCompanyBillingPlan(companyBillingPlanId: string): Pr
 }
 
 export async function editCompanyBillingPlan(companyBillingPlanId: string, updates: Partial<ICompanyBillingPlan>): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

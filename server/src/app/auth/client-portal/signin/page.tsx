@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import ClientPortalSignIn from 'server/src/components/auth/ClientPortalSignIn';
 import { getTenantBrandingByDomain } from 'server/src/lib/actions/tenant-actions/getTenantBrandingByDomain';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export default async function ClientSignInPage({
   searchParams,
@@ -11,7 +11,7 @@ export default async function ClientSignInPage({
 }) {
   const params = await searchParams;
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/client-portal/dashboard';
-  const session = await auth();
+  const session = await getSession();
   if (session?.user) {
     redirect(callbackUrl);
   }

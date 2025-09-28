@@ -9,7 +9,6 @@ import {
   ITimeEntryWithWorkItem,
 } from 'server/src/interfaces/timeEntry.interfaces';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { v4 as uuidv4 } from 'uuid';
@@ -24,6 +23,7 @@ import {
 import { getCompanyIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise<ITimeEntryWithWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -219,7 +219,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
   const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
 
   const {knex: db, tenant} = await createTenantKnex();
-  const session = await auth();
+  const session = await getSession();
 
   if (!tenant) {
     throw new Error("Tenant not found");
@@ -763,7 +763,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
   }
 
   const {knex: db, tenant} = await createTenantKnex();
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
   }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { createTenantKnex } from 'server/src/lib/db';
 import DocumentBlockContent from 'server/src/lib/models/documentBlockContent';
 import Document from 'server/src/lib/models/document';
@@ -11,10 +10,11 @@ import { createPDFGenerationService } from 'server/src/services/pdf-generation.s
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ fileId: string }> }) {
   const resolvedParams = await params;
-  const session = await auth();
+  const session = await getSession();
   // Session check is important for both PDF generation and direct download
   if (!session || !session.user || !session.user.tenant) {
     logger.warn(`Unauthorized attempt to download document/generate PDF for ID: ${resolvedParams.fileId}`);
