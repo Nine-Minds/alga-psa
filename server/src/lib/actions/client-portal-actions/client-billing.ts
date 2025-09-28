@@ -1,6 +1,5 @@
 'use server';
 
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { getConnection } from 'server/src/lib/db/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
@@ -22,9 +21,10 @@ import { InvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoic
 import Invoice from 'server/src/lib/models/invoice';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null> {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -68,7 +68,7 @@ export async function getClientBillingPlan(): Promise<ICompanyBillingPlan | null
  * Fetch all invoices for the current client
  */
 export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -99,7 +99,7 @@ export async function getClientInvoices(): Promise<InvoiceViewModel[]> {
  * Get invoice details by ID
  */
 export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceViewModel> {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -147,7 +147,7 @@ export async function getClientInvoiceById(invoiceId: string): Promise<InvoiceVi
  * Get invoice line items
  */
 export async function getClientInvoiceLineItems(invoiceId: string) {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -195,7 +195,7 @@ export async function getClientInvoiceLineItems(invoiceId: string) {
  * Get invoice templates
  */
 export async function getClientInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant) {
     throw new Error('Unauthorized');
@@ -214,7 +214,7 @@ export async function getClientInvoiceTemplates(): Promise<IInvoiceTemplate[]> {
  * Download invoice PDF
  */
 export async function downloadClientInvoicePdf(invoiceId: string) {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -262,7 +262,7 @@ export async function downloadClientInvoicePdf(invoiceId: string) {
  * Send invoice email
  */
 export async function sendClientInvoiceEmail(invoiceId: string) {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');
@@ -310,7 +310,7 @@ export async function getCurrentUsage(): Promise<{
   bucketUsage: IBucketUsage | null;
   services: IService[];
 }> {
-  const session = await auth();
+  const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.companyId) {
     throw new Error('Unauthorized');

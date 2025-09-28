@@ -6,15 +6,15 @@ import { Knex } from 'knex';
 import CompanyPlanBundle from 'server/src/lib/models/companyPlanBundle';
 import { ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { Temporal } from '@js-temporal/polyfill';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 /**
  * Get all active bundles for a company
  */
 export async function getCompanyBundles(companyId: string): Promise<ICompanyPlanBundle[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -40,7 +40,7 @@ export async function getCompanyBundles(companyId: string): Promise<ICompanyPlan
  * Get a specific company bundle by ID
  */
 export async function getCompanyBundleById(companyBundleId: string): Promise<ICompanyPlanBundle | null> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -66,7 +66,7 @@ export async function getCompanyBundleById(companyBundleId: string): Promise<ICo
  * Get detailed information about a company's bundle
  */
 export async function getDetailedCompanyBundle(companyBundleId: string): Promise<any | null> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -97,7 +97,7 @@ export async function assignBundleToCompany(
   startDate: string,
   endDate: string | null = null
 ): Promise<ICompanyPlanBundle> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -131,7 +131,7 @@ export async function updateCompanyBundle(
   companyBundleId: string, 
   updateData: Partial<ICompanyPlanBundle>
 ): Promise<ICompanyPlanBundle> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -218,7 +218,7 @@ export async function updateCompanyBundle(
  * Deactivate a company's bundle assignment
  */
 export async function deactivateCompanyBundle(companyBundleId: string): Promise<ICompanyPlanBundle> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -244,7 +244,7 @@ export async function deactivateCompanyBundle(companyBundleId: string): Promise<
  * Get all billing plans associated with a company's bundle
  */
 export async function getCompanyBundlePlans(companyBundleId: string): Promise<any[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -271,7 +271,7 @@ export async function getCompanyBundlePlans(companyBundleId: string): Promise<an
  * This creates company_billing_plan entries for each plan in the bundle
  */
 export async function applyBundleToCompany(companyBundleId: string): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

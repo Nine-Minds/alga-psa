@@ -4,14 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 (globalThis as unknown as { React?: typeof React }).React = React;
 
 const redirectMock = vi.fn();
-const authMock = vi.fn();
+const getSessionMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
 }));
 
-vi.mock('server/src/app/api/auth/[...nextauth]/auth', () => ({
-  auth: authMock,
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: getSessionMock,
 }));
 
 vi.mock('server/src/components/auth/MspSignIn', () => ({
@@ -24,11 +24,11 @@ const { default: MspSignInPage } = await import('server/src/app/auth/msp/signin/
 describe('MspSignInPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    authMock.mockReset();
+    getSessionMock.mockReset();
   });
 
   it('redirects authenticated users to the MSP dashboard when no callback is provided', async () => {
-    authMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'client' } });
+    getSessionMock.mockResolvedValue({ user: { id: 'user-1', user_type: 'client' } });
 
     await MspSignInPage({ searchParams: Promise.resolve({}) });
 
@@ -36,7 +36,7 @@ describe('MspSignInPage', () => {
   });
 
   it('redirects authenticated users to the provided callback when present', async () => {
-    authMock.mockResolvedValue({ user: { id: 'user-2', user_type: 'client' } });
+    getSessionMock.mockResolvedValue({ user: { id: 'user-2', user_type: 'client' } });
 
     await MspSignInPage({ searchParams: Promise.resolve({ callbackUrl: '/msp/tickets' }) });
 
@@ -44,7 +44,7 @@ describe('MspSignInPage', () => {
   });
 
   it('renders the sign-in component for unauthenticated users', async () => {
-    authMock.mockResolvedValue(null);
+    getSessionMock.mockResolvedValue(null);
 
     const result = await MspSignInPage({ searchParams: Promise.resolve({}) });
 

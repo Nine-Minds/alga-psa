@@ -7,13 +7,13 @@ import { validateData } from 'server/src/lib/utils/validation';
 import { ITicket, ITicketListItem } from 'server/src/interfaces/ticket.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { z } from 'zod';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import { ServerEventPublisher } from '../../adapters/serverEventPublisher';
 import { ServerAnalyticsTracker } from '../../adapters/serverAnalyticsTracker';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),
@@ -23,7 +23,7 @@ const clientTicketSchema = z.object({
 
 export async function getClientTickets(status: string): Promise<ITicketListItem[]> {
   try {
-    const session = await auth();
+    const session = await getSession();
     console.log('Debug - Full session:', JSON.stringify(session?.user, null, 2));
 
     if (!session?.user) {
@@ -184,7 +184,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
 
 export async function getClientTicketDetails(ticketId: string): Promise<ITicket> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -393,7 +393,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
 
 export async function addClientTicketComment(ticketId: string, content: string, isInternal: boolean = false, isResolution: boolean = false): Promise<boolean> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -472,7 +472,7 @@ export async function addClientTicketComment(ticketId: string, content: string, 
 
 export async function updateClientTicketComment(commentId: string, updates: Partial<IComment>): Promise<void> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -564,7 +564,7 @@ export async function updateClientTicketComment(commentId: string, updates: Part
 
 export async function updateTicketStatus(ticketId: string, newStatusId: string): Promise<void> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -645,7 +645,7 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
 
 export async function deleteClientTicketComment(commentId: string): Promise<void> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }
@@ -721,7 +721,7 @@ export async function deleteClientTicketComment(commentId: string): Promise<void
 
 export async function createClientTicket(data: FormData): Promise<ITicket> {
   try {
-    const session = await auth();
+    const session = await getSession();
     if (!session?.user) {
       throw new Error('Not authenticated');
     }

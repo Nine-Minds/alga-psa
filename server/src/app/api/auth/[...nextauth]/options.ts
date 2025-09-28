@@ -685,6 +685,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 return url;
             }
 
+            console.log('[redirect]');
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             // if the url doesn't include the host, add it
             if (url.startsWith('/')) {
@@ -973,6 +974,7 @@ export const options: NextAuthConfig = {
 
                 if (extendedUser?.user_type === 'client' && callbackUrl && canonicalBaseUrl) {
                     try {
+                        console.log('[signIn] computing vanity redirect');
                         const vanityRedirect = await computeVanityRedirect({
                             url: callbackUrl,
                             baseUrl: canonicalBaseUrl,
@@ -1135,6 +1137,7 @@ export const options: NextAuthConfig = {
                 return url;
             }
 
+            console.log('[redirect] in callbacks');
             const vanityUrl = await computeVanityRedirect({ url, baseUrl, token: null });
             return vanityUrl ?? url;
         },

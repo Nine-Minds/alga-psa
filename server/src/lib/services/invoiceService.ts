@@ -1,6 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex } from 'server/src/lib/db';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
@@ -12,6 +11,7 @@ import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
 import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/company-actions/companyTaxRateActions'; // Import the new lookup function
+import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper interface for tax calculation
 interface ITaxableEntity {
@@ -32,7 +32,7 @@ interface InvoiceContext {
 }
 
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

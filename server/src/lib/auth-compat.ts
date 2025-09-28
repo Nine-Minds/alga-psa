@@ -1,10 +1,10 @@
-// Compatibility layer for NextAuth v5 migration
-import { auth } from '../app/api/auth/[...nextauth]/auth';
+// Compatibility layer for NextAuth v5 migration using the edge-safe session helper
+import { getSession } from './auth/getSession';
 
 // This function provides backwards compatibility for getServerSession
 // It can be imported as getServerSession from this file instead of next-auth
 export async function getServerSession() {
-  return await auth();
+  return await getSession();
 }
 
-export { auth };
+export const auth = getSession;

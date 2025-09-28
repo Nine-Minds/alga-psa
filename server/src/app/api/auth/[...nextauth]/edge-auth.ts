@@ -30,6 +30,11 @@ export const { auth } = NextAuth({
         (session.user as any).user_type = token.user_type as string | undefined;
         (session.user as any).companyId = token.companyId as string | undefined;
         (session.user as any).contactId = token.contactId as string | undefined;
+        (session.user as any).email = token.email as string | undefined;
+        (session.user as any).name = token.name as string | undefined;
+        (session.user as any).username = token.username as string | undefined;
+        (session.user as any).image = token.image as string | undefined;
+        (session.user as any).proToken = token.proToken as string | undefined;
       }
       return session as any;
     },

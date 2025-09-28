@@ -1,9 +1,9 @@
 'use server'
 
 import { createTenantKnex } from "server/src/lib/db";
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export interface BillingSettings {
   zeroDollarInvoiceHandling: 'normal' | 'finalized';
@@ -14,7 +14,7 @@ export interface BillingSettings {
 }
 
 export async function getDefaultBillingSettings(): Promise<BillingSettings> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
@@ -51,7 +51,7 @@ export async function getDefaultBillingSettings(): Promise<BillingSettings> {
 }
 
 export async function updateDefaultBillingSettings(data: BillingSettings): Promise<{ success: boolean }> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
@@ -94,7 +94,7 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
 }
 
 export async function getCompanyBillingSettings(companyId: string): Promise<BillingSettings | null> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
@@ -130,7 +130,7 @@ export async function updateCompanyBillingSettings(
   companyId: string,
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean }> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
   }
