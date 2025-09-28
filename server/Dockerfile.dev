@@ -1,7 +1,8 @@
 FROM node:alpine AS server
 
-# Build argument to control edition
+# Build arguments to control edition and provide build-only auth secret fallback
 ARG INCLUDE_EE=false
+ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
 
 # Install required system dependencies (rarely changes)
 RUN apk add --no-cache \
@@ -56,9 +57,9 @@ COPY scripts/ ./scripts/
 # Clean any existing build artifacts and build the Next.js application with conditional env var
 RUN rm -rf .next && \
     if [ "$INCLUDE_EE" = "true" ]; then \
-        npm run build:enterprise; \
+        NEXTAUTH_SECRET="$NEXTAUTH_SECRET_BUILD" AUTH_SECRET="$NEXTAUTH_SECRET_BUILD" npm run build:enterprise; \
     else \
-        npm run build; \
+        NEXTAUTH_SECRET="$NEXTAUTH_SECRET_BUILD" AUTH_SECRET="$NEXTAUTH_SECRET_BUILD" npm run build; \
     fi
 
 # Copy and make entrypoint executable (rarely changes)
@@ -68,4 +69,3 @@ RUN chmod +x /app/entrypoint.sh
 EXPOSE 3000
 ENV NODE_ENV=production
 ENTRYPOINT ["/app/entrypoint.sh"]
-

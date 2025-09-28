@@ -23,6 +23,8 @@ COPY server/src/invoice-templates/assemblyscript ./server/src/invoice-templates/
 
 # Builder stage for compiling the application
 FROM deps AS builder
+# Fallback secret values ensure edge-auth guards pass during build; real values come from runtime secrets.
+ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
 # Copy all project files and build the server
 
 WORKDIR /app
@@ -52,7 +54,7 @@ RUN npm install
 # Increase Node.js memory limit for the build process
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-RUN npm run build
+RUN NEXTAUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" AUTH_SECRET="${NEXTAUTH_SECRET_BUILD}" npm run build
 
 WORKDIR /app/server
 
