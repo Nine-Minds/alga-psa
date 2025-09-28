@@ -1,4 +1,5 @@
 import { getSession } from "server/src/lib/auth/getSession";
+import { getTenantSettings } from "server/src/lib/actions/tenant-settings-actions/tenantSettingsActions";
 import { MspLayoutClient } from "./MspLayoutClient";
 
 export default async function MspLayout({
@@ -7,8 +8,17 @@ export default async function MspLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
+  let needsOnboarding = false;
+  try {
+    const tenantSettings = await getTenantSettings();
+    if (tenantSettings) {
+      needsOnboarding = !tenantSettings.onboarding_completed && !tenantSettings.onboarding_skipped;
+    }
+  } catch (error) {
+    console.error('Failed to load tenant settings for onboarding check:', error);
+  }
   return (
-    <MspLayoutClient session={session}>
+    <MspLayoutClient session={session} needsOnboarding={needsOnboarding}>
       {children}
     </MspLayoutClient>
   );
