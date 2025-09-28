@@ -17,7 +17,8 @@ export default async function MspLayout({
   children: React.ReactNode;
 }>) {
   const session = await getSession();
-  const sidebarCookie = cookies().get('sidebar_collapsed')?.value;
+  const cookieStore = await cookies();
+  const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
   const initialSidebarCollapsed = sidebarCookie === 'true';
   return (
     <MspLayoutClient session={session} initialSidebarCollapsed={initialSidebarCollapsed}>
