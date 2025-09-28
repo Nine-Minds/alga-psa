@@ -5,6 +5,7 @@ import { ITimeSheet, ITimeSheetApproval, ITimeSheetApprovalView, ITimeSheetWithU
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Users } from 'lucide-react';
@@ -167,16 +168,17 @@ export default function ManagerApprovalDashboard({ currentUser }: ManagerApprova
             dataIndex: 'select',
             width: '10%',
             render: (_, record) => (
-              <input
-                type="checkbox"
-                checked={selectedTimeSheets.includes(record.id)}
-                onChange={() => handleSelectTimeSheet(record.id)}
-                onClick={(e) => e.stopPropagation()}
-                disabled={
-                  record.approval_status === 'CHANGES_REQUESTED' ||
-                  record.approval_status === 'APPROVED'
-                }
-              />
+              <div className="[&>div]:mb-0" onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  id={`timesheet-select-${record.id}`}
+                  checked={selectedTimeSheets.includes(record.id)}
+                  onChange={() => handleSelectTimeSheet(record.id)}
+                  disabled={
+                    record.approval_status === 'CHANGES_REQUESTED' ||
+                    record.approval_status === 'APPROVED'
+                  }
+                />
+              </div>
             )
           },
           {

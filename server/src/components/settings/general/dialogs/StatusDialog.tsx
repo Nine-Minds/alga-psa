@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { IStatus, ItemType } from 'server/src/interfaces/status.interface';
 import { createStatus, updateStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { toast } from 'react-hot-toast';
@@ -165,32 +166,20 @@ export const StatusDialog: React.FC<StatusDialogProps> = ({
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <input
-                  type="checkbox"
-                  id="status-is-closed"
-                  checked={isClosed}
-                  onChange={(e) => setIsClosed(e.target.checked)}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                />
-                <label htmlFor="status-is-closed" className="text-sm text-gray-700">
-                  Mark as closed status
-                </label>
-              </div>
+              <Checkbox
+                id="status-is-closed"
+                label="Mark as closed status"
+                checked={isClosed}
+                onChange={(e) => setIsClosed((e.target as HTMLInputElement).checked)}
+              />
               
               {selectedStatusType === 'ticket' && (
-                <div className="flex items-center space-x-3">
-                  <input
-                    type="checkbox"
-                    id="status-is-default"
-                    checked={isDefault}
-                    onChange={(e) => setIsDefault(e.target.checked)}
-                    className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                  />
-                  <label htmlFor="status-is-default" className="text-sm text-gray-700">
-                    Set as default status for new tickets
-                  </label>
-                </div>
+                <Checkbox
+                  id="status-is-default"
+                  label="Set as default status for new tickets"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault((e.target as HTMLInputElement).checked)}
+                />
               )}
             </div>
           </div>

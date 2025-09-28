@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface ClientPortalLanguageConfigProps {
   /** Current tenant ID */
@@ -149,24 +150,27 @@ export function ClientPortalLanguageConfig({
           </p>
           <div className="mt-2 space-y-2">
             {LOCALE_CONFIG.supportedLocales.map((locale) => (
-              <label
+              <div
                 key={locale}
-                className="flex items-center space-x-3 cursor-pointer"
+                className="flex items-center space-x-3"
               >
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded disabled:opacity-50"
-                  checked={enabledLocales.has(locale)}
-                  onChange={() => toggleLocale(locale)}
-                  disabled={isSaving || locale === selectedLocale}
-                />
-                <span className="text-sm text-gray-700">
-                  {LOCALE_CONFIG.localeNames[locale]} ({locale})
-                  {locale === selectedLocale && (
-                    <span className="ml-2 text-xs text-gray-500">(default)</span>
-                  )}
-                </span>
-              </label>
+                <div className="[&>div]:mb-0">
+                  <Checkbox
+                    id={`locale-${locale}`}
+                    label={
+                      <span className="text-sm text-gray-700">
+                        {LOCALE_CONFIG.localeNames[locale]} ({locale})
+                        {locale === selectedLocale && (
+                          <span className="ml-2 text-xs text-gray-500">(default)</span>
+                        )}
+                      </span>
+                    }
+                    checked={enabledLocales.has(locale)}
+                    onChange={() => toggleLocale(locale)}
+                    disabled={isSaving || locale === selectedLocale}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         </div>

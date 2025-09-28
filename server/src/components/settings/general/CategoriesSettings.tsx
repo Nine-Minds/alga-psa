@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical, CornerDownRight } from "lucide-react";
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { 
-  getAllCategories, 
+import {
+  getAllCategories,
   createCategory,
   updateCategory,
   deleteCategory
@@ -16,6 +16,7 @@ import { getAvailableReferenceData, importReferenceData, checkImportConflicts, I
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Label } from 'server/src/components/ui/Label';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -628,19 +629,17 @@ const CategoriesSettings: React.FC = () => {
                 </div>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8">
-                      <input
+                    <div className="w-8 [&>div]:mb-0">
+                      <Checkbox
                         id="select-all-categories-checkbox"
-                        type="checkbox"
                         checked={availableReferenceCategories.length > 0 && selectedImportCategories.length === availableReferenceCategories.length}
                         onChange={(e) => {
-                          if (e.target.checked) {
+                          if ((e.target as HTMLInputElement).checked) {
                             setSelectedImportCategories(availableReferenceCategories.map(cat => cat.id));
                           } else {
                             setSelectedImportCategories([]);
                           }
                         }}
-                        className="w-4 h-4"
                       />
                     </div>
                     <div className="flex-1">Name</div>
@@ -693,13 +692,12 @@ const CategoriesSettings: React.FC = () => {
                             isSubcategory ? 'pl-8' : ''
                           }`}
                         >
-                          <div className="w-8">
-                            <input
+                          <div className="w-8 [&>div]:mb-0">
+                            <Checkbox
                               id={`select-category-${category.id}-checkbox`}
-                              type="checkbox"
                               checked={selectedImportCategories.includes(category.id)}
                               onChange={(e) => {
-                                if (e.target.checked) {
+                                if ((e.target as HTMLInputElement).checked) {
                                   const categoriesToAdd = [category.id];
                                   
                                   // If selecting a subcategory, ensure parent is also selected
@@ -733,7 +731,6 @@ const CategoriesSettings: React.FC = () => {
                                   );
                                 }
                               }}
-                              className="w-4 h-4"
                             />
                           </div>
                           <div className="flex-1 flex items-center">

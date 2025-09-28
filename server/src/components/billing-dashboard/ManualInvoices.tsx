@@ -5,6 +5,7 @@ import { getInvoiceLineItems } from 'server/src/lib/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from 'server/src/lib/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from 'server/src/lib/actions/manualInvoiceActions'; // Import and alias
 import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card } from '../ui/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
 import { CompanyPicker } from '../companies/CompanyPicker';
@@ -691,14 +692,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               {!invoice && !currentInvoiceData && (
                 <div className="mb-6 space-y-4">
                   <div className="flex items-center">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       id="is-prepayment"
+                      label="This is a prepayment invoice (creates credit)"
                       checked={isPrepayment}
-                      onChange={(e) => setIsPrepayment(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      onChange={(e) => setIsPrepayment((e.target as HTMLInputElement).checked)}
                     />
-                    <label htmlFor="is-prepayment" className="ml-2 block text-sm text-gray-700">This is a prepayment invoice (creates credit)</label>
                   </div>
                   {isPrepayment && (
                     <div>

@@ -4,15 +4,16 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, Lock, MoreVertical } from "lucide-react";
 import { IInteractionType, ISystemInteractionType } from 'server/src/interfaces/interaction.interfaces';
-import { 
-  getAllInteractionTypes, 
+import {
+  getAllInteractionTypes,
   deleteInteractionType,
-  getSystemInteractionTypes 
+  getSystemInteractionTypes
 } from 'server/src/lib/actions/interactionTypeActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -296,12 +297,12 @@ const InteractionTypesSettings: React.FC = () => {
                         key={type.type_id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                       >
-                        <div className="w-8">
-                          <input
-                            type="checkbox"
+                        <div className="w-8 [&>div]:mb-0">
+                          <Checkbox
+                            id={`import-type-${type.type_id}`}
                             checked={selectedImportTypes.includes(type.type_id)}
                             onChange={(e) => {
-                              if (e.target.checked) {
+                              if ((e.target as HTMLInputElement).checked) {
                                 setSelectedImportTypes([...selectedImportTypes, type.type_id]);
                               } else {
                                 setSelectedImportTypes(selectedImportTypes.filter(id => id !== type.type_id));

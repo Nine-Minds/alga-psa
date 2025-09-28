@@ -8,6 +8,7 @@ import { MoreVertical, Pencil, Trash2, ExternalLink, Shield } from "lucide-react
 import { ReflectedDropdownMenu } from 'server/src/components/ui/ReflectedDropdownMenu';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
  import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
@@ -45,23 +46,17 @@ interface CompanyCheckboxProps {
 
 const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
   const checkboxId = `company-checkbox-${companyId}`;
-  
-   useRegisterChild<FormFieldComponent>({
-     id: checkboxId,
-     type: 'formField',
-     label: 'Select Company',
-     value: checked ? 'true' : 'false',
-     fieldType: 'checkbox'
-   });
 
+  // The Checkbox component already handles registration internally
   return (
-    <input
-      type="checkbox"
-      data-automation-id={checkboxId}
-      className="form-checkbox h-4 w-4 cursor-pointer"
-      checked={checked}
-      onChange={onChange}
-    />
+    <div className="[&>div]:mb-0">
+      <Checkbox
+        id={checkboxId}
+        checked={checked}
+        onChange={onChange}
+        className="cursor-pointer"
+      />
+    </div>
   );
 };
 

@@ -4,8 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
 import { IChannel, CategoryType, PriorityType } from 'server/src/interfaces/channel.interface';
-import { 
-  getAllChannels, 
+import {
+  getAllChannels,
   createChannel,
   updateChannel,
   deleteChannel
@@ -14,6 +14,7 @@ import { getAvailableReferenceData, importReferenceData, checkImportConflicts, I
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Label } from 'server/src/components/ui/Label';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -546,18 +547,17 @@ const ChannelsSettings: React.FC = () => {
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8">
-                      <input
-                        type="checkbox"
+                    <div className="w-8 [&>div]:mb-0">
+                      <Checkbox
+                        id="select-all-channels"
                         checked={availableReferenceChannels.length > 0 && selectedImportChannels.length === availableReferenceChannels.length}
                         onChange={(e) => {
-                          if (e.target.checked) {
+                          if ((e.target as HTMLInputElement).checked) {
                             setSelectedImportChannels(availableReferenceChannels.map(ch => ch.id));
                           } else {
                             setSelectedImportChannels([]);
                           }
                         }}
-                        className="w-4 h-4"
                       />
                     </div>
                     <div className="flex-1">Name</div>
@@ -585,18 +585,17 @@ const ChannelsSettings: React.FC = () => {
                         key={channel.id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
-                        <div className="w-8">
-                          <input
-                            type="checkbox"
+                        <div className="w-8 [&>div]:mb-0">
+                          <Checkbox
+                            id={`import-channel-${channel.id}`}
                             checked={selectedImportChannels.includes(channel.id)}
                             onChange={(e) => {
-                              if (e.target.checked) {
+                              if ((e.target as HTMLInputElement).checked) {
                                 setSelectedImportChannels([...selectedImportChannels, channel.id]);
                               } else {
                                 setSelectedImportChannels(selectedImportChannels.filter(id => id !== channel.id));
                               }
                             }}
-                            className="w-4 h-4"
                           />
                         </div>
                         <div className="flex-1">{channel.channel_name}</div>
