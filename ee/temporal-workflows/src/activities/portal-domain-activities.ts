@@ -611,23 +611,39 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     nextStatus = 'certificate_failed';
     nextMessage = certificate.failureMessage;
   } else if (certificate.ready) {
-    const gatewayExists = await kubectlResourceExists(
-      'gateway',
-      manifest.gatewayName,
-      config.gatewayNamespace,
-    );
+    let secretSyncFailed = false;
+    if (config.gatewayNamespace !== config.certificateNamespace) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        secretSyncFailed = true;
+        nextStatus = 'certificate_failed';
+        nextMessage = formatErrorMessage(
+          error,
+          `Failed to replicate TLS secret into ${config.gatewayNamespace}`,
+        );
+      }
+    }
+
+    if (!secretSyncFailed) {
+      const gatewayExists = await kubectlResourceExists(
+        'gateway',
+        manifest.gatewayName,
+        config.gatewayNamespace,
+      );
     const virtualServiceExists = await kubectlResourceExists(
       'virtualservice',
       manifest.virtualServiceName,
       config.virtualServiceNamespace,
     );
 
-    if (gatewayExists && virtualServiceExists) {
-      nextStatus = 'active';
-      nextMessage = 'Your domain is live and protected by HTTPS.';
-    } else {
-      nextStatus = 'deploying';
-      nextMessage = 'SSL is ready. Finishing the domain routing setup...';
+      if (gatewayExists && virtualServiceExists) {
+        nextStatus = 'active';
+        nextMessage = 'Your domain is live and protected by HTTPS.';
+      } else {
+        nextStatus = 'deploying';
+        nextMessage = 'SSL is ready. Finishing the domain routing setup...';
+      }
     }
   } else {
     nextStatus = 'certificate_issuing';
