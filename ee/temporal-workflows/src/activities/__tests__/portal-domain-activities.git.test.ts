@@ -526,6 +526,18 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       (gateway: string) => gateway === 'istio-system/portal-domain-gw-active-id',
     ).length;
     expect(gatewayOccurrences).toBe(1);
+    const redirectOccurrences = baseVirtualService.spec.http.filter((route: any) => {
+      if (!route?.redirect || !Array.isArray(route?.match)) {
+        return false;
+      }
+      return route.redirect.uri === '/client-portal/dashboard' &&
+        route.match.some(
+          (condition: any) =>
+            condition?.authority?.exact === 'portal.mspmind.com' &&
+            condition?.uri?.exact === '/',
+        );
+    }).length;
+    expect(redirectOccurrences).toBe(1);
   });
 
   it('removes managed hosts and gateways when no domains remain', async () => {
