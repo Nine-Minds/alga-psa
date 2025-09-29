@@ -10,14 +10,14 @@ import { AlertCircle, ArrowLeft, Save } from 'lucide-react';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { getPlanBundleById, updatePlanBundle } from 'server/src/lib/actions/planBundleActions';
 import { useTenant } from 'server/src/components/TenantProvider';
-import PlanBundleHeader from './PlanBundleHeader';
-import PlanBundleForm from './PlanBundleForm';
-import PlanBundlePlans from './PlanBundlePlans';
+import ContractHeader from './ContractHeader';
+import ContractForm from './ContractForm';
+import ContractPlans from './ContractPlans';
 
-const PlanBundleDetail: React.FC = () => {
+const ContractDetail: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const bundleId = searchParams?.get('bundleId') as string;
+  const bundleId = searchParams?.get('contractId') as string;
   const tenant = useTenant();
   
   const [bundle, setBundle] = useState<IPlanBundle | null>(null);
@@ -43,17 +43,17 @@ const PlanBundleDetail: React.FC = () => {
       if (bundleData) {
         setBundle(bundleData);
       } else {
-        setError('Plan bundle not found');
+        setError('Contract not found');
       }
     } catch (error) {
-      console.error('Error fetching bundle:', error);
-      setError('Failed to load plan bundle');
+      console.error('Error fetching contract:', error);
+      setError('Failed to load contract');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleBundleUpdated = () => {
+  const handleContractUpdated = () => {
     fetchBundle();
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
@@ -61,7 +61,7 @@ const PlanBundleDetail: React.FC = () => {
 
 
   if (isLoading) {
-    return <div className="p-4">Loading bundle details...</div>;
+    return <div className="p-4">Loading contract details...</div>;
   }
 
   if (error || !bundle) {
@@ -70,11 +70,11 @@ const PlanBundleDetail: React.FC = () => {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {error || 'Plan bundle not found'}
+            {error || 'Contract not found'}
           </AlertDescription>
         </Alert>
-        <BackNav href="/msp/billing?tab=plan-bundles">
-          Back to Bundles
+        <BackNav href="/msp/billing?tab=contracts">
+          Back to Contracts
         </BackNav>
       </div>
     );
@@ -83,33 +83,33 @@ const PlanBundleDetail: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center">
-        <BackNav href="/msp/billing?tab=plan-bundles">
-          Back to Bundles
+        <BackNav href="/msp/billing?tab=contracts">
+          Back to Contracts
         </BackNav>
-        <PlanBundleHeader bundle={bundle} />
+        <ContractHeader bundle={bundle} />
       </div>
-      
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
-          <TabsTrigger value="details">Bundle Details</TabsTrigger>
-          <TabsTrigger value="plans">Billing Plans</TabsTrigger>
+          <TabsTrigger value="details">Contract Details</TabsTrigger>
+          <TabsTrigger value="plans">Service Lines</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details">
-          <PlanBundleForm bundle={bundle} onBundleUpdated={handleBundleUpdated} />
+          <ContractForm bundle={bundle} onBundleUpdated={handleContractUpdated} />
           {saveSuccess && (
             <div className="mt-2 text-green-600 text-sm">
-              Bundle details saved successfully!
+              Contract details saved successfully!
             </div>
           )}
         </TabsContent>
 
         <TabsContent value="plans">
-          <PlanBundlePlans bundle={bundle} />
+          <ContractPlans bundle={bundle} />
         </TabsContent>
       </Tabs>
     </div>
   );
 };
 
-export default PlanBundleDetail;
+export default ContractDetail;

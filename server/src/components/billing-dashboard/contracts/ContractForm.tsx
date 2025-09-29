@@ -18,7 +18,7 @@ interface PlanBundleFormProps {
   onBundleUpdated: () => void;
 }
 
-const PlanBundleForm: React.FC<PlanBundleFormProps> = ({ bundle, onBundleUpdated }) => {
+const ContractForm: React.FC<PlanBundleFormProps> = ({ bundle, onBundleUpdated }) => {
   const [bundleName, setBundleName] = useState(bundle.bundle_name);
   const [description, setDescription] = useState(bundle.bundle_description || '');
   const [isActive, setIsActive] = useState<boolean>(bundle.is_active);
@@ -139,4 +139,4 @@ const PlanBundleForm: React.FC<PlanBundleFormProps> = ({ bundle, onBundleUpdated
   );
 };
 
-export default PlanBundleForm;
+export default ContractForm;

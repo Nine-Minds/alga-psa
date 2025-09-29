@@ -6,23 +6,17 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { IService } from 'server/src/interfaces';
 
 // Import all the components
-import Overview from './Overview';
-import BillingPlans from './BillingPlans';
 import BillingPlansOverview from './billing-plans/BillingPlansOverview';
-// import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration'; // No longer used directly here
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
-import InvoiceTemplateEditor from './InvoiceTemplateEditor'; // Import the editor component
+import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
-import UsageTracking from './UsageTracking';
-import CreditManagement from './CreditManagement';
-import CreditReconciliation from './CreditReconciliation';
-import PlanBundles from './plan-bundles/PlanBundles';
-import PlanBundleDetail from './plan-bundles/PlanBundleDetail';
+import Contracts from './contracts/Contracts';
+import ContractDetail from './contracts/ContractDetail';
 import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
-import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
+import BackNav from 'server/src/components/ui/BackNav';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -52,17 +46,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const currentTab = searchParams?.get('tab') || 'overview';
 
   const tabs = [
-    'overview',
+    'contracts',
     'generate-invoices',
     'invoices',
     'invoice-templates',
     'tax-rates',
-    'plans',
-    'plan-bundles',
-    'billing-cycles',
-    'usage-tracking',
-    'credits',
-    'reconciliation'
+    'contract-lines',
+    'billing-cycles'
   ];
 
   return (
@@ -91,8 +81,12 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           ))}
         </Tabs.List>
 
-        <Tabs.Content value="overview">
-          <Overview />
+        <Tabs.Content value="contracts">
+          {searchParams?.has('contractId') ? (
+            <ContractDetail />
+          ) : (
+            <Contracts />
+          )}
         </Tabs.Content>
 
         <Tabs.Content value="generate-invoices">
@@ -114,14 +108,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         <Tabs.Content value="tax-rates">
           <TaxRates />
         </Tabs.Content>
-        <Tabs.Content value="plans">
+
+        <Tabs.Content value="contract-lines">
           {searchParams?.get('planId') ? (
             <>
-              {/* Use BackNav component */}
               <BackNav>
-                &larr; Back to Plans List {/* Using HTML entity for left arrow */}
+                &larr; Back to Contract Lines
               </BackNav>
-              <div className="mt-4"> {/* Add margin top for spacing */}
+              <div className="mt-4">
                 <PlanTypeRouter planId={searchParams.get('planId')!} />
               </div>
             </>
@@ -130,28 +124,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           )}
         </Tabs.Content>
 
-        <Tabs.Content value="plan-bundles">
-          {searchParams?.has('bundleId') ? (
-            <PlanBundleDetail />
-          ) : (
-            <PlanBundles />
-          )}
-        </Tabs.Content>
-
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
-        </Tabs.Content>
-
-        <Tabs.Content value="usage-tracking">
-          <UsageTracking initialServices={initialServices} />
-        </Tabs.Content>
-
-        <Tabs.Content value="credits">
-          <CreditManagement />
-        </Tabs.Content>
-
-        <Tabs.Content value="reconciliation">
-          <CreditReconciliation />
         </Tabs.Content>
       </Tabs.Root>
     </div>

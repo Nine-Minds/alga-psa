@@ -12,31 +12,31 @@ import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { createPlanBundle, updatePlanBundle } from 'server/src/lib/actions/planBundleActions';
 import { useTenant } from 'server/src/components/TenantProvider';
 
-interface PlanBundleDialogProps {
-  onBundleAdded: () => void;
-  editingBundle?: IPlanBundle | null;
+interface ContractDialogProps {
+  onContractAdded: () => void;
+  editingContract?: IPlanBundle | null;
   onClose?: () => void;
   triggerButton?: React.ReactNode;
 }
 
-export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, triggerButton }: PlanBundleDialogProps) {
+export function ContractDialog({ onContractAdded, editingContract, onClose, triggerButton }: ContractDialogProps) {
   const [open, setOpen] = useState(false);
-  const [bundleName, setBundleName] = useState(editingBundle?.bundle_name || '');
-  const [bundleDescription, setBundleDescription] = useState(editingBundle?.bundle_description || ''); // Renamed state and field
-  const [isActive, setIsActive] = useState<boolean>(editingBundle?.is_active ?? true);
+  const [bundleName, setBundleName] = useState(editingContract?.bundle_name || '');
+  const [bundleDescription, setBundleDescription] = useState(editingContract?.bundle_description || '');
+  const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const tenant = useTenant()!;
 
-  // Update form when editingBundle changes
+  // Update form when editingContract changes
   useEffect(() => {
-    if (editingBundle) {
-      setBundleName(editingBundle.bundle_name);
-      setBundleDescription(editingBundle.bundle_description || ''); // Use renamed state setter and field
-      setIsActive(editingBundle.is_active);
+    if (editingContract) {
+      setBundleName(editingContract.bundle_name);
+      setBundleDescription(editingContract.bundle_description || '');
+      setIsActive(editingContract.is_active);
       setOpen(true);
     }
-  }, [editingBundle]);
+  }, [editingContract]);
 
   const clearErrorIfSubmitted = () => {
     if (hasAttemptedSubmit) {
@@ -51,26 +51,26 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
     // Validate form
     const errors: string[] = [];
     if (!bundleName.trim()) {
-      errors.push('Bundle name');
+      errors.push('Contract name');
     }
 
     if (errors.length > 0) {
       setValidationErrors(errors);
       return;
     }
-    
+
     setValidationErrors([]);
 
     try {
       const bundleData = {
         bundle_name: bundleName,
-        bundle_description: bundleDescription || undefined, // Use renamed state variable and field key
+        bundle_description: bundleDescription || undefined,
         is_active: isActive,
         tenant: tenant
       };
 
-      if (editingBundle?.bundle_id) {
-        await updatePlanBundle(editingBundle.bundle_id, bundleData);
+      if (editingContract?.bundle_id) {
+        await updatePlanBundle(editingContract.bundle_id, bundleData);
       } else {
         await createPlanBundle(bundleData);
       }
@@ -78,20 +78,20 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
       // Clear form fields and close dialog
       resetForm();
       setOpen(false);
-      onBundleAdded();
+      onContractAdded();
       if (onClose) {
         onClose();
       }
     } catch (error) {
-      console.error('Error saving plan bundle:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save plan bundle';
+      console.error('Error saving contract:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save contract';
       setValidationErrors([errorMessage]);
     }
   };
 
   const resetForm = () => {
     setBundleName('');
-    setBundleDescription(''); // Use renamed state setter
+    setBundleDescription('');
     setIsActive(true);
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
@@ -109,10 +109,10 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
     <>
       {triggerButton && (
         <div onClick={() => {
-          if (editingBundle) {
-            setBundleName(editingBundle.bundle_name);
-            setBundleDescription(editingBundle.bundle_description || '');
-            setIsActive(editingBundle.is_active);
+          if (editingContract) {
+            setBundleName(editingContract.bundle_name);
+            setBundleDescription(editingContract.bundle_description || '');
+            setIsActive(editingContract.is_active);
           }
           setOpen(true);
         }}>
@@ -120,9 +120,9 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
         </div>
       )}
       <Dialog
-        isOpen={open || !!editingBundle}
+        isOpen={open || !!editingContract}
         onClose={handleClose}
-        title={editingBundle ? 'Edit Plan Bundle' : 'Add New Plan Bundle'}
+        title={editingContract ? 'Edit Contract' : 'Add New Contract'}
         className="max-w-lg"
       >
         <DialogContent>
@@ -140,41 +140,41 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
               </Alert>
             )}
             <div>
-              <Label htmlFor="bundle-name">Bundle Name *</Label>
+              <Label htmlFor="contract-name">Contract Name *</Label>
               <Input
-                id="bundle-name"
+                id="contract-name"
                 type="text"
                 value={bundleName}
                 onChange={(e) => {
                   setBundleName(e.target.value);
                   clearErrorIfSubmitted();
                 }}
-                placeholder="Enter bundle name"
+                placeholder="Enter contract name"
                 required
                 className={hasAttemptedSubmit && !bundleName.trim() ? 'border-red-500' : ''}
               />
             </div>
-            
+
             <div>
-              <Label htmlFor="bundle_description">Description</Label>
+              <Label htmlFor="contract_description">Description</Label>
               <TextArea
-                id="bundle_description" // Update id
-                value={bundleDescription} // Use renamed state variable
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBundleDescription(e.target.value)} // Use renamed state setter
-                placeholder="Enter bundle description"
+                id="contract_description"
+                value={bundleDescription}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBundleDescription(e.target.value)}
+                placeholder="Enter contract description"
                 className="min-h-[100px]"
               />
             </div>
-            
+
             <SwitchWithLabel
               label="Active"
               checked={isActive}
               onCheckedChange={setIsActive}
             />
-            
+
             <DialogFooter>
               <Button
-                id="cancel-bundle-btn"
+                id="cancel-contract-btn"
                 type="button"
                 variant="outline"
                 onClick={handleClose}
@@ -182,11 +182,11 @@ export function PlanBundleDialog({ onBundleAdded, editingBundle, onClose, trigge
                 Cancel
               </Button>
               <Button
-                id="save-bundle-btn"
+                id="save-contract-btn"
                 type="submit"
                 className={!bundleName.trim() ? 'opacity-50' : ''}
               >
-                {editingBundle ? 'Update Bundle' : 'Create Bundle'}
+                {editingContract ? 'Update Contract' : 'Create Contract'}
               </Button>
             </DialogFooter>
           </form>

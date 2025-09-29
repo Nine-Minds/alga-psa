@@ -25,7 +25,7 @@ import {
 import { getBundlePlans } from 'server/src/lib/actions/planBundleActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { BundlePlanRateDialog } from './BundlePlanRateDialog';
+import { ContractPlanRateDialog } from './ContractPlanRateDialog';
 
 interface PlanBundlePlansProps {
   bundle: IPlanBundle;
@@ -38,7 +38,7 @@ interface DetailedBundlePlan extends IBundleBillingPlan {
   default_rate?: number;
 }
 
-const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
+const ContractPlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
   const [bundlePlans, setBundlePlans] = useState<DetailedBundlePlan[]>([]);
   const [availablePlans, setAvailablePlans] = useState<IBillingPlan[]>([]);
   const [selectedPlanToAdd, setSelectedPlanToAdd] = useState<string | null>(null);
@@ -265,7 +265,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
       </Box>
       
       {editingPlan && (
-        <BundlePlanRateDialog
+        <ContractPlanRateDialog
           plan={editingPlan}
           onClose={() => setEditingPlan(null)}
           // Type assertion needed here as onSave now accepts number | undefined
@@ -276,4 +276,4 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
   );
 };
 
-export default PlanBundlePlans;
+export default ContractPlans;

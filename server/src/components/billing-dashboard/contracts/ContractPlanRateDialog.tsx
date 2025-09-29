@@ -9,7 +9,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-interface BundlePlanRateDialogProps {
+interface ContractPlanRateDialogProps {
   plan: {
     plan_id: string;
     plan_name: string;
@@ -20,7 +20,7 @@ interface BundlePlanRateDialogProps {
   onSave: (customRate: number | undefined) => void; // Allow undefined
 }
 
-export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDialogProps) {
+export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRateDialogProps) {
   const [customRate, setCustomRate] = useState<number>(
     plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0) // Use default if null or undefined
   );

@@ -8,7 +8,7 @@ interface PlanBundleHeaderProps {
   bundle: IPlanBundle;
 }
 
-const PlanBundleHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
+const ContractHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2">
@@ -24,4 +24,4 @@ const PlanBundleHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
   );
 };
 
-export default PlanBundleHeader;
+export default ContractHeader;
