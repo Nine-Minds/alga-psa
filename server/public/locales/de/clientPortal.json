@@ -8,7 +8,8 @@
     "companySettings": "Unternehmenseinstellungen",
     "profile": "Profil",
     "signOut": "Abmelden",
-    "clientPortal": "Kundenportal"
+    "clientPortal": "Kundenportal",
+    "portal": "Portal"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -224,7 +225,19 @@
       "download": "PDF herunterladen",
       "view": "Details anzeigen",
       "pay": "Jetzt bezahlen",
-      "paymentHistory": "Zahlungshistorie"
+      "paymentHistory": "Zahlungshistorie",
+      "details": "Rechnungsdetails",
+      "lineItems": "Positionen",
+      "description": "Beschreibung",
+      "quantity": "Menge",
+      "unitPrice": "Einzelpreis",
+      "total": "Gesamt",
+      "noLineItems": "Keine Positionen vorhanden",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "taxBreakdown": "Steueraufstellung",
+      "manualInvoice": "Manuelle Rechnung",
+      "credits": "Gutschriften"
     },
     "frequency": {
       "monthly": "Monatlich",
@@ -350,7 +363,8 @@
       "timezone": "Zeitzone",
       "language": "Bevorzugte Sprache",
       "dateFormat": "Datumsformat",
-      "avatar": "Profilbild"
+      "avatar": "Profilbild",
+      "notes": "Notizen"
     },
     "changePassword": {
       "title": "Passwort ändern",
@@ -394,7 +408,8 @@
       "photoRemoved": "Foto erfolgreich entfernt",
       "userNotFound": "Benutzer nicht gefunden",
       "loadError": "Profil konnte nicht geladen werden",
-      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht."
+      "avatarDescription": "Dieses Avatar wird dem MSP-Team angezeigt, wenn es deine Kontaktinformationen ansieht.",
+      "loading": "Profil wird geladen..."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar hochladen",
@@ -508,7 +523,45 @@
     "services": {
       "loadError": "Dienste konnten nicht geladen werden",
       "loadPlansError": "Servicepläne konnten nicht geladen werden",
-      "updateError": "Service konnte nicht aktualisiert werden"
+      "updateError": "Service konnte nicht aktualisiert werden",
+      "loading": "Dienste werden geladen...",
+      "activeTitle": "Aktive Dienste",
+      "empty": "Keine aktiven Dienste gefunden",
+      "columns": {
+        "service": "Dienst",
+        "description": "Beschreibung",
+        "status": "Status",
+        "currentPlan": "Aktueller Plan",
+        "nextBilling": "Nächste Abrechnung"
+      },
+      "actions": {
+        "manage": "Verwalten",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade"
+      },
+      "manageTitle": "Dienst {{service}} verwalten",
+      "genericServiceLabel": "Dienst",
+      "currentPlan": "Aktueller Plan",
+      "availablePlans": "Verfügbare Pläne",
+      "catalog": {
+        "title": "Verfügbare Dienste",
+        "learnMore": "Mehr erfahren",
+        "managedIt": {
+          "title": "Managed IT-Support",
+          "description": "Rund-um-die-Uhr IT-Support und Überwachung für Ihr Unternehmen. Enthält proaktive Wartung, Sicherheitsupdates und dedizierten technischen Support.",
+          "price": "Ab 299 $/Monat"
+        },
+        "cloudBackup": {
+          "title": "Cloud-Backup",
+          "description": "Sicheres Cloud-Backup und Notfallwiederherstellung. Automatische Backups, schnelle Wiederherstellungsmöglichkeiten und Datenverschlüsselung.",
+          "price": "Ab 99 $/Monat"
+        },
+        "cybersecurity": {
+          "title": "Cybersecurity",
+          "description": "Erweitertes Sicherheitsmonitoring und Bedrohungsprävention. Einschließlich Firewall-Management, Endpunktschutz und regelmäßiger Sicherheitsbewertungen.",
+          "price": "Ab 199 $/Monat"
+        }
+      }
     },
     "billing": {
       "loadError": "Abrechnungsdaten konnten nicht geladen werden",
@@ -520,8 +573,41 @@
         "expMonth": "Bitte gib einen gültigen Monat ein (01-12)",
         "expYear": "Bitte gib ein gültiges Jahr ein (2024-2099)",
         "cvv": "Bitte gib eine gültige Prüfziffer (CVV) ein"
+      },
+      "loadingBillingInfo": "Abrechnungsinformationen werden geladen...",
+      "overviewTitle": "Abrechnungsübersicht",
+      "paymentMethodsTitle": "Zahlungsmethoden",
+      "noPaymentMethods": "Keine Zahlungsmethoden hinterlegt",
+      "billingCycleTitle": "Abrechnungszyklus",
+      "noBillingCycle": "Kein Abrechnungszyklus gefunden",
+      "recentInvoicesTitle": "Aktuelle Rechnungen",
+      "billingHistoryTitle": "Abrechnungshistorie",
+      "labels": {
+        "defaultTag": "(Standard)"
+      },
+      "actions": {
+        "setDefault": "Als Standard festlegen",
+        "remove": "Entfernen",
+        "addPaymentMethod": "Zahlungsmethode hinzufügen",
+        "adding": "Wird hinzugefügt...",
+        "view": "Anzeigen"
+      },
+      "fields": {
+        "cardNumber": "Kartennummer",
+        "expiryMonth": "Monat",
+        "expiryYear": "Jahr",
+        "cvv": "CVV",
+        "setAsDefault": "Als Standard-Zahlungsmethode festlegen"
+      },
+      "history": {
+        "period": "Zeitraum",
+        "startDate": "Startdatum",
+        "endDate": "Enddatum",
+        "status": "Status",
+        "empty": "Keine Abrechnungshistorie verfügbar"
       }
-    }
+    },
+    "title": "Konto"
   },
   "documents": {
     "title": "Dokumente",
@@ -537,7 +623,20 @@
     "delete": "Löschen",
     "previewUnavailable": "Vorschau nicht verfügbar",
     "newDocument": "Neues Dokument",
-    "uploadFile": "Datei hochladen"
+    "uploadFile": "Datei hochladen",
+    "deleteTitle": "Dokument löschen",
+    "deleteMessage": "Möchten Sie \"{{name}}\" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "deleteVideoTitle": "Video löschen",
+    "deleteVideoMessage": "Möchten Sie das Video \"{{name}}\" wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.",
+    "removeTitle": "Dokument entfernen",
+    "removeMessage": "Möchten Sie \"{{name}}\" wirklich von diesem Element entfernen? Das Dokument bleibt in der Dokumentbibliothek verfügbar.",
+    "removeVideoTitle": "Video entfernen",
+    "removeVideoMessage": "Möchten Sie das Video \"{{name}}\" wirklich von diesem Element entfernen? Die Datei bleibt in der Dokumentbibliothek verfügbar.",
+    "downloadFile": "Datei herunterladen",
+    "videoUnsupported": "Videoformat ({{mimeType}}) wird für die Wiedergabe im Browser nicht unterstützt",
+    "videoTagUnsupported": "Ihr Browser unterstützt das Video-Tag nicht.",
+    "unnamed": "Ohne Titel",
+    "videoDownloadInfo": "Das Video wird heruntergeladen und kann mit dem Standard-Videoplayer Ihres Systems abgespielt werden."
   },
   "common": {
     "actions": "Aktionen",
@@ -616,7 +715,9 @@
         "title": "Dokumentationszugriff",
         "description": "Sieh dir geteilte Dokumente und Ressourcen an"
       }
-    }
+    },
+    "clientLogin": "Kundenanmeldung",
+    "mspStaffLogin": "MSP-Mitarbeitende? Hier anmelden →"
   },
   "notifications": {
     "title": "Benachrichtigungen",

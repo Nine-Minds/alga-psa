@@ -30,7 +30,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
   const updateForm = useRegisterUIComponent<FormComponent>({
     id: 'client-login-form',
     type: 'form',
-    label: 'Client Login'
+    label: t('auth.clientLogin', 'Client Login')
   });
 
   // Register email field as child of form
@@ -68,13 +68,14 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
   // Update field values when they change
   useEffect(() => {
+    updateForm({ label: t('auth.clientLogin', 'Client Login') });
     updateEmailField({ value: email });
     updatePasswordField({ value: password });
     updateSignInButton({ 
       label: isLoading ? t('auth.signingIn', 'Signing in...') : t('auth.signIn', 'Sign In'),
       disabled: isLoading 
     });
-  }, [email, password, isLoading, updateEmailField, updatePasswordField, updateSignInButton]);
+  }, [email, password, isLoading, t, updateEmailField, updatePasswordField, updateForm, updateSignInButton]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
