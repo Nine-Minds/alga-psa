@@ -12,7 +12,6 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 import {
   disablePortalDomainAction,
-  enablePortalDomainAction,
   getPortalDomainStatusAction,
   refreshPortalDomainStatusAction,
   requestPortalDomainRegistrationAction,
@@ -80,7 +79,6 @@ const ClientPortalDomainSettings = () => {
   const [submitting, setSubmitting] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [retrying, setRetrying] = useState(false);
-  const [enabling, setEnabling] = useState(false);
   const [portalError, setPortalError] = useState<string | null>(null);
 
   const onEditDomainIntent = useCallback((_details: { previous: string; next: string }) => {
@@ -176,7 +174,7 @@ const ClientPortalDomainSettings = () => {
     }
 
     const confirmed = typeof window !== 'undefined'
-      ? window.confirm('Disable the current custom domain? Traffic will revert to the default hosted address.')
+      ? window.confirm('Remove the current custom domain? Traffic will revert to the default hosted address.')
       : true;
 
     if (!confirmed) {
@@ -189,7 +187,7 @@ const ClientPortalDomainSettings = () => {
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);
-      toast.success('Custom domain disabled.');
+      toast.success('Custom domain removal requested.');
     } catch (error) {
       const message = resolveErrorMessage(error, 'Failed to disable custom domain.');
       setPortalError(message);
@@ -207,30 +205,6 @@ const ClientPortalDomainSettings = () => {
   const isDirtyDomain = editingExistingDomain && normalizedInput !== existingDomain;
 
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
-  const isDisabledState = portalStatus?.status === 'disabled';
-
-  const handleEnable = async () => {
-    if (!portalStatus?.domain) {
-      toast.error('No disabled custom domain to re-enable.');
-      return;
-    }
-
-    setEnabling(true);
-    try {
-      const status = await enablePortalDomainAction();
-      setPortalStatus(status);
-      setDomainInput(status.domain ?? portalStatus.domain ?? '');
-      setPortalError(null);
-      toast.success('Custom domain re-enabled.');
-    } catch (error) {
-      const message = resolveErrorMessage(error, 'Failed to re-enable custom domain.');
-      setPortalError(message);
-      console.error('Failed to re-enable custom domain:', error);
-      toast.error(message);
-    } finally {
-      setEnabling(false);
-    }
-  };
 
   return (
     <Card>
@@ -300,7 +274,7 @@ const ClientPortalDomainSettings = () => {
                     variant="outline"
                     size="sm"
                     onClick={handleRefresh}
-                    disabled={submitting || refreshing || retrying || enabling}
+                    disabled={submitting || refreshing || retrying}
                   >
                     {refreshing ? 'Refreshing...' : 'Refresh'}
                   </Button>
@@ -315,26 +289,15 @@ const ClientPortalDomainSettings = () => {
                       {retrying ? 'Retrying…' : 'Retry'}
                     </Button>
                   )}
-                  {isDisabledState && portalStatus?.domain && (
-                    <Button
-                      id="client-portal-domain-enable"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleEnable}
-                      disabled={submitting || enabling}
-                    >
-                      {enabling ? 'Re-enabling…' : 'Re-enable'}
-                    </Button>
-                  )}
                   {portalStatus?.domain && (
                     <Button
                       id="client-portal-domain-remove"
                       variant="ghost"
                       size="sm"
                       onClick={handleDisable}
-                      disabled={submitting || enabling}
+                      disabled={submitting}
                     >
-                      Disable
+                      Remove Domain
                     </Button>
                   )}
                 </div>
@@ -364,18 +327,17 @@ const ClientPortalDomainSettings = () => {
                     disabled={submitting}
                     autoComplete="off"
                   />
-                  <Button
-                    id="client-portal-domain-submit"
-                    type="submit"
-                    disabled={
-                      submitting
-                      || (!editingExistingDomain && !normalizedInput)
-                      || (editingExistingDomain && !isDirtyDomain)
-                      || enabling
-                    }
-                  >
-                    {submitting
-                      ? 'Submitting…'
+                    <Button
+                      id="client-portal-domain-submit"
+                      type="submit"
+                      disabled={
+                        submitting
+                        || (!editingExistingDomain && !normalizedInput)
+                        || (editingExistingDomain && !isDirtyDomain)
+                      }
+                    >
+                      {submitting
+                        ? 'Submitting…'
                       : editingExistingDomain
                         ? isDirtyDomain
                           ? 'Update Domain'
