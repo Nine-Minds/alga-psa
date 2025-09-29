@@ -62,4 +62,30 @@ describe('renderPortalDomainResources', () => {
     expect(labels['portal.alga-psa.com/domain-host']).toBe('example.com');
     expect(labels['portal.alga-psa.com/tenant']).toBe('123e4567-e89b-12d3-a456-426614174000');
   });
+
+  it('creates a gateway that references the generated TLS certificate', () => {
+    const record = createRecord({ domain: 'new.portal.example' });
+    const manifests = renderPortalDomainResources(record, baseConfig);
+
+    expect(manifests.gateway?.kind).toBe('Gateway');
+    expect(manifests.gateway?.metadata?.name).toBe('portal-domain-gw-123e456');
+
+    const servers = manifests.gateway?.spec?.servers ?? [];
+    expect(servers).toHaveLength(1);
+
+    const [httpsServer] = servers;
+    expect(httpsServer?.tls?.credentialName).toBe(manifests.secretName);
+    expect(httpsServer?.hosts).toEqual(['new.portal.example']);
+  });
+
+  it('adds the portal domain host and gateway to the rendered virtual service', () => {
+    const record = createRecord({ domain: 'portal.mspmind.com' });
+    const manifests = renderPortalDomainResources(record, baseConfig);
+
+    expect(manifests.virtualService?.kind).toBe('VirtualService');
+    expect(manifests.virtualService?.spec?.hosts).toEqual(['portal.mspmind.com']);
+    expect(manifests.virtualService?.spec?.gateways).toEqual([
+      'istio-system/portal-domain-gw-123e456',
+    ]);
+  });
 });

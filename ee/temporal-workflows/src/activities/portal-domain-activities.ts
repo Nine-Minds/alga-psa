@@ -30,6 +30,10 @@ const ORIGIN_SECRET_NAMESPACE_LABEL = "portal.alga-psa.com/origin-secret-namespa
 const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
   "portal.alga-psa.com/origin-resource-version";
 
+export function getBasePortalVirtualService(): string {
+  return (process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE ?? "").trim();
+}
+
 const execFileAsync = promisify(execFile);
 
 export type CommandResult = { stdout: string; stderr: string };
@@ -81,28 +85,30 @@ export interface PortalDomainConfig {
   manifestOutputDirectory: string | null;
 }
 
-const DEFAULT_CONFIG: PortalDomainConfig = {
-  certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || "msp",
-  certificateIssuerName:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER || "letsencrypt-http01",
-  certificateIssuerKind:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || "ClusterIssuer",
-  certificateIssuerGroup:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || "cert-manager.io",
-  gatewayNamespace:
-    process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || "istio-system",
-  gatewaySelector: parseSelector(
-    process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR,
-  ) || { istio: "ingressgateway" },
-  gatewayHttpsPort: parseNumberEnv(
-    process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
-    443,
-  ),
-  virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
-  serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
-  servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
-  manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
-};
+function getPortalDomainConfig(): PortalDomainConfig {
+  return {
+    certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || "msp",
+    certificateIssuerName:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER || "letsencrypt-http01",
+    certificateIssuerKind:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || "ClusterIssuer",
+    certificateIssuerGroup:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || "cert-manager.io",
+    gatewayNamespace:
+      process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || "istio-system",
+    gatewaySelector:
+      parseSelector(process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR) ||
+      { istio: "ingressgateway" },
+    gatewayHttpsPort: parseNumberEnv(
+      process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
+      443,
+    ),
+    virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
+    serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
+    servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
+    manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
+  };
+}
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
   "pending_certificate",
@@ -296,7 +302,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
-  const config = DEFAULT_CONFIG;
+  const config = getPortalDomainConfig();
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
   const manifests = managedRows.map((row) =>
     renderPortalDomainResources(row, config),
@@ -451,6 +457,21 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
+  if (getBasePortalVirtualService() && manifests.length > 0) {
+    for (const manifest of manifests) {
+      try {
+        await ensureBaseVirtualServiceRouting(manifest, config);
+      } catch (error) {
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to update base VirtualService for ${manifest.record.domain}`,
+          ),
+        );
+      }
+    }
+  }
+
   for (const manifest of manifests) {
     try {
       await knex(TABLE_NAME).where({ id: manifest.record.id }).update({
@@ -567,7 +588,7 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     return { status: record.status, statusMessage: record.status_message };
   }
 
-  const config = DEFAULT_CONFIG;
+  const config = getPortalDomainConfig();
   const manifest = renderPortalDomainResources(record, config);
 
   const certificate = await inspectCertificateStatus(
@@ -1265,6 +1286,94 @@ async function syncGatewaySecret(
   }
 }
 
+async function ensureBaseVirtualServiceRouting(
+  manifest: RenderedPortalDomainResources,
+  config: PortalDomainConfig,
+): Promise<void> {
+  const baseRef = getBasePortalVirtualService();
+  if (!baseRef) {
+    return;
+  }
+
+  const parsed = parseNamespacedResourceRef(baseRef, config.virtualServiceNamespace);
+  if (!parsed) {
+    throw new Error(
+      `Invalid PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE reference: ${baseRef}`,
+    );
+  }
+
+  const { namespace, name } = parsed;
+
+  let baseVirtualService: any;
+  try {
+    const { stdout } = await runKubectl([
+      'get',
+      'virtualservice',
+      name,
+      '-n',
+      namespace,
+      '-o',
+      'json',
+    ]);
+    baseVirtualService = JSON.parse(stdout);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to load base portal VirtualService ${namespace}/${name}`,
+      ),
+    );
+  }
+
+  const existingHosts = normalizeStringList(baseVirtualService?.spec?.hosts);
+  const manifestHosts = normalizeStringList(manifest.virtualService?.spec?.hosts);
+  const desiredHosts = combineUniqueStrings(existingHosts, manifestHosts);
+
+  const existingGateways = normalizeStringList(baseVirtualService?.spec?.gateways);
+  const manifestGateways = normalizeStringList(
+    manifest.virtualService?.spec?.gateways,
+  );
+  const desiredGateways = combineUniqueStrings(existingGateways, [
+    ...manifestGateways,
+    `${config.gatewayNamespace}/${manifest.gatewayName}`,
+  ]);
+
+  const hostsChanged = !arraysShallowEqual(existingHosts, desiredHosts);
+  const gatewaysChanged = !arraysShallowEqual(existingGateways, desiredGateways);
+
+  if (!hostsChanged && !gatewaysChanged) {
+    return;
+  }
+
+  const patch: Record<string, any> = { spec: {} };
+  if (hostsChanged) {
+    patch.spec.hosts = desiredHosts;
+  }
+  if (gatewaysChanged) {
+    patch.spec.gateways = desiredGateways;
+  }
+
+  try {
+    await runKubectl([
+      'patch',
+      'virtualservice',
+      name,
+      '-n',
+      namespace,
+      '--type=merge',
+      '-p',
+      JSON.stringify(patch),
+    ]);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to update base portal VirtualService ${namespace}/${name}`,
+      ),
+    );
+  }
+}
+
 async function deleteGatewaySecret(
   secretName: string,
   namespace: string,
@@ -1336,6 +1445,72 @@ function truncateName(input: string, maxLength: number): string {
 
 async function ensureDirectory(directoryPath: string): Promise<void> {
   await fs.mkdir(directoryPath, { recursive: true });
+}
+
+function parseNamespacedResourceRef(
+  value: string,
+  fallbackNamespace: string,
+): { namespace: string; name: string } | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!trimmed.includes('/')) {
+    return { namespace: fallbackNamespace, name: trimmed };
+  }
+
+  const [rawNamespace, rawName] = trimmed.split('/', 2);
+  const namespace = rawNamespace?.trim() || fallbackNamespace;
+  const name = rawName?.trim();
+
+  if (!name) {
+    return null;
+  }
+
+  return { namespace, name };
+}
+
+function normalizeStringList(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function combineUniqueStrings(
+  existing: string[],
+  additions: string[],
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of existing) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+
+  for (const value of additions) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+
+  return result;
+}
+
+function arraysShallowEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((value, index) => value === b[index]);
 }
 
 function formatErrorMessage(error: unknown, prefix?: string): string {
