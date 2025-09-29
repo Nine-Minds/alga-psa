@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { Palette, Eye, EyeOff } from 'lucide-react';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
 import { updateTenantDefaultLocaleAction, getTenantLocaleSettingsAction } from '@/lib/actions/tenant-actions/tenantLocaleActions';
@@ -421,17 +422,35 @@ const ClientPortalSettings = () => {
                 >
                   {previewMode === 'dashboard' ? 'Hide' : 'Preview'} Client Dashboard
                 </Button>
-                <Button
-                  id="preview-signin"
-                  type="button"
-                  variant={previewMode === 'signin' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
-                  disabled={!hasCustomDomain}
-                  title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
-                >
-                  {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
-                </Button>
+                {!hasCustomDomain ? (
+                  <Tooltip content="Must have custom domain set up">
+                    <span>
+                      <Button
+                        id="preview-signin"
+                        type="button"
+                        variant={previewMode === 'signin' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
+                        disabled={!hasCustomDomain}
+                        title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
+                      >
+                        {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
+                      </Button>
+                    </span>
+                  </Tooltip>
+                ) : (
+                  <Button
+                    id="preview-signin"
+                    type="button"
+                    variant={previewMode === 'signin' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setPreviewMode(previewMode === 'signin' ? null : 'signin')}
+                    disabled={!hasCustomDomain}
+                    title={!hasCustomDomain ? 'Configure a custom domain first to preview sign-in page' : ''}
+                  >
+                    {previewMode === 'signin' ? 'Hide' : 'Preview'} Sign-in Page
+                  </Button>
+                )}
               </div>
 
               {/* Dashboard Preview */}
@@ -578,6 +597,7 @@ const ClientPortalSettings = () => {
                     secondaryColor: secondaryColor || '#6366F1',
                     companyName
                   }}
+                  locale={defaultLocale}
                 />
               )}
             </div>

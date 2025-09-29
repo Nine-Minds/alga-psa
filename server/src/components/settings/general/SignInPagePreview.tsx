@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Ticket, FileText, Eye, History, EyeOff } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { SupportedLocale } from '@/lib/i18n/config';
 
 interface SignInPagePreviewProps {
   branding: {
@@ -12,11 +13,19 @@ interface SignInPagePreviewProps {
     secondaryColor: string;
     companyName: string;
   };
+  locale?: SupportedLocale;
 }
 
-export default function SignInPagePreview({ branding }: SignInPagePreviewProps) {
+export default function SignInPagePreview({ branding, locale }: SignInPagePreviewProps) {
   const { logoUrl, primaryColor, secondaryColor, companyName } = branding;
-  const { t } = useTranslation('clientPortal');
+  const { t, i18n } = useTranslation('clientPortal');
+
+  // Change language when locale prop changes
+  useEffect(() => {
+    if (locale && i18n.language !== locale) {
+      i18n.changeLanguage(locale);
+    }
+  }, [locale, i18n]);
 
   // Convert hex to RGB
   const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
