@@ -248,10 +248,12 @@ export async function markPortalDomainStatus(
 }
 
 export async function deletePortalDomainRecord(
-  args: { portalDomainId: string },
+  args: { portalDomainId: string; tenantId: string },
 ): Promise<void> {
   const knex = await getConnection();
-  await knex(TABLE_NAME).where({ id: args.portalDomainId }).delete();
+  await knex(TABLE_NAME)
+    .where({ id: args.portalDomainId, tenant: args.tenantId })
+    .delete();
 }
 
 export async function verifyCnameRecord(
