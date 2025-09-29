@@ -4,7 +4,7 @@ import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/t
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 
 interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'id'> {
-  label?: string;
+  label?: string | React.ReactNode;
   /** Unique identifier for UI reflection system */
   id?: string;
   /** Whether the checkbox is required */
@@ -25,7 +25,7 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
     type: 'formField',
     fieldType: 'checkbox',
     id: id || '__skip_registration_checkbox',
-    label,
+    label: typeof label === 'string' ? label : undefined,
     value: checked,
     disabled,
     required
@@ -36,7 +36,7 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
     if (updateMetadata) {
       updateMetadata({
         value: checked,
-        label,
+        label: typeof label === 'string' ? label : undefined,
         disabled,
         required
       });
