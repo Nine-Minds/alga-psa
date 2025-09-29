@@ -62,6 +62,10 @@ const commandRunner: CommandRunner = async (command, args, options) => {
           baseVirtualService.spec = baseVirtualService.spec || {};
           baseVirtualService.spec.gateways = patch.spec.gateways;
         }
+        if (patch?.spec?.http) {
+          baseVirtualService.spec = baseVirtualService.spec || {};
+          baseVirtualService.spec.http = patch.spec.http;
+        }
         if (patch?.metadata?.annotations) {
           baseVirtualService.metadata = baseVirtualService.metadata || {};
           baseVirtualService.metadata.annotations =
@@ -358,6 +362,88 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 
+  it('adds a default redirect route for the new domain in the base virtual service', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'active-id',
+        tenant: 'Tenant One',
+        domain: 'portal.mspmind.com',
+        canonical_host: 'tenantone.portal.algapsa.com',
+        status: 'active',
+        status_message: null,
+        verification_details: null,
+        certificate_secret_name: null,
+        last_synced_resource_version: null,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+    const managedRedirect = baseVirtualServicePatches
+      .flatMap((patch) => (Array.isArray(patch?.spec?.http) ? patch.spec.http : []))
+      .find((route) => {
+        if (!route?.redirect || !Array.isArray(route?.match)) {
+          return false;
+        }
+        const matchesDomain = route.match.some(
+          (condition: any) =>
+            condition?.authority?.exact === 'portal.mspmind.com' &&
+            condition?.uri?.exact === '/',
+        );
+        return matchesDomain && route.redirect.uri === '/client-portal/dashboard';
+      });
+
+    expect(managedRedirect).toBeDefined();
+    expect(managedRedirect?.redirect).toMatchObject({ uri: '/client-portal/dashboard' });
+    expect(managedRedirect?.match).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          authority: expect.objectContaining({ exact: 'portal.mspmind.com' }),
+          uri: expect.objectContaining({ exact: '/' }),
+        }),
+      ]),
+    );
+  });
+
   it('does not duplicate host entries when the domain already exists', async () => {
     process.env.GITHUB_ACCESS_TOKEN = 'test-token';
     process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
@@ -375,6 +461,15 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     baseVirtualService.metadata.annotations![
       'portal.alga-psa.com/managed-gateways'
     ] = JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+    baseVirtualService.spec.http.push({
+      match: [
+        {
+          authority: { exact: 'portal.mspmind.com' },
+          uri: { exact: '/' },
+        },
+      ],
+      redirect: { uri: '/client-portal/dashboard' },
+    });
 
     const now = new Date().toISOString();
     const rows: PortalDomainActivityRecord[] = [
@@ -431,6 +526,18 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       (gateway: string) => gateway === 'istio-system/portal-domain-gw-active-id',
     ).length;
     expect(gatewayOccurrences).toBe(1);
+    const redirectOccurrences = baseVirtualService.spec.http.filter((route: any) => {
+      if (!route?.redirect || !Array.isArray(route?.match)) {
+        return false;
+      }
+      return route.redirect.uri === '/client-portal/dashboard' &&
+        route.match.some(
+          (condition: any) =>
+            condition?.authority?.exact === 'portal.mspmind.com' &&
+            condition?.uri?.exact === '/',
+        );
+    }).length;
+    expect(redirectOccurrences).toBe(1);
   });
 
   it('removes managed hosts and gateways when no domains remain', async () => {
@@ -497,6 +604,102 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       ],
     ).toBeUndefined();
     expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
+  });
+
+  it('removes managed redirect routes when the domain is removed', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    baseVirtualService.spec.hosts.push('portal.mspmind.com');
+    baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-hosts'
+    ] = JSON.stringify(['portal.mspmind.com']);
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-gateways'
+    ] = JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+    baseVirtualService.spec.http.push(
+      {
+        match: [
+          {
+            authority: { exact: 'portal.mspmind.com' },
+            uri: { exact: '/' },
+          },
+        ],
+        redirect: { uri: '/client-portal/dashboard' },
+      },
+      {
+        match: [
+          {
+            uri: { prefix: '/' },
+          },
+        ],
+        route: [
+          {
+            destination: {
+              host: 'apps.algapsa.com',
+            },
+          },
+        ],
+      },
+    );
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
+
+    const lastHttpPatch = [...baseVirtualServicePatches]
+      .reverse()
+      .find((patch) => Array.isArray(patch?.spec?.http));
+
+    expect(lastHttpPatch).toBeDefined();
+    const redirectStillPresent = (lastHttpPatch?.spec?.http ?? []).some((route: any) => {
+      if (!route?.redirect || !Array.isArray(route?.match)) {
+        return false;
+      }
+      return route.redirect.uri === '/client-portal/dashboard' &&
+        route.match.some(
+          (condition: any) =>
+            condition?.authority?.exact === 'portal.mspmind.com' &&
+            condition?.uri?.exact === '/',
+        );
+    });
+
+    expect(redirectStillPresent).toBe(false);
   });
 
   it('removes gateway resources and routing when a domain is disabled', async () => {
