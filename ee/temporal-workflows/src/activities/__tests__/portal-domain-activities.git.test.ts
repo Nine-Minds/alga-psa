@@ -62,6 +62,20 @@ const commandRunner: CommandRunner = async (command, args, options) => {
           baseVirtualService.spec = baseVirtualService.spec || {};
           baseVirtualService.spec.gateways = patch.spec.gateways;
         }
+        if (patch?.metadata?.annotations) {
+          baseVirtualService.metadata = baseVirtualService.metadata || {};
+          baseVirtualService.metadata.annotations =
+            baseVirtualService.metadata.annotations || {};
+          for (const [key, value] of Object.entries(
+            patch.metadata.annotations,
+          )) {
+            if (value === null) {
+              delete baseVirtualService.metadata.annotations[key];
+            } else {
+              baseVirtualService.metadata.annotations[key] = value;
+            }
+          }
+        }
       }
       return { stdout: '', stderr: '' };
     }
@@ -103,6 +117,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       metadata: {
         name: 'alga-psa-vs',
         namespace: 'msp',
+        annotations: {},
       },
       spec: {
         hosts: ['apps.algapsa.com'],
@@ -254,7 +269,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(kubectlCommands).toContain('apply');
 
     const newFiles = await listYamlFiles(manifestRoot);
-    expect(newFiles).toContain('tenantone.yaml');
+    expect(newFiles).toContain('active-id.yaml');
     expect(newFiles).not.toContain('stale.yaml');
 
     expect(updates.length).toBeGreaterThan(0);
@@ -320,12 +335,252 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
     const renderedFiles = await listYamlFiles(manifestRoot);
-    expect(renderedFiles).toContain('tenantone.yaml');
+    expect(renderedFiles).toContain('active-id.yaml');
 
     expect(baseVirtualService.spec.hosts).toContain('portal.mspmind.com');
     expect(baseVirtualService.spec.gateways).toContain(
-      'istio-system/portal-domain-gw-tenantone',
+      'istio-system/portal-domain-gw-active-id',
     );
+    expect(
+      JSON.parse(
+        baseVirtualService.metadata.annotations?.[
+          'portal.alga-psa.com/managed-hosts'
+        ] ?? '[]',
+      ),
+    ).toContain('portal.mspmind.com');
+    expect(
+      JSON.parse(
+        baseVirtualService.metadata.annotations?.[
+          'portal.alga-psa.com/managed-gateways'
+        ] ?? '[]',
+      ),
+    ).toContain('istio-system/portal-domain-gw-active-id');
+    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
+  });
+
+  it('does not duplicate host entries when the domain already exists', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    baseVirtualService.spec.hosts.push('portal.mspmind.com');
+    baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-hosts'
+    ] = JSON.stringify(['portal.mspmind.com']);
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-gateways'
+    ] = JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'active-id',
+        tenant: 'Tenant One',
+        domain: 'portal.mspmind.com',
+        canonical_host: 'tenantone.portal.algapsa.com',
+        status: 'active',
+        status_message: null,
+        verification_details: null,
+        certificate_secret_name: 'existing-secret',
+        last_synced_resource_version: '1',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+    expect(baseVirtualServicePatches.length).toBe(0);
+    const hostOccurrences = baseVirtualService.spec.hosts.filter(
+      (host: string) => host === 'portal.mspmind.com',
+    ).length;
+    expect(hostOccurrences).toBe(1);
+    const gatewayOccurrences = baseVirtualService.spec.gateways.filter(
+      (gateway: string) => gateway === 'istio-system/portal-domain-gw-active-id',
+    ).length;
+    expect(gatewayOccurrences).toBe(1);
+  });
+
+  it('removes managed hosts and gateways when no domains remain', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    baseVirtualService.spec.hosts.push('portal.mspmind.com');
+    baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-hosts'
+    ] = JSON.stringify(['portal.mspmind.com']);
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-gateways'
+    ] = JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
+
+    expect(baseVirtualService.spec.hosts).toEqual(['apps.algapsa.com']);
+    expect(baseVirtualService.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    expect(
+      baseVirtualService.metadata.annotations?.[
+        'portal.alga-psa.com/managed-hosts'
+      ],
+    ).toBeUndefined();
+    expect(
+      baseVirtualService.metadata.annotations?.[
+        'portal.alga-psa.com/managed-gateways'
+      ],
+    ).toBeUndefined();
+    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
+  });
+
+  it('removes gateway resources and routing when a domain is disabled', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    baseVirtualService.spec.hosts.push('portal.mspmind.com');
+    baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-hosts'
+    ] = JSON.stringify(['portal.mspmind.com']);
+    baseVirtualService.metadata.annotations![
+      'portal.alga-psa.com/managed-gateways'
+    ] = JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'disabled-id',
+        tenant: 'Tenant One',
+        domain: 'portal.mspmind.com',
+        canonical_host: 'tenantone.portal.algapsa.com',
+        status: 'disabled',
+        status_message: 'Custom domain disabled',
+        verification_details: null,
+        certificate_secret_name: 'portal-domain-disabled-id',
+        last_synced_resource_version: '42',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'disabled-id' });
+
+    const kubectlDeletes = commands.filter(
+      (entry) => entry.command === 'kubectl' && entry.args[0] === 'delete',
+    );
+    expect(kubectlDeletes.length).toBeGreaterThan(0);
+
+    expect(baseVirtualService.spec.hosts).toEqual(['apps.algapsa.com']);
+    expect(baseVirtualService.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    expect(
+      baseVirtualService.metadata.annotations?.[
+        'portal.alga-psa.com/managed-hosts'
+      ],
+    ).toBeUndefined();
+    expect(
+      baseVirtualService.metadata.annotations?.[
+        'portal.alga-psa.com/managed-gateways'
+      ],
+    ).toBeUndefined();
     expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 });
