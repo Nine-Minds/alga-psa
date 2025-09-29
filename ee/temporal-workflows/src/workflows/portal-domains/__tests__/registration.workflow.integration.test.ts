@@ -53,6 +53,7 @@ describe('portalDomainRegistrationWorkflow', () => {
         status: currentStatus,
         statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
       }),
+      deletePortalDomainRecord: async () => {},
     };
 
     const worker = await Worker.create({
@@ -152,6 +153,7 @@ describe('portalDomainRegistrationWorkflow', () => {
           statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
         };
       },
+      deletePortalDomainRecord: async () => {},
     };
 
     const worker = await Worker.create({
@@ -271,6 +273,7 @@ describe('portalDomainRegistrationWorkflow', () => {
           statusMessage: statusUpdates[statusUpdates.length - 1]?.statusMessage ?? null,
         };
       },
+      deletePortalDomainRecord: async () => {},
     };
 
     const worker = await Worker.create({
