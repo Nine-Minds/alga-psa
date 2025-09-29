@@ -32,6 +32,7 @@ const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
 const PORTAL_MANAGED_HOSTS_ANNOTATION = "portal.alga-psa.com/managed-hosts";
 const PORTAL_MANAGED_GATEWAYS_ANNOTATION =
   "portal.alga-psa.com/managed-gateways";
+const PORTAL_DASHBOARD_REDIRECT_URI = "/client-portal/dashboard";
 
 export function getBasePortalVirtualService(): string {
   return (process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE ?? "").trim();
@@ -1356,6 +1357,9 @@ async function syncBaseVirtualServiceRouting(
 
   const baseHosts = normalizeStringList(baseVirtualService?.spec?.hosts);
   const baseGateways = normalizeStringList(baseVirtualService?.spec?.gateways);
+  const baseHttpRoutes = Array.isArray(baseVirtualService?.spec?.http)
+    ? [...baseVirtualService.spec.http]
+    : [];
 
   const desiredHostsSet = new Set<string>();
   const desiredGatewaysSet = new Set<string>();
@@ -1416,6 +1420,34 @@ async function syncBaseVirtualServiceRouting(
   const existingManagedHostsList = Array.from(managedHosts).sort();
   const existingManagedGatewaysList = Array.from(managedGateways).sort();
 
+  const retainedHttpRoutes: any[] = [];
+  const existingManagedRedirectRoutes = new Map<string, any>();
+  for (const route of baseHttpRoutes) {
+    const managedHost = extractManagedRedirectHost(route);
+    if (managedHost) {
+      existingManagedRedirectRoutes.set(managedHost, route);
+    } else {
+      retainedHttpRoutes.push(route);
+    }
+  }
+
+  const desiredManagedRedirectRoutes = Array.from(desiredHostsSet)
+    .sort()
+    .map((host) =>
+      existingManagedRedirectRoutes.get(host) ??
+      buildManagedRedirectRoute(host),
+    );
+
+  const desiredHttpRoutes = [
+    ...retainedHttpRoutes,
+    ...desiredManagedRedirectRoutes,
+  ];
+
+  const httpRoutesChanged = !httpRoutesEqual(
+    baseHttpRoutes,
+    desiredHttpRoutes,
+  );
+
   const managedHostsChanged = !arraysShallowEqual(
     existingManagedHostsList,
     desiredManagedHostsList,
@@ -1429,20 +1461,24 @@ async function syncBaseVirtualServiceRouting(
     !hostsChanged &&
     !gatewaysChanged &&
     !managedHostsChanged &&
-    !managedGatewaysChanged
+    !managedGatewaysChanged &&
+    !httpRoutesChanged
   ) {
     return;
   }
 
   const patch: Record<string, any> = {};
 
-  if (hostsChanged || gatewaysChanged) {
+  if (hostsChanged || gatewaysChanged || httpRoutesChanged) {
     patch.spec = {};
     if (hostsChanged) {
       patch.spec.hosts = desiredHosts;
     }
     if (gatewaysChanged) {
       patch.spec.gateways = desiredGateways;
+    }
+    if (httpRoutesChanged) {
+      patch.spec.http = desiredHttpRoutes;
     }
   }
 
@@ -1613,6 +1649,77 @@ function arraysShallowEqual(a: string[], b: string[]): boolean {
     return false;
   }
   return a.every((value, index) => value === b[index]);
+}
+
+function extractManagedRedirectHost(route: any): string | null {
+  if (!route || typeof route !== 'object') {
+    return null;
+  }
+
+  const redirectUri = route?.redirect?.uri;
+  if (redirectUri !== PORTAL_DASHBOARD_REDIRECT_URI) {
+    return null;
+  }
+
+  const matches = Array.isArray(route.match) ? route.match : [];
+  for (const condition of matches) {
+    const host = condition?.authority?.exact;
+    const uriExact = condition?.uri?.exact;
+    if (typeof host === 'string' && uriExact === '/') {
+      return host;
+    }
+  }
+
+  return null;
+}
+
+function buildManagedRedirectRoute(host: string): Record<string, any> {
+  return {
+    match: [
+      {
+        authority: { exact: host },
+        uri: { exact: '/' },
+      },
+    ],
+    redirect: {
+      uri: PORTAL_DASHBOARD_REDIRECT_URI,
+    },
+  };
+}
+
+function httpRoutesEqual(a: any[], b: any[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let index = 0; index < a.length; index += 1) {
+    if (stableStringify(a[index]) !== stableStringify(b[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(
+        ([key, val]) => `${JSON.stringify(key)}:${stableStringify(val)}`,
+      );
+    return `{${entries.join(',')}}`;
+  }
+
+  return JSON.stringify(value);
 }
 
 function readManagedAnnotationSet(value: unknown): Set<string> {
