@@ -53,6 +53,7 @@ const baseConfig: PortalDomainConfig = {
 
 describe("portal domain certificate generation with NEXTAUTH_URL", () => {
   let originalNextAuthUrl: string | undefined;
+  const expectedSlug = "123e4567-e89b-12d3-a456-426614174000";
 
   beforeEach(() => {
     // Store original NEXTAUTH_URL to restore later
@@ -80,26 +81,32 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
 
     // Verify Certificate resource
     expect(manifests.certificate.metadata.namespace).toBe("msp");
-    expect(manifests.certificate.spec.secretName).toBe("portal-domain-tenant");
+    expect(manifests.certificate.spec.secretName).toBe(
+      `portal-domain-${expectedSlug}`,
+    );
     expect(manifests.certificate.spec.dnsNames).toEqual(["custom.example.com"]);
     expect(manifests.certificate.spec.issuerRef.name).toBe("letsencrypt-dns");
     expect(manifests.certificate.spec.issuerRef.kind).toBe("ClusterIssuer");
 
     // Verify Gateway resource uses correct domain
-    expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
+    expect(manifests.gateway.metadata.name).toBe(
+      `portal-domain-gw-${expectedSlug}`,
+    );
     expect(manifests.gateway.metadata.namespace).toBe("istio-system");
     expect(manifests.gateway.spec.servers).toHaveLength(1);
 
     // Check HTTPS server configuration
     const httpsServer = manifests.gateway.spec.servers[0];
     expect(httpsServer.hosts).toEqual(["custom.example.com"]);
-    expect(httpsServer.tls.credentialName).toBe("portal-domain-tenant");
+    expect(httpsServer.tls.credentialName).toBe(
+      `portal-domain-${expectedSlug}`,
+    );
 
     // Verify VirtualService resource
     expect(manifests.virtualService.metadata.namespace).toBe("msp");
     expect(manifests.virtualService.spec.hosts).toEqual(["custom.example.com"]);
     expect(manifests.virtualService.spec.gateways).toEqual([
-      "istio-system/portal-domain-gw-tenant",
+      `istio-system/portal-domain-gw-${expectedSlug}`,
     ]);
 
     // Verify HTTPS routing only (HTTP handled by cert-manager solver)
@@ -133,19 +140,23 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
 
     // Verify Certificate resource for production
     expect(manifests.certificate.metadata.namespace).toBe("msp");
-    expect(manifests.certificate.spec.secretName).toBe("portal-domain-tenant");
+    expect(manifests.certificate.spec.secretName).toBe(
+      `portal-domain-${expectedSlug}`,
+    );
     expect(manifests.certificate.spec.dnsNames).toEqual(["custom.example.com"]);
 
     // Verify Gateway uses production domain reference in naming
-    expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
+    expect(manifests.gateway.metadata.name).toBe(
+      `portal-domain-gw-${expectedSlug}`,
+    );
     expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(
-      "portal-domain-tenant",
+      `portal-domain-${expectedSlug}`,
     );
 
     // Verify VirtualService routing for production
     expect(manifests.virtualService.spec.hosts).toEqual(["custom.example.com"]);
     expect(manifests.virtualService.spec.gateways).toEqual([
-      "istio-system/portal-domain-gw-tenant",
+      `istio-system/portal-domain-gw-${expectedSlug}`,
     ]);
 
     expect(manifests.virtualService.spec.http).toHaveLength(1);
@@ -169,19 +180,23 @@ describe("portal domain certificate generation with NEXTAUTH_URL", () => {
 
     // Verify Certificate resource uses fallback domain
     expect(manifests.certificate.metadata.namespace).toBe("msp");
-    expect(manifests.certificate.spec.secretName).toBe("portal-domain-tenant");
+    expect(manifests.certificate.spec.secretName).toBe(
+      `portal-domain-${expectedSlug}`,
+    );
     expect(manifests.certificate.spec.dnsNames).toEqual(["custom.example.com"]);
 
     // Verify Gateway uses fallback domain reference
-    expect(manifests.gateway.metadata.name).toBe("portal-domain-gw-tenant");
+    expect(manifests.gateway.metadata.name).toBe(
+      `portal-domain-gw-${expectedSlug}`,
+    );
     expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(
-      "portal-domain-tenant",
+      `portal-domain-${expectedSlug}`,
     );
 
     // Verify VirtualService routing for fallback
     expect(manifests.virtualService.spec.hosts).toEqual(["custom.example.com"]);
     expect(manifests.virtualService.spec.gateways).toEqual([
-      "istio-system/portal-domain-gw-tenant",
+      `istio-system/portal-domain-gw-${expectedSlug}`,
     ]);
 
     expect(manifests.virtualService.spec.http).toHaveLength(1);

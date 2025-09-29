@@ -29,6 +29,9 @@ const ORIGIN_SECRET_NAME_LABEL = "portal.alga-psa.com/origin-secret-name";
 const ORIGIN_SECRET_NAMESPACE_LABEL = "portal.alga-psa.com/origin-secret-namespace";
 const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
   "portal.alga-psa.com/origin-resource-version";
+const PORTAL_MANAGED_HOSTS_ANNOTATION = "portal.alga-psa.com/managed-hosts";
+const PORTAL_MANAGED_GATEWAYS_ANNOTATION =
+  "portal.alga-psa.com/managed-gateways";
 
 export function getBasePortalVirtualService(): string {
   return (process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE ?? "").trim();
@@ -244,6 +247,13 @@ export async function markPortalDomainStatus(
   await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
 }
 
+export async function deletePortalDomainRecord(
+  args: { portalDomainId: string },
+): Promise<void> {
+  const knex = await getConnection();
+  await knex(TABLE_NAME).where({ id: args.portalDomainId }).delete();
+}
+
 export async function verifyCnameRecord(
   input: VerifyCnameInput,
 ): Promise<VerifyCnameResult> {
@@ -347,7 +357,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
   const desiredFiles = new Map<string, RenderedPortalDomainResources>();
   for (const manifest of manifests) {
-    desiredFiles.set(`${manifest.tenantSlug}.yaml`, manifest);
+    desiredFiles.set(`${manifest.domainSlug}.yaml`, manifest);
   }
 
   let existingFiles: string[] = [];
@@ -376,9 +386,9 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
       }
 
       if (config.gatewayNamespace !== config.certificateNamespace) {
-        const tenantSlug = fileName.replace(/\.ya?ml$/i, "");
-        if (tenantSlug) {
-          const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
+        const domainSlug = fileName.replace(/\.ya?ml$/i, "");
+        if (domainSlug) {
+          const secretName = truncateName(`portal-domain-${domainSlug}`, 63);
           try {
             await deleteGatewaySecret(secretName, config.gatewayNamespace);
           } catch (error) {
@@ -457,18 +467,16 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  if (getBasePortalVirtualService() && manifests.length > 0) {
-    for (const manifest of manifests) {
-      try {
-        await ensureBaseVirtualServiceRouting(manifest, config);
-      } catch (error) {
-        errors.push(
-          formatErrorMessage(
-            error,
-            `Failed to update base VirtualService for ${manifest.record.domain}`,
-          ),
-        );
-      }
+  if (getBasePortalVirtualService()) {
+    try {
+      await syncBaseVirtualServiceRouting(manifests, config);
+    } catch (error) {
+      errors.push(
+        formatErrorMessage(
+          error,
+          'Failed to update base VirtualService routing',
+        ),
+      );
     }
   }
 
@@ -603,23 +611,39 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     nextStatus = 'certificate_failed';
     nextMessage = certificate.failureMessage;
   } else if (certificate.ready) {
-    const gatewayExists = await kubectlResourceExists(
-      'gateway',
-      manifest.gatewayName,
-      config.gatewayNamespace,
-    );
+    let secretSyncFailed = false;
+    if (config.gatewayNamespace !== config.certificateNamespace) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        secretSyncFailed = true;
+        nextStatus = 'certificate_failed';
+        nextMessage = formatErrorMessage(
+          error,
+          `Failed to replicate TLS secret into ${config.gatewayNamespace}`,
+        );
+      }
+    }
+
+    if (!secretSyncFailed) {
+      const gatewayExists = await kubectlResourceExists(
+        'gateway',
+        manifest.gatewayName,
+        config.gatewayNamespace,
+      );
     const virtualServiceExists = await kubectlResourceExists(
       'virtualservice',
       manifest.virtualServiceName,
       config.virtualServiceNamespace,
     );
 
-    if (gatewayExists && virtualServiceExists) {
-      nextStatus = 'active';
-      nextMessage = 'Your domain is live and protected by HTTPS.';
-    } else {
-      nextStatus = 'deploying';
-      nextMessage = 'SSL is ready. Finishing the domain routing setup...';
+      if (gatewayExists && virtualServiceExists) {
+        nextStatus = 'active';
+        nextMessage = 'Your domain is live and protected by HTTPS.';
+      } else {
+        nextStatus = 'deploying';
+        nextMessage = 'SSL is ready. Finishing the domain routing setup...';
+      }
     }
   } else {
     nextStatus = 'certificate_issuing';
@@ -989,7 +1013,7 @@ function buildCommitMessage(
   }
 
   const slugs = Array.from(
-    new Set(manifests.map((manifest) => manifest.tenantSlug)),
+    new Set(manifests.map((manifest) => manifest.domainSlug)),
   );
   const preview = slugs.slice(0, 5).join(", ");
   const suffix =
@@ -1051,7 +1075,7 @@ export interface RenderedPortalDomainResources {
   gateway: Record<string, any>;
   virtualService: Record<string, any>;
   secretName: string;
-  tenantSlug: string;
+  domainSlug: string;
   gatewayName: string;
   virtualServiceName: string;
 }
@@ -1061,12 +1085,12 @@ export function renderPortalDomainResources(
   config: PortalDomainConfig,
 ): RenderedPortalDomainResources {
   const normalizedDomain = normalizeHostname(record.domain);
-  const tenantSlug = createTenantSlug(record);
-  const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
-  const gatewayName = truncateName(`portal-domain-gw-${tenantSlug}`, 63);
-  const virtualServiceName = truncateName(`portal-domain-vs-${tenantSlug}`, 63);
-  const httpServerName = truncateName(`http-${tenantSlug}`, 63);
-  const httpsServerName = truncateName(`https-${tenantSlug}`, 63);
+  const domainSlug = createDomainSlug(record);
+  const secretName = truncateName(`portal-domain-${domainSlug}`, 63);
+  const gatewayName = truncateName(`portal-domain-gw-${domainSlug}`, 63);
+  const virtualServiceName = truncateName(`portal-domain-vs-${domainSlug}`, 63);
+  const httpServerName = truncateName(`http-${domainSlug}`, 63);
+  const httpsServerName = truncateName(`https-${domainSlug}`, 63);
 
   const labels = buildBaseLabels(record, normalizedDomain);
 
@@ -1173,7 +1197,7 @@ export function renderPortalDomainResources(
     gateway,
     virtualService,
     secretName,
-    tenantSlug,
+    domainSlug,
     gatewayName,
     virtualServiceName,
   };
@@ -1268,7 +1292,7 @@ async function syncGatewaySecret(
   };
 
   const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), 'portal-gateway-secret-'));
-  const filePath = joinPath(tempDir, `${manifest.tenantSlug}-gateway-secret.yaml`);
+  const filePath = joinPath(tempDir, `${manifest.domainSlug}-gateway-secret.yaml`);
 
   try {
     const yaml = dumpYaml(replica, { sortKeys: true, noRefs: true });
@@ -1286,8 +1310,8 @@ async function syncGatewaySecret(
   }
 }
 
-async function ensureBaseVirtualServiceRouting(
-  manifest: RenderedPortalDomainResources,
+async function syncBaseVirtualServiceRouting(
+  manifests: RenderedPortalDomainResources[],
   config: PortalDomainConfig,
 ): Promise<void> {
   const baseRef = getBasePortalVirtualService();
@@ -1295,7 +1319,10 @@ async function ensureBaseVirtualServiceRouting(
     return;
   }
 
-  const parsed = parseNamespacedResourceRef(baseRef, config.virtualServiceNamespace);
+  const parsed = parseNamespacedResourceRef(
+    baseRef,
+    config.virtualServiceNamespace,
+  );
   if (!parsed) {
     throw new Error(
       `Invalid PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE reference: ${baseRef}`,
@@ -1325,32 +1352,108 @@ async function ensureBaseVirtualServiceRouting(
     );
   }
 
-  const existingHosts = normalizeStringList(baseVirtualService?.spec?.hosts);
-  const manifestHosts = normalizeStringList(manifest.virtualService?.spec?.hosts);
-  const desiredHosts = combineUniqueStrings(existingHosts, manifestHosts);
+  const baseHosts = normalizeStringList(baseVirtualService?.spec?.hosts);
+  const baseGateways = normalizeStringList(baseVirtualService?.spec?.gateways);
 
-  const existingGateways = normalizeStringList(baseVirtualService?.spec?.gateways);
-  const manifestGateways = normalizeStringList(
-    manifest.virtualService?.spec?.gateways,
+  const desiredHostsSet = new Set<string>();
+  const desiredGatewaysSet = new Set<string>();
+
+  for (const manifest of manifests) {
+    const manifestHosts = normalizeStringList(
+      manifest.virtualService?.spec?.hosts,
+    );
+    for (const host of manifestHosts) {
+      desiredHostsSet.add(host);
+    }
+
+    const manifestGateways = normalizeStringList(
+      manifest.virtualService?.spec?.gateways,
+    );
+    for (const gateway of manifestGateways) {
+      desiredGatewaysSet.add(gateway);
+    }
+
+    desiredGatewaysSet.add(
+      `${config.gatewayNamespace}/${manifest.gatewayName}`,
+    );
+  }
+
+  const managedHosts = readManagedAnnotationSet(
+    baseVirtualService?.metadata?.annotations?.[
+      PORTAL_MANAGED_HOSTS_ANNOTATION
+    ],
   );
-  const desiredGateways = combineUniqueStrings(existingGateways, [
-    ...manifestGateways,
-    `${config.gatewayNamespace}/${manifest.gatewayName}`,
-  ]);
+  const managedGateways = readManagedAnnotationSet(
+    baseVirtualService?.metadata?.annotations?.[
+      PORTAL_MANAGED_GATEWAYS_ANNOTATION
+    ],
+  );
 
-  const hostsChanged = !arraysShallowEqual(existingHosts, desiredHosts);
-  const gatewaysChanged = !arraysShallowEqual(existingGateways, desiredGateways);
+  const retainedHosts = baseHosts.filter(
+    (host) => !managedHosts.has(host) || desiredHostsSet.has(host),
+  );
+  const retainedGateways = baseGateways.filter(
+    (gateway) =>
+      !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway),
+  );
 
-  if (!hostsChanged && !gatewaysChanged) {
+  const desiredHosts = combineUniqueStrings(
+    retainedHosts,
+    Array.from(desiredHostsSet),
+  );
+  const desiredGateways = combineUniqueStrings(
+    retainedGateways,
+    Array.from(desiredGatewaysSet),
+  );
+
+  const hostsChanged = !arraysShallowEqual(baseHosts, desiredHosts);
+  const gatewaysChanged = !arraysShallowEqual(baseGateways, desiredGateways);
+
+  const desiredManagedHostsList = Array.from(desiredHostsSet).sort();
+  const desiredManagedGatewaysList = Array.from(desiredGatewaysSet).sort();
+  const existingManagedHostsList = Array.from(managedHosts).sort();
+  const existingManagedGatewaysList = Array.from(managedGateways).sort();
+
+  const managedHostsChanged = !arraysShallowEqual(
+    existingManagedHostsList,
+    desiredManagedHostsList,
+  );
+  const managedGatewaysChanged = !arraysShallowEqual(
+    existingManagedGatewaysList,
+    desiredManagedGatewaysList,
+  );
+
+  if (
+    !hostsChanged &&
+    !gatewaysChanged &&
+    !managedHostsChanged &&
+    !managedGatewaysChanged
+  ) {
     return;
   }
 
-  const patch: Record<string, any> = { spec: {} };
-  if (hostsChanged) {
-    patch.spec.hosts = desiredHosts;
+  const patch: Record<string, any> = {};
+
+  if (hostsChanged || gatewaysChanged) {
+    patch.spec = {};
+    if (hostsChanged) {
+      patch.spec.hosts = desiredHosts;
+    }
+    if (gatewaysChanged) {
+      patch.spec.gateways = desiredGateways;
+    }
   }
-  if (gatewaysChanged) {
-    patch.spec.gateways = desiredGateways;
+
+  if (managedHostsChanged || managedGatewaysChanged) {
+    patch.metadata = { annotations: {} };
+    patch.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
+      desiredManagedHostsList.length > 0
+        ? JSON.stringify(desiredManagedHostsList)
+        : null;
+    patch.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
+      desiredManagedGatewaysList.length > 0
+        ? JSON.stringify(desiredManagedGatewaysList)
+        : null;
   }
 
   try {
@@ -1400,18 +1503,15 @@ function buildBaseLabels(
   };
 }
 
-function createTenantSlug(record: PortalDomainActivityRecord): string {
-  const canonical = normalizeHostname(record.canonical_host || "");
-  const prefix = canonical.split(".")[0];
-  if (prefix) {
-    return sanitizeName(prefix);
-  }
-  const tenant = record.tenant || "";
-  const sanitized = tenant.replace(/[^a-z0-9]/gi, "").toLowerCase();
+function createDomainSlug(record: PortalDomainActivityRecord): string {
+  const source = record.id ?? '';
+  const sanitized = sanitizeName(source);
   if (sanitized) {
-    return sanitized.slice(0, 32);
+    return sanitized.length <= 46 ? sanitized : sanitized.slice(0, 46);
   }
-  return "tenant";
+
+  const fallback = sanitizeName(record.domain ?? '') || sanitizeName(record.tenant ?? '');
+  return fallback || 'domain';
 }
 
 function sanitizeName(input: string): string {
@@ -1511,6 +1611,32 @@ function arraysShallowEqual(a: string[], b: string[]): boolean {
     return false;
   }
   return a.every((value, index) => value === b[index]);
+}
+
+function readManagedAnnotationSet(value: unknown): Set<string> {
+  if (typeof value !== 'string') {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const result = new Set<string>();
+      for (const entry of parsed) {
+        if (typeof entry === 'string' && entry.trim().length > 0) {
+          result.add(entry.trim());
+        }
+      }
+      return result;
+    }
+  } catch (error) {
+    console.warn('[portal-domains] Failed to parse managed annotation', {
+      annotation: value,
+      error: error instanceof Error ? error.message : String(error ?? ''),
+    });
+  }
+
+  return new Set<string>();
 }
 
 function formatErrorMessage(error: unknown, prefix?: string): string {

@@ -14,12 +14,14 @@ const {
   verifyCnameRecord,
   applyPortalDomainResources,
   checkPortalDomainDeploymentStatus,
+  deletePortalDomainRecord,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
   applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
   checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
+  deletePortalDomainRecord: (args: { portalDomainId: string }) => Promise<void>;
 }>(
   {
     startToCloseTimeout: '5 minutes',
@@ -65,6 +67,12 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
         statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
       });
       await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
+      await deletePortalDomainRecord({ portalDomainId: record.id }).catch((error) => {
+        log.warn('Failed to delete portal domain record after cleanup', {
+          portalDomainId: record.id,
+          error: error instanceof Error ? error.message : String(error ?? ''),
+        });
+      });
       return;
     }
 

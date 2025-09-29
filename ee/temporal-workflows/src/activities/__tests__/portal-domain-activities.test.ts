@@ -38,19 +38,25 @@ const baseConfig: PortalDomainConfig = {
 };
 
 describe('renderPortalDomainResources', () => {
-  it('produces manifests using sanitized domain and tenant slug', () => {
+  it('produces manifests using sanitized domain slug from record id', () => {
     const record = createRecord();
     const manifests = renderPortalDomainResources(record, baseConfig);
 
-    expect(manifests.secretName).toBe('portal-domain-123e456');
+    const expectedSlug = '123e4567-e89b-12d3-a456-426614174000';
+
+    expect(manifests.secretName).toBe(`portal-domain-${expectedSlug}`);
     expect(manifests.certificate.metadata.namespace).toBe('msp');
     expect(manifests.certificate.spec.secretName).toBe(manifests.secretName);
     expect(manifests.certificate.spec.dnsNames).toEqual(['example.com']);
-    expect(manifests.gateway.metadata.name).toBe('portal-domain-gw-123e456');
+    expect(manifests.gateway.metadata.name).toBe(
+      `portal-domain-gw-${expectedSlug}`,
+    );
     expect(manifests.gateway.spec.servers).toHaveLength(1);
     expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(manifests.secretName);
     expect(manifests.virtualService.metadata.namespace).toBe('msp');
-    expect(manifests.virtualService.spec.gateways).toEqual(['istio-system/portal-domain-gw-123e456']);
+    expect(manifests.virtualService.spec.gateways).toEqual([
+      `istio-system/portal-domain-gw-${expectedSlug}`,
+    ]);
     expect(manifests.virtualService.spec.http).toHaveLength(1);
     const [httpsRoute] = manifests.virtualService.spec.http ?? [];
     expect(httpsRoute?.match?.[0]?.port).toBe(443);
@@ -68,7 +74,9 @@ describe('renderPortalDomainResources', () => {
     const manifests = renderPortalDomainResources(record, baseConfig);
 
     expect(manifests.gateway?.kind).toBe('Gateway');
-    expect(manifests.gateway?.metadata?.name).toBe('portal-domain-gw-123e456');
+    expect(manifests.gateway?.metadata?.name).toBe(
+      'portal-domain-gw-123e4567-e89b-12d3-a456-426614174000',
+    );
 
     const servers = manifests.gateway?.spec?.servers ?? [];
     expect(servers).toHaveLength(1);
@@ -85,7 +93,7 @@ describe('renderPortalDomainResources', () => {
     expect(manifests.virtualService?.kind).toBe('VirtualService');
     expect(manifests.virtualService?.spec?.hosts).toEqual(['portal.mspmind.com']);
     expect(manifests.virtualService?.spec?.gateways).toEqual([
-      'istio-system/portal-domain-gw-123e456',
+      'istio-system/portal-domain-gw-123e4567-e89b-12d3-a456-426614174000',
     ]);
   });
 });
