@@ -50,12 +50,21 @@ const createRedisClient = async () => {
 
 // Singleton Redis client
 let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
+let clientPromise: Promise<Awaited<ReturnType<typeof createRedisClient>>> | null = null;
 
 async function getClient() {
   if (!client) {
-    logger.debug('[EventBus] Creating new Redis client');
-    client = await createRedisClient();
-    await client.connect();
+    // If another call is already creating the client, wait for it
+    if (!clientPromise) {
+      logger.info('[EventBus] Creating new Redis client');
+      clientPromise = (async () => {
+        const newClient = await createRedisClient();
+        await newClient.connect();
+        client = newClient;
+        return newClient;
+      })();
+    }
+    return await clientPromise;
   }
   return client;
 }
