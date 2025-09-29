@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from 'serve
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Switch } from 'server/src/components/ui/Switch';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -530,12 +531,12 @@ const ServiceTypeSettings: React.FC = () => {
                         key={type.id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/50 border-b last:border-b-0 cursor-pointer"
                       >
-                        <div className="w-8">
-                          <input
-                            type="checkbox"
+                        <div className="w-8 [&>div]:mb-0">
+                          <Checkbox
+                            id={`import-service-type-${type.id}`}
                             checked={selectedImportTypes.includes(type.id)}
                             onChange={(e) => {
-                              if (e.target.checked) {
+                              if ((e.target as HTMLInputElement).checked) {
                                 setSelectedImportTypes([...selectedImportTypes, type.id]);
                               } else {
                                 setSelectedImportTypes(selectedImportTypes.filter(id => id !== type.id));

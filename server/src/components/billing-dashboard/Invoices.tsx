@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FileTextIcon, GearIcon } from '@radix-ui/react-icons';
 import { MoreVertical } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -254,14 +255,13 @@ const Invoices: React.FC = () => {
     {
       title: (
         <div className="flex items-center">
-          <div onClick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
-              className="w-4 h-4"
+          <div onClick={(e) => e.stopPropagation()} className="[&>div]:mb-0">
+            <Checkbox
+              id="select-all-invoices"
               checked={selectedInvoices.size > 0 && selectedInvoices.size === invoices.length}
               onChange={(e) => {
                 e.stopPropagation();
-                handleSelectAll(e.target.checked);
+                handleSelectAll((e.target as HTMLInputElement).checked);
               }}
             />
           </div>
@@ -270,12 +270,11 @@ const Invoices: React.FC = () => {
       dataIndex: 'invoice_id', // Added to satisfy ColumnDefinition interface
       width: '50px',
       render: (_, record) => (
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            className="w-4 h-4"
+        <div className="flex items-center [&>div]:mb-0">
+          <Checkbox
+            id={`invoice-${record.invoice_id}`}
             checked={selectedInvoices.has(record.invoice_id)}
-            onChange={(e) => handleSelectInvoice(record.invoice_id, e.target.checked)}
+            onChange={(e) => handleSelectInvoice(record.invoice_id, (e.target as HTMLInputElement).checked)}
           />
         </div>
       ),

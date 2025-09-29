@@ -5,6 +5,7 @@ import { Table } from "server/src/components/ui/Table";
 import { Button } from "server/src/components/ui/Button";
 import { Dialog, DialogContent } from "server/src/components/ui/Dialog";
 import { Input } from "server/src/components/ui/Input";
+import { Checkbox } from "server/src/components/ui/Checkbox";
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 import {
@@ -349,19 +350,15 @@ export default function BillingSection() {
             </div>
 
             <div className="flex items-center">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="setDefault"
+                label="Set as default payment method"
                 checked={paymentForm.setDefault}
                 onChange={(e) => setPaymentForm(prev => ({
                   ...prev,
-                  setDefault: e.target.checked
+                  setDefault: (e.target as HTMLInputElement).checked
                 }))}
-                className="mr-2"
               />
-              <label htmlFor="setDefault" className="text-sm">
-                Set as default payment method
-              </label>
             </div>
 
             {addPaymentError && (

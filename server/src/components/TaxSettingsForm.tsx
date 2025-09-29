@@ -3,6 +3,7 @@ import { getCompanyTaxSettings, updateCompanyTaxSettings, getTaxRates, createDef
 import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface TaxSettingsFormProps {
   companyId: string;
@@ -206,18 +207,14 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
       <SuccessMessage />
      {/* Removed Tax Rate selection dropdown as tax_rate_id is no longer on company_tax_settings */}
       <div>
-        <label htmlFor="reverseCharge" className="flex items-center">
-          <input
-            type="checkbox"
-            id="reverseCharge"
-            checked={taxSettings.is_reverse_charge_applicable}
-            onChange={(e) =>
-              setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: e.target.checked })
-            }
-            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-          />
-          <span className="ml-2 text-sm text-gray-700">Apply Reverse Charge</span>
-        </label>
+        <Checkbox
+          id="reverseCharge"
+          label="Apply Reverse Charge"
+          checked={taxSettings.is_reverse_charge_applicable}
+          onChange={(e) =>
+            setTaxSettings({ ...taxSettings, is_reverse_charge_applicable: (e.target as HTMLInputElement).checked })
+          }
+        />
       </div>
 
      {/* Removed UI sections for Tax Components, Thresholds, and Holidays */}

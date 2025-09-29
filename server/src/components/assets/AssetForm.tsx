@@ -5,6 +5,7 @@ import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset, Server
 import { Card } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { getAsset, updateAsset } from 'server/src/lib/actions/asset-actions/assetActions';
@@ -403,15 +404,12 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           />
         </div>
         <div className="flex items-center">
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.network_device.supports_poe || false}
-              onChange={(e) => handleTypeSpecificChange('network_device', 'supports_poe', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Supports PoE</span>
-          </label>
+          <Checkbox
+            id="supports-poe"
+            label="Supports PoE"
+            checked={formData.network_device.supports_poe || false}
+            onChange={(e) => handleTypeSpecificChange('network_device', 'supports_poe', (e.target as HTMLInputElement).checked)}
+          />
         </div>
       </div>
     );
@@ -497,15 +495,12 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           />
         </div>
         <div className="flex items-center">
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.server.is_virtual || false}
-              onChange={(e) => handleTypeSpecificChange('server', 'is_virtual', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Virtual Machine</span>
-          </label>
+          <Checkbox
+            id="is-virtual"
+            label="Virtual Machine"
+            checked={formData.server.is_virtual || false}
+            onChange={(e) => handleTypeSpecificChange('server', 'is_virtual', (e.target as HTMLInputElement).checked)}
+          />
         </div>
         {formData.server.is_virtual && (
           <div>
@@ -594,15 +589,12 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           />
         </div>
         <div className="flex items-center">
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.mobile_device.is_supervised || false}
-              onChange={(e) => handleTypeSpecificChange('mobile_device', 'is_supervised', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Supervised Device</span>
-          </label>
+          <Checkbox
+            id="is-supervised"
+            label="Supervised Device"
+            checked={formData.mobile_device.is_supervised || false}
+            onChange={(e) => handleTypeSpecificChange('mobile_device', 'is_supervised', (e.target as HTMLInputElement).checked)}
+          />
         </div>
       </div>
     );
@@ -646,33 +638,24 @@ export default function AssetForm({ assetId }: AssetFormProps) {
           />
         </div>
         <div className="flex items-center space-x-6">
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.printer.is_network_printer || false}
-              onChange={(e) => handleTypeSpecificChange('printer', 'is_network_printer', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Network Printer</span>
-          </label>
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.printer.supports_color || false}
-              onChange={(e) => handleTypeSpecificChange('printer', 'supports_color', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Color Support</span>
-          </label>
-          <label className="flex items-center space-x-2 text-sm font-medium text-[rgb(var(--color-text-700))]">
-            <Input
-              type="checkbox"
-              checked={formData.printer.supports_duplex || false}
-              onChange={(e) => handleTypeSpecificChange('printer', 'supports_duplex', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-            <span>Duplex Support</span>
-          </label>
+          <Checkbox
+            id="is-network-printer"
+            label="Network Printer"
+            checked={formData.printer.is_network_printer || false}
+            onChange={(e) => handleTypeSpecificChange('printer', 'is_network_printer', (e.target as HTMLInputElement).checked)}
+          />
+          <Checkbox
+            id="supports-color"
+            label="Color Support"
+            checked={formData.printer.supports_color || false}
+            onChange={(e) => handleTypeSpecificChange('printer', 'supports_color', (e.target as HTMLInputElement).checked)}
+          />
+          <Checkbox
+            id="supports-duplex"
+            label="Duplex Support"
+            checked={formData.printer.supports_duplex || false}
+            onChange={(e) => handleTypeSpecificChange('printer', 'supports_duplex', (e.target as HTMLInputElement).checked)}
+          />
         </div>
       </div>
     );
