@@ -786,4 +786,117 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     ).toBeUndefined();
     expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
+
+  it('places redirect route before generic catch-all route', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    // Add a generic catch-all route at the end
+    baseVirtualService.spec.http.push({
+      route: [
+        {
+          destination: {
+            host: 'sebastian-blue.msp.svc.cluster.local',
+            port: {
+              number: 3000,
+            },
+          },
+          weight: 100,
+        },
+        {
+          destination: {
+            host: 'sebastian-green.msp.svc.cluster.local',
+            port: {
+              number: 3000,
+            },
+          },
+          weight: 0,
+        },
+      ],
+    });
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'active-id',
+        tenant: 'Tenant One',
+        domain: 'portal.mspmind.com',
+        canonical_host: 'tenantone.portal.algapsa.com',
+        status: 'active',
+        status_message: null,
+        verification_details: null,
+        certificate_secret_name: null,
+        last_synced_resource_version: null,
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(1),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+    // Get the final http routes array
+    const finalHttpRoutes = baseVirtualService.spec.http;
+
+    // Find the index of the redirect route
+    const redirectIndex = finalHttpRoutes.findIndex((route: any) => {
+      if (!route?.redirect || !Array.isArray(route?.match)) {
+        return false;
+      }
+      return route.redirect.uri === '/client-portal/dashboard' &&
+        route.match.some(
+          (condition: any) =>
+            condition?.authority?.exact === 'portal.mspmind.com' &&
+            condition?.uri?.exact === '/',
+        );
+    });
+
+    // Find the index of the catch-all route
+    const catchAllIndex = finalHttpRoutes.findIndex((route: any) => {
+      if (!route?.route || Array.isArray(route?.match)) {
+        return false;
+      }
+      return route.route.some(
+        (dest: any) =>
+          dest?.destination?.host === 'sebastian-blue.msp.svc.cluster.local' ||
+          dest?.destination?.host === 'sebastian-green.msp.svc.cluster.local',
+      );
+    });
+
+    expect(redirectIndex).toBeGreaterThanOrEqual(0);
+    expect(catchAllIndex).toBeGreaterThanOrEqual(0);
+    expect(redirectIndex).toBeLessThan(catchAllIndex);
+  });
 });

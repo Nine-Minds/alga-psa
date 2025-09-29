@@ -1438,9 +1438,24 @@ async function syncBaseVirtualServiceRouting(
       buildManagedRedirectRoute(host),
     );
 
+  // Separate catch-all routes from specific routes
+  // Catch-all routes are those with no match conditions or very generic matches
+  const specificRoutes: any[] = [];
+  const catchAllRoutes: any[] = [];
+
+  for (const route of retainedHttpRoutes) {
+    if (isCatchAllRoute(route)) {
+      catchAllRoutes.push(route);
+    } else {
+      specificRoutes.push(route);
+    }
+  }
+
+  // Order: specific routes, then redirect routes, then catch-all routes
   const desiredHttpRoutes = [
-    ...retainedHttpRoutes,
+    ...specificRoutes,
     ...desiredManagedRedirectRoutes,
+    ...catchAllRoutes,
   ];
 
   const httpRoutesChanged = !httpRoutesEqual(
@@ -1685,6 +1700,58 @@ function buildManagedRedirectRoute(host: string): Record<string, any> {
       uri: PORTAL_DASHBOARD_REDIRECT_URI,
     },
   };
+}
+
+function isCatchAllRoute(route: any): boolean {
+  if (!route || typeof route !== 'object') {
+    return false;
+  }
+
+  // A catch-all route has no match conditions or only very generic ones
+  // and contains a route (not a redirect)
+  if (!route.route || !Array.isArray(route.route)) {
+    return false;
+  }
+
+  // If there's no match array at all, it's definitely a catch-all
+  if (!Array.isArray(route.match)) {
+    return true;
+  }
+
+  // If the match array is empty, it's a catch-all
+  if (route.match.length === 0) {
+    return true;
+  }
+
+  // Check if all match conditions are generic (like prefix: "/" without authority)
+  // A route is considered catch-all if it only has generic URI matches without authority constraints
+  const hasSpecificMatch = route.match.some((condition: any) => {
+    // If there's an authority match, it's specific
+    if (condition?.authority) {
+      return true;
+    }
+
+    // If there's a specific URI match (exact or regex), it might be specific
+    // But prefix: "/" without authority is generic
+    const uriPrefix = condition?.uri?.prefix;
+    if (uriPrefix && uriPrefix !== '/') {
+      return true;
+    }
+
+    const uriExact = condition?.uri?.exact;
+    if (uriExact && uriExact !== '/') {
+      return true;
+    }
+
+    // Other match types (headers, queryParams, etc.) make it specific
+    if (condition?.headers || condition?.queryParams || condition?.method) {
+      return true;
+    }
+
+    return false;
+  });
+
+  return !hasSpecificMatch;
 }
 
 function httpRoutesEqual(a: any[], b: any[]): boolean {
