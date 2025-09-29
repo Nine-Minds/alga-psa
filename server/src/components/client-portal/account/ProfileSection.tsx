@@ -6,7 +6,7 @@ import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
 import { useState, useEffect } from 'react';
 import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ValidationErrors {
   name?: string;
@@ -135,7 +135,7 @@ export default function ProfileSection() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading profile...</div>;
+    return <div className="text-center py-8">{t('profile.messages.loading', 'Loading profile...')}</div>;
   }
 
   return (
@@ -144,7 +144,7 @@ export default function ProfileSection() {
         <div className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium mb-1">
-              Company Name *
+              {t('companySettings.fields.companyName', 'Company Name')} *
             </label>
             <Input
               id="name"
@@ -164,7 +164,7 @@ export default function ProfileSection() {
 
           <div>
             <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email Address *
+              {t('profile.fields.email', 'Email Address')} *
             </label>
             <Input
               id="email"
@@ -185,7 +185,7 @@ export default function ProfileSection() {
 
           <div>
             <label htmlFor="phone" className="block text-sm font-medium mb-1">
-              Phone Number
+              {t('profile.fields.phone', 'Phone Number')}
             </label>
             <Input
               id="phone"
@@ -205,7 +205,7 @@ export default function ProfileSection() {
 
           <div>
             <label htmlFor="address" className="block text-sm font-medium mb-1">
-              Address
+              {t('profile.fields.address', 'Address')}
             </label>
             <Input
               id="address"
@@ -225,7 +225,7 @@ export default function ProfileSection() {
 
           <div>
             <label htmlFor="notes" className="block text-sm font-medium mb-1">
-              Notes
+              {t('profile.fields.notes', 'Notes')}
             </label>
             <TextArea
               id="notes"
@@ -249,7 +249,9 @@ export default function ProfileSection() {
               type="submit"
               disabled={isSaving}
             >
-              {isSaving ? 'Saving...' : 'Save Changes'}
+              {isSaving
+                ? t('common:status.saving', 'Saving...')
+                : t('profile.actions.save', 'Save Changes')}
             </Button>
           </div>
         </div>

@@ -94,44 +94,44 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-sm font-medium text-gray-500">Invoice Number</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.number', 'Invoice Number')}</p>
               <p className="mt-1">{invoice.invoice_number}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Date</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.date', 'Invoice Date')}</p>
               <p className="mt-1">{formatDate(invoice.invoice_date)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Amount</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.amount', 'Amount')}</p>
               <p className="mt-1">${(invoice.total / 100).toFixed(2)}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Status</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</p>
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
                 invoice.finalized_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
               }`}>
-                {invoice.finalized_at ? 'Finalized' : 'Draft'}
+                {invoice.finalized_at ? t('billing.invoice.finalized', 'Finalized') : t('billing.invoice.draft', 'Draft')}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Manual Invoice</p>
-              <p className="mt-1">{invoice.is_manual ? 'Yes' : 'No'}</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.manualInvoice', 'Manual Invoice')}</p>
+              <p className="mt-1">{invoice.is_manual ? t('common.yes', 'Yes') : t('common.no', 'No')}</p>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-500">Credits</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.invoice.credits', 'Credits')}</p>
               <p className="mt-1">${(invoice.credit_applied / 100).toFixed(2)}</p>
             </div>
           </div>
 
           <div>
-            <h4 className="font-semibold mt-4">Line Items</h4>
+            <h4 className="font-semibold mt-4">{t('billing.invoice.lineItems', 'Line Items')}</h4>
             <table className="min-w-full divide-y divide-gray-200 mt-2">
               <thead>
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.description', 'Description')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.quantity', 'Quantity')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.unitPrice', 'Unit Price')}</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.total', 'Total')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -147,7 +147,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
-                      No line items available
+                      {t('billing.invoice.noLineItems', 'No line items available')}
                     </td>
                   </tr>
                 )}
@@ -156,10 +156,10 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
           </div>
 
           <div>
-            <h4 className="font-semibold mt-4">Tax Breakdown</h4>
+            <h4 className="font-semibold mt-4">{t('billing.invoice.taxBreakdown', 'Tax Breakdown')}</h4>
             <ul className="mt-2 space-y-1">
               <li className="flex justify-between">
-                <span>Tax</span>
+                <span>{t('billing.invoice.tax', 'Tax')}</span>
                 <span>${(invoice.tax / 100).toFixed(2)}</span>
               </li>
             </ul>
@@ -197,7 +197,7 @@ const InvoiceDetailsDialog: React.FC<InvoiceDetailsDialogProps> = React.memo(({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose} 
-      title="Invoice Details" 
+      title={t('billing.invoice.details', 'Invoice Details')} 
       data-automation-id="invoice-details-dialog"
     >
       <DialogContent>
