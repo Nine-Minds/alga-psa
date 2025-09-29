@@ -1,4 +1,9 @@
 import { Worker, NativeConnection } from "@temporalio/worker";
+import {
+  WorkflowClient,
+  WorkflowExecutionAlreadyStartedError,
+  WorkflowIdReusePolicy,
+} from "@temporalio/client";
 import { createLogger, format, transports } from "winston";
 import * as activities from "./activities/index.js";
 import * as dotenv from "dotenv";
@@ -7,6 +12,10 @@ import {
   validateStartup,
   logConfiguration,
 } from "./config/startupValidation.js";
+import {
+  PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+  portalDomainApplyCoordinatorWorkflow,
+} from "./workflows/portal-domains/apply-coordinator.workflow.js";
 
 // Load environment variables
 dotenv.config();
@@ -74,18 +83,10 @@ function getWorkerConfig(): WorkerConfig {
 /**
  * Create and configure the Temporal worker
  */
-async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
-  logger.info("Connecting to Temporal", {
-    address: config.temporalAddress,
-    namespace: config.temporalNamespace,
-  });
-
-  const connection = await NativeConnection.connect({
-    address: config.temporalAddress,
-  });
-
-  logger.info("Connected to Temporal successfully");
-
+async function createWorkers(
+  connection: NativeConnection,
+  config: WorkerConfig,
+): Promise<Worker[]> {
   const workers: Worker[] = [];
 
   for (const taskQueue of config.taskQueues) {
@@ -117,12 +118,16 @@ async function createWorkers(config: WorkerConfig): Promise<Worker[]> {
 /**
  * Handle graceful shutdown
  */
-function setupGracefulShutdown(workers: Worker[]): void {
+function setupGracefulShutdown(
+  workers: Worker[],
+  connection: NativeConnection,
+): void {
   const shutdownHandler = async (signal: string) => {
     logger.info(`Received ${signal}, shutting down gracefully...`);
 
     try {
       await Promise.all(workers.map((worker) => worker.shutdown()));
+      await connection.close();
       logger.info("Worker shutdown completed");
       process.exit(0);
     } catch (error) {
@@ -142,11 +147,13 @@ function setupGracefulShutdown(workers: Worker[]): void {
       error: error.message,
       stack: error.stack,
     });
+    connection.close().catch(() => undefined);
     process.exit(1);
   });
 
   process.on("unhandledRejection", (reason, promise) => {
     logger.error("Unhandled rejection", { reason, promise });
+    connection.close().catch(() => undefined);
     process.exit(1);
   });
 }
@@ -181,10 +188,41 @@ function startHealthCheck(): void {
   }
 }
 
+async function ensurePortalDomainCoordinator(
+  client: WorkflowClient,
+  config: WorkerConfig,
+): Promise<void> {
+  const coordinatorTaskQueue =
+    config.taskQueues.find((queue) => queue.includes("portal-domain")) ??
+    config.taskQueues[0];
+
+  try {
+    await client.workflow.start(portalDomainApplyCoordinatorWorkflow, {
+      workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+      taskQueue: coordinatorTaskQueue,
+      workflowIdReusePolicy:
+        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+    });
+    logger.info("Started portal domain apply coordinator", {
+      workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+      taskQueue: coordinatorTaskQueue,
+    });
+  } catch (error) {
+    if (error instanceof WorkflowExecutionAlreadyStartedError) {
+      logger.info("Portal domain apply coordinator already running", {
+        workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+      });
+      return;
+    }
+    throw error;
+  }
+}
+
 /**
  * Main function to start the worker
  */
 async function main(): Promise<void> {
+  let connection: NativeConnection | null = null;
   try {
     logger.info("Starting Temporal worker for tenant workflows");
 
@@ -201,10 +239,27 @@ async function main(): Promise<void> {
     const config = getWorkerConfig();
     logger.info("Worker configuration", config);
 
-    const workers = await createWorkers(config);
+    logger.info("Connecting to Temporal", {
+      address: config.temporalAddress,
+      namespace: config.temporalNamespace,
+    });
+
+    connection = await NativeConnection.connect({
+      address: config.temporalAddress,
+    });
+    logger.info("Connected to Temporal successfully");
+
+    const client = new WorkflowClient({
+      connection,
+      namespace: config.temporalNamespace,
+    });
+
+    await ensurePortalDomainCoordinator(client, config);
+
+    const workers = await createWorkers(connection, config);
 
     // Setup graceful shutdown
-    setupGracefulShutdown(workers);
+    setupGracefulShutdown(workers, connection);
 
     // Start health check server if enabled
     startHealthCheck();
@@ -219,6 +274,9 @@ async function main(): Promise<void> {
       error: error instanceof Error ? error.message : "Unknown error",
       stack: error instanceof Error ? error.stack : undefined,
     });
+    if (connection) {
+      await connection.close().catch(() => undefined);
+    }
     process.exit(1);
   }
 }

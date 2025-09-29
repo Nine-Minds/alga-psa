@@ -1,4 +1,14 @@
-import { proxyActivities, setHandler, sleep, Trigger, defineSignal, log } from '@temporalio/workflow';
+import {
+  proxyActivities,
+  setHandler,
+  sleep,
+  Trigger,
+  defineSignal,
+  log,
+  workflowInfo,
+  randomUUID,
+  signalExternalWorkflow,
+} from '@temporalio/workflow';
 import type {
   PortalDomainWorkflowInput,
   PortalDomainWorkflowTrigger,
@@ -7,18 +17,21 @@ import type {
   ApplyPortalDomainResourcesResult,
   PortalDomainStatusSnapshot,
 } from './types';
+import {
+  PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+  enqueuePortalDomainApplySignal,
+  portalDomainApplyCompletedSignal,
+} from './apply-coordinator.workflow.js';
 
 const {
   loadPortalDomain,
   markPortalDomainStatus,
   verifyCnameRecord,
-  applyPortalDomainResources,
   checkPortalDomainDeploymentStatus,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
-  applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
   checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
 }>(
   {
@@ -36,12 +49,50 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
 
   let pendingTrigger: PortalDomainWorkflowTrigger | undefined = input.trigger;
   let reconcileTrigger = new Trigger<void>();
+  const pendingApplyRequests = new Map<
+    string,
+    Trigger<ApplyPortalDomainResourcesResult>
+  >();
 
   setHandler(reconcileSignal, (payload?: PortalDomainWorkflowInput) => {
     pendingTrigger = payload?.trigger ?? 'refresh';
     log.info('Received reconcile signal', { pendingTrigger });
     reconcileTrigger.resolve();
   });
+
+  setHandler(portalDomainApplyCompletedSignal, ({ requestId, result }) => {
+    const pending = pendingApplyRequests.get(requestId);
+    if (pending) {
+      pendingApplyRequests.delete(requestId);
+      pending.resolve(result);
+    }
+  });
+
+  async function enqueueApplyRequest(record: PortalDomainActivityRecord): Promise<ApplyPortalDomainResourcesResult> {
+    const requestId = randomUUID();
+    const completion = new Trigger<ApplyPortalDomainResourcesResult>();
+    pendingApplyRequests.set(requestId, completion);
+
+    try {
+      await signalExternalWorkflow(
+        { workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID },
+        enqueuePortalDomainApplySignal,
+        {
+          requestId,
+          tenantId: record.tenant,
+          portalDomainId: record.id,
+          targetWorkflowId: workflowInfo().workflowId,
+          targetRunId: workflowInfo().runId,
+        },
+      );
+    } catch (error) {
+      pendingApplyRequests.delete(requestId);
+      throw error;
+    }
+
+    const result = await completion;
+    return result;
+  }
 
   async function runOnce(triggerReason: PortalDomainWorkflowTrigger | undefined): Promise<void> {
     const record = await loadPortalDomain({ portalDomainId: input.portalDomainId });
@@ -64,7 +115,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
         status: 'disabled',
         statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
       });
-      await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
+      await enqueueApplyRequest(record);
       return;
     }
 
@@ -109,7 +160,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       verificationDetails,
     });
 
-    const applyResult = await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
+    const applyResult = await enqueueApplyRequest(record);
 
     if (!applyResult.success) {
       await markPortalDomainStatus({

@@ -1,10 +1,33 @@
 import path from 'node:path';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
+import {
+  WorkflowExecutionAlreadyStartedError,
+  WorkflowIdReusePolicy,
+} from '@temporalio/client';
 import { Worker } from '@temporalio/worker';
 import { describe, expect, it } from 'vitest';
 
 import type { PortalDomainActivityRecord } from '../types.js';
 import { portalDomainRegistrationWorkflow } from '../registration.workflow.js';
+import {
+  PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+  portalDomainApplyCoordinatorWorkflow,
+} from '../apply-coordinator.workflow.js';
+
+async function ensureCoordinator(env: TestWorkflowEnvironment, taskQueue: string) {
+  try {
+    await env.client.workflow.start(portalDomainApplyCoordinatorWorkflow, {
+      workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
+      taskQueue,
+      workflowIdReusePolicy:
+        WorkflowIdReusePolicy.WORKFLOW_ID_REUSE_POLICY_REJECT_DUPLICATE,
+    });
+  } catch (error) {
+    if (!(error instanceof WorkflowExecutionAlreadyStartedError)) {
+      throw error;
+    }
+  }
+}
 
 describe('portalDomainRegistrationWorkflow', () => {
   it('marks the domain as certificate_failed when ACME registration fails', async () => {
@@ -64,6 +87,7 @@ describe('portalDomainRegistrationWorkflow', () => {
 
     try {
       await worker.runUntil(async () => {
+        await ensureCoordinator(env, taskQueue);
         const handle = await env.client.workflow.start(portalDomainRegistrationWorkflow, {
           args: [{ tenantId: record.tenant, portalDomainId: record.id }],
           taskQueue,
@@ -163,6 +187,7 @@ describe('portalDomainRegistrationWorkflow', () => {
 
     try {
       await worker.runUntil(async () => {
+        await ensureCoordinator(env, taskQueue);
         const handle = await env.client.workflow.start(portalDomainRegistrationWorkflow, {
           args: [{ tenantId: record.tenant, portalDomainId: record.id }],
           taskQueue,
@@ -282,6 +307,7 @@ describe('portalDomainRegistrationWorkflow', () => {
 
     try {
       await worker.runUntil(async () => {
+        await ensureCoordinator(env, taskQueue);
         const handle = await env.client.workflow.start(portalDomainRegistrationWorkflow, {
           args: [{ tenantId: record.tenant, portalDomainId: record.id }],
           taskQueue,
