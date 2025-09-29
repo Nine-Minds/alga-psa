@@ -224,7 +224,19 @@
       "download": "Descargar PDF",
       "view": "Ver detalles",
       "pay": "Pagar ahora",
-      "paymentHistory": "Historial de pagos"
+      "paymentHistory": "Historial de pagos",
+      "details": "Detalles de la factura",
+      "lineItems": "Conceptos",
+      "description": "Descripción",
+      "quantity": "Cantidad",
+      "unitPrice": "Precio unitario",
+      "total": "Total",
+      "noLineItems": "No hay conceptos disponibles",
+      "subtotal": "Subtotal",
+      "tax": "Impuesto",
+      "taxBreakdown": "Desglose de impuestos",
+      "manualInvoice": "Factura manual",
+      "credits": "Créditos"
     },
     "frequency": {
       "monthly": "Mensual",
@@ -350,7 +362,8 @@
       "timezone": "Zona horaria",
       "language": "Preferencia de idioma",
       "dateFormat": "Formato de fecha",
-      "avatar": "Foto de perfil"
+      "avatar": "Foto de perfil",
+      "notes": "Notas"
     },
     "changePassword": {
       "title": "Cambiar contraseña",
@@ -394,6 +407,7 @@
       "photoRemoved": "Foto eliminada correctamente",
       "userNotFound": "Usuario no encontrado",
       "loadError": "No se pudo cargar el perfil",
+      "loading": "Cargando perfil...",
       "avatarDescription": "Este avatar se muestra al personal del MSP cuando consultan tu información de contacto."
     },
     "imageUpload": {
@@ -505,16 +519,87 @@
     }
   },
   "account": {
+    "title": "Cuenta",
     "services": {
       "loadError": "No se pudieron cargar los servicios",
       "loadPlansError": "No se pudieron cargar los planes de servicio",
-      "updateError": "No se pudo actualizar el servicio"
+      "updateError": "No se pudo actualizar el servicio",
+      "loading": "Cargando servicios...",
+      "activeTitle": "Servicios activos",
+      "empty": "No se encontraron servicios activos",
+      "columns": {
+        "service": "Servicio",
+        "description": "Descripción",
+        "status": "Estado",
+        "currentPlan": "Plan actual",
+        "nextBilling": "Próxima facturación"
+      },
+      "actions": {
+        "manage": "Administrar",
+        "upgrade": "Actualizar",
+        "downgrade": "Reducir plan"
+      },
+      "manageTitle": "Administrar {{service}}",
+      "genericServiceLabel": "Servicio",
+      "currentPlan": "Plan actual",
+      "availablePlans": "Planes disponibles",
+      "catalog": {
+        "title": "Servicios disponibles",
+        "learnMore": "Más información",
+        "managedIt": {
+          "title": "Soporte TI gestionado",
+          "description": "Soporte y monitoreo de TI 24/7 para tu empresa. Incluye mantenimiento proactivo, actualizaciones de seguridad y soporte técnico dedicado.",
+          "price": "Desde $299/mes"
+        },
+        "cloudBackup": {
+          "title": "Respaldo en la nube",
+          "description": "Respaldo seguro en la nube y soluciones de recuperación ante desastres. Copias automáticas, opciones de recuperación rápida y cifrado de datos.",
+          "price": "Desde $99/mes"
+        },
+        "cybersecurity": {
+          "title": "Ciberseguridad",
+          "description": "Monitoreo avanzado de seguridad y prevención de amenazas. Incluye gestión de firewalls, protección de endpoints y evaluaciones de seguridad periódicas.",
+          "price": "Desde $199/mes"
+        }
+      }
     },
     "billing": {
       "loadError": "No se pudieron cargar los datos de facturación",
       "addPaymentError": "No se pudo agregar el método de pago",
       "removePaymentError": "No se pudo eliminar el método de pago",
       "setDefaultError": "No se pudo establecer el método de pago predeterminado",
+      "loadingBillingInfo": "Cargando información de facturación...",
+      "overviewTitle": "Resumen de facturación",
+      "paymentMethodsTitle": "Métodos de pago",
+      "noPaymentMethods": "No hay métodos de pago registrados",
+      "billingCycleTitle": "Ciclo de facturación",
+      "noBillingCycle": "No se encontró un ciclo de facturación",
+      "recentInvoicesTitle": "Facturas recientes",
+      "billingHistoryTitle": "Historial de facturación",
+      "labels": {
+        "defaultTag": "(Predeterminado)"
+      },
+      "actions": {
+        "setDefault": "Establecer predeterminado",
+        "remove": "Quitar",
+        "addPaymentMethod": "Agregar método de pago",
+        "adding": "Agregando...",
+        "view": "Ver"
+      },
+      "fields": {
+        "cardNumber": "Número de tarjeta",
+        "expiryMonth": "Mes",
+        "expiryYear": "Año",
+        "cvv": "CVV",
+        "setAsDefault": "Establecer como método de pago predeterminado"
+      },
+      "history": {
+        "period": "Período",
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de finalización",
+        "status": "Estado",
+        "empty": "No hay historial de facturación disponible"
+      },
       "validation": {
         "cardNumber": "Introduce un número de tarjeta válido de 16 dígitos",
         "expMonth": "Introduce un mes válido (01-12)",
@@ -537,7 +622,20 @@
     "delete": "Eliminar",
     "previewUnavailable": "Vista previa no disponible",
     "newDocument": "Nuevo documento",
-    "uploadFile": "Subir archivo"
+    "uploadFile": "Subir archivo",
+    "deleteTitle": "Eliminar documento",
+    "deleteMessage": "¿Seguro que deseas eliminar \"{{name}}\"? Esta acción no se puede deshacer.",
+    "deleteVideoTitle": "Eliminar video",
+    "deleteVideoMessage": "¿Seguro que deseas eliminar el video \"{{name}}\"? Esta acción no se puede deshacer.",
+    "removeTitle": "Quitar documento",
+    "removeMessage": "¿Seguro que deseas quitar \"{{name}}\" de este elemento? El documento seguirá disponible en la biblioteca de documentos.",
+    "removeVideoTitle": "Quitar video",
+    "removeVideoMessage": "¿Seguro que deseas quitar el video \"{{name}}\" de este elemento? El archivo seguirá disponible en la biblioteca de documentos.",
+    "downloadFile": "Descargar archivo",
+    "videoUnsupported": "Formato de video ({{mimeType}}) no compatible para la reproducción en el navegador",
+    "videoTagUnsupported": "Tu navegador no admite la etiqueta de video.",
+    "unnamed": "Sin título",
+    "videoDownloadInfo": "El video se descargará y podrá reproducirse con el reproductor predeterminado de tu sistema."
   },
   "common": {
     "actions": "Acciones",
@@ -595,6 +693,8 @@
     "welcomeTitle": "Bienvenido a tu portal del cliente",
     "welcomeSubtitle": "Gestiona tus tickets de soporte y mantente conectado",
     "signInDescription": "Ingresa tus credenciales para acceder a tu cuenta.",
+    "clientLogin": "Acceso de cliente",
+    "mspStaffLogin": "¿Personal MSP? Inicia sesión aquí →",
     "accessDeniedTitle": "Acceso denegado",
     "accessDeniedMessage": "No tienes permiso para acceder al portal del cliente.",
     "registrationSuccessTitle": "Registro exitoso",

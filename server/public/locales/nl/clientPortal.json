@@ -8,7 +8,8 @@
     "companySettings": "Bedrijfsinstellingen",
     "profile": "Profiel",
     "signOut": "Afmelden",
-    "clientPortal": "Klantenportaal"
+    "clientPortal": "Klantenportaal",
+    "portal": "Portal"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -224,7 +225,19 @@
       "download": "PDF downloaden",
       "view": "Details bekijken",
       "pay": "Nu betalen",
-      "paymentHistory": "Betalingsgeschiedenis"
+      "paymentHistory": "Betalingsgeschiedenis",
+      "details": "Factuurdetails",
+      "lineItems": "Regels",
+      "description": "Omschrijving",
+      "quantity": "Aantal",
+      "unitPrice": "Stukprijs",
+      "total": "Totaal",
+      "noLineItems": "Geen regels beschikbaar",
+      "subtotal": "Subtotaal",
+      "tax": "Belasting",
+      "taxBreakdown": "Belastingoverzicht",
+      "manualInvoice": "Handmatige factuur",
+      "credits": "Kredieten"
     },
     "frequency": {
       "monthly": "Maandelijks",
@@ -350,7 +363,8 @@
       "timezone": "Tijdzone",
       "language": "Taalvoorkeur",
       "dateFormat": "Datumnotatie",
-      "avatar": "Profielfoto"
+      "avatar": "Profielfoto",
+      "notes": "Notities"
     },
     "changePassword": {
       "title": "Wachtwoord wijzigen",
@@ -394,7 +408,8 @@
       "photoRemoved": "Foto succesvol verwijderd",
       "userNotFound": "Gebruiker niet gevonden",
       "loadError": "Profiel laden is mislukt",
-      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij je contactgegevens bekijken."
+      "avatarDescription": "Deze avatar wordt getoond aan het MSP-team wanneer zij je contactgegevens bekijken.",
+      "loading": "Profiel wordt geladen..."
     },
     "imageUpload": {
       "uploadAvatar": "Avatar uploaden",
@@ -508,7 +523,45 @@
     "services": {
       "loadError": "Services konden niet worden geladen",
       "loadPlansError": "Serviceplannen konden niet worden geladen",
-      "updateError": "Service kon niet worden bijgewerkt"
+      "updateError": "Service kon niet worden bijgewerkt",
+      "loading": "Services worden geladen...",
+      "activeTitle": "Actieve services",
+      "empty": "Geen actieve services gevonden",
+      "columns": {
+        "service": "Service",
+        "description": "Beschrijving",
+        "status": "Status",
+        "currentPlan": "Huidig pakket",
+        "nextBilling": "Volgende facturatie"
+      },
+      "actions": {
+        "manage": "Beheren",
+        "upgrade": "Upgraden",
+        "downgrade": "Downgraden"
+      },
+      "manageTitle": "{{service}} beheren",
+      "genericServiceLabel": "Service",
+      "currentPlan": "Huidig pakket",
+      "availablePlans": "Beschikbare pakketten",
+      "catalog": {
+        "title": "Beschikbare services",
+        "learnMore": "Meer info",
+        "managedIt": {
+          "title": "Managed IT-support",
+          "description": "24/7 IT-ondersteuning en monitoring voor je bedrijf. Inclusief proactief onderhoud, beveiligingsupdates en toegewijde technische ondersteuning.",
+          "price": "Vanaf $299/maand"
+        },
+        "cloudBackup": {
+          "title": "Cloudback-up",
+          "description": "Beveiligde cloudback-up en noodherstel. Automatische back-ups, snelle herstelopties en gegevensversleuteling.",
+          "price": "Vanaf $99/maand"
+        },
+        "cybersecurity": {
+          "title": "Cybersecurity",
+          "description": "Geavanceerde beveiligingsmonitoring en dreigingspreventie. Inclusief firewallbeheer, endpointbescherming en regelmatige veiligheidsbeoordelingen.",
+          "price": "Vanaf $199/maand"
+        }
+      }
     },
     "billing": {
       "loadError": "Factureringsgegevens konden niet worden geladen",
@@ -520,8 +573,41 @@
         "expMonth": "Voer een geldige maand in (01-12)",
         "expYear": "Voer een geldig jaar in (2024-2099)",
         "cvv": "Voer een geldige CVV in"
+      },
+      "loadingBillingInfo": "Facturatiegegevens worden geladen...",
+      "overviewTitle": "Facturatie-overzicht",
+      "paymentMethodsTitle": "Betaalmethoden",
+      "noPaymentMethods": "Geen betaalmethoden opgeslagen",
+      "billingCycleTitle": "Facturatiecyclus",
+      "noBillingCycle": "Geen facturatiecyclus gevonden",
+      "recentInvoicesTitle": "Recente facturen",
+      "billingHistoryTitle": "Facturatiegeschiedenis",
+      "labels": {
+        "defaultTag": "(Standaard)"
+      },
+      "actions": {
+        "setDefault": "Als standaard instellen",
+        "remove": "Verwijderen",
+        "addPaymentMethod": "Betaalmethode toevoegen",
+        "adding": "Toevoegen...",
+        "view": "Bekijken"
+      },
+      "fields": {
+        "cardNumber": "Kaartnummer",
+        "expiryMonth": "Maand",
+        "expiryYear": "Jaar",
+        "cvv": "CVV",
+        "setAsDefault": "Instellen als standaard betaalmethode"
+      },
+      "history": {
+        "period": "Periode",
+        "startDate": "Startdatum",
+        "endDate": "Einddatum",
+        "status": "Status",
+        "empty": "Geen facturatiegeschiedenis beschikbaar"
       }
-    }
+    },
+    "title": "Account"
   },
   "documents": {
     "title": "Documenten",
@@ -537,7 +623,20 @@
     "delete": "Verwijderen",
     "previewUnavailable": "Voorbeeld niet beschikbaar",
     "newDocument": "Nieuw document",
-    "uploadFile": "Bestand uploaden"
+    "uploadFile": "Bestand uploaden",
+    "deleteTitle": "Document verwijderen",
+    "deleteMessage": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "deleteVideoTitle": "Video verwijderen",
+    "deleteVideoMessage": "Weet je zeker dat je de video \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "removeTitle": "Document loskoppelen",
+    "removeMessage": "Weet je zeker dat je \"{{name}}\" van dit item wilt loskoppelen? Het document blijft beschikbaar in de documentbibliotheek.",
+    "removeVideoTitle": "Video loskoppelen",
+    "removeVideoMessage": "Weet je zeker dat je de video \"{{name}}\" van dit item wilt loskoppelen? Het bestand blijft beschikbaar in de documentbibliotheek.",
+    "downloadFile": "Bestand downloaden",
+    "videoUnsupported": "Videoformaat ({{mimeType}}) wordt niet ondersteund voor weergave in de browser",
+    "videoTagUnsupported": "Je browser ondersteunt de video-tag niet.",
+    "unnamed": "Zonder titel",
+    "videoDownloadInfo": "De video wordt gedownload en kan worden afgespeeld met de standaardvideospeler van je systeem."
   },
   "common": {
     "actions": "Acties",
@@ -616,7 +715,9 @@
         "title": "Toegang tot documentatie",
         "description": "Bekijk gedeelde documenten en bronnen"
       }
-    }
+    },
+    "clientLogin": "Klantenlogin",
+    "mspStaffLogin": "MSP-medewerker? Log hier in →"
   },
   "notifications": {
     "title": "Notificaties",

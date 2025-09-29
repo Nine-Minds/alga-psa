@@ -29,11 +29,22 @@
     "download": "Descargar",
     "upload": "Subir",
     "refresh": "Actualizar",
-    "close": "Cerrar"
+    "close": "Cerrar",
+    "confirm": "Confirmar",
+    "add": "Agregar",
+    "remove": "Quitar",
+    "clear": "Limpiar",
+    "reset": "Restablecer",
+    "view": "Ver",
+    "copy": "Copiar",
+    "duplicate": "Duplicar",
+    "openMenu": "Abrir menú",
+    "confirmDeletion": "Confirmar eliminación"
   },
   "status": {
     "loading": "Cargando...",
     "saving": "Guardando...",
+    "processing": "Procesando...",
     "success": "Éxito",
     "error": "Error",
     "warning": "Advertencia",
@@ -47,6 +58,7 @@
   "messages": {
     "welcome": "Bienvenido",
     "confirmDelete": "¿Seguro que deseas eliminar este elemento?",
+    "confirmDeletion": "Confirmar eliminación",
     "saveSuccess": "Cambios guardados correctamente",
     "saveError": "No se pudieron guardar los cambios",
     "loadError": "No se pudieron cargar los datos",
@@ -55,6 +67,9 @@
     "invalidEmail": "Correo electrónico no válido",
     "invalidPassword": "Contraseña inválida",
     "passwordMismatch": "Las contraseñas no coinciden"
+  },
+  "fields": {
+    "notes": "Notas"
   },
   "errors": {
     "auth": {
