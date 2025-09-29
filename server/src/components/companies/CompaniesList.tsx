@@ -47,7 +47,15 @@ interface CompanyCheckboxProps {
 const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, onChange }) => {
   const checkboxId = `company-checkbox-${companyId}`;
 
-  // The Checkbox component already handles registration internally
+  // Register as a child of the table for bulk actions to work properly
+  useRegisterChild<FormFieldComponent>({
+    id: checkboxId,
+    type: 'formField',
+    label: 'Select Company',
+    value: checked ? 'true' : 'false',
+    fieldType: 'checkbox'
+  });
+
   return (
     <div className="[&>div]:mb-0">
       <Checkbox
@@ -55,6 +63,7 @@ const CompanyCheckbox: React.FC<CompanyCheckboxProps> = ({ companyId, checked, o
         checked={checked}
         onChange={onChange}
         className="cursor-pointer"
+        skipRegistration={true}  // We handle registration above with useRegisterChild
       />
     </div>
   );

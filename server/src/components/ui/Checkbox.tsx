@@ -9,6 +9,8 @@ interface CheckboxProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'typ
   id?: string;
   /** Whether the checkbox is required */
   required?: boolean;
+  /** Skip UI reflection registration (useful when parent component handles registration) */
+  skipRegistration?: boolean;
 }
 
 export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
@@ -18,13 +20,14 @@ export const Checkbox: React.FC<CheckboxProps & AutomationProps> = ({
   checked,
   disabled,
   required,
+  skipRegistration = false,
   ...props
 }) => {
-  // Register with UI reflection system if id is provided
+  // Register with UI reflection system if id is provided and not skipped
   const updateMetadata = useRegisterUIComponent<FormFieldComponent>({
     type: 'formField',
     fieldType: 'checkbox',
-    id: id || '__skip_registration_checkbox',
+    id: skipRegistration ? '__skip_registration_checkbox' : (id || '__skip_registration_checkbox'),
     label: typeof label === 'string' ? label : undefined,
     value: checked,
     disabled,
