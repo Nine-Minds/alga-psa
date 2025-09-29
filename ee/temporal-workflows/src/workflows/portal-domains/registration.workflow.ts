@@ -6,8 +6,8 @@ import {
   defineSignal,
   log,
   workflowInfo,
-  randomUUID,
-  signalExternalWorkflow,
+  uuid4,
+  getExternalWorkflowHandle,
 } from '@temporalio/workflow';
 import type {
   PortalDomainWorkflowInput,
@@ -69,22 +69,21 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   });
 
   async function enqueueApplyRequest(record: PortalDomainActivityRecord): Promise<ApplyPortalDomainResourcesResult> {
-    const requestId = randomUUID();
+    const requestId = uuid4();
     const completion = new Trigger<ApplyPortalDomainResourcesResult>();
     pendingApplyRequests.set(requestId, completion);
 
     try {
-      await signalExternalWorkflow(
-        { workflowId: PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID },
-        enqueuePortalDomainApplySignal,
-        {
-          requestId,
-          tenantId: record.tenant,
-          portalDomainId: record.id,
-          targetWorkflowId: workflowInfo().workflowId,
-          targetRunId: workflowInfo().runId,
-        },
+      const coordinator = getExternalWorkflowHandle(
+        PORTAL_DOMAIN_APPLY_COORDINATOR_WORKFLOW_ID,
       );
+      await coordinator.signal(enqueuePortalDomainApplySignal, {
+        requestId,
+        tenantId: record.tenant,
+        portalDomainId: record.id,
+        targetWorkflowId: workflowInfo().workflowId,
+        targetRunId: workflowInfo().runId,
+      });
     } catch (error) {
       pendingApplyRequests.delete(requestId);
       throw error;

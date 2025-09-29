@@ -4,7 +4,7 @@ import {
   log,
   proxyActivities,
   setHandler,
-  signalExternalWorkflow,
+  getExternalWorkflowHandle,
 } from '@temporalio/workflow';
 
 import type { ApplyPortalDomainResourcesResult } from './types.js';
@@ -76,17 +76,14 @@ export async function portalDomainApplyCoordinatorWorkflow(): Promise<void> {
     }
 
     try {
-      await signalExternalWorkflow(
-        {
-          workflowId: next.targetWorkflowId,
-          runId: next.targetRunId ?? undefined,
-        },
-        portalDomainApplyCompletedSignal,
-        {
-          requestId: next.requestId,
-          result,
-        },
+      const targetHandle = getExternalWorkflowHandle(
+        next.targetWorkflowId,
+        next.targetRunId ?? undefined,
       );
+      await targetHandle.signal(portalDomainApplyCompletedSignal, {
+        requestId: next.requestId,
+        result,
+      });
     } catch (error) {
       log.warn('Failed to signal portal domain apply completion', {
         targetWorkflowId: next.targetWorkflowId,
