@@ -431,6 +431,21 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
+  // Sync the base VirtualService BEFORE git add and kubectl apply
+  // so it gets included in the commit and applied with other resources
+  if (getBasePortalVirtualService()) {
+    try {
+      await syncBaseVirtualServiceRouting(manifests, config, manifestRoot);
+    } catch (error) {
+      errors.push(
+        formatErrorMessage(
+          error,
+          'Failed to update base VirtualService routing',
+        ),
+      );
+    }
+  }
+
   try {
     await runGit(["add", "--all", gitConfig.relativePathPosix], gitConfig, {
       suppressOutput: true,
@@ -467,19 +482,6 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           ),
         );
       }
-    }
-  }
-
-  if (getBasePortalVirtualService()) {
-    try {
-      await syncBaseVirtualServiceRouting(manifests, config);
-    } catch (error) {
-      errors.push(
-        formatErrorMessage(
-          error,
-          'Failed to update base VirtualService routing',
-        ),
-      );
     }
   }
 
@@ -1316,6 +1318,7 @@ async function syncGatewaySecret(
 async function syncBaseVirtualServiceRouting(
   manifests: RenderedPortalDomainResources[],
   config: PortalDomainConfig,
+  manifestRoot: string,
 ): Promise<void> {
   const baseRef = getBasePortalVirtualService();
   if (!baseRef) {
@@ -1482,49 +1485,49 @@ async function syncBaseVirtualServiceRouting(
     return;
   }
 
-  const patch: Record<string, any> = {};
-
-  if (hostsChanged || gatewaysChanged || httpRoutesChanged) {
-    patch.spec = {};
-    if (hostsChanged) {
-      patch.spec.hosts = desiredHosts;
-    }
-    if (gatewaysChanged) {
-      patch.spec.gateways = desiredGateways;
-    }
-    if (httpRoutesChanged) {
-      patch.spec.http = desiredHttpRoutes;
-    }
+  // Apply changes directly to the VirtualService object
+  if (hostsChanged) {
+    baseVirtualService.spec.hosts = desiredHosts;
+  }
+  if (gatewaysChanged) {
+    baseVirtualService.spec.gateways = desiredGateways;
+  }
+  if (httpRoutesChanged) {
+    baseVirtualService.spec.http = desiredHttpRoutes;
   }
 
-  if (managedHostsChanged || managedGatewaysChanged) {
-    patch.metadata = { annotations: {} };
-    patch.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
-      desiredManagedHostsList.length > 0
-        ? JSON.stringify(desiredManagedHostsList)
-        : null;
-    patch.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
-      desiredManagedGatewaysList.length > 0
-        ? JSON.stringify(desiredManagedGatewaysList)
-        : null;
+  // Update annotations
+  if (!baseVirtualService.metadata.annotations) {
+    baseVirtualService.metadata.annotations = {};
   }
 
+  if (desiredManagedHostsList.length > 0) {
+    baseVirtualService.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
+      JSON.stringify(desiredManagedHostsList);
+  } else {
+    delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION];
+  }
+
+  if (desiredManagedGatewaysList.length > 0) {
+    baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
+      JSON.stringify(desiredManagedGatewaysList);
+  } else {
+    delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION];
+  }
+
+  // Write the base VirtualService to a file in the namespace directory (NOT portal-domains)
+  // The base VS lives in the parent folder (e.g., msp/) alongside other base resources
+  const repoDir = dirname(manifestRoot); // Go up from portal-domains to repo root
+  const vsFilePath = joinPath(repoDir, namespace, 'istio-virtualservice.yaml');
   try {
-    await runKubectl([
-      'patch',
-      'virtualservice',
-      name,
-      '-n',
-      namespace,
-      '--type=merge',
-      '-p',
-      JSON.stringify(patch),
-    ]);
+    await ensureDirectory(dirname(vsFilePath));
+    const yamlContent = dumpYaml(baseVirtualService, { sortKeys: true, noRefs: true });
+    await fs.writeFile(vsFilePath, yamlContent, 'utf8');
   } catch (error) {
     throw new Error(
       formatErrorMessage(
         error,
-        `Failed to update base portal VirtualService ${namespace}/${name}`,
+        `Failed to write base VirtualService to ${vsFilePath}`,
       ),
     );
   }
