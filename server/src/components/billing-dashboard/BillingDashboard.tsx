@@ -17,6 +17,7 @@ import Contracts from './contracts/Contracts';
 import ContractDetail from './contracts/ContractDetail';
 import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav';
+import UsageTracking from './UsageTracking';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -52,7 +53,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'invoice-templates',
     'tax-rates',
     'contract-lines',
-    'billing-cycles'
+    'billing-cycles',
+    'usage-tracking'
   ];
 
   return (
@@ -126,6 +128,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
         <Tabs.Content value="billing-cycles">
           <BillingCycles />
+        </Tabs.Content>
+
+        <Tabs.Content value="usage-tracking">
+          <UsageTracking initialServices={initialServices} />
         </Tabs.Content>
       </Tabs.Root>
     </div>

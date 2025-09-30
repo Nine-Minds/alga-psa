@@ -187,7 +187,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
     <Dialog
       isOpen={open}
       onClose={handleClose}
-      title={editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
+      title={editingPlan ? 'Edit Contract Line' : 'Add New Contract Line'}
       className="max-w-2xl"
     >
       <DialogContent>
@@ -207,7 +207,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             {/* Removed Tabs - Only show basic info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="plan-name">Plan Name *</Label>
+                <Label htmlFor="plan-name">Contract Line Name *</Label>
                 <Input
                   id="plan-name"
                   type="text"
@@ -216,7 +216,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
                     setPlanName(e.target.value);
                     clearErrorIfSubmitted();
                   }}
-                  placeholder="Enter plan name"
+                  placeholder="Enter contract line name"
                   required
                   className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
                 />

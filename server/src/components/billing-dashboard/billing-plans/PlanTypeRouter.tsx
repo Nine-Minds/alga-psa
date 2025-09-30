@@ -46,7 +46,7 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
   }, [fetchPlanType]);
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Plan..." /></div>;
+    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Contract Line..." /></div>;
   }
 
   if (error) {
@@ -71,7 +71,7 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
       return (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Unknown or unsupported plan type: {planType}</AlertDescription>
+          <AlertDescription>Unknown or unsupported contract line type: {planType}</AlertDescription>
         </Alert>
       );
   }

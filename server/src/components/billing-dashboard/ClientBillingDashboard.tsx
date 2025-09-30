@@ -17,6 +17,7 @@ import {
  getUsageDataMetrics, UsageMetricResult // Import usage action and type
 } from 'server/src/lib/actions/report-actions'; // Import actions and types
 import ChartSkeleton from 'server/src/components/ui/skeletons/ChartSkeleton';
+import BucketUsageChart from './BucketUsageChart';
 
 // Dynamic imports for recharts components with type assertions
 const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer as any), {
@@ -294,60 +295,19 @@ useEffect(() => {
        <CardContent>
          {loadingBuckets ? (
            // Skeleton for grid layout
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-             {[1, 2, 3].map(i => (
-               <div key={i} className="flex flex-col items-center space-y-2">
-                 <Skeleton className="h-6 w-3/4" />
-                 <Skeleton className="h-20 w-20 rounded-full" />
-                 <Skeleton className="h-4 w-1/2" />
-               </div>
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+             {[1, 2].map(i => (
+               <Skeleton key={i} className="h-40 w-full" />
              ))}
            </div>
          ) : bucketData.length > 0 ? (
-           // Render radial charts in a grid
-           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+           // Render enhanced bucket usage charts in a grid
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
              {bucketData.map((bucket) => (
-               <div key={`${bucket.plan_id}-${bucket.service_id}`} className="flex flex-col items-center text-center p-4 border rounded-lg">
-                 <span className="text-sm font-medium text-gray-700 mb-2 h-10 flex items-center justify-center">{bucket.display_label}</span>
-                 <div className="w-24 h-24 mb-2"> {/* Container for the chart */}
-                   <Suspense fallback={<ChartSkeleton height="96px" type="radial" title="Usage Chart" showLegend={false} />}>
-                     <ResponsiveContainer width="100%" height="100%">
-                       <RadialBarChart
-                         cx="50%"
-                         cy="50%"
-                         innerRadius="70%" // Adjust for thickness
-                         outerRadius="90%" // Adjust for thickness
-                          barSize={10} // Adjust bar size
-                           data={[bucket]} // Pass single data item in an array
-                           startAngle={225} // Start at bottom-left
-                           endAngle={-45}  // End at bottom-right (270 degree sweep)
-                         >
-                           {/* Background track */}
-                           <PolarAngleAxis
-                           type="number"
-                           domain={[0, (bucket.total_minutes + bucket.rolled_over_minutes) > 0 ? (bucket.total_minutes + bucket.rolled_over_minutes) : 1]} // Domain is 0 to total *available* minutes (total + rollover)
-                           angleAxisId={0}
-                            tick={false}
-                          />
-                          <RadialBar
-                            background={{ fill: 'rgb(var(--color-secondary-100))' }} 
-                            dataKey="minutes_used"
-                            angleAxisId={0}
-                            fill="rgb(var(--color-primary-500))" // Use theme primary color for fill
-                            cornerRadius={5} // Rounded corners
-                          />
-                          {/* Optional: Add text inside the circle */}
-                         {/* <text x="50%" y="50%" textAnchor="middle" dominantBaseline="middle" className="text-lg font-semibold">
-                           {`${((bucket.hours_used / (bucket.total_hours || 1)) * 100).toFixed(0)}%`}
-                         </text> */}
-                       </RadialBarChart>
-                     </ResponsiveContainer>
-                   </Suspense>
-                 </div>
-                 <span className="text-xs text-gray-500">
-                   {(bucket.minutes_used / 60).toFixed(2)} / {((bucket.total_minutes + bucket.rolled_over_minutes) / 60).toFixed(2)} hours used
-                 </span>
-               </div>
+               <BucketUsageChart
+                 key={`${bucket.plan_id}-${bucket.service_id}`}
+                 bucketData={bucket}
+               />
              ))}
            </div>
          ) : (

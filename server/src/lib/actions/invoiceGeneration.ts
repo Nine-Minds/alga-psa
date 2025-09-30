@@ -312,11 +312,22 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     // Add non-bundle charges
     nonBundleCharges.forEach(charge => {
+      // Enhanced description for bucket charges
+      let description = charge.serviceName;
+      if (isBucketCharge(charge)) {
+        const hoursIncluded = charge.hoursUsed - charge.overageHours;
+        if (charge.overageHours > 0) {
+          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
+        } else {
+          description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+        }
+      }
+
       invoiceItems.push({
         item_id: 'preview-' + uuidv4(),
         invoice_id: 'preview-' + billing_cycle_id,
         service_id: charge.serviceId,
-        description: charge.serviceName,
+        description: description,
         quantity: getChargeQuantity(charge), // Uses local helper
         unit_price: getChargeUnitPrice(charge), // Uses local helper
         total_price: charge.total,
@@ -356,11 +367,22 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
       // Add each charge in the bundle as a child item
       charges.forEach(charge => {
+        // Enhanced description for bucket charges
+        let description = charge.serviceName;
+        if (isBucketCharge(charge)) {
+          const hoursIncluded = charge.hoursUsed - charge.overageHours;
+          if (charge.overageHours > 0) {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (${hoursIncluded.toFixed(2)} hrs included + ${charge.overageHours.toFixed(2)} hrs overage @ $${(charge.overageRate / 100).toFixed(2)}/hr)`;
+          } else {
+            description = `${charge.serviceName} - ${charge.hoursUsed.toFixed(2)} hrs used (within ${hoursIncluded.toFixed(2)} hrs included)`;
+          }
+        }
+
         invoiceItems.push({
           item_id: 'preview-' + uuidv4(),
           invoice_id: 'preview-' + billing_cycle_id,
           service_id: charge.serviceId,
-          description: charge.serviceName,
+          description: description,
           quantity: getChargeQuantity(charge), // Uses local helper
           unit_price: getChargeUnitPrice(charge), // Uses local helper
           total_price: charge.total,
