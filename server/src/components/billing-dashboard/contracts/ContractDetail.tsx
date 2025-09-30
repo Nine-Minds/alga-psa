@@ -14,6 +14,7 @@ import { getPlanBundleById } from 'server/src/lib/actions/planBundleActions';
 import ContractHeader from './ContractHeader';
 import ContractForm from './ContractForm';
 import ContractPlans from './ContractPlans';
+import PricingSchedules from './PricingSchedules';
 
 const ContractDetail: React.FC = () => {
   const searchParams = useSearchParams();
@@ -92,6 +93,7 @@ const ContractDetail: React.FC = () => {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Contract Details</TabsTrigger>
           <TabsTrigger value="plans">Service Lines</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing Schedules</TabsTrigger>
           <TabsTrigger value="invoices">Invoices</TabsTrigger>
         </TabsList>
 
@@ -199,6 +201,10 @@ const ContractDetail: React.FC = () => {
 
         <TabsContent value="plans">
           <ContractPlans bundle={bundle} />
+        </TabsContent>
+
+        <TabsContent value="pricing">
+          <PricingSchedules bundleId={bundleId} />
         </TabsContent>
 
         <TabsContent value="invoices">
