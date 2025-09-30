@@ -315,6 +315,9 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
+  // Find the specific domain that triggered this workflow
+  const triggeringDomain = rows.find((row) => row.id === args.portalDomainId);
+
   const config = getPortalDomainConfig();
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
   const manifests = managedRows.map((row) =>
@@ -435,7 +438,11 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
   // so it gets included in the commit and applied with other resources
   if (getBasePortalVirtualService()) {
     try {
-      await syncBaseVirtualServiceRouting(manifests, config, manifestRoot);
+      // Pass the triggering domain so unmanaged resources for it can be cleaned up
+      const domainToCleanup = triggeringDomain && !shouldManageStatus(triggeringDomain.status)
+        ? triggeringDomain.domain
+        : undefined;
+      await syncBaseVirtualServiceRouting(manifests, config, manifestRoot, domainToCleanup);
     } catch (error) {
       errors.push(
         formatErrorMessage(
@@ -1319,6 +1326,7 @@ async function syncBaseVirtualServiceRouting(
   manifests: RenderedPortalDomainResources[],
   config: PortalDomainConfig,
   manifestRoot: string,
+  domainToCleanup?: string,
 ): Promise<void> {
   const baseRef = getBasePortalVirtualService();
   if (!baseRef) {
@@ -1399,11 +1407,31 @@ async function syncBaseVirtualServiceRouting(
   );
 
   const retainedHosts = baseHosts.filter(
-    (host) => !managedHosts.has(host) || desiredHostsSet.has(host),
+    (host) => {
+      // If this is the domain being cleaned up, always remove it
+      if (domainToCleanup && host === domainToCleanup) {
+        return false;
+      }
+      // Keep if not managed OR if managed and still desired
+      return !managedHosts.has(host) || desiredHostsSet.has(host);
+    },
   );
   const retainedGateways = baseGateways.filter(
-    (gateway) =>
-      !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway),
+    (gateway) => {
+      // If cleaning up a domain, remove portal domain gateways that aren't in the desired set
+      // Portal domain gateways follow the pattern: {namespace}/portal-domain-gw-{id}
+      if (domainToCleanup) {
+        const isPortalDomainGateway = gateway.includes('/portal-domain-gw-');
+        const isStillDesired = desiredGatewaysSet.has(gateway);
+
+        // Remove orphaned portal domain gateways
+        if (isPortalDomainGateway && !isStillDesired) {
+          return false;
+        }
+      }
+      // Keep if not managed OR if managed and still desired
+      return !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway);
+    },
   );
 
   const desiredHosts = combineUniqueStrings(
@@ -1515,10 +1543,10 @@ async function syncBaseVirtualServiceRouting(
     delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION];
   }
 
-  // Write the base VirtualService to a file in the namespace directory (NOT portal-domains)
-  // The base VS lives in the parent folder (e.g., msp/) alongside other base resources
+  // Write the base VirtualService to a file in the repo directory (NOT portal-domains)
+  // The base VS lives in the parent folder alongside other base resources
   const repoDir = dirname(manifestRoot); // Go up from portal-domains to repo root
-  const vsFilePath = joinPath(repoDir, namespace, 'istio-virtualservice.yaml');
+  const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
   try {
     await ensureDirectory(dirname(vsFilePath));
     const yamlContent = dumpYaml(baseVirtualService, { sortKeys: true, noRefs: true });
