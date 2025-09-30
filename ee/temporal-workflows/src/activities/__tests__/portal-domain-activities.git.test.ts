@@ -370,7 +370,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(renderedFiles).toContain('active-id.yaml');
 
     // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -454,7 +454,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
     // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -638,7 +638,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
     // Read the base VirtualService from the file
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -736,7 +736,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
     // Read the base VirtualService from the file
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -828,7 +828,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     // Read the base VirtualService from the file
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -844,6 +844,84 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         'portal.alga-psa.com/managed-gateways'
       ],
     ).toBeUndefined();
+  });
+
+  it('cleans up unmanaged resources when domain is removed', async () => {
+    process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+    process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+    process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+    process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+    process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
+
+    // Simulate a scenario where portal.orphaned.com was added manually (not in managed annotations)
+    baseVirtualService.spec.hosts.push('portal.orphaned.com');
+    baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-orphaned-id');
+    // Note: NOT adding to managed-hosts or managed-gateways annotations
+
+    const now = new Date().toISOString();
+    const rows: PortalDomainActivityRecord[] = [
+      {
+        id: 'orphaned-id',
+        tenant: 'Tenant Orphaned',
+        domain: 'portal.orphaned.com',
+        canonical_host: 'orphaned.portal.algapsa.com',
+        status: 'disabled',  // Domain is being disabled, should trigger cleanup
+        status_message: 'Custom domain disabled',
+        verification_details: null,
+        certificate_secret_name: 'portal-domain-orphaned-id',
+        last_synced_resource_version: '42',
+        created_at: now,
+        updated_at: now,
+      },
+    ];
+
+    const knexMock = Object.assign(
+      (table: string) => {
+        if (table === 'portal_domains') {
+          return {
+            select: () => Promise.resolve(rows),
+            where() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+            whereIn() {
+              return {
+                update: () => Promise.resolve(0),
+              };
+            },
+          };
+        }
+        throw new Error(`Unexpected table ${table}`);
+      },
+      {
+        fn: {
+          now: () => new Date(now),
+        },
+      }
+    );
+
+    __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+    await applyPortalDomainResources({ tenantId: 'tenant-orphaned', portalDomainId: 'orphaned-id' });
+
+    // Read the base VirtualService from the file
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
+    // Verify the orphaned domain was removed even though it wasn't in managed annotations
+    expect(vs.spec.hosts).not.toContain('portal.orphaned.com');
+    expect(vs.spec.hosts).toEqual(['apps.algapsa.com']);
+
+    // Verify the orphaned gateway was removed
+    expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-orphaned-id');
+    expect(vs.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
   });
 
   it('places redirect route before generic catch-all route', async () => {
@@ -929,7 +1007,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     // Read the base VirtualService from the file
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
-    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
@@ -1027,7 +1105,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
       // VERIFY: istio-virtualservice.yaml file exists in manifestRoot
-      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileExists = await fs.access(vsFilePath).then(() => true).catch(() => false);
       expect(fileExists).toBe(true);
 
@@ -1260,7 +1338,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'domain-1' });
 
       // VERIFY: File content structure
-      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
@@ -1417,7 +1495,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
       // VERIFY: File exists and managed hosts/gateways are removed
-      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
@@ -1508,7 +1586,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       expect(baseVsDeleted).toBe(false);
 
       // VERIFY: The base VirtualService file still exists
-      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       let fileExists = false;
       try {
         await fs.access(vsFilePath);
@@ -1548,12 +1626,11 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // PRE-CONDITION: Create the istio-virtualservice.yaml file in CORRECT location (msp/)
+      // PRE-CONDITION: Create the istio-virtualservice.yaml file in CORRECT location (repo root)
       // This simulates the file existing from a previous run
-      const mspFolder = path.join(repoDir, 'msp');
-      await fs.mkdir(mspFolder, { recursive: true });
+      await fs.mkdir(repoDir, { recursive: true });
       const { dump: dumpYaml } = await import('js-yaml');
-      const vsFilePath = path.join(mspFolder, 'istio-virtualservice.yaml');
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       await fs.writeFile(vsFilePath, dumpYaml(baseVirtualService), 'utf8');
 
       const now = new Date().toISOString();
@@ -1646,13 +1723,11 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // PRE-CONDITION: The base VirtualService file exists in the PARENT folder (msp or alga-psa)
+      // PRE-CONDITION: The base VirtualService file exists in the PARENT folder (repo root)
       // NOT in the portal-domains folder
-      const algaPsaFolder = path.join(repoDir, 'msp');
-      await fs.mkdir(algaPsaFolder, { recursive: true });
-
+      await fs.mkdir(repoDir, { recursive: true });
       const { dump: dumpYaml } = await import('js-yaml');
-      const correctVsFilePath = path.join(algaPsaFolder, 'istio-virtualservice.yaml');
+      const correctVsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       await fs.writeFile(correctVsFilePath, dumpYaml(baseVirtualService), 'utf8');
 
       const now = new Date().toISOString();
@@ -1702,7 +1777,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: The existing file in the parent folder (msp/alga-psa) should be EDITED
+      // VERIFY: The existing file in the parent folder (repo root) should be EDITED
       let correctFileExists = false;
       try {
         await fs.access(correctVsFilePath);
