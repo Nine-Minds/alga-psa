@@ -37,6 +37,9 @@ export interface ICompanyPlanBundle extends TenantEntity {
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  po_number?: string | null; // Purchase Order number
+  po_amount?: number | null; // Purchase Order amount in cents
+  po_required?: boolean; // Whether PO is required for invoicing
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
 }

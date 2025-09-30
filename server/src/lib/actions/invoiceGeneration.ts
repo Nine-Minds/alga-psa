@@ -498,6 +498,30 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     throw new Error('No active billing plans for this period');
   }
 
+  // Check for Purchase Order requirements
+  const companyPlanBundles = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('company_plan_bundles')
+      .where({
+        company_id,
+        tenant,
+        is_active: true
+      })
+      .where(function() {
+        this.where('start_date', '<=', cycleEnd)
+          .where(function() {
+            this.whereNull('end_date')
+              .orWhere('end_date', '>=', cycleStart);
+          });
+      });
+  });
+
+  // Validate PO requirements for active contracts
+  for (const bundle of companyPlanBundles) {
+    if (bundle.po_required && !bundle.po_number) {
+      throw new Error(`Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.`);
+    }
+  }
+
   const billingEngine = new BillingEngine();
   const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
 

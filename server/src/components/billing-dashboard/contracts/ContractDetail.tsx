@@ -8,7 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Badge } from 'server/src/components/ui/Badge';
 import { Card } from 'server/src/components/ui/Card';
 import BackNav from 'server/src/components/ui/BackNav';
-import { AlertCircle, FileText, Calendar, DollarSign, Package } from 'lucide-react';
+import { AlertCircle, FileText, Calendar, DollarSign, Package, FileCheck } from 'lucide-react';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { getPlanBundleById } from 'server/src/lib/actions/planBundleActions';
 import ContractHeader from './ContractHeader';
@@ -165,6 +165,35 @@ const ContractDetail: React.FC = () => {
               </div>
             </Card>
           </div>
+
+          {/* Purchase Order Card */}
+          <Card className="p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <FileCheck className="h-5 w-5 text-orange-600" />
+              <h4 className="font-semibold">Purchase Order</h4>
+            </div>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className={bundle.is_active ? 'border-orange-300 text-orange-800' : 'border-gray-300 text-gray-600'}>
+                  {bundle.is_active ? 'PO Required' : 'PO Optional'}
+                </Badge>
+              </div>
+              <div>
+                <p className="text-gray-600">PO Number</p>
+                <p className="font-medium">PO-2024-12345</p>
+                <p className="text-xs text-gray-500">TODO: Fetch from company_plan_bundles</p>
+              </div>
+              <div>
+                <p className="text-gray-600">PO Amount</p>
+                <p className="font-medium">$50,000.00</p>
+              </div>
+              <div>
+                <p className="text-gray-600">Remaining Budget</p>
+                <p className="font-medium text-green-600">$50,000.00</p>
+                <p className="text-xs text-gray-500">TODO: Calculate from invoices</p>
+              </div>
+            </div>
+          </Card>
 
           {/* Quick Actions */}
           <Card className="p-4">

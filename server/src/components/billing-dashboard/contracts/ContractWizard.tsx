@@ -28,6 +28,11 @@ export interface ContractWizardData {
   end_date?: string;
   description?: string;
 
+  // Purchase Order fields
+  po_number?: string;
+  po_amount?: number;
+  po_required?: boolean;
+
   // Step 2: Fixed Fee Services
   fixed_services: Array<{
     service_id: string;

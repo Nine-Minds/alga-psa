@@ -5,10 +5,11 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Switch } from 'server/src/components/ui/Switch';
 import { ContractWizardData } from '../ContractWizard';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { Calendar, Building2, FileText } from 'lucide-react';
+import { Calendar, Building2, FileText, FileCheck } from 'lucide-react';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -18,10 +19,18 @@ interface ContractBasicsStepProps {
 export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps) {
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [poAmountInput, setPoAmountInput] = useState<string>('');
 
   useEffect(() => {
     loadCompanies();
   }, []);
+
+  useEffect(() => {
+    // Initialize PO amount input from data
+    if (data.po_amount !== undefined) {
+      setPoAmountInput((data.po_amount / 100).toFixed(2));
+    }
+  }, [data.po_amount]);
 
   const loadCompanies = async () => {
     try {
@@ -146,6 +155,96 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
         </p>
       </div>
 
+      {/* Purchase Order Section */}
+      <div className="border-t pt-6 space-y-4">
+        <div className="flex items-center gap-2 mb-4">
+          <FileCheck className="h-5 w-5 text-gray-700" />
+          <h4 className="text-base font-semibold">Purchase Order (Optional)</h4>
+        </div>
+
+        {/* PO Required Toggle */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label htmlFor="po_required" className="text-sm font-medium">
+                Require Purchase Order for invoicing
+              </Label>
+              <p className="text-xs text-gray-500">
+                Block invoice generation if PO is not provided
+              </p>
+            </div>
+            <Switch
+              id="po_required"
+              checked={data.po_required || false}
+              onCheckedChange={(checked) => updateData({ po_required: checked })}
+            />
+          </div>
+        </div>
+
+        {/* Show PO fields only when toggle is on */}
+        {data.po_required && (
+          <div className="space-y-4 pl-4 border-l-2 border-blue-200">
+            {/* PO Number */}
+            <div className="space-y-2">
+              <Label htmlFor="po_number">
+                PO Number *
+              </Label>
+              <Input
+                id="po_number"
+                type="text"
+                value={data.po_number || ''}
+                onChange={(e) => updateData({ po_number: e.target.value })}
+                placeholder="e.g., PO-2024-12345"
+                className="w-full"
+              />
+              <p className="text-xs text-gray-500">
+                Client's purchase order reference number
+              </p>
+            </div>
+
+            {/* PO Amount */}
+            <div className="space-y-2">
+              <Label htmlFor="po_amount">
+                PO Amount
+              </Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                <Input
+                  id="po_amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={poAmountInput}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^0-9.]/g, '');
+                    // Allow only one decimal point
+                    const decimalCount = (value.match(/\./g) || []).length;
+                    if (decimalCount <= 1) {
+                      setPoAmountInput(value);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (poAmountInput.trim() === '' || poAmountInput === '.') {
+                      setPoAmountInput('');
+                      updateData({ po_amount: undefined });
+                    } else {
+                      const dollars = parseFloat(poAmountInput) || 0;
+                      const cents = Math.round(dollars * 100);
+                      updateData({ po_amount: cents });
+                      setPoAmountInput((cents / 100).toFixed(2));
+                    }
+                  }}
+                  placeholder="0.00"
+                  className="pl-7"
+                />
+              </div>
+              <p className="text-xs text-gray-500">
+                Total authorized amount on the purchase order
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Summary Card */}
       {data.company_id && data.contract_name && data.start_date && (
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
@@ -155,6 +254,13 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
             <p><strong>Contract:</strong> {data.contract_name}</p>
             <p><strong>Period:</strong> {new Date(data.start_date).toLocaleDateString()}
               {data.end_date ? ` - ${new Date(data.end_date).toLocaleDateString()}` : ' (Ongoing)'}</p>
+            {data.po_required && (
+              <>
+                <p><strong>PO Required:</strong> Yes</p>
+                {data.po_number && <p><strong>PO Number:</strong> {data.po_number}</p>}
+                {data.po_amount && <p><strong>PO Amount:</strong> ${(data.po_amount / 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>}
+              </>
+            )}
           </div>
         </div>
       )}

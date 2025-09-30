@@ -12,7 +12,8 @@ import {
   Clock,
   Package,
   Droplet,
-  CheckCircle2
+  CheckCircle2,
+  FileCheck
 } from 'lucide-react';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
@@ -114,6 +115,44 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
           )}
         </div>
       </Card>
+
+      {/* Purchase Order */}
+      {data.po_required && (
+        <Card className="p-4 border-orange-200 bg-orange-50">
+          <div className="flex items-center gap-2 mb-3">
+            <FileCheck className="h-5 w-5 text-orange-600" />
+            <h4 className="font-semibold">Purchase Order</h4>
+            <Badge variant="outline" className="border-orange-300 text-orange-800">
+              Required
+            </Badge>
+          </div>
+          <div className="space-y-2 text-sm">
+            {data.po_number && (
+              <div className="flex items-start gap-2">
+                <FileCheck className="h-4 w-4 mt-0.5 text-gray-400" />
+                <div>
+                  <p className="text-gray-600">PO Number</p>
+                  <p className="font-medium">{data.po_number}</p>
+                </div>
+              </div>
+            )}
+            {data.po_amount && (
+              <div className="flex items-start gap-2">
+                <DollarSign className="h-4 w-4 mt-0.5 text-gray-400" />
+                <div>
+                  <p className="text-gray-600">PO Amount</p>
+                  <p className="font-medium">{formatCurrency(data.po_amount)}</p>
+                </div>
+              </div>
+            )}
+            <div className="pt-2 border-t border-orange-200">
+              <p className="text-xs text-orange-800">
+                ⚠️ Invoice generation will be blocked if PO number is not provided
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Fixed Fee Services */}
       {hasFixedServices && (
