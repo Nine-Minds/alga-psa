@@ -11,7 +11,8 @@ RUN apk add --no-cache \
     imagemagick \
     ghostscript \
     curl \
-    nano
+    nano \
+    ffmpeg
 
 WORKDIR /app
 
