@@ -10,7 +10,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
 import { TimePicker } from 'server/src/components/ui/TimePicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { MinusCircle, XCircle, Info } from 'lucide-react';
+import { MinusCircle, XCircle, Info, AlertTriangle } from 'lucide-react';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { InfoCircledIcon } from '@radix-ui/react-icons';
@@ -27,6 +27,7 @@ interface EligiblePlanUI {
   plan_type: string;
   start_date: ISO8601String; // Required for filtering
   end_date?: ISO8601String | null; // Required for filtering
+  contract_name?: string; // Contract/bundle name for display
 }
 
 const TimeEntryEditForm = memo(function TimeEntryEditForm({
@@ -520,7 +521,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               className={`mt-1 w-full ${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
               options={eligibleBillingPlans.map(plan => ({
                 value: plan.company_billing_plan_id,
-                label: `${plan.plan_name} (${plan.plan_type})` // Now plan_type exists on EligiblePlanUI
+                label: plan.contract_name
+                  ? `${plan.plan_name} - ${plan.contract_name} (${plan.plan_type})`
+                  : `${plan.plan_name} (${plan.plan_type})`
               }))}
               placeholder={!companyId
                 ? "Using default billing plan"
@@ -536,6 +539,15 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 <span className="flex items-center">
                   <Info className="h-3 w-3 text-blue-500 mr-1" />
                   If no plan is selected, the system will use the default billing plan
+                </span>
+              </div>
+            )}
+
+            {eligibleBillingPlans.length > 0 && !eligibleBillingPlans.some(plan => plan.contract_name) && (
+              <div className="mt-1 text-xs text-yellow-700 bg-yellow-50 border border-yellow-200 rounded p-2">
+                <span className="flex items-center">
+                  <AlertTriangle className="h-3 w-3 text-yellow-600 mr-1 flex-shrink-0" />
+                  No contract found for this billing plan. Consider associating this plan with a contract.
                 </span>
               </div>
             )}
