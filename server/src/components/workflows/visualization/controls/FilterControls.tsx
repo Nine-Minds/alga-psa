@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useReactFlow } from 'reactflow';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 /**
  * Filter controls component for workflow visualization
@@ -42,71 +43,59 @@ export function FilterControls() {
       <div className="text-sm font-semibold text-gray-700 mb-2">Filter Nodes</div>
       
       <div className="flex flex-col space-y-1">
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-state-nodes"
+            label="States"
             checked={visibleTypes.state}
             onChange={() => toggleNodeType('state')}
-            id="filter-state-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">States</span>
-        </label>
+        </div>
         
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-action-nodes"
+            label="Actions"
             checked={visibleTypes.action}
             onChange={() => toggleNodeType('action')}
-            id="filter-action-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">Actions</span>
-        </label>
+        </div>
         
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-event-nodes"
+            label="Events"
             checked={visibleTypes.event}
             onChange={() => toggleNodeType('event')}
-            id="filter-event-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">Events</span>
-        </label>
+        </div>
         
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-conditional-nodes"
+            label="Conditionals"
             checked={visibleTypes.conditional}
             onChange={() => toggleNodeType('conditional')}
-            id="filter-conditional-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">Conditionals</span>
-        </label>
+        </div>
         
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-loop-nodes"
+            label="Loops"
             checked={visibleTypes.loop}
             onChange={() => toggleNodeType('loop')}
-            id="filter-loop-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">Loops</span>
-        </label>
+        </div>
         
-        <label className="flex items-center space-x-2 text-sm">
-          <input
-            type="checkbox"
+        <div className="[&>div]:mb-0">
+          <Checkbox
+            id="filter-parallel-nodes"
+            label="Parallel"
             checked={visibleTypes.parallel}
             onChange={() => toggleNodeType('parallel')}
-            id="filter-parallel-nodes"
-            className="rounded text-blue-500"
           />
-          <span className="text-gray-700">Parallel</span>
-        </label>
+        </div>
       </div>
     </div>
   );

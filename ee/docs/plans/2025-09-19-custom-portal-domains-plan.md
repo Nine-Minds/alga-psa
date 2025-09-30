@@ -158,5 +158,6 @@ Remaining Work & Follow-ups
 - Finalise HTTP-01 challenge serving (shared solver service or on-demand pod) and bake the required `PORTAL_DOMAIN_CHALLENGE_*` defaults into staging/production.
 - Build the GitOps helper CLI (`pnpm nm-kube-sync`) to diff manifests, open PRs, and optionally apply changes; update runbook once available.
 - Expand automated coverage: workflow unit/integration tests, CE/EE action tests, and mocked EE UI e2e flows plus a staging validation checklist.
+- Validate the new base VirtualService redirect management in staging once rolled out; regression coverage lives in `ee/temporal-workflows/src/activities/__tests__/portal-domain-activities.git.test.ts` to guard the `/client-portal/dashboard` default route.
 - Provide operational tooling (Temporal signal CLI/script) for forced reconciliation and document the procedure in the runbook.
 - Plan rollout sequencing: migration deployment order, Temporal worker release, customer enablement messaging, and nm-kube-config PR cadence.

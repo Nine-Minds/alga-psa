@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { 
@@ -170,27 +171,27 @@ const DisplaySettings = (): JSX.Element => {
             { key: 'created_by', label: 'Created By', required: false },
             { key: 'actions', label: 'Actions', required: true },
           ].map(({ key, label, required }) => (
-            <label key={key} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+            <div key={key} className="[&>div]:mb-0">
+              <Checkbox
+                id={`column-${key}`}
+                label={`${label}${required ? ' (required)' : ''}`}
                 checked={!!columnVisibility[key]}
                 disabled={required}
-                onChange={(e) => setColumnVisibility(v => ({ ...v, [key]: e.target.checked }))}
+                onChange={(e) => setColumnVisibility(v => ({ ...v, [key]: (e.target as HTMLInputElement).checked }))}
               />
-              <span className={required ? 'text-gray-500' : ''}>{label}{required ? ' (required)' : ''}</span>
-            </label>
+            </div>
           ))}
         </div>
         {/* Tags visibility and layout */}
         <div className="mt-4 space-y-2">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+          <div className="[&>div]:mb-0">
+            <Checkbox
+              id="column-tags"
+              label="Show Tags"
               checked={!!columnVisibility['tags']}
-              onChange={(e) => setColumnVisibility(v => ({ ...v, tags: e.target.checked }))}
+              onChange={(e) => setColumnVisibility(v => ({ ...v, tags: (e.target as HTMLInputElement).checked }))}
             />
-            <span>Show Tags</span>
-          </label>
+          </div>
           {columnVisibility['tags'] && (
             <div className="pl-6">
               <Switch

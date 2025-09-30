@@ -616,3 +616,13 @@ body,
   min-width: 40vw !important;
   max-width: 60vw !important;
 }
+
+/* Smooth focus treatment for custom checkboxes */
+.alga-checkbox {
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.alga-checkbox:focus,
+.alga-checkbox:focus-visible {
+  outline: none !important;
+}

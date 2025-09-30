@@ -4,6 +4,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { IBillingPlan, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface PlanPickerDialogProps {
     isOpen: boolean;
@@ -118,23 +119,22 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                                 End Date
                             </label>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
+                            <div className="flex items-center gap-2 [&>div]:mb-0">
+                                <Checkbox
                                     id="ongoing"
+                                    label="Ongoing"
                                     checked={isOngoing}
                                     onChange={(e) => {
-                                        setIsOngoing(e.target.checked);
+                                        setIsOngoing((e.target as HTMLInputElement).checked);
                                         // If switching to ongoing, set endDate to null
                                         // If switching from ongoing, set a default end date only if there isn't one already
-                                        if (e.target.checked) {
+                                        if ((e.target as HTMLInputElement).checked) {
                                             setEndDate(null);
                                         } else if (!endDate) {
                                             setEndDate(new Date().toISOString().split('T')[0]);
                                         }
                                     }}
                                 />
-                                <label htmlFor="ongoing">Ongoing</label>
                             </div>
                             <Input
                                 type="date"

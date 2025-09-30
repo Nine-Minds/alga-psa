@@ -1,7 +1,5 @@
 import React, { forwardRef, useLayoutEffect, useEffect, useRef } from 'react';
-import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormFieldComponent, AutomationProps } from '../../types/ui-reflection/types';
-import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 
 interface TextAreaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'id'> {
@@ -120,7 +118,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps & Automati
             shadow-sm 
             focus:outline-none 
             focus:ring-2 
-            focus:ring-purple-500 
+            focus:ring-[rgb(var(--color-primary-500))] 
             focus:border-transparent 
             resize-none 
             overflow-hidden 

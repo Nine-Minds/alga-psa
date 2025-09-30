@@ -12,8 +12,8 @@ vi.mock('@/lib/actions/invoiceActions', () => ({
 }));
 
 vi.mock('@/lib/db/db');
-vi.mock("server/src/app/api/auth/[...nextauth]/auth", () => ({
-  auth: vi.fn(() => Promise.resolve({
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(() => Promise.resolve({
     user: {
       id: 'mock-user-id',
     },

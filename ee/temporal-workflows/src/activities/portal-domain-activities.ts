@@ -7,6 +7,7 @@ import type { ExecFileOptions } from "node:child_process";
 import { promisify } from "node:util";
 import type { Knex } from "knex";
 import { dump as dumpYaml } from "js-yaml";
+import os from "os";
 
 import { getAdminConnection } from "@alga-psa/shared/db/admin.js";
 
@@ -24,6 +25,18 @@ const MANAGED_LABEL = "portal.alga-psa.com/managed";
 const TENANT_LABEL = "portal.alga-psa.com/tenant";
 const DOMAIN_ID_LABEL = "portal.alga-psa.com/domain-id";
 const DOMAIN_HOST_LABEL = "portal.alga-psa.com/domain-host";
+const ORIGIN_SECRET_NAME_LABEL = "portal.alga-psa.com/origin-secret-name";
+const ORIGIN_SECRET_NAMESPACE_LABEL = "portal.alga-psa.com/origin-secret-namespace";
+const ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION =
+  "portal.alga-psa.com/origin-resource-version";
+const PORTAL_MANAGED_HOSTS_ANNOTATION = "portal.alga-psa.com/managed-hosts";
+const PORTAL_MANAGED_GATEWAYS_ANNOTATION =
+  "portal.alga-psa.com/managed-gateways";
+const PORTAL_DASHBOARD_REDIRECT_URI = "/client-portal/dashboard";
+
+export function getBasePortalVirtualService(): string {
+  return (process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE ?? "").trim();
+}
 
 const execFileAsync = promisify(execFile);
 
@@ -69,7 +82,6 @@ export interface PortalDomainConfig {
   certificateIssuerGroup: string;
   gatewayNamespace: string;
   gatewaySelector: Record<string, string>;
-  gatewayHttpPort: number;
   gatewayHttpsPort: number;
   virtualServiceNamespace: string;
   serviceHost: string;
@@ -77,33 +89,30 @@ export interface PortalDomainConfig {
   manifestOutputDirectory: string | null;
 }
 
-const DEFAULT_CONFIG: PortalDomainConfig = {
-  certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || "msp",
-  certificateIssuerName:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER || "letsencrypt-http01",
-  certificateIssuerKind:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || "ClusterIssuer",
-  certificateIssuerGroup:
-    process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || "cert-manager.io",
-  gatewayNamespace:
-    process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || "istio-system",
-  gatewaySelector: parseSelector(
-    process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR,
-  ) || { istio: "ingressgateway" },
-  gatewayHttpPort: parseNumberEnv(
-    process.env.PORTAL_DOMAIN_GATEWAY_HTTP_PORT,
-    80,
-  ),
-  gatewayHttpsPort: parseNumberEnv(
-    process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
-    443,
-  ),
-  virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
-  serviceHost:
-    process.env.PORTAL_DOMAIN_SERVICE_HOST || "sebastian.msp.svc.cluster.local",
-  servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
-  manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
-};
+function getPortalDomainConfig(): PortalDomainConfig {
+  return {
+    certificateNamespace: process.env.PORTAL_DOMAIN_CERT_NAMESPACE || "msp",
+    certificateIssuerName:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER || "letsencrypt-http01",
+    certificateIssuerKind:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER_KIND || "ClusterIssuer",
+    certificateIssuerGroup:
+      process.env.PORTAL_DOMAIN_CERT_ISSUER_GROUP || "cert-manager.io",
+    gatewayNamespace:
+      process.env.PORTAL_DOMAIN_GATEWAY_NAMESPACE || "istio-system",
+    gatewaySelector:
+      parseSelector(process.env.PORTAL_DOMAIN_GATEWAY_SELECTOR) ||
+      { istio: "ingressgateway" },
+    gatewayHttpsPort: parseNumberEnv(
+      process.env.PORTAL_DOMAIN_GATEWAY_HTTPS_PORT,
+      443,
+    ),
+    virtualServiceNamespace: process.env.PORTAL_DOMAIN_VS_NAMESPACE || "msp",
+    serviceHost: process.env.PORTAL_DOMAIN_SERVICE_HOST ?? "",
+    servicePort: parseNumberEnv(process.env.PORTAL_DOMAIN_SERVICE_PORT, 3000),
+    manifestOutputDirectory: process.env.PORTAL_DOMAIN_MANIFEST_DIR || null,
+  };
+}
 
 const ACTIVE_RECONCILE_STATUSES = new Set([
   "pending_certificate",
@@ -151,6 +160,54 @@ function parseNumberEnv(value: string | undefined, fallback: number): number {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
+interface RetryOptions {
+  attempts?: number;
+  delayMs?: number;
+}
+
+function isTransientError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const anyError = error as any;
+  const code = typeof anyError?.code === "string" ? anyError.code.toUpperCase() : "";
+  const message = typeof anyError?.message === "string" ? anyError.message.toLowerCase() : "";
+
+  if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "ECONNREFUSED") {
+    return true;
+  }
+
+  if (message.includes("econnreset") || message.includes("connection reset") || message.includes("timeout")) {
+    return true;
+  }
+
+  return false;
+}
+
+async function withTransientRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+): Promise<T> {
+  const attempts = Math.max(1, options.attempts ?? 3);
+  const delayMs = Math.max(0, options.delayMs ?? 1000);
+
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (!isTransientError(error) || attempt === attempts - 1) {
+        throw error;
+      }
+      await delay(delayMs);
+    }
+  }
+
+  throw lastError ?? new Error('Transient operation failed');
+}
+
 function shouldManageStatus(status: string | null | undefined): boolean {
   return status ? ACTIVE_RECONCILE_STATUSES.has(status) : false;
 }
@@ -189,6 +246,15 @@ export async function markPortalDomainStatus(
   }
 
   await knex(TABLE_NAME).where({ id: args.portalDomainId }).update(updates);
+}
+
+export async function deletePortalDomainRecord(
+  args: { portalDomainId: string; tenantId: string },
+): Promise<void> {
+  const knex = await getConnection();
+  await knex(TABLE_NAME)
+    .where({ id: args.portalDomainId, tenant: args.tenantId })
+    .delete();
 }
 
 export async function verifyCnameRecord(
@@ -249,7 +315,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
-  const config = DEFAULT_CONFIG;
+  const config = getPortalDomainConfig();
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
   const manifests = managedRows.map((row) =>
     renderPortalDomainResources(row, config),
@@ -294,7 +360,7 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
   const desiredFiles = new Map<string, RenderedPortalDomainResources>();
   for (const manifest of manifests) {
-    desiredFiles.set(`${manifest.tenantSlug}.yaml`, manifest);
+    desiredFiles.set(`${manifest.domainSlug}.yaml`, manifest);
   }
 
   let existingFiles: string[] = [];
@@ -320,6 +386,23 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
             `Failed to delete Kubernetes resources for ${fileName}`,
           ),
         );
+      }
+
+      if (config.gatewayNamespace !== config.certificateNamespace) {
+        const domainSlug = fileName.replace(/\.ya?ml$/i, "");
+        if (domainSlug) {
+          const secretName = truncateName(`portal-domain-${domainSlug}`, 63);
+          try {
+            await deleteGatewaySecret(secretName, config.gatewayNamespace);
+          } catch (error) {
+            errors.push(
+              formatErrorMessage(
+                error,
+                `Failed to remove replicated TLS secret ${secretName}`,
+              ),
+            );
+          }
+        }
       }
 
       try {
@@ -364,6 +447,37 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
         formatErrorMessage(
           error,
           "Failed to apply manifest changes to cluster",
+        ),
+      );
+    }
+  }
+
+  if (
+    config.gatewayNamespace !== config.certificateNamespace &&
+    manifests.length > 0
+  ) {
+    for (const manifest of manifests) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        errors.push(
+          formatErrorMessage(
+            error,
+            `Failed to sync gateway TLS secret for ${manifest.secretName}`,
+          ),
+        );
+      }
+    }
+  }
+
+  if (getBasePortalVirtualService()) {
+    try {
+      await syncBaseVirtualServiceRouting(manifests, config);
+    } catch (error) {
+      errors.push(
+        formatErrorMessage(
+          error,
+          'Failed to update base VirtualService routing',
         ),
       );
     }
@@ -453,24 +567,39 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
 
 export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: string }): Promise<PortalDomainStatusSnapshot | null> {
   const knex = await getConnection();
-  const record = await knex<PortalDomainActivityRecord>(TABLE_NAME)
-    .where({ id: args.portalDomainId })
-    .first();
+  const record = await withTransientRetry(
+    () =>
+      knex<PortalDomainActivityRecord>(TABLE_NAME)
+        .where({ id: args.portalDomainId })
+        .first(),
+    { attempts: 3, delayMs: 1000 }
+  );
 
   if (!record) {
     return null;
   }
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
   if (terminalStatuses.has(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
+  }
+
+  if (record.status === 'certificate_failed') {
+    const message = record.status_message ?? '';
+    const recoverable =
+      typeof message === 'string' &&
+      message.toLowerCase().includes('secret does not exist');
+
+    if (!recoverable) {
+      return { status: record.status, statusMessage: record.status_message };
+    }
   }
 
   if (!shouldManageStatus(record.status)) {
     return { status: record.status, statusMessage: record.status_message };
   }
 
-  const config = DEFAULT_CONFIG;
+  const config = getPortalDomainConfig();
   const manifest = renderPortalDomainResources(record, config);
 
   const certificate = await inspectCertificateStatus(
@@ -485,29 +614,45 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
     nextStatus = 'certificate_failed';
     nextMessage = certificate.failureMessage;
   } else if (certificate.ready) {
-    const gatewayExists = await kubectlResourceExists(
-      'gateway',
-      manifest.gatewayName,
-      config.gatewayNamespace,
-    );
+    let secretSyncFailed = false;
+    if (config.gatewayNamespace !== config.certificateNamespace) {
+      try {
+        await syncGatewaySecret(manifest, config);
+      } catch (error) {
+        secretSyncFailed = true;
+        nextStatus = 'certificate_failed';
+        nextMessage = formatErrorMessage(
+          error,
+          `Failed to replicate TLS secret into ${config.gatewayNamespace}`,
+        );
+      }
+    }
+
+    if (!secretSyncFailed) {
+      const gatewayExists = await kubectlResourceExists(
+        'gateway',
+        manifest.gatewayName,
+        config.gatewayNamespace,
+      );
     const virtualServiceExists = await kubectlResourceExists(
       'virtualservice',
       manifest.virtualServiceName,
       config.virtualServiceNamespace,
     );
 
-    if (gatewayExists && virtualServiceExists) {
-      nextStatus = 'active';
-      nextMessage = 'Certificate issued and Istio routing configured.';
-    } else {
-      nextStatus = 'deploying';
-      nextMessage = 'Certificate issued; waiting for Istio routing resources to become available.';
+      if (gatewayExists && virtualServiceExists) {
+        nextStatus = 'active';
+        nextMessage = 'Your domain is live and protected by HTTPS.';
+      } else {
+        nextStatus = 'deploying';
+        nextMessage = 'SSL is ready. Finishing the domain routing setup...';
+      }
     }
   } else {
     nextStatus = 'certificate_issuing';
     nextMessage =
       certificate.message ??
-      `Waiting for cert-manager to issue certificate ${manifest.secretName}.`;
+      'Requesting an HTTPS certificate. This usually takes a couple of minutes.';
   }
 
   if (certificate.recoverableError) {
@@ -543,15 +688,19 @@ async function inspectCertificateStatus(
   namespace: string,
 ): Promise<CertificateInspectionResult> {
   try {
-    const { stdout } = await runKubectl([
-      'get',
-      'certificate',
-      name,
-      '-n',
-      namespace,
-      '-o',
-      'json',
-    ]);
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'certificate',
+          name,
+          '-n',
+          namespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 5, delayMs: 2000 }
+    );
     const certificate = JSON.parse(stdout);
     const conditions = Array.isArray(certificate?.status?.conditions)
       ? certificate.status.conditions
@@ -563,7 +712,7 @@ async function inspectCertificateStatus(
     if (!readyCondition) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to report readiness.',
+        message: "Requesting an HTTPS certificate from Let's Encrypt...",
       };
     }
 
@@ -581,10 +730,11 @@ async function inspectCertificateStatus(
     }
 
     if (readyCondition.status === 'False') {
-      const failureMessage =
-        normalizedMessage ??
-        normalizedReason ??
-        'Certificate issuance failed.';
+      const failureMessage = normalizedMessage
+        ? `We couldn’t finish the HTTPS setup: ${normalizedMessage}`
+        : normalizedReason
+          ? `We couldn’t finish the HTTPS setup: ${normalizedReason}`
+          : 'We couldn’t finish the HTTPS setup. Please double-check DNS and try again.';
       return { ready: false, failureMessage };
     }
 
@@ -593,13 +743,13 @@ async function inspectCertificateStatus(
       message:
         normalizedMessage ??
         normalizedReason ??
-        'Certificate issuance in progress.',
+        "Waiting for Let's Encrypt to finish verifying your domain...",
     };
   } catch (error) {
     if (isNotFoundError(error)) {
       return {
         ready: false,
-        message: 'Waiting for cert-manager to create certificate resource.',
+        message: 'Preparing HTTPS resources...',
       };
     }
 
@@ -625,7 +775,10 @@ async function kubectlResourceExists(
   namespace: string,
 ): Promise<boolean> {
   try {
-    await runKubectl(['get', kind, name, '-n', namespace]);
+    await withTransientRetry(
+      () => runKubectl(['get', kind, name, '-n', namespace]),
+      { attempts: 3, delayMs: 1000 }
+    );
     return true;
   } catch (error) {
     if (isNotFoundError(error)) {
@@ -863,7 +1016,7 @@ function buildCommitMessage(
   }
 
   const slugs = Array.from(
-    new Set(manifests.map((manifest) => manifest.tenantSlug)),
+    new Set(manifests.map((manifest) => manifest.domainSlug)),
   );
   const preview = slugs.slice(0, 5).join(", ");
   const suffix =
@@ -925,7 +1078,7 @@ export interface RenderedPortalDomainResources {
   gateway: Record<string, any>;
   virtualService: Record<string, any>;
   secretName: string;
-  tenantSlug: string;
+  domainSlug: string;
   gatewayName: string;
   virtualServiceName: string;
 }
@@ -935,12 +1088,12 @@ export function renderPortalDomainResources(
   config: PortalDomainConfig,
 ): RenderedPortalDomainResources {
   const normalizedDomain = normalizeHostname(record.domain);
-  const tenantSlug = createTenantSlug(record);
-  const secretName = truncateName(`portal-domain-${tenantSlug}`, 63);
-  const gatewayName = truncateName(`portal-domain-gw-${tenantSlug}`, 63);
-  const virtualServiceName = truncateName(`portal-domain-vs-${tenantSlug}`, 63);
-  const httpServerName = truncateName(`http-${tenantSlug}`, 63);
-  const httpsServerName = truncateName(`https-${tenantSlug}`, 63);
+  const domainSlug = createDomainSlug(record);
+  const secretName = truncateName(`portal-domain-${domainSlug}`, 63);
+  const gatewayName = truncateName(`portal-domain-gw-${domainSlug}`, 63);
+  const virtualServiceName = truncateName(`portal-domain-vs-${domainSlug}`, 63);
+  const httpServerName = truncateName(`http-${domainSlug}`, 63);
+  const httpsServerName = truncateName(`https-${domainSlug}`, 63);
 
   const labels = buildBaseLabels(record, normalizedDomain);
 
@@ -969,6 +1122,21 @@ export function renderPortalDomainResources(
 
   const hosts = [normalizedDomain];
 
+  const servers: any[] = [
+    {
+      port: {
+        number: config.gatewayHttpsPort,
+        name: httpsServerName,
+        protocol: "HTTPS",
+      },
+      tls: {
+        mode: "SIMPLE",
+        credentialName: secretName,
+      },
+      hosts,
+    },
+  ];
+
   const gateway: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
     kind: "Gateway",
@@ -979,48 +1147,37 @@ export function renderPortalDomainResources(
     },
     spec: {
       selector: config.gatewaySelector,
-      servers: [
-        {
-          port: {
-            number: config.gatewayHttpPort,
-            name: httpServerName,
-            protocol: "HTTP",
-          },
-          tls: {
-            httpsRedirect: true,
-          },
-          hosts,
-        },
-        {
-          port: {
-            number: config.gatewayHttpsPort,
-            name: httpsServerName,
-            protocol: "HTTPS",
-          },
-          tls: {
-            mode: "SIMPLE",
-            credentialName: secretName,
-          },
-          hosts,
-        },
-      ],
+      servers,
     },
   };
 
-  const httpRoutes: any[] = [];
+  const serviceHost = config.serviceHost;
+  if (!serviceHost) {
+    throw new Error(
+      "Portal domain service host is not configured. Set PORTAL_DOMAIN_SERVICE_HOST.",
+    );
+  }
 
-  httpRoutes.push({
-    route: [
-      {
-        destination: {
-          host: config.serviceHost,
-          port: {
-            number: config.servicePort,
-          },
-        },
+  const primaryDestination = {
+    destination: {
+      host: serviceHost,
+      port: {
+        number: config.servicePort,
       },
-    ],
-  });
+    },
+  };
+
+  const httpRoutes: any[] = [
+    {
+      match: [
+        {
+          uri: { prefix: "/" },
+          port: config.gatewayHttpsPort,
+        },
+      ],
+      route: [primaryDestination],
+    },
+  ];
 
   const virtualService: Record<string, any> = {
     apiVersion: "networking.istio.io/v1beta1",
@@ -1043,10 +1200,348 @@ export function renderPortalDomainResources(
     gateway,
     virtualService,
     secretName,
-    tenantSlug,
+    domainSlug,
     gatewayName,
     virtualServiceName,
   };
+}
+
+async function syncGatewaySecret(
+  manifest: RenderedPortalDomainResources,
+  config: PortalDomainConfig,
+): Promise<void> {
+  if (config.gatewayNamespace === config.certificateNamespace) {
+    return;
+  }
+
+  const sourceNamespace = config.certificateNamespace;
+  const targetNamespace = config.gatewayNamespace;
+  const secretName = manifest.secretName;
+
+  let sourceSecret: any;
+  try {
+    const { stdout } = await withTransientRetry(
+      () =>
+        runKubectl([
+          'get',
+          'secret',
+          secretName,
+          '-n',
+          sourceNamespace,
+          '-o',
+          'json',
+        ]),
+      { attempts: 3, delayMs: 1000 }
+    );
+    sourceSecret = JSON.parse(stdout);
+  } catch (error) {
+    if (isNotFoundError(error)) {
+      return;
+    }
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to load source TLS secret ${sourceNamespace}/${secretName}`,
+      ),
+    );
+  }
+
+  const data = (sourceSecret?.data ?? {}) as Record<string, string>;
+  const tlsCrt = data['tls.crt'];
+  const tlsKey = data['tls.key'];
+
+  if (!tlsCrt || !tlsKey) {
+    throw new Error(
+      `Source TLS secret ${sourceNamespace}/${secretName} is missing tls.crt or tls.key`,
+    );
+  }
+
+  const baseLabels = buildBaseLabels(
+    manifest.record,
+    normalizeHostname(manifest.record.domain),
+  );
+
+  const labels: Record<string, string> = {
+    ...baseLabels,
+    [ORIGIN_SECRET_NAME_LABEL]: secretName,
+    [ORIGIN_SECRET_NAMESPACE_LABEL]: sourceNamespace,
+  };
+
+  const annotations: Record<string, string> = {};
+  const resourceVersion = sourceSecret?.metadata?.resourceVersion;
+  if (resourceVersion) {
+    annotations[ORIGIN_SECRET_RESOURCE_VERSION_ANNOTATION] = String(
+      resourceVersion,
+    );
+  }
+
+  const replica: Record<string, any> = {
+    apiVersion: 'v1',
+    kind: 'Secret',
+    metadata: {
+      name: secretName,
+      namespace: targetNamespace,
+      labels,
+      ...(Object.keys(annotations).length > 0 ? { annotations } : {}),
+    },
+    type:
+      typeof sourceSecret?.type === 'string'
+        ? sourceSecret.type
+        : 'kubernetes.io/tls',
+    data: {
+      'tls.crt': tlsCrt,
+      'tls.key': tlsKey,
+    },
+  };
+
+  const tempDir = await fs.mkdtemp(joinPath(os.tmpdir(), 'portal-gateway-secret-'));
+  const filePath = joinPath(tempDir, `${manifest.domainSlug}-gateway-secret.yaml`);
+
+  try {
+    const yaml = dumpYaml(replica, { sortKeys: true, noRefs: true });
+    await fs.writeFile(filePath, yaml, 'utf8');
+    await runKubectl(['apply', '-f', filePath]);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to apply replicated TLS secret ${targetNamespace}/${secretName}`,
+      ),
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
+async function syncBaseVirtualServiceRouting(
+  manifests: RenderedPortalDomainResources[],
+  config: PortalDomainConfig,
+): Promise<void> {
+  const baseRef = getBasePortalVirtualService();
+  if (!baseRef) {
+    return;
+  }
+
+  const parsed = parseNamespacedResourceRef(
+    baseRef,
+    config.virtualServiceNamespace,
+  );
+  if (!parsed) {
+    throw new Error(
+      `Invalid PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE reference: ${baseRef}`,
+    );
+  }
+
+  const { namespace, name } = parsed;
+
+  let baseVirtualService: any;
+  try {
+    const { stdout } = await runKubectl([
+      'get',
+      'virtualservice',
+      name,
+      '-n',
+      namespace,
+      '-o',
+      'json',
+    ]);
+    baseVirtualService = JSON.parse(stdout);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to load base portal VirtualService ${namespace}/${name}`,
+      ),
+    );
+  }
+
+  const baseHosts = normalizeStringList(baseVirtualService?.spec?.hosts);
+  const baseGateways = normalizeStringList(baseVirtualService?.spec?.gateways);
+  const baseHttpRoutes = Array.isArray(baseVirtualService?.spec?.http)
+    ? [...baseVirtualService.spec.http]
+    : [];
+
+  const desiredHostsSet = new Set<string>();
+  const desiredGatewaysSet = new Set<string>();
+
+  for (const manifest of manifests) {
+    const manifestHosts = normalizeStringList(
+      manifest.virtualService?.spec?.hosts,
+    );
+    for (const host of manifestHosts) {
+      desiredHostsSet.add(host);
+    }
+
+    const manifestGateways = normalizeStringList(
+      manifest.virtualService?.spec?.gateways,
+    );
+    for (const gateway of manifestGateways) {
+      desiredGatewaysSet.add(gateway);
+    }
+
+    desiredGatewaysSet.add(
+      `${config.gatewayNamespace}/${manifest.gatewayName}`,
+    );
+  }
+
+  const managedHosts = readManagedAnnotationSet(
+    baseVirtualService?.metadata?.annotations?.[
+      PORTAL_MANAGED_HOSTS_ANNOTATION
+    ],
+  );
+  const managedGateways = readManagedAnnotationSet(
+    baseVirtualService?.metadata?.annotations?.[
+      PORTAL_MANAGED_GATEWAYS_ANNOTATION
+    ],
+  );
+
+  const retainedHosts = baseHosts.filter(
+    (host) => !managedHosts.has(host) || desiredHostsSet.has(host),
+  );
+  const retainedGateways = baseGateways.filter(
+    (gateway) =>
+      !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway),
+  );
+
+  const desiredHosts = combineUniqueStrings(
+    retainedHosts,
+    Array.from(desiredHostsSet),
+  );
+  const desiredGateways = combineUniqueStrings(
+    retainedGateways,
+    Array.from(desiredGatewaysSet),
+  );
+
+  const hostsChanged = !arraysShallowEqual(baseHosts, desiredHosts);
+  const gatewaysChanged = !arraysShallowEqual(baseGateways, desiredGateways);
+
+  const desiredManagedHostsList = Array.from(desiredHostsSet).sort();
+  const desiredManagedGatewaysList = Array.from(desiredGatewaysSet).sort();
+  const existingManagedHostsList = Array.from(managedHosts).sort();
+  const existingManagedGatewaysList = Array.from(managedGateways).sort();
+
+  const retainedHttpRoutes: any[] = [];
+  const existingManagedRedirectRoutes = new Map<string, any>();
+  for (const route of baseHttpRoutes) {
+    const managedHost = extractManagedRedirectHost(route);
+    if (managedHost) {
+      existingManagedRedirectRoutes.set(managedHost, route);
+    } else {
+      retainedHttpRoutes.push(route);
+    }
+  }
+
+  const desiredManagedRedirectRoutes = Array.from(desiredHostsSet)
+    .sort()
+    .map((host) =>
+      existingManagedRedirectRoutes.get(host) ??
+      buildManagedRedirectRoute(host),
+    );
+
+  // Separate catch-all routes from specific routes
+  // Catch-all routes are those with no match conditions or very generic matches
+  const specificRoutes: any[] = [];
+  const catchAllRoutes: any[] = [];
+
+  for (const route of retainedHttpRoutes) {
+    if (isCatchAllRoute(route)) {
+      catchAllRoutes.push(route);
+    } else {
+      specificRoutes.push(route);
+    }
+  }
+
+  // Order: specific routes, then redirect routes, then catch-all routes
+  const desiredHttpRoutes = [
+    ...specificRoutes,
+    ...desiredManagedRedirectRoutes,
+    ...catchAllRoutes,
+  ];
+
+  const httpRoutesChanged = !httpRoutesEqual(
+    baseHttpRoutes,
+    desiredHttpRoutes,
+  );
+
+  const managedHostsChanged = !arraysShallowEqual(
+    existingManagedHostsList,
+    desiredManagedHostsList,
+  );
+  const managedGatewaysChanged = !arraysShallowEqual(
+    existingManagedGatewaysList,
+    desiredManagedGatewaysList,
+  );
+
+  if (
+    !hostsChanged &&
+    !gatewaysChanged &&
+    !managedHostsChanged &&
+    !managedGatewaysChanged &&
+    !httpRoutesChanged
+  ) {
+    return;
+  }
+
+  const patch: Record<string, any> = {};
+
+  if (hostsChanged || gatewaysChanged || httpRoutesChanged) {
+    patch.spec = {};
+    if (hostsChanged) {
+      patch.spec.hosts = desiredHosts;
+    }
+    if (gatewaysChanged) {
+      patch.spec.gateways = desiredGateways;
+    }
+    if (httpRoutesChanged) {
+      patch.spec.http = desiredHttpRoutes;
+    }
+  }
+
+  if (managedHostsChanged || managedGatewaysChanged) {
+    patch.metadata = { annotations: {} };
+    patch.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
+      desiredManagedHostsList.length > 0
+        ? JSON.stringify(desiredManagedHostsList)
+        : null;
+    patch.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
+      desiredManagedGatewaysList.length > 0
+        ? JSON.stringify(desiredManagedGatewaysList)
+        : null;
+  }
+
+  try {
+    await runKubectl([
+      'patch',
+      'virtualservice',
+      name,
+      '-n',
+      namespace,
+      '--type=merge',
+      '-p',
+      JSON.stringify(patch),
+    ]);
+  } catch (error) {
+    throw new Error(
+      formatErrorMessage(
+        error,
+        `Failed to update base portal VirtualService ${namespace}/${name}`,
+      ),
+    );
+  }
+}
+
+async function deleteGatewaySecret(
+  secretName: string,
+  namespace: string,
+): Promise<void> {
+  await runKubectl([
+    'delete',
+    'secret',
+    secretName,
+    '-n',
+    namespace,
+    '--ignore-not-found',
+  ]);
 }
 
 function buildBaseLabels(
@@ -1061,18 +1556,15 @@ function buildBaseLabels(
   };
 }
 
-function createTenantSlug(record: PortalDomainActivityRecord): string {
-  const canonical = normalizeHostname(record.canonical_host || "");
-  const prefix = canonical.split(".")[0];
-  if (prefix) {
-    return sanitizeName(prefix);
-  }
-  const tenant = record.tenant || "";
-  const sanitized = tenant.replace(/[^a-z0-9]/gi, "").toLowerCase();
+function createDomainSlug(record: PortalDomainActivityRecord): string {
+  const source = record.id ?? '';
+  const sanitized = sanitizeName(source);
   if (sanitized) {
-    return sanitized.slice(0, 32);
+    return sanitized.length <= 46 ? sanitized : sanitized.slice(0, 46);
   }
-  return "tenant";
+
+  const fallback = sanitizeName(record.domain ?? '') || sanitizeName(record.tenant ?? '');
+  return fallback || 'domain';
 }
 
 function sanitizeName(input: string): string {
@@ -1106,6 +1598,221 @@ function truncateName(input: string, maxLength: number): string {
 
 async function ensureDirectory(directoryPath: string): Promise<void> {
   await fs.mkdir(directoryPath, { recursive: true });
+}
+
+function parseNamespacedResourceRef(
+  value: string,
+  fallbackNamespace: string,
+): { namespace: string; name: string } | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (!trimmed.includes('/')) {
+    return { namespace: fallbackNamespace, name: trimmed };
+  }
+
+  const [rawNamespace, rawName] = trimmed.split('/', 2);
+  const namespace = rawNamespace?.trim() || fallbackNamespace;
+  const name = rawName?.trim();
+
+  if (!name) {
+    return null;
+  }
+
+  return { namespace, name };
+}
+
+function normalizeStringList(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+
+  return input
+    .filter((value): value is string => typeof value === 'string')
+    .map((value) => value.trim())
+    .filter((value) => value.length > 0);
+}
+
+function combineUniqueStrings(
+  existing: string[],
+  additions: string[],
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of existing) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+
+  for (const value of additions) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+
+  return result;
+}
+
+function arraysShallowEqual(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+  return a.every((value, index) => value === b[index]);
+}
+
+function extractManagedRedirectHost(route: any): string | null {
+  if (!route || typeof route !== 'object') {
+    return null;
+  }
+
+  const redirectUri = route?.redirect?.uri;
+  if (redirectUri !== PORTAL_DASHBOARD_REDIRECT_URI) {
+    return null;
+  }
+
+  const matches = Array.isArray(route.match) ? route.match : [];
+  for (const condition of matches) {
+    const host = condition?.authority?.exact;
+    const uriExact = condition?.uri?.exact;
+    if (typeof host === 'string' && uriExact === '/') {
+      return host;
+    }
+  }
+
+  return null;
+}
+
+function buildManagedRedirectRoute(host: string): Record<string, any> {
+  return {
+    match: [
+      {
+        authority: { exact: host },
+        uri: { exact: '/' },
+      },
+    ],
+    redirect: {
+      uri: PORTAL_DASHBOARD_REDIRECT_URI,
+    },
+  };
+}
+
+function isCatchAllRoute(route: any): boolean {
+  if (!route || typeof route !== 'object') {
+    return false;
+  }
+
+  // A catch-all route has no match conditions or only very generic ones
+  // and contains a route (not a redirect)
+  if (!route.route || !Array.isArray(route.route)) {
+    return false;
+  }
+
+  // If there's no match array at all, it's definitely a catch-all
+  if (!Array.isArray(route.match)) {
+    return true;
+  }
+
+  // If the match array is empty, it's a catch-all
+  if (route.match.length === 0) {
+    return true;
+  }
+
+  // Check if all match conditions are generic (like prefix: "/" without authority)
+  // A route is considered catch-all if it only has generic URI matches without authority constraints
+  const hasSpecificMatch = route.match.some((condition: any) => {
+    // If there's an authority match, it's specific
+    if (condition?.authority) {
+      return true;
+    }
+
+    // If there's a specific URI match (exact or regex), it might be specific
+    // But prefix: "/" without authority is generic
+    const uriPrefix = condition?.uri?.prefix;
+    if (uriPrefix && uriPrefix !== '/') {
+      return true;
+    }
+
+    const uriExact = condition?.uri?.exact;
+    if (uriExact && uriExact !== '/') {
+      return true;
+    }
+
+    // Other match types (headers, queryParams, etc.) make it specific
+    if (condition?.headers || condition?.queryParams || condition?.method) {
+      return true;
+    }
+
+    return false;
+  });
+
+  return !hasSpecificMatch;
+}
+
+function httpRoutesEqual(a: any[], b: any[]): boolean {
+  if (a.length !== b.length) {
+    return false;
+  }
+
+  for (let index = 0; index < a.length; index += 1) {
+    if (stableStringify(a[index]) !== stableStringify(b[index])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function stableStringify(value: unknown): string {
+  if (value === undefined) {
+    return 'undefined';
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  }
+
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(
+        ([key, val]) => `${JSON.stringify(key)}:${stableStringify(val)}`,
+      );
+    return `{${entries.join(',')}}`;
+  }
+
+  return JSON.stringify(value);
+}
+
+function readManagedAnnotationSet(value: unknown): Set<string> {
+  if (typeof value !== 'string') {
+    return new Set<string>();
+  }
+
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      const result = new Set<string>();
+      for (const entry of parsed) {
+        if (typeof entry === 'string' && entry.trim().length > 0) {
+          result.add(entry.trim());
+        }
+      }
+      return result;
+    }
+  } catch (error) {
+    console.warn('[portal-domains] Failed to parse managed annotation', {
+      annotation: value,
+      error: error instanceof Error ? error.message : String(error ?? ''),
+    });
+  }
+
+  return new Set<string>();
 }
 
 function formatErrorMessage(error: unknown, prefix?: string): string {

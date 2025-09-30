@@ -1,7 +1,18 @@
 /* eslint-disable no-undef */
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
+
+const localRequire =
+  (typeof require !== 'undefined' && require)
+  || (typeof module !== 'undefined' && typeof module.createRequire === 'function'
+    ? module.createRequire(__filename)
+    : null);
+
+if (!localRequire) {
+  throw new Error('ee/server/knexfile.cjs must be executed in a CommonJS context where require() is available.');
+}
+
+localRequire('dotenv').config();
+const fs = localRequire('fs');
+const path = localRequire('path');
 
 // Calculate secrets directory path once at module load
 const DOCKER_SECRETS_PATH = '/run/secrets';

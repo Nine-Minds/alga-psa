@@ -8,7 +8,6 @@ import {
   ITimePeriodWithStatusView,
   TimeSheetStatus
 } from 'server/src/interfaces/timeEntry.interfaces';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { validateData } from 'server/src/lib/utils/validation';
 import {
@@ -21,9 +20,10 @@ import {
 } from './timeEntrySchemas'; // Import schemas from the new module
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export async function fetchTimeSheets(): Promise<ITimeSheet[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
   }
@@ -67,7 +67,7 @@ export async function submitTimeSheet(timeSheetId: string): Promise<ITimeSheet> 
   // Validate input
   const validatedParams = validateData<SubmitTimeSheetParams>(submitTimeSheetParamsSchema, { timeSheetId });
 
-  const session = await auth();
+  const session = await getSession();
   const userId = session?.user?.id;
 
   const {knex: db, tenant} = await createTenantKnex();

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef } from 'react';
 import { IScheduleEntry } from 'server/src/interfaces/schedule.interfaces';
 import { Button } from 'server/src/components/ui/Button';
-import { Trash } from 'lucide-react';
+import { Trash, CalendarDays } from 'lucide-react';
 import { WorkItemType } from 'server/src/interfaces/workItem.interfaces';
 import { useIsCompactEvent } from 'server/src/hooks/useIsCompactEvent';
 
@@ -49,6 +49,14 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   technicianMap = {}
 }) => {
   const eventRef = useRef<HTMLDivElement>(null);
+
+  // Check if event spans multiple days
+  const isMultiDay = React.useMemo(() => {
+    const start = new Date(event.scheduled_start);
+    const end = new Date(event.scheduled_end);
+    return start.toDateString() !== end.toDateString();
+  }, [event.scheduled_start, event.scheduled_end]);
+
   
   // Use the compact event hook
   const { isCompact, compactClasses } = useIsCompactEvent(event, eventRef);
@@ -70,9 +78,6 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   
   const backgroundColor = isHovered ? hoverColor : baseColor;
   const opacity = isPrimary ? 1 : (isComparison ? 0.6 : 1);
-  const border = isPrimary ? '2px solid rgb(var(--color-primary-500))' : 'none';
-  
-  const isTicketOrTask = event.work_item_type === 'ticket' || event.work_item_type === 'project_task';
   
   // Determine text color based on background color
   const textColor = event.work_item_type === 'ticket' ? 'text-primary-950' : 'text-gray-950';
@@ -80,31 +85,52 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
     const tech = technicianMap[userId];
-    return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+    return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
   }).join(', ') || 'Unassigned';
 
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
   const endMoment = new Date(event.scheduled_end);
-  const formattedDate = startMoment.toLocaleDateString();
-  const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Format start and end date/time
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleString([], {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Construct detailed tooltip
-  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+  const tooltipTitle = `${event.title}\nScheduled for: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}${isMultiDay ? ' (Multi-day)' : ''}`;
 
   const titleParts = event.title?.split(':') || ['Untitled'];
   const mainTitle = titleParts[0];
   const subtitle = titleParts.slice(1).join(':').trim();
 
+  // Check if we should show continuation indicator
+  const [showContinuationIndicator, setShowContinuationIndicator] = React.useState(false);
+
+  React.useEffect(() => {
+    if (eventRef.current) {
+      const parentElement = eventRef.current.closest('.rbc-event');
+      const isContinuation = parentElement?.classList.contains('rbc-event-continues-prior') || false;
+      setShowContinuationIndicator(isContinuation);
+    }
+  }, []);
+
   return (
     <div
       ref={eventRef}
-      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${textColor}`}
+      className={`absolute inset-0 ${compactClasses.text} overflow-hidden rounded-md ${textColor} group`}
       style={{
         backgroundColor,
         opacity,
         width: isComparison ? 'calc(100% - 20px)' : '100%',
         height: '100%',
+        minHeight: isMultiDay ? '30px' : undefined,
         margin: 0,
         padding: compactClasses.padding,
         border: isComparison ? '1px dashed rgb(var(--color-border-600))' : 'none',
@@ -140,7 +166,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
         ></div>
       )}
 
-      <div className={`flex justify-end ${compactClasses.buttonContainer}`} style={{ zIndex: 200 }}>
+      <div className="absolute top-2 right-1" style={{ zIndex: 200 }}>
         {isPrimary && (
           <Button
             id={`delete-entry-${event.entry_id}-btn`}
@@ -160,20 +186,38 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       </div>
 
       {/* Only display the title, not any time information */}
-      {isCompact ? (
-        // For short events, show text with minimal padding
-        <div className="flex items-center px-0.5 pb-0.5">
-          <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
-            {mainTitle}
+      <div className="pt-1.5 px-1">
+        {isCompact ? (
+          // For short events, show text with minimal padding
+          <div className="flex items-center">
+            {showContinuationIndicator && (
+              <span className="text-[10px] mr-1 opacity-60" title="Continues from previous week">...</span>
+            )}
+            {isMultiDay && !showContinuationIndicator && (
+              <CalendarDays className="w-3 h-3 mr-1 opacity-70 flex-shrink-0" />
+            )}
+            <div className="font-medium truncate flex-1 text-xs">
+              {mainTitle.length > 15 && showContinuationIndicator ? mainTitle.substring(0, 12) + '...' : mainTitle}
+            </div>
           </div>
-        </div>
-      ) : (
-        // For normal events, show two lines
-        <>
-          <div className="font-semibold truncate">{mainTitle}</div>
-          {subtitle && <div className="truncate text-xs">{subtitle}</div>}
-        </>
-      )}
+        ) : (
+          // For normal events, show two lines
+          <>
+            <div className="font-semibold truncate flex items-center text-sm">
+              {showContinuationIndicator && (
+                <span className="text-xs mr-1 opacity-60" title="Continues from previous week">...</span>
+              )}
+              {isMultiDay && !showContinuationIndicator && (
+                <CalendarDays className="w-3.5 h-3.5 mr-1 opacity-70 flex-shrink-0"/>
+              )}
+              <span className="truncate">
+                {mainTitle.length > 20 && showContinuationIndicator ? mainTitle.substring(0, 17) + '...' : mainTitle}
+              </span>
+            </div>
+            {subtitle && !showContinuationIndicator && <div className="truncate text-xs mt-0.5">{subtitle}</div>}
+          </>
+        )}
+      </div>
     </div>
   );
 };

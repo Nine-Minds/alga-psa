@@ -2,13 +2,13 @@
 
 import { describe, it, expect, beforeEach, vi, MockedFunction } from 'vitest';
 import { getBillingCycle, updateBillingCycle, getAllBillingCycles } from '../../lib/actions/billingCycleActions';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
+import { getSession } from 'server/src/lib/auth/getSession';
 import { Knex } from 'knex';
 import { createTenantKnex } from '../../lib/db';
 
-// Mock auth function
-vi.mock("server/src/app/api/auth/[...nextauth]/auth", () => ({
-  auth: vi.fn(),
+// Mock session helper
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(),
 }));
 
 // Mock the db/db module
@@ -46,7 +46,7 @@ describe('Billing Cycle Actions', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (auth as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: 'test-user-id' } });
+    (getSession as ReturnType<typeof vi.fn>).mockResolvedValue({ user: { id: 'test-user-id' } });
     mockCreateTenantKnex = vi.mocked(createTenantKnex);
   });
 
@@ -71,7 +71,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (auth as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       await expect(getBillingCycle('company-1')).rejects.toThrow('Unauthorized');
     });
@@ -90,7 +90,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (auth as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       await expect(updateBillingCycle('company-1', 'quarterly')).rejects.toThrow('Unauthorized');
     });
@@ -122,7 +122,7 @@ describe('Billing Cycle Actions', () => {
     });
 
     it('should throw an error if user is not authenticated', async () => {
-      (auth as ReturnType<typeof vi.fn>).mockResolvedValue(null);
+      (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
       await expect(getAllBillingCycles()).rejects.toThrow('Unauthorized');
     });

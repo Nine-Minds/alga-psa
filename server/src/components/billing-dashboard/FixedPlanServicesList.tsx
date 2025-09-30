@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Box } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Plus, MoreVertical, HelpCircle } from 'lucide-react';
 import {
   DropdownMenu,
@@ -311,25 +312,26 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
                                 key={service.service_id}
                                 className="flex items-center space-x-2 p-1 hover:bg-muted/50 rounded"
                                 >
-                                <input
-                                    type="checkbox"
-                                    id={`add-service-${service.service_id}`}
-                                    checked={selectedServicesToAdd.includes(service.service_id!)}
-                                    onChange={(e) => {
-                                    if (e.target.checked) {
-                                        setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
-                                    } else {
-                                        setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
-                                    }
-                                    }}
-                                    className="cursor-pointer"
-                                />
-                                <label htmlFor={`add-service-${service.service_id}`} className="flex-grow cursor-pointer flex flex-col text-sm">
+                                <div className="[&>div]:mb-0">
+                                    <Checkbox
+                                        id={`add-service-${service.service_id}`}
+                                        checked={selectedServicesToAdd.includes(service.service_id!)}
+                                        onChange={(e) => {
+                                            if ((e.target as HTMLInputElement).checked) {
+                                                setSelectedServicesToAdd([...selectedServicesToAdd, service.service_id!]);
+                                            } else {
+                                                setSelectedServicesToAdd(selectedServicesToAdd.filter(id => id !== service.service_id));
+                                            }
+                                        }}
+                                        className="cursor-pointer"
+                                    />
+                                </div>
+                                <div className="flex-grow flex flex-col text-sm">
                                     <span>{service.service_name}</span>
                                     <span className="text-xs text-muted-foreground">
                                     Service Type: {serviceTypeName} | Method: {BILLING_METHOD_OPTIONS.find(opt => opt.value === service.billing_method)?.label || service.billing_method} | Rate: ${ Number(service.default_rate).toFixed(2)}
                                     </span>
-                                </label>
+                                </div>
                                 </div>
                             );
                         })}

@@ -132,24 +132,33 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
   // Find assigned technician names for tooltip
   const assignedTechnicians = event.assigned_user_ids?.map(userId => {
     const tech = technicianMap[userId];
-    return tech ? `${tech.first_name} ${tech.last_name}` : userId;
+    return tech ? `${tech.first_name} ${tech.last_name}` : 'Unknown';
   }).join(', ') || 'Unassigned';
 
   // Format date and time for tooltip
   const startMoment = new Date(event.scheduled_start);
   const endMoment = new Date(event.scheduled_end);
-  const formattedDate = startMoment.toLocaleDateString();
-  const formattedTime = `${startMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${endMoment.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+  // Format start and end date/time
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleString([], {
+      month: 'numeric',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Check if this is a private event that the user doesn't own
   const isPrivateEvent = event.is_private;
   const isCreator = isPrimary && event.assigned_user_ids?.length === 1;
   const isPrivateNonOwner = isPrivateEvent && !isCreator;
-  
+
   // Construct detailed tooltip - show limited info for private events
   const tooltipTitle = isPrivateNonOwner
-    ? `Busy\nDate: ${formattedDate}\nTime: ${formattedTime}`
-    : `${event.title}\nAssigned to: ${assignedTechnicians}\nDate: ${formattedDate}\nTime: ${formattedTime}`;
+    ? `Busy\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`
+    : `${event.title}\nAssigned to: ${assignedTechnicians}\nStart: ${formatDateTime(startMoment)}\nEnd: ${formatDateTime(endMoment)}`;
 
   return (
     <div
@@ -200,7 +209,7 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       )}
       {/* Buttons container - only show if not a private event or user is creator */}
       {!isPrivateNonOwner && (
-      <div className={`flex justify-end ${compactClasses.buttonContainer}`} style={{ zIndex: 200 }}>
+      <div className="absolute top-2 right-1" style={{ zIndex: 200 }}>
           {/* Show individual buttons if not narrow and not a private event or user is creator */}
           {!isNarrow && (
             <div className={`flex ${compactClasses.buttonGap}`}>
@@ -288,24 +297,28 @@ const WeeklyScheduleEvent: React.FC<WeeklyScheduleEventProps> = ({
       )}
 
       {/* Event content - show limited info for private events */}
-      {isCompact ? (
-        // For short events, show text with minimal padding
-        <div className="flex items-center px-0.5 pb-0.5">
-          <div className="font-medium truncate flex-1" style={{ fontSize: compactClasses.fontSize, lineHeight: compactClasses.lineHeight }}>
-            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+      <div className="pt-1.5 px-1">
+        {isCompact ? (
+          // For short events, show text with minimal padding
+          <div className="flex items-center">
+            <div className="font-medium truncate flex-1 text-xs">
+              {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+            </div>
           </div>
-        </div>
-      ) : (
-        // For normal events, show two lines
-        <>
-          <div className="font-semibold truncate">
-            {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
-          </div>
-          <div className="truncate text-xs">
-            {isPrivateNonOwner ? "" : (event.title?.split(':').slice(1).join(':').trim() || '')}
-          </div>
-        </>
-      )}
+        ) : (
+          // For normal events, show two lines
+          <>
+            <div className="font-semibold truncate text-sm">
+              {isPrivateNonOwner ? "Busy" : (event.title?.split(':')[0] || 'Untitled')}
+            </div>
+            {!isPrivateNonOwner && event.title?.split(':').slice(1).join(':').trim() && (
+              <div className="truncate text-xs mt-0.5">
+                {event.title?.split(':').slice(1).join(':').trim()}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Confirmation Dialog for Delete */}
       <ConfirmationDialog

@@ -14,12 +14,14 @@ const {
   verifyCnameRecord,
   applyPortalDomainResources,
   checkPortalDomainDeploymentStatus,
+  deletePortalDomainRecord,
 } = proxyActivities<{
   loadPortalDomain: (args: { portalDomainId: string }) => Promise<PortalDomainActivityRecord | null>;
   markPortalDomainStatus: (args: { portalDomainId: string; status: string; statusMessage?: string | null; verificationDetails?: Record<string, unknown> | null }) => Promise<void>;
   verifyCnameRecord: (args: { domain: string; expectedCname: string; attempts?: number; intervalSeconds?: number }) => Promise<VerifyCnameResult>;
   applyPortalDomainResources: (args: { tenantId: string; portalDomainId: string }) => Promise<ApplyPortalDomainResourcesResult>;
   checkPortalDomainDeploymentStatus: (args: { portalDomainId: string }) => Promise<PortalDomainStatusSnapshot | null>;
+  deletePortalDomainRecord: (args: { portalDomainId: string; tenantId: string }) => Promise<void>;
 }>(
   {
     startToCloseTimeout: '5 minutes',
@@ -65,6 +67,12 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
         statusMessage: 'Custom domain disabled. Awaiting resource cleanup.',
       });
       await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
+      await deletePortalDomainRecord({ portalDomainId: record.id, tenantId: record.tenant }).catch((error) => {
+        log.warn('Failed to delete portal domain record after cleanup', {
+          portalDomainId: record.id,
+          error: error instanceof Error ? error.message : String(error ?? ''),
+        });
+      });
       return;
     }
 
@@ -95,10 +103,18 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       return;
     }
 
+    const verificationDetails = {
+      ...(record.verification_details ?? {}),
+      expected_cname: expectedCname,
+      last_verified_at: new Date().toISOString(),
+      last_verified_cnames: dns.observed,
+    };
+
     await markPortalDomainStatus({
       portalDomainId: record.id,
       status: 'pending_certificate',
-      statusMessage: 'DNS verified. Preparing Kubernetes resources and HTTP-01 challenge.',
+      statusMessage: 'DNS verified. Preparing Kubernetes resources for certificate issuance.',
+      verificationDetails,
     });
 
     const applyResult = await applyPortalDomainResources({ tenantId: record.tenant, portalDomainId: record.id });
@@ -115,7 +131,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
     await markPortalDomainStatus({
       portalDomainId: record.id,
       status: 'deploying',
-      statusMessage: 'Resources applied. Waiting for certificate and gateway readiness.',
+      statusMessage: 'Resources applied. Waiting for certificate issuance.',
     });
   }
 
@@ -123,7 +139,7 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
   pendingTrigger = undefined;
   await runOnce(initialTrigger);
 
-  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed', 'certificate_failed']);
+  const terminalStatuses = new Set(['active', 'disabled', 'dns_failed']);
 
   while (true) {
     const timeoutPromise = sleep('1 minute');
@@ -146,12 +162,31 @@ export async function portalDomainRegistrationWorkflow(input: PortalDomainWorkfl
       return;
     }
 
+    const isRecoverableCertificateFailure =
+      deploymentStatus.status === 'certificate_failed' &&
+      typeof deploymentStatus.statusMessage === 'string' &&
+      deploymentStatus.statusMessage.toLowerCase().includes('secret does not exist');
+
     if (terminalStatuses.has(deploymentStatus.status)) {
       log.info('Portal domain reached terminal status; ending workflow.', {
         portalDomainId: input.portalDomainId,
         status: deploymentStatus.status,
       });
       return;
+    }
+
+    if (deploymentStatus.status === 'certificate_failed' && !isRecoverableCertificateFailure) {
+      log.info('Certificate failed with non-recoverable error; ending workflow.', {
+        portalDomainId: input.portalDomainId,
+        statusMessage: deploymentStatus.statusMessage,
+      });
+      return;
+    }
+
+    if (deploymentStatus.status === 'certificate_failed' && isRecoverableCertificateFailure) {
+      log.info('Certificate secret missing; continuing to monitor.', {
+        portalDomainId: input.portalDomainId,
+      });
     }
 
     log.info('Portal domain still progressing; continuing wait.', {

@@ -174,7 +174,7 @@ const ClientPortalDomainSettings = () => {
     }
 
     const confirmed = typeof window !== 'undefined'
-      ? window.confirm('Disable the current custom domain? Traffic will revert to the default hosted address.')
+      ? window.confirm('Remove the current custom domain? Traffic will revert to the default hosted address.')
       : true;
 
     if (!confirmed) {
@@ -187,7 +187,7 @@ const ClientPortalDomainSettings = () => {
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);
-      toast.success('Custom domain disabled.');
+      toast.success('Custom domain removal requested.');
     } catch (error) {
       const message = resolveErrorMessage(error, 'Failed to disable custom domain.');
       setPortalError(message);
@@ -284,7 +284,7 @@ const ClientPortalDomainSettings = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleRetry}
-                      disabled={submitting || retrying}
+                      disabled={submitting || retrying || enabling}
                     >
                       {retrying ? 'Retrying…' : 'Retry'}
                     </Button>
@@ -297,7 +297,7 @@ const ClientPortalDomainSettings = () => {
                       onClick={handleDisable}
                       disabled={submitting}
                     >
-                      Disable
+                      Remove Domain
                     </Button>
                   )}
                 </div>
@@ -327,13 +327,17 @@ const ClientPortalDomainSettings = () => {
                     disabled={submitting}
                     autoComplete="off"
                   />
-                  <Button
-                    id="client-portal-domain-submit"
-                    type="submit"
-                    disabled={submitting || (!editingExistingDomain && !normalizedInput) || (editingExistingDomain && !isDirtyDomain)}
-                  >
-                    {submitting
-                      ? 'Submitting…'
+                    <Button
+                      id="client-portal-domain-submit"
+                      type="submit"
+                      disabled={
+                        submitting
+                        || (!editingExistingDomain && !normalizedInput)
+                        || (editingExistingDomain && !isDirtyDomain)
+                      }
+                    >
+                      {submitting
+                        ? 'Submitting…'
                       : editingExistingDomain
                         ? isDirtyDomain
                           ? 'Update Domain'

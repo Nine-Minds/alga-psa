@@ -122,6 +122,7 @@ const Header: React.FC<HeaderProps> = ({
               )}
               {index === 0 ? (
                 <Link
+                  prefetch={false}
                   href={item.href}
                   className="text-gray-500 hover:text-main-800 text-md transition-colors cursor-pointer"
                   aria-label="Home"
@@ -134,6 +135,7 @@ const Header: React.FC<HeaderProps> = ({
                 </span>
               ) : (
                 <Link
+                  prefetch={false}
                   href={item.href}
                   className="text-md text-gray-500 hover:text-main-800 transition-colors cursor-pointer"
                 >

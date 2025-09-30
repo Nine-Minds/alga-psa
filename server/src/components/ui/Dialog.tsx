@@ -2,6 +2,7 @@
 import React, { ReactNode, useEffect, useState, useRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
@@ -170,9 +171,14 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
             {title ? (
               <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
             ) : (
-              <div className="flex items-center justify-center">
-                <div className="w-12 h-1 bg-gray-300 rounded-full" /> {/* Visual drag indicator */}
-              </div>
+              <>
+                <VisuallyHidden.Root>
+                  <RadixDialog.Title>Dialog</RadixDialog.Title>
+                </VisuallyHidden.Root>
+                <div className="flex items-center justify-center">
+                  <div className="w-12 h-1 bg-gray-300 rounded-full" /> {/* Visual drag indicator */}
+                </div>
+              </>
             )}
           </div>
           <div className="px-6 pt-3 pb-6 flex-1 overflow-y-auto overflow-x-visible min-h-0">

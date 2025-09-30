@@ -19,7 +19,11 @@ import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
-import { CompositeSecretProvider, FileSystemSecretProvider, getSecretProviderInstance, ISecretProvider, EnvSecretProvider } from '@alga-psa/shared/core';
+import { CompositeSecretProvider } from '@alga-psa/shared/core/CompositeSecretProvider';
+import { FileSystemSecretProvider } from '@alga-psa/shared/core/FileSystemSecretProvider';
+import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
+import type { ISecretProvider } from '@alga-psa/shared/core/ISecretProvider';
+import { EnvSecretProvider } from '@alga-psa/shared/core/EnvSecretProvider';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
 
 let isFunctionExecuted = false;

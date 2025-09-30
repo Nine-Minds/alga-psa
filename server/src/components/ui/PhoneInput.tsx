@@ -103,7 +103,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
         onBlur={onBlur}
         placeholder={getPlaceholderText()}
         disabled={disabled}
-        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
       />
       {phoneCode && (
         <p className="text-xs text-gray-500 mt-1">
