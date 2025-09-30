@@ -12,6 +12,7 @@ import {
   Clock,
   Package,
   Droplet,
+  Activity,
   CheckCircle2,
   FileCheck
 } from 'lucide-react';
@@ -64,6 +65,7 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
   const hasFixedServices = data.fixed_services.length > 0;
   const hasHourlyServices = data.hourly_services.length > 0;
   const hasBucketHours = !!(data.bucket_hours && data.bucket_monthly_fee && data.bucket_overage_rate);
+  const hasUsageServices = !!(data.usage_services && data.usage_services.length > 0);
 
   return (
     <div className="space-y-6">
@@ -272,13 +274,45 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         </Card>
       )}
 
+      {/* Usage-Based Services */}
+      {hasUsageServices && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-orange-600" />
+              <h4 className="font-semibold">Usage-Based Services</h4>
+            </div>
+            <Badge variant="default" className="bg-orange-100 text-orange-800">
+              {data.usage_services?.length} services
+            </Badge>
+          </div>
+          <div className="space-y-2 text-sm">
+            <div>
+              <p className="text-gray-600 mb-1">Services & Rates</p>
+              <ul className="list-disc list-inside space-y-1 ml-2">
+                {data.usage_services?.map((service, idx) => (
+                  <li key={idx} className="font-medium">
+                    {service.service_name || service.service_id} - {formatCurrency(service.unit_rate)}/{service.unit_of_measure || 'unit'}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="pt-2 border-t">
+              <p className="text-xs text-gray-600">
+                💡 Usage-based services are billed based on actual consumption each month
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Total Summary */}
       <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-200">
         <div className="flex items-center justify-between">
           <div>
             <h4 className="font-semibold text-lg mb-1">Estimated Monthly Total</h4>
             <p className="text-sm text-gray-600">
-              Fixed charges only (hourly services billed as used)
+              Fixed charges only (hourly & usage-based services billed as used)
             </p>
           </div>
           <div className="text-right">

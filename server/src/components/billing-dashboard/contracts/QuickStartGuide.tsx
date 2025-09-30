@@ -9,6 +9,7 @@ import {
   DollarSign,
   Clock,
   Droplet,
+  Activity,
   CheckCircle,
   PlayCircle,
   X,
@@ -129,6 +130,10 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
               <div className="flex items-center gap-2">
                 <Droplet className="h-4 w-4 text-blue-600" />
                 <span className="text-sm text-gray-700"><strong>Bucket Hours:</strong> Prepaid hours + overage</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-orange-600" />
+                <span className="text-sm text-gray-700"><strong>Usage-Based:</strong> Bill by consumption/usage</span>
               </div>
             </div>
           </div>

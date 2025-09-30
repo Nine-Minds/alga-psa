@@ -8,6 +8,7 @@ import { ContractBasicsStep } from './wizard-steps/ContractBasicsStep';
 import { FixedFeeServicesStep } from './wizard-steps/FixedFeeServicesStep';
 import { HourlyServicesStep } from './wizard-steps/HourlyServicesStep';
 import { BucketHoursStep } from './wizard-steps/BucketHoursStep';
+import { UsageBasedServicesStep } from './wizard-steps/UsageBasedServicesStep';
 import { ReviewContractStep } from './wizard-steps/ReviewContractStep';
 
 const STEPS = [
@@ -15,10 +16,11 @@ const STEPS = [
   'Fixed Fee Services',
   'Hourly Services',
   'Bucket Hours',
+  'Usage-Based Services',
   'Review & Create'
 ];
 
-const REQUIRED_STEPS = [0, 4]; // Contract Basics and Review are required
+const REQUIRED_STEPS = [0, 5]; // Contract Basics and Review are required
 
 export interface ContractWizardData {
   // Step 1: Contract Basics
@@ -60,6 +62,14 @@ export interface ContractWizardData {
     service_name?: string;
   }>;
 
+  // Step 5: Usage-Based Services
+  usage_services?: Array<{
+    service_id: string;
+    service_name?: string;
+    unit_rate?: number;
+    unit_of_measure?: string;
+  }>;
+
   // Internal tracking
   bundle_id?: string; // Set after creation
 }
@@ -98,6 +108,7 @@ export function ContractWizard({
     bucket_monthly_fee: undefined,
     bucket_overage_rate: undefined,
     bucket_services: [],
+    usage_services: [],
     ...editingContract
   });
 
@@ -161,12 +172,17 @@ export function ContractWizard({
         }
         return true;
 
-      case 4: // Review
+      case 4: // Usage-Based Services
+        // Optional step
+        return true;
+
+      case 5: // Review
         // Check that at least one service type is configured
         const hasServices =
           wizardData.fixed_services.length > 0 ||
           wizardData.hourly_services.length > 0 ||
-          (wizardData.bucket_hours && wizardData.bucket_services.length > 0);
+          (wizardData.bucket_hours && wizardData.bucket_services.length > 0) ||
+          (wizardData.usage_services && wizardData.usage_services.length > 0);
 
         if (!hasServices) {
           setErrors(prev => ({ ...prev, [stepIndex]: 'At least one service line is required' }));
@@ -244,6 +260,8 @@ export function ContractWizard({
       case 3:
         return <BucketHoursStep data={wizardData} updateData={updateData} />;
       case 4:
+        return <UsageBasedServicesStep data={wizardData} updateData={updateData} />;
+      case 5:
         return <ReviewContractStep data={wizardData} />;
       default:
         return null;
