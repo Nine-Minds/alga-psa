@@ -164,9 +164,44 @@ export function useI18n() {
 
 /**
  * Hook for translations (wrapper around react-i18next)
+ * Gracefully handles cases where I18nProvider is not present (e.g., MSP portal)
+ * by returning English fallback text
  */
 export function useTranslation(namespace?: string) {
-  return useI18nextTranslation(namespace);
+  const context = useContext(I18nContext);
+  const i18nextResult = useI18nextTranslation(namespace);
+
+  // If no I18nProvider context (e.g., MSP portal), return a safe t function
+  // that uses the default/fallback value (English text)
+  if (!context) {
+    return {
+      ...i18nextResult,
+      t: (key: string, defaultValue?: string | any, options?: any) => {
+        // Handle different call signatures:
+        // t('key', 'default') - string default
+        // t('key', { variable: 'value' }) - options without default
+        // t('key', 'default {{var}}', { var: 'value' }) - default with interpolation
+
+        if (typeof defaultValue === 'string') {
+          // Simple string default or default with interpolation
+          if (options && typeof options === 'object') {
+            // Perform simple interpolation
+            return defaultValue.replace(/\{\{(\w+)\}\}/g, (match, varName) => {
+              return options[varName] !== undefined ? String(options[varName]) : match;
+            });
+          }
+          return defaultValue;
+        }
+
+        // If defaultValue is an object (options), return the key as fallback
+        return key;
+      },
+      i18n: i18nextResult.i18n,
+      ready: true,
+    };
+  }
+
+  return i18nextResult;
 }
 
 /**
