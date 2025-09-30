@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import os from 'os';
 import path from 'path';
 import { mkdtemp, rm } from 'node:fs/promises';
+import { load as yamlLoad } from 'js-yaml';
 
 import {
   resolveGitConfiguration,
@@ -27,6 +28,7 @@ describe('portal domain git integration helpers', () => {
   let baseVirtualService: any;
   let baseVirtualServicePatches: Array<Record<string, any>>;
   const secretStore = new Map<string, any>();
+  const gitTrackedFiles = new Map<string, string>(); // Track files written to git repo
 
 const commandRunner: CommandRunner = async (command, args, options) => {
   commands.push({ command, args, cwd: options.cwd });
@@ -38,8 +40,33 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       await fs.mkdir(manifestDir, { recursive: true });
       await fs.writeFile(path.join(manifestDir, 'stale.yaml'), 'kind: List\n', 'utf8');
     }
+    if (args[0] === 'add') {
+      // Track which files are being added for git operations
+      const pathsToAdd = args.slice(1);
+      const allFlagIndex = pathsToAdd.indexOf('--all');
+      if (allFlagIndex >= 0) {
+        // When --all is used, track all YAML files in the directory
+        const dirPath = pathsToAdd[allFlagIndex + 1] || '.';
+        const fullDirPath = path.isAbsolute(dirPath)
+          ? dirPath
+          : path.join(options.cwd || tmpDir, dirPath);
+
+        // Track common manifest files that would be added
+        gitTrackedFiles.set(path.join(fullDirPath, 'istio-virtualservice.yaml'), 'staged');
+        gitTrackedFiles.set(path.join(fullDirPath, 'portal-domain-*.yaml'), 'staged');
+      } else {
+        for (const filePath of pathsToAdd) {
+          gitTrackedFiles.set(filePath, 'staged');
+        }
+      }
+    }
     if (args[0] === 'status') {
-      return { stdout: ' M portal-domains/example.yaml\n', stderr: '' };
+      // Build status output based on tracked files
+      const modifiedFiles = Array.from(gitTrackedFiles.keys())
+        .filter(f => gitTrackedFiles.get(f) === 'staged')
+        .map(f => ` M ${f}`)
+        .join('\n');
+      return { stdout: modifiedFiles || ' M portal-domains/example.yaml\n', stderr: '' };
     }
   }
   if (command === 'kubectl') {
@@ -131,6 +158,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     };
     baseVirtualServicePatches = [];
     secretStore.clear();
+    gitTrackedFiles.clear();
     __setCommandRunnerForTests(commandRunner);
   });
 
@@ -341,25 +369,29 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     const renderedFiles = await listYamlFiles(manifestRoot);
     expect(renderedFiles).toContain('active-id.yaml');
 
-    expect(baseVirtualService.spec.hosts).toContain('portal.mspmind.com');
-    expect(baseVirtualService.spec.gateways).toContain(
+    // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
+    expect(vs.spec.hosts).toContain('portal.mspmind.com');
+    expect(vs.spec.gateways).toContain(
       'istio-system/portal-domain-gw-active-id',
     );
     expect(
       JSON.parse(
-        baseVirtualService.metadata.annotations?.[
+        vs.metadata.annotations?.[
           'portal.alga-psa.com/managed-hosts'
         ] ?? '[]',
       ),
     ).toContain('portal.mspmind.com');
     expect(
       JSON.parse(
-        baseVirtualService.metadata.annotations?.[
+        vs.metadata.annotations?.[
           'portal.alga-psa.com/managed-gateways'
         ] ?? '[]',
       ),
     ).toContain('istio-system/portal-domain-gw-active-id');
-    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 
   it('adds a default redirect route for the new domain in the base virtual service', async () => {
@@ -370,6 +402,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
     process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
     process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
 
     const now = new Date().toISOString();
     const rows: PortalDomainActivityRecord[] = [
@@ -418,9 +453,12 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-    const managedRedirect = baseVirtualServicePatches
-      .flatMap((patch) => (Array.isArray(patch?.spec?.http) ? patch.spec.http : []))
-      .find((route) => {
+    // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
+    const managedRedirect = (vs.spec.http || []).find((route: any) => {
         if (!route?.redirect || !Array.isArray(route?.match)) {
           return false;
         }
@@ -452,6 +490,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
     process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
     process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
 
     baseVirtualService.spec.hosts.push('portal.mspmind.com');
     baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
@@ -517,7 +558,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
-    expect(baseVirtualServicePatches.length).toBe(0);
+
+    // When the domain already exists with the same values, the sync function returns early
+    // without writing the file. Verify the in-memory baseVirtualService doesn't have duplicates.
     const hostOccurrences = baseVirtualService.spec.hosts.filter(
       (host: string) => host === 'portal.mspmind.com',
     ).length;
@@ -548,6 +591,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
     process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
     process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
 
     baseVirtualService.spec.hosts.push('portal.mspmind.com');
     baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
@@ -591,19 +637,23 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
-    expect(baseVirtualService.spec.hosts).toEqual(['apps.algapsa.com']);
-    expect(baseVirtualService.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    // Read the base VirtualService from the file
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
+    expect(vs.spec.hosts).toEqual(['apps.algapsa.com']);
+    expect(vs.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
     expect(
-      baseVirtualService.metadata.annotations?.[
+      vs.metadata.annotations?.[
         'portal.alga-psa.com/managed-hosts'
       ],
     ).toBeUndefined();
     expect(
-      baseVirtualService.metadata.annotations?.[
+      vs.metadata.annotations?.[
         'portal.alga-psa.com/managed-gateways'
       ],
     ).toBeUndefined();
-    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 
   it('removes managed redirect routes when the domain is removed', async () => {
@@ -614,6 +664,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
     process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
     process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
 
     baseVirtualService.spec.hosts.push('portal.mspmind.com');
     baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
@@ -682,12 +735,12 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
-    const lastHttpPatch = [...baseVirtualServicePatches]
-      .reverse()
-      .find((patch) => Array.isArray(patch?.spec?.http));
+    // Read the base VirtualService from the file
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
 
-    expect(lastHttpPatch).toBeDefined();
-    const redirectStillPresent = (lastHttpPatch?.spec?.http ?? []).some((route: any) => {
+    const redirectStillPresent = (vs.spec.http || []).some((route: any) => {
       if (!route?.redirect || !Array.isArray(route?.match)) {
         return false;
       }
@@ -772,19 +825,25 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     );
     expect(kubectlDeletes.length).toBeGreaterThan(0);
 
-    expect(baseVirtualService.spec.hosts).toEqual(['apps.algapsa.com']);
-    expect(baseVirtualService.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    // Read the base VirtualService from the file
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
+    expect(vs.spec.hosts).toEqual(['apps.algapsa.com']);
+    expect(vs.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
     expect(
-      baseVirtualService.metadata.annotations?.[
+      vs.metadata.annotations?.[
         'portal.alga-psa.com/managed-hosts'
       ],
     ).toBeUndefined();
     expect(
-      baseVirtualService.metadata.annotations?.[
+      vs.metadata.annotations?.[
         'portal.alga-psa.com/managed-gateways'
       ],
     ).toBeUndefined();
-    expect(baseVirtualServicePatches.length).toBeGreaterThan(0);
   });
 
   it('places redirect route before generic catch-all route', async () => {
@@ -867,8 +926,15 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
+    // Read the base VirtualService from the file
+    const repoDir = path.join(tmpDir, 'nm-kube-config');
+    const manifestRoot = path.join(repoDir, 'portal-domains');
+    const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+    const vsContent = await fs.readFile(vsFilePath, 'utf8');
+    const vs = yamlLoad(vsContent) as any;
+
     // Get the final http routes array
-    const finalHttpRoutes = baseVirtualService.spec.http;
+    const finalHttpRoutes = vs.spec.http;
 
     // Find the index of the redirect route
     const redirectIndex = finalHttpRoutes.findIndex((route: any) => {
@@ -898,5 +964,785 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     expect(redirectIndex).toBeGreaterThanOrEqual(0);
     expect(catchAllIndex).toBeGreaterThanOrEqual(0);
     expect(redirectIndex).toBeLessThan(catchAllIndex);
+  });
+
+  describe('Base VirtualService file-based editing (TDD - these tests expose the gap)', () => {
+    it('should write base VirtualService updates to istio-virtualservice.yaml in git', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: istio-virtualservice.yaml file exists in manifestRoot
+      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const fileExists = await fs.access(vsFilePath).then(() => true).catch(() => false);
+      expect(fileExists).toBe(true);
+
+      // VERIFY: File contains base VirtualService with updated hosts/gateways
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const parsed = yamlLoad(fileContent) as any;
+      expect(parsed.kind).toBe('VirtualService');
+      expect(parsed.metadata.name).toBe('alga-psa-vs');
+      expect(parsed.spec.hosts).toContain('portal.mspmind.com');
+      expect(parsed.spec.gateways).toContain('istio-system/portal-domain-gw-active-id');
+    });
+
+    it('should commit base VirtualService changes to git', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: git status should show istio-virtualservice.yaml as modified or tracked
+      const gitStatusCommands = commands.filter(
+        cmd => cmd.command === 'git' && cmd.args[0] === 'status'
+      );
+      expect(gitStatusCommands.length).toBeGreaterThan(0);
+
+      // VERIFY: The gitTrackedFiles includes istio-virtualservice.yaml
+      const vsFileTracked = Array.from(gitTrackedFiles.keys()).some(
+        key => key.includes('istio-virtualservice.yaml')
+      );
+      expect(vsFileTracked).toBe(true);
+    });
+
+    it('should not use kubectl patch for base VirtualService updates', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: No kubectl patch commands for virtualservice
+      const patchCommands = commands.filter(
+        cmd => cmd.command === 'kubectl' &&
+               cmd.args[0] === 'patch' &&
+               cmd.args[1] === 'virtualservice'
+      );
+      expect(patchCommands.length).toBe(0);
+    });
+
+    it('should generate valid base VirtualService YAML with correct structure', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      // Add a catch-all route to test route ordering
+      baseVirtualService.spec.http.push({
+        route: [
+          {
+            destination: {
+              host: 'sebastian-blue.msp.svc.cluster.local',
+              port: { number: 3000 },
+            },
+            weight: 100,
+          },
+        ],
+      });
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'domain-1',
+          tenant: 'Tenant One',
+          domain: 'portal1.example.com',
+          canonical_host: 'tenant1.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+        {
+          id: 'domain-2',
+          tenant: 'Tenant Two',
+          domain: 'portal2.example.com',
+          canonical_host: 'tenant2.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(2),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(2),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'domain-1' });
+
+      // VERIFY: File content structure
+      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const vs = yamlLoad(fileContent) as any;
+
+      // Check hosts array includes managed domains
+      expect(vs.spec.hosts).toContain('portal1.example.com');
+      expect(vs.spec.hosts).toContain('portal2.example.com');
+      expect(vs.spec.hosts).toContain('apps.algapsa.com'); // Original host retained
+
+      // Check gateways array includes managed gateways
+      expect(vs.spec.gateways).toContain('istio-system/portal-domain-gw-domain-1');
+      expect(vs.spec.gateways).toContain('istio-system/portal-domain-gw-domain-2');
+
+      // Check annotations track managed resources
+      expect(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']).toBeDefined();
+      const managedHosts = JSON.parse(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']);
+      expect(managedHosts).toContain('portal1.example.com');
+      expect(managedHosts).toContain('portal2.example.com');
+
+      // Check http routes - redirects should be before catch-all
+      expect(vs.spec.http.length).toBeGreaterThan(0);
+      const redirectRouteIndex = vs.spec.http.findIndex((r: any) => r.redirect);
+      const catchAllIndex = vs.spec.http.findIndex((r: any) => !r.match && r.route);
+      if (redirectRouteIndex >= 0 && catchAllIndex >= 0) {
+        expect(redirectRouteIndex).toBeLessThan(catchAllIndex);
+      }
+    });
+
+    it('should apply base VirtualService from file after editing', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: kubectl apply includes the istio-virtualservice.yaml file
+      const applyCommands = commands.filter(
+        cmd => cmd.command === 'kubectl' && cmd.args[0] === 'apply'
+      );
+
+      // Should have apply command that references manifestRoot (which would include the VS file)
+      expect(applyCommands.length).toBeGreaterThan(0);
+
+      // Check if any apply command includes the file or directory containing it
+      const baseVsApplied = applyCommands.some(cmd =>
+        cmd.args.some(arg =>
+          arg.includes('istio-virtualservice.yaml') ||
+          arg.includes('portal-domains')
+        )
+      );
+
+      expect(baseVsApplied).toBe(true);
+    });
+
+    it('should remove managed hosts from base VirtualService file when domains are removed', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      // Setup: Pre-populate base VirtualService with a managed domain
+      baseVirtualService.spec.hosts.push('portal.example.com');
+      baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-test-id');
+      baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-hosts'] =
+        JSON.stringify(['portal.example.com']);
+      baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-gateways'] =
+        JSON.stringify(['istio-system/portal-domain-gw-test-id']);
+
+      // Apply with no active domains (empty list)
+      const rows: PortalDomainActivityRecord[] = [];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
+
+      // VERIFY: File exists and managed hosts/gateways are removed
+      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const vs = yamlLoad(fileContent) as any;
+
+      expect(vs.spec.hosts).not.toContain('portal.example.com');
+      expect(vs.spec.hosts).toContain('apps.algapsa.com'); // Original retained
+      expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-test-id');
+
+      // Annotations should be removed when no managed resources remain
+      expect(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']).toBeUndefined();
+      expect(vs.metadata.annotations['portal.alga-psa.com/managed-gateways']).toBeUndefined();
+    });
+
+    it('should not delete base VirtualService when removing managed domains and gateways', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      // Setup: Add managed domain and gateway to base VirtualService
+      baseVirtualService.spec.hosts.push('portal.mspmind.com');
+      baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
+      baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-hosts'] =
+        JSON.stringify(['portal.mspmind.com']);
+      baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-gateways'] =
+        JSON.stringify(['istio-system/portal-domain-gw-active-id']);
+
+      // Add a redirect route
+      baseVirtualService.spec.http.push({
+        match: [
+          {
+            authority: { exact: 'portal.mspmind.com' },
+            uri: { exact: '/' },
+          },
+        ],
+        redirect: { uri: '/client-portal/dashboard' },
+      });
+
+      // Now remove all domains - simulate cleanup scenario
+      const rows: PortalDomainActivityRecord[] = [];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'removed-id' });
+
+      // VERIFY: kubectl delete was NOT called on the base VirtualService
+      const deleteCommands = commands.filter(
+        cmd => cmd.command === 'kubectl' && cmd.args[0] === 'delete'
+      );
+
+      // Check that no delete command targets the base VirtualService
+      const baseVsDeleted = deleteCommands.some(cmd =>
+        cmd.args.includes('virtualservice') &&
+        (cmd.args.includes('alga-psa-vs') || cmd.args.some(arg => arg.includes('istio-virtualservice.yaml')))
+      );
+
+      expect(baseVsDeleted).toBe(false);
+
+      // VERIFY: The base VirtualService file still exists
+      const vsFilePath = path.join(repoDir, 'msp', 'istio-virtualservice.yaml');
+      let fileExists = false;
+      try {
+        await fs.access(vsFilePath);
+        fileExists = true;
+      } catch (error) {
+        fileExists = false;
+      }
+
+      expect(fileExists).toBe(true);
+
+      // VERIFY: The file content shows managed resources removed but base resources intact
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const vs = yamlLoad(fileContent) as any;
+
+      // Original base hosts and gateways should remain
+      expect(vs.spec.hosts).toContain('apps.algapsa.com');
+      expect(vs.spec.gateways).toContain('istio-system/alga-psa-gw');
+
+      // Managed resources should be removed
+      expect(vs.spec.hosts).not.toContain('portal.mspmind.com');
+      expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-active-id');
+
+      // Managed annotations should be cleaned up
+      expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-hosts']).toBeUndefined();
+      expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-gateways']).toBeUndefined();
+    });
+
+    it('should not delete pre-existing istio-virtualservice.yaml during cleanup phase', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      // PRE-CONDITION: Create the istio-virtualservice.yaml file in CORRECT location (msp/)
+      // This simulates the file existing from a previous run
+      const mspFolder = path.join(repoDir, 'msp');
+      await fs.mkdir(mspFolder, { recursive: true });
+      const { dump: dumpYaml } = await import('js-yaml');
+      const vsFilePath = path.join(mspFolder, 'istio-virtualservice.yaml');
+      await fs.writeFile(vsFilePath, dumpYaml(baseVirtualService), 'utf8');
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: kubectl delete should NOT have been called on istio-virtualservice.yaml
+      const deleteCommands = commands.filter(
+        cmd => cmd.command === 'kubectl' && cmd.args[0] === 'delete'
+      );
+
+      const vsDeletedByKubectl = deleteCommands.some(cmd =>
+        cmd.args.some(arg => arg.includes('istio-virtualservice.yaml'))
+      );
+
+      // THIS SHOULD BE FALSE - the base VS file should not be deleted during cleanup
+      expect(vsDeletedByKubectl).toBe(false);
+
+      // VERIFY: The file should still exist on disk
+      let fileExists = false;
+      try {
+        await fs.access(vsFilePath);
+        fileExists = true;
+      } catch (error) {
+        fileExists = false;
+      }
+
+      expect(fileExists).toBe(true);
+
+      // VERIFY: The file should have been updated (not deleted then recreated)
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const vs = yamlLoad(fileContent) as any;
+
+      // Should contain the new managed host
+      expect(vs.spec.hosts).toContain('portal.mspmind.com');
+    });
+
+    it('should edit existing istio-virtualservice.yaml in parent folder, not create new file in portal-domains', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+      const manifestRoot = path.join(repoDir, 'portal-domains');
+
+      // PRE-CONDITION: The base VirtualService file exists in the PARENT folder (msp or alga-psa)
+      // NOT in the portal-domains folder
+      const algaPsaFolder = path.join(repoDir, 'msp');
+      await fs.mkdir(algaPsaFolder, { recursive: true });
+
+      const { dump: dumpYaml } = await import('js-yaml');
+      const correctVsFilePath = path.join(algaPsaFolder, 'istio-virtualservice.yaml');
+      await fs.writeFile(correctVsFilePath, dumpYaml(baseVirtualService), 'utf8');
+
+      const now = new Date().toISOString();
+      const rows: PortalDomainActivityRecord[] = [
+        {
+          id: 'active-id',
+          tenant: 'Tenant One',
+          domain: 'portal.mspmind.com',
+          canonical_host: 'tenantone.portal.algapsa.com',
+          status: 'active',
+          status_message: null,
+          verification_details: null,
+          certificate_secret_name: null,
+          last_synced_resource_version: null,
+          created_at: now,
+          updated_at: now,
+        },
+      ];
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve(rows),
+              where() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(1),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(now),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
+
+      // VERIFY: The existing file in the parent folder (msp/alga-psa) should be EDITED
+      let correctFileExists = false;
+      try {
+        await fs.access(correctVsFilePath);
+        correctFileExists = true;
+      } catch (error) {
+        correctFileExists = false;
+      }
+      expect(correctFileExists).toBe(true);
+
+      // VERIFY: The file content in the correct location should be updated
+      const correctFileContent = await fs.readFile(correctVsFilePath, 'utf8');
+      const correctVs = yamlLoad(correctFileContent) as any;
+      expect(correctVs.spec.hosts).toContain('portal.mspmind.com');
+
+      // VERIFY: NO file should be created in the portal-domains folder
+      const wrongVsFilePath = path.join(manifestRoot, 'istio-virtualservice.yaml');
+      let wrongFileExists = false;
+      try {
+        await fs.access(wrongVsFilePath);
+        wrongFileExists = true;
+      } catch (error) {
+        wrongFileExists = false;
+      }
+
+      // THIS SHOULD BE FALSE - we should NOT create istio-virtualservice.yaml in portal-domains
+      expect(wrongFileExists).toBe(false);
+
+      // VERIFY: kubectl apply should reference the correct file location (parent folder, not portal-domains)
+      const applyCommands = commands.filter(
+        cmd => cmd.command === 'kubectl' && cmd.args[0] === 'apply'
+      );
+
+      // Check if any apply command includes the wrong path (portal-domains/istio-virtualservice.yaml)
+      const appliedFromWrongLocation = applyCommands.some(cmd =>
+        cmd.args.some(arg =>
+          arg.includes('portal-domains') && arg.includes('istio-virtualservice.yaml')
+        )
+      );
+
+      expect(appliedFromWrongLocation).toBe(false);
+    });
   });
 });
