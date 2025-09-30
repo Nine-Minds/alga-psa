@@ -486,6 +486,31 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
    ```
 
+# Testing Standards
+
+All tests should follow the conventions outlined in [docs/testing-standards.md](./testing-standards.md).
+
+**Quick Reference:**
+- **Unit tests**: `server/src/test/unit/` - Isolated tests with mocked dependencies
+- **Integration tests**: `server/src/test/integration/` - Multi-component tests with real database
+- **Infrastructure tests**: `server/src/test/infrastructure/` - Complete business workflows
+- **E2E tests**: `server/src/test/e2e/` - API endpoints and full user flows
+
+**Naming conventions:**
+- Unit: `<feature>.test.ts` or `<ComponentName>.test.tsx`
+- Integration: `<feature>Integration.test.ts`
+- Infrastructure: `<feature>.test.ts` or `<feature>_<aspect>.test.ts` (when split)
+- E2E: `<feature>.e2e.test.ts`
+
+**Key principles:**
+- Tests are centralized in `server/src/test/`, not colocated with source code
+- Mirror source structure using subdirectories within test directories
+- Split large test suites by concern using underscore notation (e.g., `billing_tax.test.ts`)
+- Use `TestContext` helpers for infrastructure tests
+- Use `setupE2ETestEnvironment()` for E2E tests
+
+See the full [Testing Standards](./testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
+
 # Time Entry Work Item Types
 They can be:
 - Ticket
