@@ -21,8 +21,8 @@ interface ContractDialogProps {
 
 export function ContractDialog({ onContractAdded, editingContract, onClose, triggerButton }: ContractDialogProps) {
   const [open, setOpen] = useState(false);
-  const [bundleName, setBundleName] = useState(editingContract?.bundle_name || '');
-  const [bundleDescription, setBundleDescription] = useState(editingContract?.bundle_description || '');
+  const [contractName, setContractName] = useState(editingContract?.bundle_name || '');
+  const [contractDescription, setContractDescription] = useState(editingContract?.bundle_description || '');
   const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
@@ -31,8 +31,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
   // Update form when editingContract changes
   useEffect(() => {
     if (editingContract) {
-      setBundleName(editingContract.bundle_name);
-      setBundleDescription(editingContract.bundle_description || '');
+      setContractName(editingContract.bundle_name);
+      setContractDescription(editingContract.bundle_description || '');
       setIsActive(editingContract.is_active);
       setOpen(true);
     }
@@ -50,7 +50,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
 
     // Validate form
     const errors: string[] = [];
-    if (!bundleName.trim()) {
+    if (!contractName.trim()) {
       errors.push('Contract name');
     }
 
@@ -63,8 +63,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
 
     try {
       const bundleData = {
-        bundle_name: bundleName,
-        bundle_description: bundleDescription || undefined,
+        bundle_name: contractName,
+        bundle_description: contractDescription || undefined,
         is_active: isActive,
         tenant: tenant
       };
@@ -90,8 +90,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
   };
 
   const resetForm = () => {
-    setBundleName('');
-    setBundleDescription('');
+    setContractName('');
+    setContractDescription('');
     setIsActive(true);
     setHasAttemptedSubmit(false);
     setValidationErrors([]);
@@ -110,8 +110,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
       {triggerButton && (
         <div onClick={() => {
           if (editingContract) {
-            setBundleName(editingContract.bundle_name);
-            setBundleDescription(editingContract.bundle_description || '');
+            setContractName(editingContract.bundle_name);
+            setContractDescription(editingContract.bundle_description || '');
             setIsActive(editingContract.is_active);
           }
           setOpen(true);
@@ -144,14 +144,14 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               <Input
                 id="contract-name"
                 type="text"
-                value={bundleName}
+                value={contractName}
                 onChange={(e) => {
-                  setBundleName(e.target.value);
+                  setContractName(e.target.value);
                   clearErrorIfSubmitted();
                 }}
                 placeholder="Enter contract name"
                 required
-                className={hasAttemptedSubmit && !bundleName.trim() ? 'border-red-500' : ''}
+                className={hasAttemptedSubmit && !contractName.trim() ? 'border-red-500' : ''}
               />
             </div>
 
@@ -159,8 +159,8 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               <Label htmlFor="contract_description">Description</Label>
               <TextArea
                 id="contract_description"
-                value={bundleDescription}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setBundleDescription(e.target.value)}
+                value={contractDescription}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setContractDescription(e.target.value)}
                 placeholder="Enter contract description"
                 className="min-h-[100px]"
               />
@@ -184,7 +184,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               <Button
                 id="save-contract-btn"
                 type="submit"
-                className={!bundleName.trim() ? 'opacity-50' : ''}
+                className={!contractName.trim() ? 'opacity-50' : ''}
               >
                 {editingContract ? 'Update Contract' : 'Create Contract'}
               </Button>

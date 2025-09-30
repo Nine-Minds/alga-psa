@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { Button } from 'server/src/components/ui/Button';
-import { MoreVertical, Plus, Wand2 } from 'lucide-react';
+import { Input } from 'server/src/components/ui/Input';
+import { Badge } from 'server/src/components/ui/Badge';
+import { MoreVertical, Plus, Wand2, Search, Filter } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,31 +15,96 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
+import { IPlanBundle, ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
+import { ICompany } from 'server/src/interfaces';
 import { getPlanBundles, deletePlanBundle } from 'server/src/lib/actions/planBundleActions';
+import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
 
+type ContractStatus = 'active' | 'upcoming' | 'expired';
+
+interface EnrichedContract extends IPlanBundle {
+  client_name?: string;
+  company_id?: string;
+  start_date?: string;
+  end_date?: string | null;
+  monthly_value?: number;
+  status?: ContractStatus;
+}
+
 const Contracts: React.FC = () => {
-  const [contracts, setContracts] = useState<IPlanBundle[]>([]);
+  const [contracts, setContracts] = useState<EnrichedContract[]>([]);
+  const [filteredContracts, setFilteredContracts] = useState<EnrichedContract[]>([]);
   const [editingContract, setEditingContract] = useState<IPlanBundle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ContractStatus | 'all'>('all');
   const router = useRouter();
 
   useEffect(() => {
     fetchContracts();
   }, []);
 
+  useEffect(() => {
+    filterContracts();
+  }, [contracts, searchTerm, statusFilter]);
+
+  const getContractStatus = (startDate?: string, endDate?: string | null, isActive?: boolean): ContractStatus => {
+    if (!isActive) return 'expired';
+
+    const now = new Date();
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+
+    if (start && start > now) return 'upcoming';
+    if (end && end < now) return 'expired';
+    return 'active';
+  };
+
   const fetchContracts = async () => {
     try {
       const fetchedContracts = await getPlanBundles();
-      setContracts(fetchedContracts);
+      const companies = await getAllCompanies();
+
+      // For now, we'll use mock data for company assignments
+      // In a real implementation, we'd fetch company_plan_bundles
+      const enriched: EnrichedContract[] = fetchedContracts.map((contract) => ({
+        ...contract,
+        client_name: 'Mock Client', // TODO: Get from company_plan_bundles join
+        company_id: undefined,
+        start_date: new Date().toISOString().split('T')[0], // Mock data
+        end_date: null,
+        monthly_value: 0, // TODO: Calculate from billing plans
+        status: getContractStatus(undefined, null, contract.is_active)
+      }));
+
+      setContracts(enriched);
       setError(null);
     } catch (error) {
       console.error('Error fetching contracts:', error);
       setError('Failed to fetch contracts');
     }
+  };
+
+  const filterContracts = () => {
+    let filtered = contracts;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(contract =>
+        contract.bundle_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contract.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(contract => contract.status === statusFilter);
+    }
+
+    setFilteredContracts(filtered);
   };
 
   const handleDeleteContract = async (contractId: string) => {
@@ -53,20 +120,62 @@ const Contracts: React.FC = () => {
     }
   };
 
-  const contractColumns: ColumnDefinition<IPlanBundle>[] = [
+  const getStatusBadge = (status?: ContractStatus) => {
+    const variants = {
+      active: { variant: 'default' as const, className: 'bg-green-100 text-green-800 border-green-200' },
+      upcoming: { variant: 'default' as const, className: 'bg-blue-100 text-blue-800 border-blue-200' },
+      expired: { variant: 'default' as const, className: 'bg-gray-100 text-gray-800 border-gray-200' }
+    };
+
+    const config = status ? variants[status] : variants.expired;
+    const label = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown';
+
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {label}
+      </Badge>
+    );
+  };
+
+  const formatCurrency = (cents: number | undefined) => {
+    if (!cents) return '$0.00';
+    return `$${(cents / 100).toFixed(2)}`;
+  };
+
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const contractColumns: ColumnDefinition<EnrichedContract>[] = [
+    {
+      title: 'Client',
+      dataIndex: 'client_name',
+      render: (value) => value || 'Not Assigned',
+    },
     {
       title: 'Contract Name',
       dataIndex: 'bundle_name',
     },
     {
-      title: 'Description',
-      dataIndex: 'description',
-      render: (value) => value || 'No description',
+      title: 'Status',
+      dataIndex: 'status',
+      render: (value) => getStatusBadge(value as ContractStatus),
     },
     {
-      title: 'Status',
-      dataIndex: 'is_active',
-      render: (value) => value ? 'Active' : 'Inactive',
+      title: 'Monthly Value',
+      dataIndex: 'monthly_value',
+      render: (value) => formatCurrency(value),
+    },
+    {
+      title: 'Start Date',
+      dataIndex: 'start_date',
+      render: (value) => formatDate(value),
+    },
+    {
+      title: 'End Date',
+      dataIndex: 'end_date',
+      render: (value) => formatDate(value),
     },
     {
       title: 'Actions',
@@ -86,6 +195,17 @@ const Contracts: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
+              id="view-contract-menu-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (record.bundle_id) {
+                  router.push(`/msp/billing?tab=contracts&contractId=${record.bundle_id}`);
+                }
+              }}
+            >
+              View Details
+            </DropdownMenuItem>
+            <DropdownMenuItem
               id="edit-contract-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
@@ -95,11 +215,32 @@ const Contracts: React.FC = () => {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
+              id="renew-contract-menu-item"
+              onClick={(e) => {
+                e.stopPropagation();
+                // TODO: Implement renew functionality
+                alert('Renew contract feature coming soon');
+              }}
+            >
+              Renew
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              id="terminate-contract-menu-item"
+              className="text-orange-600 focus:text-orange-600"
+              onClick={(e) => {
+                e.stopPropagation();
+                // TODO: Implement terminate functionality
+                alert('Terminate contract feature coming soon');
+              }}
+            >
+              Terminate
+            </DropdownMenuItem>
+            <DropdownMenuItem
               id="delete-contract-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={async (e) => {
                 e.stopPropagation();
-                if (record.bundle_id) {
+                if (record.bundle_id && confirm('Are you sure you want to delete this contract?')) {
                   handleDeleteContract(record.bundle_id);
                 }
               }}
@@ -147,6 +288,42 @@ const Contracts: React.FC = () => {
             </div>
           </div>
 
+          {/* Search and Filter */}
+          <div className="flex gap-3 mb-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search by client or contract name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Status: {statusFilter === 'all' ? 'All' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setStatusFilter('all')}>
+                  All Contracts
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('active')}>
+                  Active Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('upcoming')}>
+                  Upcoming Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('expired')}>
+                  Expired Only
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -154,7 +331,7 @@ const Contracts: React.FC = () => {
           )}
 
           <DataTable
-            data={contracts.filter(contract => contract.bundle_id !== undefined)}
+            data={filteredContracts.filter(contract => contract.bundle_id !== undefined)}
             columns={contractColumns}
             pagination={true}
             onRowClick={handleContractClick}
