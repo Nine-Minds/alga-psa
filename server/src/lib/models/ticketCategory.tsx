@@ -44,28 +44,28 @@ const TicketCategory = {
     }
   },
 
-  getByChannel: async (knexOrTrx: Knex | Knex.Transaction, channelId: string): Promise<ITicketCategory[]> => {
+  getByBoard: async (knexOrTrx: Knex | Knex.Transaction, boardId: string): Promise<ITicketCategory[]> => {
     try {
       const tenant = await getCurrentTenantId();
       if (!tenant) {
         throw new Error('No tenant context available');
       }
 
-      // Verify channel exists in the current tenant
-      const channel = await knexOrTrx('channels')
+      // Verify board exists in the current tenant
+      const board = await knexOrTrx('boards')
         .where({
-          channel_id: channelId,
+          board_id: boardId,
           tenant
         })
         .first();
 
-      if (!channel) {
-        throw new Error(`Board with id ${channelId} not found in tenant ${tenant}`);
+      if (!board) {
+        throw new Error(`Board with id ${boardId} not found in tenant ${tenant}`);
       }
 
       const categories = await knexOrTrx<ITicketCategory>('categories')
         .where({
-          channel_id: channelId,
+          board_id: boardId,
           tenant
         });
       return categories;
@@ -86,28 +86,28 @@ const TicketCategory = {
         throw new Error('Category name is required');
       }
 
-      if (!category.channel_id) {
+      if (!category.board_id) {
         throw new Error('Board ID is required');
       }
 
-      // Verify channel exists in the current tenant
-      const channel = await knexOrTrx('channels')
+      // Verify board exists in the current tenant
+      const board = await knexOrTrx('boards')
         .where({
-          channel_id: category.channel_id,
+          board_id: category.board_id,
           tenant
         })
         .first();
 
-      if (!channel) {
-        throw new Error(`Board with id ${category.channel_id} not found in tenant ${tenant}`);
+      if (!board) {
+        throw new Error(`Board with id ${category.board_id} not found in tenant ${tenant}`);
       }
 
-      // Check if category with same name exists in the channel
+      // Check if category with same name exists in the board
       const existingCategory = await knexOrTrx('categories')
         .where({
           tenant,
           category_name: category.category_name,
-          channel_id: category.channel_id
+          board_id: category.board_id
         })
         .first();
 
@@ -156,27 +156,27 @@ const TicketCategory = {
         throw new Error(`Ticket category with id ${id} not found in tenant ${tenant}`);
       }
 
-      // If channel_id is being updated, verify the new channel exists in the current tenant
-      if (category.channel_id && category.channel_id !== existingCategory.channel_id) {
-        const newChannel = await knexOrTrx('channels')
+      // If board_id is being updated, verify the new board exists in the current tenant
+      if (category.board_id && category.board_id !== existingCategory.board_id) {
+        const newBoard = await knexOrTrx('boards')
           .where({
-            channel_id: category.channel_id,
+            board_id: category.board_id,
             tenant
           })
           .first();
 
-        if (!newChannel) {
-          throw new Error(`Board with id ${category.channel_id} not found in tenant ${tenant}`);
+        if (!newBoard) {
+          throw new Error(`Board with id ${category.board_id} not found in tenant ${tenant}`);
         }
       }
 
-      // If name is being updated, check for duplicates in the same channel
+      // If name is being updated, check for duplicates in the same board
       if (category.category_name) {
         const duplicateCategory = await knexOrTrx('categories')
           .where({
             tenant,
             category_name: category.category_name,
-            channel_id: category.channel_id || existingCategory.channel_id
+            board_id: category.board_id || existingCategory.board_id
           })
           .whereNot('category_id', id)
           .first();

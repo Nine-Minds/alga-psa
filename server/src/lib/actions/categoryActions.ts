@@ -136,5 +136,5 @@ export async function deleteServiceCategory(categoryId: string): Promise<void> {
   }
 }
 
-// Removed getTicketCategoriesByChannel - this function has been moved to ticketCategoryActions.ts
-// and updated to return both categories and channel configuration
+// Removed getTicketCategoriesByBoard - this function has been moved to ticketCategoryActions.ts
+// and updated to return both categories and board configuration

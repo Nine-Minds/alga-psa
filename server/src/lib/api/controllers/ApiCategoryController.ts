@@ -462,7 +462,7 @@ export class ApiCategoryController extends ApiBaseController {
   }
 
   /**
-   * Get category tree for a channel
+   * Get category tree for a board
    */
   getCategoryTree() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -477,8 +477,9 @@ export class ApiCategoryController extends ApiBaseController {
 
           const url = new URL(req.url);
           const pathParts = url.pathname.split('/');
-          const channelId = pathParts[pathParts.length - 1];
-          const tree = await this.categoryService.getCategoryTree(channelId, apiRequest.context!);
+          // Support both boardId (legacy) and boardId (new) route parameters
+          const boardId = pathParts[pathParts.length - 1];
+          const tree = await this.categoryService.getCategoryTree(boardId, apiRequest.context!);
           
           return createSuccessResponse({
             tree,

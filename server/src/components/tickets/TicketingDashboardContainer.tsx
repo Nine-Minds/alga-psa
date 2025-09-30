@@ -1,4 +1,5 @@
 'use client';
+import { IBoard } from '@/interfaces';
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,7 +10,7 @@ import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { IChannel } from 'server/src/interfaces';
+import { IBoard } from 'server/src/interfaces';
 import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/ticketDisplaySettings';
 
 interface TicketingDashboardContainerProps {
@@ -17,7 +18,7 @@ interface TicketingDashboardContainerProps {
     options: {
       statusOptions: SelectOption[];
       priorityOptions: SelectOption[];
-      channelOptions: IChannel[];
+      boardOptions: IBoard[];
       agentOptions: SelectOption[];
       categories: ITicketCategory[];
       companies: ICompany[];
@@ -49,9 +50,9 @@ export default function TicketingDashboardContainer({
       statusId: 'open',
       priorityId: 'all',
       searchQuery: '',
-      channelFilterState: 'active',
+      boardFilterState: 'active',
       showOpenOnly: true,
-      channelId: undefined,
+      boardId: undefined,
       categoryId: undefined,
       companyId: undefined,
     };
@@ -62,14 +63,14 @@ export default function TicketingDashboardContainer({
     const params = new URLSearchParams();
     
     // Only add non-default/non-empty values to URL
-    if (filters.channelId) params.set('channelId', filters.channelId);
+    if (filters.boardId) params.set('boardId', filters.boardId);
     if (filters.companyId) params.set('companyId', filters.companyId);
     if (filters.statusId && filters.statusId !== 'open') params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
     if (filters.categoryId) params.set('categoryId', filters.categoryId);
     if (filters.searchQuery) params.set('searchQuery', filters.searchQuery);
-    if (filters.channelFilterState && filters.channelFilterState !== 'active') {
-      params.set('channelFilterState', filters.channelFilterState);
+    if (filters.boardFilterState && filters.boardFilterState !== 'active') {
+      params.set('boardFilterState', filters.boardFilterState);
     }
     if (filters.tags && Array.isArray(filters.tags) && filters.tags.length > 0) {
       // Encode each tag to handle special characters like commas
@@ -90,13 +91,13 @@ export default function TicketingDashboardContainer({
     setIsLoading(true);
     try {
       const currentFiltersWithDefaults: ITicketListFilters = {
-        channelId: filters.channelId || undefined,
+        boardId: filters.boardId || undefined,
         statusId: filters.statusId || 'all',
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,
         companyId: filters.companyId || undefined,
         searchQuery: filters.searchQuery || '',
-        channelFilterState: filters.channelFilterState || 'active',
+        boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true) 
       };
 
@@ -139,21 +140,21 @@ export default function TicketingDashboardContainer({
     await fetchTickets(newFilters, null); // Fetch page 1
   }, [fetchTickets, updateURLWithFilters]);
 
-  const mappedAndFilteredChannels = consolidatedData.options.channelOptions.map(channel => ({
-    ...channel,
-    channel_id: channel.channel_id || '',
-    channel_name: channel.channel_name || 'Unnamed Channel',
-    tenant: channel.tenant || currentUser.tenant || '',
-    is_inactive: channel.is_inactive || false,
-  })).filter(channel => channel.channel_id !== '');
+  const mappedAndFilteredBoards = consolidatedData.options.boardOptions.map(board => ({
+    ...board,
+    board_id: board.board_id || '',
+    board_name: board.board_name || 'Unnamed Board',
+    tenant: board.tenant || currentUser.tenant || '',
+    is_inactive: board.is_inactive || false,
+  })).filter(board => board.board_id !== '');
 
-  const initialChannelsForDashboard: Array<IChannel & { channel_id: string; channel_name: string; tenant: string; is_inactive: boolean }> = mappedAndFilteredChannels;
+  const initialBoardsForDashboard: Array<IBoard & { board_id: string; board_name: string; tenant: string; is_inactive: boolean }> = mappedAndFilteredBoards;
   
   return (
     <TicketingDashboard
       id="ticketing-dashboard"
       initialTickets={tickets} 
-      initialChannels={initialChannelsForDashboard}
+      initialBoards={initialBoardsForDashboard}
       initialStatuses={consolidatedData.options.statusOptions}
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}

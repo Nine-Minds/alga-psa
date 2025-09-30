@@ -20,7 +20,7 @@ const ticketAttributesSchema = z.record(z.unknown()).optional();
 export const createTicketSchema = z.object({
   title: z.string().min(1, 'Title is required').max(255),
   url: z.string().url().optional(),
-  channel_id: uuidSchema,
+  board_id: uuidSchema,
   company_id: uuidSchema,
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
@@ -52,7 +52,7 @@ export const updateTicketAssignmentSchema = z.object({
 export const ticketFilterSchema = baseFilterSchema.extend({
   title: z.string().optional(),
   ticket_number: z.string().optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   company_id: uuidSchema.optional(),
   location_id: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
@@ -75,7 +75,7 @@ export const ticketFilterSchema = baseFilterSchema.extend({
   status_name: z.string().optional(),
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
-  channel_name: z.string().optional()
+  board_name: z.string().optional()
 });
 
 // Ticket list query schema
@@ -87,7 +87,7 @@ export const ticketResponseSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
-  channel_id: uuidSchema,
+  board_id: uuidSchema,
   company_id: uuidSchema,
   location_id: uuidSchema.nullable(),
   contact_name_id: uuidSchema.nullable(),
@@ -116,7 +116,7 @@ export const ticketWithDetailsResponseSchema = ticketResponseSchema.extend({
   priority_name: z.string().optional(),
   category_name: z.string().optional(),
   subcategory_name: z.string().optional(),
-  channel_name: z.string().optional(),
+  board_name: z.string().optional(),
   entered_by_name: z.string().optional(),
   assigned_to_name: z.string().optional(),
   location_name: z.string().optional(),
@@ -212,7 +212,7 @@ export const ticketStatsResponseSchema = z.object({
   tickets_by_status: z.record(z.number()),
   tickets_by_priority: z.record(z.number()),
   tickets_by_category: z.record(z.number()),
-  tickets_by_channel: z.record(z.number()),
+  tickets_by_board: z.record(z.number()),
   average_resolution_time: z.number().nullable(),
   tickets_created_today: z.number(),
   tickets_created_this_week: z.number(),
@@ -262,7 +262,7 @@ export const ticketMetricsQuerySchema = z.object({
   period: z.enum(['day', 'week', 'month', 'quarter', 'year']).optional().default('month'),
   start_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
-  group_by: z.enum(['status', 'priority', 'category', 'channel', 'assignee', 'company']).optional()
+  group_by: z.enum(['status', 'priority', 'category', 'board', 'assignee', 'company']).optional()
 });
 
 // Asset ticket creation schema

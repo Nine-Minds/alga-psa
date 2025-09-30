@@ -34,7 +34,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
   const [editingDefaults, setEditingDefaults] = useState<InboundTicketDefaults | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [fieldOptions, setFieldOptions] = useState<TicketFieldOptions>({
-    channels: [],
+    boards: [],
     statuses: [],
     priorities: [],
     categories: [],
@@ -231,7 +231,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
                     {/* Defaults Preview */}
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
-                        <span className="font-medium">Board:</span> {nameById(fieldOptions.channels, defaultConfig.channel_id)}
+                        <span className="font-medium">Board:</span> {nameById(fieldOptions.boards, defaultConfig.board_id)}
                       </div>
                       <div>
                         <span className="font-medium">Status:</span> {nameById(fieldOptions.statuses, defaultConfig.status_id)}

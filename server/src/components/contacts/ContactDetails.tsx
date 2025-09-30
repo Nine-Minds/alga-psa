@@ -1,4 +1,5 @@
 'use client';
+import { IBoard } from '@/interfaces';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
@@ -28,7 +29,7 @@ import { useToast } from 'server/src/hooks/use-toast';
 import ContactTickets from './ContactTickets';
 import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IBoard } from 'server/src/interfaces/board.interface';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { TagManager } from 'server/src/components/tags';
@@ -174,7 +175,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
-    channelOptions: IChannel[];
+    boardOptions: IBoard[];
     categories: ITicketCategory[];
     tags?: string[];
   } | null>(null);
@@ -235,7 +236,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
-          channelOptions: options.channelOptions,
+          boardOptions: options.boardOptions,
           categories: options.categories,
           tags: options.tags
         });
@@ -514,7 +515,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               contactName={editedContact.full_name}
               companyId={editedContact.company_id || ''}
               companyName={getCompanyName(editedContact.company_id || '')}
-              initialChannels={ticketFormOptions.channelOptions}
+              initialBoards={ticketFormOptions.boardOptions}
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}
