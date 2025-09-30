@@ -5,10 +5,11 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, Droplet, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { Plus, X, Droplet, DollarSign, Clock, TrendingUp, HelpCircle } from 'lucide-react';
 
 interface BucketHoursStepProps {
   data: ContractWizardData;
@@ -120,10 +121,15 @@ export function BucketHoursStep({ data, updateData }: BucketHoursStepProps) {
       <div className="space-y-4">
         {/* Hours Per Period */}
         <div className="space-y-2">
-          <Label htmlFor="bucket_hours" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Hours Per Period (Month)
-          </Label>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="bucket_hours" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Hours Per Period (Month)
+            </Label>
+            <Tooltip content="The number of hours included in the monthly fee. Once these hours are used, any additional time is billed at the overage rate.">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+            </Tooltip>
+          </div>
           <Input
             id="bucket_hours"
             type="number"

@@ -6,10 +6,12 @@ import { Input } from 'server/src/components/ui/Input';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
+import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { Calendar, Building2, FileText, FileCheck } from 'lucide-react';
+import { Calendar, Building2, FileText, FileCheck, HelpCircle } from 'lucide-react';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -20,6 +22,12 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
   const [companies, setCompanies] = useState<ICompany[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
   const [poAmountInput, setPoAmountInput] = useState<string>('');
+  const [startDate, setStartDate] = useState<Date | null>(
+    data.start_date ? new Date(data.start_date) : null
+  );
+  const [endDate, setEndDate] = useState<Date | null>(
+    data.end_date ? new Date(data.end_date) : null
+  );
 
   useEffect(() => {
     loadCompanies();
@@ -31,6 +39,16 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
       setPoAmountInput((data.po_amount / 100).toFixed(2));
     }
   }, [data.po_amount]);
+
+  useEffect(() => {
+    // Sync local date state with data prop
+    if (data.start_date) {
+      setStartDate(new Date(data.start_date));
+    }
+    if (data.end_date) {
+      setEndDate(new Date(data.end_date));
+    }
+  }, [data.start_date, data.end_date]);
 
   const loadCompanies = async () => {
     try {
@@ -47,9 +65,6 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
     value: company.company_id,
     label: company.company_name
   }));
-
-  // Get today's date in YYYY-MM-DD format for min date
-  const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="space-y-6">
@@ -106,12 +121,12 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           <Calendar className="h-4 w-4" />
           Start Date *
         </Label>
-        <Input
-          id="start_date"
-          type="date"
-          value={data.start_date}
-          onChange={(e) => updateData({ start_date: e.target.value })}
-          min={today}
+        <DatePicker
+          value={startDate}
+          onChange={(date) => {
+            setStartDate(date);
+            updateData({ start_date: date ? date.toISOString().split('T')[0] : '' });
+          }}
           className="w-full"
         />
         <p className="text-xs text-gray-500">
@@ -121,16 +136,21 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
 
       {/* End Date (Optional) */}
       <div className="space-y-2">
-        <Label htmlFor="end_date" className="flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          End Date (Optional)
-        </Label>
-        <Input
-          id="end_date"
-          type="date"
-          value={data.end_date || ''}
-          onChange={(e) => updateData({ end_date: e.target.value || undefined })}
-          min={data.start_date || today}
+        <div className="flex items-center gap-2">
+          <Label htmlFor="end_date" className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            End Date (Optional)
+          </Label>
+          <Tooltip content="Leave blank for ongoing contracts that don't have a fixed end date. You can always set an end date later when the contract is terminated or expires.">
+            <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+          </Tooltip>
+        </div>
+        <DatePicker
+          value={endDate}
+          onChange={(date) => {
+            setEndDate(date);
+            updateData({ end_date: date ? date.toISOString().split('T')[0] : undefined });
+          }}
           className="w-full"
         />
         <p className="text-xs text-gray-500">
@@ -165,10 +185,15 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
         {/* PO Required Toggle */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <Label htmlFor="po_required" className="text-sm font-medium">
-                Require Purchase Order for invoicing
-              </Label>
+            <div className="space-y-1 flex-1">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="po_required" className="text-sm font-medium">
+                  Require Purchase Order for invoicing
+                </Label>
+                <Tooltip content="When enabled, invoices cannot be generated for this contract unless a PO number is provided. This helps ensure compliance with client procurement policies.">
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                </Tooltip>
+              </div>
               <p className="text-xs text-gray-500">
                 Block invoice generation if PO is not provided
               </p>

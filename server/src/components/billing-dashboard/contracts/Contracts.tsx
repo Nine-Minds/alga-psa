@@ -21,6 +21,7 @@ import { getPlanBundles, deletePlanBundle } from 'server/src/lib/actions/planBun
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
 import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
+import { QuickStartGuide } from './QuickStartGuide';
 
 type ContractStatus = 'active' | 'upcoming' | 'expired';
 
@@ -41,6 +42,7 @@ const Contracts: React.FC = () => {
   const [showWizard, setShowWizard] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<ContractStatus | 'all'>('all');
+  const [showQuickStart, setShowQuickStart] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -330,13 +332,68 @@ const Contracts: React.FC = () => {
             </div>
           )}
 
-          <DataTable
-            data={filteredContracts.filter(contract => contract.bundle_id !== undefined)}
-            columns={contractColumns}
-            pagination={true}
-            onRowClick={handleContractClick}
-            rowClassName={() => "cursor-pointer"}
-          />
+          {/* Show Quick Start Guide when no contracts exist */}
+          {contracts.length === 0 && showQuickStart && (
+            <div className="mb-6">
+              <QuickStartGuide
+                onDismiss={() => setShowQuickStart(false)}
+                onCreateContract={() => setShowWizard(true)}
+              />
+            </div>
+          )}
+
+          {/* Empty State when filtered results are empty but contracts exist */}
+          {contracts.length > 0 && filteredContracts.length === 0 && (
+            <div className="text-center py-12">
+              <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                <Search className="h-12 w-12" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts found</h3>
+              <p className="text-gray-600 mb-4">
+                Try adjusting your search or filter criteria
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+
+          {/* Empty State when no contracts exist */}
+          {contracts.length === 0 && (
+            <div className="text-center py-12">
+              <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                <Plus className="h-12 w-12" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts yet</h3>
+              <p className="text-gray-600 mb-4">
+                Get started by creating your first client contract
+              </p>
+              <Button
+                onClick={() => setShowWizard(true)}
+                className="bg-gradient-to-r from-blue-600 to-purple-600"
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                Create Your First Contract
+              </Button>
+            </div>
+          )}
+
+          {/* Show data table only when there are filtered results */}
+          {filteredContracts.length > 0 && (
+            <DataTable
+              data={filteredContracts.filter(contract => contract.bundle_id !== undefined)}
+              columns={contractColumns}
+              pagination={true}
+              onRowClick={handleContractClick}
+              rowClassName={() => "cursor-pointer"}
+            />
+          )}
         </Box>
       </Card>
 

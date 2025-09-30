@@ -5,10 +5,11 @@ import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
+import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { ContractWizardData } from '../ContractWizard';
 import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { Plus, X, DollarSign, Package } from 'lucide-react';
+import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 
 interface FixedFeeServicesStepProps {
@@ -146,11 +147,16 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
       {/* Proration Toggle */}
       {data.fixed_services.length > 0 && (
         <div className="space-y-2">
-          <SwitchWithLabel
-            label="Enable Proration"
-            checked={data.enable_proration}
-            onCheckedChange={(checked) => updateData({ enable_proration: checked })}
-          />
+          <div className="flex items-center gap-2">
+            <SwitchWithLabel
+              label="Enable Proration"
+              checked={data.enable_proration}
+              onCheckedChange={(checked) => updateData({ enable_proration: checked })}
+            />
+            <Tooltip content="Proration automatically adjusts the monthly fee for partial months. For example, if a contract starts mid-month, the client is only charged for the days active that month.">
+              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+            </Tooltip>
+          </div>
           <p className="text-xs text-gray-500">
             When enabled, the monthly fee will be prorated for partial months based on the start/end date
           </p>
