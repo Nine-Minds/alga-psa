@@ -529,6 +529,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       width: '4%',
       headerClassName: 'text-center px-4',
       cellClassName: 'text-center px-4',
+      sortable: false,
       render: (_value: string, record: ITicketListItem) => {
         const ticketId = record.ticket_id;
         if (!ticketId) {

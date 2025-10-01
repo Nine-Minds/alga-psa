@@ -8,6 +8,8 @@ export interface BaseColumnDefinition<T> {
   headerClassName?: string;
   /** Optional class for body td */
   cellClassName?: string;
+  /** Whether this column is sortable (default: true) */
+  sortable?: boolean;
 }
 
 export interface RenderColumnDefinition<T, V> extends BaseColumnDefinition<T> {

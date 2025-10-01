@@ -318,6 +318,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
           header: () => col.title,
           cell: (info) => col.render ? col.render(info.getValue(), info.row.original, info.row.index) : info.getValue(),
           sortingFn: caseInsensitiveSort,
+          enableSorting: col.sortable !== false,
         })),
     [columns, visibleColumnIds]
   );
@@ -491,21 +492,24 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                     const colId = Array.isArray(col.dataIndex) ? col.dataIndex.join('_') : col.dataIndex;
                     return colId === header.column.id;
                   });
+                  const isSortable = header.column.getCanSort();
                   return (
                     <th
                       key={`header_${columnId}_${headerIndex}`}
-                      onClick={header.column.getToggleSortingHandler()}
-                      className={`px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider cursor-pointer hover:bg-gray-50 transition-colors ${colDef?.headerClassName ?? ''}`}
+                      onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
+                      className={`px-6 py-3 text-left text-xs font-medium text-[rgb(var(--color-text-700))] tracking-wider transition-colors ${isSortable ? 'cursor-pointer hover:bg-gray-50' : ''} ${colDef?.headerClassName ?? ''}`}
                       style={{ width: columns.find(col => col.dataIndex === header.column.id)?.width }}
                     >
                         <div className="flex items-center space-x-1">
                           <span>{flexRender(header.column.columnDef.header, header.getContext())}</span>
-                          <span className="text-gray-400">
-                            {{
-                              asc: ' ↑',
-                              desc: ' ↓',
-                            }[header.column.getIsSorted() as string] ?? null}
-                          </span>
+                          {isSortable && (
+                            <span className="text-gray-400">
+                              {{
+                                asc: ' ↑',
+                                desc: ' ↓',
+                              }[header.column.getIsSorted() as string] ?? null}
+                            </span>
+                          )}
                         </div>
                       </th>
                     );
