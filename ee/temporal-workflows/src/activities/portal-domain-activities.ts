@@ -1,6 +1,6 @@
 import { promises as dns } from "dns";
 import { promises as fs } from "node:fs";
-import { join as joinPath, dirname } from "node:path";
+import { join as joinPath, dirname, relative as pathRelative } from "node:path";
 import { setTimeout as delay } from "timers/promises";
 import { execFile } from "node:child_process";
 import type { ExecFileOptions } from "node:child_process";
@@ -433,7 +433,10 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  if (getBasePortalVirtualService()) {
+  const baseVirtualServiceRef = getBasePortalVirtualService();
+  const baseVirtualServiceDir = dirname(manifestRoot);
+
+  if (baseVirtualServiceRef) {
     try {
       const domainToCleanup = triggeringDomain && !shouldManageStatus(triggeringDomain.status)
         ? triggeringDomain.domain
@@ -445,8 +448,15 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
         domainToCleanup,
         manifestCount: manifests.length,
         manifestRoot,
+        baseVirtualServiceDir,
       });
-      await syncBaseVirtualServiceRouting(manifests, config, manifestRoot, domainToCleanup);
+      await syncBaseVirtualServiceRouting(
+        manifests,
+        config,
+        manifestRoot,
+        baseVirtualServiceDir,
+        domainToCleanup,
+      );
       console.log('[applyPortalDomainResources] syncBaseVirtualServiceRouting completed successfully');
     } catch (error) {
       console.error('[applyPortalDomainResources] syncBaseVirtualServiceRouting failed', error);
@@ -466,12 +476,26 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
       suppressOutput: true,
     });
 
-    if (getBasePortalVirtualService()) {
-      const baseVsPath = joinPath(gitConfig.relativePathSegments[0], 'istio-virtualservice.yaml');
-      console.log('[applyPortalDomainResources] Adding base VirtualService to git', { path: baseVsPath });
-      await runGit(["add", baseVsPath], gitConfig, {
+    if (baseVirtualServiceRef) {
+      const baseVsPath = joinPath(baseVirtualServiceDir, 'istio-virtualservice.yaml');
+      const relativeBaseVsPath = pathRelative(repoDir, baseVsPath) || 'istio-virtualservice.yaml';
+      console.log('[applyPortalDomainResources] Adding base VirtualService to git', {
+        path: baseVsPath,
+        relativePath: relativeBaseVsPath,
+      });
+      await runGit(["add", relativeBaseVsPath], gitConfig, {
         suppressOutput: true,
       });
+
+      const legacyBaseVsPath = joinPath(manifestRoot, 'istio-virtualservice.yaml');
+      try {
+        await fs.rm(legacyBaseVsPath, { force: true });
+      } catch (cleanupError) {
+        console.warn('[applyPortalDomainResources] Unable to remove legacy base VirtualService path', {
+          legacyBaseVsPath,
+          error: formatErrorMessage(cleanupError),
+        });
+      }
     }
   } catch (error) {
     errors.push(formatErrorMessage(error, "Failed to stage manifest changes"));
@@ -490,12 +514,11 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  if (getBasePortalVirtualService()) {
+  if (baseVirtualServiceRef) {
     try {
-      const repoDir = dirname(manifestRoot);
-      const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
+      const vsFilePath = joinPath(baseVirtualServiceDir, 'istio-virtualservice.yaml');
       console.log('[applyPortalDomainResources] Applying base VirtualService to Kubernetes', { path: vsFilePath });
-      await runKubectl(["apply", "-f", vsFilePath]);
+      await runKubectl(["apply", "-f", 'istio-virtualservice.yaml'], { cwd: baseVirtualServiceDir });
       console.log('[applyPortalDomainResources] Successfully applied base VirtualService to Kubernetes');
     } catch (error) {
       console.error('[applyPortalDomainResources] Failed to apply base VirtualService to Kubernetes', error);
@@ -998,8 +1021,12 @@ export async function runGit(
 
 export async function runKubectl(
   args: string[],
+  options: CommandOptions = {},
 ): Promise<{ stdout: string; stderr: string }> {
-  return runCommand("kubectl", args, { suppressOutput: true });
+  return runCommand("kubectl", args, {
+    suppressOutput: true,
+    ...options,
+  });
 }
 
 export async function runCommand(
@@ -1360,11 +1387,13 @@ async function syncBaseVirtualServiceRouting(
   manifests: RenderedPortalDomainResources[],
   config: PortalDomainConfig,
   manifestRoot: string,
+  baseVirtualServiceDir: string,
   domainToCleanup?: string,
 ): Promise<void> {
   console.log('[syncBaseVS] Starting sync', {
     manifestCount: manifests.length,
     manifestRoot,
+    baseVirtualServiceDir,
     domainToCleanup: domainToCleanup || '(none)',
   });
 
@@ -1630,12 +1659,11 @@ async function syncBaseVirtualServiceRouting(
   }
 
   // Write the base VirtualService to the repo root (not the portal-domains folder)
-  const repoDir = dirname(manifestRoot);
-  const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
+  const vsFilePath = joinPath(baseVirtualServiceDir, 'istio-virtualservice.yaml');
 
   console.log('[syncBaseVS] File path construction:', {
     manifestRoot,
-    repoDir,
+    baseVirtualServiceDir,
     vsFilePath,
   });
 

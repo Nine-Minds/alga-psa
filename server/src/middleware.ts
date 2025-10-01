@@ -104,7 +104,16 @@ const _middleware = auth((request) => {
       }
       return NextResponse.redirect(loginUrl);
     } else if (request.auth.user?.user_type !== 'client') {
-      // Prevent non-client users (internal) from accessing client portal
+      if (request.auth.user?.user_type === 'internal') {
+        if (!canonicalUrlEnv) {
+          throw new Error('NEXTAUTH_URL must be set to redirect MSP users from client portal routes');
+        }
+
+        const redirectTarget = new URL('/msp/dashboard', canonicalUrlEnv.origin);
+        return NextResponse.redirect(redirectTarget);
+      }
+
+      // Prevent other non-client users from accessing client portal
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/client-portal/signin';
       loginUrl.searchParams.set('error', 'AccessDenied');
