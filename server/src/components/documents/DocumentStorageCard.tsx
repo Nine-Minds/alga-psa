@@ -49,9 +49,14 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick, thumbnailU
     }, [mimeType]);
 
     // Browser-supported video formats (common ones)
-    const isBrowserSupported = mimeType === 'video/mp4' || 
-                               mimeType === 'video/webm' || 
-                               mimeType === 'video/ogg';
+    // QuickTime/MOV is supported on Safari and most modern browsers
+    // AVI support varies by browser and codec
+    const isBrowserSupported = mimeType === 'video/mp4' ||
+                               mimeType === 'video/webm' ||
+                               mimeType === 'video/ogg' ||
+                               mimeType === 'video/quicktime' ||
+                               mimeType === 'video/x-msvideo' ||
+                               mimeType === 'video/avi';
 
     const shouldShowNativeVideo = !thumbnailUrl && canPlay !== false && isBrowserSupported;
 
@@ -145,11 +150,18 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName, thumbnail
     }, [mimeType]);
 
     // Browser-supported video formats (common ones)
-    const isBrowserSupported = mimeType === 'video/mp4' || 
-                               mimeType === 'video/webm' || 
-                               mimeType === 'video/ogg';
+    // QuickTime/MOV is supported on Safari and most modern browsers
+    // AVI support varies by browser and codec
+    const isBrowserSupported = mimeType === 'video/mp4' ||
+                               mimeType === 'video/webm' ||
+                               mimeType === 'video/ogg' ||
+                               mimeType === 'video/quicktime' ||
+                               mimeType === 'video/x-msvideo' ||
+                               mimeType === 'video/avi';
 
-    if (canPlay === false || !isBrowserSupported) {
+    // If we have a thumbnail and it's a potentially supported format, try to play it
+    // Even if canPlayType is uncertain, let the video tag handle it
+    if (!isBrowserSupported || (canPlay === false && !thumbnailUrl)) {
         // Show download option for unsupported formats
         return (
             <div className="text-center p-8">
@@ -194,14 +206,41 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName, thumbnail
 
     // Show native video player for supported formats
     return (
-        <video
-            className="max-w-full max-h-[70vh] object-contain"
-            controls
-            autoPlay={false}
-        >
-            <source src={`/api/documents/view/${fileId}`} type={mimeType} />
-            {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
-        </video>
+        <div>
+            <video
+                className="max-w-full max-h-[70vh] object-contain"
+                controls
+                autoPlay={false}
+                onError={() => {
+                    console.error('Video failed to load, showing download option');
+                }}
+            >
+                <source src={`/api/documents/view/${fileId}`} type={mimeType} />
+                {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
+            </video>
+            <div className="text-center mt-4">
+                <p className="text-sm text-gray-600 mb-2">
+                    {t('documents.videoPlaybackIssue', 'Having trouble playing the video?')}
+                </p>
+                <Button
+                    id={`download-video-fallback-${fileId}`}
+                    onClick={async () => {
+                        const downloadUrl = getDocumentDownloadUrl(documentId);
+                        const filename = fileName || 'download';
+                        try {
+                            await downloadDocument(downloadUrl, filename, true);
+                        } catch (error) {
+                            console.error('Download failed:', error);
+                        }
+                    }}
+                    variant="outline"
+                    size="sm"
+                >
+                    <Download className="w-4 h-4 mr-2" />
+                    {t('documents.downloadVideo', 'Download Video')}
+                </Button>
+            </div>
+        </div>
     );
 }
 
