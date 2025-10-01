@@ -42,69 +42,197 @@ exports.up = async function(knex) {
     console.log(`✓ Verified data migration: ${boardsCount.count} rows in both tables`);
   }
 
-  // Step 1: Drop old foreign key constraints referencing channels
-  console.log('Dropping foreign key constraints referencing channels...');
-
-  const categoriesFK = await knex.raw(`
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'categories'::regclass
-    AND confrelid = 'channels'::regclass
-    AND contype = 'f'
+  // Step 1: If Citus is enabled, check if we need to undistribute tables
+  const citusEnabled = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_extension WHERE extname = 'citus'
+    ) as enabled
   `);
 
-  for (const constraint of categoriesFK.rows) {
-    await knex.raw(`ALTER TABLE categories DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
-    console.log(`  ✓ Dropped constraint ${constraint.conname} from categories`);
-  }
+  if (citusEnabled.rows[0].enabled) {
+    console.log('Citus detected - checking if channels table is distributed...');
 
-  const ticketsFK = await knex.raw(`
-    SELECT conname
-    FROM pg_constraint
-    WHERE conrelid = 'tickets'::regclass
-    AND confrelid = 'channels'::regclass
-    AND contype = 'f'
-  `);
+    const channelsDistributed = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1 FROM pg_dist_partition
+        WHERE logicalrelid = 'channels'::regclass
+      ) as distributed
+    `);
 
-  for (const constraint of ticketsFK.rows) {
-    await knex.raw(`ALTER TABLE tickets DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
-    console.log(`  ✓ Dropped constraint ${constraint.conname} from tickets`);
-  }
+    if (channelsDistributed.rows[0].distributed) {
+      console.log('Need to undistribute channels table before dropping...');
 
-  const hasTagsTable = await knex.schema.hasTable('tags');
-  if (hasTagsTable) {
-    const hasChannelId = await knex.schema.hasColumn('tags', 'channel_id');
-    if (hasChannelId) {
-      const tagsFK = await knex.raw(`
+      // First, get all foreign key constraints that reference the channels table
+      const foreignKeys = await knex.raw(`
+        SELECT
+          tc.table_name,
+          tc.constraint_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_name = 'channels'
+      `);
+
+      // Drop all foreign keys that reference channels
+      console.log('Dropping foreign key constraints referencing channels...');
+      for (const fk of foreignKeys.rows) {
+        console.log(`  Dropping constraint ${fk.constraint_name} from ${fk.table_name}...`);
+        await knex.raw(`ALTER TABLE ${fk.table_name} DROP CONSTRAINT IF EXISTS ${fk.constraint_name}`);
+      }
+
+      // Now we can undistribute the channels table
+      await knex.raw(`SELECT undistribute_table('channels')`);
+      console.log('  ✓ Channels table undistributed');
+    } else {
+      // If not distributed, still need to drop the foreign keys
+      console.log('Channels table not distributed, dropping foreign key constraints...');
+
+      const categoriesFK = await knex.raw(`
         SELECT conname
         FROM pg_constraint
-        WHERE conrelid = 'tags'::regclass
+        WHERE conrelid = 'categories'::regclass
         AND confrelid = 'channels'::regclass
         AND contype = 'f'
       `);
 
-      for (const constraint of tagsFK.rows) {
-        await knex.raw(`ALTER TABLE tags DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
-        console.log(`  ✓ Dropped constraint ${constraint.conname} from tags`);
+      for (const constraint of categoriesFK.rows) {
+        await knex.raw(`ALTER TABLE categories DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+        console.log(`  ✓ Dropped constraint ${constraint.conname} from categories`);
+      }
+
+      const ticketsFK = await knex.raw(`
+        SELECT conname
+        FROM pg_constraint
+        WHERE conrelid = 'tickets'::regclass
+        AND confrelid = 'channels'::regclass
+        AND contype = 'f'
+      `);
+
+      for (const constraint of ticketsFK.rows) {
+        await knex.raw(`ALTER TABLE tickets DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+        console.log(`  ✓ Dropped constraint ${constraint.conname} from tickets`);
+      }
+
+      const hasTagsTable = await knex.schema.hasTable('tags');
+      if (hasTagsTable) {
+        const hasChannelId = await knex.schema.hasColumn('tags', 'channel_id');
+        if (hasChannelId) {
+          const tagsFK = await knex.raw(`
+            SELECT conname
+            FROM pg_constraint
+            WHERE conrelid = 'tags'::regclass
+            AND confrelid = 'channels'::regclass
+            AND contype = 'f'
+          `);
+
+          for (const constraint of tagsFK.rows) {
+            await knex.raw(`ALTER TABLE tags DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+            console.log(`  ✓ Dropped constraint ${constraint.conname} from tags`);
+          }
+        }
+      }
+
+      const hasTagDefinitions = await knex.schema.hasTable('tag_definitions');
+      if (hasTagDefinitions) {
+        const hasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
+        if (hasChannelId) {
+          const tagDefsFK = await knex.raw(`
+            SELECT conname
+            FROM pg_constraint
+            WHERE conrelid = 'tag_definitions'::regclass
+            AND confrelid = 'channels'::regclass
+            AND contype = 'f'
+          `);
+
+          for (const constraint of tagDefsFK.rows) {
+            await knex.raw(`ALTER TABLE tag_definitions DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+            console.log(`  ✓ Dropped constraint ${constraint.conname} from tag_definitions`);
+          }
+        }
       }
     }
-  }
 
-  const hasTagDefinitions = await knex.schema.hasTable('tag_definitions');
-  if (hasTagDefinitions) {
-    const hasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
-    if (hasChannelId) {
-      const tagDefsFK = await knex.raw(`
-        SELECT conname
-        FROM pg_constraint
-        WHERE conrelid = 'tag_definitions'::regclass
-        AND confrelid = 'channels'::regclass
-        AND contype = 'f'
+    // Also undistribute standard_channels if it's a reference table
+    const standardChannelsExists = await knex.schema.hasTable('standard_channels');
+    if (standardChannelsExists) {
+      const standardDistributed = await knex.raw(`
+        SELECT EXISTS (
+          SELECT 1 FROM pg_dist_partition
+          WHERE logicalrelid = 'standard_channels'::regclass
+        ) as distributed
       `);
 
-      for (const constraint of tagDefsFK.rows) {
-        await knex.raw(`ALTER TABLE tag_definitions DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
-        console.log(`  ✓ Dropped constraint ${constraint.conname} from tag_definitions`);
+      if (standardDistributed.rows[0].distributed) {
+        console.log('Undistributing standard_channels table before dropping...');
+        await knex.raw(`SELECT undistribute_table('standard_channels')`);
+        console.log('  ✓ Standard_channels table undistributed');
+      }
+    }
+  } else {
+    // No Citus, just drop the foreign keys normally
+    console.log('Dropping foreign key constraints referencing channels...');
+
+    const categoriesFK = await knex.raw(`
+      SELECT conname
+      FROM pg_constraint
+      WHERE conrelid = 'categories'::regclass
+      AND confrelid = 'channels'::regclass
+      AND contype = 'f'
+    `);
+
+    for (const constraint of categoriesFK.rows) {
+      await knex.raw(`ALTER TABLE categories DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+      console.log(`  ✓ Dropped constraint ${constraint.conname} from categories`);
+    }
+
+    const ticketsFK = await knex.raw(`
+      SELECT conname
+      FROM pg_constraint
+      WHERE conrelid = 'tickets'::regclass
+      AND confrelid = 'channels'::regclass
+      AND contype = 'f'
+    `);
+
+    for (const constraint of ticketsFK.rows) {
+      await knex.raw(`ALTER TABLE tickets DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+      console.log(`  ✓ Dropped constraint ${constraint.conname} from tickets`);
+    }
+
+    const hasTagsTable = await knex.schema.hasTable('tags');
+    if (hasTagsTable) {
+      const hasChannelId = await knex.schema.hasColumn('tags', 'channel_id');
+      if (hasChannelId) {
+        const tagsFK = await knex.raw(`
+          SELECT conname
+          FROM pg_constraint
+          WHERE conrelid = 'tags'::regclass
+          AND confrelid = 'channels'::regclass
+          AND contype = 'f'
+        `);
+
+        for (const constraint of tagsFK.rows) {
+          await knex.raw(`ALTER TABLE tags DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+          console.log(`  ✓ Dropped constraint ${constraint.conname} from tags`);
+        }
+      }
+    }
+
+    const hasTagDefinitions = await knex.schema.hasTable('tag_definitions');
+    if (hasTagDefinitions) {
+      const hasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
+      if (hasChannelId) {
+        const tagDefsFK = await knex.raw(`
+          SELECT conname
+          FROM pg_constraint
+          WHERE conrelid = 'tag_definitions'::regclass
+          AND confrelid = 'channels'::regclass
+          AND contype = 'f'
+        `);
+
+        for (const constraint of tagDefsFK.rows) {
+          await knex.raw(`ALTER TABLE tag_definitions DROP CONSTRAINT IF EXISTS ${constraint.conname}`);
+          console.log(`  ✓ Dropped constraint ${constraint.conname} from tag_definitions`);
+        }
       }
     }
   }

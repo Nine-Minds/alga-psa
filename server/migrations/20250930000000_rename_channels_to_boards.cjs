@@ -9,47 +9,6 @@ exports.config = { transaction: false };
 exports.up = async function(knex) {
   console.log('Starting channels to boards rename migration...');
 
-  // Step 0: If Citus is enabled, undistribute channels table first
-  const citusEnabled = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_extension WHERE extname = 'citus'
-    ) as enabled
-  `);
-
-  if (citusEnabled.rows[0].enabled) {
-    console.log('Citus detected - checking if channels table is distributed...');
-
-    const channelsDistributed = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1 FROM pg_dist_partition
-        WHERE logicalrelid = 'channels'::regclass
-      ) as distributed
-    `);
-
-    if (channelsDistributed.rows[0].distributed) {
-      console.log('Undistributing channels table before migration...');
-      await knex.raw(`SELECT undistribute_table('channels')`);
-      console.log('  ✓ Channels table undistributed');
-    }
-
-    // Also undistribute standard_channels if it's a reference table
-    const standardChannelsExists = await knex.schema.hasTable('standard_channels');
-    if (standardChannelsExists) {
-      const standardDistributed = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_dist_partition
-          WHERE logicalrelid = 'standard_channels'::regclass
-        ) as distributed
-      `);
-
-      if (standardDistributed.rows[0].distributed) {
-        console.log('Undistributing standard_channels table before migration...');
-        await knex.raw(`SELECT undistribute_table('standard_channels')`);
-        console.log('  ✓ Standard_channels table undistributed');
-      }
-    }
-  }
-
   // Step 1: Create new boards table with all columns from channels
   console.log('Creating boards table...');
   await knex.schema.createTable('boards', (table) => {
