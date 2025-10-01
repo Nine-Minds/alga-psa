@@ -297,28 +297,28 @@ function DocumentStorageCardComponent({
     useEffect(() => {
         if (!cardRef.current) return;
 
-        // const observer = new IntersectionObserver(
-        //     (entries) => {
-        //         entries.forEach((entry) => {
-        //             if (entry.isIntersecting) {
-        //                 setIsInView(true);
-        //             }
-        //         });
-        //     },
-        //     {
-        //         // Start loading when card is 100px away from viewport
-        //         rootMargin: '100px',
-        //         threshold: 0.01
-        //     }
-        // );
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsInView(true);
+                    }
+                });
+            },
+            {
+                // Start loading when card is 100px away from viewport
+                rootMargin: '100px',
+                threshold: 0.01
+            }
+        );
 
-        // observer.observe(cardRef.current);
+        observer.observe(cardRef.current);
 
-        // return () => {
-        //     if (cardRef.current) {
-        //         observer.unobserve(cardRef.current);
-        //     }
-        // };
+        return () => {
+            if (cardRef.current) {
+                observer.unobserve(cardRef.current);
+            }
+        };
     }, []);
 
     // Load preview only when in view and hasn't been loaded yet
