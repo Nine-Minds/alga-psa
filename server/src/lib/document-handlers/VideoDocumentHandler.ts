@@ -5,11 +5,13 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
 import type { Knex } from 'knex';
-import { existsSync } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import { createRequire } from 'module';
 import process from 'process';
 import { Buffer } from 'buffer';
 import { Readable } from 'stream';
+import { tmpdir } from 'os';
+import { pipeline } from 'stream/promises';
 
 const moduleRequire = createRequire(import.meta.url);
 
@@ -345,61 +347,62 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
 
   private async extractFrameFromStream(stream: Readable, mimeType: string | null): Promise<Buffer | null> {
     console.log(`[VideoDocumentHandler] extractFrameFromStream called with mimeType: ${mimeType}`);
-    return await new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
-      const command = ffmpeg(stream);
 
-      const format = this.mapMimeToFormat(mimeType);
-      if (format) {
-        console.log(`[VideoDocumentHandler] Using input format: ${format}`);
-        command.inputFormat(format);
-      } else {
-        console.log(`[VideoDocumentHandler] No specific format mapping for ${mimeType}, letting ffmpeg auto-detect`);
+    // Create a temporary file
+    const tempVideoPath = path.join(tmpdir(), `video-${Date.now()}-${Math.random().toString(36).substring(7)}.tmp`);
+    const tempImagePath = path.join(tmpdir(), `thumb-${Date.now()}-${Math.random().toString(36).substring(7)}.jpg`);
+
+    try {
+      // Write stream to temp file
+      console.log(`[VideoDocumentHandler] Writing video stream to temp file: ${tempVideoPath}`);
+      const writeStream = await fs.open(tempVideoPath, 'w');
+      await pipeline(stream, writeStream.createWriteStream());
+      await writeStream.close();
+
+      // Check if file was written
+      const stats = await fs.stat(tempVideoPath);
+      console.log(`[VideoDocumentHandler] Temp file size: ${stats.size} bytes`);
+
+      if (stats.size === 0) {
+        console.error(`[VideoDocumentHandler] Temp video file is empty`);
+        return null;
       }
 
-      command.noAudio();
-      command.seekInput('00:00:01');
-      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
-      command.format('mjpeg');
-
-      command.on('error', (err) => {
-        console.error(`[VideoDocumentHandler] ffmpeg command error:`, err);
-        stream.destroy();
-        reject(err);
+      // Extract frame using ffmpeg
+      console.log(`[VideoDocumentHandler] Extracting frame from temp file`);
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg(tempVideoPath)
+          .seekInput(1) // Seek to 1 second
+          .frames(1) // Extract 1 frame
+          .size('640x?') // Scale width to 640, auto height
+          .output(tempImagePath)
+          .on('end', () => {
+            console.log(`[VideoDocumentHandler] Frame extraction complete`);
+            resolve();
+          })
+          .on('error', (err) => {
+            console.error(`[VideoDocumentHandler] ffmpeg error:`, err);
+            reject(err);
+          })
+          .run();
       });
 
-      command.on('end', () => {
-        console.log(`[VideoDocumentHandler] ffmpeg processing complete`);
-      });
+      // Read the generated thumbnail
+      const thumbnailBuffer = await fs.readFile(tempImagePath);
+      console.log(`[VideoDocumentHandler] Thumbnail generated, size: ${thumbnailBuffer.length} bytes`);
 
-      // Pipe output to capture chunks
-      const ffmpegStream = command.pipe();
-
-      ffmpegStream.on('data', (chunk: Buffer) => {
-        chunks.push(chunk);
-      });
-
-      ffmpegStream.on('end', () => {
-        if (chunks.length === 0) {
-          console.log(`[VideoDocumentHandler] No thumbnail data received from ffmpeg`);
-          resolve(null);
-        } else {
-          console.log(`[VideoDocumentHandler] Thumbnail generated, size: ${Buffer.concat(chunks).length} bytes`);
-          resolve(Buffer.concat(chunks));
-        }
-      });
-
-      ffmpegStream.on('error', (err) => {
-        console.error(`[VideoDocumentHandler] ffmpeg stream error:`, err);
-        stream.destroy();
-        reject(err);
-      });
-
-      stream.on('error', (err) => {
-        console.error(`[VideoDocumentHandler] video stream error:`, err);
-        stream.destroy();
-        reject(err);
-      });
-    });
+      return thumbnailBuffer;
+    } catch (error) {
+      console.error(`[VideoDocumentHandler] Error extracting frame:`, error);
+      return null;
+    } finally {
+      // Clean up temp files
+      try {
+        await fs.unlink(tempVideoPath).catch(() => {});
+        await fs.unlink(tempImagePath).catch(() => {});
+      } catch (cleanupError) {
+        console.warn(`[VideoDocumentHandler] Error cleaning up temp files:`, cleanupError);
+      }
+    }
   }
 }
