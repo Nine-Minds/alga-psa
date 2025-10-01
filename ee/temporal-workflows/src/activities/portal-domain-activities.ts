@@ -315,7 +315,6 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
-  // Find the specific domain that triggered this workflow
   const triggeringDomain = rows.find((row) => row.id === args.portalDomainId);
 
   const config = getPortalDomainConfig();
@@ -434,11 +433,8 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  // Sync the base VirtualService BEFORE git add and kubectl apply
-  // so it gets included in the commit and applied with other resources
   if (getBasePortalVirtualService()) {
     try {
-      // Pass the triggering domain so unmanaged resources for it can be cleaned up
       const domainToCleanup = triggeringDomain && !shouldManageStatus(triggeringDomain.status)
         ? triggeringDomain.domain
         : undefined;
@@ -466,12 +462,10 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
   }
 
   try {
-    // Add portal domain manifests
     await runGit(["add", "--all", gitConfig.relativePathPosix], gitConfig, {
       suppressOutput: true,
     });
 
-    // Add base VirtualService file if it exists (it's in the parent directory)
     if (getBasePortalVirtualService()) {
       const baseVsPath = joinPath(gitConfig.relativePathSegments[0], 'istio-virtualservice.yaml');
       console.log('[applyPortalDomainResources] Adding base VirtualService to git', { path: baseVsPath });
@@ -496,7 +490,6 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
-  // Apply base VirtualService to Kubernetes if it was updated
   if (getBasePortalVirtualService()) {
     try {
       const repoDir = dirname(manifestRoot);
@@ -1608,7 +1601,6 @@ async function syncBaseVirtualServiceRouting(
 
   console.log('[syncBaseVS] Changes detected, updating base VirtualService');
 
-  // Apply changes directly to the VirtualService object
   if (hostsChanged) {
     baseVirtualService.spec.hosts = desiredHosts;
   }
@@ -1619,7 +1611,6 @@ async function syncBaseVirtualServiceRouting(
     baseVirtualService.spec.http = desiredHttpRoutes;
   }
 
-  // Update annotations
   if (!baseVirtualService.metadata.annotations) {
     baseVirtualService.metadata.annotations = {};
   }
@@ -1638,9 +1629,8 @@ async function syncBaseVirtualServiceRouting(
     delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION];
   }
 
-  // Write the base VirtualService to a file in the repo directory (NOT portal-domains)
-  // The base VS lives in the parent folder alongside other base resources
-  const repoDir = dirname(manifestRoot); // Go up from portal-domains to repo root
+  // Write the base VirtualService to the repo root (not the portal-domains folder)
+  const repoDir = dirname(manifestRoot);
   const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
 
   console.log('[syncBaseVS] File path construction:', {

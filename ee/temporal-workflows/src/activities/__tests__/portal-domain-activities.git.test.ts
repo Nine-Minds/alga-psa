@@ -17,7 +17,6 @@ import {
 import type { PortalDomainActivityRecord } from '../../workflows/portal-domains/types.js';
 import type { PortalDomainConfig, CommandRunner } from '../portal-domain-activities.js';
 import type { Knex } from 'knex';
-
 import { applyPortalDomainResources } from '../portal-domain-activities';
 import { promises as fs } from 'node:fs';
 
@@ -28,116 +27,112 @@ describe('portal domain git integration helpers', () => {
   let baseVirtualService: any;
   let baseVirtualServicePatches: Array<Record<string, any>>;
   const secretStore = new Map<string, any>();
-  const gitTrackedFiles = new Map<string, string>(); // Track files written to git repo
+  const gitTrackedFiles = new Map<string, string>();
 
-const commandRunner: CommandRunner = async (command, args, options) => {
-  commands.push({ command, args, cwd: options.cwd });
-  if (command === 'git') {
-    if (args[0] === 'clone') {
-      const targetDir = args[2];
-      await fs.mkdir(path.join(targetDir, '.git'), { recursive: true });
-      const manifestDir = path.join(targetDir, 'portal-domains');
-      await fs.mkdir(manifestDir, { recursive: true });
-      await fs.writeFile(path.join(manifestDir, 'stale.yaml'), 'kind: List\n', 'utf8');
-    }
-    if (args[0] === 'add') {
-      // Track which files are being added for git operations
-      const pathsToAdd = args.slice(1);
-      const allFlagIndex = pathsToAdd.indexOf('--all');
-      if (allFlagIndex >= 0) {
-        // When --all is used, track all YAML files in the directory
-        const dirPath = pathsToAdd[allFlagIndex + 1] || '.';
-        const fullDirPath = path.isAbsolute(dirPath)
-          ? dirPath
-          : path.join(options.cwd || tmpDir, dirPath);
-
-        // Track common manifest files that would be added
-        gitTrackedFiles.set(path.join(fullDirPath, 'istio-virtualservice.yaml'), 'staged');
-        gitTrackedFiles.set(path.join(fullDirPath, 'portal-domain-*.yaml'), 'staged');
-      } else {
-        for (const filePath of pathsToAdd) {
-          gitTrackedFiles.set(filePath, 'staged');
-        }
+  const commandRunner: CommandRunner = async (command, args, options) => {
+    commands.push({ command, args, cwd: options.cwd });
+    if (command === 'git') {
+      if (args[0] === 'clone') {
+        const targetDir = args[2];
+        await fs.mkdir(path.join(targetDir, '.git'), { recursive: true });
+        const manifestDir = path.join(targetDir, 'portal-domains');
+        await fs.mkdir(manifestDir, { recursive: true });
+        await fs.writeFile(path.join(manifestDir, 'stale.yaml'), 'kind: List\n', 'utf8');
       }
-    }
-    if (args[0] === 'status') {
-      // Build status output based on tracked files
-      const modifiedFiles = Array.from(gitTrackedFiles.keys())
-        .filter(f => gitTrackedFiles.get(f) === 'staged')
-        .map(f => ` M ${f}`)
-        .join('\n');
-      return { stdout: modifiedFiles || ' M portal-domains/example.yaml\n', stderr: '' };
-    }
-  }
-  if (command === 'kubectl') {
-    if (args[0] === 'get' && args[1] === 'virtualservice') {
-      return {
-        stdout: JSON.stringify(baseVirtualService ?? {}),
-        stderr: '',
-      };
-    }
-    if (args[0] === 'patch' && args[1] === 'virtualservice') {
-      const payloadIndex = args.indexOf('-p');
-      if (payloadIndex >= 0) {
-        const patch = JSON.parse(args[payloadIndex + 1] ?? '{}');
-        baseVirtualServicePatches.push(patch);
-        if (patch?.spec?.hosts) {
-          baseVirtualService.spec = baseVirtualService.spec || {};
-          baseVirtualService.spec.hosts = patch.spec.hosts;
-        }
-        if (patch?.spec?.gateways) {
-          baseVirtualService.spec = baseVirtualService.spec || {};
-          baseVirtualService.spec.gateways = patch.spec.gateways;
-        }
-        if (patch?.spec?.http) {
-          baseVirtualService.spec = baseVirtualService.spec || {};
-          baseVirtualService.spec.http = patch.spec.http;
-        }
-        if (patch?.metadata?.annotations) {
-          baseVirtualService.metadata = baseVirtualService.metadata || {};
-          baseVirtualService.metadata.annotations =
-            baseVirtualService.metadata.annotations || {};
-          for (const [key, value] of Object.entries(
-            patch.metadata.annotations,
-          )) {
-            if (value === null) {
-              delete baseVirtualService.metadata.annotations[key];
-            } else {
-              baseVirtualService.metadata.annotations[key] = value;
-            }
+      if (args[0] === 'add') {
+        const pathsToAdd = args.slice(1);
+        const allFlagIndex = pathsToAdd.indexOf('--all');
+        if (allFlagIndex >= 0) {
+          const dirPath = pathsToAdd[allFlagIndex + 1] || '.';
+          const fullDirPath = path.isAbsolute(dirPath)
+            ? dirPath
+            : path.join(options.cwd || tmpDir, dirPath);
+
+          gitTrackedFiles.set(path.join(fullDirPath, 'istio-virtualservice.yaml'), 'staged');
+          gitTrackedFiles.set(path.join(fullDirPath, 'portal-domain-*.yaml'), 'staged');
+        } else {
+          for (const filePath of pathsToAdd) {
+            gitTrackedFiles.set(filePath, 'staged');
           }
         }
       }
-      return { stdout: '', stderr: '' };
-    }
-    if (args[0] === 'get' && args[1] === 'secret') {
-      const name = args[2];
-      const namespaceIndex = args.indexOf('-n');
-      const namespace = namespaceIndex >= 0 ? args[namespaceIndex + 1] : 'default';
-      const key = `${namespace}/${name}`;
-      if (!secretStore.has(key)) {
-        const secret = {
-          apiVersion: 'v1',
-          kind: 'Secret',
-          metadata: {
-            name,
-            namespace,
-            resourceVersion: '1',
-          },
-          type: 'kubernetes.io/tls',
-          data: {
-            'tls.crt': Buffer.from('certificate').toString('base64'),
-            'tls.key': Buffer.from('key').toString('base64'),
-          },
-        };
-        secretStore.set(key, secret);
+      if (args[0] === 'status') {
+        const modifiedFiles = Array.from(gitTrackedFiles.keys())
+          .filter(f => gitTrackedFiles.get(f) === 'staged')
+          .map(f => ` M ${f}`)
+          .join('\n');
+        return { stdout: modifiedFiles || ' M portal-domains/example.yaml\n', stderr: '' };
       }
-
-      return { stdout: JSON.stringify(secretStore.get(key)), stderr: '' };
     }
-  }
-  return { stdout: '', stderr: '' };
-};
+    if (command === 'kubectl') {
+      if (args[0] === 'get' && args[1] === 'virtualservice') {
+        return {
+          stdout: JSON.stringify(baseVirtualService ?? {}),
+          stderr: '',
+        };
+      }
+      if (args[0] === 'patch' && args[1] === 'virtualservice') {
+        const payloadIndex = args.indexOf('-p');
+        if (payloadIndex >= 0) {
+          const patch = JSON.parse(args[payloadIndex + 1] ?? '{}');
+          baseVirtualServicePatches.push(patch);
+          if (patch?.spec?.hosts) {
+            baseVirtualService.spec = baseVirtualService.spec || {};
+            baseVirtualService.spec.hosts = patch.spec.hosts;
+          }
+          if (patch?.spec?.gateways) {
+            baseVirtualService.spec = baseVirtualService.spec || {};
+            baseVirtualService.spec.gateways = patch.spec.gateways;
+          }
+          if (patch?.spec?.http) {
+            baseVirtualService.spec = baseVirtualService.spec || {};
+            baseVirtualService.spec.http = patch.spec.http;
+          }
+          if (patch?.metadata?.annotations) {
+            baseVirtualService.metadata = baseVirtualService.metadata || {};
+            baseVirtualService.metadata.annotations =
+              baseVirtualService.metadata.annotations || {};
+            for (const [key, value] of Object.entries(
+              patch.metadata.annotations,
+            )) {
+              if (value === null) {
+                delete baseVirtualService.metadata.annotations[key];
+              } else {
+                baseVirtualService.metadata.annotations[key] = value;
+              }
+            }
+          }
+        }
+        return { stdout: '', stderr: '' };
+      }
+      if (args[0] === 'get' && args[1] === 'secret') {
+        const name = args[2];
+        const namespaceIndex = args.indexOf('-n');
+        const namespace = namespaceIndex >= 0 ? args[namespaceIndex + 1] : 'default';
+        const key = `${namespace}/${name}`;
+        if (!secretStore.has(key)) {
+          const secret = {
+            apiVersion: 'v1',
+            kind: 'Secret',
+            metadata: {
+              name,
+              namespace,
+              resourceVersion: '1',
+            },
+            type: 'kubernetes.io/tls',
+            data: {
+              'tls.crt': Buffer.from('certificate').toString('base64'),
+              'tls.key': Buffer.from('key').toString('base64'),
+            },
+          };
+          secretStore.set(key, secret);
+        }
+
+        return { stdout: JSON.stringify(secretStore.get(key)), stderr: '' };
+      }
+    }
+    return { stdout: '', stderr: '' };
+  };
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(path.join(os.tmpdir(), 'portal-domains-test-'));
@@ -369,7 +364,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     const renderedFiles = await listYamlFiles(manifestRoot);
     expect(renderedFiles).toContain('active-id.yaml');
 
-    // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
@@ -453,7 +447,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-    // Read the base VirtualService from the file (in namespace folder, NOT portal-domains)
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
@@ -559,8 +552,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-    // When the domain already exists with the same values, the sync function returns early
-    // without writing the file. Verify the in-memory baseVirtualService doesn't have duplicates.
     const hostOccurrences = baseVirtualService.spec.hosts.filter(
       (host: string) => host === 'portal.mspmind.com',
     ).length;
@@ -637,7 +628,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
-    // Read the base VirtualService from the file
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
@@ -735,7 +725,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
-    // Read the base VirtualService from the file
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
@@ -825,7 +814,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     );
     expect(kubectlDeletes.length).toBeGreaterThan(0);
 
-    // Read the base VirtualService from the file
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
@@ -858,10 +846,8 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
 
-    // Simulate a scenario where portal.orphaned.com was added manually (not in managed annotations)
     baseVirtualService.spec.hosts.push('portal.orphaned.com');
     baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-orphaned-id');
-    // Note: NOT adding to managed-hosts or managed-gateways annotations
 
     const now = new Date().toISOString();
     const rows: PortalDomainActivityRecord[] = [
@@ -870,7 +856,7 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         tenant: 'Tenant Orphaned',
         domain: 'portal.orphaned.com',
         canonical_host: 'orphaned.portal.algapsa.com',
-        status: 'disabled',  // Domain is being disabled, should trigger cleanup
+        status: 'disabled',
         status_message: 'Custom domain disabled',
         verification_details: null,
         certificate_secret_name: 'portal-domain-orphaned-id',
@@ -910,16 +896,13 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-orphaned', portalDomainId: 'orphaned-id' });
 
-    // Read the base VirtualService from the file
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
-    // Verify the orphaned domain was removed even though it wasn't in managed annotations
     expect(vs.spec.hosts).not.toContain('portal.orphaned.com');
     expect(vs.spec.hosts).toEqual(['apps.algapsa.com']);
 
-    // Verify the orphaned gateway was removed
     expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-orphaned-id');
     expect(vs.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
   });
@@ -933,7 +916,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
     process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
     process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
 
-    // Add a generic catch-all route at the end
     baseVirtualService.spec.http.push({
       route: [
         {
@@ -1004,17 +986,14 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
     await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-    // Read the base VirtualService from the file
     const repoDir = path.join(tmpDir, 'nm-kube-config');
     const manifestRoot = path.join(repoDir, 'portal-domains');
     const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
     const vsContent = await fs.readFile(vsFilePath, 'utf8');
     const vs = yamlLoad(vsContent) as any;
 
-    // Get the final http routes array
     const finalHttpRoutes = vs.spec.http;
 
-    // Find the index of the redirect route
     const redirectIndex = finalHttpRoutes.findIndex((route: any) => {
       if (!route?.redirect || !Array.isArray(route?.match)) {
         return false;
@@ -1027,7 +1006,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         );
     });
 
-    // Find the index of the catch-all route
     const catchAllIndex = finalHttpRoutes.findIndex((route: any) => {
       if (!route?.route || Array.isArray(route?.match)) {
         return false;
@@ -1104,12 +1082,10 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: istio-virtualservice.yaml file exists in manifestRoot
       const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileExists = await fs.access(vsFilePath).then(() => true).catch(() => false);
       expect(fileExists).toBe(true);
 
-      // VERIFY: File contains base VirtualService with updated hosts/gateways
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const parsed = yamlLoad(fileContent) as any;
       expect(parsed.kind).toBe('VirtualService');
@@ -1174,13 +1150,11 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: git status should show istio-virtualservice.yaml as modified or tracked
       const gitStatusCommands = commands.filter(
         cmd => cmd.command === 'git' && cmd.args[0] === 'status'
       );
       expect(gitStatusCommands.length).toBeGreaterThan(0);
 
-      // VERIFY: The gitTrackedFiles includes istio-virtualservice.yaml
       const vsFileTracked = Array.from(gitTrackedFiles.keys()).some(
         key => key.includes('istio-virtualservice.yaml')
       );
@@ -1243,7 +1217,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: No kubectl patch commands for virtualservice
       const patchCommands = commands.filter(
         cmd => cmd.command === 'kubectl' &&
                cmd.args[0] === 'patch' &&
@@ -1264,7 +1237,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // Add a catch-all route to test route ordering
       baseVirtualService.spec.http.push({
         route: [
           {
@@ -1337,27 +1309,22 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'domain-1' });
 
-      // VERIFY: File content structure
       const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
-      // Check hosts array includes managed domains
       expect(vs.spec.hosts).toContain('portal1.example.com');
       expect(vs.spec.hosts).toContain('portal2.example.com');
-      expect(vs.spec.hosts).toContain('apps.algapsa.com'); // Original host retained
+      expect(vs.spec.hosts).toContain('apps.algapsa.com');
 
-      // Check gateways array includes managed gateways
       expect(vs.spec.gateways).toContain('istio-system/portal-domain-gw-domain-1');
       expect(vs.spec.gateways).toContain('istio-system/portal-domain-gw-domain-2');
 
-      // Check annotations track managed resources
       expect(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']).toBeDefined();
       const managedHosts = JSON.parse(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']);
       expect(managedHosts).toContain('portal1.example.com');
       expect(managedHosts).toContain('portal2.example.com');
 
-      // Check http routes - redirects should be before catch-all
       expect(vs.spec.http.length).toBeGreaterThan(0);
       const redirectRouteIndex = vs.spec.http.findIndex((r: any) => r.redirect);
       const catchAllIndex = vs.spec.http.findIndex((r: any) => !r.match && r.route);
@@ -1422,15 +1389,12 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: kubectl apply includes the istio-virtualservice.yaml file
       const applyCommands = commands.filter(
         cmd => cmd.command === 'kubectl' && cmd.args[0] === 'apply'
       );
 
-      // Should have apply command that references manifestRoot (which would include the VS file)
       expect(applyCommands.length).toBeGreaterThan(0);
 
-      // Check if any apply command includes the file or directory containing it
       const baseVsApplied = applyCommands.some(cmd =>
         cmd.args.some(arg =>
           arg.includes('istio-virtualservice.yaml') ||
@@ -1453,7 +1417,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // Setup: Pre-populate base VirtualService with a managed domain
       baseVirtualService.spec.hosts.push('portal.example.com');
       baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-test-id');
       baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-hosts'] =
@@ -1461,7 +1424,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-gateways'] =
         JSON.stringify(['istio-system/portal-domain-gw-test-id']);
 
-      // Apply with no active domains (empty list)
       const rows: PortalDomainActivityRecord[] = [];
 
       const knexMock = Object.assign(
@@ -1494,16 +1456,14 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
 
-      // VERIFY: File exists and managed hosts/gateways are removed
       const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
       expect(vs.spec.hosts).not.toContain('portal.example.com');
-      expect(vs.spec.hosts).toContain('apps.algapsa.com'); // Original retained
+      expect(vs.spec.hosts).toContain('apps.algapsa.com');
       expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-test-id');
 
-      // Annotations should be removed when no managed resources remain
       expect(vs.metadata.annotations['portal.alga-psa.com/managed-hosts']).toBeUndefined();
       expect(vs.metadata.annotations['portal.alga-psa.com/managed-gateways']).toBeUndefined();
     });
@@ -1520,7 +1480,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // Setup: Add managed domain and gateway to base VirtualService
       baseVirtualService.spec.hosts.push('portal.mspmind.com');
       baseVirtualService.spec.gateways.push('istio-system/portal-domain-gw-active-id');
       baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-hosts'] =
@@ -1528,7 +1487,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       baseVirtualService.metadata.annotations['portal.alga-psa.com/managed-gateways'] =
         JSON.stringify(['istio-system/portal-domain-gw-active-id']);
 
-      // Add a redirect route
       baseVirtualService.spec.http.push({
         match: [
           {
@@ -1539,7 +1497,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         redirect: { uri: '/client-portal/dashboard' },
       });
 
-      // Now remove all domains - simulate cleanup scenario
       const rows: PortalDomainActivityRecord[] = [];
 
       const knexMock = Object.assign(
@@ -1572,12 +1529,10 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'removed-id' });
 
-      // VERIFY: kubectl delete was NOT called on the base VirtualService
       const deleteCommands = commands.filter(
         cmd => cmd.command === 'kubectl' && cmd.args[0] === 'delete'
       );
 
-      // Check that no delete command targets the base VirtualService
       const baseVsDeleted = deleteCommands.some(cmd =>
         cmd.args.includes('virtualservice') &&
         (cmd.args.includes('alga-psa-vs') || cmd.args.some(arg => arg.includes('istio-virtualservice.yaml')))
@@ -1585,7 +1540,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       expect(baseVsDeleted).toBe(false);
 
-      // VERIFY: The base VirtualService file still exists
       const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
       let fileExists = false;
       try {
@@ -1597,19 +1551,15 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       expect(fileExists).toBe(true);
 
-      // VERIFY: The file content shows managed resources removed but base resources intact
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
-      // Original base hosts and gateways should remain
       expect(vs.spec.hosts).toContain('apps.algapsa.com');
       expect(vs.spec.gateways).toContain('istio-system/alga-psa-gw');
 
-      // Managed resources should be removed
       expect(vs.spec.hosts).not.toContain('portal.mspmind.com');
       expect(vs.spec.gateways).not.toContain('istio-system/portal-domain-gw-active-id');
 
-      // Managed annotations should be cleaned up
       expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-hosts']).toBeUndefined();
       expect(vs.metadata.annotations?.['portal.alga-psa.com/managed-gateways']).toBeUndefined();
     });
@@ -1626,8 +1576,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // PRE-CONDITION: Create the istio-virtualservice.yaml file in CORRECT location (repo root)
-      // This simulates the file existing from a previous run
       await fs.mkdir(repoDir, { recursive: true });
       const { dump: dumpYaml } = await import('js-yaml');
       const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
@@ -1680,7 +1628,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: kubectl delete should NOT have been called on istio-virtualservice.yaml
       const deleteCommands = commands.filter(
         cmd => cmd.command === 'kubectl' && cmd.args[0] === 'delete'
       );
@@ -1689,10 +1636,8 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         cmd.args.some(arg => arg.includes('istio-virtualservice.yaml'))
       );
 
-      // THIS SHOULD BE FALSE - the base VS file should not be deleted during cleanup
       expect(vsDeletedByKubectl).toBe(false);
 
-      // VERIFY: The file should still exist on disk
       let fileExists = false;
       try {
         await fs.access(vsFilePath);
@@ -1703,11 +1648,9 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       expect(fileExists).toBe(true);
 
-      // VERIFY: The file should have been updated (not deleted then recreated)
       const fileContent = await fs.readFile(vsFilePath, 'utf8');
       const vs = yamlLoad(fileContent) as any;
 
-      // Should contain the new managed host
       expect(vs.spec.hosts).toContain('portal.mspmind.com');
     });
 
@@ -1723,8 +1666,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       const repoDir = path.join(tmpDir, 'nm-kube-config');
       const manifestRoot = path.join(repoDir, 'portal-domains');
 
-      // PRE-CONDITION: The base VirtualService file exists in the PARENT folder (repo root)
-      // NOT in the portal-domains folder
       await fs.mkdir(repoDir, { recursive: true });
       const { dump: dumpYaml } = await import('js-yaml');
       const correctVsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
@@ -1777,7 +1718,6 @@ const commandRunner: CommandRunner = async (command, args, options) => {
 
       await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'active-id' });
 
-      // VERIFY: The existing file in the parent folder (repo root) should be EDITED
       let correctFileExists = false;
       try {
         await fs.access(correctVsFilePath);
@@ -1787,12 +1727,10 @@ const commandRunner: CommandRunner = async (command, args, options) => {
       }
       expect(correctFileExists).toBe(true);
 
-      // VERIFY: The file content in the correct location should be updated
       const correctFileContent = await fs.readFile(correctVsFilePath, 'utf8');
       const correctVs = yamlLoad(correctFileContent) as any;
       expect(correctVs.spec.hosts).toContain('portal.mspmind.com');
 
-      // VERIFY: NO file should be created in the portal-domains folder
       const wrongVsFilePath = path.join(manifestRoot, 'istio-virtualservice.yaml');
       let wrongFileExists = false;
       try {
@@ -1802,15 +1740,12 @@ const commandRunner: CommandRunner = async (command, args, options) => {
         wrongFileExists = false;
       }
 
-      // THIS SHOULD BE FALSE - we should NOT create istio-virtualservice.yaml in portal-domains
       expect(wrongFileExists).toBe(false);
 
-      // VERIFY: kubectl apply should reference the correct file location (parent folder, not portal-domains)
       const applyCommands = commands.filter(
         cmd => cmd.command === 'kubectl' && cmd.args[0] === 'apply'
       );
 
-      // Check if any apply command includes the wrong path (portal-domains/istio-virtualservice.yaml)
       const appliedFromWrongLocation = applyCommands.some(cmd =>
         cmd.args.some(arg =>
           arg.includes('portal-domains') && arg.includes('istio-virtualservice.yaml')
