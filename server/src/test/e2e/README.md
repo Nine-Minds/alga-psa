@@ -13,9 +13,9 @@ This directory contains end-to-end tests for the REST API endpoints.
 
 E2E tests require a running API server. Follow these steps:
 
-### Step 1: Start the Development Server
+### Step 1: Start the Development Server (Optional)
 
-In one terminal, start the Next.js development server:
+When running through Vitest, the E2E suite will try to start `npm run start:express` automatically if it does not detect a local server at `http://127.0.0.1:3000`. Starting the server manually is still recommended for faster feedback when iterating:
 
 ```bash
 cd server
