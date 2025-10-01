@@ -10,6 +10,7 @@ import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelec
 import { PrioritySelect } from './PrioritySelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
@@ -19,7 +20,7 @@ import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IChannel, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
+import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { XCircle, Clock } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
@@ -63,6 +64,10 @@ const useDebounce = <T,>(value: T, delay: number): T => {
   return debouncedValue;
 };
 
+type PendingDeletion =
+  | { type: 'single'; ticketId: string; ticketName?: string | null }
+  | { type: 'bulk'; ticketIds: string[] };
+
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets,
@@ -84,11 +89,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   useTagPermissions(['ticket']);
   
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
-  const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
-  const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
+  const [pendingDeletion, setPendingDeletion] = useState<PendingDeletion | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isIntervalDrawerOpen, setIsIntervalDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(user || null);
+  const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(() => new Set());
 
   const [channels] = useState<IChannel[]>(initialChannels);
   const [companies] = useState<ICompany[]>(initialCompanies);
@@ -124,7 +129,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   
   const handleTagsChange = (ticketId: string, tags: ITag[]) => {
     ticketTagsRef.current[ticketId] = tags;
-    
+
     // Update unique tags list if needed
     setAllUniqueTags(current => {
       const currentTagTexts = new Set(current.map(t => t.tag_text));
@@ -133,8 +138,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   };
 
+  const handleToggleTicketSelection = useCallback((ticketId: string, isSelected: boolean) => {
+    if (!ticketId) return;
+    setSelectedTicketIds(prev => {
+      const next = new Set(prev);
+      if (isSelected) {
+        next.add(ticketId);
+      } else {
+        next.delete(ticketId);
+      }
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     setTickets(initialTickets);
+    setSelectedTicketIds(new Set());
   }, [initialTickets]);
 
   // Fetch ticket-specific tags when initial tickets change
@@ -211,11 +230,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     // Removed onFiltersChanged from dependencies to prevent infinite loop
   ]);
 
-  const handleDeleteTicket = (ticketId: string, ticketNameOrNumber: string) => {
-    setTicketToDelete(ticketId);
-    setTicketToDeleteName(ticketNameOrNumber);
+  const handleDeleteTicket = useCallback((ticketId: string, ticketNameOrNumber: string) => {
+    setPendingDeletion({ type: 'single', ticketId, ticketName: ticketNameOrNumber });
     setDeleteError(null);
-  };
+  }, []);
   
   const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
   
@@ -252,29 +270,54 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   // Use interval tracking hook to get interval count
   const { intervalCount, isLoading: isLoadingIntervals } = useIntervalTracking(currentUser?.id);
 
-  const confirmDeleteTicket = async () => {
-    if (!ticketToDelete) return;
+  const confirmDeleteTicket = useCallback(async () => {
+    if (!pendingDeletion) return;
+
+    if (!currentUser) {
+      setDeleteError('User not found');
+      return;
+    }
 
     try {
-      // Use the current user from state instead of fetching it again
-      if (!currentUser) {
-        throw new Error('User not found');
+      if (pendingDeletion.type === 'single') {
+        await deleteTicket(pendingDeletion.ticketId, currentUser);
+        setTickets(prev => prev.filter(t => t.ticket_id !== pendingDeletion.ticketId));
+        setSelectedTicketIds(prev => {
+          const next = new Set(prev);
+          next.delete(pendingDeletion.ticketId);
+          return next;
+        });
+        if (pendingDeletion.ticketId) {
+          delete ticketTagsRef.current[pendingDeletion.ticketId];
+        }
+      } else {
+        await deleteTickets(pendingDeletion.ticketIds, currentUser);
+        setTickets(prev => prev.filter(t => !pendingDeletion.ticketIds.includes(t.ticket_id ?? '')));
+        setSelectedTicketIds(prev => {
+          const next = new Set(prev);
+          pendingDeletion.ticketIds.forEach(id => next.delete(id));
+          return next;
+        });
+        pendingDeletion.ticketIds.forEach(id => {
+          delete ticketTagsRef.current[id];
+        });
       }
 
-      await deleteTicket(ticketToDelete, currentUser);
-      setTickets(prev => prev.filter(t => t.ticket_id !== ticketToDelete));
-      setTicketToDelete(null);
-      setTicketToDeleteName(null);
+      setPendingDeletion(null);
       setDeleteError(null);
     } catch (error: any) {
-      console.error('Failed to delete ticket:', error);
+      console.error('Failed to delete ticket(s):', error);
       if (error.message && error.message.startsWith('VALIDATION_ERROR:')) {
         setDeleteError(error.message.replace('VALIDATION_ERROR: ', ''));
       } else {
-        setDeleteError('An unexpected error occurred while deleting the ticket.');
+        setDeleteError(
+          pendingDeletion.type === 'bulk'
+            ? 'An unexpected error occurred while deleting the selected tickets.'
+            : 'An unexpected error occurred while deleting the ticket.'
+        );
       }
     }
-  };
+  }, [pendingDeletion, currentUser, deleteTicket, deleteTickets]);
 
   // Custom function for clicking on tickets with filter preservation
   const handleTicketClick = useCallback((ticketId: string) => {
@@ -285,19 +328,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     window.location.href = href;
   }, [getCurrentFiltersQuery]);
 
-
-  // Create columns using shared utility
-  const columns = useMemo(() => 
-    createTicketColumns({
-      categories,
-      displaySettings: displaySettings || undefined,
-      onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
-      ticketTagsRef,
-      onTagsChange: handleTagsChange,
-      showClient: true,
-      onClientClick: onQuickViewCompany,
-    }), [categories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
 
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
@@ -327,8 +357,153 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const ticketsWithIds = useMemo(() =>
     filteredTickets.map((ticket): any => ({
       ...ticket,
-      id: ticket.ticket_id 
+      id: ticket.ticket_id
     })), [filteredTickets]);
+
+  const allTicketIds = useMemo(
+    () => ticketsWithIds.map(ticket => ticket.ticket_id).filter((id): id is string => !!id),
+    [ticketsWithIds]
+  );
+
+  useEffect(() => {
+    setSelectedTicketIds(prev => {
+      const validIds = new Set(allTicketIds);
+      const filtered = Array.from(prev).filter(id => validIds.has(id));
+      if (filtered.length === prev.size) {
+        return prev;
+      }
+      return new Set(filtered);
+    });
+  }, [allTicketIds]);
+
+  const selectionSummary = useMemo(() => {
+    const selectedCount = selectedTicketIds.size;
+    const allSelected = allTicketIds.length > 0 && allTicketIds.every(id => selectedTicketIds.has(id));
+    return {
+      selectedCount,
+      allSelected,
+      indeterminate: selectedCount > 0 && !allSelected,
+    };
+  }, [allTicketIds, selectedTicketIds]);
+
+  const {
+    selectedCount: selectedTicketsCount,
+    allSelected: areAllTicketsSelected,
+    indeterminate: isSelectAllIndeterminate,
+  } = selectionSummary;
+
+  const handleSelectAll = useCallback((isChecked: boolean) => {
+    setSelectedTicketIds(prev => {
+      const next = new Set(prev);
+      if (isChecked) {
+        allTicketIds.forEach(id => next.add(id));
+      } else {
+        allTicketIds.forEach(id => next.delete(id));
+      }
+      return next;
+    });
+  }, [allTicketIds]);
+
+  const handleBulkDeleteRequest = useCallback(() => {
+    if (selectedTicketIds.size === 0) return;
+    setPendingDeletion({ type: 'bulk', ticketIds: Array.from(selectedTicketIds) });
+    setDeleteError(null);
+  }, [selectedTicketIds]);
+
+
+  const baseColumns = useMemo(
+    () =>
+      createTicketColumns({
+        categories,
+        displaySettings: displaySettings || undefined,
+        onTicketClick: handleTicketClick,
+        onDeleteClick: handleDeleteTicket,
+        ticketTagsRef,
+        onTagsChange: handleTagsChange,
+        showClient: true,
+        onClientClick: onQuickViewCompany,
+      }),
+    [categories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]
+  );
+
+  const selectionColumn = useMemo<ColumnDefinition<ITicketListItem>>(
+    () => ({
+      title: '',
+      dataIndex: 'selection',
+      width: '4%',
+      headerClassName: 'w-12',
+      cellClassName: 'w-12',
+      render: (_value: string, record: ITicketListItem) => {
+        const ticketId = record.ticket_id;
+        if (!ticketId) return null;
+
+        const checkboxId = `${id}-select-ticket-${ticketId}`;
+        const labelSource = record.ticket_number || record.title || ticketId;
+        const stopPropagation = (event: React.SyntheticEvent) => {
+          event.stopPropagation();
+        };
+
+        return (
+          <div
+            className="flex justify-center"
+            onClick={stopPropagation}
+            onMouseDown={stopPropagation}
+          >
+            <Checkbox
+              id={checkboxId}
+              checked={selectedTicketIds.has(ticketId)}
+              onChange={event => {
+                stopPropagation(event);
+                handleToggleTicketSelection(ticketId, event.target.checked);
+              }}
+              onClick={stopPropagation}
+              containerClassName="mb-0 justify-center"
+              aria-label={`Select ticket ${labelSource}`}
+            />
+          </div>
+        );
+      },
+    }),
+    [id, selectedTicketIds, handleToggleTicketSelection]
+  );
+
+  const columns = useMemo(
+    () => [selectionColumn, ...baseColumns],
+    [selectionColumn, baseColumns]
+  );
+
+  const deletionDialogTitle = pendingDeletion?.type === 'bulk' ? 'Delete Tickets' : 'Delete Ticket';
+
+  const deletionDialogMessage = useMemo(() => {
+    if (deleteError) {
+      return deleteError;
+    }
+    if (!pendingDeletion) {
+      return 'Are you sure you want to delete the selected tickets? This action cannot be undone.';
+    }
+    if (pendingDeletion.type === 'single') {
+      const displayName = pendingDeletion.ticketName || pendingDeletion.ticketId;
+      return `Are you sure you want to delete ticket "${displayName}"? This action cannot be undone.`;
+    }
+    const names = pendingDeletion.ticketIds.map(id => {
+      const ticket = tickets.find(t => t.ticket_id === id);
+      return ticket?.title || ticket?.ticket_number || id;
+    });
+    const visibleSummary = names.slice(0, 3).join(', ');
+    const remaining = names.length - 3;
+    const additionalSummary = remaining > 0 ? `, and ${remaining} more` : '';
+    const selectionSummaryText = visibleSummary ? `${visibleSummary}${additionalSummary}` : '';
+    const selectionSuffix = selectionSummaryText ? ` Selected: ${selectionSummaryText}.` : '';
+    return `Are you sure you want to delete ${pendingDeletion.ticketIds.length} tickets? This action cannot be undone.${selectionSuffix}`;
+  }, [deleteError, pendingDeletion, tickets]);
+
+  const confirmationDialogConfirmLabel = deleteError
+    ? undefined
+    : pendingDeletion?.type === 'bulk'
+      ? 'Delete Tickets'
+      : 'Delete';
+
+  const confirmationDialogCancelLabel = deleteError ? 'Close' : 'Cancel';
 
 
   const handleTicketAdded = useCallback((newTicket: ITicket) => {
@@ -428,8 +603,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSearchQuery(defaultSearchQuery);
     setChannelFilterState(defaultChannelFilterState);
     setSelectedTags([]);
-    
-    setCompanyFilterState('active'); 
+
+    setSelectedTicketIds(new Set());
+
+    setCompanyFilterState('active');
     setClientTypeFilter('all');
 
     onFiltersChanged({
@@ -549,8 +726,32 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         <h2 className="text-xl font-semibold mt-6 mb-2">
           Tickets
         </h2>
+        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${id}-select-all-checkbox`}
+              label="Select all on page"
+              checked={areAllTicketsSelected}
+              indeterminate={isSelectAllIndeterminate}
+              onChange={event => handleSelectAll(event.target.checked)}
+              containerClassName="mb-0"
+              disabled={ticketsWithIds.length === 0}
+            />
+            <span className="text-sm text-gray-600">
+              {selectedTicketsCount} selected
+            </span>
+          </div>
+          <Button
+            id={`${id}-delete-selected-button`}
+            variant="destructive"
+            onClick={handleBulkDeleteRequest}
+            disabled={selectedTicketsCount === 0}
+          >
+            Delete Selected
+          </Button>
+        </div>
         {/* isLoadingMore prop now correctly reflects loading state from container for pagination or filter changes */}
-        {isLoadingMore ? ( 
+        {isLoadingMore ? (
           <div className="flex justify-center items-center h-32">
             <span>Loading tickets...</span>
           </div>
@@ -587,21 +788,16 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       />
       <ConfirmationDialog
         id={`${id}-delete-ticket-dialog`}
-        isOpen={!!ticketToDelete}
+        isOpen={!!pendingDeletion}
         onClose={() => {
-          setTicketToDelete(null);
-          setTicketToDeleteName(null);
+          setPendingDeletion(null);
           setDeleteError(null);
         }}
         onConfirm={confirmDeleteTicket}
-        title="Delete Ticket"
-        message={
-          deleteError
-            ? deleteError
-            : `Are you sure you want to delete ticket "${ticketToDeleteName || ticketToDelete}"? This action cannot be undone.`
-        }
-        confirmLabel={deleteError ? undefined : "Delete"}
-        cancelLabel={deleteError ? "Close" : "Cancel"}
+        title={deletionDialogTitle}
+        message={deletionDialogMessage}
+        confirmLabel={confirmationDialogConfirmLabel}
+        cancelLabel={confirmationDialogCancelLabel}
       />
       
       {/* Interval Management Drawer */}

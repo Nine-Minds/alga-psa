@@ -11,7 +11,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { Knex } from 'knex';
-import { deleteEntityTags } from '../../utils/tagCleanup';
+import { deleteEntityTags, deleteEntitiesTags } from '../../utils/tagCleanup';
 import { 
   ticketSchema, 
   ticketUpdateSchema, 
@@ -700,66 +700,74 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
   }
 }
 
-export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
-  try {
-    const {knex: db, tenant} = await createTenantKnex();
-    if (!tenant) {
-      throw new Error('Tenant not found');
+async function performTicketDeletion(ticketIds: string[], user: IUser): Promise<void> {
+  const uniqueTicketIds = Array.from(
+    new Set(
+      ticketIds.filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
+    )
+  );
+
+  if (uniqueTicketIds.length === 0) {
+    throw new Error('No tickets provided for deletion');
+  }
+
+  const {knex: db, tenant} = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  await withTransaction(db, async (trx: Knex.Transaction) => {
+    if (!await hasPermission(user, 'ticket', 'delete', trx)) {
+      throw new Error('Permission denied: Cannot delete ticket');
     }
 
-    // Start transaction for atomic operations
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-        throw new Error('Permission denied: Cannot delete ticket');
-      }
-      // Verify ticket exists and belongs to tenant
-      const ticket = await trx('tickets')
-        .where({
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .first();
+    const tickets = await trx('tickets')
+      .where({ tenant })
+      .whereIn('ticket_id', uniqueTicketIds);
 
-      if (!ticket) {
-        throw new Error('Ticket not found');
-      }
-      // Delete associated comments
-      await trx('comments')
-        .where({ 
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .delete();
+    if (tickets.length !== uniqueTicketIds.length) {
+      throw new Error('Ticket not found');
+    }
 
-      // Delete associated tags
-      await deleteEntityTags(trx, ticketId, 'ticket');
+    await trx('comments')
+      .where({ tenant })
+      .whereIn('ticket_id', uniqueTicketIds)
+      .delete();
 
-      // Delete the ticket
-      await trx('tickets')
-        .where({ 
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .delete();
+    if (uniqueTicketIds.length === 1) {
+      await deleteEntityTags(trx, uniqueTicketIds[0], 'ticket');
+    } else {
+      await deleteEntitiesTags(trx, uniqueTicketIds, 'ticket');
+    }
 
-      // Publish ticket deleted event
+    await trx('tickets')
+      .where({ tenant })
+      .whereIn('ticket_id', uniqueTicketIds)
+      .delete();
+
+    for (const ticket of tickets) {
       await safePublishEvent('TICKET_DELETED', {
         tenantId: tenant,
-        ticketId: ticketId,
+        ticketId: ticket.ticket_id,
         userId: user.user_id
       });
-      
-      // Track ticket deletion analytics
+
       analytics.capture('ticket_deleted', {
         was_resolved: !!ticket.closed_at,
-        had_comments: false, // We could query this if needed
-        age_in_days: ticket.entered_at ? 
-          Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
+        had_comments: false,
+        age_in_days: ticket.entered_at
+          ? Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24)
+          : 0,
       }, user.user_id);
-    });
+    }
+  });
 
-    // Revalidate relevant paths
-    revalidatePath('/msp/tickets');
+  revalidatePath('/msp/tickets');
+}
+
+export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
+  try {
+    await performTicketDeletion([ticketId], user);
   } catch (error: any) {
     console.error('Failed to delete ticket:', error);
 
@@ -767,6 +775,19 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
       throw new Error('VALIDATION_ERROR: This ticket cannot be deleted because it has associated resources or tasks. Please remove them first.');
     }
     throw new Error('Failed to delete ticket');
+  }
+}
+
+export async function deleteTickets(ticketIds: string[], user: IUser): Promise<void> {
+  try {
+    await performTicketDeletion(ticketIds, user);
+  } catch (error: any) {
+    console.error('Failed to delete tickets:', error);
+
+    if (error.message && error.message.includes('ticket_resources_tenant_ticket_id_assigned_to_foreign')) {
+      throw new Error('VALIDATION_ERROR: One or more selected tickets cannot be deleted because they have associated resources or tasks. Please remove them first.');
+    }
+    throw new Error('Failed to delete tickets');
   }
 }
 
