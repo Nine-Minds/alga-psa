@@ -466,9 +466,19 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
   }
 
   try {
+    // Add portal domain manifests
     await runGit(["add", "--all", gitConfig.relativePathPosix], gitConfig, {
       suppressOutput: true,
     });
+
+    // Add base VirtualService file if it exists (it's in the parent directory)
+    if (getBasePortalVirtualService()) {
+      const baseVsPath = joinPath(gitConfig.relativePathSegments[0], 'istio-virtualservice.yaml');
+      console.log('[applyPortalDomainResources] Adding base VirtualService to git', { path: baseVsPath });
+      await runGit(["add", baseVsPath], gitConfig, {
+        suppressOutput: true,
+      });
+    }
   } catch (error) {
     errors.push(formatErrorMessage(error, "Failed to stage manifest changes"));
   }
