@@ -780,6 +780,81 @@ export async function addTicketComment(ticketId: string, comment: string, isInte
   }
 }
 
+async function deleteTicketTransactional(
+  trx: Knex.Transaction,
+  ticketId: string,
+  tenant: string,
+  user: IUser
+): Promise<void> {
+  if (!await hasPermission(user, 'ticket', 'delete', trx)) {
+    throw new Error('Permission denied: Cannot delete ticket');
+  }
+
+  const ticket = await trx('tickets')
+    .where({
+      ticket_id: ticketId,
+      tenant: tenant
+    })
+    .first();
+
+  if (!ticket) {
+    throw new Error('Ticket not found');
+  }
+
+  await trx('comments')
+    .where({ 
+      ticket_id: ticketId,
+      tenant: tenant
+    })
+    .delete();
+
+  await deleteEntityTags(trx, ticketId, 'ticket');
+
+  await trx('tickets')
+    .where({ 
+      ticket_id: ticketId,
+      tenant: tenant
+    })
+    .delete();
+
+  await safePublishEvent('TICKET_DELETED', {
+    tenantId: tenant,
+    ticketId: ticketId,
+    userId: user.user_id
+  });
+
+  analytics.capture('ticket_deleted', {
+    was_resolved: !!ticket.closed_at,
+    had_comments: false,
+    age_in_days: ticket.entered_at ? 
+      Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
+  }, user.user_id);
+}
+
+function normalizeTicketDeleteError(error: unknown): { raw: string; userFacing: string } {
+  const baseMessage = error instanceof Error ? error.message : String(error);
+
+  if (baseMessage && baseMessage.includes('ticket_resources_tenant_ticket_id_assigned_to_foreign')) {
+    const friendlyMessage = 'This ticket cannot be deleted because it has associated resources or tasks. Please remove them first.';
+    return {
+      raw: `VALIDATION_ERROR: ${friendlyMessage}`,
+      userFacing: friendlyMessage,
+    };
+  }
+
+  if (baseMessage && baseMessage.startsWith('VALIDATION_ERROR:')) {
+    return {
+      raw: baseMessage,
+      userFacing: baseMessage.replace('VALIDATION_ERROR: ', ''),
+    };
+  }
+
+  return {
+    raw: baseMessage || 'Failed to delete ticket',
+    userFacing: baseMessage || 'Failed to delete ticket',
+  };
+}
+
 export async function deleteTicket(ticketId: string, user: IUser): Promise<void> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
@@ -787,67 +862,54 @@ export async function deleteTicket(ticketId: string, user: IUser): Promise<void>
       throw new Error('Tenant not found');
     }
 
-    // Start transaction for atomic operations
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'ticket', 'delete', trx)) {
-        throw new Error('Permission denied: Cannot delete ticket');
-      }
-      // Verify ticket exists and belongs to tenant
-      const ticket = await trx('tickets')
-        .where({
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .first();
-
-      if (!ticket) {
-        throw new Error('Ticket not found');
-      }
-      // Delete associated comments
-      await trx('comments')
-        .where({ 
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .delete();
-
-      // Delete associated tags
-      await deleteEntityTags(trx, ticketId, 'ticket');
-
-      // Delete the ticket
-      await trx('tickets')
-        .where({ 
-          ticket_id: ticketId,
-          tenant: tenant
-        })
-        .delete();
-
-      // Publish ticket deleted event
-      await safePublishEvent('TICKET_DELETED', {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: user.user_id
-      });
-      
-      // Track ticket deletion analytics
-      analytics.capture('ticket_deleted', {
-        was_resolved: !!ticket.closed_at,
-        had_comments: false, // We could query this if needed
-        age_in_days: ticket.entered_at ? 
-          Math.round((Date.now() - new Date(ticket.entered_at).getTime()) / 1000 / 60 / 60 / 24) : 0,
-      }, user.user_id);
+      await deleteTicketTransactional(trx, ticketId, tenant, user);
     });
 
-    // Revalidate relevant paths
     revalidatePath('/msp/tickets');
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete ticket:', error);
-
-    if (error.message && error.message.includes('ticket_resources_tenant_ticket_id_assigned_to_foreign')) {
-      throw new Error('VALIDATION_ERROR: This ticket cannot be deleted because it has associated resources or tasks. Please remove them first.');
-    }
-    throw new Error('Failed to delete ticket');
+    const { raw } = normalizeTicketDeleteError(error);
+    throw new Error(raw);
   }
+}
+
+export async function deleteTickets(ticketIds: string[], user: IUser): Promise<{
+  deletedIds: string[];
+  failed: Array<{ ticketId: string; message: string }>;
+}> {
+  const uniqueIds = Array.from(new Set(ticketIds.filter(id => !!id)));
+
+  if (uniqueIds.length === 0) {
+    return { deletedIds: [], failed: [] };
+  }
+
+  const { knex: db, tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error('Tenant not found');
+  }
+
+  const deletedIds: string[] = [];
+  const failed: Array<{ ticketId: string; message: string }> = [];
+
+  for (const ticketId of uniqueIds) {
+    try {
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        await deleteTicketTransactional(trx, ticketId, tenant, user);
+      });
+      deletedIds.push(ticketId);
+    } catch (error: unknown) {
+      console.error(`Failed to delete ticket ${ticketId}:`, error);
+      const { userFacing } = normalizeTicketDeleteError(error);
+      failed.push({ ticketId, message: userFacing });
+    }
+  }
+
+  if (deletedIds.length > 0) {
+    revalidatePath('/msp/tickets');
+  }
+
+  return { deletedIds, failed };
 }
 
 export async function getScheduledHoursForTicket(ticketId: string): Promise<IAgentSchedule[]> {
