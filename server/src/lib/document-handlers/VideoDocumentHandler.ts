@@ -4,15 +4,12 @@ import path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegStatic from 'ffmpeg-static';
 import { StorageProviderFactory } from 'server/src/lib/storage/StorageProviderFactory';
-import type { StorageProviderInterface } from 'server/src/lib/storage/providers/StorageProvider';
 import type { Knex } from 'knex';
-import { existsSync, createWriteStream } from 'fs';
+import { existsSync } from 'fs';
 import { createRequire } from 'module';
 import process from 'process';
 import { Buffer } from 'buffer';
-import { promises as fsPromises } from 'fs';
-import os from 'os';
-import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
 
 const moduleRequire = createRequire(import.meta.url);
 
@@ -189,6 +186,8 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
    */
   async generatePreview(document: IDocument, tenant: string, knex: Knex | Knex.Transaction): Promise<PreviewResponse> {
     try {
+      console.log(`[VideoDocumentHandler] generatePreview called for ${document.document_name} (${document.file_id})`);
+
       if (!document.file_id) {
         return {
           success: false,
@@ -199,9 +198,11 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       // Check cache first
       const cachedPreview = await this.getFromCache(document.file_id, tenant);
       if (cachedPreview) {
+        console.log(`[VideoDocumentHandler] Using cached preview for ${document.file_id}`);
         return cachedPreview;
       }
 
+      console.log(`[VideoDocumentHandler] Generating thumbnail for ${document.file_id}`);
       const thumbnailBuffer = await this.generateThumbnail(document, tenant, knex);
 
       // For videos, we don't generate a preview image
@@ -213,7 +214,7 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
 
       if (thumbnailBuffer) {
         console.log(`[VideoDocumentHandler] Generated thumbnail for ${document.file_id}, size=${thumbnailBuffer.length}`);
-        const base64Image = `data:image/png;base64,${thumbnailBuffer.toString('base64')}`;
+        const base64Image = `data:image/jpeg;base64,${thumbnailBuffer.toString('base64')}`;
         await this.saveToCache(document.file_id, thumbnailBuffer, tenant);
         return {
           success: true,
@@ -338,26 +339,35 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
   }
 
   private async extractFrameFromStream(stream: Readable, mimeType: string | null): Promise<Buffer | null> {
+    console.log(`[VideoDocumentHandler] extractFrameFromStream called with mimeType: ${mimeType}`);
     return await new Promise((resolve, reject) => {
       const chunks: Buffer[] = [];
       const command = ffmpeg(stream);
 
-      command.noAudio();
-      command.inputOptions(['-ss', '00:00:01']);
-      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
-
       const format = this.mapMimeToFormat(mimeType);
       if (format) {
+        console.log(`[VideoDocumentHandler] Using input format: ${format}`);
         command.inputFormat(format);
+      } else {
+        console.log(`[VideoDocumentHandler] No specific format mapping for ${mimeType}, letting ffmpeg auto-detect`);
       }
 
-      command.format('png');
+      command.noAudio();
+      command.seekInput('00:00:01');
+      command.outputOptions(['-frames:v 1', '-vf', 'scale=640:-1']);
+      command.format('mjpeg');
 
       command.on('error', (err) => {
+        console.error(`[VideoDocumentHandler] ffmpeg command error:`, err);
         stream.destroy();
         reject(err);
       });
 
+      command.on('end', () => {
+        console.log(`[VideoDocumentHandler] ffmpeg processing complete`);
+      });
+
+      // Pipe output to capture chunks
       const ffmpegStream = command.pipe();
 
       ffmpegStream.on('data', (chunk: Buffer) => {
@@ -365,20 +375,23 @@ export class VideoDocumentHandler extends BaseDocumentHandler {
       });
 
       ffmpegStream.on('end', () => {
-        stream.destroy();
         if (chunks.length === 0) {
+          console.log(`[VideoDocumentHandler] No thumbnail data received from ffmpeg`);
           resolve(null);
         } else {
+          console.log(`[VideoDocumentHandler] Thumbnail generated, size: ${Buffer.concat(chunks).length} bytes`);
           resolve(Buffer.concat(chunks));
         }
       });
 
       ffmpegStream.on('error', (err) => {
+        console.error(`[VideoDocumentHandler] ffmpeg stream error:`, err);
         stream.destroy();
         reject(err);
       });
 
       stream.on('error', (err) => {
+        console.error(`[VideoDocumentHandler] video stream error:`, err);
         stream.destroy();
         reject(err);
       });
