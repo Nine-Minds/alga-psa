@@ -496,6 +496,25 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
+  // Apply base VirtualService to Kubernetes if it was updated
+  if (getBasePortalVirtualService()) {
+    try {
+      const repoDir = dirname(manifestRoot);
+      const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
+      console.log('[applyPortalDomainResources] Applying base VirtualService to Kubernetes', { path: vsFilePath });
+      await runKubectl(["apply", "-f", vsFilePath]);
+      console.log('[applyPortalDomainResources] Successfully applied base VirtualService to Kubernetes');
+    } catch (error) {
+      console.error('[applyPortalDomainResources] Failed to apply base VirtualService to Kubernetes', error);
+      errors.push(
+        formatErrorMessage(
+          error,
+          "Failed to apply base VirtualService to cluster",
+        ),
+      );
+    }
+  }
+
   if (
     config.gatewayNamespace !== config.certificateNamespace &&
     manifests.length > 0
