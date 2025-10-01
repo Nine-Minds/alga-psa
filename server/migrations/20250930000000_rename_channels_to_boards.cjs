@@ -66,6 +66,7 @@ exports.up = async function(knex) {
     table.boolean('display_assigned_to').defaultTo(true);
     table.boolean('display_status').defaultTo(true);
     table.boolean('display_due_date').defaultTo(true);
+    table.boolean('is_inactive').defaultTo(false);
     table.boolean('is_default').defaultTo(false);
     table.boolean('display_itil_impact').defaultTo(false);
     table.boolean('display_itil_urgency').defaultTo(false);
@@ -101,14 +102,14 @@ exports.up = async function(knex) {
       tenant, board_id, board_name, display_contact_name_id, display_priority,
       display_severity, display_urgency, display_impact, display_category,
       display_subcategory, display_assigned_to, display_status, display_due_date,
-      is_default, display_itil_impact, display_itil_urgency, category_type,
+      is_inactive, is_default, display_itil_impact, display_itil_urgency, category_type,
       priority_type, display_order, description
     )
     SELECT
       tenant, channel_id, channel_name, display_contact_name_id, display_priority,
       display_severity, display_urgency, display_impact, display_category,
       display_subcategory, display_assigned_to, display_status, display_due_date,
-      is_default, display_itil_impact, display_itil_urgency, category_type,
+      is_inactive, is_default, display_itil_impact, display_itil_urgency, category_type,
       priority_type, display_order, description
     FROM channels
   `);
