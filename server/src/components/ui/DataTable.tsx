@@ -150,7 +150,8 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     sortBy,
     sortDirection,
     onSortChange,
-    rowClassName
+    rowClassName,
+    onVisibleRowsChange,
   } = props;
 
   const { t } = useTranslation('common');
@@ -393,6 +394,22 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
       editableConfig: props.editableConfig,
     },
   });
+
+  React.useEffect(() => {
+    if (!onVisibleRowsChange) {
+      return;
+    }
+    const visibleRows = table.getPaginationRowModel().rows.map(row => row.original as T);
+    onVisibleRowsChange(visibleRows);
+  }, [
+    onVisibleRowsChange,
+    table,
+    pageIndex,
+    currentPageSize,
+    data,
+    sorting,
+    visibleColumnIds,
+  ]);
 
   const handleRowClick = (row: Row<T>) => {
     if (onRowClick) {

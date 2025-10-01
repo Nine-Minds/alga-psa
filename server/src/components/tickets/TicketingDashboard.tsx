@@ -87,6 +87,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   
   const [tickets, setTickets] = useState<ITicketListItem[]>(initialTickets);
   const [selectedTicketIds, setSelectedTicketIds] = useState<Set<string>>(new Set());
+  const [visibleTicketIds, setVisibleTicketIds] = useState<string[]>([]);
   const [ticketToDelete, setTicketToDelete] = useState<string | null>(null);
   const [ticketToDeleteName, setTicketToDeleteName] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -336,10 +337,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     })), [filteredTickets]);
 
   const selectableTicketIds = useMemo(
-    () =>
-      ticketsWithIds
+    () => {
+      const ids = ticketsWithIds
         .map(ticket => ticket.ticket_id)
-        .filter((id): id is string => typeof id === 'string' && id.length > 0),
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+      return Array.from(new Set(ids));
+    },
     [ticketsWithIds]
   );
 
@@ -393,33 +396,57 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     });
   }, []);
 
-  const handleSelectAllTickets = useCallback((shouldSelect: boolean) => {
-    setSelectedTicketIds(prev => {
-      if (shouldSelect) {
-        const next = new Set(prev);
-        let changed = false;
+  const handleSelectAllVisibleTickets = useCallback((shouldSelect: boolean) => {
+    const visibleIds = visibleTicketIds.filter((id): id is string => !!id);
 
-        selectableTicketIds.forEach(id => {
+    setSelectedTicketIds(prev => {
+      if (visibleIds.length === 0) {
+        return prev;
+      }
+
+      const next = new Set(prev);
+
+      if (shouldSelect) {
+        let changed = false;
+        visibleIds.forEach(id => {
           if (!next.has(id)) {
             next.add(id);
             changed = true;
           }
         });
-
         return changed ? next : prev;
       }
 
-      return prev.size === 0 ? prev : new Set<string>();
+      let changed = false;
+      visibleIds.forEach(id => {
+        if (next.delete(id)) {
+          changed = true;
+        }
+      });
+      return changed ? next : prev;
     });
+  }, [visibleTicketIds]);
+
+  const handleSelectAllMatchingTickets = useCallback(() => {
+    if (selectableTicketIds.length === 0) {
+      return;
+    }
+    setSelectedTicketIds(new Set(selectableTicketIds));
   }, [selectableTicketIds]);
 
   const clearSelection = useCallback(() => {
     setSelectedTicketIds(prev => (prev.size === 0 ? prev : new Set<string>()));
   }, []);
 
-  const allTicketsSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
-  const isSelectionIndeterminate = selectedTicketIds.size > 0 && !allTicketsSelected;
+  const visibleTicketIdSet = useMemo(() => new Set(visibleTicketIds.filter((id): id is string => !!id)), [visibleTicketIds]);
+  const allVisibleTicketsSelected = visibleTicketIds.length > 0 && visibleTicketIds.every(id => selectedTicketIds.has(id));
   const selectedTicketIdsArray = useMemo(() => Array.from(selectedTicketIds), [selectedTicketIds]);
+  const hasHiddenSelections = useMemo(
+    () => selectedTicketIdsArray.some(id => !visibleTicketIdSet.has(id)),
+    [selectedTicketIdsArray, visibleTicketIdSet]
+  );
+  const allFilteredTicketsSelected = selectableTicketIds.length > 0 && selectableTicketIds.every(id => selectedTicketIds.has(id));
+  const isSelectionIndeterminate = selectedTicketIds.size > 0 && (!allVisibleTicketsSelected || hasHiddenSelections) && !allFilteredTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
       return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; company_name?: string }>;
@@ -447,6 +474,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [tickets, selectedTicketIds]);
 
   const hasSelection = selectedTicketIds.size > 0;
+  const totalSelectableTickets = selectableTicketIds.length;
+  const showSelectAllBanner = allVisibleTicketsSelected && !hasHiddenSelections && !allFilteredTicketsSelected && visibleTicketIds.length > 0;
+  const showAllSelectedBanner = allFilteredTicketsSelected && totalSelectableTickets > 0;
+
+  const handleVisibleRowsChange = useCallback((rows: ITicketListItem[]) => {
+    const ids = rows
+      .map(row => row.ticket_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    const uniqueIds = Array.from(new Set(ids));
+    setVisibleTicketIds(prev => {
+      if (prev.length === uniqueIds.length && prev.every((value, index) => value === uniqueIds[index])) {
+        return prev;
+      }
+      return uniqueIds;
+    });
+  }, []);
 
   const columns = useMemo(() => {
     const baseColumns = createTicketColumns({
@@ -470,11 +513,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         >
           <Checkbox
             id={`${id}-select-all`}
-            checked={allTicketsSelected}
+            checked={allVisibleTicketsSelected}
             indeterminate={isSelectionIndeterminate}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
               event.stopPropagation();
-              handleSelectAllTickets(event.target.checked);
+              handleSelectAllVisibleTickets(event.target.checked);
             }}
             containerClassName="mb-0"
             className="m-0"
@@ -527,9 +570,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     ticketTagsRef,
     onQuickViewCompany,
     id,
-    allTicketsSelected,
+    allVisibleTicketsSelected,
     isSelectionIndeterminate,
-    handleSelectAllTickets,
+    handleSelectAllVisibleTickets,
     handleTicketSelectionChange,
     selectedTicketIds,
   ]);
@@ -832,6 +875,46 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           </div>
         ) : (
           <>
+            {showSelectAllBanner && (
+              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+                <span>
+                  All {visibleTicketIds.length} ticket{visibleTicketIds.length === 1 ? '' : 's'} on this page are selected.
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    id={`${id}-select-all-matching`}
+                    variant="link"
+                    onClick={handleSelectAllMatchingTickets}
+                    className="p-0"
+                  >
+                    Select all {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters
+                  </Button>
+                  <Button
+                    id={`${id}-clear-visible-selection`}
+                    variant="link"
+                    onClick={clearSelection}
+                    className="p-0"
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              </div>
+            )}
+            {showAllSelectedBanner && (
+              <div className="mb-3 flex items-center justify-between rounded-md border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-700">
+                <span>
+                  All {totalSelectableTickets} ticket{totalSelectableTickets === 1 ? '' : 's'} matching your filters are selected.
+                </span>
+                <Button
+                  id={`${id}-clear-all-selection`}
+                  variant="link"
+                  onClick={clearSelection}
+                  className="p-0"
+                >
+                  Clear selection
+                </Button>
+              </div>
+            )}
             <DataTable
               {...withDataAutomationId({ id: `${id}-tickets-table` })}
               data={ticketsWithIds}
@@ -841,6 +924,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                   ? '!bg-blue-50'
                   : ''
               }
+              onVisibleRowsChange={handleVisibleRowsChange}
             />
             
             {/* Load More Button */}

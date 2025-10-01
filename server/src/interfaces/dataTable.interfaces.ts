@@ -37,6 +37,8 @@ export interface DataTableProps<T> {
   editableConfig?: EditableConfig;
   /** Custom class name for table rows */
   rowClassName?: (record: T) => string;
+  /** Callback invoked when the set of visible rows (current page) changes */
+  onVisibleRowsChange?: (rows: T[]) => void;
   /** Initial sorting configuration */
   initialSorting?: { id: string; desc: boolean }[];
   /** Enable manual (server-side) sorting */
