@@ -3,7 +3,8 @@
  * This prevents Turbopack warnings about missing database drivers
  */
 
-import { Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createRequire } from 'module';
 
 // Get the database client from environment or config
 function getActiveDialect(): string {
@@ -28,10 +29,11 @@ const createMockDriver = () => {
 
 // Override require for database drivers we don't use
 if (typeof globalThis !== 'undefined' && !globalThis.__knexDialectPatched) {
-  const Module = require('module');
+  const nodeRequire = createRequire(import.meta.url);
+  const Module = nodeRequire('module');
   const originalRequire = Module.prototype.require;
   
-  Module.prototype.require = function(id: string) {
+  Module.prototype.require = function patchedRequire(this: any, id: string, ...args: any[]) {
     // Intercept knex dialect requires
     if (id.includes('knex/lib/dialects/')) {
       const dialectName = id.split('/').pop();
@@ -42,7 +44,7 @@ if (typeof globalThis !== 'undefined' && !globalThis.__knexDialectPatched) {
             dialectName === 'postgres' && activeDialect === 'pg' ||
             dialectName === 'sqlite3' && activeDialect === 'better-sqlite3' ||
             dialectName === 'index') {
-          return originalRequire.apply(this, arguments);
+          return originalRequire.call(this, id, ...args);
         }
         
         // Mock all other dialects
@@ -57,16 +59,16 @@ if (typeof globalThis !== 'undefined' && !globalThis.__knexDialectPatched) {
     if (dbDrivers.includes(id)) {
       // Only allow the drivers we actually need
       if ((activeDialect === 'pg' || activeDialect === 'postgres' || activeDialect === 'postgresql') && id === 'pg') {
-        return originalRequire.apply(this, arguments);
+        return originalRequire.call(this, id, ...args);
       }
       if (activeDialect === id) {
-        return originalRequire.apply(this, arguments);
+        return originalRequire.call(this, id, ...args);
       }
       // Return a mock for all others
       return {};
     }
     
-    return originalRequire.apply(this, arguments);
+    return originalRequire.call(this, id, ...args);
   };
   
   // Mark as patched to avoid re-patching
