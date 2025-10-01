@@ -301,7 +301,8 @@ export async function getDocumentByTicketId(ticketId: string) {
         .where({
           'document_associations.entity_id': ticketId,
           'document_associations.entity_type': 'ticket',
-          'documents.tenant': tenant
+          'documents.tenant': tenant,
+          'document_associations.tenant': tenant
         })
         .select('documents.*');
       return documents;
@@ -335,7 +336,8 @@ export async function getDocumentByCompanyId(companyId: string) {
         .where({
           'document_associations.entity_id': companyId,
           'document_associations.entity_type': 'company',
-          'documents.tenant': tenant
+          'documents.tenant': tenant,
+          'document_associations.tenant': tenant
         })
         .select('documents.*');
       return documents;
@@ -369,7 +371,8 @@ export async function getDocumentByContactNameId(contactNameId: string) {
         .where({
           'document_associations.entity_id': contactNameId,
           'document_associations.entity_type': 'contact',
-          'documents.tenant': tenant
+          'documents.tenant': tenant,
+          'document_associations.tenant': tenant
         })
         .select('documents.*');
       return documents;
