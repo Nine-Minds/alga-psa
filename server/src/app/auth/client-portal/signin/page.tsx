@@ -13,7 +13,25 @@ export default async function ClientSignInPage({
   const callbackUrl = typeof params?.callbackUrl === 'string' ? params.callbackUrl : '/client-portal/dashboard';
   const session = await getSession();
   if (session?.user) {
-    redirect(callbackUrl);
+    if (session.user.user_type === 'internal') {
+      const canonicalBase = process.env.NEXTAUTH_URL;
+
+      if (!canonicalBase) {
+        throw new Error('NEXTAUTH_URL must be set to redirect MSP users from client portal sign-in');
+      }
+
+      let mspRedirect: string;
+
+      try {
+        mspRedirect = new URL('/msp/dashboard', canonicalBase).toString();
+      } catch (error) {
+        throw new Error('NEXTAUTH_URL is invalid and cannot be used for MSP redirect');
+      }
+
+      return redirect(mspRedirect);
+    }
+
+    return redirect(callbackUrl);
   }
 
   // Get the current domain from headers
