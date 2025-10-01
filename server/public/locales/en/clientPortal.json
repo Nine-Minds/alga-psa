@@ -225,7 +225,19 @@
       "download": "Download PDF",
       "view": "View Details",
       "pay": "Pay Now",
-      "paymentHistory": "Payment History"
+      "paymentHistory": "Payment History",
+      "details": "Invoice Details",
+      "lineItems": "Line Items",
+      "description": "Description",
+      "quantity": "Quantity",
+      "unitPrice": "Unit Price",
+      "total": "Total",
+      "noLineItems": "No line items available",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "taxBreakdown": "Tax Breakdown",
+      "manualInvoice": "Manual Invoice",
+      "credits": "Credits"
     },
     "frequency": {
       "monthly": "Monthly",
@@ -351,7 +363,8 @@
       "timezone": "Time Zone",
       "language": "Language Preference",
       "dateFormat": "Date Format",
-      "avatar": "Profile Picture"
+      "avatar": "Profile Picture",
+      "notes": "Notes"
     },
     "changePassword": {
       "title": "Change Password",
@@ -395,6 +408,7 @@
       "photoRemoved": "Photo removed successfully",
       "userNotFound": "User not found",
       "loadError": "Failed to load profile",
+      "loading": "Loading profile...",
       "avatarDescription": "This avatar is shown to MSP staff when they view your contact information."
     },
     "imageUpload": {
@@ -506,16 +520,87 @@
     }
   },
   "account": {
+    "title": "Account",
     "services": {
       "loadError": "Failed to load services",
       "loadPlansError": "Failed to load service plans",
-      "updateError": "Failed to update service"
+      "updateError": "Failed to update service",
+      "loading": "Loading services...",
+      "activeTitle": "Active Services",
+      "empty": "No active services found",
+      "columns": {
+        "service": "Service",
+        "description": "Description",
+        "status": "Status",
+        "currentPlan": "Current Plan",
+        "nextBilling": "Next Billing"
+      },
+      "actions": {
+        "manage": "Manage",
+        "upgrade": "Upgrade",
+        "downgrade": "Downgrade"
+      },
+      "manageTitle": "Manage {{service}}",
+      "genericServiceLabel": "Service",
+      "currentPlan": "Current Plan",
+      "availablePlans": "Available Plans",
+      "catalog": {
+        "title": "Available Services",
+        "learnMore": "Learn More",
+        "managedIt": {
+          "title": "Managed IT Support",
+          "description": "24/7 IT support and monitoring for your business. Includes proactive maintenance, security updates, and dedicated technical support.",
+          "price": "Starting at $299/mo"
+        },
+        "cloudBackup": {
+          "title": "Cloud Backup",
+          "description": "Secure cloud backup and disaster recovery solutions. Automated backups, quick recovery options, and data encryption included.",
+          "price": "Starting at $99/mo"
+        },
+        "cybersecurity": {
+          "title": "Cybersecurity",
+          "description": "Advanced security monitoring and threat prevention. Includes firewall management, endpoint protection, and regular security assessments.",
+          "price": "Starting at $199/mo"
+        }
+      }
     },
     "billing": {
       "loadError": "Failed to load billing data",
       "addPaymentError": "Failed to add payment method",
       "removePaymentError": "Failed to remove payment method",
       "setDefaultError": "Failed to set default payment method",
+      "loadingBillingInfo": "Loading billing information...",
+      "overviewTitle": "Billing Overview",
+      "paymentMethodsTitle": "Payment Methods",
+      "noPaymentMethods": "No payment methods on file",
+      "billingCycleTitle": "Billing Cycle",
+      "noBillingCycle": "No billing cycle found",
+      "recentInvoicesTitle": "Recent Invoices",
+      "billingHistoryTitle": "Billing History",
+      "labels": {
+        "defaultTag": "(Default)"
+      },
+      "actions": {
+        "setDefault": "Set Default",
+        "remove": "Remove",
+        "addPaymentMethod": "Add Payment Method",
+        "adding": "Adding...",
+        "view": "View"
+      },
+      "fields": {
+        "cardNumber": "Card Number",
+        "expiryMonth": "Month",
+        "expiryYear": "Year",
+        "cvv": "CVV",
+        "setAsDefault": "Set as default payment method"
+      },
+      "history": {
+        "period": "Period",
+        "startDate": "Start Date",
+        "endDate": "End Date",
+        "status": "Status",
+        "empty": "No billing history available"
+      },
       "validation": {
         "cardNumber": "Please enter a valid 16-digit card number",
         "expMonth": "Please enter a valid month (01-12)",
@@ -538,7 +623,20 @@
     "delete": "Delete",
     "previewUnavailable": "Preview unavailable",
     "newDocument": "New Document",
-    "uploadFile": "Upload File"
+    "uploadFile": "Upload File",
+    "deleteTitle": "Delete Document",
+    "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "deleteVideoTitle": "Delete Video",
+    "deleteVideoMessage": "Are you sure you want to delete the video \"{{name}}\"? This action cannot be undone.",
+    "removeTitle": "Remove Document",
+    "removeMessage": "Are you sure you want to remove \"{{name}}\" from this item? The document will still be available in the document library.",
+    "removeVideoTitle": "Remove Video",
+    "removeVideoMessage": "Are you sure you want to remove the video \"{{name}}\" from this item? The file will remain available in the document library.",
+    "downloadFile": "Download File",
+    "videoUnsupported": "Video format ({{mimeType}}) not supported for browser playback",
+    "videoTagUnsupported": "Your browser does not support the video tag.",
+    "unnamed": "Untitled",
+    "videoDownloadInfo": "The video will be downloaded and can be played with your system's default video player"
   },
   "common": {
     "actions": "Actions",
@@ -596,6 +694,8 @@
     "welcomeTitle": "Welcome to Your Client Portal",
     "welcomeSubtitle": "Manage your support tickets and stay connected",
     "signInDescription": "Please enter your credentials to access your account.",
+    "clientLogin": "Client Login",
+    "mspStaffLogin": "MSP Staff? Login here →",
     "accessDeniedTitle": "Access Denied",
     "accessDeniedMessage": "You do not have permission to access the client portal.",
     "registrationSuccessTitle": "Registration Successful",

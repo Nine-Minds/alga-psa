@@ -29,7 +29,17 @@
     "download": "Herunterladen",
     "upload": "Hochladen",
     "refresh": "Aktualisieren",
-    "close": "Schließen"
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "clear": "Leeren",
+    "reset": "Zurücksetzen",
+    "view": "Anzeigen",
+    "copy": "Kopieren",
+    "duplicate": "Duplizieren",
+    "openMenu": "Menü öffnen",
+    "confirmDeletion": "Löschung bestätigen"
   },
   "status": {
     "loading": "Wird geladen...",
@@ -42,7 +52,8 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "completed": "Abgeschlossen",
-    "cancelled": "Abgebrochen"
+    "cancelled": "Abgebrochen",
+    "processing": "Wird verarbeitet..."
   },
   "messages": {
     "welcome": "Willkommen",
@@ -54,7 +65,8 @@
     "required": "Dieses Feld ist erforderlich",
     "invalidEmail": "Ungültige E-Mail-Adresse",
     "invalidPassword": "Ungültiges Passwort",
-    "passwordMismatch": "Passwörter stimmen nicht überein"
+    "passwordMismatch": "Passwörter stimmen nicht überein",
+    "confirmDeletion": "Löschung bestätigen"
   },
   "errors": {
     "auth": {
@@ -228,5 +240,8 @@
     "rowsPerPage": "Zeilen pro Seite",
     "first": "Erste",
     "last": "Letzte"
+  },
+  "fields": {
+    "notes": "Notizen"
   }
 }
