@@ -1,5 +1,4 @@
 'use client';
-import { IBoard } from '@/interfaces';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';

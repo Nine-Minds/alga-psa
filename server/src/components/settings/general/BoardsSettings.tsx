@@ -1,5 +1,4 @@
 'use client'
-import { IBoard } from '@/interfaces';
 
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';

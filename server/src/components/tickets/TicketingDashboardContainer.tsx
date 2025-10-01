@@ -1,5 +1,4 @@
 'use client';
-import { IBoard } from '@/interfaces';
 
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';

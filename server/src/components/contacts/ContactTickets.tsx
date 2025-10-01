@@ -1,5 +1,4 @@
 'use client';
-import { IBoard } from '@/interfaces';
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
