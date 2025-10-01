@@ -5,6 +5,12 @@
 - Do not proceed to updating files until you have enough context to do so.
 
 
+# Failure Handling Philosophy
+
+- Fail fast when assumptions are violated instead of silently attempting fallbacks.
+- Throw exceptions with actionable, descriptive messages to surface what went wrong.
+- Validate assumptions as early as possible and reject inputs that do not meet strict criteria.
+
 # UI coding standards
 
 Prefer radix components over other libraries
