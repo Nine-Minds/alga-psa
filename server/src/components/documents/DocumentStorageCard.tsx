@@ -37,7 +37,7 @@ interface VideoPreviewProps {
 }
 
 function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPreviewProps) {
-    const { t } = useTranslation('documents');
+    const { t } = useTranslation('clientPortal');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -87,7 +87,7 @@ function VideoPreviewComponent({ fileId, mimeType, fileName, onClick }: VideoPre
                 preload="metadata"
             >
                 <source src={`/api/documents/view/${fileId}`} type={mimeType} />
-                Your browser does not support the video tag.
+                {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
             </video>
             <div 
                 className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
@@ -110,7 +110,7 @@ interface VideoModalProps {
 }
 
 function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoModalProps) {
-    const { t } = useTranslation('documents');
+    const { t } = useTranslation('clientPortal');
     const [canPlay, setCanPlay] = useState<boolean | null>(null);
 
     useEffect(() => {
@@ -134,7 +134,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {fileName}
                 </p>
                 <p className="text-[rgb(var(--color-text-500))] mb-4 text-sm">
-                    Video format ({mimeType}) not supported for browser playback
+                    {t('documents.videoUnsupported', 'Video format ({{mimeType}}) not supported for browser playback', { mimeType })}
                 </p>
                 <Button
                     id={`download-video-${fileId}`}
@@ -154,7 +154,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
                     {t('documents.downloadToPlay', 'Download to Play')}
                 </Button>
                 <div className="text-xs text-[rgb(var(--color-text-400))] mt-2">
-                    The video will be downloaded and can be played with your system's default video player
+                    {t('documents.videoDownloadInfo', "The video will be downloaded and can be played with your system's default video player")}
                 </div>
             </div>
         );
@@ -168,7 +168,7 @@ function VideoModalComponent({ fileId, documentId, mimeType, fileName }: VideoMo
             autoPlay={false}
         >
             <source src={`/api/documents/view/${fileId}`} type={mimeType} />
-            Your browser does not support the video tag.
+            {t('documents.videoTagUnsupported', 'Your browser does not support the video tag.')}
         </video>
     );
 }
@@ -250,6 +250,21 @@ function DocumentStorageCardComponent({
     const [hasLoadedPreview, setHasLoadedPreview] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
+    const documentName = document.document_name || t('documents.unnamed', 'Untitled');
+    const isVideoDocument = Boolean(document.mime_type && document.mime_type.startsWith('video/'));
+    const deleteTitle = isVideoDocument
+        ? t('documents.deleteVideoTitle', 'Delete Video')
+        : t('documents.deleteTitle', 'Delete Document');
+    const deleteMessage = isVideoDocument
+        ? t('documents.deleteVideoMessage', 'Are you sure you want to delete the video "{{name}}"? This action cannot be undone.', { name: documentName })
+        : t('documents.deleteMessage', 'Are you sure you want to delete "{{name}}"? This action cannot be undone.', { name: documentName });
+    const removeTitle = isVideoDocument
+        ? t('documents.removeVideoTitle', 'Remove Video')
+        : t('documents.removeTitle', 'Remove Document');
+    const removeMessage = isVideoDocument
+        ? t('documents.removeVideoMessage', 'Are you sure you want to remove the video "{{name}}" from this item? The file will remain available in the document library.', { name: documentName })
+        : t('documents.removeMessage', 'Are you sure you want to remove "{{name}}" from this item? The document will still be available in the document library.', { name: documentName });
+
 
     const loadPreview = async () => {
         const identifierForPreview = document.file_id || document.document_id;
@@ -282,28 +297,28 @@ function DocumentStorageCardComponent({
     useEffect(() => {
         if (!cardRef.current) return;
 
-        // const observer = new IntersectionObserver(
-        //     (entries) => {
-        //         entries.forEach((entry) => {
-        //             if (entry.isIntersecting) {
-        //                 setIsInView(true);
-        //             }
-        //         });
-        //     },
-        //     {
-        //         // Start loading when card is 100px away from viewport
-        //         rootMargin: '100px',
-        //         threshold: 0.01
-        //     }
-        // );
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    if (entry.isIntersecting) {
+                        setIsInView(true);
+                    }
+                });
+            },
+            {
+                // Start loading when card is 100px away from viewport
+                rootMargin: '100px',
+                threshold: 0.01
+            }
+        );
 
-        // observer.observe(cardRef.current);
+        observer.observe(cardRef.current);
 
-        // return () => {
-        //     if (cardRef.current) {
-        //         observer.unobserve(cardRef.current);
-        //     }
-        // };
+        return () => {
+            if (cardRef.current) {
+                observer.unobserve(cardRef.current);
+            }
+        };
     }, []);
 
     // Load preview only when in view and hasn't been loaded yet
@@ -621,10 +636,10 @@ function DocumentStorageCardComponent({
             isOpen={showDeleteConfirmation}
             onClose={() => setShowDeleteConfirmation(false)}
             onConfirm={confirmDelete}
-            title="Delete Document"
-            message={`Are you sure you want to delete "${document.document_name}"? This action cannot be undone.`}
-            confirmLabel="Delete"
-            cancelLabel="Cancel"
+            title={deleteTitle}
+            message={deleteMessage}
+            confirmLabel={t('documents.delete', 'Delete')}
+            cancelLabel={t('common.cancel', 'Cancel')}
             isConfirming={isLoading}
         />
 
@@ -636,10 +651,10 @@ function DocumentStorageCardComponent({
                     isOpen={showDisassociateConfirmation}
                     onClose={() => setShowDisassociateConfirmation(false)}
                     onConfirm={confirmDisassociate}
-                    title="Remove Document"
-                    message={`Are you sure you want to remove "${document.document_name}" from this item? The document will still be available in the document library.`}
-                    confirmLabel="Remove"
-                    cancelLabel="Cancel"
+                    title={removeTitle}
+                    message={removeMessage}
+                    confirmLabel={t('documents.remove', 'Remove')}
+                    cancelLabel={t('common.cancel', 'Cancel')}
                     isConfirming={isLoading}
                 />
             )
@@ -691,7 +706,7 @@ function DocumentStorageCardComponent({
                                 />
                             ) : (
                                 <div className="text-center p-8">
-                                    <p className="text-[rgb(var(--color-text-500))]">Preview not available for this file type.</p>
+                                    <p className="text-[rgb(var(--color-text-500))]">{t('documents.previewUnavailable', 'Preview unavailable')}</p>
                                     <Button
                                         id={`${id}-download-modal-button`}
                                         onClick={async () => {
@@ -706,7 +721,7 @@ function DocumentStorageCardComponent({
                                         className="mt-4"
                                     >
                                         <Download className="w-4 h-4 mr-2" />
-                                        Download File
+                                        {t('documents.downloadFile', 'Download File')}
                                     </Button>
                                 </div>
                             )}

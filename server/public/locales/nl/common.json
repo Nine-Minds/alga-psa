@@ -29,7 +29,17 @@
     "download": "Downloaden",
     "upload": "Uploaden",
     "refresh": "Vernieuwen",
-    "close": "Sluiten"
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "add": "Toevoegen",
+    "remove": "Verwijderen",
+    "clear": "Wissen",
+    "reset": "Resetten",
+    "view": "Bekijken",
+    "copy": "Kopiëren",
+    "duplicate": "Dupliceren",
+    "openMenu": "Menu openen",
+    "confirmDeletion": "Verwijderen bevestigen"
   },
   "status": {
     "loading": "Bezig met laden...",
@@ -42,7 +52,8 @@
     "active": "Actief",
     "inactive": "Inactief",
     "completed": "Voltooid",
-    "cancelled": "Geannuleerd"
+    "cancelled": "Geannuleerd",
+    "processing": "Bezig..."
   },
   "messages": {
     "welcome": "Welkom",
@@ -54,7 +65,8 @@
     "required": "Dit veld is verplicht",
     "invalidEmail": "Ongeldig e-mailadres",
     "invalidPassword": "Ongeldig wachtwoord",
-    "passwordMismatch": "Wachtwoorden komen niet overeen"
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "confirmDeletion": "Verwijderen bevestigen"
   },
   "errors": {
     "auth": {
@@ -228,5 +240,8 @@
     "rowsPerPage": "Rijen per pagina",
     "first": "Eerste",
     "last": "Laatste"
+  },
+  "fields": {
+    "notes": "Notities"
   }
 }

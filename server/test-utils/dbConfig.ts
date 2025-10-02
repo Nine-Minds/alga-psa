@@ -28,7 +28,7 @@ export function verifyTestDatabase(dbName: string): void {
  * @returns Knex instance configured for testing
  */
 export async function createTestDbConnection(): Promise<Knex> {
-  const dbName = 'sebastian_test';
+  const dbName = process.env.DB_NAME_SERVER || 'sebastian_test';
   verifyTestDatabase(dbName);
 
   const config: Knex.Config = {

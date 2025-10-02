@@ -31,6 +31,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ReflectionParentContext } from 'server/src/types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, FormFieldComponent } from 'server/src/types/ui-reflection/types';
 import { useTranslation } from 'server/src/lib/i18n/client';
+import { interpolateFallback } from 'server/src/lib/i18n/interpolateFallback';
 
 interface CompanyLocationsProps {
   companyId: string;
@@ -186,7 +187,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 helperText={t('companies.locations.card.phoneHelper', 'Phone number for this location')}
               >
                 <div className="mt-1">
-                  {t('companies.locations.card.phoneValue', 'Phone: {{phone}}', { phone: location.phone })}
+                  {`${t('companies.locations.card.phoneLabel', 'Phone')}: ${location.phone}`}
                 </div>
               </LocationDetailField>
             )}
@@ -198,7 +199,7 @@ const LocationCard: React.FC<LocationCardProps> = ({ location, onEdit, onDelete,
                 value={location.email}
                 helperText={t('companies.locations.card.emailHelper', 'Email address for this location')}
               >
-                {t('companies.locations.card.emailValue', 'Email: {{email}}', { email: location.email })}
+                {`${t('companies.locations.card.emailLabel', 'Email')}: ${location.email}`}
               </LocationDetailField>
             )}
             
@@ -942,9 +943,11 @@ export default function CompanyLocations({ companyId, isEditing }: CompanyLocati
         onConfirm={confirmDeleteLocation}
         title={t('companies.locations.dialog.deleteTitle', 'Delete Location')}
         message={locationToDelete
-          ? t(
-              'companies.locations.dialog.deleteMessage',
-              'Are you sure you want to delete the location "{{name}}"? This action cannot be undone.',
+          ? interpolateFallback(
+              t('companies.locations.dialog.deleteMessage', {
+                defaultValue: 'Are you sure you want to delete the location "{{name}}"? This action cannot be undone.',
+                name: locationToDelete.location_name || t('companies.locations.card.unnamed', 'Unnamed Location'),
+              }),
               {
                 name: locationToDelete.location_name || t('companies.locations.card.unnamed', 'Unnamed Location'),
               }

@@ -1,6 +1,6 @@
 {
   "name": "server",
-  "version": "0.11.0",
+  "version": "0.11.5",
   "private": true,
   "type": "module",
   "engines": {
@@ -187,7 +187,6 @@
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@faker-js/faker": "^9.9.0",
-
     "@testing-library/react": "^16.2.0",
     "@types/archiver": "^6.0.3",
     "@types/jsonwebtoken": "^9.0.8",

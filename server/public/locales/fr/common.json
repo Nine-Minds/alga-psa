@@ -29,7 +29,17 @@
     "download": "Télécharger",
     "upload": "Téléverser",
     "refresh": "Actualiser",
-    "close": "Fermer"
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "clear": "Effacer",
+    "reset": "Réinitialiser",
+    "view": "Afficher",
+    "copy": "Copier",
+    "duplicate": "Dupliquer",
+    "openMenu": "Ouvrir le menu",
+    "confirmDeletion": "Confirmer la suppression"
   },
   "status": {
     "loading": "Chargement...",
@@ -42,7 +52,8 @@
     "active": "Actif",
     "inactive": "Inactif",
     "completed": "Terminé",
-    "cancelled": "Annulé"
+    "cancelled": "Annulé",
+    "processing": "Traitement en cours..."
   },
   "messages": {
     "welcome": "Bienvenue",
@@ -54,7 +65,8 @@
     "required": "Ce champ est obligatoire",
     "invalidEmail": "Adresse e-mail invalide",
     "invalidPassword": "Mot de passe invalide",
-    "passwordMismatch": "Les mots de passe ne correspondent pas"
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "confirmDeletion": "Confirmer la suppression"
   },
   "errors": {
     "auth": {
@@ -228,5 +240,8 @@
     "rowsPerPage": "Lignes par page",
     "first": "Première",
     "last": "Dernière"
+  },
+  "fields": {
+    "notes": "Notes"
   }
 }
