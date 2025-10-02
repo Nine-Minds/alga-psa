@@ -90,6 +90,13 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
 
   // Apply branding colors to buttons
   useEffect(() => {
+    // Check if server-side styles already exist
+    const serverStyles = document.getElementById('server-tenant-branding-styles');
+    if (serverStyles) {
+      console.log('ClientPortalSignIn: Server-side styles already present, skipping client-side injection');
+      return;
+    }
+
     if (branding?.secondaryColor) {
       // For sign-in page, use secondary color for the primary button
       const secondaryShades = generateColorShades(branding.secondaryColor);
