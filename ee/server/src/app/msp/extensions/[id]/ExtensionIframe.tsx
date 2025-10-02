@@ -34,8 +34,26 @@ export default function ExtensionIframe({ domain }: Props) {
       // ignore
     }
 
+    // Listen for the 'ready' message from the extension to hide loading state
+    const handleMessage = (ev: MessageEvent) => {
+      // Validate origin matches the expected extension domain
+      if (ev.origin !== allowedOrigin) return;
+
+      const data = ev.data;
+      // Check for Alga envelope format with ready message
+      if (data?.alga === true && data?.version === '1' && data?.type === 'ready') {
+        setIsLoading(false);
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+
     bootstrapIframe({ iframe, allowedOrigin });
-  }, [src]);
+
+    return () => {
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [src, domain]);
 
   useEffect(() => {
     // Reset state whenever the domain changes so we show the loading state again.
@@ -74,7 +92,6 @@ export default function ExtensionIframe({ domain }: Props) {
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         sandbox="allow-scripts allow-forms allow-popups allow-same-origin"
-        onLoad={() => setIsLoading(false)}
         onError={() => {
           setHasError(true);
           setIsLoading(false);
