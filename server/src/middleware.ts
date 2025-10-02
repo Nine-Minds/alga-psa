@@ -16,12 +16,17 @@ const _middleware = auth((request) => {
   // Create a response that will be modified throughout the middleware chain
   let response = NextResponse.next();
 
+  // Add pathname header for use in layouts (e.g., for branding injection)
+  response.headers.set('x-pathname', pathname);
+
   // Apply i18n middleware first (unless path should skip it)
   if (!shouldSkipI18n(pathname)) {
     const i18nResponse = i18nMiddleware(request);
     // Merge i18n response headers and cookies into our response
     if (i18nResponse instanceof NextResponse) {
       response = i18nResponse;
+      // Preserve the pathname header
+      response.headers.set('x-pathname', pathname);
     }
   }
 
@@ -65,13 +70,17 @@ const _middleware = auth((request) => {
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
-      return NextResponse.redirect(loginUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
     } else if (request.auth.user?.user_type !== 'internal') {
       // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
       const redirectTarget = canonicalUrlEnv
         ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
         : new URL('/client-portal/dashboard', request.nextUrl);
-      return NextResponse.redirect(redirectTarget);
+      const redirectResponse = NextResponse.redirect(redirectTarget);
+      redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+      return redirectResponse;
     }
   }
 
@@ -91,7 +100,9 @@ const _middleware = auth((request) => {
           callback: callbackUrl,
           redirect: canonicalLogin.toString(),
         });
-        return NextResponse.redirect(canonicalLogin);
+        const redirectResponse = NextResponse.redirect(canonicalLogin);
+        redirectResponse.headers.set('x-pathname', canonicalLogin.pathname);
+        return redirectResponse;
       }
 
       const loginUrl = request.nextUrl.clone();
@@ -102,13 +113,17 @@ const _middleware = auth((request) => {
       } else {
         loginUrl.searchParams.set('callbackUrl', callbackUrlAbsolute.pathname + callbackUrlAbsolute.search);
       }
-      return NextResponse.redirect(loginUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
     } else if (request.auth.user?.user_type !== 'client') {
       // Prevent non-client users (internal) from accessing client portal
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/client-portal/signin';
       loginUrl.searchParams.set('error', 'AccessDenied');
-      return NextResponse.redirect(loginUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
     }
   }
 

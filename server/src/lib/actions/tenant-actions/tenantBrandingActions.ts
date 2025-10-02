@@ -3,12 +3,14 @@
 import { getConnection } from '@/lib/db/db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { revalidateTag } from 'next/cache';
+import { generateBrandingStyles } from '@/lib/branding/generateBrandingStyles';
 
 export interface TenantBranding {
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
   companyName: string;
+  computedStyles?: string; // Cached CSS styles
 }
 
 /**
@@ -34,7 +36,15 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
 
   const existingSettings = existingRecord?.settings || {};
 
-  // Build updated settings with branding
+  // Precompute CSS styles for performance
+  const computedStyles = generateBrandingStyles({
+    logoUrl: branding.logoUrl,
+    primaryColor: branding.primaryColor,
+    secondaryColor: branding.secondaryColor,
+    companyName: branding.companyName,
+  });
+
+  // Build updated settings with branding and computed styles
   const updatedSettings = {
     ...existingSettings,
     branding: {
@@ -42,6 +52,7 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       companyName: branding.companyName,
+      computedStyles, // Store precomputed CSS
     }
   };
 

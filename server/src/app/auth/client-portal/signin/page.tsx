@@ -34,7 +34,7 @@ export default async function ClientSignInPage({
     return redirect(callbackUrl);
   }
 
-  // Get the current domain from headers
+  // Get the current domain from headers (styles are injected in root layout)
   const headersList = await headers();
   const host = headersList.get('host') || '';
 
