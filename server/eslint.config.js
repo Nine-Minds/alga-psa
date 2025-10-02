@@ -4,6 +4,10 @@ import tseslint from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import pluginReact from "eslint-plugin-react";
 import customRules from "../eslint-plugin-custom-rules/index.js";
+import { fileURLToPath } from "url";
+import path from "path";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
@@ -26,11 +30,11 @@ export default [
       parserOptions: {
         ecmaVersion: 2020,
         sourceType: "module",
-        project: "./tsconfig.json",
+        project: [path.join(__dirname, "tsconfig.eslint.json")],
         ecmaFeatures: {
           jsx: true
         },
-        tsconfigRootDir: ".",
+        tsconfigRootDir: __dirname,
       },
     },
 

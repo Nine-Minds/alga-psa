@@ -31,31 +31,70 @@ export async function createTestDbConnection(): Promise<Knex> {
   const dbName = 'sebastian_test';
   verifyTestDatabase(dbName);
 
-  const config: Knex.Config = {
+  const baseConnection = await buildBaseConnectionConfig();
+  await ensureTestDatabaseExists(dbName, baseConnection);
+
+  return knex({
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
-      user: process.env.DB_USER_ADMIN || 'postgres',
-      password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password'),
-      database: dbName,
+      ...baseConnection,
+      database: dbName
     },
     asyncStackTraces: true,
     pool: {
       min: 2,
-      max: 20,
+      max: 20
     },
     migrations: {
-      directory: path.join(serverRoot, 'migrations'),
+      directory: path.join(serverRoot, 'migrations')
     },
     seeds: {
-      directory: path.join(serverRoot, 'seeds', 'dev'),
-    },
+      directory: path.join(serverRoot, 'seeds', 'dev')
+    }
+  });
+}
+
+async function buildBaseConnectionConfig(): Promise<Knex.StaticConnectionConfig> {
+  const directHost = process.env.DB_DIRECT_HOST || process.env.DB_HOST || 'localhost';
+  const directPort = Number(process.env.DB_DIRECT_PORT || 5432);
+
+  return {
+    host: directHost,
+    port: directPort,
+    user: process.env.DB_USER_ADMIN || 'postgres',
+    password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password')
   };
+}
 
-  console.log(config);
+async function ensureTestDatabaseExists(
+  databaseName: string,
+  baseConnection: Knex.StaticConnectionConfig
+): Promise<void> {
+  const adminDb = knex({
+    client: 'pg',
+    connection: {
+      ...baseConnection,
+      database: 'postgres'
+    },
+    pool: {
+      min: 1,
+      max: 2
+    }
+  });
 
-  return knex(config);
+  try {
+    const { rows } = await adminDb.raw('SELECT 1 FROM pg_database WHERE datname = ?', [databaseName]);
+    if (!rows?.length) {
+      const safeDbName = databaseName.replace(/"/g, '""');
+      await adminDb.raw(`CREATE DATABASE "${safeDbName}"`);
+    }
+  } catch (error) {
+    if (!/already exists/i.test(String(error))) {
+      throw error;
+    }
+  } finally {
+    await adminDb.destroy().catch(() => undefined);
+  }
 }
 
 /**

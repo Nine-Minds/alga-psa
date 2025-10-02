@@ -37,12 +37,20 @@ exports.seed = async function(knex) {
     display_subcategory: true,
     display_order: 100,
     is_default: false,
-    is_inactive: false,
-    created_at: knex.fn.now(),
-    updated_at: knex.fn.now()
+    is_inactive: false
   });
 
   console.log('Created ITIL Support channel for testing');
+
+  const createdByUser = await knex('users')
+    .where('tenant', tenant.tenant)
+    .orderBy('created_at')
+    .first();
+
+  if (!createdByUser) {
+    console.log('No user found for tenant, skipping ITIL priorities seed');
+    return;
+  }
 
   // Copy ITIL priorities from standard_priorities to tenant's priorities table
   // This simulates what should happen automatically when an ITIL channel is created
@@ -68,8 +76,8 @@ exports.seed = async function(knex) {
         is_from_itil_standard: true,
         itil_priority_level: stdPriority.itil_priority_level,
         item_type: stdPriority.item_type,
-        created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
+        created_by: createdByUser.user_id,
+        created_at: knex.fn.now()
       });
     }
   }

@@ -2040,8 +2040,12 @@ export class BillingEngine {
         invoiceId,
         company, // Pass company object
         tenant, // Pass tenant
-        invoice.invoice_number // Pass invoice number
-        // expirationDate is optional and not needed here
+        invoice.invoice_number, // Pass invoice number
+        undefined,
+        {
+          transactionType: 'invoice_adjustment',
+          description: `Adjusted invoice ${invoice.invoice_number}`
+        }
       );
       console.log(`[recalculateInvoice] Finished updateInvoiceTotalsAndRecordTransaction for invoice ${invoiceId}`);
 
