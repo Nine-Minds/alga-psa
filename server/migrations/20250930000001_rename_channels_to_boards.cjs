@@ -89,36 +89,42 @@ exports.up = async function(knex) {
   console.log(`Data synced (${insertedCount.rows[0].count} total records in boards)`);
 
   // Step 3: Create new standard_boards table
-  console.log('Creating standard_boards table...');
-  await knex.schema.createTable('standard_boards', (table) => {
-    table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
-    table.text('board_name').notNullable().unique();
-    table.text('description');
-    table.integer('display_order').notNullable().defaultTo(0);
-    table.boolean('is_inactive').defaultTo(false);
-    table.boolean('is_default').defaultTo(false);
-    table.text('category_type').defaultTo('custom');
-    table.text('priority_type').defaultTo('custom');
-    table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
-    table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
-  });
+  const standardBoardsExists = await knex.schema.hasTable('standard_boards');
 
-  // Add check constraints for standard_boards
-  await knex.raw(`
-    ALTER TABLE standard_boards
-    ADD CONSTRAINT standard_boards_category_type_check
-    CHECK (category_type IN ('custom', 'itil'))
-  `);
+  if (standardBoardsExists) {
+    console.log('standard_boards table already exists, skipping creation...');
+  } else {
+    console.log('Creating standard_boards table...');
+    await knex.schema.createTable('standard_boards', (table) => {
+      table.uuid('id').primary().defaultTo(knex.raw('gen_random_uuid()'));
+      table.text('board_name').notNullable().unique();
+      table.text('description');
+      table.integer('display_order').notNullable().defaultTo(0);
+      table.boolean('is_inactive').defaultTo(false);
+      table.boolean('is_default').defaultTo(false);
+      table.text('category_type').defaultTo('custom');
+      table.text('priority_type').defaultTo('custom');
+      table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
+      table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
+    });
 
-  await knex.raw(`
-    ALTER TABLE standard_boards
-    ADD CONSTRAINT standard_boards_priority_type_check
-    CHECK (priority_type IN ('custom', 'itil'))
-  `);
+    // Add check constraints for standard_boards
+    await knex.raw(`
+      ALTER TABLE standard_boards
+      ADD CONSTRAINT standard_boards_category_type_check
+      CHECK (category_type IN ('custom', 'itil'))
+    `);
 
-  // Add indexes for standard_boards
-  await knex.raw('CREATE INDEX idx_standard_boards_category_type ON standard_boards(category_type)');
-  await knex.raw('CREATE INDEX idx_standard_boards_priority_type ON standard_boards(priority_type)');
+    await knex.raw(`
+      ALTER TABLE standard_boards
+      ADD CONSTRAINT standard_boards_priority_type_check
+      CHECK (priority_type IN ('custom', 'itil'))
+    `);
+
+    // Add indexes for standard_boards
+    await knex.raw('CREATE INDEX idx_standard_boards_category_type ON standard_boards(category_type)');
+    await knex.raw('CREATE INDEX idx_standard_boards_priority_type ON standard_boards(priority_type)');
+  }
 
   // Step 4: Copy data from standard_channels to standard_boards (only missing records)
   console.log('Copying data from standard_channels to standard_boards...');
