@@ -10,51 +10,59 @@ exports.up = async function(knex) {
   console.log('Starting channels to boards rename migration...');
 
   // Step 1: Create new boards table with all columns from channels
-  console.log('Creating boards table...');
-  await knex.schema.createTable('boards', (table) => {
-    table.uuid('tenant').notNullable();
-    table.uuid('board_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
-    table.text('board_name').notNullable();
-    table.boolean('display_contact_name_id').defaultTo(true);
-    table.boolean('display_priority').defaultTo(true);
-    table.boolean('display_severity').defaultTo(true);
-    table.boolean('display_urgency').defaultTo(true);
-    table.boolean('display_impact').defaultTo(true);
-    table.boolean('display_category').defaultTo(true);
-    table.boolean('display_subcategory').defaultTo(true);
-    table.boolean('display_assigned_to').defaultTo(true);
-    table.boolean('display_status').defaultTo(true);
-    table.boolean('display_due_date').defaultTo(true);
-    table.boolean('is_inactive').defaultTo(false);
-    table.boolean('is_default').defaultTo(false);
-    table.boolean('display_itil_impact').defaultTo(false);
-    table.boolean('display_itil_urgency').defaultTo(false);
-    table.text('category_type').defaultTo('custom');
-    table.text('priority_type').defaultTo('custom');
-    table.integer('display_order').notNullable().defaultTo(0);
-    table.text('description');
-    table.primary(['tenant', 'board_id']);
-    table.foreign('tenant').references('tenants.tenant');
-  });
+  const boardsExists = await knex.schema.hasTable('boards');
 
-  // Add check constraints
-  await knex.raw(`
-    ALTER TABLE boards
-    ADD CONSTRAINT boards_category_type_check
-    CHECK (category_type IN ('custom', 'itil'))
-  `);
+  if (boardsExists) {
+    console.log('boards table already exists, skipping creation...');
+  } else {
+    console.log('Creating boards table...');
+    await knex.schema.createTable('boards', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('board_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+      table.text('board_name').notNullable();
+      table.boolean('display_contact_name_id').defaultTo(true);
+      table.boolean('display_priority').defaultTo(true);
+      table.boolean('display_severity').defaultTo(true);
+      table.boolean('display_urgency').defaultTo(true);
+      table.boolean('display_impact').defaultTo(true);
+      table.boolean('display_category').defaultTo(true);
+      table.boolean('display_subcategory').defaultTo(true);
+      table.boolean('display_assigned_to').defaultTo(true);
+      table.boolean('display_status').defaultTo(true);
+      table.boolean('display_due_date').defaultTo(true);
+      table.boolean('is_inactive').defaultTo(false);
+      table.boolean('is_default').defaultTo(false);
+      table.boolean('display_itil_impact').defaultTo(false);
+      table.boolean('display_itil_urgency').defaultTo(false);
+      table.text('category_type').defaultTo('custom');
+      table.text('priority_type').defaultTo('custom');
+      table.integer('display_order').notNullable().defaultTo(0);
+      table.text('description');
+      table.primary(['tenant', 'board_id']);
+      table.foreign('tenant').references('tenants.tenant');
+    });
+  }
 
-  await knex.raw(`
-    ALTER TABLE boards
-    ADD CONSTRAINT boards_priority_type_check
-    CHECK (priority_type IN ('custom', 'itil'))
-  `);
+  if (!boardsExists) {
+    // Add check constraints
+    await knex.raw(`
+      ALTER TABLE boards
+      ADD CONSTRAINT boards_category_type_check
+      CHECK (category_type IN ('custom', 'itil'))
+    `);
 
-  // Add indexes
-  await knex.raw('CREATE INDEX idx_boards_tenant_category_type ON boards(tenant, category_type)');
-  await knex.raw('CREATE INDEX idx_boards_tenant_priority_type ON boards(tenant, priority_type)');
+    await knex.raw(`
+      ALTER TABLE boards
+      ADD CONSTRAINT boards_priority_type_check
+      CHECK (priority_type IN ('custom', 'itil'))
+    `);
 
-  // Step 2: Copy data from channels to boards
+    // Add indexes
+    await knex.raw('CREATE INDEX idx_boards_tenant_category_type ON boards(tenant, category_type)');
+    await knex.raw('CREATE INDEX idx_boards_tenant_priority_type ON boards(tenant, priority_type)');
+  }
+
+  // Step 2: Copy data from channels to boards (only missing records)
   console.log('Copying data from channels to boards...');
   await knex.raw(`
     INSERT INTO boards (
@@ -65,15 +73,20 @@ exports.up = async function(knex) {
       priority_type, display_order, description
     )
     SELECT
-      tenant, channel_id, channel_name, display_contact_name_id, display_priority,
-      display_severity, display_urgency, display_impact, display_category,
-      display_subcategory, display_assigned_to, display_status, display_due_date,
-      is_inactive, is_default, display_itil_impact, display_itil_urgency, category_type,
-      priority_type, display_order, description
-    FROM channels
+      c.tenant, c.channel_id, c.channel_name, c.display_contact_name_id, c.display_priority,
+      c.display_severity, c.display_urgency, c.display_impact, c.display_category,
+      c.display_subcategory, c.display_assigned_to, c.display_status, c.display_due_date,
+      c.is_inactive, c.is_default, c.display_itil_impact, c.display_itil_urgency, c.category_type,
+      c.priority_type, c.display_order, c.description
+    FROM channels c
+    LEFT JOIN boards b ON c.tenant = b.tenant AND c.channel_id = b.board_id
+    WHERE b.board_id IS NULL
   `);
 
-  console.log('Data copied successfully');
+  const insertedCount = await knex.raw(`
+    SELECT COUNT(*) as count FROM boards
+  `);
+  console.log(`Data synced (${insertedCount.rows[0].count} total records in boards)`);
 
   // Step 3: Create new standard_boards table
   console.log('Creating standard_boards table...');
@@ -107,7 +120,7 @@ exports.up = async function(knex) {
   await knex.raw('CREATE INDEX idx_standard_boards_category_type ON standard_boards(category_type)');
   await knex.raw('CREATE INDEX idx_standard_boards_priority_type ON standard_boards(priority_type)');
 
-  // Step 4: Copy data from standard_channels to standard_boards
+  // Step 4: Copy data from standard_channels to standard_boards (only missing records)
   console.log('Copying data from standard_channels to standard_boards...');
   await knex.raw(`
     INSERT INTO standard_boards (
@@ -115,12 +128,17 @@ exports.up = async function(knex) {
       category_type, priority_type, created_at, updated_at
     )
     SELECT
-      id, channel_name, description, display_order, is_inactive, is_default,
-      category_type, priority_type, created_at, updated_at
-    FROM standard_channels
+      sc.id, sc.channel_name, sc.description, sc.display_order, sc.is_inactive, sc.is_default,
+      sc.category_type, sc.priority_type, sc.created_at, sc.updated_at
+    FROM standard_channels sc
+    LEFT JOIN standard_boards sb ON sc.id = sb.id
+    WHERE sb.id IS NULL
   `);
 
-  console.log('Standard boards data copied successfully');
+  const standardCount = await knex.raw(`
+    SELECT COUNT(*) as count FROM standard_boards
+  `);
+  console.log(`Standard boards synced (${standardCount.rows[0].count} total records)`);
 
   // Step 5: Add board_id column to related tables and copy data
   console.log('Updating categories table...');
