@@ -7,18 +7,20 @@ import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifi
 import { BrandingProvider } from "server/src/components/providers/BrandingProvider";
 import type { Session } from "next-auth";
 import type { TenantBranding } from "server/src/lib/actions/tenant-actions/tenantBrandingActions";
+import type { SupportedLocale } from "server/src/lib/i18n/config";
 
 interface Props {
   children: React.ReactNode;
   session: Session | null;
   branding: TenantBranding | null;
+  initialLocale?: SupportedLocale | null;
 }
 
-export function ClientPortalLayoutClient({ children, session, branding }: Props) {
+export function ClientPortalLayoutClient({ children, session, branding, initialLocale }: Props) {
   return (
     <AppSessionProvider session={session}>
       <PostHogUserIdentifier />
-      <I18nWrapper portal="client">
+      <I18nWrapper portal="client" initialLocale={initialLocale || undefined}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalLayout>
             {children}

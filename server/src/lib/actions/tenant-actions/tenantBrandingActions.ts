@@ -72,8 +72,9 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
     });
   }
 
-  // Invalidate cache for tenant branding
+  // Invalidate cache for tenant branding and related portal config
   revalidateTag('tenant-branding');
+  revalidateTag('tenant-portal-config');
 
   return { success: true };
 }

@@ -13,21 +13,25 @@ const _middleware = auth((request) => {
   const requestHost = request.headers.get('host') || '';
   const requestHostname = requestHost.split(':')[0];
 
+  // Clone request headers so we can pass additional metadata downstream
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
+
   // Create a response that will be modified throughout the middleware chain
-  let response = NextResponse.next();
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
 
   // Add pathname header for use in layouts (e.g., for branding injection)
   response.headers.set('x-pathname', pathname);
 
   // Apply i18n middleware first (unless path should skip it)
   if (!shouldSkipI18n(pathname)) {
-    const i18nResponse = i18nMiddleware(request);
-    // Merge i18n response headers and cookies into our response
-    if (i18nResponse instanceof NextResponse) {
-      response = i18nResponse;
-      // Preserve the pathname header
-      response.headers.set('x-pathname', pathname);
-    }
+    response = i18nMiddleware(request, response);
+    // Ensure header persists after i18n adjustments
+    response.headers.set('x-pathname', pathname);
   }
 
   // Only handle API routes that need API key authentication

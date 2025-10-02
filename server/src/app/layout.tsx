@@ -76,7 +76,9 @@ export default async function RootLayout({
   // Check if this is a client portal route and inject branding styles
   const headersList = await headers();
   const host = headersList.get('host') || '';
-  const pathname = headersList.get('x-pathname') || '';
+  const pathname = headersList.get('x-pathname')
+    || headersList.get('x-middleware-pathname')
+    || '';
 
   // Determine if we're on a client portal page
   const isClientPortal = pathname.includes('/client-portal') || pathname.includes('/auth/client-portal');

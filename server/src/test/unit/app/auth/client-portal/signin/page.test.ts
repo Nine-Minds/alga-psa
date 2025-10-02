@@ -7,6 +7,7 @@ const redirectMock = vi.fn();
 const getSessionMock = vi.fn();
 const headersMock = vi.fn();
 const getTenantBrandingByDomainMock = vi.fn();
+const getTenantLocaleByDomainMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
   redirect: redirectMock,
@@ -22,6 +23,11 @@ vi.mock('next/headers', () => ({
 
 vi.mock('server/src/lib/actions/tenant-actions/getTenantBrandingByDomain', () => ({
   getTenantBrandingByDomain: getTenantBrandingByDomainMock,
+  getTenantLocaleByDomain: getTenantLocaleByDomainMock,
+}));
+
+vi.mock('server/src/components/i18n/I18nWrapper', () => ({
+  I18nWrapper: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock('server/src/components/auth/ClientPortalSignIn', () => ({
@@ -40,6 +46,7 @@ describe('ClientPortalSignInPage', () => {
     getSessionMock.mockReset();
     headersMock.mockReset();
     getTenantBrandingByDomainMock.mockReset();
+    getTenantLocaleByDomainMock.mockReset();
 
     if (typeof originalNextAuthUrl === 'undefined') {
       delete process.env.NEXTAUTH_URL;
@@ -51,6 +58,7 @@ describe('ClientPortalSignInPage', () => {
       get: (key: string) => (key === 'host' ? 'vanity.example.com' : null),
     });
     getTenantBrandingByDomainMock.mockResolvedValue(null);
+    getTenantLocaleByDomainMock.mockResolvedValue('es');
   });
 
   afterEach(() => {
