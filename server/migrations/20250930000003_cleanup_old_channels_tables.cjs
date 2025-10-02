@@ -361,16 +361,7 @@ exports.up = async function(knex) {
     console.log('  ✓ Dropped channel_id from tickets');
   }
 
-  if (hasTagsTable) {
-    const hasChannelId = await knex.schema.hasColumn('tags', 'channel_id');
-    if (hasChannelId) {
-      await knex.schema.alterTable('tags', (table) => {
-        table.dropColumn('channel_id');
-      });
-      console.log('  ✓ Dropped channel_id from tags');
-    }
-  }
-
+  const hasTagDefinitions = await knex.schema.hasTable('tag_definitions');
   if (hasTagDefinitions) {
     const hasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
     if (hasChannelId) {
