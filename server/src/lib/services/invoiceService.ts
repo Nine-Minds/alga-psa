@@ -5,7 +5,7 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceItem as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
-import { IBillingCharge, IFixedPriceCharge, IService } from 'server/src/interfaces/billing.interfaces'; // Added import
+import { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from 'server/src/interfaces/billing.interfaces'; // Added import
 import { ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -128,7 +128,7 @@ export async function persistManualInvoiceItems(
         .first();
       if (!service) {
         console.warn(`Service ID ${requestItem.service_id} provided for manual item but not found.`);
-        // Decide if this should throw an error or just proceed without service context
+        throw new Error(`Service not found: ${requestItem.service_id}`);
       }
     }
     // --- Determine Tax Info based on Service's Tax Rate ID ---
@@ -935,8 +935,16 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   // subtotal and computedTotalTax are now calculated implicitly by summing items
   tenant: string,
   invoiceNumber: string,
-  expirationDate?: string
+  expirationDate?: string,
+  options: {
+    transactionType?: TransactionType;
+    description?: string;
+  } = {}
 ): Promise<void> {
+  const {
+    transactionType = 'invoice_generated',
+    description
+  } = options;
 
   // Recalculate totals directly from the updated invoice items
   const finalItems = await tx('invoice_items').where({ invoice_id: invoiceId });
@@ -970,9 +978,11 @@ export async function updateInvoiceTotalsAndRecordTransaction(
     company_id: company.company_id,
     invoice_id: invoiceId,
     amount: Math.round(finalTotalAmount), // Use rounded final amount
-    type: 'invoice_generated',
+    type: transactionType,
     status: 'completed',
-    description: `Generated invoice ${invoiceNumber}`,
+    description: description ?? (transactionType === 'invoice_generated'
+      ? `Generated invoice ${invoiceNumber}`
+      : `Adjusted invoice ${invoiceNumber}`),
     created_at: Temporal.Now.instant().toString(),
     tenant,
     balance_after: currentBalance + Math.round(finalTotalAmount), // Use rounded final amount

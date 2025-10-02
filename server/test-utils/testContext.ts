@@ -37,6 +37,12 @@ export interface TestContextOptions {
    * @default "admin"
    */
   userType?: 'client' | 'internal';
+
+  /**
+   * Whether to run a full database reset between tests
+   * @default true
+   */
+  resetBetweenTests?: boolean;
 }
 
 /**
@@ -44,13 +50,76 @@ export interface TestContextOptions {
  */
 export class TestContext {
   public static currentTenantId: string;
-  public db!: Knex;
+  private rootDb!: Knex;
+  private activeTransaction: Knex.Transaction | null = null;
+  private baseTenantId?: string;
+  private tenantKnexMockApplied = false;
   public tenantId!: string;
   public companyId!: string;
   public userId!: string;
   public company!: ICompany;
   public user!: IUserWithRoles;
   private options: TestContextOptions;
+
+  public get db(): Knex {
+    if (this.activeTransaction) {
+      return this.activeTransaction;
+    }
+
+    if (!this.rootDb) {
+      throw new Error('Test database connection not initialized');
+    }
+
+    return this.rootDb;
+  }
+
+  private async bindTenantKnexToTransaction(): Promise<void> {
+    if (this.tenantKnexMockApplied) {
+      return;
+    }
+
+    try {
+      const { vi } = await import('vitest');
+      const dbModule = await import('server/src/lib/db');
+      const tenantModule = await import('server/src/lib/tenant');
+
+      if (!vi?.spyOn) {
+        return;
+      }
+
+      vi.spyOn(dbModule, 'createTenantKnex').mockImplementation(async () => ({
+        knex: this.db,
+        tenant: this.tenantId
+      }));
+
+      if (typeof dbModule.getCurrentTenantId === 'function') {
+        vi.spyOn(dbModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
+      }
+
+      if (typeof dbModule.runWithTenant === 'function') {
+        vi.spyOn(dbModule, 'runWithTenant').mockImplementation(async (_tenant, fn) => fn());
+      }
+
+      if (tenantModule?.getTenantForCurrentRequest) {
+        vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockImplementation(async () => this.tenantId ?? null);
+      }
+
+      if (tenantModule?.getTenantFromHeaders) {
+        vi.spyOn(tenantModule, 'getTenantFromHeaders').mockImplementation(() => this.tenantId ?? null);
+      }
+
+      this.tenantKnexMockApplied = true;
+    } catch (error) {
+      // If vitest or the db module aren't available (e.g. non-test environments), skip mocking
+      if (process.env.NODE_ENV === 'test') {
+        console.warn('Failed to bind tenant Knex to transaction:', error);
+      }
+    }
+  }
+
+  public get transaction(): Knex.Transaction | null {
+    return this.activeTransaction;
+  }
 
   constructor(options: TestContextOptions = {}) {
     this.options = {
@@ -59,6 +128,7 @@ export class TestContext {
       setupCommands: [],
       companyName: 'Test Company',
       userType: 'internal',
+      resetBetweenTests: true,
       ...options
     };
   }
@@ -68,58 +138,114 @@ export class TestContext {
    */
   async initialize(): Promise<void> {
     try {
-      // Initialize database connection
-      this.db = await createTestDbConnection();
+      const setupDb = await createTestDbConnection();
 
-      // Reset database state
-      await resetDatabase(this.db, {
+      await resetDatabase(setupDb, {
         runSeeds: this.options.runSeeds,
         cleanupTables: this.options.cleanupTables,
         preSetupCommands: this.options.setupCommands
       });
 
-      // Create test tenant
-      // this.tenantId = await createTenant(this.db);
+      await setupDb.destroy();
 
-      const tenant = await this.db('tenants').first();
-      this.tenantId = tenant.tenant;
-      TestContext.currentTenantId = this.tenantId;
+      this.rootDb = await createTestDbConnection();
 
-      // Create test company
-      this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
-
-      // Get company details with full details
-      this.company = await this.db('companies')
-        .where({ 
-          company_id: this.companyId,
-          tenant: this.tenantId 
-        })
-        .first();
-
-      if (!this.company) {
-        throw new Error(`Failed to find company with ID ${this.companyId}`);
-      }
-
-      this.company = this.company as ICompany;
-
-      // Create test user
-      this.userId = await createUser(this.db, this.tenantId, {
-        first_name: `Test ${this.options.userType}`,
-        user_type: this.options.userType
-      });
-
-      // Get user details with roles
-      this.user = await this.db('users')
-        .select('users.*')
-        .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-        .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-        .where('users.user_id', this.userId)
-        .first() as IUserWithRoles;
-
+      await this.ensureTenantInitialized();
+      await this.beginTestTransaction();
+      await this.prepareTransactionalState();
     } catch (error) {
       console.error('Error initializing test context:', error);
       throw error;
     }
+  }
+
+  private async ensureTenantInitialized(): Promise<void> {
+    if (!this.rootDb) {
+      throw new Error('Test database connection not initialized');
+    }
+
+    const tenantRecord = await this.rootDb('tenants').first();
+
+    if (tenantRecord?.tenant) {
+      this.baseTenantId = tenantRecord.tenant as string;
+    } else {
+      this.baseTenantId = await createTenant(this.rootDb);
+    }
+
+    this.tenantId = this.baseTenantId;
+    TestContext.currentTenantId = this.tenantId;
+  }
+
+  private async beginTestTransaction(): Promise<void> {
+    if (!this.rootDb) {
+      throw new Error('Test database connection not initialized');
+    }
+
+    this.activeTransaction = await this.rootDb.transaction();
+  }
+
+  private async prepareTransactionalState(): Promise<void> {
+    if (!this.baseTenantId) {
+      await this.ensureTenantInitialized();
+    }
+
+    this.tenantId = this.baseTenantId as string;
+    TestContext.currentTenantId = this.tenantId;
+
+    if (this.options.cleanupTables?.length) {
+      await this.truncateCleanupTables(this.db, this.options.cleanupTables);
+    }
+
+    if (this.options.setupCommands?.length) {
+      for (const command of this.options.setupCommands) {
+        await this.db.raw(command);
+      }
+    }
+
+    await this.ensureBaseEntities();
+    await this.bindTenantKnexToTransaction();
+  }
+
+  private async truncateCleanupTables(db: Knex, tables: string[]): Promise<void> {
+    const uniqueTables = Array.from(new Set(tables));
+
+    if (!uniqueTables.length) {
+      return;
+    }
+
+    const quotedTables = uniqueTables
+      .map(table => table.replace(/"/g, '""'))
+      .map(table => `"${table}"`)
+      .join(', ');
+
+    if (!quotedTables.length) {
+      return;
+    }
+
+    await db.raw(`TRUNCATE TABLE ${quotedTables} RESTART IDENTITY CASCADE`);
+  }
+
+  private async rollbackActiveTransaction(): Promise<void> {
+    if (!this.activeTransaction) {
+      return;
+    }
+
+    const trx = this.activeTransaction;
+    this.activeTransaction = null;
+
+    await trx.rollback().catch(error => {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (
+        message.includes('Transaction rejected with non-error') ||
+        message.includes('Transaction query already complete')
+      ) {
+        return;
+      }
+
+      console.error('Error rolling back test transaction:', error);
+      throw error;
+    });
   }
 
   /**
@@ -127,54 +253,82 @@ export class TestContext {
    */
   async reset(): Promise<void> {
     try {
-      await resetDatabase(this.db, {
-        runSeeds: this.options.runSeeds,
-        cleanupTables: this.options.cleanupTables,
-        preSetupCommands: this.options.setupCommands
-      });
-
-      // Re-create test data
-      const tenant = await this.db('tenants').first();
-      this.tenantId = tenant.tenant;
-      TestContext.currentTenantId = this.tenantId;
-      this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
-      this.userId = await createUser(this.db, this.tenantId, {
-        first_name: `Test ${this.options.userType}`,
-        user_type: this.options.userType
-      });
-
-      // Refresh entity references
-      this.company = await this.db('companies')
-        .where({ 
-          company_id: this.companyId,
-          tenant: this.tenantId 
-        })
-        .first();
-
-      if (!this.company) {
-        throw new Error(`Failed to find company with ID ${this.companyId}`);
-      }
-
-      this.company = this.company as ICompany;
-
-      // this.user = await this.db('users')
-      //   .select('users.*')
-      //   .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
-      //   .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
-      //   .where('users.user_id', this.userId)
-      //   .first() as IUserWithRoles;
+      await this.rollbackActiveTransaction();
+      await this.beginTestTransaction();
+      await this.prepareTransactionalState();
     } catch (error) {
       console.error('Error resetting test context:', error);
       throw error;
     }
   }
 
+  async finishTestTransaction(): Promise<void> {
+    await this.rollbackActiveTransaction();
+  }
+
+  private async ensureBaseEntities(): Promise<void> {
+    if (!this.tenantId) {
+      const tenant = await this.db('tenants').first();
+      this.tenantId = tenant?.tenant;
+      TestContext.currentTenantId = this.tenantId;
+    }
+
+    if (!this.tenantId) {
+      throw new Error('Tenant not initialized in ensureBaseEntities');
+    }
+
+    let companyRecord = this.companyId
+      ? await this.db('companies')
+          .where({ company_id: this.companyId, tenant: this.tenantId })
+          .first()
+      : null;
+
+    if (!companyRecord) {
+      this.companyId = await createCompany(this.db, this.tenantId, this.options.companyName);
+      companyRecord = await this.db('companies')
+        .where({ company_id: this.companyId, tenant: this.tenantId })
+        .first();
+    }
+
+    if (!companyRecord) {
+      throw new Error('Failed to ensure company record');
+    }
+
+    this.company = companyRecord as ICompany;
+
+    let userRecord = this.userId
+      ? await this.db('users')
+          .where({ user_id: this.userId, tenant: this.tenantId })
+          .first()
+      : null;
+
+    if (!userRecord) {
+      this.userId = await createUser(this.db, this.tenantId, {
+        first_name: `Test ${this.options.userType}`,
+        user_type: this.options.userType
+      });
+
+      userRecord = await this.db('users')
+        .where({ user_id: this.userId, tenant: this.tenantId })
+        .first();
+    }
+
+    this.user = await this.db('users')
+      .select('users.*')
+      .leftJoin('user_roles', 'users.user_id', 'user_roles.user_id')
+      .leftJoin('roles', 'user_roles.role_id', 'roles.role_id')
+      .where('users.user_id', this.userId)
+      .first() as IUserWithRoles;
+  }
+
   /**
    * Cleans up the test context
    */
   async cleanup(): Promise<void> {
-    if (this.db) {
-      await this.db.destroy();
+    await this.rollbackActiveTransaction();
+
+    if (this.rootDb) {
+      await this.rootDb.destroy();
     }
   }
 
@@ -247,6 +401,13 @@ export class TestContext {
         return testContext.context;
       },
 
+      afterEach: async () => {
+        if (!testContext.context) {
+          return;
+        }
+        await testContext.context.finishTestTransaction();
+      },
+
       afterAll: async () => {
         if (testContext.context) {
           await testContext.context.cleanup();
@@ -254,6 +415,16 @@ export class TestContext {
         }
       }
     };
+
+    void import('vitest')
+      .then(({ afterEach }) => {
+        afterEach(async () => {
+          if (testContext.context) {
+            await testContext.context.finishTestTransaction();
+          }
+        });
+      })
+      .catch(() => undefined);
 
     return testContext;
   }

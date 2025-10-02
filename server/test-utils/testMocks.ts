@@ -133,6 +133,14 @@ export function setupCommonMocks(options: {
   mockNextCache();
   mockRBAC(options.permissionCheck);
   mockGetCurrentUser(user);
+  vi.mock('server/src/lib/auth/getSession', () => ({
+    getSession: vi.fn(() => Promise.resolve({
+      user: {
+        id: user.user_id,
+        tenant: tenantId
+      }
+    }))
+  }));
 
   return { tenantId, userId, user };
 }
