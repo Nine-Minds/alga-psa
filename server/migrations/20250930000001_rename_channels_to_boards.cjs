@@ -148,37 +148,46 @@ exports.up = async function(knex) {
 
   // Step 5: Add board_id column to related tables and copy data
   console.log('Updating categories table...');
-  await knex.schema.alterTable('categories', (table) => {
-    table.uuid('board_id');
-  });
-
+  const categoriesHasBoardId = await knex.schema.hasColumn('categories', 'board_id');
+  if (!categoriesHasBoardId) {
+    await knex.schema.alterTable('categories', (table) => {
+      table.uuid('board_id');
+    });
+  }
   await knex.raw(`
     UPDATE categories
     SET board_id = channel_id
+    WHERE board_id IS NULL AND channel_id IS NOT NULL
   `);
 
   console.log('Updating tickets table...');
-  await knex.schema.alterTable('tickets', (table) => {
-    table.uuid('board_id');
-  });
-
+  const ticketsHasBoardId = await knex.schema.hasColumn('tickets', 'board_id');
+  if (!ticketsHasBoardId) {
+    await knex.schema.alterTable('tickets', (table) => {
+      table.uuid('board_id');
+    });
+  }
   await knex.raw(`
     UPDATE tickets
     SET board_id = channel_id
+    WHERE board_id IS NULL AND channel_id IS NOT NULL
   `);
 
   console.log('Updating tags table...');
   const hasTagsTable = await knex.schema.hasTable('tags');
   if (hasTagsTable) {
     const hasChannelId = await knex.schema.hasColumn('tags', 'channel_id');
-    if (hasChannelId) {
+    const tagsHasBoardId = await knex.schema.hasColumn('tags', 'board_id');
+    if (hasChannelId && !tagsHasBoardId) {
       await knex.schema.alterTable('tags', (table) => {
         table.uuid('board_id');
       });
-
+    }
+    if (hasChannelId) {
       await knex.raw(`
         UPDATE tags
         SET board_id = channel_id
+        WHERE board_id IS NULL AND channel_id IS NOT NULL
       `);
     }
   }
@@ -187,15 +196,17 @@ exports.up = async function(knex) {
   const hasTagDefinitions = await knex.schema.hasTable('tag_definitions');
   if (hasTagDefinitions) {
     const hasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
-    if (hasChannelId) {
+    const tagDefsHasBoardId = await knex.schema.hasColumn('tag_definitions', 'board_id');
+    if (hasChannelId && !tagDefsHasBoardId) {
       await knex.schema.alterTable('tag_definitions', (table) => {
         table.uuid('board_id');
       });
-
+    }
+    if (hasChannelId) {
       await knex.raw(`
         UPDATE tag_definitions
         SET board_id = channel_id
-        WHERE channel_id IS NOT NULL
+        WHERE board_id IS NULL AND channel_id IS NOT NULL
       `);
     }
   }
