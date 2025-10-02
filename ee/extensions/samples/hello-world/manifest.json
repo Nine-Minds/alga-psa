@@ -4,6 +4,12 @@
   "version": "0.1.0",
   "runtime": "wasm-js@1",
   "capabilities": [],
-  "ui": { "type": "iframe", "entry": "ui/index.html" },
+  "ui": {
+    "type": "iframe",
+    "entry": "ui/index.html",
+    "hooks": {
+      "appMenu": { "label": "Hello World" }
+    }
+  },
   "assets": ["ui/**/*"]
 }
