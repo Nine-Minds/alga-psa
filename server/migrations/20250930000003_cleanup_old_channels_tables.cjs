@@ -17,7 +17,39 @@ exports.config = { transaction: false };
 exports.up = async function(knex) {
   console.log('Starting cleanup of old channels tables and columns...');
 
-  // Step 0: Make channel_id nullable in related tables (if not already)
+  // Step 0: Update views that use channel_id to use board_id instead
+  console.log('Updating views to use board_id instead of channel_id...');
+
+  const viewExists = await knex.raw(`
+    SELECT EXISTS (
+      SELECT FROM pg_views
+      WHERE viewname = 'v_ticket_details'
+    ) as exists
+  `);
+
+  if (viewExists.rows[0].exists) {
+    try {
+      // Get the current view definition
+      const viewDef = await knex.raw(`
+        SELECT pg_get_viewdef('v_ticket_details', true) as definition
+      `);
+      let viewDefinition = viewDef.rows[0].definition;
+
+      // Replace channel_id with board_id in the view definition
+      const updatedDefinition = viewDefinition.replace(/channel_id/g, 'board_id');
+
+      // Drop and recreate the view with updated definition
+      // In Citus, views are local to the coordinator, so this should work
+      await knex.raw(`DROP VIEW IF EXISTS v_ticket_details CASCADE`);
+      await knex.raw(`CREATE VIEW v_ticket_details AS ${updatedDefinition}`);
+      console.log('  ✓ Updated v_ticket_details view to use board_id');
+    } catch (error) {
+      console.log(`  ⚠ Could not update v_ticket_details view: ${error.message}`);
+      console.log('  You may need to manually update this view');
+    }
+  }
+
+  // Step 1: Make channel_id nullable in related tables (if not already)
   // This allows the app to use board_id while channel_id still exists
   console.log('Making channel_id nullable in related tables...');
 
@@ -47,6 +79,7 @@ exports.up = async function(knex) {
       console.log('  ✓ tag_definitions.channel_id is now nullable');
     }
   }
+
 
   // Verify boards table exists before proceeding
   const boardsExists = await knex.schema.hasTable('boards');
