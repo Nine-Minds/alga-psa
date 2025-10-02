@@ -17,6 +17,37 @@ exports.config = { transaction: false };
 exports.up = async function(knex) {
   console.log('Starting cleanup of old channels tables and columns...');
 
+  // Step 0: Make channel_id nullable in related tables (if not already)
+  // This allows the app to use board_id while channel_id still exists
+  console.log('Making channel_id nullable in related tables...');
+
+  const categoriesHasChannelId = await knex.schema.hasColumn('categories', 'channel_id');
+  if (categoriesHasChannelId) {
+    await knex.schema.alterTable('categories', (table) => {
+      table.uuid('channel_id').nullable().alter();
+    });
+    console.log('  ✓ categories.channel_id is now nullable');
+  }
+
+  const ticketsHasChannelId = await knex.schema.hasColumn('tickets', 'channel_id');
+  if (ticketsHasChannelId) {
+    await knex.schema.alterTable('tickets', (table) => {
+      table.uuid('channel_id').nullable().alter();
+    });
+    console.log('  ✓ tickets.channel_id is now nullable');
+  }
+
+  const tagDefsExists = await knex.schema.hasTable('tag_definitions');
+  if (tagDefsExists) {
+    const tagDefsHasChannelId = await knex.schema.hasColumn('tag_definitions', 'channel_id');
+    if (tagDefsHasChannelId) {
+      await knex.schema.alterTable('tag_definitions', (table) => {
+        table.uuid('channel_id').nullable().alter();
+      });
+      console.log('  ✓ tag_definitions.channel_id is now nullable');
+    }
+  }
+
   // Verify boards table exists before proceeding
   const boardsExists = await knex.schema.hasTable('boards');
   if (!boardsExists) {

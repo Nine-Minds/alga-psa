@@ -3,14 +3,19 @@
  * This migration should run after 20250930000001_rename_channels_to_boards.cjs
  * Dependencies: tenants, categories, tickets, tags, tag_definitions must be distributed first
  */
-const {
-  dropAndCaptureForeignKeys,
-  recreateForeignKeys
-} = require('./utils/foreign_key_manager.cjs');
 
 exports.config = { transaction: false };
 
 exports.up = async function(knex) {
+  // Check if we're in recovery mode (read replica/standby)
+  const inRecovery = await knex.raw(`SELECT pg_is_in_recovery() as in_recovery`);
+
+  if (inRecovery.rows[0].in_recovery) {
+    console.log('Database is in recovery mode (read replica). Skipping Citus distribution.');
+    console.log('This migration must run on the primary/coordinator node.');
+    return;
+  }
+
   // Check if Citus is enabled
   const citusEnabled = await knex.raw(`
     SELECT EXISTS (
@@ -43,7 +48,39 @@ exports.up = async function(knex) {
   if (channelsDistributed.rows[0].distributed) {
     console.log('Undistributing old channels table...');
     try {
-      await knex.raw(`SELECT undistribute_table('channels')`);
+      // First, drop all foreign keys referencing channels
+      const foreignKeys = await knex.raw(`
+        SELECT DISTINCT
+          tc.table_name,
+          tc.constraint_name
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.constraint_column_usage AS ccu USING (constraint_schema, constraint_name)
+        WHERE tc.constraint_type = 'FOREIGN KEY'
+        AND ccu.table_name = 'channels'
+      `);
+
+      for (const fk of foreignKeys.rows) {
+        console.log(`  Dropping ${fk.constraint_name} from ${fk.table_name}...`);
+        await knex.raw(`ALTER TABLE ${fk.table_name} DROP CONSTRAINT IF EXISTS ${fk.constraint_name}`);
+      }
+
+      // Check for any remaining FKs from channels to other tables (like channels -> tenants)
+      const channelsFKs = await knex.raw(`
+        SELECT
+          conname as constraint_name,
+          confrelid::regclass as referenced_table
+        FROM pg_constraint
+        WHERE conrelid = 'channels'::regclass
+        AND contype = 'f'
+      `);
+
+      for (const fk of channelsFKs.rows) {
+        console.log(`  Dropping ${fk.constraint_name} from channels (references ${fk.referenced_table})...`);
+        await knex.raw(`ALTER TABLE channels DROP CONSTRAINT IF EXISTS ${fk.constraint_name}`);
+      }
+
+      // Use cascade option to handle any remaining FK dependencies
+      await knex.raw(`SELECT undistribute_table('channels', cascade_via_foreign_keys=>true)`);
       console.log('  ✓ Undistributed channels table');
     } catch (error) {
       console.log(`  - Could not undistribute channels: ${error.message}`);
@@ -64,8 +101,28 @@ exports.up = async function(knex) {
   }
 
   try {
-    console.log('  Capturing and dropping foreign key constraints for boards...');
-    const capturedFKs = await dropAndCaptureForeignKeys(knex, 'boards');
+    console.log('  Capturing foreign key constraints for boards...');
+
+    // Manually capture FKs instead of using utility
+    const capturedFKs = await knex.raw(`
+      SELECT
+        conname as constraint_name,
+        pg_get_constraintdef(c.oid) as definition
+      FROM pg_constraint c
+      JOIN pg_namespace n ON n.oid = c.connamespace
+      WHERE c.conrelid = 'boards'::regclass
+      AND c.contype = 'f'
+    `);
+
+    console.log('  Dropping foreign key constraints for boards...');
+    for (const fk of capturedFKs.rows) {
+      try {
+        await knex.raw(`ALTER TABLE boards DROP CONSTRAINT IF EXISTS ${fk.constraint_name}`);
+        console.log(`    ✓ Dropped FK: ${fk.constraint_name}`);
+      } catch (e) {
+        console.log(`    - Could not drop ${fk.constraint_name}: ${e.message}`);
+      }
+    }
 
     // Drop unique constraints with CASCADE
     console.log('  Dropping unique constraints for boards...');
@@ -124,7 +181,13 @@ exports.up = async function(knex) {
 
     // Distribute the boards table
     console.log('  Distributing boards table...');
-    await knex.raw(`SELECT create_distributed_table('boards', 'tenant', colocate_with => 'tenants')`);
+    try {
+      await knex.raw(`SELECT create_distributed_table('boards', 'tenant', colocate_with => 'tenants')`);
+    } catch (e) {
+      // If colocation fails, try without it
+      console.log(`    Colocation not available, distributing without it...`);
+      await knex.raw(`SELECT create_distributed_table('boards', 'tenant')`);
+    }
     console.log('    ✓ Distributed boards table');
 
     // Recreate check constraints
@@ -157,7 +220,14 @@ exports.up = async function(knex) {
 
     // Recreate foreign keys
     console.log('  Recreating foreign keys for boards...');
-    await recreateForeignKeys(knex, 'boards', capturedFKs);
+    for (const fk of capturedFKs.rows) {
+      try {
+        await knex.raw(`ALTER TABLE boards ADD CONSTRAINT ${fk.constraint_name} ${fk.definition}`);
+        console.log(`    ✓ Recreated FK: ${fk.constraint_name}`);
+      } catch (e) {
+        console.log(`    - Could not recreate ${fk.constraint_name}: ${e.message}`);
+      }
+    }
 
     console.log('\n✓ boards table distributed successfully');
 
@@ -230,7 +300,7 @@ exports.up = async function(knex) {
   // Now update foreign keys in related tables to reference boards instead of channels
   console.log('\nUpdating foreign keys in related tables to reference boards...');
 
-  const relatedTables = ['categories', 'tickets', 'tags', 'tag_definitions'];
+  const relatedTables = ['categories', 'tickets', 'tag_definitions'];
 
   for (const table of relatedTables) {
     try {
