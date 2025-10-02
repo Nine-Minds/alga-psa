@@ -35,6 +35,39 @@ Prefer radix components over other libraries
     - [Table](../server/src/components/ui/Table.tsx)
     - [TextArea](../server/src/components/ui/TextArea.tsx)
 
+## Loading States for Remote Content
+
+- When embedding remote experiences (extension iframes, external dashboards, etc.), always surface a branded loading state until the surface reports it is ready.
+- Wrap the remote surface in a `relative` container and gate its visibility with an `isLoading` flag driven by the `onLoad`/`onError` lifecycle events.
+- Reuse the shared overlay styles defined in `server/src/app/globals.css` (`extension-loading-overlay`, `extension-loading-indicator`, `extension-loading-text`, `extension-loading-subtext`) to maintain consistent visuals.
+- Use the `LoadingIndicator` component with `layout="stacked"` for the primary status message and reserve the subtext paragraph for short explanations (<40 characters) so the layout stays balanced.
+- Example pattern:
+  ```tsx
+  <div className="relative h-full" aria-busy={isLoading}>
+    {isLoading && (
+      <div className="extension-loading-overlay" role="status">
+        <LoadingIndicator
+          layout="stacked"
+          className="extension-loading-indicator"
+          text="Starting extension"
+          textClassName="extension-loading-text"
+          spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+        />
+        <p className="extension-loading-subtext">Connecting to the runtime workspace&hellip;</p>
+      </div>
+    )}
+
+    <iframe
+      onLoad={() => setIsLoading(false)}
+      onError={() => {
+        setHasError(true);
+        setIsLoading(false);
+      }}
+      className={isLoading ? 'opacity-0' : 'opacity-100'}
+    />
+  </div>
+  ```
+
 ## Dialog Component Usage
 
 When implementing dialogs in the application, follow these guidelines:
