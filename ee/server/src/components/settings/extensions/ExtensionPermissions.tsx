@@ -35,7 +35,7 @@ const categorizePermissions = (permissions: string[]) => {
         categories['UI'].push(permission);
         break;
       case 'data':
-      case 'company':
+      case 'client':
       case 'contact':
       case 'invoice':
       case 'ticket':

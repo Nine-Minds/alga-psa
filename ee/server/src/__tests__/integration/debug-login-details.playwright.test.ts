@@ -13,7 +13,7 @@ test('debug exact login error messages', async ({ page }) => {
   try {
     // Create test tenant with admin user
     const tenantData = await createTestTenant(db, {
-      companyName: 'Debug Error Company',
+      clientName: 'Debug Error Client',
       adminUser: { 
         firstName: 'Debug', 
         lastName: 'Error', 

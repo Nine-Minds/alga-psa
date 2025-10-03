@@ -11,7 +11,7 @@ export * from './workflow/index';
 export * from './types/index';
 
 // Re-export canonical interfaces
-export * from './interfaces/company.interfaces';
+export * from './interfaces/client.interfaces';
 export * from './interfaces/contact.interfaces';
 export * from './interfaces/tag.interfaces';
 export * from './interfaces/validation.interfaces';

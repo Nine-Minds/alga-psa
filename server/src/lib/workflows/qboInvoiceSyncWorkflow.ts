@@ -9,9 +9,9 @@ const WorkflowState = {
   FAILED: 'FAILED'
 };
 
-type AlgaInvoice = { invoice_id: string; invoice_number: string; company_id: string; };
+type AlgaInvoice = { invoice_id: string; invoice_number: string; client_id: string; };
 type AlgaInvoiceItem = { id: string; invoice_id: string; service_id?: string; amount?: number; service_name?: string; };
-type AlgaCompany = { company_id: string; qbo_customer_id?: string; qbo_term_id?: string; };
+type AlgaClient = { client_id: string; qbo_customer_id?: string; qbo_term_id?: string; };
 type QboInvoiceData = { Line: any[]; CustomerRef: { value: string }; DocNumber: string; };
 type QboMappingInfo = { externalEntityId: string; metadata?: { syncToken?: string; }; };
 
@@ -39,7 +39,7 @@ interface WorkflowActions extends Record<string, (params: any) => Promise<any>> 
     }) => Promise<CreateTaskAndWaitForResultReturn>;
     getInvoice: (args: { id: string; tenantId: string }) => Promise<AlgaInvoice>;
     getInvoiceItems: (args: { invoiceId: string; tenantId: string }) => Promise<{ success: boolean; items: AlgaInvoiceItem[]; message?: string; error?: any; }>;
-    getCompany: (args: { id: string; tenantId: string }) => Promise<AlgaCompany>;
+    getClient: (args: { id: string; tenantId: string }) => Promise<AlgaClient>;
     lookupQboItemId: (args: { algaProductId: string; tenantId: string; realmId: string, qboCredentials: any }) => Promise<{ success: boolean; found: boolean; qboItemId?: string; message?: string; }>;
     create_human_task: (args: { taskType: string; title: string; description?: string; priority?: string; dueDate?: string; assignTo?: { roles?: string[]; users?: string[] }; contextData?: any; }) => Promise<{ success: boolean; taskId: string }>;
     triggerWorkflow: (args: { name: string; input: any; tenantId: string; }) => Promise<void>;
@@ -52,7 +52,7 @@ interface WorkflowActions extends Record<string, (params: any) => Promise<any>> 
         algaEntityId: string;
         externalSystemName: 'quickbooks_online';
         externalRealmId: string;
-        algaEntityType?: string; // Optional parameter, defaults to 'company' if not specified
+        algaEntityType?: string; // Optional parameter, defaults to 'client' if not specified
         tenantId: string;
     }) => Promise<{
         success: boolean;
@@ -264,7 +264,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             itemId,
             algaInvoiceId,
             invoiceNumber,
-            companyId,
+            clientId,
             realmId
         }: {
             serviceId: string;
@@ -272,7 +272,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             itemId: string;
             algaInvoiceId: string;
             invoiceNumber?: string;
-            companyId?: string;
+            clientId?: string;
             realmId: string;
         }
     ): Promise<TaskResolutionResult> {
@@ -288,8 +288,8 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             contextData: {
                 alga_service_id: serviceId,
                 service_name: serviceName || 'Unknown Product',
-                alga_company_id: companyId,
-                company_name: companyId || 'Unknown Company',
+                alga_client_id: clientId,
+                client_name: clientId || 'Unknown Client',
                 alga_invoice_id: algaInvoiceId,
                 tenant: ctx.tenant,
                 realm_id: realmId,
@@ -493,7 +493,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         itemId: item.id,
                         algaInvoiceId,
                         invoiceNumber: algaInvoice?.invoice_number,
-                        companyId: algaInvoice?.company_id,
+                        clientId: algaInvoice?.client_id,
                         realmId
                     });
                     
@@ -596,7 +596,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 algaEntityId: algaInvoice.invoice_id,
                 externalSystemName: 'quickbooks_online',
                 externalRealmId: realmId,
-                algaEntityType: 'invoice', // Specify entity type to avoid default of 'company'
+                algaEntityType: 'invoice', // Specify entity type to avoid default of 'client'
                 tenantId: ctx.tenant
             });
             
@@ -822,7 +822,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             success: boolean; 
             algaInvoice?: AlgaInvoice; 
             algaInvoiceItems?: AlgaInvoiceItem[]; 
-            algaCompany?: AlgaCompany;
+            algaClient?: AlgaClient;
         }> {
             logger.info('Fetching required invoice data', { executionId });
             setState(WorkflowState.RUNNING);
@@ -832,16 +832,16 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 const invoice = await typedActions.getInvoice({ id: algaInvoiceId, tenantId: tenant });
                 logger.info('Fetched invoice data', { invoice_number: invoice?.invoice_number, executionId });
 
-                if (!invoice?.company_id) {
-                    logger.error('Fetched invoice is missing company_id.', { alga_invoice_id: algaInvoiceId, tenant, executionId });
+                if (!invoice?.client_id) {
+                    logger.error('Fetched invoice is missing client_id.', { alga_invoice_id: algaInvoiceId, tenant, executionId });
                     await createAndWaitForHumanTask(typedActions, {
                         taskType: 'workflow_error',
-                        title: `Invalid Invoice Data: Missing Company (Invoice ID: ${algaInvoiceId})`,
-                        description: `The invoice data is missing a required company ID. This invoice cannot be synchronized with QuickBooks.`,
+                        title: `Invalid Invoice Data: Missing Client (Invoice ID: ${algaInvoiceId})`,
+                        description: `The invoice data is missing a required client ID. This invoice cannot be synchronized with QuickBooks.`,
                         priority: 'high',
                         userId,
                         contextData: {
-                            message: `The invoice ${algaInvoiceId} is missing a required company ID. Please ensure the invoice is associated with a company.`,
+                            message: `The invoice ${algaInvoiceId} is missing a required client ID. Please ensure the invoice is associated with a client.`,
                             alga_invoice_id: algaInvoiceId,
                             tenant,
                             workflow_instance_id: executionId
@@ -850,10 +850,10 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     return { success: false };
                 }
 
-                // Fetch invoice items and company data in parallel
-                const [invoiceItemsResult, company] = await Promise.all([
+                // Fetch invoice items and client data in parallel
+                const [invoiceItemsResult, client] = await Promise.all([
                     typedActions.getInvoiceItems({ invoiceId: algaInvoiceId, tenantId: tenant }),
-                    typedActions.getCompany({ id: invoice.company_id, tenantId: tenant })
+                    typedActions.getClient({ id: invoice.client_id, tenantId: tenant })
                 ]);
 
                 // Validate invoice items result
@@ -879,20 +879,20 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
                 const invoiceItems = invoiceItemsResult.items;
 
-                // Validate company data
-                if (!company) {
-                    logger.error('Failed to fetch company data.', { alga_invoice_id: algaInvoiceId, company_id: invoice.company_id, executionId });
+                // Validate client data
+                if (!client) {
+                    logger.error('Failed to fetch client data.', { alga_invoice_id: algaInvoiceId, client_id: invoice.client_id, executionId });
                     
                     await createAndWaitForHumanTask(typedActions, {
                         taskType: 'workflow_error',
-                        title: `Failed to Fetch Company Data for Invoice #${invoice.invoice_number || algaInvoiceId}`,
-                        description: `The system failed to fetch company data (ID: ${invoice.company_id}) for invoice #${invoice.invoice_number || algaInvoiceId}.`,
+                        title: `Failed to Fetch Client Data for Invoice #${invoice.invoice_number || algaInvoiceId}`,
+                        description: `The system failed to fetch client data (ID: ${invoice.client_id}) for invoice #${invoice.invoice_number || algaInvoiceId}.`,
                         priority: 'high',
                         userId,
                         contextData: {
-                            message: `Failed to fetch company data with ID ${invoice.company_id} needed for QuickBooks synchronization.`,
+                            message: `Failed to fetch client data with ID ${invoice.client_id} needed for QuickBooks synchronization.`,
                             alga_invoice_id: algaInvoiceId,
-                            company_id: invoice.company_id,
+                            client_id: invoice.client_id,
                             tenant,
                             workflow_instance_id: executionId
                         }
@@ -903,12 +903,12 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 // Store all data in workflow context
                 data.set('algaInvoice', invoice);
                 data.set('algaInvoiceItems', invoiceItems);
-                data.set('algaCompany', company);
+                data.set('algaClient', client);
                 
                 logger.info('Successfully fetched all required data', { 
                     invoice_number: invoice.invoice_number, 
                     items_count: invoiceItems.length, 
-                    company_id: company.company_id,
+                    client_id: client.client_id,
                     executionId 
                 });
                 
@@ -916,7 +916,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     success: true, 
                     algaInvoice: invoice, 
                     algaInvoiceItems: invoiceItems, 
-                    algaCompany: company 
+                    algaClient: client 
                 };
             } catch (error: any) {
                 logger.error('Exception occurred while fetching required data', { 
@@ -946,9 +946,9 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         // Check if we need to fetch data or if it's already in the workflow context
         let algaInvoice = data.get<AlgaInvoice>('algaInvoice');
         let retrievedInvoiceItemsArray = data.get<AlgaInvoiceItem[]>('algaInvoiceItems');
-        let algaCompany = data.get<AlgaCompany>('algaCompany');
+        let algaClient = data.get<AlgaClient>('algaClient');
         
-        if (!algaInvoice || !retrievedInvoiceItemsArray || !algaCompany) {
+        if (!algaInvoice || !retrievedInvoiceItemsArray || !algaClient) {
             // Fetch all required data
             const fetchResult = await fetchRequiredData();
             if (!fetchResult.success) {
@@ -959,10 +959,10 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             // Update local variables with fetched data
             algaInvoice = data.get<AlgaInvoice>('algaInvoice');
             retrievedInvoiceItemsArray = data.get<AlgaInvoiceItem[]>('algaInvoiceItems') || [];
-            algaCompany = data.get<AlgaCompany>('algaCompany');
+            algaClient = data.get<AlgaClient>('algaClient');
             
             // Final validation of data
-            if (!algaInvoice || !retrievedInvoiceItemsArray || !algaCompany) {
+            if (!algaInvoice || !retrievedInvoiceItemsArray || !algaClient) {
                 logger.error('Critical: Core data still missing after fetch.', { algaInvoiceId, executionId });
                 setState(WorkflowState.ERROR);
                 return;
@@ -970,7 +970,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         }
         
         // Initialize the customer ID for QBO
-        let qboCustomerIdToUse: string | undefined = algaCompany?.qbo_customer_id;
+        let qboCustomerIdToUse: string | undefined = algaClient?.qbo_customer_id;
         
         // --- Refactored Customer Processing Block ---
         let customerDetailsResolved = false;
@@ -978,11 +978,11 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
         let qboCustomerIdForInvoice: string | undefined; // To store the resolved ID for later use
 
         while (!customerDetailsResolved) {
-            // algaCompany is retrieved from data store at the start of the loop or re-fetched.
+            // algaClient is retrieved from data store at the start of the loop or re-fetched.
             // algaInvoice should have been fetched in the 'FETCHING_DATA' block.
-            // If algaInvoice or algaInvoice.company_id is missing here, it's a critical issue.
-            if (!algaInvoice || !algaInvoice.company_id) {
-                logger.error("Critical: AlgaInvoice or its company_id is not available for customer processing loop.", { executionId, attempt: customerProcessingAttempt, hasInvoice: !!algaInvoice });
+            // If algaInvoice or algaInvoice.client_id is missing here, it's a critical issue.
+            if (!algaInvoice || !algaInvoice.client_id) {
+                logger.error("Critical: AlgaInvoice or its client_id is not available for customer processing loop.", { executionId, attempt: customerProcessingAttempt, hasInvoice: !!algaInvoice });
                 setState("ERROR");
                 await typedActions.createTaskAndWaitForResult({
                     taskType: 'workflow_error',
@@ -1001,23 +1001,23 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 return; // Terminal workflow failure
             }
 
-            let currentAlgaCompany = data.get<AlgaCompany>('algaCompany');
-            if (!currentAlgaCompany || currentAlgaCompany.company_id !== algaInvoice.company_id || customerProcessingAttempt > 1) {
-                 logger.info('Fetching/Re-fetching AlgaCompany for customer processing.', { company_id: algaInvoice.company_id, attempt: customerProcessingAttempt, executionId });
-                 currentAlgaCompany = await typedActions.getCompany({ id: algaInvoice.company_id, tenantId: tenant });
-                 if (currentAlgaCompany) {
-                     data.set('algaCompany', currentAlgaCompany);
+            let currentAlgaClient = data.get<AlgaClient>('algaClient');
+            if (!currentAlgaClient || currentAlgaClient.client_id !== algaInvoice.client_id || customerProcessingAttempt > 1) {
+                 logger.info('Fetching/Re-fetching AlgaClient for customer processing.', { client_id: algaInvoice.client_id, attempt: customerProcessingAttempt, executionId });
+                 currentAlgaClient = await typedActions.getClient({ id: algaInvoice.client_id, tenantId: tenant });
+                 if (currentAlgaClient) {
+                     data.set('algaClient', currentAlgaClient);
                  } else {
-                    logger.error("Critical: Failed to fetch AlgaCompany.", { company_id: algaInvoice.company_id, executionId });
+                    logger.error("Critical: Failed to fetch AlgaClient.", { client_id: algaInvoice.client_id, executionId });
                     setState("ERROR");
                     await typedActions.createTaskAndWaitForResult({
                         taskType: 'workflow_error',
-                        title: `Critical: AlgaCompany Data Missing for Customer Processing (Invoice ID: ${algaInvoiceId})`,
-                        description: `The workflow encountered a critical error while processing invoice ${algaInvoiceId}. The AlgaCompany data is missing or incomplete. Please investigate the issue.`,
+                        title: `Critical: AlgaClient Data Missing for Customer Processing (Invoice ID: ${algaInvoiceId})`,
+                        description: `The workflow encountered a critical error while processing invoice ${algaInvoiceId}. The AlgaClient data is missing or incomplete. Please investigate the issue.`,
                         priority: 'high',
                         assignTo: userId ? { users: [userId] } : undefined,
                         contextData: {
-                            message: `Critical error: AlgaCompany data is missing or incomplete for invoice ${algaInvoiceId}. Please investigate.`,
+                            message: `Critical error: AlgaClient data is missing or incomplete for invoice ${algaInvoiceId}. Please investigate.`,
                             alga_invoice_id: algaInvoiceId,
                             tenant,
                             realm_id: realmId!,
@@ -1028,47 +1028,47 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                  }
             }
             
-            qboCustomerIdForInvoice = currentAlgaCompany.qbo_customer_id; // Initialize with current known ID from the (potentially refreshed) company object
+            qboCustomerIdForInvoice = currentAlgaClient.qbo_customer_id; // Initialize with current known ID from the (potentially refreshed) client object
 
-            logger.info(`Processing company ${currentAlgaCompany.company_id}, current QBO Customer ID from company object: ${qboCustomerIdForInvoice || 'None'}.`, { executionId });
+            logger.info(`Processing client ${currentAlgaClient.client_id}, current QBO Customer ID from client object: ${qboCustomerIdForInvoice || 'None'}.`, { executionId });
 
             // Part 1: Attempt to get QBO Customer ID from existing mapping
             setState(WorkflowState.RUNNING);
-            logger.info('Checking for QBO Customer mapping.', { company_id: currentAlgaCompany.company_id, executionId });
+            logger.info('Checking for QBO Customer mapping.', { client_id: currentAlgaClient.client_id, executionId });
             const mappingLookupResult = await typedActions.get_external_entity_mapping({
-                algaEntityId: currentAlgaCompany.company_id,
+                algaEntityId: currentAlgaClient.client_id,
                 externalSystemName: 'quickbooks_online',
                 externalRealmId: realmId!, // realmId is validated at the start of the workflow
-                algaEntityType: 'company', // Explicitly specify entity type for clarity
+                algaEntityType: 'client', // Explicitly specify entity type for clarity
                 tenantId: tenant,
             });
 
             if (mappingLookupResult.success) {
                 if (mappingLookupResult.found && mappingLookupResult.mapping?.externalEntityId) {
                     qboCustomerIdForInvoice = mappingLookupResult.mapping.externalEntityId;
-                    logger.info('QBO Customer ID found/confirmed via get_external_entity_mapping.', { qbo_customer_id: qboCustomerIdForInvoice, company_id: currentAlgaCompany.company_id, executionId });
-                    if (currentAlgaCompany.qbo_customer_id !== qboCustomerIdForInvoice) {
-                        logger.info('Updating algaCompany.qbo_customer_id with mapped ID.', { old_id: currentAlgaCompany.qbo_customer_id, new_id: qboCustomerIdForInvoice, executionId });
-                        currentAlgaCompany.qbo_customer_id = qboCustomerIdForInvoice;
-                        data.set('algaCompany', currentAlgaCompany); // Persist updated company
+                    logger.info('QBO Customer ID found/confirmed via get_external_entity_mapping.', { qbo_customer_id: qboCustomerIdForInvoice, client_id: currentAlgaClient.client_id, executionId });
+                    if (currentAlgaClient.qbo_customer_id !== qboCustomerIdForInvoice) {
+                        logger.info('Updating algaClient.qbo_customer_id with mapped ID.', { old_id: currentAlgaClient.qbo_customer_id, new_id: qboCustomerIdForInvoice, executionId });
+                        currentAlgaClient.qbo_customer_id = qboCustomerIdForInvoice;
+                        data.set('algaClient', currentAlgaClient); // Persist updated client
                     }
                     customerDetailsResolved = true;
                     break; // Exit while loop, customer ID is resolved
                 } else {
-                    logger.warn('No QBO Customer mapping found via get_external_entity_mapping. Will proceed to customer sync.', { company_id: currentAlgaCompany.company_id, executionId });
+                    logger.warn('No QBO Customer mapping found via get_external_entity_mapping. Will proceed to customer sync.', { client_id: currentAlgaClient.client_id, executionId });
                     qboCustomerIdForInvoice = undefined; // Ensure it's clear for the next step
                 }
             } else { // get_external_entity_mapping action itself failed
-                logger.error('get_external_entity_mapping action failed.', { company_id: currentAlgaCompany.company_id, error: mappingLookupResult.message, executionId });
+                logger.error('get_external_entity_mapping action failed.', { client_id: currentAlgaClient.client_id, error: mappingLookupResult.message, executionId });
                 setState(WorkflowState.ERROR);
                 const taskResolution = await typedActions.createTaskAndWaitForResult({
                     taskType: 'workflow_error',
                     title: `Resolve Customer Mapping Lookup: Invoice #${algaInvoice?.invoice_number || algaInvoiceId}`,
-                    description: `The workflow failed to look up QBO customer mapping for Alga Company ID ${currentAlgaCompany.company_id} in Realm ${realmId}. Error: ${mappingLookupResult.message || 'Unknown error'}. Please investigate and confirm resolution.`,
+                    description: `The workflow failed to look up QBO customer mapping for Alga Client ID ${currentAlgaClient.client_id} in Realm ${realmId}. Error: ${mappingLookupResult.message || 'Unknown error'}. Please investigate and confirm resolution.`,
                     priority: 'high',
                     assignTo: userId ? { users: [userId] } : undefined,
                     contextData: {
-                        message: `The workflow failed to look up QBO customer mapping for Alga Company ID ${currentAlgaCompany.company_id}. Error: ${mappingLookupResult.message}. Please investigate.`,
+                        message: `The workflow failed to look up QBO customer mapping for Alga Client ID ${currentAlgaClient.client_id}. Error: ${mappingLookupResult.message}. Please investigate.`,
                     },
                 });
                 if (taskResolution.success && taskResolution.resolutionData?.userFixedTheProblem) {
@@ -1083,7 +1083,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
             // Part 2: If no QBO Customer ID yet (qboCustomerIdForInvoice is undefined), trigger and await qboCustomerSyncWorkflow
             if (!qboCustomerIdForInvoice) {
-                logger.warn('QBO Customer ID is not yet resolved. Triggering Customer Sync.', { company_id: currentAlgaCompany.company_id, executionId });
+                logger.warn('QBO Customer ID is not yet resolved. Triggering Customer Sync.', { client_id: currentAlgaClient.client_id, executionId });
                 setState(WorkflowState.RUNNING);
 
                 const customerSyncSuccessEventName = `QBO_CUSTOMER_SYNC_COMPLETED_FOR_${executionId}_ATTEMPT_${customerProcessingAttempt}`;
@@ -1095,7 +1095,7 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                         triggerEvent: {
                             name: 'CUSTOMER_SYNC_REQUESTED_BY_INVOICE_WORKFLOW',
                             payload: {
-                                company_id: currentAlgaCompany.company_id,
+                                client_id: currentAlgaClient.client_id,
                                 tenantId: tenant,
                                 realmId: realmId!,
                                 originatingWorkflowInstanceId: executionId,
@@ -1116,17 +1116,17 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                 );
 
                 if (customerSyncOutcomeEvent.name === customerSyncSuccessEventName) {
-                    const { qbo_customer_id: qboIdFromSync, company_id: companyIdFromSyncEvent } = customerSyncOutcomeEvent.payload;
+                    const { qbo_customer_id: qboIdFromSync, client_id: clientIdFromSyncEvent } = customerSyncOutcomeEvent.payload;
                     logger.info('Customer sync success event received.', { executionId, payload: customerSyncOutcomeEvent.payload });
-                    if (qboIdFromSync && currentAlgaCompany.company_id === companyIdFromSyncEvent) {
-                        currentAlgaCompany.qbo_customer_id = qboIdFromSync;
-                        data.set('algaCompany', currentAlgaCompany); // Persist updated company
+                    if (qboIdFromSync && currentAlgaClient.client_id === clientIdFromSyncEvent) {
+                        currentAlgaClient.qbo_customer_id = qboIdFromSync;
+                        data.set('algaClient', currentAlgaClient); // Persist updated client
                         qboCustomerIdForInvoice = qboIdFromSync; // Update local variable for this scope
                         customerDetailsResolved = true;
-                        logger.info('Updated algaCompany in context with QBO Customer ID from sync event.', { qbo_customer_id: qboCustomerIdForInvoice, executionId });
+                        logger.info('Updated algaClient in context with QBO Customer ID from sync event.', { qbo_customer_id: qboCustomerIdForInvoice, executionId });
                         break; // Exit while loop, customer ID is resolved
                     } else {
-                        logger.error('Customer sync success event payload missing QBO customer ID, or company ID mismatch with current company.', { executionId, payload: customerSyncOutcomeEvent.payload, expectedCompanyId: currentAlgaCompany.company_id });
+                        logger.error('Customer sync success event payload missing QBO customer ID, or client ID mismatch with current client.', { executionId, payload: customerSyncOutcomeEvent.payload, expectedClientId: currentAlgaClient.client_id });
                         logger.warn('Continuing to next attempt in customer processing loop due to sync payload issue.', { executionId });
                         // Implicitly continue to the next iteration of the while loop
                     }
@@ -1136,11 +1136,11 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
                     const taskResolution = await typedActions.createTaskAndWaitForResult({
                         taskType: 'workflow_error',
                         title: `Customer Sync Failed for Invoice ${algaInvoice?.invoice_number || algaInvoiceId}`,
-                        description: `The customer sync for Company ID ${currentAlgaCompany.company_id} (related to Invoice ${algaInvoice?.invoice_number || algaInvoiceId}) failed. Error: ${customerSyncOutcomeEvent.payload?.error_message || 'Unknown error from customer sync'}. Please resolve the customer sync issue. You can then choose to retry syncing this invoice.`,
+                        description: `The customer sync for Client ID ${currentAlgaClient.client_id} (related to Invoice ${algaInvoice?.invoice_number || algaInvoiceId}) failed. Error: ${customerSyncOutcomeEvent.payload?.error_message || 'Unknown error from customer sync'}. Please resolve the customer sync issue. You can then choose to retry syncing this invoice.`,
                         priority: 'high',
                         assignTo: userId ? { users: [userId] } : undefined,
                         contextData: {
-                            message: `Customer sync failed for Company ID ${currentAlgaCompany.company_id}. Error: ${customerSyncOutcomeEvent.payload?.error_message}. Resolve and then decide to retry invoice sync.`,
+                            message: `Customer sync failed for Client ID ${currentAlgaClient.client_id}. Error: ${customerSyncOutcomeEvent.payload?.error_message}. Resolve and then decide to retry invoice sync.`,
                         }
                     });
                     if (taskResolution.success && taskResolution.resolutionData?.userFixedTheProblem) {
@@ -1160,14 +1160,14 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
         }
 
-        // Ensure algaCompany in data store is the latest version for subsequent steps.
-        // The qboCustomerIdForInvoice is now resolved and stored on currentAlgaCompany.qbo_customer_id, which is persisted in data.get('algaCompany').
-        algaCompany = data.get<AlgaCompany>('algaCompany')!; // Re-assign local algaCompany to the one from data store.
-        qboCustomerIdToUse = algaCompany?.qbo_customer_id; // Assign to qboCustomerIdToUse for subsequent logic
+        // Ensure algaClient in data store is the latest version for subsequent steps.
+        // The qboCustomerIdForInvoice is now resolved and stored on currentAlgaClient.qbo_customer_id, which is persisted in data.get('algaClient').
+        algaClient = data.get<AlgaClient>('algaClient')!; // Re-assign local algaClient to the one from data store.
+        qboCustomerIdToUse = algaClient?.qbo_customer_id; // Assign to qboCustomerIdToUse for subsequent logic
         logger.info(`Customer processing completed. Resolved QBO Customer ID for invoice ${algaInvoiceId}: ${qboCustomerIdToUse}`, { executionId });
         // --- End of Refactored Customer Processing Block ---
 
-        // algaCompany is already up-to-date from the end of the customer processing block.
+        // algaClient is already up-to-date from the end of the customer processing block.
 
         // Fetch QBO credentials using helper function
         const qboCredentialsResult = await fetchQboCredentials(helperContext, realmId!, algaInvoiceId);
@@ -1424,9 +1424,9 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
 
         logger.info(`Successfully prepared ${qboInvoiceLines.length} line items for QBO invoice.`, { executionId });
 
-        const qboTermId = algaCompany.qbo_term_id;
+        const qboTermId = algaClient.qbo_term_id;
         if (!qboTermId) {
-            logger.warn('QBO Term ID not found on company or lookup failed. Proceeding without term.', { company_id: algaCompany.company_id, executionId });
+            logger.warn('QBO Term ID not found on client or lookup failed. Proceeding without term.', { client_id: algaClient.client_id, executionId });
         }
 
         // Verify we have a QBO customer ID to use
@@ -1436,14 +1436,14 @@ export async function qboInvoiceSyncWorkflow(context: WorkflowContext): Promise<
             await createAndWaitForHumanTask(typedActions, {
                 taskType: 'workflow_error',
                 title: `System Error: Missing Customer - Invoice #${algaInvoice.invoice_number}`,
-                description: `Cannot sync invoice because the system couldn't find a QuickBooks customer for company ID ${algaCompany.company_id}.`,
+                description: `Cannot sync invoice because the system couldn't find a QuickBooks customer for client ID ${algaClient.client_id}.`,
                 priority: 'high',
                 userId: context.userId,
                 contextData: {
-                    message: `System error: The workflow couldn't find a QuickBooks customer ID for company ${algaCompany.company_id} when trying to sync invoice #${algaInvoice.invoice_number}. This indicates either a mapping issue or a system error. Please ensure the company is properly mapped to a QuickBooks customer or contact technical support.`,
+                    message: `System error: The workflow couldn't find a QuickBooks customer ID for client ${algaClient.client_id} when trying to sync invoice #${algaInvoice.invoice_number}. This indicates either a mapping issue or a system error. Please ensure the client is properly mapped to a QuickBooks customer or contact technical support.`,
                     alga_invoice_id: algaInvoiceId,
                     tenant: tenant,
-                    company_id: algaCompany.company_id,
+                    client_id: algaClient.client_id,
                     workflow_instance_id: executionId
                 }
             });

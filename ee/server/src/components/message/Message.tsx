@@ -9,7 +9,7 @@ type MessageProps = {
   messageId?: string,
   role: string;
   content: string;
-  companyUrl?: string;
+  clientUrl?: string;
   isFunction?: boolean;
 }
 
@@ -18,7 +18,7 @@ export const Message: React.FC<MessageProps> = (
     messageId,
     role,
     content,
-    companyUrl,
+    clientUrl,
     isFunction
   }
 ) => {
@@ -31,7 +31,7 @@ export const Message: React.FC<MessageProps> = (
 
     msg = msg.replace(/\[CONTEXT\][\s\S]*?\[\/CONTEXT\]/g, "")
     msg = msg.replace(/\[INST\]|\[\/INST\]/g, "").replace("<|end_of_text|><s>", "")
-    msg = msg.replace(/%link_to_ticket\("(\d+)"\)%/g, (match: any, g1: any) => `[Ticket ${g1}](${companyUrl?.replace("ticket_id", g1)})`)
+    msg = msg.replace(/%link_to_ticket\("(\d+)"\)%/g, (match: any, g1: any) => `[Ticket ${g1}](${clientUrl?.replace("ticket_id", g1)})`)
     msg = msg.replace(/###[\s\S]*?\[\/CONTEXT\]/g, ""); // Remove anything between ### and [/CONTEXT]
     msg = msg.replace("<|end_of_text|>", ""); // Remove <|end_of_text|> tags
 

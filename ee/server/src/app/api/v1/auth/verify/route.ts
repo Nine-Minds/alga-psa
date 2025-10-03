@@ -88,7 +88,7 @@ async function verifyTenantCredentials(email: string, password: string) {
             userId: user.id,
             tenant: {
               id: tenant.id,
-              name: tenant.company_name,
+              name: tenant.client_name,
               email: tenant.email,
               adminEmail: tenant.admin_email,
               status: tenant.status

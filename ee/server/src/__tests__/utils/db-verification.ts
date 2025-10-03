@@ -10,7 +10,7 @@ export interface TenantVerificationData {
   tenantId: string;
   tenantName: string;
   email: string;
-  companyId?: string;
+  clientId?: string;
   adminUserId: string;
 }
 
@@ -27,7 +27,7 @@ export async function verifyTenantCreation(
     .first();
 
   expect(tenant).toBeTruthy();
-  expect(tenant.company_name).toBe(tenantData.tenantName);
+  expect(tenant.client_name).toBe(tenantData.tenantName);
   expect(tenant.email).toBe(tenantData.email);
   expect(tenant.created_at).toBeTruthy();
   expect(tenant.updated_at).toBeTruthy();
@@ -71,35 +71,35 @@ export async function verifyAdminUserCreation(
 }
 
 /**
- * Verify company was created correctly (if applicable)
+ * Verify client was created correctly (if applicable)
  */
-export async function verifyCompanyCreation(
+export async function verifyClientCreation(
   db: Knex,
   tenantData: TenantVerificationData,
-  expectedCompanyName: string
+  expectedClientName: string
 ): Promise<void> {
-  if (!tenantData.companyId) {
-    return; // No company expected
+  if (!tenantData.clientId) {
+    return; // No client expected
   }
 
-  // Verify company exists
-  const company = await db('companies')
-    .where('company_id', tenantData.companyId)
+  // Verify client exists
+  const client = await db('clients')
+    .where('client_id', tenantData.clientId)
     .where('tenant', tenantData.tenantId)
     .first();
 
-  expect(company).toBeTruthy();
-  expect(company.company_name).toBe(expectedCompanyName);
-  expect(company.created_at).toBeTruthy();
+  expect(client).toBeTruthy();
+  expect(client.client_name).toBe(expectedClientName);
+  expect(client.created_at).toBeTruthy();
 
-  // Verify tenant-company association
-  const tenantCompany = await db('tenant_companies')
+  // Verify tenant-client association
+  const tenantClient = await db('tenant_companies')
     .where('tenant', tenantData.tenantId)
-    .where('company_id', tenantData.companyId)
+    .where('client_id', tenantData.clientId)
     .first();
 
-  expect(tenantCompany).toBeTruthy();
-  expect(tenantCompany.is_default).toBe(true);
+  expect(tenantClient).toBeTruthy();
+  expect(tenantClient.is_default).toBe(true);
 }
 
 /**
@@ -165,15 +165,15 @@ export async function verifyTenantIsolation(
     expect(userRoles.length).toBe(0);
   }
 
-  // Verify companies are properly isolated
-  const companies = await db('companies').where('tenant', tenantId);
-  for (const companyId of companies.map(c => c.company_id)) {
-    // Verify company doesn't appear in other tenants
-    const otherTenantCompanies = await db('companies')
-      .where('company_id', companyId)
+  // Verify clients are properly isolated
+  const clients = await db('clients').where('tenant', tenantId);
+  for (const clientId of clients.map(c => c.client_id)) {
+    // Verify client doesn't appear in other tenants
+    const otherTenantClients = await db('clients')
+      .where('client_id', clientId)
       .whereNotIn('tenant', [tenantId]);
     
-    expect(otherTenantCompanies.length).toBe(0);
+    expect(otherTenantClients.length).toBe(0);
   }
 }
 
@@ -185,7 +185,7 @@ export async function verifyCompleteTenantSetup(
   tenantData: TenantVerificationData,
   expectedData: {
     tenantName: string;
-    companyName?: string;
+    clientName?: string;
     adminUser: {
       firstName: string;
       lastName: string;
@@ -199,9 +199,9 @@ export async function verifyCompleteTenantSetup(
   // Verify admin user creation
   await verifyAdminUserCreation(db, tenantData, expectedData.adminUser);
 
-  // Verify company creation (if applicable)
-  if (expectedData.companyName && tenantData.companyId) {
-    await verifyCompanyCreation(db, tenantData, expectedData.companyName);
+  // Verify client creation (if applicable)
+  if (expectedData.clientName && tenantData.clientId) {
+    await verifyClientCreation(db, tenantData, expectedData.clientName);
   }
 
   // Verify email settings
@@ -223,20 +223,20 @@ export async function getTenantStats(
   tenantId: string
 ): Promise<{
   userCount: number;
-  companyCount: number;
+  clientCount: number;
   roleCount: number;
   hasEmailSettings: boolean;
 }> {
-  const [userCount, companyCount, roleCount, emailSettings] = await Promise.all([
+  const [userCount, clientCount, roleCount, emailSettings] = await Promise.all([
     db('users').where('tenant', tenantId).count('* as count').first(),
-    db('companies').where('tenant', tenantId).count('* as count').first(),
+    db('clients').where('tenant', tenantId).count('* as count').first(),
     db('roles').where('tenant', tenantId).count('* as count').first(),
     db('tenant_email_settings').where('tenant', tenantId).first(),
   ]);
 
   return {
     userCount: parseInt(userCount?.count as string) || 0,
-    companyCount: parseInt(companyCount?.count as string) || 0,
+    clientCount: parseInt(clientCount?.count as string) || 0,
     roleCount: parseInt(roleCount?.count as string) || 0,
     hasEmailSettings: !!emailSettings,
   };
@@ -250,10 +250,10 @@ export async function verifyTenantDataConsistency(
   tenantId: string
 ): Promise<void> {
   // Get all tenant data
-  const [tenant, users, companies, roles, userRoles] = await Promise.all([
+  const [tenant, users, clients, roles, userRoles] = await Promise.all([
     db('tenants').where('tenant', tenantId).first(),
     db('users').where('tenant', tenantId),
-    db('companies').where('tenant', tenantId),
+    db('clients').where('tenant', tenantId),
     db('roles').where('tenant', tenantId),
     db('user_roles').where('tenant', tenantId),
   ]);
@@ -265,8 +265,8 @@ export async function verifyTenantDataConsistency(
     expect(user.tenant).toBe(tenantId);
   }
 
-  for (const company of companies) {
-    expect(company.tenant).toBe(tenantId);
+  for (const client of clients) {
+    expect(client.tenant).toBe(tenantId);
   }
 
   for (const role of roles) {
@@ -325,10 +325,10 @@ export async function verifyTenantCleanup(
   db: Knex,
   tenantId: string
 ): Promise<void> {
-  const [tenants, users, companies, roles, userRoles, emailSettings, tenantCompanies, tenantSettings] = await Promise.all([
+  const [tenants, users, clients, roles, userRoles, emailSettings, tenantClients, tenantSettings] = await Promise.all([
     db('tenants').where('tenant', tenantId),
     db('users').where('tenant', tenantId),
-    db('companies').where('tenant', tenantId),
+    db('clients').where('tenant', tenantId),
     db('roles').where('tenant', tenantId),
     db('user_roles').where('tenant', tenantId),
     db('tenant_email_settings').where('tenant', tenantId),
@@ -339,10 +339,10 @@ export async function verifyTenantCleanup(
   // All should be empty after cleanup
   expect(tenants.length).toBe(0);
   expect(users.length).toBe(0);
-  expect(companies.length).toBe(0);
+  expect(clients.length).toBe(0);
   expect(roles.length).toBe(0);
   expect(userRoles.length).toBe(0);
   expect(emailSettings.length).toBe(0);
-  expect(tenantCompanies.length).toBe(0);
+  expect(tenantClients.length).toBe(0);
   expect(tenantSettings.length).toBe(0);
 }

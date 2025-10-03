@@ -96,7 +96,7 @@ def "main list" [
     let query = "
         SELECT 
             t.tenant,
-            t.company_name,
+            t.client_name,
             t.created_at,
             COUNT(DISTINCT u.user_id) as user_count,
             COUNT(DISTINCT tk.ticket_id) as ticket_count,
@@ -104,7 +104,7 @@ def "main list" [
         FROM tenants t
         LEFT JOIN users u ON t.tenant = u.tenant
         LEFT JOIN tickets tk ON t.tenant = tk.tenant
-        GROUP BY t.tenant, t.company_name, t.created_at
+        GROUP BY t.tenant, t.client_name, t.created_at
         ORDER BY t.created_at DESC
     "
     
@@ -121,7 +121,7 @@ def "main list" [
         let count_query = "
             SELECT 
                 (SELECT COUNT(*) FROM users WHERE tenant = '" + $row.tenant + "') +
-                (SELECT COUNT(*) FROM companies WHERE tenant = '" + $row.tenant + "') +
+                (SELECT COUNT(*) FROM clients WHERE tenant = '" + $row.tenant + "') +
                 (SELECT COUNT(*) FROM contacts WHERE tenant = '" + $row.tenant + "') +
                 (SELECT COUNT(*) FROM tickets WHERE tenant = '" + $row.tenant + "') +
                 (SELECT COUNT(*) FROM projects WHERE tenant = '" + $row.tenant + "') +
@@ -144,7 +144,7 @@ def "main list" [
         
         {
             tenant: $row.tenant
-            company: $row.company_name
+            client: $row.client_name
             created: ($row.created_at | str substring 0..10)
             users: $user_count
             tickets: $ticket_count
@@ -172,7 +172,7 @@ def "main inspect" [
         exit 1
     }
     
-    print $"Company: ($tenant.company_name)"
+    print $"Client: ($tenant.client_name)"
     print $"Created: ($tenant.created_at)"
     print "\nData breakdown:\n"
     
@@ -242,7 +242,7 @@ def "main cleanup" [
     }
     
     print $"Tenant ID: ($tenant_id)"
-    print $"Company: ($tenant.company_name)"
+    print $"Client: ($tenant.client_name)"
     print $"Created: ($tenant.created_at)"
     print $"Preserve tenant record: ($preserve_tenant)"
     print $"Environment: ($environment)"
@@ -337,15 +337,15 @@ def "main cleanup" [
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
-        "company_plan_bundles" "plan_service_rate_tiers" "plan_service_bucket_config"
+        "client_plan_bundles" "plan_service_rate_tiers" "plan_service_bucket_config"
         "plan_service_hourly_config" "plan_service_hourly_configs" "plan_service_usage_config"
         "plan_service_fixed_config" "plan_service_configuration" "billing_plan_fixed_config"
         "service_rate_tiers" "plan_discounts" "discounts"
-        "company_billing_plans" "company_billing_cycles" "company_billing_settings"
+        "client_billing_plans" "client_billing_cycles" "client_billing_settings"
         "plan_services" "bundle_billing_plans" "plan_bundles"
         
-        # Company details (must come before companies)
-        "company_tax_rates" "company_tax_settings"
+        # Client details (must come before clients)
+        "client_tax_rates" "client_tax_settings"
         "tenant_companies"
         
         # Project/task entities
@@ -399,12 +399,12 @@ def "main cleanup" [
         
         # === LEVEL 5: Tickets and related ===
         # Tickets MUST be deleted BEFORE categories, statuses, etc that it references
-        # AND BEFORE company_locations that tickets reference via location_id
+        # AND BEFORE client_locations that tickets reference via location_id
         "tickets"
         
-        # === LEVEL 6: Company locations (referenced by tickets.location_id) ===
+        # === LEVEL 6: Client locations (referenced by tickets.location_id) ===
         # Must be deleted AFTER tickets
-        "company_locations"
+        "client_locations"
         
         # === LEVEL 6: Lookup tables referenced by tickets ===
         # These can only be deleted AFTER tickets
@@ -419,8 +419,8 @@ def "main cleanup" [
         # === LEVEL 8: Breaking circular dependencies ===
         # There's a complex circular dependency:
         # - users.contact_id → contacts (with ON DELETE SET NULL that fails on NOT NULL constraint)
-        # - contacts.company_id → companies
-        # - companies.account_manager → users
+        # - contacts.client_id → clients
+        # - clients.account_manager → users
         
         # Tax configuration (no dependencies on core entities)
         "tax_components" "tax_rates" "tax_regions"
@@ -429,12 +429,12 @@ def "main cleanup" [
         "permissions" "roles" "teams"
         
         # The correct order to avoid constraint violations:
-        # 1. Delete companies first (after NULLing account_manager)
-        # 2. Delete contacts second (after NULLing company_id, before users that reference them)
+        # 1. Delete clients first (after NULLing account_manager)
+        # 2. Delete contacts second (after NULLing client_id, before users that reference them)
         # 3. Delete users last (they have NOT NULL contact_id that references contacts)
         
-        "companies"  # Delete companies FIRST (after NULLing account_manager references)
-        "contacts"   # Delete contacts SECOND (after companies, before users that have NOT NULL contact_id)
+        "clients"  # Delete clients FIRST (after NULLing account_manager references)
+        "contacts"   # Delete contacts SECOND (after clients, before users that have NOT NULL contact_id)
         "users"      # Delete users LAST (they have NOT NULL contact_id → contacts)
         
         # === LEVEL 7: Configuration and settings ===
@@ -485,30 +485,30 @@ def "main cleanup" [
         print "Breaking circular dependencies..."
         
         # The circular dependency chain:
-        # companies.account_manager_id → users.user_id
+        # clients.account_manager_id → users.user_id
         # users.contact_id → contacts.contact_id (NOT NULL constraint!)
-        # contacts.company_id → companies.company_id
+        # contacts.client_id → clients.client_id
         
-        # Step 1: NULL out account_manager_id in companies to break companies → users dependency
+        # Step 1: NULL out account_manager_id in clients to break clients → users dependency
         try {
-            let null_query = "UPDATE companies SET account_manager_id = NULL WHERE tenant = '" + $tenant_id + "'"
+            let null_query = "UPDATE clients SET account_manager_id = NULL WHERE tenant = '" + $tenant_id + "'"
             execute-sql $null_query --env-name $environment
-            print "  Cleared account_manager_id references in companies"
+            print "  Cleared account_manager_id references in clients"
         } catch {
             # Ignore if column doesn't exist or already NULL
         }
         
-        # Step 2: NULL out company_id in contacts to break contacts → companies dependency
+        # Step 2: NULL out client_id in contacts to break contacts → clients dependency
         try {
-            let null_query = "UPDATE contacts SET company_id = NULL WHERE tenant = '" + $tenant_id + "'"
+            let null_query = "UPDATE contacts SET client_id = NULL WHERE tenant = '" + $tenant_id + "'"
             execute-sql $null_query --env-name $environment
-            print "  Cleared company_id references in contacts"
+            print "  Cleared client_id references in contacts"
         } catch {
             # Ignore if column doesn't exist or already NULL
         }
         
         # Note: We cannot NULL users.contact_id because it has a NOT NULL constraint
-        # Instead, we'll delete in the order: companies → contacts → users
+        # Instead, we'll delete in the order: clients → contacts → users
         # This way contacts are deleted before users tries to reference them
     }
     
@@ -569,7 +569,7 @@ def "main cleanup" [
     print ("=" | fill -w 60)
     let mode_text = if $is_dry_run { "DRY RUN" } else { "ACTUAL DELETION" }
     print $"Mode: ($mode_text)"
-    print $"Tenant: ($tenant_id) \(($tenant.company_name)\)"
+    print $"Tenant: ($tenant_id) \(($tenant.client_name)\)"
     print $"Tables affected: ($tables_affected)"
     let action_text = if $is_dry_run { "to delete" } else { "deleted" }
     print $"Estimated total records ($action_text): ($total_deleted)"

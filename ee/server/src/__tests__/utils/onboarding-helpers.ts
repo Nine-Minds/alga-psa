@@ -71,7 +71,7 @@ export async function completeOnboardingWizard(
 
   // Complete the wizard with tenant-specific data
   await onboardingWizard.completeOnboardingFlow({
-    companyName: tenantData.company?.companyName || tenantData.tenant.tenantName,
+    clientName: tenantData.client?.clientName || tenantData.tenant.tenantName,
     skipOptionalSteps,
     ...customData,
   });
@@ -178,9 +178,9 @@ export async function testOnboardingNavigation(
     if (step < totalSteps) {
       // Skip or fill required fields for navigation
       const currentTitle = await onboardingWizard.getCurrentStepTitle();
-      if (currentTitle.toLowerCase().includes('company')) {
-        // Fill required company info
-        await onboardingWizard.page.locator('input[name="companyName"]').fill('Test Company');
+      if (currentTitle.toLowerCase().includes('client')) {
+        // Fill required client info
+        await onboardingWizard.page.locator('input[name="clientName"]').fill('Test Client');
       }
       
       try {
@@ -209,7 +209,7 @@ export async function testOnboardingValidation(
 
   await onboardingWizard.verifyWizardLoaded();
 
-  // Test required field validation on company info step
+  // Test required field validation on client info step
   await onboardingWizard.verifyStepVisible(1);
   
   // Try to proceed without filling required fields
@@ -235,7 +235,7 @@ export async function testOnboardingSkipFunctionality(
 
   // Complete required steps and skip optional ones
   await onboardingWizard.completeOnboardingFlow({
-    companyName: 'Skip Test Company',
+    clientName: 'Skip Test Client',
     skipOptionalSteps: true,
   });
 

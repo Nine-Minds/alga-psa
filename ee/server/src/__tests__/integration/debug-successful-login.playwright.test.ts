@@ -14,7 +14,7 @@ test('debug successful login attempt', async ({ page }) => {
     // Create test tenant with admin user
     console.log('Creating test tenant...');
     const tenantData = await createTestTenant(db, {
-      companyName: 'Debug Login Company',
+      clientName: 'Debug Login Client',
       adminUser: { 
         firstName: 'Debug', 
         lastName: 'Admin', 

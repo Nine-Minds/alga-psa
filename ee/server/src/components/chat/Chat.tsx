@@ -13,7 +13,7 @@ import { HfInference } from '@huggingface/inference';
 import "../../components/chat/chat.css";
 
 type ChatProps = {
-  companyUrl: string,
+  clientUrl: string,
   accountId: string,
   messages: any[],
   userRole: string,
@@ -28,7 +28,7 @@ type ChatProps = {
 };
 
 export const Chat: React.FC<ChatProps> = ({
-  companyUrl,
+  clientUrl,
   accountId,
   messages,
   userRole,
@@ -349,7 +349,7 @@ export const Chat: React.FC<ChatProps> = ({
                 messageId={message._id}
                 role={message.role}
                 content={message.content}
-                companyUrl={companyUrl}
+                clientUrl={clientUrl}
               />
             ))}
             {!!incomingMessage && (

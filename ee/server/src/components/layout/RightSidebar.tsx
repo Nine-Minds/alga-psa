@@ -6,7 +6,7 @@ const RightSidebarContent = lazy(() => import('./RightSidebarContent'));
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  companyUrl: string;
+  clientUrl: string;
   accountId: string;
   messages: any[];
   userId: string;

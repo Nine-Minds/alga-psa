@@ -63,12 +63,12 @@ test.describe('Tenant Onboarding Database Tests', () => {
     try {
       // Create multiple test tenants to verify password uniqueness
       const tenant1 = await createTestTenant(db, {
-        companyName: 'Test Company 1',
+        clientName: 'Test Client 1',
         adminUser: { firstName: 'Admin1', lastName: 'User', email: 'admin1@test.com' }
       });
       
       const tenant2 = await createTestTenant(db, {
-        companyName: 'Test Company 2', 
+        clientName: 'Test Client 2', 
         adminUser: { firstName: 'Admin2', lastName: 'User', email: 'admin2@test.com' }
       });
       
@@ -98,12 +98,12 @@ test.describe('Tenant Onboarding Database Tests', () => {
     try {
       // Create two separate tenants
       const tenant1 = await createTestTenant(db, {
-        companyName: 'Tenant 1 Company',
+        clientName: 'Tenant 1 Client',
         adminUser: { firstName: 'Admin1', lastName: 'User', email: 'admin1@tenant1.com' }
       });
       
       const tenant2 = await createTestTenant(db, {
-        companyName: 'Tenant 2 Company',
+        clientName: 'Tenant 2 Client',
         adminUser: { firstName: 'Admin2', lastName: 'User', email: 'admin2@tenant2.com' }
       });
       
@@ -118,16 +118,16 @@ test.describe('Tenant Onboarding Database Tests', () => {
       expect(tenant2Users.length).toBe(1);
       expect(tenant1Users[0].user_id).not.toBe(tenant2Users[0].user_id);
       
-      // Verify companies are separate
-      const tenant1Companies = await db('companies')
-        .where('tenant', tenant1.tenant.tenantId) as Array<{ company_id: string; tenant: string; company_name: string }>;
+      // Verify clients are separate
+      const tenant1Clients = await db('clients')
+        .where('tenant', tenant1.tenant.tenantId) as Array<{ client_id: string; tenant: string; client_name: string }>;
         
-      const tenant2Companies = await db('companies')
-        .where('tenant', tenant2.tenant.tenantId) as Array<{ company_id: string; tenant: string; company_name: string }>;
+      const tenant2Clients = await db('clients')
+        .where('tenant', tenant2.tenant.tenantId) as Array<{ client_id: string; tenant: string; client_name: string }>;
       
-      expect(tenant1Companies.length).toBe(1);
-      expect(tenant2Companies.length).toBe(1);
-      expect(tenant1Companies[0].company_id).not.toBe(tenant2Companies[0].company_id);
+      expect(tenant1Clients.length).toBe(1);
+      expect(tenant2Clients.length).toBe(1);
+      expect(tenant1Clients[0].client_id).not.toBe(tenant2Clients[0].client_id);
       
       // Clean up
       await rollbackTenant(db, tenant1.tenant.tenantId);

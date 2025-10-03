@@ -13,7 +13,7 @@ test('debug tenant context in authentication', async ({ page }) => {
   try {
     // Create test tenant with admin user
     const tenantData = await createTestTenant(db, {
-      companyName: 'Debug Tenant Company',
+      clientName: 'Debug Tenant Client',
       adminUser: { 
         firstName: 'Debug', 
         lastName: 'Tenant', 

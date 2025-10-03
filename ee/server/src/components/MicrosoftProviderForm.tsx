@@ -320,7 +320,7 @@ export function MicrosoftProviderForm({
                 id="mailbox"
                 type="email"
                 {...form.register('mailbox')}
-                placeholder="support@company.com"
+                placeholder="support@client.com"
                 className={hasAttemptedSubmit && form.formState.errors.mailbox ? 'border-red-500' : ''}
               />
               {form.formState.errors.mailbox && (

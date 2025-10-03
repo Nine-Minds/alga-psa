@@ -4,19 +4,19 @@
 
 # Create a new tenant
 export def create-tenant [
-    tenant_name: string      # Name of the tenant company
+    tenant_name: string      # Name of the tenant client
     admin_email: string      # Email for the admin user
     --first-name: string = "Admin"    # Admin user's first name
     --last-name: string = "User"       # Admin user's last name
-    --company-name: string = ""        # Company name (defaults to tenant name)
+    --client-name: string = ""        # Client name (defaults to tenant name)
     --password: string = ""            # Admin password (generated if not provided)
     --seed-onboarding = true           # Run onboarding seeds after creation
     --skip-onboarding = false          # Set onboarding_skipped flag to true in tenant_settings
 ] {
     print $"($env.ALGA_COLOR_CYAN)Creating new tenant: ($tenant_name)($env.ALGA_COLOR_RESET)"
     
-    # Set company name to tenant name if not provided
-    let company_name = if $company_name == "" { $tenant_name } else { $company_name }
+    # Set client name to tenant name if not provided
+    let client_name = if $client_name == "" { $tenant_name } else { $client_name }
     
     # Get the project root
     let project_root = (find-project-root)
@@ -26,7 +26,7 @@ export def create-tenant [
     
     # Use the shared tenant creation module
     let result = (
-        cd $"($project_root)/server"; npm run --silent create-tenant -- --tenant $"($tenant_name)" --email $"($admin_email)" --firstName $"($first_name)" --lastName $"($last_name)" --companyName $"($company_name)" --password $"($password)"
+        cd $"($project_root)/server"; npm run --silent create-tenant -- --tenant $"($tenant_name)" --email $"($admin_email)" --firstName $"($first_name)" --lastName $"($last_name)" --clientName $"($client_name)" --password $"($password)"
         | complete
     )
     
@@ -154,7 +154,7 @@ export def list-tenants [] {
     let project_root = (find-project-root)
     
     # Query the database for tenants  
-    let sql = "SELECT t.tenant, t.company_name, t.email, t.created_at, ts.onboarding_completed, ts.onboarding_skipped FROM tenants t LEFT JOIN tenant_settings ts ON t.tenant = ts.tenant ORDER BY t.created_at DESC"
+    let sql = "SELECT t.tenant, t.client_name, t.email, t.created_at, ts.onboarding_completed, ts.onboarding_skipped FROM tenants t LEFT JOIN tenant_settings ts ON t.tenant = ts.tenant ORDER BY t.created_at DESC"
     let result = (
         cd $"($project_root)/server"; node scripts/run-sql.cjs migration $sql 2>/dev/null
         | complete

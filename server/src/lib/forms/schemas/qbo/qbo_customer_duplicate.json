@@ -13,19 +13,19 @@
     "realmId": {
       "type": "string",
       "title": "QBO Realm ID",
-      "description": "The QuickBooks Online company ID.",
+      "description": "The QuickBooks Online client ID.",
       "readOnly": true
     },
-    "algaCompanyId": {
+    "algaClientId": {
       "type": "string",
-      "title": "Alga Company ID",
-      "description": "The internal ID of the Alga company.",
+      "title": "Alga Client ID",
+      "description": "The internal ID of the Alga client.",
       "readOnly": true
     },
-    "algaCompanyName": {
+    "algaClientName": {
       "type": "string",
-      "title": "Alga Company Name",
-      "description": "The name of the Alga company.",
+      "title": "Alga Client Name",
+      "description": "The name of the Alga client.",
       "readOnly": true
     },
     "potentialQboDuplicates": {
@@ -87,8 +87,8 @@
   "required": [
     "tenantId",
     "realmId",
-    "algaCompanyId",
-    "algaCompanyName",
+    "algaClientId",
+    "algaClientName",
     "potentialQboDuplicates",
     "resolutionAction"
   ],
