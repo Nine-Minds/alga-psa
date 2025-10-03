@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
@@ -9,13 +9,11 @@ import {
   createFixedPlanAssignment,
   setupCompanyTaxConfiguration,
   assignServiceTaxRate
-} from '../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -142,24 +140,10 @@ describe('Credit Reconciliation Tests', () => {
   }, 30000);
 
   it('should verify credit tracking table reconciliation with transaction log', async () => {
-    // 1. Create test company with a unique name
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: `Credit Reconciliation Test Company ${Date.now()}`,
-      billing_cycle: 'monthly',
-      company_id: uuidv4(),
-      region_code: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'company_id');
+    // Use the context's company instead of creating a new one
+    const company_id = context.companyId;
 
-    // 2. Set up company billing settings with expiration days
+    // 1. Set up company billing settings with expiration days
     await context.db('company_billing_settings').insert({
       company_id: company_id,
       tenant: context.tenantId,
@@ -170,16 +154,6 @@ describe('Credit Reconciliation Tests', () => {
       credit_expiration_notification_days: [7, 1],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
-    });
-
-    // 3. Set up tax configuration for the company
-    await setupCompanyTaxConfiguration(context, {
-      regionCode: 'US-NY',
-      regionName: 'New York',
-      description: 'New York Sales Tax',
-      startDate: '2025-01-01T00:00:00.000Z',
-      taxPercentage: 8.875,
-      companyId: company_id
     });
 
     // 4. Create first prepayment invoice
@@ -202,7 +176,7 @@ describe('Credit Reconciliation Tests', () => {
     // 7. Finalize the second prepayment invoice to create the credit
     await finalizeInvoice(prepaymentInvoice2.invoice_id);
 
-    // 8. Create a service for a positive invoice using test helper
+    // 2. Create a service for a positive invoice using test helper
     const serviceId = await createTestService(context, {
       service_name: 'Regular Service',
       billing_method: 'fixed',
@@ -211,11 +185,7 @@ describe('Credit Reconciliation Tests', () => {
       tax_region: 'US-NY'
     });
 
-    // 9. Create billing plan and assign service using test helper
-    // Temporarily set context.companyId to the test company for helper functions
-    const originalCompanyId = context.companyId;
-    (context as any).companyId = company_id;
-
+    // 3. Create billing plan and assign service using test helper
     const { planId } = await createFixedPlanAssignment(context, serviceId, {
       planName: 'Regular Plan',
       billingFrequency: 'monthly',
@@ -224,10 +194,7 @@ describe('Credit Reconciliation Tests', () => {
       startDate: '2025-01-01'
     });
 
-    // Restore original companyId
-    (context as any).companyId = originalCompanyId;
-
-    // 10. Create a billing cycle
+    // 4. Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
@@ -240,21 +207,21 @@ describe('Credit Reconciliation Tests', () => {
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // 11. Generate positive invoice
+    // 5. Generate positive invoice using transactional connection
     const invoice = await generateInvoice(billingCycleId);
 
     if (!invoice) {
       throw new Error('Failed to generate invoice');
     }
 
-    // 12. Verify invoice has expected structure
+    // 6. Verify invoice has expected structure
     expect(invoice.invoice_id).toBeDefined();
     expect(invoice.subtotal).toBeGreaterThan(0);
 
-    // 13. Finalize the invoice to apply credit
+    // 7. Finalize the invoice to apply credit
     await finalizeInvoice(invoice.invoice_id);
 
-    // 14. Verify invoice items were created correctly
+    // 8. Verify invoice items were created correctly (invariant check)
     const invoiceItems = await context.db('invoice_items')
       .where({
         invoice_id: invoice.invoice_id,
@@ -263,7 +230,7 @@ describe('Credit Reconciliation Tests', () => {
 
     expect(invoiceItems.length).toBeGreaterThan(0);
 
-    // 15. Verify tax calculation on invoice items
+    // 9. Verify tax calculation on invoice items (invariant check)
     const itemsWithTax = invoiceItems.filter(item => Number(item.tax_amount) > 0);
     expect(itemsWithTax.length).toBeGreaterThan(0);
 
@@ -271,15 +238,29 @@ describe('Credit Reconciliation Tests', () => {
     const expectedTax = Math.round(invoice.subtotal * 0.08875);
     expect(invoice.tax).toBeCloseTo(expectedTax, -1); // Allow for rounding
 
-    // 16. Manually apply some credit to create a partial application
+    // 10. Verify invoice items sum to subtotal (invariant check)
+    const itemsSubtotal = invoiceItems.reduce(
+      (sum, item) => sum + Number(item.net_amount),
+      0
+    );
+    expect(itemsSubtotal).toBe(invoice.subtotal);
+
+    // 11. Verify invoice items tax sum matches invoice tax (invariant check)
+    const itemsTax = invoiceItems.reduce(
+      (sum, item) => sum + Number(item.tax_amount),
+      0
+    );
+    expect(itemsTax).toBe(invoice.tax);
+
+    // 12. Manually apply some credit to create a partial application
     const remainingCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
     const partialCreditAmount = 3000; // $30.00
     await applyCreditToInvoice(company_id, invoice.invoice_id, partialCreditAmount);
 
-    // 17. Get the current credit balance before validation
+    // 13. Get the current credit balance before validation
     const beforeValidationCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
 
-    // 18. Get all credit tracking entries before validation using transactional db
+    // 14. Get all credit tracking entries before validation using transactional db
     const preValidationCreditEntries = await context.db('credit_tracking')
       .where({
         company_id: company_id,
@@ -287,7 +268,7 @@ describe('Credit Reconciliation Tests', () => {
       })
       .orderBy('created_at', 'asc');
 
-    // 19. Calculate the expected credit balance based on credit tracking entries
+    // 15. Calculate the expected credit balance based on credit tracking entries
     const expectedCreditBalance = preValidationCreditEntries.reduce(
       (sum, entry) => sum + Number(entry.remaining_amount),
       0
@@ -295,7 +276,7 @@ describe('Credit Reconciliation Tests', () => {
 
     console.log(`Current credit balance: ${beforeValidationCredit}, Expected from tracking: ${expectedCreditBalance}`);
 
-    // 20. Create an artificial discrepancy by directly modifying the company's credit_balance
+    // 16. Create an artificial discrepancy by directly modifying the company's credit_balance
     // This simulates a data corruption scenario that would require reconciliation
     const artificialBalance = expectedCreditBalance - 1000; // Reduce by $10.00
     await context.db('companies')
@@ -308,27 +289,27 @@ describe('Credit Reconciliation Tests', () => {
         updated_at: new Date().toISOString()
       });
 
-    // 21. Get the modified balance using transactional context
+    // 17. Get the modified balance using transactional context
     const modifiedBalance = await CompanyBillingPlan.getCompanyCredit(company_id);
     console.log(`Artificially modified balance: ${modifiedBalance}, Expected from tracking: ${expectedCreditBalance}`);
 
-    // 22. Verify that there's a discrepancy between the actual and expected balance
+    // 18. Verify that there's a discrepancy between the actual and expected balance
     expect(modifiedBalance).not.toEqual(expectedCreditBalance);
 
-    // 23. Now run the credit balance validation to check reconciliation
+    // 19. Now run the credit balance validation to check reconciliation
     // This will automatically correct any discrepancies
     const validationResult = await validateCreditBalance(company_id);
 
-    // 24. Verify that the validation detected an issue
+    // 20. Verify that the validation detected an issue
     expect(validationResult.isValid).toBe(false);
 
-    // 25. After validation, the balance should be corrected, so run it again to verify
+    // 21. After validation, the balance should be corrected, so run it again to verify
     const secondValidationResult = await validateCreditBalance(company_id);
 
-    // 26. Verify that the second validation shows the balance is now correct
+    // 22. Verify that the second validation shows the balance is now correct
     expect(secondValidationResult.isValid).toBe(true);
-    
-    // 27. Get all credit-related transactions using transactional db
+
+    // 23. Get all credit-related transactions using transactional db
     const transactions = await context.db('transactions')
       .where({
         company_id: company_id,
@@ -343,7 +324,7 @@ describe('Credit Reconciliation Tests', () => {
       ])
       .orderBy('created_at', 'asc');
 
-    // 28. Get all credit tracking entries using transactional db
+    // 24. Get all credit tracking entries using transactional db
     const creditTrackingEntries = await context.db('credit_tracking')
       .where({
         company_id: company_id,
@@ -351,7 +332,7 @@ describe('Credit Reconciliation Tests', () => {
       })
       .orderBy('created_at', 'asc');
     
-    // 29. Verify that each credit issuance transaction has a corresponding credit tracking entry
+    // 25. Verify that each credit issuance transaction has a corresponding credit tracking entry
     const issuanceTransactions = transactions.filter(tx =>
       tx.type === 'credit_issuance' || tx.type === 'credit_issuance_from_negative_invoice'
     );
@@ -362,7 +343,7 @@ describe('Credit Reconciliation Tests', () => {
       expect(Number(matchingEntry!.amount)).toBe(Number(tx.amount));
     }
 
-    // 30. Verify that credit application transactions have updated the remaining amounts correctly
+    // 26. Verify that credit application transactions have updated the remaining amounts correctly
     const applicationTransactions = transactions.filter(tx => tx.type === 'credit_application');
     
     for (const tx of applicationTransactions) {
@@ -416,7 +397,7 @@ describe('Credit Reconciliation Tests', () => {
       }
     }
 
-    // 31. Verify the company's credit balance matches the sum of remaining amounts in credit tracking
+    // 27. Verify the company's credit balance matches the sum of remaining amounts in credit tracking
     const companyCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
     const sumOfRemainingAmounts = creditTrackingEntries.reduce(
       (sum, entry) => sum + Number(entry.remaining_amount),
@@ -425,7 +406,7 @@ describe('Credit Reconciliation Tests', () => {
 
     expect(companyCredit).toBeCloseTo(sumOfRemainingAmounts, 2);
 
-    // 32. Verify that the credit balance in the company record matches the calculated balance from transactions
+    // 28. Verify that the credit balance in the company record matches the calculated balance from transactions
     const calculatedBalance = transactions.reduce(
       (balance, tx) => balance + Number(tx.amount),
       0
@@ -433,7 +414,7 @@ describe('Credit Reconciliation Tests', () => {
 
     expect(companyCredit).toBeCloseTo(calculatedBalance, 2);
 
-    // 33. Verify consolidated invoice data integrity
+    // 29. Verify consolidated invoice data integrity (invariant check)
     const consolidatedInvoice = await context.db('invoices')
       .where({
         invoice_id: invoice.invoice_id,
@@ -445,19 +426,5 @@ describe('Credit Reconciliation Tests', () => {
     expect(consolidatedInvoice!.subtotal).toBe(invoice.subtotal);
     expect(consolidatedInvoice!.tax).toBe(invoice.tax);
     expect(consolidatedInvoice!.total).toBe(invoice.total);
-
-    // 34. Verify invoice items sum to subtotal
-    const itemsSubtotal = invoiceItems.reduce(
-      (sum, item) => sum + Number(item.net_amount),
-      0
-    );
-    expect(itemsSubtotal).toBe(invoice.subtotal);
-
-    // 35. Verify invoice items tax sum matches invoice tax
-    const itemsTax = invoiceItems.reduce(
-      (sum, item) => sum + Number(item.tax_amount),
-      0
-    );
-    expect(itemsTax).toBe(invoice.tax);
   });
 });

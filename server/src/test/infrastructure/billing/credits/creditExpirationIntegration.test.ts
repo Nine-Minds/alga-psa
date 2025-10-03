@@ -1,20 +1,20 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import {
   createTestService,
   createFixedPlanAssignment,
   setupCompanyTaxConfiguration,
   assignServiceTaxRate
-} from '../../../test-utils/billingTestHelpers';
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -50,15 +50,6 @@ vi.mock('@alga-psa/shared/db', async (importOriginal) => {
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
-}));
-
-vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
-  getCurrentUser: vi.fn(async () => ({
-    user_id: mockedUserId,
-    tenant: mockedTenantId,
-    user_type: 'internal',
-    roles: []
-  }))
 }));
 
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
@@ -119,15 +110,26 @@ describe('Credit Expiration Integration Tests', () => {
       userType: 'internal'
     });
 
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     await ensureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
     await ensureDefaultTax();
   }, 30000);
 

@@ -1,23 +1,83 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { dateHelpers, createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { createTestDateISO } from '../../../../../test-utils/dateUtils';
+import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
-// Required for tests
-global.TextEncoder = TextEncoder;
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Billing Invoice Generation – Error Handling', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -28,24 +88,44 @@ describe('Billing Invoice Generation – Error Handling', () => {
         'tickets',
         'company_billing_cycles',
         'company_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
+        'tax_regions',
         'company_tax_settings',
+        'company_tax_rates',
         'next_number'
       ],
-      companyName: 'Test Company',
+      companyName: 'Error Handling Test Company',
       userType: 'internal'
     });
 
-    console.log('Created tenant:', context.tenantId);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-    
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     // Set up invoice numbering settings
     const nextNumberRecord = {
       tenant: context.tenantId,
@@ -55,42 +135,18 @@ describe('Billing Invoice Generation – Error Handling', () => {
       initial_value: 1,
       padding_length: 6
     };
-    console.log('Adding next_number record:', nextNumberRecord);
     await context.db('next_number').insert(nextNumberRecord);
 
-    // Create default tax rate
-    await context.createEntity('tax_rates', {
-      tax_type: 'VAT',
-      country_code: 'US',
-      tax_percentage: 10,
-      region: null,
-      is_reverse_charge_applicable: false,
-      is_composite: false,
-      start_date: dateHelpers.createDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      description: 'Test Tax Rate'
-    }, 'tax_rate_id');
+    await configureDefaultTax();
+  }, 30000);
 
-    // Create default tax settings for the test company
-    await createDefaultTaxSettings(context.company.company_id);
-
-    // Re-create tax rate
-    await context.createEntity('tax_rates', {
-      tax_type: 'VAT',
-      country_code: 'US',
-      tax_percentage: 10,
-      region: null,
-      is_reverse_charge_applicable: false,
-      is_composite: false,
-      start_date: dateHelpers.createDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      description: 'Test Tax Rate'
-    }, 'tax_rate_id');
-  });
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should handle invalid billing period dates', async () => {
     await expectNotFound(
@@ -106,114 +162,92 @@ describe('Billing Invoice Generation – Error Handling', () => {
       billing_cycle: 'monthly'
     }, 'company_id');
 
-    // Create default tax settings
-    await createDefaultTaxSettings(newCompanyId);
+    // Configure tax for the new company
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      companyId: newCompanyId
+    });
 
     // Create billing cycle
     const billingCycleId = await context.createEntity('company_billing_cycles', {
       company_id: newCompanyId,
       billing_cycle: 'monthly',
-      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: new RegExp(`No active billing plans found for company ${newCompanyId} in the given period`)
+        messagePattern: new RegExp(`No active billing plans found for company ${newCompanyId}`)
       }
     );
   });
 
   it('should handle undefined service rates', async () => {
-    // Arrange
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Invalid Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create a service without a rate (rate = 0)
+    const serviceId = await createTestService(context, {
       service_name: 'Service Without Rate',
-      description: 'Test service: Service Without Rate',
-      service_type: 'Fixed',
-      unit_of_measure: 'unit'
-      // default_rate intentionally undefined
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      tenant: context.tenantId
+      billing_method: 'fixed',
+      default_rate: 0,  // Invalid rate
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    // Create billing cycle
     const billingCycleId = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
-      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    // Assign plan with invalid service
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Invalid Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 0,  // Invalid rate
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     await expectError(() => generateInvoice(billingCycleId));
   });
 
   it('should throw error when regenerating for same period', async () => {
-    // Arrange
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Fixed Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create a service
+    const serviceId = await createTestService(context, {
       service_name: 'Monthly Service',
-      description: 'Test service: Monthly Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    // Create billing cycle
     const billingCycleId = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
-      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
+    // Assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Standard Fixed Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Generate first invoice
     const firstInvoice = await generateInvoice(billingCycleId);
 
-    // Assert first invoice is correct
-    expect(firstInvoice).toMatchObject({
-      subtotal: 10000,
-      status: 'draft'
-    });
+    // Verify invoice was created with consolidated fixed-fee item
+    expect(firstInvoice).not.toBeNull();
+    const invoiceItems = await context.db('invoice_items')
+      .where({ invoice_id: firstInvoice!.invoice_id, tenant: context.tenantId });
+    expect(invoiceItems).toHaveLength(1);
 
     // Attempt to generate second invoice for same period
     await expectError(

@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { setupCompanyTaxConfiguration, assignServiceTaxRate } from '../../../test-utils/billingTestHelpers';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCompanyTaxConfiguration, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { v4 as uuidv4 } from 'uuid';
@@ -114,15 +115,26 @@ describe('Credit Creation and Dates Tests', () => {
       userType: 'internal'
     });
 
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     await ensureDefaultTax();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
     await ensureDefaultTax();
   }, 30000);
 

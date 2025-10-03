@@ -1,16 +1,17 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import '../../../test-utils/nextApiMock';
+import '../../../../../test-utils/nextApiMock';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { createTestDateISO } from '../../../test-utils/dateUtils';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   setupCompanyTaxConfiguration,
   assignServiceTaxRate,
   createTestService
-} from '../../../test-utils/billingTestHelpers';
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 // Force connection directly to PostgreSQL on port 5432 (not pgbouncer on 6432)
 // This is required for tests that need direct database access
@@ -112,15 +113,26 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       userType: 'internal'
     });
 
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     await ensureDefaultTaxConfiguration();
   }, 60000);
 
   beforeEach(async () => {
     context = await resetContext();
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
 
     // Set up invoice numbering settings
     await context.db('next_number').insert({

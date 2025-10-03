@@ -1,18 +1,18 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
-import '../../../test-utils/nextApiMock';
+import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { createTestDateISO } from '../../../test-utils/dateUtils';
-import { expectError } from '../../../test-utils/errorUtils';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { createTestDateISO } from '../../../../../test-utils/dateUtils';
+import { expectError } from '../../../../../test-utils/errorUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
   setupCompanyTaxConfiguration,
   assignServiceTaxRate
-} from '../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -71,7 +71,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
-      startDate: '2025-01-01T00:00:00.000Z',
+      startDate: '2020-01-01T00:00:00.000Z',
       taxPercentage: 8.875
     });
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
@@ -106,17 +106,26 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
 
     const mockContext = setupCommonMocks({
       tenantId: context.tenantId,
-      userId: context.userId
+      userId: context.userId,
+      permissionCheck: () => true
     });
 
-    mockedTenantId = context.tenantId;
-    mockedUserId = context.userId;
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
 
-    console.log('Created tenant:', context.tenantId);
-  });
+    await configureDefaultTax();
+  }, 120000);
 
   beforeEach(async () => {
-    await resetContext();
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
 
     // Set up invoice numbering settings
     const nextNumberRecord = {
@@ -127,20 +136,19 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       initial_value: 1,
       padding_length: 6
     };
-    console.log('Adding next_number record:', nextNumberRecord);
     await context.db('next_number').insert(nextNumberRecord);
 
     // Configure default tax for the test company
     await configureDefaultTax();
-  });
+  }, 30000);
 
   afterEach(async () => {
     await rollbackContext();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await cleanupContext();
-  });
+  }, 30000);
 
   it('should maintain sequence without gaps after failed generation attempts', async () => {
     await context.db('next_number').where({
@@ -233,10 +241,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }
     expect(invoice1.invoice_number).toBe('INV-000001');
 
-    // Verify invoice items were created
+    // Verify invoice items were created - should be single consolidated row for fixed plan
     const invoice1Items = await context.db('invoice_items')
-      .where({ invoice_id: invoice1.invoice_id });
-    expect(invoice1Items.length).toBeGreaterThan(0);
+      .where({ invoice_id: invoice1.invoice_id, tenant: context.tenantId });
+    expect(invoice1Items).toHaveLength(1);
 
     // Failed generation attempt (no billing plan for this company)
     await expectError(
@@ -253,10 +261,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }
     expect(invoice2.invoice_number).toBe('INV-000002');
 
-    // Verify invoice items were created
+    // Verify invoice items were created - should be single consolidated row for fixed plan
     const invoice2Items = await context.db('invoice_items')
-      .where({ invoice_id: invoice2.invoice_id });
-    expect(invoice2Items.length).toBeGreaterThan(0);
+      .where({ invoice_id: invoice2.invoice_id, tenant: context.tenantId });
+    expect(invoice2Items).toHaveLength(1);
 
     // Verify the sequence in next_number table
     const nextNumber = await context.db('next_number')
@@ -345,10 +353,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       }
       expect(invoice.invoice_number).toBe(testCase.expected);
 
-      // Verify invoice items were created
+      // Verify invoice items were created - should be single consolidated row for fixed plan
       const invoiceItems = await context.db('invoice_items')
-        .where({ invoice_id: invoice.invoice_id });
-      expect(invoiceItems.length).toBeGreaterThan(0);
+        .where({ invoice_id: invoice.invoice_id, tenant: context.tenantId });
+      expect(invoiceItems).toHaveLength(1);
     }
   });
 
@@ -416,13 +424,13 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     expect(invoice1.invoice_number).toBe('INV-1000000');
     expect(invoice2.invoice_number).toBe('INV-1000001');
 
-    // Verify invoice items were created for both invoices
+    // Verify invoice items were created for both invoices - should be single consolidated row per invoice for fixed plans
     const invoice1Items = await context.db('invoice_items')
-      .where({ invoice_id: invoice1.invoice_id });
-    expect(invoice1Items.length).toBeGreaterThan(0);
+      .where({ invoice_id: invoice1.invoice_id, tenant: context.tenantId });
+    expect(invoice1Items).toHaveLength(1);
 
     const invoice2Items = await context.db('invoice_items')
-      .where({ invoice_id: invoice2.invoice_id });
-    expect(invoice2Items.length).toBeGreaterThan(0);
+      .where({ invoice_id: invoice2.invoice_id, tenant: context.tenantId });
+    expect(invoice2Items).toHaveLength(1);
   });
 });
