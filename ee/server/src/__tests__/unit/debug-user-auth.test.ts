@@ -24,7 +24,7 @@ describe('Debug User Authentication', () => {
   it('should debug tenant user authentication process', async () => {
     // Create test tenant with admin user
     const tenantData = await createTestTenant(db, {
-      companyName: 'Debug Auth Company',
+      clientName: 'Debug Auth Client',
       adminUser: { 
         firstName: 'Debug', 
         lastName: 'User', 

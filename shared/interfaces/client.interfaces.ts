@@ -59,7 +59,7 @@ export interface CreateClientInput {
  */
 export interface UpdateClientInput {
   client_name?: string;
-  client_type?: 'client' | 'individual';
+  client_type?: 'company' | 'individual';
   url?: string;
   phone_no?: string;
   email?: string;
