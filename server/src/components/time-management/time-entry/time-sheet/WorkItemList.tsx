@@ -31,7 +31,7 @@ export function WorkItemList({
             {item.ticket_number} - {item.title || 'Untitled'}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.company_name}
+            {item.client_name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
             Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
@@ -58,7 +58,7 @@ export function WorkItemList({
             {item.project_name} • {item.phase_name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
-            {item.company_name}
+            {item.client_name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">
             Due Date: {item.due_date ? new Date(item.due_date).toLocaleDateString() : 'No due date'}
@@ -105,7 +105,7 @@ export function WorkItemList({
             {item.title || item.name}
           </div>
           <div className="text-sm text-[rgb(var(--color-text-600))]">
-            {item.interaction_type && `${item.interaction_type} • `}{item.company_name}
+            {item.interaction_type && `${item.interaction_type} • `}{item.client_name}
           </div>
           {item.contact_name && (
             <div className="text-sm text-[rgb(var(--color-text-600))] mt-1">

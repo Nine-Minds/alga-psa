@@ -86,7 +86,7 @@ export interface PortalSessionTokenPayload {
   name?: string | null;
   tenant?: string | null;
   user_type?: string | null;
-  companyId?: string | null;
+  clientId?: string | null;
   contactId?: string | null;
   roles?: string[] | null;
   [key: string]: unknown;

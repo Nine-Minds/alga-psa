@@ -134,8 +134,8 @@ const BundleBillingPlan = {
         throw new Error(`Billing plan ${planId} is not in bundle ${bundleId}`);
       }
 
-      // Check if the bundle is in use by any company
-      const isInUse = await db('company_plan_bundles')
+      // Check if the bundle is in use by any client
+      const isInUse = await db('client_plan_bundles')
         .where({ 
           bundle_id: bundleId,
           tenant,
@@ -144,7 +144,7 @@ const BundleBillingPlan = {
         .first();
 
       if (isInUse) {
-        throw new Error(`Cannot remove plan from bundle ${bundleId} as it is currently assigned to companies`);
+        throw new Error(`Cannot remove plan from bundle ${bundleId} as it is currently assigned to clients`);
       }
 
       const deletedCount = await db('bundle_billing_plans')

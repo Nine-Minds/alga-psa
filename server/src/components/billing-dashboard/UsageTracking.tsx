@@ -12,10 +12,10 @@ import { Plus, AlertTriangle, Info, MoreVertical } from 'lucide-react';
 import { useToast } from 'server/src/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from 'server/src/lib/actions/usageActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { CompanyPicker } from '../companies/CompanyPicker';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { ClientPicker } from '../clients/ClientPicker';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -40,21 +40,21 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [usageRecords, setUsageRecords] = useState<IUsageRecord[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string>('');
   const [editingUsage, setEditingUsage] = useState<IUsageRecord | null>(null);
   const [usageToDelete, setUsageToDelete] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [newUsage, setNewUsage] = useState<ICreateUsageRecord>({
-    company_id: '',
+    client_id: '',
     service_id: '',
     quantity: 0,
     usage_date: new Date().toISOString(),
   });
   const [eligibleBillingPlans, setEligibleBillingPlans] = useState<Array<{
-    company_billing_plan_id: string;
+    client_billing_plan_id: string;
     plan_name: string;
     plan_type: string;
   }>>([]);
@@ -67,24 +67,24 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   });
 
   useEffect(() => {
-    loadCompanies();
+    loadClients();
   }, []);
 
   useEffect(() => {
     loadUsageRecords();
-  }, [selectedCompany, selectedService]);
+  }, [selectedClient, selectedService]);
   
-  // Load eligible billing plans when company and service change in the form
+  // Load eligible billing plans when client and service change in the form
   useEffect(() => {
     const loadEligibleBillingPlans = async () => {
-      if (!newUsage.company_id || !newUsage.service_id) {
+      if (!newUsage.client_id || !newUsage.service_id) {
         setEligibleBillingPlans([]);
         setShowBillingPlanSelector(false);
         return;
       }
       
       try {
-        const plans = await getEligibleBillingPlansForUI(newUsage.company_id, newUsage.service_id);
+        const plans = await getEligibleBillingPlansForUI(newUsage.client_id, newUsage.service_id);
         setEligibleBillingPlans(plans);
         
         // Always show the plan selector, but set a default when appropriate
@@ -94,13 +94,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         if (!newUsage.billing_plan_id) {
           if (plans.length === 1) {
             // If there's only one plan, use it automatically
-            setNewUsage(prev => ({ ...prev, billing_plan_id: plans[0].company_billing_plan_id }));
+            setNewUsage(prev => ({ ...prev, billing_plan_id: plans[0].client_billing_plan_id }));
           } else if (plans.length > 1) {
             // Check for bucket plans first
             const bucketPlans = plans.filter(plan => plan.plan_type === 'Bucket');
             if (bucketPlans.length === 1) {
               // If there's only one bucket plan, use it as default
-              setNewUsage(prev => ({ ...prev, billing_plan_id: bucketPlans[0].company_billing_plan_id }));
+              setNewUsage(prev => ({ ...prev, billing_plan_id: bucketPlans[0].client_billing_plan_id }));
             }
           }
         } else if (plans.length === 0) {
@@ -113,16 +113,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     };
     
     loadEligibleBillingPlans();
-  }, [newUsage.company_id, newUsage.service_id]);
+  }, [newUsage.client_id, newUsage.service_id]);
 
-  const loadCompanies = async () => {
+  const loadClients = async () => {
     try {
-      const fetchedCompanies = await getAllCompanies();
-      setCompanies(fetchedCompanies);
+      const fetchedClients = await getAllClients();
+      setClients(fetchedClients);
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load companies",
+        description: "Failed to load clients",
         variant: "destructive",
       });
     }
@@ -132,7 +132,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     try {
       setIsLoading(true);
       const filter: IUsageFilter = {};
-      if (selectedCompany !== null && selectedCompany !== 'all_companies') filter.company_id = selectedCompany;
+      if (selectedClient !== null && selectedClient !== 'all_clients') filter.client_id = selectedClient;
       if (selectedService && selectedService !== 'all_services') filter.service_id = selectedService;
       
       const records = await getUsageRecords(filter);
@@ -226,7 +226,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   const resetForm = () => {
     setNewUsage({
-      company_id: '',
+      client_id: '',
       service_id: '',
       quantity: 0,
       usage_date: new Date().toISOString(),
@@ -239,8 +239,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   const columns: ColumnDefinition<IUsageRecord>[] = [
     {
-      title: 'Company',
-      dataIndex: 'company_name',
+      title: 'Client',
+      dataIndex: 'client_name',
     },
     {
       title: 'Service',
@@ -287,7 +287,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
               onClick={() => {
                 setEditingUsage(record);
                 setNewUsage({
-                  company_id: record.company_id,
+                  client_id: record.client_id,
                   service_id: record.service_id,
                   quantity: record.quantity,
                   usage_date: record.usage_date,
@@ -336,17 +336,17 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
               <div className="flex-1">
-                <Label htmlFor="company-filter">Company</Label>
+                <Label htmlFor="client-filter">Client</Label>
                 <CustomSelect
-                  id="company-filter"
-                  value={selectedCompany || 'all_companies'}
-                  onValueChange={value => setSelectedCompany(value === 'all_companies' ? null : value)}
-                  placeholder="Filter by company"
+                  id="client-filter"
+                  value={selectedClient || 'all_clients'}
+                  onValueChange={value => setSelectedClient(value === 'all_clients' ? null : value)}
+                  placeholder="Filter by client"
                   options={[
-                    { value: 'all_companies', label: 'All Companies' },
-                    ...companies.map(company => ({
-                      value: company.company_id,
-                      label: company.company_name
+                    { value: 'all_clients', label: 'All Clients' },
+                    ...clients.map(client => ({
+                      value: client.client_id,
+                      label: client.client_name
                     }))
                   ]}
                 />
@@ -373,7 +373,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   variant="outline"
                   onClick={() => {
                     setSelectedService('all_services');
-                    setSelectedCompany('all_companies');
+                    setSelectedClient('all_clients');
                   }}
                 >
                   Clear Filters
@@ -393,7 +393,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                 onRowClick={(record) => {
                   setEditingUsage(record);
                   setNewUsage({
-                    company_id: record.company_id,
+                    client_id: record.client_id,
                     service_id: record.service_id,
                     quantity: record.quantity,
                     usage_date: record.usage_date,
@@ -419,12 +419,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         <DialogContent>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="company-select">Company</Label>
-              <CompanyPicker
-                id="company-select"
-                companies={companies}
-                selectedCompanyId={newUsage.company_id}
-                onSelect={(id) => setNewUsage({ ...newUsage, company_id: id || '' })}
+              <Label htmlFor="client-select">Client</Label>
+              <ClientPicker
+                id="client-select"
+                clients={clients}
+                selectedClientId={newUsage.client_id}
+                onSelect={(id) => setNewUsage({ ...newUsage, client_id: id || '' })}
                 filterState={filterState}
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}
@@ -496,8 +496,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   <div className="relative inline-block">
                     <div
                       className="cursor-help"
-                      title={!newUsage.company_id
-                        ? "Company information not available. The system will use the default billing plan."
+                      title={!newUsage.client_id
+                        ? "Client information not available. The system will use the default billing plan."
                         : eligibleBillingPlans.length > 1
                           ? "This service appears in multiple billing plans. Please select which plan to use. Bucket plans are typically used first until depleted."
                           : eligibleBillingPlans.length === 1
@@ -516,9 +516,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   id="billing-plan-select"
                   value={newUsage.billing_plan_id || ''}
                   onValueChange={(value: string) => setNewUsage({ ...newUsage, billing_plan_id: value })}
-                  disabled={!newUsage.company_id || eligibleBillingPlans.length <= 1}
+                  disabled={!newUsage.client_id || eligibleBillingPlans.length <= 1}
                   className={`${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
-                  placeholder={!newUsage.company_id
+                  placeholder={!newUsage.client_id
                     ? "Using default billing plan"
                     : eligibleBillingPlans.length === 0
                       ? "No eligible plans"
@@ -526,7 +526,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                         ? `Using ${eligibleBillingPlans[0].plan_name}`
                         : "Select a billing plan"}
                   options={eligibleBillingPlans.map(plan => ({
-                    value: plan.company_billing_plan_id,
+                    value: plan.client_billing_plan_id,
                     label: `${plan.plan_name} (${plan.plan_type})`
                   }))}
                 />
@@ -540,9 +540,9 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
                   </div>
                 )}
                 
-                {!newUsage.company_id ? (
+                {!newUsage.client_id ? (
                   <small className="text-gray-500 mt-1">
-                    Company information not available. The system will use the default billing plan.
+                    Client information not available. The system will use the default billing plan.
                   </small>
                 ) : eligibleBillingPlans.length === 0 ? (
                   <small className="text-gray-500 mt-1">

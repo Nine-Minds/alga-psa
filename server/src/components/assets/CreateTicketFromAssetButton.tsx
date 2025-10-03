@@ -60,7 +60,7 @@ export default function CreateTicketFromAssetButton({ asset }: CreateTicketFromA
                 description,
                 priority_id: priority,
                 asset_id: asset.asset_id,
-                company_id: asset.company_id
+                client_id: asset.client_id
             }, currentUser);
 
             toast.success('Ticket created successfully');

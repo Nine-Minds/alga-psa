@@ -6,7 +6,7 @@ import ProjectDetail from 'server/src/components/projects/ProjectDetail';
 import { useEffect, useState } from 'react';
 import { IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ProjectStatus } from 'server/src/interfaces/project.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 
 interface ProjectMetadata {
@@ -16,7 +16,7 @@ interface ProjectMetadata {
   users: IUserWithRoles[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles | null;
-  companies: ICompany[];
+  clients: IClient[];
 }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -102,7 +102,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         contact={projectMetadata.contact}
         assignedUser={projectMetadata.assignedUser || undefined}
         users={projectMetadata.users}
-        companies={projectMetadata.companies}
+        clients={projectMetadata.clients}
         onAssignedUserChange={handleAssignedUserChange}
         onContactChange={handleContactChange}
         onProjectUpdate={handleProjectUpdate}
@@ -115,7 +115,7 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
         phases={projectMetadata.phases}
         statuses={projectMetadata.statuses}
         users={projectMetadata.users}
-        companies={projectMetadata.companies}
+        clients={projectMetadata.clients}
         onTagsUpdate={handleTagsUpdate}
       />
     </div>

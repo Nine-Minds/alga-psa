@@ -13,8 +13,8 @@ import {
     ITimePeriod,
     ITimePeriodView,
     ITimeEntry,
-    ICompany,
-    ICompanyLocation,
+    IClient,
+    IClientLocation,
     IContact,
     IUser,
     IUserWithRoles,
@@ -38,15 +38,15 @@ import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/action
 import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
-import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
-import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
+import { getContactByContactNameId, getContactsByClient } from "server/src/lib/actions/contact-actions/contactActions";
+import { getClientById, getAllClients } from "server/src/lib/actions/client-actions/clientActions";
 import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
 import { fetchTimeSheets, fetchOrCreateTimeSheet, saveTimeEntry } from "server/src/lib/actions/timeEntryActions";
 import { getCurrentTimePeriod } from "server/src/lib/actions/timePeriodsActions";
-import CompanyDetails from "server/src/components/companies/CompanyDetails";
+import ClientDetails from "server/src/components/clients/ClientDetails";
 import ContactDetailsView from "server/src/components/contacts/ContactDetailsView";
 import { addTicketResource, getTicketResources, removeTicketResource } from "server/src/lib/actions/ticketResourceActions";
 import AgentScheduleDrawer from "server/src/components/tickets/ticket/AgentScheduleDrawer";
@@ -71,7 +71,7 @@ interface TicketDetailsProps {
     // Pre-fetched data props
     initialComments?: IComment[];
     initialDocuments?: any[];
-    initialCompany?: ICompany | null;
+    initialClient?: IClient | null;
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
@@ -84,8 +84,8 @@ interface TicketDetailsProps {
     boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
     initialCategories?: ITicketCategory[];
-    initialCompanies?: ICompany[];
-    initialLocations?: ICompanyLocation[];
+    initialClients?: IClient[];
+    initialLocations?: IClientLocation[];
     initialAgentSchedules?: { userId: string; minutes: number }[];
 
     // Current user (for drawer usage)
@@ -106,7 +106,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     // Pre-fetched data with defaults
     initialComments = [],
     initialDocuments = [],
-    initialCompany = null,
+    initialClient = null,
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
@@ -119,7 +119,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
-    initialCompanies = [],
+    initialClients = [],
     initialLocations = [],
     initialAgentSchedules = [],
     // Current user (for drawer usage)
@@ -141,13 +141,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [ticket, setTicket] = useState(initialTicket);
     const [conversations, setConversations] = useState<IComment[]>(initialComments);
     const [documents, setDocuments] = useState<any[]>(initialDocuments);
-    const [company, setCompany] = useState<ICompany | null>(initialCompany);
+    const [client, setClient] = useState<IClient | null>(initialClient);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
     const [board, setBoard] = useState<any>(initialBoard);
-    const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
+    const [clients, setClients] = useState<IClient[]>(initialClients);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
-    const [locations, setLocations] = useState<ICompanyLocation[]>(initialLocations);
+    const [locations, setLocations] = useState<IClientLocation[]>(initialLocations);
     const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
 
     // Use pre-fetched options directly
@@ -184,8 +184,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [team, setTeam] = useState<ITeam | null>(null);
 
     const [isChangeContactDialogOpen, setIsChangeContactDialogOpen] = useState(false);
-    const [isChangeCompanyDialogOpen, setIsChangeCompanyDialogOpen] = useState(false);
-    const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+    const [isChangeClientDialogOpen, setIsChangeClientDialogOpen] = useState(false);
+    const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
     const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
@@ -460,44 +460,44 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         };
     }, []);
 
-    const handleCompanyClick = async () => {
-        if (ticket.company_id) {
+    const handleClientClick = async () => {
+        if (ticket.client_id) {
             try {
-                const company = await getCompanyById(ticket.company_id);
-                if (company) {
+                const client = await getClientById(ticket.client_id);
+                if (client) {
                     openDrawer(
-                        <CompanyDetails 
-                            company={company} 
-                            documents={[]} 
-                            contacts={[]} 
+                        <ClientDetails
+                            client={client}
+                            documents={[]}
+                            contacts={[]}
                             isInDrawer={true}
                         />
                     );
                 } else {
-                    console.error('Company not found');
+                    console.error('Client not found');
                 }
             } catch (error) {
-                console.error('Error fetching company details:', error);
+                console.error('Error fetching client details:', error);
             }
         } else {
-            console.log('No company associated with this ticket');
+            console.log('No client associated with this ticket');
         }
     };
 
     const handleContactClick = () => {
-        if (contactInfo && company) {
+        if (contactInfo && client) {
             openDrawer(
                 <ContactDetailsView 
                     initialContact={{
                         ...contactInfo,
-                        company_id: company.company_id
+                        client_id: client.client_id
                     }}
-                    companies={[company]}
+                    clients={[client]}
                     isInDrawer={true}
                 />
             );
         } else {
-            console.log('No contact information or company information available');
+            console.log('No contact information or client information available');
         }
     };
 
@@ -986,8 +986,8 @@ const handleClose = () => {
         setIsChangeContactDialogOpen(true);
     };
 
-    const handleChangeCompany = () => {
-        setIsChangeCompanyDialogOpen(true);
+    const handleChangeClient = () => {
+        setIsChangeClientDialogOpen(true);
     };
 
     const handleTagsChange = (updatedTags: ITag[]) => {
@@ -1068,7 +1068,7 @@ const handleClose = () => {
         }
     };
 
-    const handleCompanyChange = async (newCompanyId: string) => {
+    const handleClientChange = async (newClientId: string) => {
         try {
             const user = await getCurrentUser();
             if (!user) {
@@ -1077,30 +1077,30 @@ const handleClose = () => {
             }
 
             await updateTicket(ticket.ticket_id!, { 
-                company_id: newCompanyId,
-                contact_name_id: null, // Reset contact when company changes
-                location_id: null // Reset location when company changes
+                client_id: newClientId,
+                contact_name_id: null, // Reset contact when client changes
+                location_id: null // Reset location when client changes
             }, user);
             
-            const [companyData, contactsData] = await Promise.all([
-                getCompanyById(newCompanyId),
-                getContactsByCompany(newCompanyId)
+            const [clientData, contactsData] = await Promise.all([
+                getClientById(newClientId),
+                getContactsByClient(newClientId)
             ]);
             
-            setCompany(companyData);
+            setClient(clientData);
             setContacts(contactsData || []);
             setContactInfo(null); // Reset contact info
             
-            // Update locations for the new company
-            if (newCompanyId) {
-                // TODO: Fetch locations for the new company
+            // Update locations for the new client
+            if (newClientId) {
+                // TODO: Fetch locations for the new client
                 // For now, we'll rely on the parent component to provide updated locations
             }
 
-            setIsChangeCompanyDialogOpen(false);
+            setIsChangeClientDialogOpen(false);
             toast.success('Client updated successfully');
         } catch (error) {
-            console.error('Error updating company:', error);
+            console.error('Error updating client:', error);
             toast.error('Failed to update client');
         }
     };
@@ -1330,7 +1330,7 @@ const handleClose = () => {
                             <TicketProperties
                                 id={`${id}-properties`}
                                 ticket={ticket}
-                                company={company}
+                                client={client}
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
                                 board={board}
@@ -1343,7 +1343,7 @@ const handleClose = () => {
                                 onStop={handleStopClick}
                                 onTimeDescriptionChange={setTimeDescription}
                                 onAddTimeEntry={handleAddTimeEntry}
-                                onCompanyClick={handleCompanyClick}
+                                onClientClick={handleClientClick}
                                 onContactClick={handleContactClick}
                                 team={team}
                                 additionalAgents={additionalAgents}
@@ -1356,14 +1356,14 @@ const handleClose = () => {
                                 userId={userId || ''}
                                 tenant={tenant}
                                 contacts={contacts}
-                                companies={companies}
+                                clients={clients}
                                 locations={locations}
-                                companyFilterState={companyFilterState}
+                                clientFilterState={clientFilterState}
                                 clientTypeFilter={clientTypeFilter}
                                 onChangeContact={handleContactChange}
-                                onChangeCompany={handleCompanyChange}
+                                onChangeClient={handleClientChange}
                                 onChangeLocation={handleLocationChange}
-                                onCompanyFilterStateChange={setCompanyFilterState}
+                                onClientFilterStateChange={setClientFilterState}
                                 onClientTypeFilterChange={setClientTypeFilter}
                                 tags={tags}
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
@@ -1373,14 +1373,14 @@ const handleClose = () => {
                         </Suspense>
                         
                         {/* Assets - commented out for now
-                        {ticket.company_id && ticket.ticket_id && (
+                        {ticket.client_id && ticket.ticket_id && (
                             <div className="mt-6" id="associated-assets-container">
                                 <Suspense fallback={<div id="associated-assets-skeleton" className="animate-pulse bg-gray-200 h-32 rounded-lg"></div>}>
                                     <AssociatedAssets
                                         id={`${id}-associated-assets`}
                                         entityId={ticket.ticket_id}
                                         entityType="ticket"
-                                        companyId={ticket.company_id}
+                                        clientId={ticket.client_id}
                                     />
                                 </Suspense>
                             </div>

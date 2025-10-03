@@ -34,7 +34,7 @@ export const portalUserInputSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   contactId: z.string().uuid('Contact ID must be a valid UUID'),
-  companyId: z.string().uuid('Company ID must be a valid UUID'),
+  clientId: z.string().uuid('Client ID must be a valid UUID'),
   tenantId: z.string().uuid('Tenant ID must be a valid UUID'),
   firstName: z.string().optional(),
   lastName: z.string().optional(),
@@ -236,18 +236,18 @@ export async function createPortalUserInDB(
 }
 
 /**
- * Get portal users for a company
+ * Get portal users for a client
  */
-export async function getPortalUsersForCompany(
+export async function getPortalUsersForClient(
   knex: Knex,
-  companyId: string,
+  clientId: string,
   tenantId: string
 ): Promise<IUser[]> {
   try {
-    // Get all contacts for the company
+    // Get all contacts for the client
     const contacts = await knex('contacts')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: tenantId
       })
       .select('contact_name_id');
@@ -269,7 +269,7 @@ export async function getPortalUsersForCompany(
 
     return users;
   } catch (error) {
-    console.error('Error fetching portal users for company:', error);
+    console.error('Error fetching portal users for client:', error);
     return [];
   }
 }

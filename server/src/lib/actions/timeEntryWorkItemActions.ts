@@ -109,9 +109,9 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
           'time_entries.tenant': tenant
         });
     })
-    .leftJoin('companies', function() {
-      this.on('interactions.company_id', '=', 'companies.company_id')
-        .andOn('companies.tenant', '=', 'interactions.tenant');
+    .leftJoin('clients', function() {
+      this.on('interactions.client_id', '=', 'clients.client_id')
+        .andOn('clients.tenant', '=', 'interactions.tenant');
     })
     .leftJoin('contacts', function() {
       this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
@@ -126,7 +126,7 @@ export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<I
       'interactions.interaction_id as work_item_id',
       'interactions.title as name',
       db.raw("'' as description"), // Don't copy interaction notes to time entry
-      'companies.company_name',
+      'clients.client_name',
       'contacts.full_name as contact_name',
       'interaction_types.type_name as interaction_type',
       db.raw("'interaction' as type")

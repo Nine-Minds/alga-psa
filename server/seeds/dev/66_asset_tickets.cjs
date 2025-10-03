@@ -5,9 +5,9 @@ exports.seed = async function(knex) {
         .whereIn('username', ['glinda', 'scarecrow', 'madhatter'])
         .select('user_id', 'username');
     
-    const [emeraldCity, wonderland] = await knex('companies')
-        .whereIn('company_name', ['Emerald City', 'Wonderland'])
-        .select('company_id', 'company_name');
+    const [emeraldCity, wonderland] = await knex('clients')
+        .whereIn('client_name', ['Emerald City', 'Wonderland'])
+        .select('client_id', 'client_name');
 
     const statuses = await knex('statuses')
         .whereIn('name', ['Curious Beginning', 'Unfolding Adventure'])
@@ -54,7 +54,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 title: 'Ruby Slippers Server Power Fluctuation',
                 ticket_number: 'TIC1006',
-                company_id: emeraldCity.company_id,
+                client_id: emeraldCity.client_id,
                 status_id: statuses.find(s => s.name === 'Curious Beginning').status_id,
                 board_id: board.board_id,
                 category_id: mainCategory.category_id,
@@ -71,7 +71,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 title: 'Tea Time Server Performance Issues',
                 ticket_number: 'TIC1007',
-                company_id: wonderland.company_id,
+                client_id: wonderland.client_id,
                 status_id: statuses.find(s => s.name === 'Unfolding Adventure').status_id,
                 board_id: board.board_id,
                 category_id: mainCategory.category_id,

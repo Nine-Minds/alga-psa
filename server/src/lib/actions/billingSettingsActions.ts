@@ -93,7 +93,7 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
   return { success: true };
 }
 
-export async function getCompanyBillingSettings(companyId: string): Promise<BillingSettings | null> {
+export async function getClientBillingSettings(clientId: string): Promise<BillingSettings | null> {
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
@@ -105,9 +105,9 @@ export async function getCompanyBillingSettings(companyId: string): Promise<Bill
   }
 
   const settings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('company_billing_settings')
+    return await trx('client_billing_settings')
       .where({ 
-        company_id: companyId,
+        client_id: clientId,
         tenant 
       })
       .first();
@@ -126,8 +126,8 @@ export async function getCompanyBillingSettings(companyId: string): Promise<Bill
   };
 }
 
-export async function updateCompanyBillingSettings(
-  companyId: string,
+export async function updateClientBillingSettings(
+  clientId: string,
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean }> {
   const session = await getSession();
@@ -141,27 +141,27 @@ export async function updateCompanyBillingSettings(
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // If data is null, remove the company override
+    // If data is null, remove the client override
     if (data === null) {
-      return await trx('company_billing_settings')
+      return await trx('client_billing_settings')
         .where({ 
-          company_id: companyId,
+          client_id: clientId,
           tenant 
         })
         .delete();
     }
 
-    const existingSettings = await trx('company_billing_settings')
+    const existingSettings = await trx('client_billing_settings')
       .where({ 
-        company_id: companyId,
+        client_id: clientId,
         tenant 
       })
       .first();
 
     if (existingSettings) {
-      return await trx('company_billing_settings')
+      return await trx('client_billing_settings')
         .where({ 
-          company_id: companyId,
+          client_id: clientId,
           tenant 
         })
         .update({
@@ -173,8 +173,8 @@ export async function updateCompanyBillingSettings(
           updated_at: trx.fn.now()
         });
     } else {
-      return await trx('company_billing_settings').insert({
-        company_id: companyId,
+      return await trx('client_billing_settings').insert({
+        client_id: clientId,
         tenant,
         zero_dollar_invoice_handling: data.zeroDollarInvoiceHandling,
         suppress_zero_dollar_invoices: data.suppressZeroDollarInvoices,

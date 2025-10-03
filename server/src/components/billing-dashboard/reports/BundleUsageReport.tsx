@@ -10,14 +10,14 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { getPlanBundles } from 'server/src/lib/actions/planBundleActions';
-import { getCompanyBundles, getDetailedCompanyBundle } from 'server/src/lib/actions/company-actions/companyPlanBundleActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { ICompany } from 'server/src/interfaces';
+import { getClientBundles, getDetailedClientBundle } from 'server/src/lib/actions/client-actions/clientPlanBundleActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { IClient } from 'server/src/interfaces';
 import Spinner from 'server/src/components/ui/Spinner';
 
 interface BundleUsage {
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   bundle_id: string;
   bundle_name: string;
   start_date: string;
@@ -29,7 +29,7 @@ interface BundleUsage {
 
 const BundleUsageReport: React.FC = () => {
   const [bundles, setBundles] = useState<IPlanBundle[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [bundleUsage, setBundleUsage] = useState<BundleUsage[]>([]);
   const [selectedBundle, setSelectedBundle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,14 +44,14 @@ const BundleUsageReport: React.FC = () => {
     setError(null);
     
     try {
-      // Get all bundles and companies
-      const [fetchedBundles, fetchedCompanies] = await Promise.all([
+      // Get all bundles and clients
+      const [fetchedBundles, fetchedClients] = await Promise.all([
         getPlanBundles(),
-        getAllCompanies(false) // false to get only active companies
+        getAllClients(false) // false to get only active clients
       ]);
       
       setBundles(fetchedBundles);
-      setCompanies(fetchedCompanies);
+      setClients(fetchedClients);
       
       // Set default selected bundle if available
       if (fetchedBundles.length > 0) {
@@ -71,20 +71,20 @@ const BundleUsageReport: React.FC = () => {
     setError(null);
     
     try {
-      // Get all companies that have this bundle assigned
-      const companyBundles: Array<{ company_id: string; company_name: string; bundle_id: string; bundle_name: string; start_date: string; end_date: string | null; plan_count: number; total_billed: number; is_active: boolean }> = [];
+      // Get all clients that have this bundle assigned
+      const clientBundles: Array<{ client_id: string; client_name: string; bundle_id: string; bundle_name: string; start_date: string; end_date: string | null; plan_count: number; total_billed: number; is_active: boolean }> = [];
       
-      for (const company of companies) {
-        const companyBundleAssignments = await getCompanyBundles(company.company_id);
-        const matchingBundle = companyBundleAssignments.find(cb => cb.bundle_id === bundleId);
+      for (const client of clients) {
+        const clientBundleAssignments = await getClientBundles(client.client_id);
+        const matchingBundle = clientBundleAssignments.find(cb => cb.bundle_id === bundleId);
         
-        if (matchingBundle && matchingBundle.company_bundle_id) {
-          const detailedBundle = await getDetailedCompanyBundle(matchingBundle.company_bundle_id);
+        if (matchingBundle && matchingBundle.client_bundle_id) {
+          const detailedBundle = await getDetailedClientBundle(matchingBundle.client_bundle_id);
           
           if (detailedBundle) {
-            companyBundles.push({
-              company_id: company.company_id,
-              company_name: company.company_name || 'Unknown Company',
+            clientBundles.push({
+              client_id: client.client_id,
+              client_name: client.client_name || 'Unknown Client',
               bundle_id: bundleId,
               bundle_name: detailedBundle.bundle_name,
               start_date: matchingBundle.start_date,
@@ -97,7 +97,7 @@ const BundleUsageReport: React.FC = () => {
         }
       }
       
-      setBundleUsage(companyBundles);
+      setBundleUsage(clientBundles);
     } catch (error) {
       console.error('Error fetching bundle usage:', error);
       setError('Failed to load bundle usage data');
@@ -119,8 +119,8 @@ const BundleUsageReport: React.FC = () => {
 
   const bundleUsageColumns: ColumnDefinition<BundleUsage>[] = [
     {
-      title: 'Company',
-      dataIndex: 'company_name',
+      title: 'Client',
+      dataIndex: 'client_name',
     },
     {
       title: 'Start Date',
@@ -191,7 +191,7 @@ const BundleUsageReport: React.FC = () => {
           
           {bundleUsage.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              {selectedBundle ? 'No companies are using this bundle' : 'Select a bundle to view usage data'}
+              {selectedBundle ? 'No clients are using this bundle' : 'Select a bundle to view usage data'}
             </div>
           ) : (
             <DataTable
@@ -207,7 +207,7 @@ const BundleUsageReport: React.FC = () => {
             <h3 className="text-lg font-medium mb-2">Summary</h3>
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-blue-50 p-4 rounded-md">
-                <div className="text-sm text-blue-600">Total Companies</div>
+                <div className="text-sm text-blue-600">Total Clients</div>
                 <div className="text-2xl font-bold">{bundleUsage.length}</div>
               </div>
               <div className="bg-green-50 p-4 rounded-md">

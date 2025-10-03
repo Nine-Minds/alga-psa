@@ -19,11 +19,11 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
   return await knex.transaction(async (trx) => {
     // If no billing plan ID is provided, try to determine the default one
     let billingPlanId = data.billing_plan_id;
-    if (!billingPlanId && data.service_id && data.company_id) {
+    if (!billingPlanId && data.service_id && data.client_id) {
       try {
         // Use trx for consistency if determineDefaultBillingPlan needs DB access within transaction
         const defaultPlanId = await determineDefaultBillingPlan(
-          data.company_id,
+          data.client_id,
           data.service_id
           // trx // Removed transaction argument
         );
@@ -41,7 +41,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
     const [record] = await trx('usage_tracking')
       .insert({
         tenant,
-        company_id: data.company_id,
+        client_id: data.client_id,
         service_id: data.service_id,
         quantity: data.quantity,
         usage_date: data.usage_date,
@@ -54,7 +54,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
     }
 
     // --- Bucket Usage Update Logic ---
-    if (record.service_id && record.company_id && record.billing_plan_id) {
+    if (record.service_id && record.client_id && record.billing_plan_id) {
       // Check if the plan is a 'Bucket' type plan
       const plan = await trx('billing_plans')
         .where({ plan_id: record.billing_plan_id, tenant })
@@ -70,7 +70,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
           try {
             const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
               trx,
-              record.company_id,
+              record.client_id,
               record.service_id,
               record.usage_date // Use usage record's date
             );
@@ -121,12 +121,12 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     let finalBillingPlanId = data.billing_plan_id;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalBillingPlanId === null || finalBillingPlanId === undefined) {
-      const companyIdForPlan = data.company_id || originalRecord.company_id;
+      const clientIdForPlan = data.client_id || originalRecord.client_id;
       const serviceIdForPlan = data.service_id || originalRecord.service_id;
-      if (companyIdForPlan && serviceIdForPlan) {
+      if (clientIdForPlan && serviceIdForPlan) {
         try {
           const defaultPlanId = await determineDefaultBillingPlan(
-            companyIdForPlan,
+            clientIdForPlan,
             serviceIdForPlan
             // trx // Removed transaction argument
           );
@@ -136,14 +136,14 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
           finalBillingPlanId = originalRecord.billing_plan_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
         }
       } else {
-         finalBillingPlanId = originalRecord.billing_plan_id; // Fallback if company/service IDs are missing
+         finalBillingPlanId = originalRecord.billing_plan_id; // Fallback if client/service IDs are missing
       }
     }
 
     // 3. Update the usage record
     const updatePayload: Partial<IUsageRecord> = {
         // Only include fields that are present in the input data
-        ...(data.company_id !== undefined && { company_id: data.company_id }),
+        ...(data.client_id !== undefined && { client_id: data.client_id }),
         ...(data.service_id !== undefined && { service_id: data.service_id }),
         ...(data.quantity !== undefined && { quantity: data.quantity }),
         ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
@@ -166,7 +166,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     // This handles adding/removing quantity from a bucket-linked record, or changing a record to become bucket-linked.
     // It currently DOES NOT handle removing quantity when a record is changed *away* from a bucket plan. That requires more complex logic checking the original plan type.
 
-    if (updatedRecord.service_id && updatedRecord.company_id && updatedRecord.billing_plan_id) {
+    if (updatedRecord.service_id && updatedRecord.client_id && updatedRecord.billing_plan_id) {
       const plan = await trx('billing_plans')
         .where({ plan_id: updatedRecord.billing_plan_id, tenant })
         .first('plan_type');
@@ -183,7 +183,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
           try {
             const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
               trx,
-              updatedRecord.company_id,
+              updatedRecord.client_id,
               updatedRecord.service_id,
               updatedRecord.usage_date // Use updated usage date
             );
@@ -230,7 +230,7 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
-    if (recordToDelete.service_id && recordToDelete.company_id && recordToDelete.billing_plan_id) {
+    if (recordToDelete.service_id && recordToDelete.client_id && recordToDelete.billing_plan_id) {
       const plan = await trx('billing_plans')
         .where({ plan_id: recordToDelete.billing_plan_id, tenant })
         .first('plan_type');
@@ -247,7 +247,7 @@ export async function deleteUsageRecord(usageId: string): Promise<void> {
             // Find the record - it should exist if usage was previously logged
             const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
               trx,
-              recordToDelete.company_id,
+              recordToDelete.client_id,
               recordToDelete.service_id,
               recordToDelete.usage_date // Use record's usage date
             );
@@ -295,12 +295,12 @@ export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageReco
   let query = knex('usage_tracking')
     .select(
       'usage_tracking.*',
-      'companies.company_name',
+      'clients.client_name',
       'service_catalog.service_name'
     )
-    .join('companies', function(this: Knex.JoinClause) {
-      this.on('companies.company_id', '=', 'usage_tracking.company_id')
-        .andOn('companies.tenant', '=', 'usage_tracking.tenant');
+    .join('clients', function(this: Knex.JoinClause) {
+      this.on('clients.client_id', '=', 'usage_tracking.client_id')
+        .andOn('clients.tenant', '=', 'usage_tracking.tenant');
     })
     .join('service_catalog', function(this: Knex.JoinClause) {
       this.on('service_catalog.service_id', '=', 'usage_tracking.service_id')
@@ -308,8 +308,8 @@ export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageReco
     })
     .where('usage_tracking.tenant', tenant);
 
-  if (filter?.company_id) {
-    query = query.where('usage_tracking.company_id', filter.company_id);
+  if (filter?.client_id) {
+    query = query.where('usage_tracking.client_id', filter.client_id);
   }
 
   if (filter?.service_id) {
@@ -327,12 +327,12 @@ export async function getUsageRecords(filter?: IUsageFilter): Promise<IUsageReco
   return query.orderBy('usage_tracking.usage_date', 'desc');
 }
 
-interface Company {
-  company_id: string;
-  company_name: string;
+interface Client {
+  client_id: string;
+  client_name: string;
 }
 
-export async function getCompanies() {
+export async function getClients() {
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
@@ -340,13 +340,13 @@ export async function getCompanies() {
 
   const { knex, tenant } = await createTenantKnex();
 
-  const companies = await knex('companies')
-    .select('company_id', 'company_name')
+  const clients = await knex('clients')
+    .select('client_id', 'client_name')
     .where('tenant', tenant)
-    .orderBy('company_name') as Company[];
+    .orderBy('client_name') as Client[];
 
-  return companies.map((company: Company) => ({
-    value: company.company_id,
-    label: company.company_name
+  return clients.map((client: Client) => ({
+    value: client.client_id,
+    label: client.client_name
   }));
 }

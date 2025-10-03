@@ -117,9 +117,9 @@ export default function AssetDetails({ asset }: AssetDetailsProps) {
         <Text as="div" size="2" className="font-medium text-gray-700">Location</Text>
         <Text as="div" size="2">{asset.location || 'Not specified'}</Text>
       </div>
-      <div {...withDataAutomationId({ id: 'asset-company-info' })}>
-        <Text as="div" size="2" className="font-medium text-gray-700">Company</Text>
-        <Text as="div" size="2">{asset.company?.company_name || 'Unassigned'}</Text>
+      <div {...withDataAutomationId({ id: 'asset-client-info' })}>
+        <Text as="div" size="2" className="font-medium text-gray-700">Client</Text>
+        <Text as="div" size="2">{asset.client?.client_name || 'Unassigned'}</Text>
       </div>
       {asset.purchase_date && (
         <div {...withDataAutomationId({ id: 'asset-purchase-date-info' })}>

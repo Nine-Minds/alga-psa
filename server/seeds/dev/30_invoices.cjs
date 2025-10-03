@@ -5,10 +5,10 @@ exports.seed = function (knex) {
             return knex('invoices').insert([
                 {
                     tenant: tenant.tenant,
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Emerald City' 
-                    }).select('company_id').first(),
+                        client_name: 'Emerald City' 
+                    }).select('client_id').first(),
                     invoice_number: 'INV-003',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),
@@ -28,10 +28,10 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Emerald City' 
-                    }).select('company_id').first(),
+                        client_name: 'Emerald City' 
+                    }).select('client_id').first(),
                     invoice_number: 'INV-004',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),
@@ -51,10 +51,10 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Emerald City' 
-                    }).select('company_id').first(),
+                        client_name: 'Emerald City' 
+                    }).select('client_id').first(),
                     invoice_number: 'INV-005',
                     invoice_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     due_date: knex.raw("DATE_TRUNC('month', CURRENT_DATE) + INTERVAL '15 days'"),

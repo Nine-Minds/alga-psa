@@ -62,7 +62,7 @@ export interface IUserRegister {
   username: string;
   email: string;
   password: string;
-  companyName: string;
+  clientName: string;
   user_type: string;
 }
 

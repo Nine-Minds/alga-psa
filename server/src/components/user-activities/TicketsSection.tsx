@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { TicketActivity, ActivityFilters } from "server/src/interfaces/activity.interfaces";
-import { ICompany } from "server/src/interfaces/company.interfaces";
+import { IClient } from "server/src/interfaces/client.interfaces";
 import { IContact } from "server/src/interfaces/contact.interfaces";
 import { IStatus } from "server/src/interfaces/status.interface";
 import { Button } from "server/src/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "server/src/components/ui/Card";
 import { TicketCard } from "server/src/components/user-activities/ActivityCard";
 import { fetchTicketActivities } from "server/src/lib/actions/activity-actions/activityServerActions";
-import { getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
+import { getAllClients } from "server/src/lib/actions/client-actions/clientActions";
 import { getAllContacts } from "server/src/lib/actions/contact-actions/contactActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { TicketSectionFiltersDialog } from "server/src/components/user-activities/filters/TicketSectionFiltersDialog";
@@ -25,7 +25,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
   const [error, setError] = useState<string | null>(null);
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
   const [ticketFilters, setTicketFilters] = useState<Partial<ActivityFilters>>({ isClosed: false });
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [filterDataLoading, setFilterDataLoading] = useState(true);
@@ -70,17 +70,17 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
     }
   }, [limit]); // Removed dependency on ticketFilters to avoid loop, loadActivities is called explicitly
 
-  // Fetch filter options (companies, contacts) on mount
+  // Fetch filter options (clients, contacts) on mount
   useEffect(() => {
     async function loadFilterData() {
       try {
         setFilterDataLoading(true);
-        const [companyData, contactData, statusData] = await Promise.all([
-          getAllCompanies(false),
+        const [clientData, contactData, statusData] = await Promise.all([
+          getAllClients(false),
           getAllContacts('active'),
           getTicketStatuses() // Fetch ticket statuses
         ]);
-        setCompanies(companyData);
+        setClients(clientData);
         setContacts(contactData);
         setStatuses(statusData); // Set statuses state
       } catch (err) {
@@ -217,7 +217,7 @@ export function TicketsSection({ limit = 5, onViewAll }: TicketsSectionProps) {
           onOpenChange={setIsFilterDialogOpen}
           initialFilters={ticketFilters}
           onApplyFilters={handleApplyFilters}
-          companies={companies}
+          clients={clients}
           contacts={contacts}
           statuses={statuses}
         />

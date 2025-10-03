@@ -20,7 +20,7 @@ import {
   saveTimeEntryParamsSchema,
   SaveTimeEntryParams
 } from './timeEntrySchemas'; // Import schemas
-import { getCompanyIdForWorkItem } from './timeEntryHelpers'; // Import helper
+import { getClientIdForWorkItem } from './timeEntryHelpers'; // Import helper
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 import { getSession } from 'server/src/lib/auth/getSession';
@@ -113,9 +113,9 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
             'interactions.interaction_id': entry.work_item_id,
             'interactions.tenant': tenant
           })
-          .leftJoin('companies', function() {
-            this.on('interactions.company_id', '=', 'companies.company_id')
-              .andOn('companies.tenant', '=', 'interactions.tenant');
+          .leftJoin('clients', function() {
+            this.on('interactions.client_id', '=', 'clients.client_id')
+              .andOn('clients.tenant', '=', 'interactions.tenant');
           })
           .leftJoin('contacts', function() {
             this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
@@ -129,7 +129,7 @@ export async function fetchTimeEntriesForTimeSheet(timeSheetId: string): Promise
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
             db.raw("'' as description"), // Don't copy interaction notes to time entry
-            'companies.company_name',
+            'clients.client_name',
             'contacts.full_name as contact_name',
             'interaction_types.type_name as interaction_type'
           );
@@ -302,18 +302,18 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
                     .andOn('project_phases.tenant', '=', 'projects.tenant');
               })
               .where({ 'project_tasks.task_id': work_item_id, 'project_tasks.tenant': tenant })
-              .first('projects.company_id')).company_id
+              .first('projects.client_id')).client_id
             : work_item_type === 'ticket' ?
               (await db('tickets')
                 .where({ ticket_id: work_item_id, tenant })
-                .first('company_id')).company_id
+                .first('client_id')).client_id
               : work_item_type === 'interaction' ?
                 (await db('interactions')
                   .where({ 
                     interaction_id: work_item_id, 
                     tenant
                   })
-                  .first('company_id'))?.company_id
+                  .first('client_id'))?.client_id
                 : null,
           service_id
         );
@@ -532,22 +532,22 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
       // Check if billable based on duration > 0
       if (resultingEntry && resultingEntry.service_id && (resultingEntry.billable_duration || 0) > 0) {
         // Ensure work_item_id and work_item_type exist and call helper
-        let companyId: string | null = null;
+        let clientId: string | null = null;
         if (resultingEntry.work_item_id && resultingEntry.work_item_type) {
             // Now TypeScript knows both are strings here
-            companyId = await getCompanyIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
+            clientId = await getClientIdForWorkItem(trx, tenant, resultingEntry.work_item_id as string, resultingEntry.work_item_type as string);
         }
         const currentPlanId = resultingEntry.billing_plan_id; // Use the plan ID associated with the entry
 
-        if (companyId && currentPlanId) {
+        if (clientId && currentPlanId) {
           // Check if the plan is a 'Bucket' type plan
-          // Correctly check plan_type by joining company_billing_plans with billing_plans
-          const planInfo = await trx('company_billing_plans as cbp')
+          // Correctly check plan_type by joining client_billing_plans with billing_plans
+          const planInfo = await trx('client_billing_plans as cbp')
             .join('billing_plans as bp', function() {
                 this.on('cbp.plan_id', '=', 'bp.plan_id')
                     .andOn('cbp.tenant', '=', 'bp.tenant');
             })
-            .where('cbp.company_billing_plan_id', currentPlanId) // Use the ID from the time entry
+            .where('cbp.client_billing_plan_id', currentPlanId) // Use the ID from the time entry
             .andWhere('cbp.tenant', tenant)
             .first('bp.plan_type'); // Select plan_type from billing_plans table
 
@@ -563,7 +563,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
               try {
                 const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
                   trx,
-                  companyId,
+                  clientId,
                   resultingEntry.service_id,
                   resultingEntry.start_time // Use entry's start time to find the correct period
                 );
@@ -586,7 +586,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
              console.log(`Time entry ${resultingEntry.entry_id} service/plan is not a Bucket type or plan not found.`);
           }
         } else {
-           console.log(`Could not determine company ID or billing plan for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+           console.log(`Could not determine client ID or billing plan for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
         }
       } else {
          console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);
@@ -685,9 +685,9 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
             'interactions.interaction_id': entry.work_item_id,
             'interactions.tenant': tenant
           })
-          .leftJoin('companies', function() {
-            this.on('interactions.company_id', '=', 'companies.company_id')
-              .andOn('companies.tenant', '=', 'interactions.tenant');
+          .leftJoin('clients', function() {
+            this.on('interactions.client_id', '=', 'clients.client_id')
+              .andOn('clients.tenant', '=', 'interactions.tenant');
           })
           .leftJoin('contacts', function() {
             this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
@@ -701,7 +701,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
             'interactions.interaction_id as work_item_id',
             'interactions.title as name',
             db.raw("'' as description"), // Don't copy interaction notes to time entry
-            'companies.company_name',
+            'clients.client_name',
             'contacts.full_name as contact_name',
             'interaction_types.type_name as interaction_type'
           );
@@ -709,7 +709,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           ...interaction,
           type: 'interaction',
           is_billable: entry.billable_duration > 0,
-          company_name: interaction.company_name,
+          client_name: interaction.client_name,
           contact_name: interaction.contact_name,
           interaction_type: interaction.interaction_type
         };
@@ -788,19 +788,19 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
 
       // --- Bucket Usage Update Logic (Before Delete) ---
       if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
-        let companyId: string | null = null;
+        let clientId: string | null = null;
         if (timeEntry.work_item_id && timeEntry.work_item_type) {
-            companyId = await getCompanyIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
+            clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
         }
         const currentPlanId = timeEntry.billing_plan_id;
 
-        if (companyId && currentPlanId) {
-          const planInfo = await trx('company_billing_plans as cbp')
+        if (clientId && currentPlanId) {
+          const planInfo = await trx('client_billing_plans as cbp')
             .join('billing_plans as bp', function() {
                 this.on('cbp.plan_id', '=', 'bp.plan_id')
                     .andOn('cbp.tenant', '=', 'bp.tenant');
             })
-            .where('cbp.company_billing_plan_id', currentPlanId)
+            .where('cbp.client_billing_plan_id', currentPlanId)
             .andWhere('cbp.tenant', tenant)
             .first('bp.plan_type');
 
@@ -812,7 +812,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
               try {
                 const bucketUsageRecord = await findOrCreateCurrentBucketUsageRecord(
                   trx,
-                  companyId,
+                  clientId,
                   timeEntry.service_id,
                   timeEntry.start_time // Use entry's start time to find the correct period
                 );
@@ -1004,9 +1004,9 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
               'interactions.interaction_id': entry.work_item_id,
               'interactions.tenant': tenant
             })
-            .leftJoin('companies', function() {
-              this.on('interactions.company_id', '=', 'companies.company_id')
-                .andOn('companies.tenant', '=', 'interactions.tenant');
+            .leftJoin('clients', function() {
+              this.on('interactions.client_id', '=', 'clients.client_id')
+                .andOn('clients.tenant', '=', 'interactions.tenant');
             })
             .leftJoin('contacts', function() {
               this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
@@ -1020,7 +1020,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
               'interactions.interaction_id as work_item_id',
               'interactions.title as name',
               db.raw("'' as description"), // Don't copy interaction notes to time entry
-              'companies.company_name',
+              'clients.client_name',
               'contacts.full_name as contact_name',
               'interaction_types.type_name as interaction_type'
             );
@@ -1028,7 +1028,7 @@ export async function deleteTimeEntry(entryId: string): Promise<void> {
             ...interaction,
             type: 'interaction',
             is_billable: entry.billable_duration > 0,
-            company_name: interaction.company_name,
+            client_name: interaction.client_name,
             contact_name: interaction.contact_name,
             interaction_type: interaction.interaction_type
           };

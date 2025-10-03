@@ -25,7 +25,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
       statuses,
       priorities,
       categories,
-      companies,
+      clients,
       users,
       locations
     ] = await Promise.all([
@@ -76,11 +76,11 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           board_id: row.board_id
         }))),
 
-      // Companies
-      knex('companies')
+      // Clients
+      knex('clients')
         .where({ tenant })
-        .orderBy('company_name', 'asc')
-        .select('company_id as id', 'company_name as name')
+        .orderBy('client_name', 'asc')
+        .select('client_id as id', 'client_name as name')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
           name: row.name
@@ -99,15 +99,15 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
           username: row.username
         }))),
 
-      // Locations (stored in company_locations)
-      knex('company_locations')
+      // Locations (stored in client_locations)
+      knex('client_locations')
         .where({ tenant })
         .orderBy('location_name', 'asc')
-        .select('location_id as id', 'location_name as name', 'company_id')
+        .select('location_id as id', 'location_name as name', 'client_id')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
           name: row.name,
-          company_id: row.company_id
+          client_id: row.client_id
         })))
     ]);
 
@@ -119,7 +119,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
         statuses: statuses || [],
         priorities: priorities || [],
         categories: categories || [],
-        companies: companies || [],
+        clients: clients || [],
         users: users || [],
         locations: locations || []
       }
@@ -132,7 +132,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
         statuses: [],
         priorities: [],
         categories: [],
-        companies: [],
+        clients: [],
         users: [],
         locations: []
       }
@@ -327,7 +327,7 @@ export async function getCategoriesByBoard(boardId: string | null): Promise<{ ca
   }
 }
 
-export async function getAvailableCompanies(): Promise<{ companies: TicketFieldOptions['companies'] }> {
+export async function getAvailableClients(): Promise<{ clients: TicketFieldOptions['clients'] }> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
@@ -340,19 +340,19 @@ export async function getAvailableCompanies(): Promise<{ companies: TicketFieldO
   }
   
   try {
-    const companies = await knex('companies')
+    const clients = await knex('clients')
       .where({ tenant })
-      .orderBy('company_name', 'asc')
-      .select('company_id as id', 'company_name as name')
+      .orderBy('client_name', 'asc')
+      .select('client_id as id', 'client_name as name')
       .then(rows => rows.map(row => ({ 
         id: row.id, 
         name: row.name
       })));
 
-    return { companies };
+    return { clients };
   } catch (error) {
-    console.error('Failed to load companies:', error);
-    return { companies: [] };
+    console.error('Failed to load clients:', error);
+    return { clients: [] };
   }
 }
 

@@ -39,7 +39,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
         rate: 55.44
       }
     ],
-    company: {
+    client: {
       name: 'Wonderland Whimsies Ltd.',
       logo: 'https://example.com/cheshire-cat-logo.png',
       address: '1 Rabbit Hole Lane, Wonderland, WL 12345, Wonderland'
@@ -48,7 +48,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
       name: 'Alice Liddell',
       address: '1 Rabbit Hole Lane, Wonderland, WL 12345, Wonderland'
     },
-    company_id: 'WNDR-001',
+    client_id: 'WNDR-001',
     credit_applied: 0,
     is_manual: false
   },
@@ -88,7 +88,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
         rate: 2
       }
     ],
-    company: {
+    client: {
       name: 'Red Queen Enterprises',
       logo: 'https://example.com/red-queen-logo.png',
       address: 'Heart Castle, Queen\'s Way, Card Castle, WL 54321, Wonderland'
@@ -97,7 +97,7 @@ export const sampleInvoices: InvoiceViewModel[] = [
       name: 'Knave of Hearts',
       address: 'Heart Castle, Queen\'s Way, Card Castle, WL 54321, Wonderland'
     },
-    company_id: 'RQE-001',
+    client_id: 'RQE-001',
     credit_applied: 0,
     is_manual: false
   }

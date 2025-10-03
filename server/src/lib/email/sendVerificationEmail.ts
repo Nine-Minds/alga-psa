@@ -25,22 +25,22 @@ export async function sendVerificationEmail({
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL;
       const verificationUrl = `${baseUrl}/auth/verify?token=${token}&registrationId=${registrationId}`;
 
-      // Get both company names from their respective tables
-      const [registrationCompany, tenantCompany] = await Promise.all([
-        knex('companies').where({ tenant }).select('company_name').first(),
-        knex('tenants').where({ tenant }).select('company_name').first()
+      // Get both client names from their respective tables
+      const [registrationClient, tenantClient] = await Promise.all([
+        knex('clients').where({ tenant }).select('client_name').first(),
+        knex('tenants').where({ tenant }).select('client_name').first()
       ]);
 
-      if (!registrationCompany || !tenantCompany) {
-        throw new Error('Company information not found');
+      if (!registrationClient || !tenantClient) {
+        throw new Error('Client information not found');
       }
 
       // Prepare template data
       const templateData = {
         email,
         verificationUrl,
-        registrationCompanyName: registrationCompany.company_name,
-        tenantCompanyName: tenantCompany.company_name,
+        registrationClientName: registrationClient.client_name,
+        tenantClientName: tenantClient.client_name,
         currentYear: new Date().getFullYear()
       };
 

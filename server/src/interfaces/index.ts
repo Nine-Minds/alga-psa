@@ -14,7 +14,7 @@ export * from './document.interface';
 export * from './project.interfaces';
 export * from './board.interface';
 export * from './comment.interface';
-export * from './company.interfaces';
+export * from './client.interfaces';
 export * from './contact.interfaces';
 export * from './billing.interfaces';
 export * from './timeEntry.interfaces';

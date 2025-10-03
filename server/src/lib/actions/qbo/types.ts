@@ -54,16 +54,16 @@ export interface QboMetaData {
 export interface QboCustomer {
   Id?: string;
   SyncToken?: string;
-  DisplayName?: string; // Maps from Alga Company Name
+  DisplayName?: string; // Maps from Alga Client Name
   GivenName?: string;
   MiddleName?: string;
   FamilyName?: string;
-  CompanyName?: string; // May also map from Alga Company Name if applicable
-  PrimaryEmailAddr?: QboEmailAddr; // Maps from Alga Company billing_email
-  BillAddr?: QboAddress; // Maps from Alga Company address
-  ShipAddr?: QboAddress; // Maps from Alga Company address (if different)
-  PrimaryPhone?: QboPhoneNumber; // Maps from Alga Company phone
-  SalesTermRef?: QboRef; // Maps from Alga Company payment_terms via lookup
+  ClientName?: string; // May also map from Alga Client Name if applicable
+  PrimaryEmailAddr?: QboEmailAddr; // Maps from Alga Client billing_email
+  BillAddr?: QboAddress; // Maps from Alga Client address
+  ShipAddr?: QboAddress; // Maps from Alga Client address (if different)
+  PrimaryPhone?: QboPhoneNumber; // Maps from Alga Client phone
+  SalesTermRef?: QboRef; // Maps from Alga Client payment_terms via lookup
   MetaData?: QboMetaData;
   // Add other relevant fields as needed
 }
@@ -136,16 +136,16 @@ export interface QboInvoice {
   SyncToken?: string;
   DocNumber?: string; // Maps from Alga invoice_number
   TxnDate?: string; // Maps from Alga invoice_date (YYYY-MM-DD)
-  CustomerRef: QboRef; // Maps from Alga company_id via lookup (qbo_customer_id)
+  CustomerRef: QboRef; // Maps from Alga client_id via lookup (qbo_customer_id)
   Line: QboInvoiceLine[]; // Maps from Alga invoice_items
   DueDate?: string; // Maps from Alga due_date (YYYY-MM-DD)
   TotalAmt?: number; // Maps from Alga total_amount (converted), QBO calculates
   ApplyTaxAfterDiscount?: boolean;
   TxnTaxDetail?: QboTxnTaxDetail; // Maps from Alga tax details
-  BillEmail?: QboEmailAddr; // Maps from Alga Company billing_email
-  BillAddr?: QboAddress; // Maps from Alga Company address
-  ShipAddr?: QboAddress; // Maps from Alga Company address (if different)
-  SalesTermRef?: QboRef; // Maps from Alga Company payment_terms via lookup
+  BillEmail?: QboEmailAddr; // Maps from Alga Client billing_email
+  BillAddr?: QboAddress; // Maps from Alga Client address
+  ShipAddr?: QboAddress; // Maps from Alga Client address (if different)
+  SalesTermRef?: QboRef; // Maps from Alga Client payment_terms via lookup
   PrivateNote?: string; // Potential place for billing period info
   MetaData?: QboMetaData;
   // Add other relevant fields as needed

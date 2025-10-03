@@ -60,9 +60,9 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
 
   let logoCol: ColumnElement;
   // --- Tenant Logo ---
-  // Check if tenantCompany and logoUrl exist
-  if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
-    const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
+  // Check if tenantClient and logoUrl exist
+  if (viewModel.tenantClient != null && viewModel.tenantClient!.logoUrl != null && viewModel.tenantClient!.logoUrl!.length > 0) {
+    const logoElement = new ImageElement(viewModel.tenantClient!.logoUrl!, "Tenant Client Logo");
     const logoStyle = new PartialStyle();
     logoStyle.width = "150px";
     logoElement.style = instantiateStyle(logoStyle);
@@ -73,14 +73,14 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
   }
   logoCol.span = 3; // Keep existing span
 
-  // --- Tenant Company Name & Address ---
-  const tenantName = viewModel.tenantCompany != null && viewModel.tenantCompany!.name != null ? viewModel.tenantCompany!.name! : "[Tenant Name]";
-  const tenantAddress = viewModel.tenantCompany != null && viewModel.tenantCompany!.address != null ? viewModel.tenantCompany!.address! : "[Tenant Address]";
-  const companyInfoCol = new ColumnElement([
+  // --- Tenant Client Name & Address ---
+  const tenantName = viewModel.tenantClient != null && viewModel.tenantClient!.name != null ? viewModel.tenantClient!.name! : "[Tenant Name]";
+  const tenantAddress = viewModel.tenantClient != null && viewModel.tenantClient!.address != null ? viewModel.tenantClient!.address! : "[Tenant Address]";
+  const clientInfoCol = new ColumnElement([
     new TextElement(tenantName, "heading3"), // Use a heading style for name
     new TextElement(tenantAddress)
   ]);
-  companyInfoCol.span = 5; // Keep existing span
+  clientInfoCol.span = 5; // Keep existing span
 
   // --- Invoice Info (Remains the same) ---
   const invoiceInfoCol = new ColumnElement([
@@ -106,7 +106,7 @@ function createHeaderSection_StdDetailed(viewModel: InvoiceViewModel, children: 
   customerInfoStyle.paddingTop = "0.5em";
   applyStyle(customerInfoCol, instantiateStyle(customerInfoStyle));
 
-  const headerRow1 = new RowElement([logoCol, companyInfoCol, invoiceInfoCol]);
+  const headerRow1 = new RowElement([logoCol, clientInfoCol, invoiceInfoCol]);
   const headerRow2 = new RowElement([customerInfoCol]); // Customer info on its own row
 
   const headerSection = new SectionElement([headerRow1, headerRow2]);

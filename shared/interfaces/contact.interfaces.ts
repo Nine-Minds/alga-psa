@@ -11,7 +11,7 @@ export interface IContact {
   contact_name_id: string;
   tenant?: string;
   full_name: string;
-  company_id: string | null;
+  client_id: string | null;
   phone_number: string | null;
   email: string | null;
   role: string | null;
@@ -29,7 +29,7 @@ export interface CreateContactInput {
   full_name: string;
   email?: string;
   phone_number?: string;
-  company_id?: string;
+  client_id?: string;
   role?: string;
   notes?: string;
   is_inactive?: boolean;
@@ -42,7 +42,7 @@ export interface UpdateContactInput {
   full_name?: string;
   email?: string;
   phone_number?: string;
-  company_id?: string;
+  client_id?: string;
   role?: string;
   notes?: string;
   is_inactive?: boolean;

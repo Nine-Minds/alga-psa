@@ -31,7 +31,7 @@ const ClientPortalSettings = () => {
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
-  const [companyName, setCompanyName] = useState<string>('');
+  const [clientName, setClientName] = useState<string>('');
   const [tenantId, setTenantId] = useState<string>('');
   const [showPreview, setShowPreview] = useState<boolean>(false);
   const [previewMode, setPreviewMode] = useState<'dashboard' | 'signin' | null>(null);
@@ -90,7 +90,7 @@ const ClientPortalSettings = () => {
           setLogoUrl(brandingSettings.logoUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
-          setCompanyName(brandingSettings.companyName || '');
+          setClientName(brandingSettings.clientName || '');
         }
       } catch (error) {
         console.error('Failed to load tenant settings:', error);
@@ -150,13 +150,13 @@ const ClientPortalSettings = () => {
   const saveBrandingSettings = async (updates: Partial<{
     primaryColor: string;
     secondaryColor: string;
-    companyName: string;
+    clientName: string;
   }>) => {
     const brandingData = {
       logoUrl: logoUrl, // Keep existing logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
-      companyName: updates.companyName !== undefined ? updates.companyName : companyName,
+      clientName: updates.clientName !== undefined ? updates.clientName : clientName,
     };
 
     await updateTenantBrandingAction(brandingData);
@@ -169,7 +169,7 @@ const ClientPortalSettings = () => {
       await saveBrandingSettings({
         primaryColor,
         secondaryColor,
-        companyName,
+        clientName,
       });
       // Refresh branding context after saving
       await refreshBranding();
@@ -219,7 +219,7 @@ const ClientPortalSettings = () => {
           <CardTitle>Language Settings</CardTitle>
           <CardDescription>
             Configure the default language settings for your client portal.
-            These settings apply to all users and companies unless overridden.
+            These settings apply to all users and clients unless overridden.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -236,7 +236,7 @@ const ClientPortalSettings = () => {
                 data-automation-id="tenant-default-language-select"
               />
               <p className="text-sm text-gray-500">
-                This will be the default language for all client portal users unless overridden by company setting or individual user preferences
+                This will be the default language for all client portal users unless overridden by client setting or individual user preferences
               </p>
             </div>
 
@@ -272,7 +272,7 @@ const ClientPortalSettings = () => {
               <h4 className="text-sm font-medium text-blue-900 mb-2">Language Preference Hierarchy</h4>
               <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
                 <li>Individual user preference (highest priority)</li>
-                <li>Company default language</li>
+                <li>Client default language</li>
                 <li>Organization default (configured here)</li>
                 <li>System default (English)</li>
               </ol>
@@ -302,8 +302,8 @@ const ClientPortalSettings = () => {
                 id="company-name"
                 label="Company Name"
                 type="text"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
+                value={clientName}
+                onChange={(e) => setClientName(e.target.value)}
                 placeholder="Your Company Name"
                 disabled={brandingLoading || brandingSaving}
                 containerClassName="mb-1"
@@ -322,7 +322,7 @@ const ClientPortalSettings = () => {
                 <EntityImageUpload
                   entityType="tenant"
                   entityId={tenantId}
-                  entityName={companyName || 'Client Portal'}
+                  entityName={clientName || 'Client Portal'}
                   imageUrl={logoUrl}
                   uploadAction={handleLogoUpload}
                   deleteAction={handleLogoDelete}
@@ -447,7 +447,7 @@ const ClientPortalSettings = () => {
                         <div className="w-7 h-7 bg-gray-300 rounded" />
                       )}
                       <span className="text-base font-semibold text-gray-900">
-                        {companyName || 'Your Company'} Portal
+                        {clientName || 'Your Client'} Portal
                       </span>
                     </div>
                     <div className="flex items-center gap-4">
@@ -576,7 +576,7 @@ const ClientPortalSettings = () => {
                     logoUrl,
                     primaryColor: primaryColor || '#8B5CF6',
                     secondaryColor: secondaryColor || '#6366F1',
-                    companyName
+                    clientName
                   }}
                 />
               )}

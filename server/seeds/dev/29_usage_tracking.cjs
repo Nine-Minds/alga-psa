@@ -5,10 +5,10 @@ exports.seed = function (knex) {
             return knex('usage_tracking').insert([
                 {
                     tenant: tenant.tenant,
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Wonderland' 
-                    }).select('company_id').first(),
+                        client_name: 'Wonderland' 
+                    }).select('client_id').first(),
                     service_id: knex('service_catalog').where({ 
                         tenant: tenant.tenant, 
                         service_name: 'Shrinking Potion' 
@@ -18,10 +18,10 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Wonderland' 
-                    }).select('company_id').first(),
+                        client_name: 'Wonderland' 
+                    }).select('client_id').first(),
                     service_id: knex('service_catalog').where({ 
                         tenant: tenant.tenant, 
                         service_name: 'Yellow Brick Road Repair' 

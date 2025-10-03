@@ -134,7 +134,7 @@ export class EmailService {
     return {
       subject: 'Invoice {{invoice_number}} from Your Company',
       body: `
-        <p>Dear {{company_name}},</p>
+        <p>Dear {{client_name}},</p>
         <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
         <p>Thank you for your business!</p>
       `
@@ -143,7 +143,7 @@ export class EmailService {
 
   private renderInvoiceTemplate(template: string, invoice: InvoiceViewModel) {
     return template
-      .replace(/{{company_name}}/g, invoice.company.name)
+      .replace(/{{client_name}}/g, invoice.client.name)
       .replace(/{{invoice_number}}/g, invoice.invoice_number)
       .replace(/{{total_amount}}/g, `$${(invoice.total_amount / 100).toFixed(2)}`);
   }

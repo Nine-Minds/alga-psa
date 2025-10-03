@@ -13,7 +13,7 @@ interface PaginationProps {
     itemsPerPage: number;
     currentPage?: number;
     onPageChange: (page: number) => void;
-    variant?: 'compact' | 'full' | 'numbered' | 'companies';
+    variant?: 'compact' | 'full' | 'numbered' | 'clients';
     className?: string;
     showTotalItems?: boolean;
     itemLabel?: string;
@@ -27,7 +27,7 @@ interface PaginationProps {
  * - compact: Icon-only buttons with page info
  * - full: Text buttons with page info
  * - numbered: Page number buttons with ellipsis for many pages
- * - companies: Full featured pagination with page numbers and items per page selector
+ * - clients: Full featured pagination with page numbers and items per page selector
  */
 const Pagination = ({
     id,
@@ -109,7 +109,7 @@ const Pagination = ({
     }
 
     // Render the appropriate variant
-    if (variant === 'companies') {
+    if (variant === 'clients') {
         return (
             <ReflectionContainer id={id} label="Pagination">
                 <div className={`flex py-3 items-center justify-end pr-6 ${className}`}>

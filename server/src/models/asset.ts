@@ -108,14 +108,14 @@ export class AssetModel extends BaseModel {
         }
 
         return knexOrTrx.transaction(async (trx) => {
-            // Verify company exists and get full company details
-            const company = await trx('companies')
+            // Verify client exists and get full client details
+            const client = await trx('clients')
                 .select('*')
-                .where({ tenant, company_id: data.company_id })
+                .where({ tenant, client_id: data.client_id })
                 .first();
 
-            if (!company) {
-                throw new Error('Company not found');
+            if (!client) {
+                throw new Error('Client not found');
             }
 
             // Create base asset
@@ -135,34 +135,34 @@ export class AssetModel extends BaseModel {
             // Get extension data
             const typeExtensionData = await getExtensionData(trx, tenant, asset.asset_id, data.asset_type);
 
-            // Transform company data with location fields
-            const transformedCompany = {
-                company_id: company.company_id,
-                company_name: company.company_name,
-                url: company.url ?? '',
-                created_at: company.created_at ?? new Date().toISOString(),
-                updated_at: company.updated_at ?? new Date().toISOString(),
-                is_inactive: company.is_inactive ?? false,
-                is_tax_exempt: company.is_tax_exempt ?? false,
-                notes: company.notes ?? '',
-                client_type: company.client_type,
-                tax_id_number: company.tax_id_number,
-                properties: company.properties,
-                payment_terms: company.payment_terms,
-                billing_cycle: company.billing_cycle,
-                credit_limit: company.credit_limit,
-                preferred_payment_method: company.preferred_payment_method,
-                auto_invoice: company.auto_invoice ?? false,
-                invoice_delivery_method: company.invoice_delivery_method,
-                region_code: company.region_code, // Changed from tax_region
-                tax_exemption_certificate: company.tax_exemption_certificate,
+            // Transform client data with location fields
+            const transformedClient = {
+                client_id: client.client_id,
+                client_name: client.client_name,
+                url: client.url ?? '',
+                created_at: client.created_at ?? new Date().toISOString(),
+                updated_at: client.updated_at ?? new Date().toISOString(),
+                is_inactive: client.is_inactive ?? false,
+                is_tax_exempt: client.is_tax_exempt ?? false,
+                notes: client.notes ?? '',
+                client_type: client.client_type,
+                tax_id_number: client.tax_id_number,
+                properties: client.properties,
+                payment_terms: client.payment_terms,
+                billing_cycle: client.billing_cycle,
+                credit_limit: client.credit_limit,
+                preferred_payment_method: client.preferred_payment_method,
+                auto_invoice: client.auto_invoice ?? false,
+                invoice_delivery_method: client.invoice_delivery_method,
+                region_code: client.region_code, // Changed from tax_region
+                tax_exemption_certificate: client.tax_exemption_certificate,
                 credit_balance: 0,
                 tenant
             };
 
             return convertDatesToISOString({
                 ...asset,
-                company: transformedCompany,
+                client: transformedClient,
                 ...(typeExtensionData ? {
                     [data.asset_type]: typeExtensionData
                 } : {})
@@ -179,35 +179,35 @@ export class AssetModel extends BaseModel {
         const asset = await knexOrTrx('assets')
             .select(
                 'assets.*',
-                'companies.company_name',
+                'clients.client_name',
                 'cl.email as email',
                 'cl.phone as phone_no',
-                'companies.url',
+                'clients.url',
                 'cl.address_line1 as address',
-                'companies.created_at as company_created_at',
-                'companies.updated_at as company_updated_at',
-                'companies.is_inactive',
-                'companies.is_tax_exempt',
-                'companies.client_type',
-                'companies.tax_id_number',
-                'companies.properties',
-                'companies.payment_terms',
-                'companies.billing_cycle',
-                'companies.credit_limit',
-                'companies.preferred_payment_method',
-                'companies.auto_invoice',
-                'companies.invoice_delivery_method',
-                'companies.region_code', // Changed from tax_region
-                'companies.tax_exemption_certificate',
-                'companies.notes as company_notes'
+                'clients.created_at as client_created_at',
+                'clients.updated_at as client_updated_at',
+                'clients.is_inactive',
+                'clients.is_tax_exempt',
+                'clients.client_type',
+                'clients.tax_id_number',
+                'clients.properties',
+                'clients.payment_terms',
+                'clients.billing_cycle',
+                'clients.credit_limit',
+                'clients.preferred_payment_method',
+                'clients.auto_invoice',
+                'clients.invoice_delivery_method',
+                'clients.region_code', // Changed from tax_region
+                'clients.tax_exemption_certificate',
+                'clients.notes as client_notes'
             )
-            .leftJoin('companies', function() {
-                this.on('assets.company_id', '=', 'companies.company_id')
-                    .andOn('companies.tenant', '=', knexOrTrx.raw('?', [tenant]));
+            .leftJoin('clients', function() {
+                this.on('assets.client_id', '=', 'clients.client_id')
+                    .andOn('clients.tenant', '=', knexOrTrx.raw('?', [tenant]));
             })
-            .leftJoin('company_locations as cl', function() {
-                this.on('companies.company_id', '=', 'cl.company_id')
-                    .andOn('companies.tenant', '=', 'cl.tenant')
+            .leftJoin('client_locations as cl', function() {
+                this.on('clients.client_id', '=', 'cl.client_id')
+                    .andOn('clients.tenant', '=', 'cl.tenant')
                     .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
             })
             .where({ 'assets.tenant': tenant, 'assets.asset_id': asset_id })
@@ -240,8 +240,8 @@ export class AssetModel extends BaseModel {
         }
 
         const { 
-            company_id, 
-            company_name, 
+            client_id, 
+            client_name, 
             asset_type, 
             status, 
             search, 
@@ -249,51 +249,51 @@ export class AssetModel extends BaseModel {
             maintenance_type,
             page = 1, 
             limit = 10,
-            include_company_details = false,
+            include_client_details = false,
             include_extension_data = false
         } = params;
 
         let baseQuery = knexOrTrx('assets')
             .select(
                 'assets.*',
-                'companies.company_name',
+                'clients.client_name',
                 'cl.email as email',
                 'cl.phone as phone_no',
-                'companies.url',
+                'clients.url',
                 'cl.address_line1 as address',
-                'companies.created_at as company_created_at',
-                'companies.updated_at as company_updated_at',
-                'companies.is_inactive',
-                'companies.is_tax_exempt',
-                'companies.client_type',
-                'companies.tax_id_number',
-                'companies.properties',
-                'companies.payment_terms',
-                'companies.billing_cycle',
-                'companies.credit_limit',
-                'companies.preferred_payment_method',
-                'companies.auto_invoice',
-                'companies.invoice_delivery_method',
-                'companies.region_code', // Changed from tax_region
-                'companies.tax_exemption_certificate',
-                'companies.notes as company_notes'
+                'clients.created_at as client_created_at',
+                'clients.updated_at as client_updated_at',
+                'clients.is_inactive',
+                'clients.is_tax_exempt',
+                'clients.client_type',
+                'clients.tax_id_number',
+                'clients.properties',
+                'clients.payment_terms',
+                'clients.billing_cycle',
+                'clients.credit_limit',
+                'clients.preferred_payment_method',
+                'clients.auto_invoice',
+                'clients.invoice_delivery_method',
+                'clients.region_code', // Changed from tax_region
+                'clients.tax_exemption_certificate',
+                'clients.notes as client_notes'
             )
-            .innerJoin('companies', function() {
-                this.on('assets.company_id', '=', 'companies.company_id')
-                    .andOn('companies.tenant', '=', 'assets.tenant');
+            .innerJoin('clients', function() {
+                this.on('assets.client_id', '=', 'clients.client_id')
+                    .andOn('clients.tenant', '=', 'assets.tenant');
             })
-            .leftJoin('company_locations as cl', function() {
-                this.on('companies.company_id', '=', 'cl.company_id')
-                    .andOn('companies.tenant', '=', 'cl.tenant')
+            .leftJoin('client_locations as cl', function() {
+                this.on('clients.client_id', '=', 'cl.client_id')
+                    .andOn('clients.tenant', '=', 'cl.tenant')
                     .andOn('cl.is_default', '=', knexOrTrx.raw('true'));
             })
             .where('assets.tenant', tenant);
 
-        if (company_id) {
-            baseQuery = baseQuery.where('assets.company_id', company_id);
+        if (client_id) {
+            baseQuery = baseQuery.where('assets.client_id', client_id);
         }
-        if (company_name) {
-            baseQuery = baseQuery.where('companies.company_name', 'ilike', `%${company_name}%`);
+        if (client_name) {
+            baseQuery = baseQuery.where('clients.client_name', 'ilike', `%${client_name}%`);
         }
         if (asset_type) {
             baseQuery = baseQuery.where('assets.asset_type', asset_type);
@@ -349,16 +349,16 @@ export class AssetModel extends BaseModel {
             .offset(offset)
             .limit(Math.max(1, limit));
 
-        // Transform results to include company as a nested object and convert dates to ISO strings
+        // Transform results to include client as a nested object and convert dates to ISO strings
         const transformedAssets = await Promise.all(assets.map(async (asset: any): Promise<Asset> => {
             const { 
-                company_name,
+                client_name,
                 email,
                 phone_no,
                 url,
                 address,
-                company_created_at,
-                company_updated_at,
+                client_created_at,
+                client_updated_at,
                 is_inactive,
                 is_tax_exempt,
                 client_type,
@@ -372,7 +372,7 @@ export class AssetModel extends BaseModel {
                 invoice_delivery_method,
                 region_code, // Changed from tax_region
                 tax_exemption_certificate,
-                company_notes,
+                client_notes,
                 ...assetData 
             } = asset;
 
@@ -384,18 +384,18 @@ export class AssetModel extends BaseModel {
 
             return convertDatesToISOString({
                 ...assetData,
-                company: company_name ? {
-                    company_id: asset.company_id,
-                    company_name,
+                client: client_name ? {
+                    client_id: asset.client_id,
+                    client_name,
                     email: email ?? '',
                     phone_no: phone_no ?? '',
                     url: url ?? '',
                     address: address ?? '',
-                    created_at: company_created_at ?? new Date().toISOString(),
-                    updated_at: company_updated_at ?? new Date().toISOString(),
+                    created_at: client_created_at ?? new Date().toISOString(),
+                    updated_at: client_updated_at ?? new Date().toISOString(),
                     is_inactive: is_inactive ?? false,
                     is_tax_exempt: is_tax_exempt ?? false,
-                    notes: company_notes ?? '',
+                    notes: client_notes ?? '',
                     client_type,
                     tax_id_number,
                     properties,
@@ -415,19 +415,19 @@ export class AssetModel extends BaseModel {
             });
         }));
 
-        let company_summary;
-        if (include_company_details) {
-            const assetsByCompany = await knexOrTrx('assets')
-                .select('company_id')
+        let client_summary;
+        if (include_client_details) {
+            const assetsByClient = await knexOrTrx('assets')
+                .select('client_id')
                 .count('* as count')
                 .where({ tenant })
-                .groupBy('company_id');
+                .groupBy('client_id');
 
-            company_summary = {
-                total_companies: assetsByCompany.length,
-                assets_by_company: assetsByCompany.reduce<Record<string, number>>((acc, { company_id, count }) => ({
+            client_summary = {
+                total_clients: assetsByClient.length,
+                assets_by_client: assetsByClient.reduce<Record<string, number>>((acc, { client_id, count }) => ({
                     ...acc,
-                    [company_id]: Number(count)
+                    [client_id]: Number(count)
                 }), {})
             };
         }
@@ -437,7 +437,7 @@ export class AssetModel extends BaseModel {
             total: Number(count),
             page,
             limit,
-            company_summary
+            client_summary
         };
     }
 
@@ -448,21 +448,21 @@ export class AssetModel extends BaseModel {
             .delete();
     }
 
-    static async getCompanyAssetReport(knexOrTrx: Knex | Knex.Transaction, company_id: string): Promise<ClientMaintenanceSummary> {
+    static async getClientAssetReport(knexOrTrx: Knex | Knex.Transaction, client_id: string): Promise<ClientMaintenanceSummary> {
         const tenant = await this.getTenant();
 
-        // Get company details
-        const company = await knexOrTrx('companies')
-            .where({ tenant, company_id })
+        // Get client details
+        const client = await knexOrTrx('clients')
+            .where({ tenant, client_id })
             .first();
 
-        if (!company) {
-            throw new Error('Company not found');
+        if (!client) {
+            throw new Error('Client not found');
         }
 
         // Get asset statistics
         const assetStats = await knexOrTrx('assets')
-            .where({ tenant, company_id })
+            .where({ tenant, client_id })
             .select(
                 knexOrTrx.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
                 knexOrTrx.raw(`
@@ -481,7 +481,7 @@ export class AssetModel extends BaseModel {
         // Get maintenance statistics
         const maintenanceStats = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, client_id }).select('asset_id'))
             .select(
                 knexOrTrx.raw('COUNT(*) as total_schedules'),
                 knexOrTrx.raw(`
@@ -502,7 +502,7 @@ export class AssetModel extends BaseModel {
         // Get maintenance type breakdown
         const typeBreakdown = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, client_id }).select('asset_id'))
             .select('maintenance_type')
             .count('* as count')
             .groupBy('maintenance_type')
@@ -524,13 +524,13 @@ export class AssetModel extends BaseModel {
         // Calculate compliance rate
         const completed = await knexOrTrx('asset_maintenance_history')
             .where({ tenant })
-            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, client_id }).select('asset_id'))
             .count('* as count')
             .first();
 
         const scheduled = await knexOrTrx('asset_maintenance_schedules')
             .where({ tenant })
-            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, company_id }).select('asset_id'))
+            .whereIn('asset_id', knexOrTrx('assets').where({ tenant, client_id }).select('asset_id'))
             .sum('frequency_interval as sum')
             .first();
 
@@ -539,8 +539,8 @@ export class AssetModel extends BaseModel {
         const compliance_rate = scheduledSum > 0 ? (completedCount / scheduledSum) * 100 : 100;
 
         return convertDatesToISOString({
-            company_id,
-            company_name: company.company_name,
+            client_id,
+            client_name: client.client_name,
             total_assets: Number(assetStats?.total_assets || 0),
             assets_with_maintenance: Number(assetStats?.assets_with_maintenance || 0),
             total_schedules: Number(maintenanceStats?.total_schedules || 0),

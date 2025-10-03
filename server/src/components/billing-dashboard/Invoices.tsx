@@ -21,7 +21,7 @@ import { getInvoiceTemplates } from 'server/src/lib/actions/invoiceTemplates';
 import { finalizeInvoice, unfinalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceZipAction';
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 // Import both ViewModel types with aliases
 import { InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from 'server/src/interfaces/invoice.interfaces';
@@ -35,7 +35,7 @@ import { DataTable } from 'server/src/components/ui/DataTable';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import ManualInvoices from './ManualInvoices';
-import { ICompany } from 'server/src/interfaces';
+import { IClient } from 'server/src/interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import BackNav from '../ui/BackNav';
 
@@ -51,7 +51,7 @@ const Invoices: React.FC = () => {
   // allInvoices likely holds the DB/interface version
   const [allInvoices, setAllInvoices] = useState<DbInvoiceViewModel[]>([]);
   const [templates, setTemplates] = useState<IInvoiceTemplate[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<ServiceWithRate[]>([]);
   const [selectedInvoices, setSelectedInvoices] = useState<Set<string>>(new Set());
   const [activeJobs, setActiveJobs] = useState<Set<string>>(new Set());
@@ -105,18 +105,18 @@ const Invoices: React.FC = () => {
       const [
         fetchedInvoices,
         fetchedTemplates,
-        fetchedCompanies,
+        fetchedClients,
         fetchedServices
       ] = await Promise.all([
         fetchAllInvoices(),
         getInvoiceTemplates(),
-        getAllCompanies(false), // false to get only active companies
+        getAllClients(false), // false to get only active clients
         getServices(1, 1000) // Get all services with a large page size
       ]);
 
       setAllInvoices(fetchedInvoices);
       setTemplates(fetchedTemplates);
-      setCompanies(fetchedCompanies);
+      setClients(fetchedClients);
       setServices(fetchedServices.services.map((service): ServiceWithRate => ({
         service_id: service.service_id,
         service_name: service.service_name,
@@ -284,8 +284,8 @@ const Invoices: React.FC = () => {
       dataIndex: 'invoice_number',
     },
     {
-      title: 'Company',
-      dataIndex: ['company', 'name'],
+      title: 'Client',
+      dataIndex: ['client', 'name'],
     },
     {
       title: 'Amount',
@@ -493,7 +493,7 @@ const Invoices: React.FC = () => {
           </div>
         </div>
         <ManualInvoices
-          companies={companies}
+          clients={clients}
           services={services}
           invoice={managingInvoice}
           onGenerateSuccess={() => {

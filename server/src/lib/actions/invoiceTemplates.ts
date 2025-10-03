@@ -95,12 +95,12 @@ export async function getDefaultTemplate(): Promise<IInvoiceTemplate | null> {
     return template;
 }
 
-export async function setCompanyTemplate(companyId: string, templateId: string | null): Promise<void> {
+export async function setClientTemplate(clientId: string, templateId: string | null): Promise<void> {
     const { knex, tenant } = await createTenantKnex();
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+      return await trx('clients')
           .where({
-              company_id: companyId,
+              client_id: clientId,
               tenant
           })
           .update({ invoice_template_id: templateId });
@@ -756,9 +756,9 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
     }
 
     try {
-        // 1. Check if the template is assigned to any company within the tenant
-        const companyUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
-          return await trx('companies')
+        // 1. Check if the template is assigned to any client within the tenant
+        const clientUsingTemplate = await withTransaction(knex, async (trx: Knex.Transaction) => {
+          return await trx('clients')
             .where({
                 invoice_template_id: templateId,
                 tenant: tenant
@@ -766,10 +766,10 @@ export async function deleteInvoiceTemplate(templateId: string): Promise<{ succe
             .first();
         });
 
-        if (companyUsingTemplate) {
+        if (clientUsingTemplate) {
             return {
                 success: false,
-                error: 'Template is currently assigned to one or more companies and cannot be deleted.'
+                error: 'Template is currently assigned to one or more clients and cannot be deleted.'
             };
         }
 

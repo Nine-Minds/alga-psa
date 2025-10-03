@@ -4,7 +4,7 @@ import { FileStore } from 'server/src/types/storage';
 import { getInvoiceForRendering } from 'server/src/lib/actions/invoiceQueries';
 import { getInvoiceTemplates, getCompiledWasm } from 'server/src/lib/actions/invoiceTemplates';
 import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
-import { getCompanyLogoUrl } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl } from 'server/src/lib/utils/avatarUtils';
 import { executeWasmTemplate } from 'server/src/lib/invoice-renderer/wasm-executor';
 import { renderLayout } from 'server/src/lib/invoice-renderer/layout-renderer';
 import type { WasmInvoiceViewModel } from 'server/src/lib/invoice-renderer/types';
@@ -118,23 +118,23 @@ export class PDFGenerationService {
   }
 
   private async mapInvoiceDataToViewModel(dbData: DbInvoiceViewModel): Promise<WasmInvoiceViewModel> {
-    let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
+    let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
     const { knex } = await createTenantKnex();
-    const tenantCompanyLink = await knex('tenant_companies')
+    const tenantClientLink = await knex('tenant_companies')
       .where({ tenant: this.tenant, is_default: true })
-      .select('company_id')
+      .select('client_id')
       .first();
 
-    if (tenantCompanyLink) {
-      const tenantCompanyDetails = await knex('companies as c')
-        .leftJoin('company_locations as cl', function() {
-          this.on('c.company_id', '=', 'cl.company_id')
+    if (tenantClientLink) {
+      const tenantClientDetails = await knex('clients as c')
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn('cl.is_default', '=', knex.raw('true'));
         })
-        .where({ 'c.company_id': tenantCompanyLink.company_id })
+        .where({ 'c.client_id': tenantClientLink.client_id })
         .select(
-          'c.company_name',
+          'c.client_name',
           knex.raw(`COALESCE(
             CONCAT_WS(', ', 
               cl.address_line1, 
@@ -148,11 +148,11 @@ export class PDFGenerationService {
         )
         .first();
 
-      if (tenantCompanyDetails) {
-        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, this.tenant);
-        tenantCompanyInfo = {
-          name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address,
+      if (tenantClientDetails) {
+        const logoUrl = await getClientLogoUrl(tenantClientLink.client_id, this.tenant);
+        tenantClientInfo = {
+          name: tenantClientDetails.client_name,
+          address: tenantClientDetails.address,
           logoUrl: logoUrl || null,
         };
       }
@@ -163,8 +163,8 @@ export class PDFGenerationService {
       issueDate: this.formatDateValue(dbData.invoice_date),
       dueDate: this.formatDateValue(dbData.due_date),
       customer: {
-        name: dbData.company?.name || 'N/A',
-        address: dbData.contact?.address || dbData.company?.address || 'N/A',
+        name: dbData.client?.name || 'N/A',
+        address: dbData.contact?.address || dbData.client?.address || 'N/A',
       },
       items: dbData.invoice_items.map((item: IInvoiceItem) => ({
         id: item.item_id,
@@ -176,7 +176,7 @@ export class PDFGenerationService {
       subtotal: dbData.subtotal,
       tax: dbData.tax,
       total: dbData.total_amount,
-      tenantCompany: tenantCompanyInfo,
+      tenantClient: tenantClientInfo,
     };
   }
 
@@ -192,13 +192,13 @@ export class PDFGenerationService {
       }
 
       const { knex } = await createTenantKnex();
-      const company = await knex('companies')
-        .where({ company_id: dbInvoiceData.company_id })
+      const client = await knex('clients')
+        .where({ client_id: dbInvoiceData.client_id })
         .first();
 
       let template;
-      if (company?.invoice_template_id) {
-        template = templates.find(t => t.template_id === company.invoice_template_id);
+      if (client?.invoice_template_id) {
+        template = templates.find(t => t.template_id === client.invoice_template_id);
       }
       if (!template) {
         template = templates.find(t => t.is_default);

@@ -4,7 +4,7 @@ import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel 
 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
-  company_id: string;
+  client_id: string;
   invoice_date: DateValue;
   due_date: DateValue;
   subtotal: number;
@@ -48,7 +48,7 @@ export interface IInvoiceItem extends TenantEntity, NetAmountItem {
   discount_percentage?: number;
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
-  company_bundle_id?: string; // Reference to the company plan bundle
+  client_bundle_id?: string; // Reference to the client plan bundle
   bundle_name?: string; // Name of the bundle
   is_bundle_header?: boolean; // Whether this item is a bundle header
   parent_item_id?: string; // Reference to the parent bundle header item
@@ -265,8 +265,8 @@ export interface ICreditAllocation extends TenantEntity {
 
 export interface InvoiceViewModel {
   invoice_number: string;
-  company_id: string;
-  company: {
+  client_id: string;
+  client: {
     name: string;
     logo: string;
     address: string;

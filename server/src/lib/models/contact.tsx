@@ -34,15 +34,15 @@ const ContactModel = {
     }
   },
 
-  updateMany: async (knexOrTrx: Knex | Knex.Transaction, companyId: string, updateData: Partial<IContact>): Promise<void> => {
+  updateMany: async (knexOrTrx: Knex | Knex.Transaction, clientId: string, updateData: Partial<IContact>): Promise<void> => {
     try {
       const tenant = await getCurrentTenantId();
       await knexOrTrx<IContact>('contacts')
-        .where({ company_id: companyId })
+        .where({ client_id: clientId })
         .where('tenant', tenant)
         .update(updateData);
     } catch (error) {
-      console.error(`Error updating contacts for company ${companyId}:`, error);
+      console.error(`Error updating contacts for client ${clientId}:`, error);
       throw error;
     }
   },

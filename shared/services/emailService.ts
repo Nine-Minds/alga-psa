@@ -15,8 +15,8 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   phone?: string;
   title?: string;
 }
@@ -24,7 +24,7 @@ export interface FindContactByEmailOutput {
 export interface CreateOrFindContactInput {
   email: string;
   name?: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
 }
@@ -33,7 +33,7 @@ export interface CreateOrFindContactOutput {
   id: string;
   name: string;
   email: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
   created_at: string;
@@ -84,7 +84,7 @@ export interface ProcessEmailAttachmentOutput {
 
 export interface SaveEmailClientAssociationInput {
   email: string;
-  company_id: string;
+  client_id: string;
   contact_id?: string;
   confidence_score?: number;
   notes?: string;
@@ -94,13 +94,13 @@ export interface SaveEmailClientAssociationOutput {
   success: boolean;
   associationId: string;
   email: string;
-  company_id: string;
+  client_id: string;
 }
 
 export interface CreateTicketFromEmailInput {
   title: string;
   description: string;
-  company_id?: string;
+  client_id?: string;
   contact_id?: string;
   source: string;
   board_id: string;
@@ -145,22 +145,22 @@ export interface CreateCommentFromEmailOutput {
   created_at: string;
 }
 
-export interface CreateCompanyFromEmailInput {
-  company_name: string;
+export interface CreateClientFromEmailInput {
+  client_name: string;
   email: string;
   source: string;
 }
 
-export interface CreateCompanyFromEmailOutput {
-  company_id: string;
-  company_name: string;
+export interface CreateClientFromEmailOutput {
+  client_id: string;
+  client_name: string;
   email: string;
   created_at: string;
 }
 
-export interface GetCompanyByIdForEmailOutput {
-  company_id: string;
-  company_name: string;
+export interface GetClientByIdForEmailOutput {
+  client_id: string;
+  client_name: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -217,13 +217,13 @@ export class EmailService {
   async findContactByEmail(email: string): Promise<FindContactByEmailOutput | null> {
     try {
       const contact = await this.knex('contacts')
-        .leftJoin('companies', 'contacts.company_id', 'companies.company_id')
+        .leftJoin('clients', 'contacts.client_id', 'clients.client_id')
         .select(
           'contacts.contact_name_id as contact_id',
           'contacts.full_name as name',
           'contacts.email',
-          'contacts.company_id',
-          'companies.company_name',
+          'contacts.client_id',
+          'clients.client_name',
           'contacts.phone_number as phone',
           'contacts.role as title'
         )
@@ -241,8 +241,8 @@ export class EmailService {
         contact_id: contact.contact_id,
         name: contact.name,
         email: contact.email,
-        company_id: contact.company_id || '',
-        company_name: contact.company_name || '',
+        client_id: contact.client_id || '',
+        client_name: contact.client_name || '',
         phone: contact.phone,
         title: contact.title
       };
@@ -253,19 +253,19 @@ export class EmailService {
   }
 
   /**
-   * Create or find contact by email and company
+   * Create or find contact by email and client
    */
   async createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput> {
     try {
       // First try to find existing contact
       const existingContact = await this.findContactByEmail(input.email);
 
-      if (existingContact && existingContact.company_id === input.company_id) {
+      if (existingContact && existingContact.client_id === input.client_id) {
         return {
           id: existingContact.contact_id,
           name: existingContact.name,
           email: existingContact.email,
-          company_id: existingContact.company_id,
+          client_id: existingContact.client_id,
           phone: existingContact.phone,
           title: existingContact.title,
           created_at: new Date().toISOString(), // We don't have the actual created_at
@@ -282,7 +282,7 @@ export class EmailService {
         tenant: this.tenant,
         full_name: input.name || input.email,
         email: input.email.toLowerCase(),
-        company_id: input.company_id,
+        client_id: input.client_id,
         phone_number: input.phone,
         role: input.title,
         created_at: now,
@@ -293,7 +293,7 @@ export class EmailService {
         id: contactId,
         name: input.name || input.email,
         email: input.email,
-        company_id: input.company_id,
+        client_id: input.client_id,
         phone: input.phone,
         title: input.title,
         created_at: now.toISOString(),
@@ -385,7 +385,7 @@ export class EmailService {
         ticket_number: ticketNumber,
         title: input.title,
         description: input.description,
-        company_id: input.company_id,
+        client_id: input.client_id,
         contact_name_id: input.contact_id,
         board_id: input.board_id,
         status_id: input.status_id,
@@ -451,17 +451,17 @@ export class EmailService {
   }
 
   /**
-   * Create company from email
+   * Create client from email
    */
-  async createCompanyFromEmail(input: CreateCompanyFromEmailInput): Promise<CreateCompanyFromEmailOutput> {
+  async createClientFromEmail(input: CreateClientFromEmailInput): Promise<CreateClientFromEmailOutput> {
     try {
-      const companyId = uuidv4();
+      const clientId = uuidv4();
       const now = new Date();
 
-      await this.knex('companies').insert({
-        company_id: companyId,
+      await this.knex('clients').insert({
+        client_id: clientId,
         tenant: this.tenant,
-        company_name: input.company_name,
+        client_name: input.client_name,
         email: input.email,
         source: input.source,
         created_at: now,
@@ -469,43 +469,43 @@ export class EmailService {
       });
 
       return {
-        company_id: companyId,
-        company_name: input.company_name,
+        client_id: clientId,
+        client_name: input.client_name,
         email: input.email,
         created_at: now.toISOString()
       };
     } catch (error: any) {
-      logger.error('Error creating company from email:', error);
+      logger.error('Error creating client from email:', error);
       throw error;
     }
   }
 
   /**
-   * Get company by ID for email processing
+   * Get client by ID for email processing
    */
-  async getCompanyByIdForEmail(companyId: string): Promise<GetCompanyByIdForEmailOutput | null> {
+  async getClientByIdForEmail(clientId: string): Promise<GetClientByIdForEmailOutput | null> {
     try {
-      const company = await this.knex('companies')
-        .select('company_id', 'company_name', 'email', 'phone', 'address')
+      const client = await this.knex('clients')
+        .select('client_id', 'client_name', 'email', 'phone', 'address')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant: this.tenant
         })
         .first();
 
-      if (!company) {
+      if (!client) {
         return null;
       }
 
       return {
-        company_id: company.company_id,
-        company_name: company.company_name,
-        email: company.email,
-        phone: company.phone,
-        address: company.address
+        client_id: client.client_id,
+        client_name: client.client_name,
+        email: client.email,
+        phone: client.phone,
+        address: client.address
       };
     } catch (error: any) {
-      logger.error('Error getting company by ID:', error);
+      logger.error('Error getting client by ID:', error);
       throw error;
     }
   }
@@ -640,13 +640,13 @@ export class EmailService {
       // This would typically save the association to a dedicated table
       // for learning email-to-client mappings
 
-      logger.info(`Saving email association: ${input.email} -> company ${input.company_id}`);
+      logger.info(`Saving email association: ${input.email} -> client ${input.client_id}`);
 
       return {
         success: true,
         associationId,
         email: input.email,
-        company_id: input.company_id
+        client_id: input.client_id
       };
     } catch (error: any) {
       logger.error('Error saving email client association:', error);

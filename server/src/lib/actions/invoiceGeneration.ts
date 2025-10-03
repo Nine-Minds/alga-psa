@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { Session } from 'next-auth';
 import {
   IInvoiceItem,
@@ -14,7 +14,7 @@ import {
 } from 'server/src/interfaces/invoice.interfaces';
 import { WasmInvoiceViewModel } from '../invoice-renderer/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType } from 'server/src/interfaces/billing.interfaces';
-import { ICompany, ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
+import { IClient, IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Temporal } from '@js-temporal/polyfill';
@@ -26,15 +26,15 @@ import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
-import { getCompanyLogoUrl } from '../utils/avatarUtils';
-import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { getClientLogoUrl } from '../utils/avatarUtils';
+import { getClientDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';
 import { AnalyticsEvents } from '../analytics/events';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
-import { getCompanyDefaultTaxRegionCode } from './company-actions/companyTaxRateActions';
+import { getClientDefaultTaxRegionCode } from './client-actions/clientTaxRateActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
@@ -71,7 +71,7 @@ function getChargeUnitPrice(charge: IBillingCharge): number {
 // TODO: Move to billingAndTax.ts
 async function calculatePreviewTax(
   charges: IBillingCharge[],
-  companyId: string,
+  clientId: string,
   cycleEnd: ISO8601String,
   defaultTaxRegion: string
 ): Promise<number> {
@@ -93,7 +93,7 @@ async function calculatePreviewTax(
 // TODO: Move to billingAndTax.ts
 async function calculateChargeDetails(
   charge: IBillingCharge,
-  companyId: string,
+  clientId: string,
   endDate: ISO8601String,
   taxService: TaxService,
   defaultTaxRegion: string
@@ -120,7 +120,7 @@ async function calculateChargeDetails(
     // Otherwise, calculate tax (for time, usage, etc., or if fixed fee somehow missed pre-calc)
     taxCalculationResult = charge.is_taxable !== false && netAmount > 0
       ? await taxService.calculateTax(
-        companyId,
+        clientId,
         netAmount,
         endDate,
         charge.tax_region || defaultTaxRegion
@@ -147,49 +147,49 @@ function getPaymentTermDays(paymentTerms: string): number {
 // Adapter function to convert data to WasmInvoiceViewModel
 async function adaptToWasmViewModel(
   billingResult: IBillingResult,
-  company: ICompanyWithLocation | null,
+  client: IClientWithLocation | null,
   invoiceItems: IInvoiceItem[],
   dueDate: string,
   previewTax: number,
-  tenant: string | null // Added tenant for fetching tenant company info
+  tenant: string | null // Added tenant for fetching tenant client info
 ): Promise<WasmInvoiceViewModel> {
-  // Fetch Tenant Company Info (similar logic to getFullInvoiceById)
-  let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
+  // Fetch Tenant Client Info (similar logic to getFullInvoiceById)
+  let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
   if (tenant) {
     const { knex } = await createTenantKnex(); // Get knex instance again if needed
-    const tenantCompanyLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const tenantClientLink = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('tenant_companies')
         .where({ tenant: tenant, is_default: true })
-        .select('company_id')
+        .select('client_id')
         .first();
     });
 
-    if (tenantCompanyLink) {
-      const tenantCompanyDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('companies as c')
-          .leftJoin('company_locations as cl', function() {
-            this.on('c.company_id', '=', 'cl.company_id')
+    if (tenantClientLink) {
+      const tenantClientDetails = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('clients as c')
+          .leftJoin('client_locations as cl', function() {
+            this.on('c.client_id', '=', 'cl.client_id')
                 .andOn('c.tenant', '=', 'cl.tenant')
                 .andOn('cl.is_default', '=', trx.raw('true'));
           })
           .select(
-            'c.company_name',
+            'c.client_name',
             'cl.address_line1 as address'
           )
           .where({
-            'c.company_id': tenantCompanyLink.company_id,
+            'c.client_id': tenantClientLink.client_id,
             'c.tenant': tenant
           })
           .first();
       });
 
-      if (tenantCompanyDetails) {
-        // Assuming getCompanyLogoUrl is accessible or import it
-        // import { getCompanyLogoUrl } from '../utils/avatarUtils';
-        const logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, tenant);
-        tenantCompanyInfo = {
-          name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address || 'N/A',
+      if (tenantClientDetails) {
+        // Assuming getClientLogoUrl is accessible or import it
+        // import { getClientLogoUrl } from '../utils/avatarUtils';
+        const logoUrl = await getClientLogoUrl(tenantClientLink.client_id, tenant);
+        tenantClientInfo = {
+          name: tenantClientDetails.client_name,
+          address: tenantClientDetails.address || 'N/A',
           logoUrl: logoUrl || null, // Use null if logoUrl is empty/null
         };
       }
@@ -210,10 +210,10 @@ async function adaptToWasmViewModel(
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
     customer: {
-      name: company?.company_name || 'N/A',
-      address: company?.location_address || 'N/A',
+      name: client?.client_name || 'N/A',
+      address: client?.location_address || 'N/A',
     },
-    tenantCompany: tenantCompanyInfo, // Use fetched tenant company info
+    tenantClient: tenantClientInfo, // Use fetched tenant client info
     items: previewViewModelItems,
     subtotal: billingResult.totalAmount,
     tax: previewTax,
@@ -249,7 +249,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         throw new Error('Permission denied: Cannot preview invoices');
       }
 
-      return await trx('company_billing_cycles')
+      return await trx('client_billing_cycles')
         .where({
           billing_cycle_id,
           tenant
@@ -264,14 +264,14 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
       };
     }
 
-    const { company_id, effective_date } = billingCycle;
+    const { client_id, effective_date } = billingCycle;
 
     // Calculate cycle dates
     const cycleStart = toISODate(toPlainDate(effective_date));
-    const cycleEnd = await getNextBillingDate(company_id, effective_date); // Uses temporary import
+    const cycleEnd = await getNextBillingDate(client_id, effective_date); // Uses temporary import
 
     const billingEngine = new BillingEngine();
-    const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
+    const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
 
     // Add this check first: If the billing engine returned a specific error, return it.
     if (billingResult.error) {
@@ -287,15 +287,15 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Create invoice view model without persisting
-    const company = await getCompanyDetails(knex, tenant, company_id);
-    const due_date = await getDueDate(company_id, cycleEnd); // Uses temporary import
+    const client = await getClientDetails(knex, tenant, client_id);
+    const due_date = await getDueDate(client_id, cycleEnd); // Uses temporary import
 
     // Group charges by bundle if they have bundle information
     const chargesByBundle: { [key: string]: IBillingCharge[] } = {};
     const nonBundleCharges: IBillingCharge[] = [];
 
     for (const charge of billingResult.charges) {
-      if (charge.company_bundle_id && charge.bundle_name) {
+      if (charge.client_bundle_id && charge.bundle_name) {
         // Use only the bundle_name as the key to avoid including the ID in the description
         const bundleKey = charge.bundle_name;
         if (!chargesByBundle[bundleKey]) {
@@ -331,9 +331,9 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
 
     // Add bundle charges
     for (const [bundleKey, charges] of Object.entries(chargesByBundle)) {
-      // Get the bundle name and company_bundle_id from the first charge
+      // Get the bundle name and client_bundle_id from the first charge
       const bundleName = bundleKey; // Now bundleKey is just the bundle_name
-      const companyBundleId = charges[0].company_bundle_id; // Get company_bundle_id from the first charge
+      const clientBundleId = charges[0].client_bundle_id; // Get client_bundle_id from the first charge
 
       // Create a group header for the bundle
       const bundleHeaderId = 'preview-' + uuidv4();
@@ -349,7 +349,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
         tax_rate: 0,
         is_manual: false,
         is_bundle_header: true,
-        company_bundle_id: companyBundleId,
+        client_bundle_id: clientBundleId,
         bundle_name: bundleName,
         rate: 0
       });
@@ -369,7 +369,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
           tax_region: charge.tax_region || '',
           net_amount: charge.total - (charge.tax_amount || 0),
           is_manual: false,
-          company_bundle_id: companyBundleId,
+          client_bundle_id: clientBundleId,
           bundle_name: bundleName,
           parent_item_id: bundleHeaderId,
           rate: charge.rate,
@@ -378,7 +378,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     }
 
     // Calculate tax and total for the preview
-    const previewTax = await calculatePreviewTax(billingResult.charges, company_id, cycleEnd, company?.tax_region || '');
+    const previewTax = await calculatePreviewTax(billingResult.charges, client_id, cycleEnd, client?.tax_region || '');
     const previewTotal = billingResult.totalAmount + previewTax;
 
     // Map IInvoiceItem[] to the structure expected by InvoiceViewModel.items
@@ -393,7 +393,7 @@ export async function previewInvoice(billing_cycle_id: string): Promise<PreviewI
     // Use the adapter function to create the WasmInvoiceViewModel
     const previewData = await adaptToWasmViewModel(
       billingResult,
-      company,
+      client,
       invoiceItems,
       due_date,
       previewTax,
@@ -432,7 +432,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
-    return await trx('company_billing_cycles')
+    return await trx('client_billing_cycles')
       .where({
         billing_cycle_id,
         tenant
@@ -446,7 +446,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
 
   let cycleStart: ISO8601String;
   let cycleEnd: ISO8601String;
-  const { company_id, period_start_date, period_end_date, effective_date } = billingCycle;
+  const { client_id, period_start_date, period_end_date, effective_date } = billingCycle;
 
   if (period_start_date && period_end_date) {
     // Use the billing cycle's period dates if provided, ensuring UTC format
@@ -457,7 +457,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
     // Format effective_date as UTC ISO8601
     const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
     cycleStart = effectiveDateUTC;
-    cycleEnd = await getNextBillingDate(company_id, effectiveDateUTC); // Uses temporary import
+    cycleEnd = await getNextBillingDate(client_id, effectiveDateUTC); // Uses temporary import
   } else {
     throw new Error('Invalid billing cycle dates');
   }
@@ -477,16 +477,16 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   }
 
   const billingEngine = new BillingEngine();
-  const billingResult = await billingEngine.calculateBilling(company_id, cycleStart, cycleEnd, billing_cycle_id);
+  const billingResult = await billingEngine.calculateBilling(client_id, cycleStart, cycleEnd, billing_cycle_id);
 
   if (billingResult.error) {
     throw new Error(billingResult.error);
   }
 
   // Get zero-dollar invoice settings
-  const companySettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await trx('company_billing_settings')
-      .where({ company_id: company_id, tenant })
+  const clientSettings = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await trx('client_billing_settings')
+      .where({ client_id: client_id, tenant })
       .first();
   });
 
@@ -496,7 +496,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
       .first();
   });
 
-  const settings = companySettings || defaultSettings;
+  const settings = clientSettings || defaultSettings;
 
   if (!settings) {
     throw new Error('No billing settings found');
@@ -510,7 +510,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
 
     const createdInvoice = await createInvoiceFromBillingResult( // Uses local function
       billingResult,
-      company_id,
+      client_id,
       cycleStart,
       cycleEnd,
       billing_cycle_id,
@@ -539,7 +539,7 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
 
   const createdInvoice = await createInvoiceFromBillingResult( // Uses local function
     billingResult,
-    company_id,
+    client_id,
     cycleStart,
     cycleEnd,
     billing_cycle_id,
@@ -547,14 +547,14 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
   );
 
   // Get the next billing date as a PlainDate string (YYYY-MM-DD)
-  const nextBillingDateStr = await getNextBillingDate(company_id, cycleEnd); // Uses temporary import
+  const nextBillingDateStr = await getNextBillingDate(client_id, cycleEnd); // Uses temporary import
   
   // Convert the PlainDate string to a proper ISO 8601 timestamp for rolloverUnapprovedTime
   const nextBillingDate = toPlainDate(nextBillingDateStr);
   const nextBillingTimestamp = toISOTimestamp(nextBillingDate);
   
   // Pass the ISO timestamp to rolloverUnapprovedTime
-  await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingTimestamp);
+  await billingEngine.rolloverUnapprovedTime(client_id, cycleEnd, nextBillingTimestamp);
 
 console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
   return await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
@@ -616,7 +616,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
 
 export async function createInvoiceFromBillingResult(
   billingResult: IBillingResult,
-  companyId: string,
+  clientId: string,
   cycleStart: ISO8601String,
   cycleEnd: ISO8601String,
   billing_cycle_id: string,
@@ -637,23 +637,23 @@ export async function createInvoiceFromBillingResult(
     throw new Error('No tenant found');
   }
 
-  const company = await getCompanyDetails(knex, tenant, companyId);
-  let region_code = await getCompanyDefaultTaxRegionCode(companyId);
+  const client = await getClientDetails(knex, tenant, clientId);
+  let region_code = await getClientDefaultTaxRegionCode(clientId);
   
-  // --- Add Check for Company Default Tax Region ---
+  // --- Add Check for Client Default Tax Region ---
   if (!region_code) {
-    console.error(`[createInvoiceFromBillingResult] Cannot create invoice for company ${companyId} (${company.company_name}) because it lacks a default tax region (region_code).`);
-    throw new Error(`Company '${company.company_name}' does not have a default tax region configured. Please set one before generating invoices.`);
+    console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code).`);
+    throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
   // --- End Check ---
   const currentDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(companyId, cycleEnd); // Uses temporary import
+  const due_date = await getDueDate(clientId, cycleEnd); // Uses temporary import
   const taxService = new TaxService();
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceItems
 
   // Create base invoice object
   const invoiceData = {
-    company_id: companyId,
+    client_id: clientId,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
     due_date,
     subtotal: 0,
@@ -723,7 +723,7 @@ export async function createInvoiceFromBillingResult(
         proToken: '', // Not available in currentUser, using empty string
         tenant: currentUser.tenant,
         user_type: currentUser.user_type,
-        companyId: undefined, // Not available in currentUser
+        clientId: undefined, // Not available in currentUser
         contactId: currentUser.contact_id
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
@@ -732,7 +732,7 @@ export async function createInvoiceFromBillingResult(
       trx,
       newInvoice!.invoice_id,
       billingResult.charges,
-      company,
+      client,
       sessionObject,
       tenant
     );
@@ -804,7 +804,7 @@ export async function createInvoiceFromBillingResult(
       const regionTotals = new Map<string, number>();
       // Group OTHER items by tax region
       for (const item of otherPositiveTaxableItems) {
-        const region = item.tax_region || company.tax_region; // Use item's region or company default
+        const region = item.tax_region || client.tax_region; // Use item's region or client default
         const amount = parseInt(item.net_amount);
         regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
       }
@@ -812,7 +812,7 @@ export async function createInvoiceFromBillingResult(
       // Calculate tax for each region on full amounts (no discount factor)
       for (const [region, amount] of regionTotals) {
         const rawTaxResult = await taxService.calculateTax(
-          companyId,
+          clientId,
           amount,
           cycleEnd,
           region,
@@ -827,7 +827,7 @@ export async function createInvoiceFromBillingResult(
       // Group OTHER items by region for distribution
       const itemsByRegion = new Map<string, typeof otherPositiveTaxableItems>();
       for (const item of otherPositiveTaxableItems) {
-        const region = item.tax_region || company.tax_region;
+        const region = item.tax_region || client.tax_region;
         if (!itemsByRegion.has(region)) {
           itemsByRegion.set(region, []);
         }
@@ -842,7 +842,7 @@ export async function createInvoiceFromBillingResult(
 
         // Get tax rate and amount for this region
         const regionalTaxResult = await taxService.calculateTax(
-          companyId,
+          clientId,
           regionalTotal,  // Use full amount before discounts
           cycleEnd,
           region,
@@ -900,7 +900,7 @@ export async function createInvoiceFromBillingResult(
 
     // Use the subtotal calculated above
     const totalAmount = subtotal + totalTax;
-    const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
+    const availableCredit = await ClientBillingPlan.getClientCredit(clientId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
 
     // Update invoice with final totals, ensuring tax is properly stored
@@ -921,7 +921,7 @@ export async function createInvoiceFromBillingResult(
     await updateInvoiceTotalsAndRecordTransaction(
       trx,
       newInvoice!.invoice_id,
-      company,
+      client,
       tenant,
       invoiceData.invoice_number
       // expirationDate is optional and not needed here
@@ -932,7 +932,7 @@ export async function createInvoiceFromBillingResult(
   analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
     invoice_id: newInvoice.invoice_id,
     invoice_number: newInvoice.invoice_number,
-    company_id: companyId,
+    client_id: clientId,
     subtotal: newInvoice.subtotal,
     tax: newInvoice.tax,
     total_amount: newInvoice.total_amount,

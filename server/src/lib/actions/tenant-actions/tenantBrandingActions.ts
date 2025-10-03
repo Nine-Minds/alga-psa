@@ -9,7 +9,7 @@ export interface TenantBranding {
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
-  companyName: string;
+  clientName: string;
   computedStyles?: string; // Cached CSS styles
 }
 
@@ -41,7 +41,7 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
     logoUrl: branding.logoUrl,
     primaryColor: branding.primaryColor,
     secondaryColor: branding.secondaryColor,
-    companyName: branding.companyName,
+    clientName: branding.clientName,
   });
 
   // Build updated settings with branding and computed styles
@@ -51,7 +51,7 @@ export async function updateTenantBrandingAction(branding: TenantBranding) {
       logoUrl: branding.logoUrl,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
-      companyName: branding.companyName,
+      clientName: branding.clientName,
       computedStyles, // Store precomputed CSS
     }
   };

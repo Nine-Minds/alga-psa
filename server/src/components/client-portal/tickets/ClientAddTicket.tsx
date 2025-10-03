@@ -107,7 +107,7 @@ export function ClientAddTicket({ open, onOpenChange, onTicketAdded }: ClientAdd
       if (error instanceof Error) {
         const errorMap: Record<string, string> = {
           'Failed to create ticket': t('tickets.messages.failedToCreateTicket'),
-          'Contact not associated with a company': t('tickets.messages.contactNotAssociatedWithCompany'),
+          'Contact not associated with a client': t('tickets.messages.contactNotAssociatedWithClient'),
           'User not associated with a contact': t('tickets.messages.userNotAssociatedWithContact'),
           'Not authenticated': t('tickets.messages.notAuthenticated'),
           'User ID not found in session': t('tickets.messages.userNotFound'),

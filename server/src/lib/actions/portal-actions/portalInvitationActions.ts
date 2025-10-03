@@ -24,7 +24,7 @@ export interface VerifyTokenResult {
     contact_name_id: string;
     full_name: string;
     email: string;
-    company_name: string;
+    client_name: string;
   };
   error?: string;
 }
@@ -57,7 +57,7 @@ export interface CreateClientPortalUserParams {
   contact?: {
     email: string;
     fullName: string;
-    companyId: string;
+    clientId: string;
     isClientAdmin?: boolean;
   };
   requirePasswordChange?: boolean;
@@ -100,14 +100,14 @@ export async function createClientPortalUser(
           .first();
         if (!contact && params.contact) {
           // Create new contact since provided ID not found and details are available
-          const normalizedCompanyId = params.contact.companyId && params.contact.companyId.trim() !== '' ? params.contact.companyId : null
+          const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null
           const [createdContact] = await trx('contacts')
             .insert({
               tenant,
               contact_name_id: trx.raw('gen_random_uuid()'),
               full_name: params.contact.fullName,
               email: params.contact.email.toLowerCase(),
-              company_id: normalizedCompanyId,
+              client_id: normalizedClientId,
               is_client_admin: !!params.contact.isClientAdmin,
               is_inactive: false,
               created_at: trx.raw('now()'),
@@ -119,14 +119,14 @@ export async function createClientPortalUser(
       }
 
       if (!contact && params.contact) {
-        // Try to find by email + company; else create
-        const normalizedCompanyId = params.contact.companyId && params.contact.companyId.trim() !== '' ? params.contact.companyId : null;
+        // Try to find by email + client; else create
+        const normalizedClientId = params.contact.clientId && params.contact.clientId.trim() !== '' ? params.contact.clientId : null;
         const q = trx('contacts')
           .where({ tenant, email: params.contact.email.toLowerCase() });
-        if (normalizedCompanyId) {
-          q.andWhere('company_id', normalizedCompanyId);
+        if (normalizedClientId) {
+          q.andWhere('client_id', normalizedClientId);
         } else {
-          q.whereNull('company_id');
+          q.whereNull('client_id');
         }
         contact = await q.first();
         if (!contact) {
@@ -136,7 +136,7 @@ export async function createClientPortalUser(
               contact_name_id: trx.raw('gen_random_uuid()'),
               full_name: params.contact.fullName,
               email: params.contact.email.toLowerCase(),
-              company_id: normalizedCompanyId,
+              client_id: normalizedClientId,
               is_client_admin: !!params.contact.isClientAdmin,
               is_inactive: false,
               created_at: trx.raw('now()'),
@@ -333,44 +333,44 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
         throw new Error(invitationResult.error || 'Failed to create invitation');
       }
 
-      // Get the tenant's default company (MSP company) for reply-to email
-      const tenantDefaultCompany = await trx('tenant_companies')
-        .join('companies', function() {
-          this.on('companies.company_id', '=', 'tenant_companies.company_id')
-              .andOn('companies.tenant', '=', 'tenant_companies.tenant');
+      // Get the tenant's default client (MSP client) for reply-to email
+      const tenantDefaultClient = await trx('tenant_companies')
+        .join('clients', function() {
+          this.on('clients.client_id', '=', 'tenant_companies.client_id')
+              .andOn('clients.tenant', '=', 'tenant_companies.tenant');
         })
         .where({ 
           'tenant_companies.tenant': tenant,
           'tenant_companies.is_default': true 
         })
-        .select('companies.*')
+        .select('clients.*')
         .first();
       
-      if (!tenantDefaultCompany) {
-        throw new Error('No default company configured for this tenant. Please set a default company in General Settings.');
+      if (!tenantDefaultClient) {
+        throw new Error('No default client configured for this tenant. Please set a default client in General Settings.');
       }
       
-      // Get MSP company's default location for reply-to email
-      const mspLocation = await trx('company_locations')
+      // Get MSP client's default location for reply-to email
+      const mspLocation = await trx('client_locations')
         .where({ 
           tenant, 
-          company_id: tenantDefaultCompany.company_id,
+          client_id: tenantDefaultClient.client_id,
           is_default: true,
           is_active: true
         })
         .first();
       
       if (!mspLocation) {
-        throw new Error('Default company must have a default location configured to send portal invitations');
+        throw new Error('Default client must have a default location configured to send portal invitations');
       }
       
       if (!mspLocation.email) {
-        throw new Error('Default company\'s location must have a contact email configured');
+        throw new Error('Default client\'s location must have a contact email configured');
       }
       
-      // Get the client's company info for the email template
-      const clientCompany = contact.company_id ? await trx('companies')
-        .where({ tenant, company_id: contact.company_id })
+      // Get the client's client info for the email template
+      const clientClient = contact.client_id ? await trx('clients')
+        .where({ tenant, client_id: contact.client_id })
         .first() : null;
 
       // Generate portal setup URL with robust base URL fallback
@@ -384,13 +384,13 @@ export async function sendPortalInvitation(contactId: string): Promise<SendInvit
       await sendPortalInvitationEmail({
         email: contact.email,
         contactName: contact.full_name,
-        companyName: clientCompany?.company_name || tenantDefaultCompany.company_name,  // Client's company name or MSP name
+        clientName: clientClient?.client_name || tenantDefaultClient.client_name,  // Client's client name or MSP name
         portalLink: portalSetupUrl,
         expirationTime: expirationTime,
         tenant: tenant,
-        companyLocationEmail: mspLocation.email,  // MSP's email for reply-to
-        companyLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
-        fromName: `${tenantDefaultCompany.company_name} Portal`  // MSP's name for the portal
+        clientLocationEmail: mspLocation.email,  // MSP's email for reply-to
+        clientLocationPhone: mspLocation.phone || 'Not provided',  // MSP's phone
+        fromName: `${tenantDefaultClient.client_name} Portal`  // MSP's name for the portal
       });
 
       return {

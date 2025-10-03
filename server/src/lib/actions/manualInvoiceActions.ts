@@ -26,7 +26,7 @@ export interface ManualInvoiceItem { // Add export
 }
 
 interface ManualInvoiceRequest {
-  companyId: string;
+  clientId: string;
   items: ManualInvoiceItem[];
   expirationDate?: string; // Add expiration date for prepayments
   isPrepayment?: boolean;
@@ -35,10 +35,10 @@ interface ManualInvoiceRequest {
 export async function generateManualInvoice(request: ManualInvoiceRequest): Promise<InvoiceViewModel> {
   // Validate session and tenant context
   const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
-  const { companyId, items, expirationDate, isPrepayment } = request;
+  const { clientId, items, expirationDate, isPrepayment } = request;
 
-  // Get company details
-  const company = await invoiceService.getCompanyDetails(knex, tenant, companyId);
+  // Get client details
+  const client = await invoiceService.getClientDetails(knex, tenant, clientId);
   const currentDate = Temporal.Now.plainDateISO().toString();
 
   // Generate invoice number and create invoice record
@@ -49,7 +49,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
   const invoice = {
     invoice_id: invoiceId,
     tenant,
-    company_id: companyId,
+    client_id: clientId,
     invoice_date: currentDate,
     due_date: currentDate, // You may want to calculate this based on payment terms
     invoice_number: invoiceNumber,
@@ -71,7 +71,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
-      company,
+      client,
       session,
       tenant
     );
@@ -81,7 +81,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     const computedTotalTax = await invoiceService.calculateAndDistributeTax(
       trx,
       invoiceId,
-      company,
+      client,
       taxService // Removed subtotal argument
     );
 
@@ -89,7 +89,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     await invoiceService.updateInvoiceTotalsAndRecordTransaction(
       trx,
       invoiceId,
-      company,
+      client,
       tenant,
       invoiceNumber,
       isPrepayment ? expirationDate : undefined
@@ -104,7 +104,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     analytics.capture(AnalyticsEvents.INVOICE_GENERATED, {
       invoice_id: invoiceId,
       invoice_number: invoiceNumber,
-      company_id: companyId,
+      client_id: clientId,
       subtotal: Math.ceil(subtotal),
       tax: Math.ceil(computedTotalTax),
       total_amount: Math.ceil(subtotal + computedTotalTax),
@@ -117,11 +117,11 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
     return {
       invoice_id: invoiceId,
       invoice_number: invoiceNumber,
-      company_id: companyId,
-      company: {
-        name: company.company_name,
-        logo: company.logoUrl || '',
-        address: company.location_address || ''
+      client_id: clientId,
+      client: {
+        name: client.client_name,
+        logo: client.logoUrl || '',
+        address: client.location_address || ''
       },
       contact: {
         name: '',
@@ -165,7 +165,7 @@ export async function updateManualInvoice(
   request: ManualInvoiceRequest
 ): Promise<InvoiceViewModel> {
   const { session, knex, tenant } = await invoiceService.validateSessionAndTenant();
-  const { companyId, items } = request;
+  const { clientId, items } = request;
 
   // Verify invoice exists and is manual
   const existingInvoice = await knex('invoices')
@@ -180,8 +180,8 @@ export async function updateManualInvoice(
     throw new Error('Manual invoice not found');
   }
 
-  // Get company details
-  const company = await invoiceService.getCompanyDetails(knex, tenant, companyId);
+  // Get client details
+  const client = await invoiceService.getClientDetails(knex, tenant, clientId);
   const currentDate = Temporal.Now.plainDateISO().toString();
   const billingEngine = new BillingEngine();
 
@@ -200,7 +200,7 @@ export async function updateManualInvoice(
       trx,
       invoiceId,
       items, // Assuming items match ManualInvoiceItemInput structure
-      company,
+      client,
       session,
       tenant
     );
@@ -289,11 +289,11 @@ export async function updateManualInvoice(
   return {
     invoice_id: invoiceId,
     invoice_number: existingInvoice.invoice_number,
-    company_id: companyId,
-    company: {
-      name: company.company_name,
-      logo: company.logoUrl || '',
-      address: company.location_address || ''
+    client_id: clientId,
+    client: {
+      name: client.client_name,
+      logo: client.logoUrl || '',
+      address: client.location_address || ''
     },
     contact: {
       name: '',

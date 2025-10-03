@@ -35,13 +35,13 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Group assets by company
-  const assetsByCompany = assets.reduce((acc, asset) => {
-    if (!asset.company_id) return acc;
-    if (!acc[asset.company_id]) {
-      acc[asset.company_id] = [];
+  // Group assets by client
+  const assetsByClient = assets.reduce((acc, asset) => {
+    if (!asset.client_id) return acc;
+    if (!acc[asset.client_id]) {
+      acc[asset.client_id] = [];
     }
-    acc[asset.company_id].push(asset);
+    acc[asset.client_id].push(asset);
     return acc;
   }, {} as Record<string, Asset[]>);
 
@@ -57,9 +57,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       setLoading(true);
       try {
         const summaries: Record<string, ClientMaintenanceSummary> = {};
-        for (const companyId of Object.keys(assetsByCompany)) {
-          const summary = await getClientMaintenanceSummary(companyId);
-          summaries[companyId] = summary;
+        for (const clientId of Object.keys(assetsByClient)) {
+          const summary = await getClientMaintenanceSummary(clientId);
+          summaries[clientId] = summary;
         }
         setMaintenanceSummaries(summaries);
       } catch (error) {
@@ -178,9 +178,9 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
       }
     },
     { 
-      dataIndex: 'company_name',
-      title: 'Company',
-      render: (_: unknown, record: Asset) => record.company?.company_name || 'Unassigned'
+      dataIndex: 'client_name',
+      title: 'Client',
+      render: (_: unknown, record: Asset) => record.client?.client_name || 'Unassigned'
     },
     {
       dataIndex: 'location',
@@ -243,42 +243,42 @@ export default function AssetDashboard({ initialAssets }: AssetDashboardProps) {
         </div>
       </Card>
 
-      {/* Company Assets Overview */}
-      <Card {...withDataAutomationId({ id: 'company-assets-overview' })} className="p-4 border border-[rgb(var(--color-border-200))]">
-        <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Assets by Company</h3>
+      {/* Client Assets Overview */}
+      <Card {...withDataAutomationId({ id: 'client-assets-overview' })} className="p-4 border border-[rgb(var(--color-border-200))]">
+        <h3 className="text-xl font-semibold mb-4 text-[rgb(var(--color-text-900))]">Assets by Client</h3>
         <div className="space-y-4">
-          {Object.entries(assetsByCompany).map(([companyId, companyAssets]): JSX.Element => {
-            const summary = maintenanceSummaries[companyId];
-            const companyName = companyAssets[0]?.company?.company_name || 'Unassigned';
+          {Object.entries(assetsByClient).map(([clientId, clientAssets]): JSX.Element => {
+            const summary = maintenanceSummaries[clientId];
+            const clientName = clientAssets[0]?.client?.client_name || 'Unassigned';
             return (
               <div 
-                {...withDataAutomationId({ id: `company-assets-${companyId}` })}
-                key={companyId} 
+                {...withDataAutomationId({ id: `client-assets-${clientId}` })}
+                key={clientId} 
                 className="border border-[rgb(var(--color-border-200))] rounded-lg p-4 bg-[rgb(var(--color-border-50))]"
               >
-                <div {...withDataAutomationId({ id: `company-header-${companyId}` })} className="flex justify-between items-center mb-2">
+                <div {...withDataAutomationId({ id: `client-header-${clientId}` })} className="flex justify-between items-center mb-2">
                   <h4 className="text-lg font-medium text-[rgb(var(--color-text-900))]">
-                    {companyName}
+                    {clientName}
                   </h4>
                   <span className="text-sm text-[rgb(var(--color-text-600))]">
-                    {companyAssets.length} assets
+                    {clientAssets.length} assets
                   </span>
                 </div>
                 {summary && (
-                  <div {...withDataAutomationId({ id: `company-maintenance-stats-${companyId}` })} className="grid grid-cols-3 gap-4 mt-2 text-sm">
-                    <div {...withDataAutomationId({ id: `company-compliance-${companyId}` })}>
+                  <div {...withDataAutomationId({ id: `client-maintenance-stats-${clientId}` })} className="grid grid-cols-3 gap-4 mt-2 text-sm">
+                    <div {...withDataAutomationId({ id: `client-compliance-${clientId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Maintenance Compliance</p>
                       <p className="font-semibold text-[rgb(var(--color-text-900))]">
                         {summary.compliance_rate.toFixed(1)}%
                       </p>
                     </div>
-                    <div {...withDataAutomationId({ id: `company-overdue-${companyId}` })}>
+                    <div {...withDataAutomationId({ id: `client-overdue-${clientId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Overdue</p>
                       <p className="font-semibold text-[rgb(var(--color-accent-500))]">
                         {summary.overdue_maintenances}
                       </p>
                     </div>
-                    <div {...withDataAutomationId({ id: `company-upcoming-${companyId}` })}>
+                    <div {...withDataAutomationId({ id: `client-upcoming-${clientId}` })}>
                       <p className="text-[rgb(var(--color-text-600))]">Upcoming</p>
                       <p className="font-semibold text-[rgb(var(--color-primary-500))]">
                         {summary.upcoming_maintenances}

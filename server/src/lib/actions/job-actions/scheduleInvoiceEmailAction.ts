@@ -4,7 +4,7 @@ import { JobService } from 'server/src/services/job.service';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from '../user-actions/userActions';
 import { getInvoiceForRendering } from '../invoiceQueries';
-import { getCompanyById } from '../company-actions/companyActions';
+import { getClientById } from '../client-actions/clientActions';
 import { JobStatus } from 'server/src/types/job';
 import logger from '@shared/core/logger';
 import { withTransaction } from '@shared/db';
@@ -25,26 +25,26 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
       if (!invoice) {
         throw new Error(`Invoice ${invoiceId} not found`);
       }
-      const company = await getCompanyById(invoice.company_id);
-      if (!company) {
-        throw new Error(`Company not found for invoice ${invoice.invoice_number}`);
+      const client = await getClientById(invoice.client_id);
+      if (!client) {
+        throw new Error(`Client not found for invoice ${invoice.invoice_number}`);
       }
       return {
         invoiceId,
         invoiceNumber: invoice.invoice_number,
-        companyName: company.company_name
+        clientName: client.client_name
       };
     })
   );
 
-  const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, companyName }) => [
+  const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, clientName }) => [
     {
-      stepName: `PDF Generation for Invoice #${invoiceNumber} (${companyName})`,
+      stepName: `PDF Generation for Invoice #${invoiceNumber} (${clientName})`,
       type: 'pdf_generation',
       metadata: { invoiceId, tenantId: tenant }
     },
     {
-      stepName: `Email Sending for Invoice #${invoiceNumber} (${companyName})`,
+      stepName: `Email Sending for Invoice #${invoiceNumber} (${clientName})`,
       type: 'email_sending',
       metadata: { invoiceId, tenantId: tenant }
     }
@@ -77,7 +77,7 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
       analytics.capture(AnalyticsEvents.INVOICE_SENT, {
         invoice_id: detail.invoiceId,
         invoice_number: detail.invoiceNumber,
-        company_name: detail.companyName,
+        client_name: detail.clientName,
         batch_size: invoiceIds.length,
         job_id: jobRecord.id
       }, currentUser.user_id);
@@ -93,7 +93,7 @@ export const scheduleInvoiceEmailAction = async (invoiceIds: string[]) => {
       // Include human-readable details in the error log if available
       invoiceDetails: invoiceDetails?.map(d => ({
         invoiceNumber: d.invoiceNumber,
-        companyName: d.companyName
+        clientName: d.clientName
       }))
     });
     

@@ -1,6 +1,6 @@
 'use server';
 
-import { getUserAvatarUrl, getContactAvatarUrl, getCompanyLogoUrl, getEntityImageUrlsBatch } from '../utils/avatarUtils';
+import { getUserAvatarUrl, getContactAvatarUrl, getClientLogoUrl, getEntityImageUrlsBatch } from '../utils/avatarUtils';
 
 export async function getUserAvatarUrlAction(userId: string, tenant: string): Promise<string | null> {
   return getUserAvatarUrl(userId, tenant);
@@ -10,8 +10,8 @@ export async function getContactAvatarUrlAction(contactId: string, tenant: strin
   return getContactAvatarUrl(contactId, tenant);
 }
 
-export async function getCompanyLogoUrlAction(companyId: string, tenant: string): Promise<string | null> {
-  return getCompanyLogoUrl(companyId, tenant);
+export async function getClientLogoUrlAction(clientId: string, tenant: string): Promise<string | null> {
+  return getClientLogoUrl(clientId, tenant);
 }
 
 export async function getUserAvatarUrlsBatchAction(userIds: string[], tenant: string): Promise<Map<string, string | null>> {

@@ -68,7 +68,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   });
   const [formData, setFormData] = useState<AssetFormData>({
     asset_type: 'unknown',
-    company_id: '',
+    client_id: '',
     name: '',
     asset_tag: '',
     serial_number: '',
@@ -100,7 +100,7 @@ export default function AssetForm({ assetId }: AssetFormProps) {
   
         setFormData({
           asset_type: data.asset_type,
-          company_id: data.company_id,
+          client_id: data.client_id,
           name: data.name || '',
           asset_tag: data.asset_tag || '',
           serial_number: data.serial_number || '',

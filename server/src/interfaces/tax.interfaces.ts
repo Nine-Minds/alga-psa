@@ -2,8 +2,8 @@ import { TenantEntity } from ".";
 
 import { ISO8601String } from '../types/types.d';
 
-export interface ICompanyTaxSettings extends TenantEntity {
-  company_id: string;
+export interface IClientTaxSettings extends TenantEntity {
+  client_id: string;
   tax_rate_id?: string; // Made optional for backward compatibility with tests
   is_reverse_charge_applicable: boolean;
   tax_components?: ITaxComponent[];
@@ -77,10 +77,10 @@ export interface ITaxRegion extends TenantEntity {
   is_active: boolean;
 }
 
-// Represents an entry in the company_tax_rates table
-export interface ICompanyTaxRateAssociation extends TenantEntity {
- company_tax_rates_id: string; // Corrected column name (plural rates)
-  company_id: string;
+// Represents an entry in the client_tax_rates table
+export interface IClientTaxRateAssociation extends TenantEntity {
+  client_tax_rates_id: string; // Corrected column name (plural rates)
+  client_id: string;
   tax_rate_id: string;
   is_default: boolean;
   location_id: string | null;

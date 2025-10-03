@@ -34,7 +34,7 @@ export default function OnboardingPage() {
         data = settings.onboarding_data;
       }
       
-      // Fetch current user and company info to prefill
+      // Fetch current user and client info to prefill
       const initialDataResult = await getOnboardingInitialData();
       
       if (initialDataResult.success && initialDataResult.data) {

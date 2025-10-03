@@ -30,7 +30,7 @@ export enum ActivityPriority {
  */
 export interface RelatedEntity {
   id: string;
-  type: 'project' | 'ticket' | 'company' | 'contact' | 'workflow';
+  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow';
   name: string;
   url?: string;
 }
@@ -102,8 +102,8 @@ export interface ProjectTaskActivity extends ActivityBase {
 export interface TicketActivity extends ActivityBase {
   sourceType: ActivityType.TICKET;
   ticketNumber: string;
-  companyId?: string;
-  companyName?: string;
+  clientId?: string;
+  clientName?: string;
   contactId?: string;
   contactName?: string;
   estimatedHours?: number;
@@ -156,7 +156,7 @@ export interface ActivityFilters {
   dateRangeEnd?: ISO8601String;
   search?: string;
   isClosed?: boolean;
-  companyId?: string;
+  clientId?: string;
   contactId?: string;
   ticketNumber?: string;
   projectId?: string;

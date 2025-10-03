@@ -7,10 +7,10 @@ import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Asset, CreateAssetRequest, WorkstationAsset, NetworkDeviceAsset } from 'server/src/interfaces/asset.interfaces';
-import { ICompany } from 'server/src/interfaces';
+import { IClient } from 'server/src/interfaces';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface CreateAssetDialogProps {
@@ -62,7 +62,7 @@ const INITIAL_NETWORK_DEVICE: NetworkDeviceFields = {
 
 const INITIAL_FORM_DATA: Omit<CreateAssetRequest, 'asset_type'> & { asset_type: string } = {
   asset_type: '',
-  company_id: '',
+  client_id: '',
   asset_tag: '',
   name: '',
   status: 'active',
@@ -72,25 +72,25 @@ const INITIAL_FORM_DATA: Omit<CreateAssetRequest, 'asset_type'> & { asset_type: 
 
 export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAssetDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
-  const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(true);
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchClients = async () => {
       try {
-        const companiesList = await getAllCompanies(false);
-        setCompanies(companiesList);
+        const clientsList = await getAllClients(false);
+        setClients(clientsList);
       } catch (error) {
-        console.error('Error fetching companies:', error);
+        console.error('Error fetching clients:', error);
       } finally {
-        setIsLoadingCompanies(false);
+        setIsLoadingClients(false);
       }
     };
 
-    fetchCompanies();
+    fetchClients();
   }, []);
 
   const validateForm = () => {
@@ -306,13 +306,13 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
 
         {/* Common fields */}
         <div>
-          <Label htmlFor="company_id">Client</Label>
+          <Label htmlFor="client_id">Client</Label>
           <div className="mt-1">
-            <CompanyPicker
-              id='company-picker'
-              companies={companies}
-              selectedCompanyId={formData.company_id || null}
-              onSelect={(companyId) => handleChange('company_id', companyId || '')}
+            <ClientPicker
+              id='client-picker'
+              clients={clients}
+              selectedClientId={formData.client_id || null}
+              onSelect={(clientId) => handleChange('client_id', clientId || '')}
               filterState="active"
               onFilterStateChange={() => {}}
               clientTypeFilter="all"
@@ -368,7 +368,7 @@ export default function CreateAssetDialog({ onClose, onAssetCreated }: CreateAss
           <Button
             id='create-button'
             type="submit"
-            disabled={isSubmitting || isLoadingCompanies}
+            disabled={isSubmitting || isLoadingClients}
             className={!formData.asset_type || !formData.name.trim() || !formData.asset_tag.trim() ? 'opacity-50' : ''}
           >
             {isSubmitting ? 'Creating...' : 'Create Asset'}

@@ -9,7 +9,7 @@ import { Knex } from 'knex'; // Import Knex type
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  companyId: z.string().uuid(),
+  clientId: z.string().uuid(),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid start date format (YYYY-MM-DD)",
   }),
@@ -27,10 +27,10 @@ export interface UsageMetricResult {
 }
 
 /**
- * Server action to fetch key usage data metrics for a specific company
+ * Server action to fetch key usage data metrics for a specific client
  * within a given date range. Currently implements "Total Usage per Service".
  *
- * @param input - Object containing companyId, startDate, and endDate.
+ * @param input - Object containing clientId, startDate, and endDate.
  * @returns A promise that resolves to an array of usage metrics.
  */
 export async function getUsageDataMetrics(
@@ -42,7 +42,7 @@ export async function getUsageDataMetrics(
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     throw new Error(`Validation Error: ${errorMessages}`);
   }
-  const { companyId, startDate, endDate } = validationResult.data;
+  const { clientId, startDate, endDate } = validationResult.data;
 
   const { knex, tenant } = await createTenantKnex();
 
@@ -50,7 +50,7 @@ export async function getUsageDataMetrics(
     throw new Error('Tenant context is required.');
   }
 
-  console.log(`Fetching usage metrics for company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+  console.log(`Fetching usage metrics for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
   try {
     const results: UsageMetricResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -59,7 +59,7 @@ export async function getUsageDataMetrics(
           this.on('ut.service_id', '=', 'sc.service_id')
               .andOn('ut.tenant', '=', 'sc.tenant');
         })
-        .where('ut.company_id', companyId)
+        .where('ut.client_id', clientId)
         .andWhere('ut.tenant', tenant)
         .andWhere('ut.usage_date', '>=', startDate)
         .andWhere('ut.usage_date', '<=', endDate)
@@ -83,11 +83,11 @@ export async function getUsageDataMetrics(
       }));
     });
 
-    console.log(`Found ${results.length} usage metric groupings for company ${companyId}`);
+    console.log(`Found ${results.length} usage metric groupings for client ${clientId}`);
     return results;
 
   } catch (error) {
-    console.error(`Error fetching usage metrics for company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching usage metrics for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch usage metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

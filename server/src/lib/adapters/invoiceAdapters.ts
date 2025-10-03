@@ -45,7 +45,7 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
 
   try {
     // Check if the input data is in DbInvoiceViewModel format (from database)
-    if (typeof inputData.invoice_number !== 'undefined' && typeof inputData.company !== 'undefined' && typeof inputData.invoice_items !== 'undefined') {
+    if (typeof inputData.invoice_number !== 'undefined' && typeof inputData.client !== 'undefined' && typeof inputData.invoice_items !== 'undefined') {
       console.log('[mapDbInvoiceToWasmViewModel] Input data appears to be in DbInvoiceViewModel format. Mapping...');
       const dbData = inputData as DbInvoiceViewModel;
 
@@ -54,11 +54,11 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         issueDate: formatDateValueToString(dbData.invoice_date), // Corrected property name
         dueDate: formatDateValueToString(dbData.due_date),
         customer: {
-          name: String(dbData.company?.name ?? 'N/A'),
-          address: String(dbData.company?.address ?? 'N/A'),
+          name: String(dbData.client?.name ?? 'N/A'),
+          address: String(dbData.client?.address ?? 'N/A'),
         },
-        // tenantCompany does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
-        tenantCompany: null,
+        // tenantClient does not exist directly in DbInvoiceViewModel, assuming it's not needed or handled elsewhere
+        tenantClient: null,
 
         items: (dbData.invoice_items ?? []).map((item: IInvoiceItem) => ({
           id: String(item.item_id ?? ''), // Corrected property name

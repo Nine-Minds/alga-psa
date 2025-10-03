@@ -176,12 +176,12 @@ export async function deleteUser(userId: string): Promise<void> {
         throw new Error('Permission denied: Cannot delete user');
       }
 
-      const assignedCompany = await trx('companies')
+      const assignedClient = await trx('clients')
         .where({ account_manager_id: userId, tenant: tenant || undefined })
         .first();
 
-      if (assignedCompany) {
-        throw new Error('Cannot delete user: Assigned as Account Manager to one or more companies. Please reassign first.');
+      if (assignedClient) {
+        throw new Error('Cannot delete user: Assigned as Account Manager to one or more clients. Please reassign first.');
       }
 
       // Set completed_by to NULL in workflow_tasks where the user is the completer
@@ -713,17 +713,17 @@ export async function setUserPreference(userId: string, settingName: string, set
   }
 }
 
-export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; companyId?: string; tenant?: string }> {
+export async function verifyContactEmail(email: string): Promise<{ exists: boolean; isActive: boolean; clientId?: string; tenant?: string }> {
   try {
     // Email suffix functionality removed for security - only check contacts
     const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
-        .join('companies', function() {
-          this.on('companies.company_id', '=', 'contacts.company_id')
-              .andOn('companies.tenant', '=', 'contacts.tenant');
+        .join('clients', function() {
+          this.on('clients.client_id', '=', 'contacts.client_id')
+              .andOn('clients.tenant', '=', 'contacts.tenant');
         })
         .where({ 'contacts.email': email.toLowerCase() })
-        .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.tenant')
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.tenant')
         .first();
     });
 
@@ -734,7 +734,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
     return {
       exists: true,
       isActive: !contact.is_inactive,
-      companyId: contact.company_id,
+      clientId: contact.client_id,
       tenant: contact.tenant
     };
   } catch (error) {
@@ -762,14 +762,14 @@ export async function registerClientUser(
 
       // First verify the contact exists and get their tenant
       const contact = await trx('contacts')
-        .join('companies', function() {
-          this.on('companies.company_id', '=', 'contacts.company_id')
-              .andOn('companies.tenant', '=', 'contacts.tenant');
+        .join('clients', function() {
+          this.on('clients.client_id', '=', 'contacts.client_id')
+              .andOn('clients.tenant', '=', 'contacts.tenant');
         })
         .where({ 'contacts.email': email.toLowerCase() })
         .select(
           'contacts.contact_name_id',
-          'contacts.company_id',
+          'contacts.client_id',
           'contacts.tenant',
           'contacts.is_inactive',
           'contacts.full_name'
@@ -911,7 +911,7 @@ export async function changeOwnPassword(
 }
 
 // Function for admins to change user passwords
-export async function getUserCompanyId(userId: string): Promise<string | null> {
+export async function getUserClientId(userId: string): Promise<string | null> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -924,27 +924,27 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
     }
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // For client users accessing their own company ID, no permission check needed
+      // For client users accessing their own client ID, no permission check needed
       // For other users, check user:read permission
       if (currentUser.user_id !== userId && !await hasPermission(currentUser, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot read user company ID');
+        throw new Error('Permission denied: Cannot read user client ID');
       }
 
       const user = await User.get(trx, userId); // Use User.get which includes tenant context
       if (!user) return null;
 
-      // First try to get company ID from contact if user is contact-based
+      // First try to get client ID from contact if user is contact-based
       if (user.contact_id) {
         const contact = await trx('contacts')
           .where({
             contact_name_id: user.contact_id,
             tenant: tenant
           })
-          .select('company_id')
+          .select('client_id')
           .first();
 
-        if (contact?.company_id) {
-          return contact.company_id;
+        if (contact?.client_id) {
+          return contact.client_id;
         }
       }
 
@@ -952,8 +952,8 @@ export async function getUserCompanyId(userId: string): Promise<string | null> {
       return null;
     });
   } catch (error) {
-    logger.error('Error getting user company ID:', error);
-    throw new Error('Failed to get user company ID');
+    logger.error('Error getting user client ID:', error);
+    throw new Error('Failed to get user client ID');
   }
 }
 
@@ -1211,7 +1211,7 @@ export async function deleteUserAvatar(userId: string): Promise<ActionResult> {
   }
 }
 
-export async function getClientUsersForCompany(companyId: string): Promise<IUser[]> {
+export async function getClientUsersForClient(clientId: string): Promise<IUser[]> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -1223,10 +1223,10 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
       throw new Error('Tenant not found');
     }
 
-    // Get all users associated with the company
+    // Get all users associated with the client
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       if (!await hasPermission(currentUser, 'user', 'read', trx)) {
-        throw new Error('Permission denied: Cannot read client users for company');
+        throw new Error('Permission denied: Cannot read client users for client');
       }
 
       const users = await trx('users')
@@ -1235,7 +1235,7 @@ export async function getClientUsersForCompany(companyId: string): Promise<IUser
               .andOn('contacts.tenant', '=', trx.raw('?', [tenant]));
         })
         .where({
-          'contacts.company_id': companyId,
+          'contacts.client_id': clientId,
           'users.tenant': tenant,
           'users.user_type': 'client'
         })

@@ -37,10 +37,10 @@ interface SendEmailOptions {
 }
 
 interface InvoiceEmailTemplateData {
-  company_name: string;
+  client_name: string;
   invoice_number: string;
   total_amount: string;
-  sender_company: string;
+  sender_client: string;
 }
 
 export class EmailService {
@@ -253,9 +253,9 @@ export class EmailService {
     }, 
     pdfPath: string
   ) {
-    const { companies } = await getTenantDetails();
-    const defaultCompany = companies.find(c => c.is_default);
-    const senderCompany = defaultCompany?.company_name || 'Our Company';
+    const { clients } = await getTenantDetails();
+    const defaultClient = clients.find(c => c.is_default);
+    const senderClient = defaultClient?.client_name || 'Our Client';
 
     const template = await this.getInvoiceEmailTemplate();
     const attachments = [{
@@ -265,10 +265,10 @@ export class EmailService {
     }];
 
     const templateData: InvoiceEmailTemplateData = {
-      company_name: invoice.company.name,
+      client_name: invoice.client.name,
       invoice_number: invoice.invoice_number,
       total_amount: `$${(invoice.total_amount / 100).toFixed(2)}`,
-      sender_company: senderCompany
+      sender_client: senderClient
     };
 
     const html = this.renderInvoiceTemplate(template.body, templateData);
@@ -305,12 +305,12 @@ export class EmailService {
   private async getInvoiceEmailTemplate() {
     // TODO: Fetch from database
     return {
-      subject: 'Invoice {{invoice_number}} from {{sender_company}}',
+      subject: 'Invoice {{invoice_number}} from {{sender_client}}',
       body: `
-        <p>Dear {{company_name}},</p>
+        <p>Dear {{client_name}},</p>
         <p>Please find attached your invoice {{invoice_number}} for {{total_amount}}.</p>
         <p>Thank you for your business!</p>
-        <p>Best regards,<br>{{sender_company}}</p>
+        <p>Best regards,<br>{{sender_client}}</p>
       `
     };
   }

@@ -176,10 +176,10 @@ function formatAssetForOutput(asset: any): Asset {
         // Handle optional fields
         serial_number: asset.serial_number || undefined,
         location: asset.location || undefined,
-        // Ensure company data is properly structured
-        company: asset.company ? {
-            company_id: asset.company.company_id,
-            company_name: asset.company.company_name || ''
+        // Ensure client data is properly structured
+        client: asset.client ? {
+            client_id: asset.client.client_id,
+            client_name: asset.client.client_name || ''
         } : undefined,
         // Ensure relationships is always an array
         relationships: Array.isArray(asset.relationships) ? asset.relationships : [],
@@ -292,7 +292,7 @@ export async function createAsset(data: CreateAssetRequest): Promise<Asset> {
             const baseAssetData = {
                 tenant,
                 asset_type: validatedData.asset_type,
-                company_id: validatedData.company_id,
+                client_id: validatedData.client_id,
                 asset_tag: validatedData.asset_tag,
                 name: validatedData.name,
                 status: validatedData.status,
@@ -451,15 +451,15 @@ export async function updateAsset(asset_id: string, data: UpdateAssetRequest): P
 }
 
 async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: string): Promise<Asset> {
-    // Get base asset data with company info
+    // Get base asset data with client info
     const asset = await knex('assets')
         .select(
             'assets.*',
-            'companies.company_name'
+            'clients.client_name'
         )
-        .leftJoin('companies', function(this: Knex.JoinClause) {
-            this.on('companies.company_id', '=', 'assets.company_id')
-                .andOn('companies.tenant', '=', 'assets.tenant');
+        .leftJoin('clients', function(this: Knex.JoinClause) {
+            this.on('clients.client_id', '=', 'assets.client_id')
+                .andOn('clients.tenant', '=', 'assets.tenant');
         })
         .where({ 'assets.tenant': tenant, 'assets.asset_id': asset_id })
         .first();
@@ -482,9 +482,9 @@ async function getAssetWithExtensions(knex: Knex, tenant: string, asset_id: stri
     // Transform the data
     const transformedAsset: Asset = {
         ...asset,
-        company: {
-            company_id: asset.company_id,
-            company_name: asset.company_name || ''
+        client: {
+            client_id: asset.client_id,
+            client_name: asset.client_name || ''
         },
         relationships: relationships || [],  // Ensure relationships is always an array
         // Add extension data under the appropriate key
@@ -520,15 +520,15 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
             // Build base query
             const baseQuery = trx('assets')
             .where('assets.tenant', tenant)
-            .leftJoin('companies', function(this: Knex.JoinClause) {
-                this.on('companies.company_id', '=', 'assets.company_id')
-                    .andOn('companies.tenant', '=', 'assets.tenant')
-                    .andOn('companies.tenant', '=', trx.raw('?', [tenant]));
+            .leftJoin('clients', function(this: Knex.JoinClause) {
+                this.on('clients.client_id', '=', 'assets.client_id')
+                    .andOn('clients.tenant', '=', 'assets.tenant')
+                    .andOn('clients.tenant', '=', trx.raw('?', [tenant]));
             });
 
         // Apply filters
-        if (validatedParams.company_id) {
-            baseQuery.where('assets.company_id', validatedParams.company_id);
+        if (validatedParams.client_id) {
+            baseQuery.where('assets.client_id', validatedParams.client_id);
         }
         if (validatedParams.asset_type) {
             baseQuery.where('assets.asset_type', validatedParams.asset_type);
@@ -548,7 +548,7 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
         const assets = await baseQuery
             .select(
                 'assets.*',
-                'companies.company_name'
+                'clients.client_name'
             )
             .orderBy('assets.created_at', 'desc')
             .limit(limit)
@@ -563,9 +563,9 @@ export async function listAssets(params: AssetQueryParams): Promise<AssetListRes
 
                 return {
                     ...asset,
-                    company: {
-                        company_id: asset.company_id,
-                        company_name: asset.company_name || ''
+                    client: {
+                        client_id: asset.client_id,
+                        client_name: asset.client_name || ''
                     },
                     relationships: [],  // Initialize empty array for relationships
                     ...(extensionData ? {
@@ -915,7 +915,7 @@ export async function getAssetMaintenanceReport(asset_id: string): Promise<Asset
     }
 }
 
-export async function getClientMaintenanceSummary(company_id: string): Promise<ClientMaintenanceSummary> {
+export async function getClientMaintenanceSummary(client_id: string): Promise<ClientMaintenanceSummary> {
     try {
         const currentUser = await getCurrentUser();
         if (!currentUser) {
@@ -932,18 +932,18 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
             throw new Error('No tenant found');
         }
 
-        // Get company details
-        const company = await knex('companies')
-            .where({ tenant, company_id })
+        // Get client details
+        const client = await knex('clients')
+            .where({ tenant, client_id })
             .first();
 
-        if (!company) {
-            throw new Error('Company not found');
+        if (!client) {
+            throw new Error('Client not found');
         }
 
         // Get asset statistics with proper 'this' type annotation
         const assetStats = await knex('assets')
-            .where({ 'assets.tenant': tenant, company_id })
+            .where({ 'assets.tenant': tenant, client_id })
             .select(
                 knex.raw('COUNT(DISTINCT assets.asset_id) as total_assets'),
                 knex.raw(`
@@ -966,7 +966,7 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
                 knex('assets')
                     .where({ 
                         'assets.tenant': tenant, 
-                        company_id,
+                        client_id,
                         tenant 
                     })
                     .select('asset_id')
@@ -995,7 +995,7 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
                 knex('assets')
                     .where({ 
                         'assets.tenant': tenant, 
-                        company_id,
+                        client_id,
                         tenant 
                     })
                     .select('asset_id')
@@ -1015,7 +1015,7 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
             .where({ 'asset_maintenance_history.tenant': tenant })
             .whereIn('asset_id',
                 knex('assets')
-                    .where({ 'assets.tenant': tenant, company_id })
+                    .where({ 'assets.tenant': tenant, client_id })
                     .select('asset_id')
             )
             .count('* as count')
@@ -1025,7 +1025,7 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
             .where({ 'asset_maintenance_schedules.tenant': tenant })
             .whereIn('asset_id',
                 knex('assets')
-                    .where({ 'assets.tenant': tenant, company_id })
+                    .where({ 'assets.tenant': tenant, client_id })
                     .select('asset_id')
             )
             .sum('frequency_interval as sum')
@@ -1037,8 +1037,8 @@ export async function getClientMaintenanceSummary(company_id: string): Promise<C
 
         // Create summary with proper date handling
         const summary = {
-            company_id,
-            company_name: company.company_name,
+            client_id,
+            client_name: client.client_name,
             total_assets: Number(assetStats?.total_assets || 0),
             assets_with_maintenance: Number(assetStats?.assets_with_maintenance || 0),
             total_schedules: Number(maintenanceStats?.total_schedules || 0),

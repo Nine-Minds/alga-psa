@@ -15,7 +15,7 @@ interface ContactPickerProps {
   contacts: IContact[];
   value: string;
   onValueChange: (value: string) => void;
-  companyId?: string;
+  clientId?: string;
   label?: string;
   placeholder?: string;
   disabled?: boolean;
@@ -30,7 +30,7 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
   contacts,
   value,
   onValueChange,
-  companyId,
+  clientId,
   label = 'Contact',
   placeholder = 'Select Contact',
   disabled = false,
@@ -64,12 +64,12 @@ export const ContactPicker: React.FC<ContactPickerProps & AutomationProps> = ({
       );
     }
 
-    if (companyId) {
-      results = results.filter(contact => contact.company_id === companyId);
+    if (clientId) {
+      results = results.filter(contact => contact.client_id === clientId);
     }
 
     return results;
-  }, [contacts, searchTerm, companyId]); // Removed internalFilterState from dependencies
+  }, [contacts, searchTerm, clientId]); // Removed internalFilterState from dependencies
 
   useEffect(() => {
     if (!isOpen) return;

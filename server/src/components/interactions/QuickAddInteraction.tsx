@@ -24,14 +24,14 @@ import { IInteraction, IInteractionType } from 'server/src/interfaces/interactio
 import { useTenant } from 'server/src/components/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '../ui/UserPicker';
-import { CompanyPicker } from '../companies/CompanyPicker';
+import { ClientPicker } from '../clients/ClientPicker';
 import { ContactPicker } from '../ui/ContactPicker';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ButtonComponent, FormFieldComponent, DialogComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
@@ -40,8 +40,8 @@ import { X } from 'lucide-react';
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
   entityId: string;
-  entityType: 'contact' | 'company';
-  companyId?: string;
+  entityType: 'contact' | 'client';
+  clientId?: string;
   onInteractionAdded: (newInteraction: IInteraction) => void;
   isOpen: boolean;
   onClose: () => void;
@@ -52,7 +52,7 @@ export function QuickAddInteraction({
   id = 'quick-add-interaction',
   entityId, 
   entityType, 
-  companyId, 
+  clientId, 
   onInteractionAdded, 
   isOpen, 
   onClose,
@@ -68,12 +68,12 @@ export function QuickAddInteraction({
   const [statusId, setStatusId] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string>('');
   const [selectedContactId, setSelectedContactId] = useState<string>('');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
   const [statuses, setStatuses] = useState<any[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clients, setClients] = useState<IClient[]>([]);
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
   const tenant = useTenant()!;
@@ -124,12 +124,12 @@ export function QuickAddInteraction({
     helperText: 'Select the user responsible for this interaction'
   });
 
-  const { automationIdProps: companyPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-company-picker`,
+  const { automationIdProps: clientPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: `${id}-client-picker`,
     type: 'formField',
     fieldType: 'select',
-    label: 'Associated Company',
-    helperText: 'Select the company this interaction is related to'
+    label: 'Associated Client',
+    helperText: 'Select the client this interaction is related to'
   });
 
   const { automationIdProps: contactPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -204,15 +204,15 @@ export function QuickAddInteraction({
         const statusList = await getInteractionStatuses();
         setStatuses(statusList);
         
-        // Fetch users, companies, and contacts for edit mode
+        // Fetch users, clients, and contacts for edit mode
         if (isEditMode) {
           const usersList = await getAllUsers();
           setUsers(usersList);
           
-          const companiesList = await getAllCompanies();
-          setCompanies(companiesList);
+          const clientsList = await getAllClients();
+          setClients(clientsList);
           
-          // Get all contacts - the ContactPicker will filter by company internally
+          // Get all contacts - the ContactPicker will filter by client internally
           const allContacts = await getAllContacts();
           setContacts(allContacts);
         }
@@ -241,7 +241,7 @@ export function QuickAddInteraction({
       setEndTime(editingInteraction.end_time ? new Date(editingInteraction.end_time) : undefined);
       setSelectedUserId(editingInteraction.user_id || '');
       setSelectedContactId(editingInteraction.contact_name_id || '');
-      setSelectedCompanyId(editingInteraction.company_id || '');
+      setSelectedClientId(editingInteraction.client_id || '');
       
       // Contacts are now fetched in the main fetchData function above
       
@@ -298,8 +298,8 @@ export function QuickAddInteraction({
     }
   }, [isOpen, isEditMode, editingInteraction]);
 
-  // Note: ContactPicker handles company filtering internally, 
-  // so we don't need to refetch contacts when company changes
+  // Note: ContactPicker handles client filtering internally, 
+  // so we don't need to refetch contacts when client changes
 
   // Handle start time change
   const handleStartTimeChange = (date: Date) => {
@@ -383,14 +383,14 @@ export function QuickAddInteraction({
       if (isEditMode) {
         // In edit mode, use the selected values from pickers
         interactionData.contact_name_id = selectedContactId === '' ? null : selectedContactId;
-        interactionData.company_id = selectedCompanyId === '' ? null : selectedCompanyId;
+        interactionData.client_id = selectedClientId === '' ? null : selectedClientId;
       } else {
         // In add mode, use the original logic
         if (entityType === 'contact') {
           interactionData.contact_name_id = entityId;
-          interactionData.company_id = companyId;
+          interactionData.client_id = clientId;
         } else {
-          interactionData.company_id = entityId;
+          interactionData.client_id = entityId;
         }
       }
   
@@ -430,7 +430,7 @@ export function QuickAddInteraction({
         setEndTime(undefined);
         setSelectedUserId('');
         setSelectedContactId('');
-        setSelectedCompanyId('');
+        setSelectedClientId('');
         setIsNotesContentReady(false);
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
@@ -554,16 +554,16 @@ export function QuickAddInteraction({
                   </div>
                   
                   <div className="space-y-4">
-                    {/* Company in right column */}
+                    {/* Client in right column */}
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Company</label>
-                      <CompanyPicker
-                        id={`${id}-company-picker`}
-                        companies={companies}
-                        onSelect={(companyId) => setSelectedCompanyId(companyId || '')}
-                        selectedCompanyId={selectedCompanyId}
-                        filterState={companyFilterState}
-                        onFilterStateChange={setCompanyFilterState}
+                      <label className="text-sm font-medium">Client</label>
+                      <ClientPicker
+                        id={`${id}-client-picker`}
+                        clients={clients}
+                        onSelect={(clientId) => setSelectedClientId(clientId || '')}
+                        selectedClientId={selectedClientId}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={setClientTypeFilter}
                         fitContent={true}
@@ -578,9 +578,9 @@ export function QuickAddInteraction({
                         contacts={contacts}
                         value={selectedContactId || ''}
                         onValueChange={(value) => setSelectedContactId(value || '')}
-                        companyId={selectedCompanyId}
-                        placeholder={!selectedCompanyId ? "Select company first" : "Select Contact"}
-                        disabled={!selectedCompanyId}
+                        clientId={selectedClientId}
+                        placeholder={!selectedClientId ? "Select client first" : "Select Contact"}
+                        disabled={!selectedClientId}
                         buttonWidth="fit"
                       />
                     </div>

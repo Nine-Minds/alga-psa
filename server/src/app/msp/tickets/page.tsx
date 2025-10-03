@@ -28,8 +28,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.boardId && typeof params.boardId === 'string') {
       filtersFromURL.boardId = params.boardId;
     }
-    if (params?.companyId && typeof params.companyId === 'string') {
-      filtersFromURL.companyId = params.companyId;
+    if (params?.clientId && typeof params.clientId === 'string') {
+      filtersFromURL.clientId = params.clientId;
     }
     if (params?.statusId && typeof params.statusId === 'string') {
       filtersFromURL.statusId = params.statusId;
@@ -75,7 +75,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
       statusId: initialFilters.statusId || 'open',
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,
-      companyId: initialFilters.companyId || undefined,
+      clientId: initialFilters.clientId || undefined,
       searchQuery: initialFilters.searchQuery || '',
       boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: (initialFilters.statusId === 'open') || false,

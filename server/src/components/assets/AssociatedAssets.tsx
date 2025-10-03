@@ -15,10 +15,10 @@ interface AssociatedAssetsProps {
     id: string; // Made required since it's needed for reflection registration
     entityId: string;
     entityType: 'ticket' | 'project';
-    companyId: string;
+    clientId: string;
 }
 
-export default function AssociatedAssets({ id, entityId, entityType, companyId }: AssociatedAssetsProps) {
+export default function AssociatedAssets({ id, entityId, entityType, clientId }: AssociatedAssetsProps) {
     const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
     const [selectedAssetId, setSelectedAssetId] = useState<string>('');
     const [relationshipType, setRelationshipType] = useState<'affected' | 'related'>('affected');
@@ -29,11 +29,11 @@ export default function AssociatedAssets({ id, entityId, entityType, companyId }
     useEffect(() => {
         loadAssociatedAssets();
         loadAvailableAssets();
-    }, [entityId, companyId]);
+    }, [entityId, clientId]);
 
     const loadAvailableAssets = async () => {
         try {
-            const response = await listAssets({ company_id: companyId });
+            const response = await listAssets({ client_id: clientId });
             const options = response.assets.map((asset): SelectOption => ({
                 value: asset.asset_id,
                 label: `${asset.name} (${asset.asset_tag})`

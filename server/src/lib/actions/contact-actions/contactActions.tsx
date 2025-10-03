@@ -1,7 +1,7 @@
 'use server'
 
 import { IContact, MappableField, ImportContactResult } from 'server/src/interfaces/contact.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
@@ -25,16 +25,16 @@ export async function getContactByContactNameId(contactNameId: string): Promise<
       throw new Error('VALIDATION_ERROR: Contact ID is required');
     }
 
-    // Fetch contact with company information
+    // Fetch contact with client information
     const contact = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select(
           'contacts.*',
-          'companies.company_name'
+          'clients.client_name'
         )
-        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant')
+        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant')
         })
         .where({
           'contacts.contact_name_id': contactNameId,
@@ -278,7 +278,7 @@ export async function deleteContact(contactId: string) {
 
 type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
-export async function getContactsByCompany(companyId: string, status: ContactFilterStatus = 'active'): Promise<IContact[]> {
+export async function getContactsByClient(clientId: string, status: ContactFilterStatus = 'active'): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
@@ -286,33 +286,33 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
 
   try {
     // Validate input
-    if (!companyId) {
-      throw new Error('VALIDATION_ERROR: Company ID is required');
+    if (!clientId) {
+      throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    // Verify company exists
-    const company = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('companies')
-        .where({ company_id: companyId, tenant })
+    // Verify client exists
+    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('clients')
+        .where({ client_id: clientId, tenant })
         .first();
     });
 
-    if (!company) {
-      throw new Error('VALIDATION_ERROR: The specified company does not exist');
+    if (!client) {
+      throw new Error('VALIDATION_ERROR: The specified client does not exist');
     }
 
-    // Fetch contacts with company information
+    // Fetch contacts with client information
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select(
           'contacts.*',
-          'companies.company_name'
+          'clients.client_name'
         )
-        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant')
+        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant')
         })
-        .where('contacts.company_id', companyId)
+        .where('contacts.client_id', clientId)
         .andWhere('contacts.tenant', tenant)
         .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
           if (status !== 'all') {
@@ -335,7 +335,7 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
     return contactsWithAvatars;
   } catch (err) {
     // Log the error for debugging
-    console.error('Error fetching contacts for company:', err);
+    console.error('Error fetching contacts for client:', err);
 
     // Handle known error types
     if (err instanceof Error) {
@@ -354,16 +354,16 @@ export async function getContactsByCompany(companyId: string, status: ContactFil
     }
 
     // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving company contacts');
+    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving client contacts');
   }
 }
 
 /**
  * Get contacts that do not yet have an associated client portal user.
- * Optionally filter by company and status (active by default).
+ * Optionally filter by client and status (active by default).
  */
 export async function getContactsEligibleForInvitation(
-  companyId?: string,
+  clientId?: string,
   status: ContactFilterStatus = 'active'
 ): Promise<IContact[]> {
   const { knex: db, tenant } = await createTenantKnex();
@@ -394,17 +394,17 @@ export async function getContactsEligibleForInvitation(
             .andOn('u.tenant', 'c.tenant')
             .andOn(trx.raw('u.user_type = ?', ['client']));
         })
-        .leftJoin('companies as comp', function(this: Knex.JoinClause) {
-          this.on('c.company_id', 'comp.company_id')
+        .leftJoin('clients as comp', function(this: Knex.JoinClause) {
+          this.on('c.client_id', 'comp.client_id')
             .andOn('comp.tenant', 'c.tenant');
         })
         .where('c.tenant', tenant)
         .whereNull('u.user_id')
         .modify((qb: Knex.QueryBuilder) => {
-          if (companyId) qb.andWhere('c.company_id', companyId);
+          if (clientId) qb.andWhere('c.client_id', clientId);
           if (status !== 'all') qb.andWhere('c.is_inactive', status === 'inactive');
         })
-        .select('c.*', 'comp.company_name')
+        .select('c.*', 'comp.client_name')
         .orderBy('c.full_name', 'asc');
 
       return q;
@@ -422,28 +422,28 @@ export async function getContactsEligibleForInvitation(
   }
 }
 
-export async function getAllCompanies(): Promise<ICompany[]> {
+export async function getAllClients(): Promise<IClient[]> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
   }
 
   try {
-    // Fetch all companies with proper ordering
-    const companies = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+    // Fetch all clients with proper ordering
+    const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('clients')
         .select(
-          'companies.*'
+          'clients.*'
         )
-        .where('companies.tenant', tenant)
-        .orderBy('companies.company_name', 'asc'); // Add consistent ordering
+        .where('clients.tenant', tenant)
+        .orderBy('clients.client_name', 'asc'); // Add consistent ordering
     });
 
-    // Return empty array if no companies found (don't throw error)
-    return companies;
+    // Return empty array if no clients found (don't throw error)
+    return clients;
   } catch (err) {
     // Log the error for debugging
-    console.error('Error fetching all companies:', err);
+    console.error('Error fetching all clients:', err);
 
     // Handle known error types
     if (err instanceof Error) {
@@ -462,7 +462,7 @@ export async function getAllCompanies(): Promise<ICompany[]> {
     }
 
     // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving companies');
+    throw new Error('SYSTEM_ERROR: An unexpected error occurred while retrieving clients');
   }
 }
 
@@ -478,16 +478,16 @@ export async function getAllContacts(status: ContactFilterStatus = 'active'): Pr
       throw new Error('VALIDATION_ERROR: Invalid status filter provided');
     }
 
-    // Fetch all contacts with company information
+    // Fetch all contacts with client information
     const contacts = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select(
           'contacts.*',
-          'companies.company_name'
+          'clients.client_name'
         )
-        .leftJoin('companies', function (this: Knex.JoinClause) { // Add type for 'this'
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant')
+        .leftJoin('clients', function (this: Knex.JoinClause) { // Add type for 'this'
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant')
         })
         .where('contacts.tenant', tenant)
         .modify(function (queryBuilder: Knex.QueryBuilder) { // Add type for 'queryBuilder'
@@ -554,7 +554,7 @@ export async function addContact(contactData: Partial<IContact>): Promise<IConta
     full_name: contactData.full_name || '',
     email: contactData.email,
     phone_number: contactData.phone_number,
-    company_id: contactData.company_id || undefined,
+    client_id: contactData.client_id || undefined,
     role: contactData.role,
     notes: contactData.notes || undefined,
     is_inactive: contactData.is_inactive
@@ -613,20 +613,20 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
       }
     }
 
-    // If company_id is being updated, verify it exists (but allow null to remove association)
-    if ('company_id' in contactData && contactData.company_id) {
-      const company = await db('companies')
-        .where({ company_id: contactData.company_id, tenant })
+    // If client_id is being updated, verify it exists (but allow null to remove association)
+    if ('client_id' in contactData && contactData.client_id) {
+      const client = await db('clients')
+        .where({ client_id: contactData.client_id, tenant })
         .first();
 
-      if (!company) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
+      if (!client) {
+        throw new Error('FOREIGN_KEY_ERROR: The selected client no longer exists');
       }
     }
 
     // Define valid fields
     const validFields: (keyof IContact)[] = [
-      'contact_name_id', 'full_name', 'company_id', 'phone_number',
+      'contact_name_id', 'full_name', 'client_id', 'phone_number',
       'email', 'created_at', 'updated_at', 'is_inactive',
       'role', 'notes'
     ];
@@ -698,8 +698,8 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
         throw new Error(`VALIDATION_ERROR: The ${field} is required`);
       }
 
-      if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
+      if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
+        throw new Error('FOREIGN_KEY_ERROR: The selected client is no longer valid');
       }
     }
 
@@ -708,7 +708,7 @@ export async function updateContact(contactData: Partial<IContact>): Promise<ICo
   }
 }
 
-export async function updateContactsForCompany(companyId: string, updateData: Partial<IContact>): Promise<void> {
+export async function updateContactsForClient(clientId: string, updateData: Partial<IContact>): Promise<void> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('SYSTEM_ERROR: Tenant configuration not found');
@@ -716,19 +716,19 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
 
   try {
     // Validate input
-    if (!companyId) {
-      throw new Error('VALIDATION_ERROR: Company ID is required');
+    if (!clientId) {
+      throw new Error('VALIDATION_ERROR: Client ID is required');
     }
 
-    // Verify company exists
-    const company = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('companies')
-        .where({ company_id: companyId, tenant })
+    // Verify client exists
+    const client = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await trx('clients')
+        .where({ client_id: clientId, tenant })
         .first();
     });
 
-    if (!company) {
-      throw new Error('VALIDATION_ERROR: The specified company does not exist');
+    if (!client) {
+      throw new Error('VALIDATION_ERROR: The specified client does not exist');
     }
 
     // Validate update data
@@ -775,7 +775,7 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
           }
           break;
 
-        case 'company_id':
+        case 'client_id':
           // This field is string | null
           acc[contactKey] = value === null ? null : String(value);
           break;
@@ -804,19 +804,19 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     // Perform the update within a transaction
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const updated = await trx('contacts')
-        .where({ company_id: companyId, tenant })
+        .where({ client_id: clientId, tenant })
         .update({
           ...sanitizedData,
           updated_at: new Date().toISOString()
         });
 
       if (!updated) {
-        throw new Error('SYSTEM_ERROR: Failed to update company contacts');
+        throw new Error('SYSTEM_ERROR: Failed to update client contacts');
       }
     });
   } catch (err) {
     // Log the error for debugging
-    console.error('Error updating contacts for company:', err);
+    console.error('Error updating contacts for client:', err);
 
     // Handle known error types
     if (err instanceof Error) {
@@ -846,19 +846,19 @@ export async function updateContactsForCompany(companyId: string, updateData: Pa
     }
 
     // For unexpected errors, throw a generic system error
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating company contacts');
+    throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating client contacts');
   }
 }
 
 export async function exportContactsToCSV(
   contacts: IContact[],
-  companies: ICompany[],
+  clients: IClient[],
   contactTags: Record<string, ITag[]>
 ): Promise<string> {
-  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
+  const fields = ['full_name', 'email', 'phone_number', 'client', 'role', 'notes', 'tags'];
 
   const data = contacts.map((contact): Record<string, string> => {
-    const company = companies.find(c => c.company_id === contact.company_id);
+    const client = clients.find(c => c.client_id === contact.client_id);
     const tags = contactTags[contact.contact_name_id] || [];
     const tagText = tags.map((tag: ITag) => tag.tag_text).join(', ');
 
@@ -866,7 +866,7 @@ export async function exportContactsToCSV(
       full_name: contact.full_name || '',
       email: contact.email || '',
       phone_number: contact.phone_number || '',
-      company: company?.company_name || '',
+      client: client?.client_name || '',
       role: contact.role || '',
       notes: contact.notes || '',
       tags: tagText
@@ -883,7 +883,7 @@ export async function generateContactCSVTemplate(): Promise<string> {
       full_name: 'Alice Liddell',
       email: 'alice@wonderland.com',
       phone_number: '+1-555-CURIOUS',
-      company: 'Mad Hatter Tea Company',
+      client: 'Mad Hatter Tea Client',
       role: 'Chief Explorer',
       notes: 'Fell down a rabbit hole and discovered a whole new world',
       tags: 'Curious, Adventurous, Brave'
@@ -892,14 +892,14 @@ export async function generateContactCSVTemplate(): Promise<string> {
       full_name: 'Mad Hatter',
       email: 'hatter@teaparty.wonderland',
       phone_number: '+1-555-TEA-TIME',
-      company: 'Mad Hatter Tea Company',
+      client: 'Mad Hatter Tea Client',
       role: 'Chief Tea Ceremony Expert',
       notes: 'Knows why a raven is like a writing desk',
       tags: 'Creative, Eccentric, Tea Expert'
     }
   ];
 
-  const fields = ['full_name', 'email', 'phone_number', 'company', 'role', 'notes', 'tags'];
+  const fields = ['full_name', 'email', 'phone_number', 'client', 'role', 'notes', 'tags'];
 
   return unparseCSV(templateData, fields);
 }
@@ -946,14 +946,14 @@ export async function importContactsFromCSV(
             }
           }
 
-          // Verify company if provided
-          if (contactData.company_id) {
-            const company = await trx('companies')
-              .where({ company_id: contactData.company_id, tenant })
+          // Verify client if provided
+          if (contactData.client_id) {
+            const client = await trx('clients')
+              .where({ client_id: contactData.client_id, tenant })
               .first();
 
-            if (!company) {
-              throw new Error(`FOREIGN_KEY_ERROR: Company not found for contact: ${contactData.full_name}`);
+            if (!client) {
+              throw new Error(`FOREIGN_KEY_ERROR: Client not found for contact: ${contactData.full_name}`);
             }
           }
 
@@ -962,7 +962,7 @@ export async function importContactsFromCSV(
             .where({
               full_name: contactData.full_name.trim(),
               tenant,
-              company_id: contactData.company_id
+              client_id: contactData.client_id
             })
             .first();
 
@@ -1037,7 +1037,7 @@ export async function importContactsFromCSV(
               full_name: contactData.full_name.trim(),
               email: contactData.email?.trim().toLowerCase() || '',
               phone_number: contactData.phone_number?.trim() || '',
-              company_id: contactData.company_id,
+              client_id: contactData.client_id,
               is_inactive: contactData.is_inactive || false,
               role: contactData.role?.trim() || '',
               notes: contactData.notes?.trim() || '',
@@ -1210,7 +1210,7 @@ export async function checkExistingEmails(
   }
 }
 
-export async function getContactByEmail(email: string, companyId: string) {
+export async function getContactByEmail(email: string, clientId: string) {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
@@ -1221,7 +1221,7 @@ export async function getContactByEmail(email: string, companyId: string) {
       return await trx('contacts')
         .where({
           email,
-          company_id: companyId,
+          client_id: clientId,
           tenant
         })
         .first();
@@ -1235,17 +1235,17 @@ export async function getContactByEmail(email: string, companyId: string) {
 }
 
 /**
- * Create a new contact for a company
+ * Create a new contact for a client
  * @deprecated Use createOrFindContactByEmail instead for better duplicate handling
  */
-export async function createCompanyContact({
-  companyId,
+export async function createClientContact({
+  clientId,
   fullName,
   email,
   phone = '',
   jobTitle = ''
 }: {
-  companyId: string;
+  clientId: string;
   fullName: string;
   email: string;
   phone?: string;
@@ -1275,7 +1275,7 @@ export async function createCompanyContact({
       const [inserted] = await trx('contacts')
         .insert({
           tenant,
-          company_id: companyId,
+          client_id: clientId,
           full_name: fullName,
           email: email.trim().toLowerCase(),
           phone_number: phone,
@@ -1290,13 +1290,13 @@ export async function createCompanyContact({
 
     return contact;
   } catch (error) {
-    console.error('Error creating company contact:', error);
+    console.error('Error creating client contact:', error);
     throw error;
   }
 }
 
 /**
- * Find contact by email address (without requiring company_id)
+ * Find contact by email address (without requiring client_id)
  * Used for email processing workflows
  */
 export async function findContactByEmailAddress(email: string): Promise<IContact | null> {
@@ -1310,11 +1310,11 @@ export async function findContactByEmailAddress(email: string): Promise<IContact
       return await trx('contacts')
         .select(
           'contacts.*',
-          'companies.company_name'
+          'clients.client_name'
         )
-        .leftJoin('companies', function (this: Knex.JoinClause) {
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant')
+        .leftJoin('clients', function (this: Knex.JoinClause) {
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant')
         })
         .where({
           'contacts.email': email.toLowerCase(),
@@ -1336,16 +1336,16 @@ export async function findContactByEmailAddress(email: string): Promise<IContact
 export async function createOrFindContactByEmail({
   email,
   name,
-  companyId,
+  clientId,
   phone,
   title
 }: {
   email: string;
   name?: string;
-  companyId: string;
+  clientId: string;
   phone?: string;
   title?: string;
-}): Promise<{ contact: IContact & { company_name: string }; isNew: boolean }> {
+}): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> {
   try {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
@@ -1357,11 +1357,11 @@ export async function createOrFindContactByEmail({
       const existingContactInTenant = await trx('contacts')
         .select(
           'contacts.*',
-          'companies.company_name'
+          'clients.client_name'
         )
-        .leftJoin('companies', function (this: Knex.JoinClause) {
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant')
+        .leftJoin('clients', function (this: Knex.JoinClause) {
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant')
         })
         .where({
           'contacts.email': email.toLowerCase(),
@@ -1370,21 +1370,21 @@ export async function createOrFindContactByEmail({
         .first();
 
       if (existingContactInTenant) {
-        // If the contact exists but is in a different company, throw an error
-        if (existingContactInTenant.company_id !== companyId) {
-          // If contact has no company, still throw error - don't auto-assign
-          if (!existingContactInTenant.company_id) {
-            throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a company assignment');
+        // If the contact exists but is in a different client, throw an error
+        if (existingContactInTenant.client_id !== clientId) {
+          // If contact has no client, still throw error - don't auto-assign
+          if (!existingContactInTenant.client_id) {
+            throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
           }
-          // If they already belong to a different company, throw error with company name
-          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContactInTenant.company_name || 'another company'}`);
+          // If they already belong to a different client, throw error with client name
+          throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingContactInTenant.client_name || 'another client'}`);
         }
-        // Contact exists in the same company - return it
-        const contactWithCompanyName = {
+        // Contact exists in the same client - return it
+        const contactWithClientName = {
           ...existingContactInTenant,
-          company_name: existingContactInTenant.company_name || ''
+          client_name: existingContactInTenant.client_name || ''
         };
-        return { contact: contactWithCompanyName, isNew: false };
+        return { contact: contactWithClientName, isNew: false };
       }
 
       // Create new contact if not found
@@ -1394,7 +1394,7 @@ export async function createOrFindContactByEmail({
       const [newContact] = await trx('contacts')
         .insert({
           tenant,
-          company_id: companyId,
+          client_id: clientId,
           full_name: contactName,
           email: email.toLowerCase(),
           phone_number: phone,
@@ -1405,18 +1405,18 @@ export async function createOrFindContactByEmail({
         })
         .returning('*');
 
-      // Add company name for consistency
-      const company = await trx('companies')
-        .select('company_name')
-        .where({ company_id: companyId, tenant })
+      // Add client name for consistency
+      const client = await trx('clients')
+        .select('client_name')
+        .where({ client_id: clientId, tenant })
         .first();
 
-      const contactWithCompany = {
+      const contactWithClient = {
         ...newContact,
-        company_name: company?.company_name || ''
+        client_name: client?.client_name || ''
       };
 
-      return { contact: contactWithCompany, isNew: true };
+      return { contact: contactWithClient, isNew: true };
     });
   } catch (error) {
     console.error('Error creating or finding contact:', error);

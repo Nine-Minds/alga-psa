@@ -25,8 +25,8 @@ export interface IExtendedWorkItem extends IWorkItem {
   // Ticket specific fields
   ticket_number?: string;
   title?: string;
-  company_id?: string;
-  company_name?: string;
+  client_id?: string;
+  client_name?: string;
   status_name?: string;
   board_name?: string;
   assigned_to_name?: string;

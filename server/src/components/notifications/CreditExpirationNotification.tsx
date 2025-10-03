@@ -9,8 +9,8 @@ import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import Link from 'next/link';
 
 export interface CreditExpirationNotificationProps {
-  companyId: string;
-  companyName: string;
+  clientId: string;
+  clientName: string;
   expiringCredits: Array<{
     creditId: string;
     amount: number;
@@ -23,8 +23,8 @@ export interface CreditExpirationNotificationProps {
 }
 
 const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> = ({
-  companyId,
-  companyName,
+  clientId,
+  clientName,
   expiringCredits,
   onDismiss,
   notificationId
@@ -91,7 +91,7 @@ const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> 
           )}
         </div>
         <CardDescription>
-          {expiringCredits.length} credit{expiringCredits.length !== 1 ? 's' : ''} for {companyName} will expire soon
+          {expiringCredits.length} credit{expiringCredits.length !== 1 ? 's' : ''} for {clientName} will expire soon
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -114,7 +114,7 @@ const CreditExpirationNotification: React.FC<CreditExpirationNotificationProps> 
         </div>
       </CardContent>
       <CardFooter className="pt-0">
-        <Link href={`/msp/billing/credits?company=${companyId}`} passHref>
+        <Link href={`/msp/billing/credits?client=${clientId}`} passHref>
           <Button id="view-credits-button" variant="soft" className="w-full">
             View Credits
           </Button>

@@ -1,7 +1,7 @@
 // server/src/lib/actions/report-actions/index.ts
 
-export { getRecentCompanyInvoices } from './getRecentCompanyInvoices';
-export type { RecentInvoice } from './getRecentCompanyInvoices'; // Export type if needed
+export { getRecentClientInvoices } from './getRecentClientInvoices';
+export type { RecentInvoice } from './getRecentClientInvoices'; // Export type if needed
 
 export { getHoursByServiceType } from './getHoursByServiceType';
 export type { HoursByServiceResult } from './getHoursByServiceType'; // Export type if needed

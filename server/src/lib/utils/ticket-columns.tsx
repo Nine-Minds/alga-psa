@@ -21,7 +21,7 @@ interface CreateTicketColumnsOptions {
   showActions?: boolean;
   showTags?: boolean;
   showClient?: boolean;
-  onClientClick?: (companyId: string) => void;
+  onClientClick?: (clientId: string) => void;
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -195,13 +195,13 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
       key: 'client',
       col: {
         title: 'Client',
-        dataIndex: 'company_name',
+        dataIndex: 'client_name',
         width: '15%',
         render: onClientClick ? (value: string, record: ITicketListItem) => (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              if (record.company_id) onClientClick(record.company_id);
+              if (record.client_id) onClientClick(record.client_id);
             }}
             className="text-blue-500 hover:underline text-left whitespace-normal break-words bg-transparent border-none p-0"
           >

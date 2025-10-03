@@ -35,11 +35,11 @@ exports.seed = async function (knex) {
             },
             {
                 tenant: tenant.tenant,
-                document_name: 'Company Profile',
+                document_name: 'Client Profile',
                 type_id: knex('document_types')
                     .where({
                         tenant: tenant.tenant,
-                        type_name: 'Company'
+                        type_name: 'Client'
                     })
                     .select('type_id')
                     .first(),
@@ -58,7 +58,7 @@ exports.seed = async function (knex) {
                     .select('user_id')
                     .first(),
                 entered_at: knex.fn.now(),
-                content: 'Wonderland Company Profile and Details'
+                content: 'Wonderland Client Profile and Details'
             },
             {
                 tenant: tenant.tenant,
@@ -109,13 +109,13 @@ exports.seed = async function (knex) {
         .select('ticket_id')
         .first();
 
-    // Get the company ID we want to associate with
-    const companyId = await knex('companies')
+    // Get the client ID we want to associate with
+    const clientId = await knex('clients')
         .where({
             tenant: tenant.tenant,
-            company_name: 'Wonderland Inc'
+            client_name: 'Wonderland Inc'
         })
-        .select('company_id')
+        .select('client_id')
         .first();
 
     // Create associations if we have the related entities
@@ -138,12 +138,12 @@ exports.seed = async function (knex) {
         );
     }
 
-    if (companyId) {
+    if (clientId) {
         associations.push({
             tenant: tenant.tenant,
             document_id: documents[1].document_id,
-            entity_id: companyId.company_id,
-            entity_type: 'company'
+            entity_id: clientId.client_id,
+            entity_type: 'client'
         });
     }
 

@@ -15,8 +15,8 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   phone?: string;
   title?: string;
 }
@@ -24,7 +24,7 @@ export interface FindContactByEmailOutput {
 export interface CreateOrFindContactInput {
   email: string;
   name?: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
 }
@@ -33,7 +33,7 @@ export interface CreateOrFindContactOutput {
   id: string;
   name: string;
   email: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
   created_at: string;
@@ -84,7 +84,7 @@ export interface ProcessEmailAttachmentOutput {
 
 export interface SaveEmailClientAssociationInput {
   email: string;
-  company_id: string;
+  client_id: string;
   contact_id?: string;
   confidence_score?: number;
   notes?: string;
@@ -94,7 +94,7 @@ export interface SaveEmailClientAssociationOutput {
   success: boolean;
   associationId: string;
   email: string;
-  company_id: string;
+  client_id: string;
 }
 
 // =============================================================================
@@ -116,14 +116,14 @@ export async function findContactByEmail(
           'contacts.contact_name_id as contact_id',
           'contacts.full_name as name',
           'contacts.email',
-          'contacts.company_id',
-          'companies.company_name',
+          'contacts.client_id',
+          'clients.client_name',
           'contacts.phone_number as phone',
           'contacts.role as title'
         )
-        .leftJoin('companies', function() {
-          this.on('contacts.company_id', 'companies.company_id')
-            .andOn('companies.tenant', 'contacts.tenant');
+        .leftJoin('clients', function() {
+          this.on('contacts.client_id', 'clients.client_id')
+            .andOn('clients.tenant', 'contacts.tenant');
         })
         .where({
           'contacts.email': email.toLowerCase(),
@@ -136,7 +136,7 @@ export async function findContactByEmail(
 }
 
 /**
- * Create or find contact by email and company
+ * Create or find contact by email and client
  */
 export async function createOrFindContact(
   input: CreateOrFindContactInput,
@@ -149,7 +149,7 @@ export async function createOrFindContact(
       const existingContact = await trx('contacts')
         .where({
           email: input.email.toLowerCase(),
-          company_id: input.company_id,
+          client_id: input.client_id,
           tenant
         })
         .first();
@@ -159,7 +159,7 @@ export async function createOrFindContact(
           id: existingContact.contact_name_id,
           name: existingContact.full_name,
           email: existingContact.email,
-          company_id: existingContact.company_id,
+          client_id: existingContact.client_id,
           phone: existingContact.phone_number,
           title: existingContact.role,
           created_at: existingContact.created_at ? new Date(existingContact.created_at).toISOString() : new Date().toISOString(),
@@ -176,7 +176,7 @@ export async function createOrFindContact(
         tenant,
         full_name: input.name || input.email,
         email: input.email.toLowerCase(),
-        company_id: input.company_id,
+        client_id: input.client_id,
         phone_number: input.phone,
         role: input.title,
         created_at: now,
@@ -187,7 +187,7 @@ export async function createOrFindContact(
         id: contactId,
         name: input.name || input.email,
         email: input.email,
-        company_id: input.company_id,
+        client_id: input.client_id,
         phone: input.phone,
         title: input.title,
         created_at: now.toISOString(),
@@ -404,7 +404,7 @@ export async function saveEmailClientAssociation(
       const existing = await trx('email_client_associations')
         .where('tenant', tenant)
         .whereRaw('LOWER(email) = LOWER(?)', [input.email])
-        .where('company_id', input.company_id)
+        .where('client_id', input.client_id)
         .first();
 
       if (existing) {
@@ -423,7 +423,7 @@ export async function saveEmailClientAssociation(
           success: true,
           associationId: existing.id,
           email: input.email,
-          company_id: input.company_id
+          client_id: input.client_id
         };
       } else {
         // Create new association
@@ -431,7 +431,7 @@ export async function saveEmailClientAssociation(
           id: associationId,
           tenant,
           email: input.email.toLowerCase(),
-          company_id: input.company_id,
+          client_id: input.client_id,
           contact_id: input.contact_id,
           confidence_score: input.confidence_score || 1.0,
           notes: input.notes,
@@ -443,7 +443,7 @@ export async function saveEmailClientAssociation(
           success: true,
           associationId,
           email: input.email,
-          company_id: input.company_id
+          client_id: input.client_id
         };
       }
     });
@@ -491,7 +491,7 @@ export async function resolveInboundTicketDefaults(
           'board_id',
           'status_id',
           'priority_id',
-          'company_id',
+          'client_id',
           'entered_by',
           'category_id',
           'subcategory_id',
@@ -504,7 +504,7 @@ export async function resolveInboundTicketDefaults(
         const fallback = await trx('inbound_ticket_defaults')
           .where({ tenant, is_active: true })
           .orderBy('updated_at', 'desc')
-          .select('board_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
+          .select('board_id','status_id','priority_id','client_id','entered_by','category_id','subcategory_id','location_id')
           .first();
         if (!fallback) {
           console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
@@ -538,7 +538,7 @@ export async function createTicketFromEmail(
   ticketData: {
     title: string;
     description: string;
-    company_id?: string;
+    client_id?: string;
     contact_id?: string;
     source?: string;
     board_id?: string;
@@ -567,7 +567,7 @@ export async function createTicketFromEmail(
       const result = await TicketModel.createTicketWithRetry({
         title: ticketData.title,
         description: ticketData.description,
-        company_id: ticketData.company_id,
+        client_id: ticketData.client_id,
         contact_id: ticketData.contact_id,
         source: ticketData.source || 'email',
         board_id: ticketData.board_id,
@@ -671,55 +671,55 @@ export async function findTicketByReplyToken(
 }
 
 /**
- * Create company from email data
+ * Create client from email data
  */
-export async function createCompanyFromEmail(
-  companyData: {
-    company_name: string;
+export async function createClientFromEmail(
+  clientData: {
+    client_name: string;
     email?: string;
     source?: string;
   },
   tenant: string
-): Promise<{ company_id: string; company_name: string }> {
+): Promise<{ client_id: string; client_name: string }> {
   const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const companyId = uuidv4();
+      const clientId = uuidv4();
 
-      await trx('companies')
+      await trx('clients')
         .insert({
-          company_id: companyId,
+          client_id: clientId,
           tenant,
-          company_name: companyData.company_name,
-          email: companyData.email,
-          source: companyData.source || 'email',
+          client_name: clientData.client_name,
+          email: clientData.email,
+          source: clientData.source || 'email',
           created_at: new Date(),
           updated_at: new Date()
         });
 
       return {
-        company_id: companyId,
-        company_name: companyData.company_name
+        client_id: clientId,
+        client_name: clientData.client_name
       };
     });
 }
 
 /**
- * Get company by ID
+ * Get client by ID
  */
-export async function getCompanyByIdForEmail(
-  companyId: string,
+export async function getClientByIdForEmail(
+  clientId: string,
   tenant: string
-): Promise<{ company_id: string; company_name: string } | null> {
+): Promise<{ client_id: string; client_name: string } | null> {
   const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const company = await trx('companies')
-        .select('company_id', 'company_name')
-        .where({ company_id: companyId, tenant })
+      const client = await trx('clients')
+        .select('client_id', 'client_name')
+        .where({ client_id: clientId, tenant })
         .first();
 
-      return company || null;
+      return client || null;
     });
 }
 

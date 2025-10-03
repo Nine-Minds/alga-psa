@@ -19,7 +19,7 @@ interface ContactInfo {
   contact_name_id: string;
   full_name: string;
   email: string;
-  company_name: string;
+  client_name: string;
 }
 
 export default function PortalSetupPage() {
@@ -223,7 +223,7 @@ export default function PortalSetupPage() {
               </div>
               <div className="flex items-center gap-1">
                 <Building className="h-3 w-3" />
-                <span className="text-muted-foreground">Company:</span> {contactInfo.company_name}
+                <span className="text-muted-foreground">Client:</span> {contactInfo.client_name}
               </div>
             </div>
           </div>

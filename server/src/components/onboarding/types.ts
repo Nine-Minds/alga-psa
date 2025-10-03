@@ -1,5 +1,5 @@
 export interface WizardData {
-  // Company Info
+  // Client Info
   firstName: string;
   lastName: string;
   companyName: string;
@@ -76,7 +76,7 @@ export interface StepProps {
 }
 
 export const STEPS = [
-  'Company Info',
+  'Client Info',
   'Team Members',
   'Add Client',
   'Client Contact',
@@ -84,4 +84,4 @@ export const STEPS = [
   'Ticketing'
 ];
 
-export const REQUIRED_STEPS = [0, 5]; // Company Info and Ticketing are required
+export const REQUIRED_STEPS = [0, 5]; // Client Info and Ticketing are required

@@ -134,7 +134,7 @@ const WelcomeDashboard = () => {
             step="1"
             title="Add Your First Client"
             description="Start by setting up your client profiles and their IT infrastructure details."
-            href="/msp/companies?create=true"
+            href="/msp/clients?create=true"
           />
           <QuickStartCard
             icon={UserCheck}

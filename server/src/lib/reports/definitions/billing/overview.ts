@@ -38,25 +38,25 @@ export const billingOverviewReport: ReportDefinition = {
     {
       id: 'active_clients_count',
       name: 'Active Billing Clients',
-      description: 'Count of companies with active billing plans',
+      description: 'Count of clients with active billing plans',
       type: 'count',
       query: {
-        table: 'companies',
+        table: 'clients',
         joins: [
           {
             type: 'inner',
-            table: 'company_billing_plans',
+            table: 'client_billing_plans',
             on: [
-              { left: 'companies.company_id', right: 'company_billing_plans.company_id' },
-              { left: 'companies.tenant', right: 'company_billing_plans.tenant' }
+              { left: 'clients.client_id', right: 'client_billing_plans.client_id' },
+              { left: 'clients.tenant', right: 'client_billing_plans.tenant' }
             ]
           }
         ],
         aggregation: 'count_distinct',
-        fields: ['companies.company_id'],
+        fields: ['clients.client_id'],
         filters: [
-          { field: 'company_billing_plans.is_active', operator: 'eq', value: true },
-          { field: 'companies.tenant', operator: 'eq', value: '{{tenant}}' }
+          { field: 'client_billing_plans.is_active', operator: 'eq', value: true },
+          { field: 'clients.tenant', operator: 'eq', value: '{{tenant}}' }
         ]
       },
       formatting: {
@@ -130,10 +130,10 @@ export const billingOverviewReport: ReportDefinition = {
     {
       id: 'total_credit_balance',
       name: 'Total Credit Balance',
-      description: 'Sum of all company credit balances',
+      description: 'Sum of all client credit balances',
       type: 'sum',
       query: {
-        table: 'companies',
+        table: 'clients',
         fields: ['credit_balance'],
         aggregation: 'sum',
         filters: [

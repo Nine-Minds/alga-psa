@@ -1,7 +1,7 @@
 import { TenantEntity } from ".";
 
 export interface ITenant extends TenantEntity {
-    company_name: string;
+    client_name: string;
     phone_number?: string;
     email: string;
     payment_platform_id?: string;

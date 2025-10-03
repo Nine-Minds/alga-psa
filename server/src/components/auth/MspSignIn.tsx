@@ -85,7 +85,7 @@ export default function MspSignIn() {
           <div className="max-w-lg">
             <Image
               src="/images/avatar-purple-big.png"
-              alt="Company Logo"
+              alt="Client Logo"
               width={200}
               height={200}
               className="rounded-full mb-8 mx-auto"

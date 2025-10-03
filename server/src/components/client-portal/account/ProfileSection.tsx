@@ -5,7 +5,7 @@ import { Input } from "server/src/components/ui/Input";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { Button } from "server/src/components/ui/Button";
 import { useState, useEffect } from 'react';
-import { getCompanyProfile, updateCompanyProfile, type CompanyProfile } from "server/src/lib/actions/account";
+import { getClientProfile, updateClientProfile, type ClientProfile } from "server/src/lib/actions/account";
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ValidationErrors {
@@ -17,7 +17,7 @@ interface ValidationErrors {
 
 export default function ProfileSection() {
   const { t } = useTranslation('clientPortal');
-  const [profile, setProfile] = useState<CompanyProfile>({
+  const [profile, setProfile] = useState<ClientProfile>({
     name: '',
     email: '',
     phone: '',
@@ -33,7 +33,7 @@ export default function ProfileSection() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const data = await getCompanyProfile();
+        const data = await getClientProfile();
         setProfile(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : t('profile.messages.loadError', 'Failed to load profile'));
@@ -51,7 +51,7 @@ export default function ProfileSection() {
 
     // Required fields
     if (!profile.name.trim()) {
-      errors.name = t('profile.validation.companyNameRequired', 'Company name is required');
+      errors.name = t('profile.validation.clientNameRequired', 'Client name is required');
       isValid = false;
     }
 
@@ -124,7 +124,7 @@ export default function ProfileSection() {
         notes: sanitizeInput(profile.notes)
       };
 
-      await updateCompanyProfile(sanitizedProfile);
+      await updateClientProfile(sanitizedProfile);
       setSuccessMessage(t('profile.messages.updateSuccess', 'Profile updated successfully'));
       setProfile(sanitizedProfile);
     } catch (err) {
@@ -144,7 +144,7 @@ export default function ProfileSection() {
         <div className="space-y-6">
           <div>
             <label htmlFor="name" className="block text-sm font-medium mb-1">
-              {t('companySettings.fields.companyName', 'Company Name')} *
+              {t('clientSettings.fields.clientName', 'Client Name')} *
             </label>
             <Input
               id="name"

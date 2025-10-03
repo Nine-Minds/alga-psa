@@ -32,16 +32,16 @@ const ProjectModel = {
         .where('projects.tenant', tenant)
         .select(
           'projects.*', 
-          'companies.company_name as client_name',
+          'clients.client_name as client_name',
           'users.first_name as assigned_to_first_name',
           'users.last_name as assigned_to_last_name',
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', function() {
-          this.on('projects.company_id', 'companies.company_id')
-              .andOn('projects.tenant', 'companies.tenant')
+        .leftJoin('clients', function() {
+          this.on('projects.client_id', 'clients.client_id')
+              .andOn('projects.tenant', 'clients.tenant')
         })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
@@ -75,16 +75,16 @@ const ProjectModel = {
         .where('projects.tenant', tenant)
         .select(
           'projects.*', 
-          'companies.company_name as client_name',
+          'clients.client_name as client_name',
           'users.first_name as assigned_to_first_name',
           'users.last_name as assigned_to_last_name',
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', function() {
-          this.on('projects.company_id', 'companies.company_id')
-              .andOn('projects.tenant', 'companies.tenant')
+        .leftJoin('clients', function() {
+          this.on('projects.client_id', 'clients.client_id')
+              .andOn('projects.tenant', 'clients.tenant')
         })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
@@ -145,16 +145,16 @@ const ProjectModel = {
       const projectWithStatus = await knexOrTrx<IProject>('projects')
         .select(
           'projects.*',
-          'companies.company_name as client_name',
+          'clients.client_name as client_name',
           'users.first_name as assigned_to_first_name',
           'users.last_name as assigned_to_last_name',
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', function() {
-          this.on('projects.company_id', 'companies.company_id')
-              .andOn('projects.tenant', 'companies.tenant')
+        .leftJoin('clients', function() {
+          this.on('projects.client_id', 'clients.client_id')
+              .andOn('projects.tenant', 'clients.tenant')
         })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')
@@ -206,16 +206,16 @@ const ProjectModel = {
       const projectWithStatus = await knexOrTrx<IProject>('projects')
         .select(
           'projects.*',
-          'companies.company_name as client_name',
+          'clients.client_name as client_name',
           'users.first_name as assigned_to_first_name',
           'users.last_name as assigned_to_last_name',
           'contacts.full_name as contact_name',
           's.name as status_name',
           's.is_closed'
         )
-        .leftJoin('companies', function() {
-          this.on('projects.company_id', 'companies.company_id')
-              .andOn('projects.tenant', 'companies.tenant')
+        .leftJoin('clients', function() {
+          this.on('projects.client_id', 'clients.client_id')
+              .andOn('projects.tenant', 'clients.tenant')
         })
         .leftJoin('users', function() {
           this.on('projects.assigned_to', 'users.user_id')

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { 
-  listCompanyCredits, 
+  listClientCredits, 
   getCreditDetails, 
   updateCreditExpiration, 
   manuallyExpireCredit, 
@@ -12,21 +12,21 @@ import { getCurrentUser } from 'server/src/lib/auth/session';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 
 /**
- * List all credits for a company with detailed information
- * @param companyId The ID of the company
+ * List all credits for a client with detailed information
+ * @param clientId The ID of the client
  * @param includeExpired Whether to include expired credits
  * @param page Page number for pagination
  * @param pageSize Number of items per page
  * @returns Paginated list of credits with detailed information
  */
 export async function listCredits(
-  companyId: string,
+  clientId: string,
   includeExpired: boolean = false,
   page: number = 1,
   pageSize: number = 20
 ) {
   try {
-    const result = await listCompanyCredits(companyId, includeExpired, page, pageSize);
+    const result = await listClientCredits(clientId, includeExpired, page, pageSize);
     return { success: true, data: result };
   } catch (error) {
     console.error('Error listing credits:', error);
@@ -118,16 +118,16 @@ export async function expireCredit(
 }
 
 /**
- * Transfer credit from one company to another
+ * Transfer credit from one client to another
  * @param sourceCreditId The ID of the credit to transfer from
- * @param targetCompanyId The ID of the company to transfer to
+ * @param targetClientId The ID of the client to transfer to
  * @param amount The amount to transfer
  * @param reason Optional reason for the transfer
- * @returns The new credit created for the target company
+ * @returns The new credit created for the target client
  */
-export async function transferCreditToCompany(
+export async function transferCreditToClient(
   sourceCreditId: string,
-  targetCompanyId: string,
+  targetClientId: string,
   amount: number,
   reason?: string
 ) {
@@ -143,7 +143,7 @@ export async function transferCreditToCompany(
 
     const result = await transferCredit(
       sourceCreditId,
-      targetCompanyId,
+      targetClientId,
       amount,
       user.user_id,
       reason

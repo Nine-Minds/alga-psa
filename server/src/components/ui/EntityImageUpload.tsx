@@ -7,7 +7,7 @@ import { Pen, Trash2, Upload } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Button } from 'server/src/components/ui/Button';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
 import { useTranslation } from 'server/src/lib/i18n/client';
@@ -107,7 +107,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
     }
 
     const formData = new FormData();
-    formData.append((entityType === 'company' || entityType === 'tenant') ? 'logo' : 'avatar', file);
+    formData.append((entityType === 'client' || entityType === 'tenant') ? 'logo' : 'avatar', file);
 
     // Create a local object URL for immediate display
     const localImageUrl = URL.createObjectURL(file);
@@ -189,7 +189,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         if (result.success) {
           setCurrentImageUrl(null);
           setIsEditing(false);
-          toast.success(result.message || t('profile.imageUpload.deleteSuccess', `${entityType === 'company' ? 'Logo' : 'Avatar'} deleted successfully.`));
+          toast.success(result.message || t('profile.imageUpload.deleteSuccess', `${entityType === 'client' ? 'Logo' : 'Avatar'} deleted successfully.`));
           
           // Notify parent component if callback provided
           if (onImageChange) {
@@ -219,11 +219,11 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
     // Use the preview URL if available, otherwise use the current image URL
     const displayUrl = previewUrl || currentImageUrl;
     
-    if (entityType === 'company') {
+    if (entityType === 'client') {
       return (
-        <CompanyAvatar
-          companyId={entityId}
-          companyName={entityName}
+        <ClientAvatar
+          clientId={entityId}
+          clientName={entityName}
           logoUrl={displayUrl}
           size={size}
         />
@@ -278,7 +278,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 {isPendingUpload ? (
                   <LoadingIndicator
                     spinnerProps={{ size: "xs" }}
-                    text={(entityType === 'company' || entityType === 'tenant')
+                    text={(entityType === 'client' || entityType === 'tenant')
                       ? t('profile.imageUpload.uploadingLogo', 'Uploading Logo...')
                       : t('profile.imageUpload.uploadingAvatar', 'Uploading Avatar...')
                     }
@@ -287,7 +287,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    {(entityType === 'company' || entityType === 'tenant')
+                    {(entityType === 'client' || entityType === 'tenant')
                       ? t('profile.imageUpload.uploadLogo', 'Upload Logo')
                       : t('profile.imageUpload.uploadAvatar', 'Upload Avatar')
                     }
@@ -359,11 +359,11 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onConfirm={confirmDeleteImage}
-        title={entityType === 'company'
-          ? t('profile.imageUpload.deleteLogo', 'Delete Company Logo')
+        title={entityType === 'client'
+          ? t('profile.imageUpload.deleteLogo', 'Delete Client Logo')
           : t('profile.imageUpload.deleteProfilePicture', 'Delete Profile Picture')
         }
-        message={entityType === 'company'
+        message={entityType === 'client'
           ? t('profile.imageUpload.deleteLogoConfirm', `Are you sure you want to delete the logo for "${entityName}"? This action cannot be undone.`)
           : t('profile.imageUpload.deleteAvatarConfirm', `Are you sure you want to delete the profile picture for "${entityName}"? This action cannot be undone.`)
         }

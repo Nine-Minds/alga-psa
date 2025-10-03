@@ -38,7 +38,7 @@ export async function getBillingPlans(): Promise<IBillingPlan[]> {
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to fetch company billing plans: ${error}`);
+        throw new Error(`Failed to fetch client billing plans: ${error}`);
     }
 }
 
@@ -209,12 +209,12 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
                 throw new Error('Permission denied: Cannot delete billing plans');
             }
 
-            // Check if plan is in use by companies before attempting to delete
+            // Check if plan is in use by clients before attempting to delete
             const isInUse = await BillingPlan.isInUse(trx, planId); // This check might be redundant now, but keep for clarity or remove if desired
             if (isInUse) {
                  // This specific error might be superseded by the detailed one below if the FK constraint is hit
                  // Consider if this pre-check is still necessary or if relying on the DB error is sufficient
-                // throw new Error(`Cannot delete plan that is currently in use by companies in tenant ${tenant}`);
+                // throw new Error(`Cannot delete plan that is currently in use by clients in tenant ${tenant}`);
             }
 
             // Check if plan has associated services before attempting to delete
@@ -229,38 +229,38 @@ export async function deleteBillingPlan(planId: string): Promise<void> {
         console.error('Error deleting billing plan:', error);
         if (error instanceof Error) {
             // Check for specific PostgreSQL foreign key violation error code (23503)
-            // This indicates the plan is likely referenced by another table (e.g., company_billing_plans)
+            // This indicates the plan is likely referenced by another table (e.g., client_billing_plans)
             // We cast to 'any' to access potential driver-specific properties like 'code'
             if ((error as any).code === '23503') {
-                 // Fetch company IDs associated with the plan
+                 // Fetch client IDs associated with the plan
                  const { knex: queryKnex, tenant: queryTenant } = await createTenantKnex();
-                 const companyPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
-                     return await trx('company_billing_plans')
-                         .select('company_id')
+                 const clientPlanLinks = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
+                     return await trx('client_billing_plans')
+                         .select('client_id')
                          .where({ plan_id: planId, tenant: queryTenant });
                  });
 
-                 const companyIds = companyPlanLinks.map(link => link.company_id);
+                 const clientIds = clientPlanLinks.map(link => link.client_id);
 
-                 let companyNames: string[] = [];
-                 if (companyIds.length > 0) {
-                     const companies = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
-                         return await trx('companies')
-                             .select('company_name')
-                             .whereIn('company_id', companyIds)
+                 let clientNames: string[] = [];
+                 if (clientIds.length > 0) {
+                     const clients = await withTransaction(queryKnex, async (trx: Knex.Transaction) => {
+                         return await trx('clients')
+                             .select('client_name')
+                             .whereIn('client_id', clientIds)
                              .andWhere({ tenant: queryTenant });
                      });
-                     companyNames = companies.map(c => c.company_name);
+                     clientNames = clients.map(c => c.client_name);
                  }
 
-                 let errorMessage = "Cannot delete billing plan: It is currently assigned to one or more companies.";
-                 if (companyNames.length > 0) {
+                 let errorMessage = "Cannot delete billing plan: It is currently assigned to one or more clients.";
+                 if (clientNames.length > 0) {
                      // Truncate if too many names
                      const displayLimit = 5;
-                     const displayNames = companyNames.length > displayLimit
-                         ? companyNames.slice(0, displayLimit).join(', ') + ` and ${companyNames.length - displayLimit} more`
-                         : companyNames.join(', ');
-                     errorMessage = `Cannot delete billing plan: It is assigned to the following companies: ${displayNames}.`;
+                     const displayNames = clientNames.length > displayLimit
+                         ? clientNames.slice(0, displayLimit).join(', ') + ` and ${clientNames.length - displayLimit} more`
+                         : clientNames.join(', ');
+                     errorMessage = `Cannot delete billing plan: It is assigned to the following clients: ${displayNames}.`;
                  }
                  throw new Error(errorMessage);
             }

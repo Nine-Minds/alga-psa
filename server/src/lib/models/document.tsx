@@ -149,14 +149,14 @@ const Document = {
         }
     },
 
-    getByCompanyId: async (knexOrTrx: Knex | Knex.Transaction, company_id: string): Promise<IDocument[]> => {
+    getByClientId: async (knexOrTrx: Knex | Knex.Transaction, client_id: string): Promise<IDocument[]> => {
         try {
             // First, get document IDs from associations
             const associations = await knexOrTrx('document_associations')
                 .select('document_id', 'tenant')
                 .where({
-                    entity_id: company_id,
-                    entity_type: 'company'
+                    entity_id: client_id,
+                    entity_type: 'client'
                 });
 
             if (associations.length === 0) {
@@ -200,7 +200,7 @@ const Document = {
                 };
             });
         } catch (error) {
-            logger.error(`Error getting documents with company_id ${company_id}:`, error);
+            logger.error(`Error getting documents with client_id ${client_id}:`, error);
             throw error;
         }
     },

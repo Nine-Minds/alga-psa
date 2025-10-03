@@ -8,14 +8,14 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetailsView from '../contacts/ContactDetailsView';
-import CompanyDetails from '../companies/CompanyDetails';
+import ClientDetails from '../clients/ClientDetails';
 import AgentScheduleDrawer from '../tickets/ticket/AgentScheduleDrawer';
 import { Button } from 'server/src/components/ui/Button';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { QuickAddInteraction } from './QuickAddInteraction';
 import { ITicket } from 'server/src/interfaces';
 import { getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
-import { getCompanyById, getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getClientById, getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { findUserById } from 'server/src/lib/actions/user-actions/userActions';
 import { deleteInteraction } from 'server/src/lib/actions/interactionActions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
@@ -119,11 +119,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
       try {
         const contact = await getContactByContactNameId(interaction.contact_name_id);
         if (contact) {
-          const companies = await getAllCompanies();
+          const clients = await getAllClients();
           openDrawer(
             <ContactDetailsView 
               initialContact={contact} 
-              companies={companies}
+              clients={clients}
               isInDrawer={true}
             />
           );
@@ -138,27 +138,27 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     }
   };
 
-  const handleCompanyClick = async () => {
-    if (interaction.company_id) {
+  const handleClientClick = async () => {
+    if (interaction.client_id) {
       try {
-        const company = await getCompanyById(interaction.company_id);
-        if (company) {
+        const client = await getClientById(interaction.client_id);
+        if (client) {
           openDrawer(
-            <CompanyDetails 
-              company={company} 
-              documents={[]} 
-              contacts={[]} 
+            <ClientDetails
+              client={client}
+              documents={[]}
+              contacts={[]}
               isInDrawer={true}
             />
           );
         } else {
-          console.error('Company not found');
+          console.error('Client not found');
         }
       } catch (error) {
-        console.error('Error fetching company details:', error);
+        console.error('Error fetching client details:', error);
       }
     } else {
-      console.log('No company associated with this interaction');
+      console.log('No client associated with this interaction');
     }
   };
 
@@ -245,14 +245,14 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
       const workItem: Omit<IWorkItem, 'tenant'> & { 
         interaction_type?: string; 
-        company_name?: string | null;
+        client_name?: string | null;
       } = {
         work_item_id: interaction.interaction_id,
         type: 'interaction' as WorkItemType,
         name: interaction.title || 'Interaction',
         description: '',  // Don't copy interaction notes to time entry notes
         interaction_type: interaction.type_name, // Use type_name from IInteraction
-        company_name: interaction.company_name
+        client_name: interaction.client_name
       };
 
       // Calculate default times and duration from interaction
@@ -439,16 +439,16 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         </div>
         
         <div className="flex items-center">
-          <span className="font-semibold">Company:</span>
-          {interaction.company_name ? (
+          <span className="font-semibold">Client:</span>
+          {interaction.client_name ? (
             <button
-              onClick={handleCompanyClick}
+              onClick={handleClientClick}
               className="ml-2 text-blue-500 hover:underline"
             >
-              {interaction.company_name}
+              {interaction.client_name}
             </button>
           ) : (
-            <span className="ml-2">No company associated</span>
+            <span className="ml-2">No client associated</span>
           )}
         </div>
       </div>
@@ -479,9 +479,9 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
         open={isQuickAddTicketOpen}
         onOpenChange={setIsQuickAddTicketOpen}
         onTicketAdded={handleTicketAdded}
-        prefilledCompany={interaction.company_id ? {
-          id: interaction.company_id,
-          name: interaction.company_name || ''
+        prefilledClient={interaction.client_id ? {
+          id: interaction.client_id,
+          name: interaction.client_name || ''
         } : undefined}
         prefilledContact={interaction.contact_name_id ? {
           id: interaction.contact_name_id,
@@ -506,9 +506,9 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
       <QuickAddInteraction
         id="edit-interaction"
-        entityId={interaction.contact_name_id || interaction.company_id || ''}
-        entityType={interaction.contact_name_id ? 'contact' : 'company'}
-        companyId={interaction.company_id || undefined}
+        entityId={interaction.contact_name_id || interaction.client_id || ''}
+        entityType={interaction.contact_name_id ? 'contact' : 'client'}
+        clientId={interaction.client_id || undefined}
         onInteractionAdded={handleInteractionUpdated}
         isOpen={isEditInteractionOpen}
         onClose={() => setIsEditInteractionOpen(false)}

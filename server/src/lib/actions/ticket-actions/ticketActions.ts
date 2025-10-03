@@ -61,7 +61,7 @@ interface CreateTicketFromAssetData {
     description: string;
     priority_id: string;
     asset_id: string;
-    company_id: string;
+    client_id: string;
 }
 
 export async function createTicketFromAsset(data: CreateTicketFromAssetData, user: IUser): Promise<ITicket> {
@@ -175,7 +175,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       const createTicketInput: CreateTicketInput = {
         title: data.get('title') as string,
         board_id: data.get('board_id') as string,
-        company_id: data.get('company_id') as string,
+        client_id: data.get('client_id') as string,
         location_id: location_id === '' ? undefined : (location_id as string),
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
         status_id: data.get('status_id') as string,
@@ -343,19 +343,19 @@ export async function updateTicket(id: string, data: Partial<ITicket>, user: IUs
         }
       }
       
-      // Validate location belongs to the company if provided
+      // Validate location belongs to the client if provided
       if ('location_id' in updateData && updateData.location_id) {
-        const companyId = 'company_id' in updateData ? updateData.company_id : currentTicket.company_id;
-        const location = await trx('company_locations')
+        const clientId = 'client_id' in updateData ? updateData.client_id : currentTicket.client_id;
+        const location = await trx('client_locations')
           .where({
             location_id: updateData.location_id,
-            company_id: companyId,
+            client_id: clientId,
             tenant: tenant
           })
           .first();
         
         if (!location) {
-          throw new Error('Invalid location: Location does not belong to the selected company');
+          throw new Error('Invalid location: Location does not belong to the selected client');
         }
       }
 
@@ -595,7 +595,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         'p.priority_name',
         'c.board_name',
         'cat.category_name',
-        'co.company_name as company_name',
+        'co.client_name as client_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
@@ -623,8 +623,8 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         this.on('t.assigned_to', 'au.user_id')
            .andOn('t.tenant', 'au.tenant')
       })
-      .leftJoin('companies as co', function() {
-        this.on('t.company_id', 'co.company_id')
+      .leftJoin('clients as co', function() {
+        this.on('t.client_id', 'co.client_id')
            .andOn('t.tenant', 'co.tenant')
       })
       .where({
@@ -663,8 +663,8 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       query = query.where('t.category_id', validatedFilters.categoryId);
     }
 
-    if (validatedFilters.companyId) {
-      query = query.where('t.company_id', validatedFilters.companyId);
+    if (validatedFilters.clientId) {
+      query = query.where('t.client_id', validatedFilters.clientId);
     }
 
     if (validatedFilters.searchQuery) {
@@ -689,7 +689,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           priority_name,
           board_name,
           category_name,
-          company_name,
+          client_name,
           entered_by_name,
           assigned_to_name,
           ...rest
@@ -705,7 +705,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
           priority_name: priority_name || 'Unknown',
           board_name: board_name || 'Unknown',
           category_name: category_name || 'Unknown',
-          company_name: company_name || 'Unknown',
+          client_name: client_name || 'Unknown',
           entered_by_name: entered_by_name || 'Unknown',
           assigned_to_name: assigned_to_name || 'Unknown',
           ...convertDates(rest),
@@ -978,7 +978,7 @@ export type DetailedTicket = ITicket & {
   assigned_to_last_name?: string;
   assigned_to_name?: string;
   contact_name?: string;
-  company_name?: string;
+  client_name?: string;
 
   additionalAgents?: ITicketResource[];
   availableAgents?: IUser[];
@@ -1003,7 +1003,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       assigned_to_first_name?: string;
       assigned_to_last_name?: string;
       contact_name?: string;
-      company_name?: string;
+      client_name?: string;
     };
 
       const ticket: TicketQueryResult | undefined = await trx('tickets as t')
@@ -1015,7 +1015,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
         'u_assignee.first_name as assigned_to_first_name',
         'u_assignee.last_name as assigned_to_last_name',
         'ct.full_name as contact_name',
-        'co.company_name'
+        'co.client_name'
       )
       .leftJoin('statuses as s', function() {
         this.on('t.status_id', 's.status_id')
@@ -1033,8 +1033,8 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
         this.on('t.contact_name_id', 'ct.contact_name_id')
            .andOn('t.tenant', 'ct.tenant');
       })
-      .leftJoin('companies as co', function() {
-        this.on('t.company_id', 'co.company_id')
+      .leftJoin('clients as co', function() {
+        this.on('t.client_id', 'co.client_id')
            .andOn('t.tenant', 'co.tenant');
       })
       .where({
@@ -1072,7 +1072,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       board_name: ticket.board_name || undefined,
       assigned_to_name: assigned_to_name,
       contact_name: ticket.contact_name || undefined,
-      company_name: ticket.company_name || undefined,
+      client_name: ticket.client_name || undefined,
       additionalAgents: additionalAgents,
       availableAgents: availableAgents,
     };
@@ -1090,7 +1090,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       category_id: ticket.category_id,
       board_id: ticket.board_id,
       assigned_to: ticket.assigned_to,
-      company_id: ticket.company_id,
+      client_id: ticket.client_id,
       has_additional_agents: additionalAgents.length > 0,
       additional_agent_count: additionalAgents.length,
       view_source: 'ticket_by_id'

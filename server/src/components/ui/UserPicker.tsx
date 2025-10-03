@@ -120,12 +120,12 @@ const UserPicker: React.FC<UserPickerProps & AutomationProps> = ({
     : placeholder;
 
   // Register the main container first, then the trigger button
-  // Try to register as a child of company-details if we're in that context
+  // Try to register as a child of client-details if we're in that context
   useRegisterUIComponent<ContainerComponent>({
     type: 'container',
     id: pickerId,
     label: label || 'User Picker'
-  }, 'company-details');
+  }, 'client-details');
 
   // Register the trigger button as a child component
   const { automationIdProps: pickerProps, updateMetadata } = useAutomationIdAndRegister<ButtonComponent>({

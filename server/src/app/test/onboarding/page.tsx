@@ -81,7 +81,7 @@ export default function OnboardingTestPage() {
           showWizard && window.location.hash === '#prefilled' ? {
             firstName: 'Test',
             lastName: 'User',
-            companyName: 'Test Company',
+            clientName: 'Test Client',
             email: 'test@example.com'
           } : undefined
         }

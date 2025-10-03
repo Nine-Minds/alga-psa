@@ -5,7 +5,7 @@ import { ITransaction, TransactionType } from 'server/src/interfaces/billing.int
 export async function recordTransaction(
   trx: Knex.Transaction,
   data: {
-    companyId: string,
+    clientId: string,
     invoiceId?: string,
     amount: number,
     type: TransactionType,
@@ -17,7 +17,7 @@ export async function recordTransaction(
 ): Promise<ITransaction> {
   const [transaction] = await trx('transactions').insert({
     transaction_id: uuidv4(),
-    company_id: data.companyId,
+    client_id: data.clientId,
     invoice_id: data.invoiceId,
     amount: data.amount,
     type: data.type,

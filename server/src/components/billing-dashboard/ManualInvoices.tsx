@@ -8,8 +8,8 @@ import { Button } from '../ui/Button';
 import { Checkbox } from '../ui/Checkbox';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Card } from '../ui/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
-import { CompanyPicker } from '../companies/CompanyPicker';
-import { ICompany } from '../../interfaces';
+import { ClientPicker } from '../clients/ClientPicker';
+import { IClient } from '../../interfaces';
 import { ErrorBoundary } from 'react-error-boundary';
 import { IService } from '../../interfaces/billing.interfaces';
 import { InvoiceViewModel, DiscountType, IInvoiceItem } from 'server/src/interfaces/invoice.interfaces';
@@ -32,7 +32,7 @@ interface SelectOption {
 }
 
 interface ManualInvoicesProps {
-  companies: ICompany[];
+  clients: IClient[];
   services: ServiceWithRate[];
   onGenerateSuccess: () => void;
   invoice?: InvoiceViewModel;
@@ -65,7 +65,7 @@ const baseDefaultItem: Omit<EditableInvoiceItem, 'invoice_id'> = {
   discount_percentage: undefined,
   applies_to_item_id: undefined,
   applies_to_service_id: undefined,
-  company_bundle_id: undefined,
+  client_bundle_id: undefined,
   bundle_name: undefined,
   is_bundle_header: undefined,
   parent_item_id: undefined,
@@ -128,13 +128,13 @@ function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetError
 }
 
 const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
-  companies,
+  clients,
   services,
   onGenerateSuccess,
   invoice, // This is the initial invoice prop
 }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(
-    invoice?.company_id || null
+  const [selectedClient, setSelectedClient] = useState<string | null>(
+    invoice?.client_id || null
   );
   // State to hold the full invoice data, initialized from prop but updated locally after fetch/changes
   const [currentInvoiceData, setCurrentInvoiceData] = useState<InvoiceViewModel | undefined>(invoice);
@@ -153,7 +153,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
       applies_to_service_id: item.applies_to_service_id,
-      company_bundle_id: item.company_bundle_id,
+      client_bundle_id: item.client_bundle_id,
       bundle_name: item.bundle_name,
       is_bundle_header: item.is_bundle_header,
       parent_item_id: item.parent_item_id,
@@ -214,7 +214,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             discount_percentage: item.discount_percentage,
             applies_to_item_id: item.applies_to_item_id,
             applies_to_service_id: item.applies_to_service_id,
-            company_bundle_id: item.company_bundle_id,
+            client_bundle_id: item.client_bundle_id,
             bundle_name: item.bundle_name,
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
@@ -340,8 +340,8 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentInvoiceData && selectedCompany === null) {
-      setError('Please select a company');
+    if (!currentInvoiceData && selectedClient === null) {
+      setError('Please select a client');
       return;
     }
 
@@ -385,7 +385,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           applies_to_item_id: item.applies_to_item_id,
           // Include other potentially relevant fields from IInvoiceItem if needed by backend logic
           applies_to_service_id: item.applies_to_service_id,
-          company_bundle_id: item.company_bundle_id,
+          client_bundle_id: item.client_bundle_id,
           bundle_name: item.bundle_name,
           is_bundle_header: item.is_bundle_header,
           parent_item_id: item.parent_item_id,
@@ -453,7 +453,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             discount_percentage: item.discount_percentage,
             applies_to_item_id: item.applies_to_item_id,
             applies_to_service_id: item.applies_to_service_id,
-            company_bundle_id: item.company_bundle_id,
+            client_bundle_id: item.client_bundle_id,
             bundle_name: item.bundle_name,
             is_bundle_header: item.is_bundle_header,
             parent_item_id: item.parent_item_id,
@@ -489,7 +489,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         const newInvoiceNumber = newInvoiceNumberInput?.value || undefined;
 
         await generateManualInvoice({
-          companyId: selectedCompany || '',
+          clientId: selectedClient || '',
           // invoiceNumber: newInvoiceNumber, // Remove - ManualInvoiceRequest doesn't have this
           isPrepayment,
           expirationDate: isPrepayment ? expirationDate : undefined,
@@ -619,9 +619,9 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
 
             {currentInvoiceData && (
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
                 <div className="text-gray-900">
-                  {companies.find(c => c.company_id === currentInvoiceData.company_id)?.company_name || 'Unknown Company'}
+                  {clients.find(c => c.client_id === currentInvoiceData.client_id)?.client_name || 'Unknown Client'}
                 </div>
               </div>
             )}
@@ -649,12 +649,12 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
             <form onSubmit={handleSubmit} className="space-y-6">
               {!invoice && !currentInvoiceData && (
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                  <CompanyPicker
-                    id='company-picker'
-                    companies={companies}
-                    selectedCompanyId={selectedCompany}
-                    onSelect={setSelectedCompany}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Client</label>
+                  <ClientPicker
+                    id='client-picker'
+                    clients={clients}
+                    selectedClientId={selectedClient}
+                    onSelect={setSelectedClient}
                     filterState={filterState}
                     onFilterStateChange={setFilterState}
                     clientTypeFilter={clientTypeFilter}
@@ -767,7 +767,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
               <Button
                 id='save-changes-button'
                 type="submit"
-                disabled={isGenerating || (!currentInvoiceData && !selectedCompany)}
+                disabled={isGenerating || (!currentInvoiceData && !selectedClient)}
                 className="px-4"
               >
                 {getButtonText()}

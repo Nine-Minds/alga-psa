@@ -22,16 +22,16 @@ const BundleInvoiceItems: React.FC<BundleInvoiceItemsProps> = ({ items }) => {
 
   // First pass: group items by bundle
   items.forEach(item => {
-    if (item.company_bundle_id && item.bundle_name) {
-      if (!groupedItems[item.company_bundle_id]) {
-        groupedItems[item.company_bundle_id] = {
+    if (item.client_bundle_id && item.bundle_name) {
+      if (!groupedItems[item.client_bundle_id]) {
+        groupedItems[item.client_bundle_id] = {
           bundleName: item.bundle_name,
           items: [],
           subtotal: 0
         };
       }
-      groupedItems[item.company_bundle_id].items.push(item);
-      groupedItems[item.company_bundle_id].subtotal += item.total_price;
+      groupedItems[item.client_bundle_id].items.push(item);
+      groupedItems[item.client_bundle_id].subtotal += item.total_price;
     } else {
       nonBundleItems.push(item);
     }

@@ -17,9 +17,9 @@ import ClientUserDetails from './ClientUserDetails';
 import { 
   getCurrentUser, 
   getUserRolesWithPermissions, 
-  getUserCompanyId, 
+  getUserClientId, 
   deleteUser,
-  getClientUsersForCompany
+  getClientUsersForClient
 } from 'server/src/lib/actions/user-actions/userActions';
 import { createOrFindContactByEmail } from 'server/src/lib/actions/contact-actions/contactActions';
 import { createClientUser, getClientPortalRoles, getClientUserRoles } from 'server/src/lib/actions/client-portal-actions/clientUserActions';
@@ -40,7 +40,7 @@ export function UserManagementSettings() {
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [newUser, setNewUser] = useState({ firstName: '', lastName: '', email: '', password: '', roleId: '' });
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<IUser | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [availableRoles, setAvailableRoles] = useState<SharedIRole[]>([]);
@@ -72,21 +72,21 @@ export function UserManagementSettings() {
       );
 
       if (!hasRequiredPermissions) {
-        setError(t('companySettings.users.permissionError', 'You do not have permission to manage users'));
+        setError(t('clientSettings.users.permissionError', 'You do not have permission to manage users'));
         return;
       }
 
-      // Get company ID
-      const userCompanyId = await getUserCompanyId(user.user_id);
-      if (!userCompanyId) {
-        setError(t('companySettings.users.companyNotFound', 'Company not found'));
+      // Get client ID
+      const userClientId = await getUserClientId(user.user_id);
+      if (!userClientId) {
+        setError(t('clientSettings.users.clientNotFound', 'Client not found'));
         return;
       }
 
-      setCompanyId(userCompanyId);
+      setClientId(userClientId);
 
-      // Get all users for this company - use a server action instead
-      const clientUsers = await getClientUsersForCompany(userCompanyId);
+      // Get all users for this client - use a server action instead
+      const clientUsers = await getClientUsersForClient(userClientId);
       setUsers(clientUsers);
       
       // Fetch available roles for client portal
@@ -104,20 +104,20 @@ export function UserManagementSettings() {
       setLoading(false);
     } catch (error) {
       console.error('Error loading users:', error);
-      setError(t('companySettings.users.loadError', 'Failed to load users'));
+      setError(t('clientSettings.users.loadError', 'Failed to load users'));
       setLoading(false);
     }
   }
 
   const handleCreateUser = async () => {
-    if (!companyId) return;
+    if (!clientId) return;
 
     try {
       // 1. Create or find contact using the improved function
       const { contact, isNew } = await createOrFindContactByEmail({
         email: newUser.email,
         name: `${newUser.firstName} ${newUser.lastName}`,
-        companyId,
+        clientId,
         phone: '', // Add phone if available in newUser
         title: '' // Add title/role if available in newUser
       });
@@ -127,7 +127,7 @@ export function UserManagementSettings() {
         email: newUser.email,
         password: newUser.password,
         contactId: contact.contact_name_id,
-        companyId,
+        clientId,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         roleId: newUser.roleId || undefined
@@ -138,7 +138,7 @@ export function UserManagementSettings() {
       }
 
       // Refresh the user list
-      const updatedUsers = await getClientUsersForCompany(companyId);
+      const updatedUsers = await getClientUsersForClient(clientId);
       setUsers(updatedUsers);
       
       // Refresh user roles
@@ -154,9 +154,9 @@ export function UserManagementSettings() {
     } catch (error) {
       console.error('Error creating user:', error);
       if (error instanceof Error && error.message.includes('EMAIL_EXISTS')) {
-        setError(t('companySettings.users.emailExists', 'A contact with this email address already exists'));
+        setError(t('clientSettings.users.emailExists', 'A contact with this email address already exists'));
       } else {
-        setError(t('companySettings.users.createError', 'Failed to create user'));
+        setError(t('clientSettings.users.createError', 'Failed to create user'));
       }
     }
   };
@@ -183,7 +183,7 @@ export function UserManagementSettings() {
       setUserToDelete(null);
     } catch (error) {
       console.error('Error deleting user:', error);
-      setError(t('companySettings.users.deleteError', 'Failed to delete user'));
+      setError(t('clientSettings.users.deleteError', 'Failed to delete user'));
     }
   };
 
@@ -196,22 +196,22 @@ export function UserManagementSettings() {
   // Define columns for DataTable
   const columns: ColumnDefinition<IUser>[] = [
     {
-      title: t('companySettings.users.firstName'),
+      title: t('clientSettings.users.firstName'),
       dataIndex: 'first_name',
       width: '20%',
     },
     {
-      title: t('companySettings.users.lastName'),
+      title: t('clientSettings.users.lastName'),
       dataIndex: 'last_name',
       width: '20%',
     },
     {
-      title: t('companySettings.users.email'),
+      title: t('clientSettings.users.email'),
       dataIndex: 'email',
       width: '25%',
     },
     {
-      title: t('companySettings.users.phone'),
+      title: t('clientSettings.users.phone'),
       dataIndex: 'phone',
       width: '15%',
       render: (value, record) => (
@@ -219,7 +219,7 @@ export function UserManagementSettings() {
       ),
     },
     {
-      title: t('companySettings.users.roles'),
+      title: t('clientSettings.users.roles'),
       dataIndex: 'user_id',
       width: '20%',
       render: (userId) => {
@@ -234,17 +234,17 @@ export function UserManagementSettings() {
       },
     },
     {
-      title: t('companySettings.users.status'),
+      title: t('clientSettings.users.status'),
       dataIndex: 'is_inactive',
       width: '10%',
       render: (value, record) => (
         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.is_inactive ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-          {record.is_inactive ? t('companySettings.users.inactive') : t('companySettings.users.active')}
+          {record.is_inactive ? t('clientSettings.users.inactive') : t('clientSettings.users.active')}
         </span>
       ),
     },
     {
-      title: t('companySettings.users.actions'),
+      title: t('clientSettings.users.actions'),
       dataIndex: 'user_id',
       width: '5%',
       render: (_, record) => (
@@ -308,22 +308,22 @@ export function UserManagementSettings() {
           <div className="relative">
             <Input
               type="text"
-              placeholder={t('companySettings.users.searchUsers')}
+              placeholder={t('clientSettings.users.searchUsers')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
             />
             <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
           </div>
-          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>{t('companySettings.users.addNewUser')}</Button>
+          <Button id="create-new-user-btn" onClick={() => setShowNewUserForm(true)}>{t('clientSettings.users.addNewUser')}</Button>
         </div>
 
         {showNewUserForm && (
           <div className="mb-4 p-4 border rounded-md">
-            <h3 className="text-lg font-semibold mb-2">{t('companySettings.users.addNewUser')}</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('clientSettings.users.addNewUser')}</h3>
             <div className="space-y-2">
               <div>
-                <Label htmlFor="firstName">{t('companySettings.users.firstName')}</Label>
+                <Label htmlFor="firstName">{t('clientSettings.users.firstName')}</Label>
                 <Input
                   id="firstName"
                   value={newUser.firstName}
@@ -331,7 +331,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="lastName">{t('companySettings.users.lastName')}</Label>
+                <Label htmlFor="lastName">{t('clientSettings.users.lastName')}</Label>
                 <Input
                   id="lastName"
                   value={newUser.lastName}
@@ -339,7 +339,7 @@ export function UserManagementSettings() {
                 />
               </div>
               <div>
-                <Label htmlFor="email">{t('companySettings.users.email')}</Label>
+                <Label htmlFor="email">{t('clientSettings.users.email')}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -371,7 +371,7 @@ export function UserManagementSettings() {
                 </div>
               </div>
               <div>
-                <Label htmlFor="role">{t('companySettings.users.roles')}</Label>
+                <Label htmlFor="role">{t('clientSettings.users.roles')}</Label>
                 <CustomSelect
                   value={newUser.roleId}
                   onValueChange={(value) => setNewUser({ ...newUser, roleId: value })}
@@ -379,10 +379,10 @@ export function UserManagementSettings() {
                     value: role.role_id,
                     label: role.role_name
                   }))}
-                  placeholder={t('companySettings.users.selectRole', 'Select a role (optional)')}
+                  placeholder={t('clientSettings.users.selectRole', 'Select a role (optional)')}
                 />
               </div>
-              <Button id="submit-new-user-btn" onClick={handleCreateUser}>{t('companySettings.users.createUser', 'Create User')}</Button>
+              <Button id="submit-new-user-btn" onClick={handleCreateUser}>{t('clientSettings.users.createUser', 'Create User')}</Button>
             </div>
           </div>
         )}

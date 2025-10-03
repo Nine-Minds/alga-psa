@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { getCompanyTaxSettings, updateCompanyTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
-import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
+import { getClientTaxSettings, updateClientTaxSettings, getTaxRates, createDefaultTaxSettings } from '../lib/actions/taxSettingsActions';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../interfaces/tax.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface TaxSettingsFormProps {
-  companyId: string;
+  clientId: string;
 }
 
-const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
-  const [taxSettings, setTaxSettings] = useState<Omit<ICompanyTaxSettings, 'tenant'> | null>(null);
-  const [originalSettings, setOriginalSettings] = useState<Omit<ICompanyTaxSettings, 'tenant'> | null>(null);
+const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
+  const [taxSettings, setTaxSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
+  const [originalSettings, setOriginalSettings] = useState<Omit<IClientTaxSettings, 'tenant'> | null>(null);
   const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const settings = await getCompanyTaxSettings(companyId);
+        const settings = await getClientTaxSettings(clientId);
         const rates = await getTaxRates();
         setTaxSettings(settings);
         // Store original settings for reverting on error
@@ -39,13 +39,13 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
     };
 
     fetchData();
-  }, [companyId]);
+  }, [clientId]);
 
   // Handle creation of default tax settings when none exist
   const handleCreateDefaultSettings = async () => {
     try {
       setLoading(true);
-      const defaultSettings = await createDefaultTaxSettings(companyId);
+      const defaultSettings = await createDefaultTaxSettings(clientId);
       setTaxSettings(defaultSettings);
       setError(null);
       setSuccessMessage('Default tax settings created successfully');
@@ -62,7 +62,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
   };
 
   // Validate tax settings before submission
-  const validateTaxSettings = (settings: Omit<ICompanyTaxSettings, 'tenant'>): string | null => {
+  const validateTaxSettings = (settings: Omit<IClientTaxSettings, 'tenant'>): string | null => {
    // Removed validation for tax_rate_id as it's no longer part of settings
 
     // Validate tax rate thresholds
@@ -115,7 +115,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
 
     setIsSubmitting(true);
     try {
-      const updatedSettings = await updateCompanyTaxSettings(companyId, taxSettings);
+      const updatedSettings = await updateClientTaxSettings(clientId, taxSettings);
       setTaxSettings(updatedSettings);
       // Update original settings after successful update
       setOriginalSettings(JSON.parse(JSON.stringify(updatedSettings)));
@@ -186,7 +186,7 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
   if (!taxSettings) {
     return (
       <div className="text-center">
-        <p className="mb-4">No tax settings found for this company.</p>
+        <p className="mb-4">No tax settings found for this client.</p>
         <Button
           id="create-default-tax-settings-button"
           onClick={handleCreateDefaultSettings}
@@ -202,10 +202,10 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ companyId }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-2xl font-bold">Company Tax Settings</h2>
+      <h2 className="text-2xl font-bold">Client Tax Settings</h2>
       <ErrorMessage />
       <SuccessMessage />
-     {/* Removed Tax Rate selection dropdown as tax_rate_id is no longer on company_tax_settings */}
+     {/* Removed Tax Rate selection dropdown as tax_rate_id is no longer on client_tax_settings */}
       <div>
         <Checkbox
           id="reverseCharge"

@@ -9,12 +9,12 @@ interface SignInPagePreviewProps {
     logoUrl: string;
     primaryColor: string;
     secondaryColor: string;
-    companyName: string;
+    clientName: string;
   };
 }
 
 export default function SignInPagePreview({ branding }: SignInPagePreviewProps) {
-  const { logoUrl, primaryColor, secondaryColor, companyName } = branding;
+  const { logoUrl, primaryColor, secondaryColor, clientName } = branding;
 
   // Convert hex to RGB
   const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
@@ -53,7 +53,7 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
             {logoUrl ? (
               <img
                 src={logoUrl}
-                alt={companyName || 'Company Logo'}
+                alt={clientName || 'Client Logo'}
                 width={40}
                 height={40}
                 className="rounded-full mr-3 object-contain"
@@ -68,7 +68,7 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
               />
             )}
             <span className="text-xl font-bold text-gray-800">
-              {companyName ? `${companyName} Client Portal` : 'Client Portal'}
+              {clientName ? `${clientName} Client Portal` : 'Client Portal'}
             </span>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
               {logoUrl ? (
                 <img
                   src={logoUrl}
-                  alt={companyName || 'Company Logo'}
+                  alt={clientName || 'Client Logo'}
                   className="w-20 h-20 object-contain"
                 />
               ) : (

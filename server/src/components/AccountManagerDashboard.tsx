@@ -6,7 +6,7 @@ import React from 'react';
 import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from 'server/src/components/ui/Table';
 import { Users, ArrowUp, AlertCircle } from 'lucide-react';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const revenueData = [
@@ -19,12 +19,12 @@ const revenueData = [
 ];
 
 interface AccountManagerDashboardProps {
-  companies: ICompany[];
+  clients: IClient[];
 }
 
-const AccountManagerDashboard: React.FC<AccountManagerDashboardProps> = ({ companies }) => {
-  const totalClients = companies.length;
-  const atRiskClients = companies.filter(company => company.properties?.status === 'At Risk').length;
+const AccountManagerDashboard: React.FC<AccountManagerDashboardProps> = ({ clients }) => {
+  const totalClients = clients.length;
+  const atRiskClients = clients.filter(client => client.properties?.status === 'At Risk').length;
 
   return (
     <div className="p-4 space-y-4">
@@ -76,11 +76,11 @@ const AccountManagerDashboard: React.FC<AccountManagerDashboardProps> = ({ compa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {companies.slice(0, 5).map((company):JSX.Element => (
-                <TableRow key={company.company_id}>
-                  <TableCell>{company.company_name}</TableCell>
-                  <TableCell>{new Date(company.properties?.last_contact_date || '').toLocaleDateString()}</TableCell>
-                  <TableCell>{company.properties?.status}</TableCell>
+              {clients.slice(0, 5).map((client):JSX.Element => (
+                <TableRow key={client.client_id}>
+                  <TableCell>{client.client_name}</TableCell>
+                  <TableCell>{new Date(client.properties?.last_contact_date || '').toLocaleDateString()}</TableCell>
+                  <TableCell>{client.properties?.status}</TableCell>
                   <TableCell>Follow-up needed</TableCell>
                 </TableRow>
               ))}

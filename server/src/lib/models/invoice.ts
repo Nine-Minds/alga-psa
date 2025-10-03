@@ -5,7 +5,7 @@ import { getCurrentTenantId } from '../db';
 import { IInvoice, IInvoiceItem, IInvoiceTemplate, LayoutSection, ICustomField, IConditionalRule, IInvoiceAnnotation, InvoiceViewModel } from '../../interfaces/invoice.interfaces';
 // Remove direct import from renderer types
 import { Temporal } from '@js-temporal/polyfill';
-import { getCompanyLogoUrl } from '../utils/avatarUtils'; // Added Import
+import { getClientLogoUrl } from '../utils/avatarUtils';
 
 export default class Invoice {
   static async create(knexOrTrx: Knex | Knex.Transaction, invoice: Omit<IInvoice, 'invoice_id' | 'tenant'>): Promise<IInvoice> {
@@ -417,28 +417,28 @@ export default class Invoice {
       throw new Error('Invoice not found');
     }
 
-    // --- Fetch Tenant's Default Company ---
-    let tenantCompanyInfo: { name: any; address: any; logoUrl: string | null } | null = null;
-    const tenantCompanyLink = await knexOrTrx('tenant_companies')
+    // --- Fetch Tenant's Default Client ---
+    let tenantClientInfo: { name: any; address: any; logoUrl: string | null } | null = null;
+    const tenantClientLink = await knexOrTrx('tenant_companies')
       .where({ tenant: tenant, is_default: true })
-      .select('company_id')
+      .select('client_id')
       .first();
 
-    if (tenantCompanyLink) {
+    if (tenantClientLink) {
       // Step 2: Modify query - remove 'logo_url' and fix address field
       // First try to get billing address, then fall back to default address
-      const tenantCompanyDetails = await knexOrTrx('companies as c')
-        .leftJoin('company_locations as cl', function() {
-          this.on('c.company_id', '=', 'cl.company_id')
+      const tenantClientDetails = await knexOrTrx('clients as c')
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
               .andOn('c.tenant', '=', 'cl.tenant')
               .andOn(function() {
                 this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
                     .orOn('cl.is_default', '=', knexOrTrx.raw('true'));
               });
         })
-        .where({ 'c.company_id': tenantCompanyLink.company_id })
+        .where({ 'c.client_id': tenantClientLink.client_id })
         .select(
-          'c.company_name',
+          'c.client_name',
           'cl.is_billing_address',
           'cl.is_default',
           knexOrTrx.raw(`CONCAT_WS(', ', 
@@ -455,23 +455,23 @@ export default class Invoice {
 
       // Step 3: Fetch Logo URL using the utility function
       let logoUrl: string | null = null; // Initialize logoUrl
-      if (tenantCompanyDetails) {
-         logoUrl = await getCompanyLogoUrl(tenantCompanyLink.company_id, invoice.tenant); // Use invoice.tenant
+      if (tenantClientDetails) {
+         logoUrl = await getClientLogoUrl(tenantClientLink.client_id, invoice.tenant); // Use invoice.tenant
 
         // Step 4: Update ViewModel Population
-        tenantCompanyInfo = {
-          name: tenantCompanyDetails.company_name,
-          address: tenantCompanyDetails.address || '',
+        tenantClientInfo = {
+          name: tenantClientDetails.client_name,
+          address: tenantClientDetails.address || '',
           logoUrl: logoUrl, // Use the fetched logoUrl
         };
-        console.log('Found tenant default company:', tenantCompanyInfo);
+        console.log('Found tenant default client:', tenantClientInfo);
       } else {
-        console.warn(`Tenant default company details not found for company_id: ${tenantCompanyLink.company_id}`);
+        console.warn(`Tenant default client details not found for client_id: ${tenantClientLink.client_id}`);
       }
     } else {
-      console.warn(`No default company found for tenant: ${tenant}`);
+      console.warn(`No default client found for tenant: ${tenant}`);
     }
-    // --- End Fetch Tenant's Default Company ---
+    // --- End Fetch Tenant's Default Client ---
   
     const invoice_items = await this.getInvoiceItems(knexOrTrx, invoiceId);
     console.log('Processing invoice items for view model:', {
@@ -486,9 +486,9 @@ export default class Invoice {
         unitPrice: item.unit_price
       }))
     });
-    const company = await knexOrTrx('companies as c')
-      .leftJoin('company_locations as cl', function() {
-        this.on('c.company_id', '=', 'cl.company_id')
+    const client = await knexOrTrx('clients as c')
+      .leftJoin('client_locations as cl', function() {
+        this.on('c.client_id', '=', 'cl.client_id')
             .andOn('c.tenant', '=', 'cl.tenant')
             .andOn(function() {
               this.on('cl.is_billing_address', '=', knexOrTrx.raw('true'))
@@ -506,13 +506,13 @@ export default class Invoice {
           cl.country_name
         ) as location_address`)
       )
-      .where({ 'c.company_id': invoice.company_id })
+      .where({ 'c.client_id': invoice.client_id })
       .orderByRaw('cl.is_billing_address DESC NULLS LAST, cl.is_default DESC NULLS LAST')
       .first();
-// Add check for company existence
-    if (!company) {
-      console.error(`!!! Critical Error: Company details not found for company_id ${invoice.company_id} associated with invoice ${invoiceId} !!!`);
-      throw new Error(`Customer company details not found for invoice ${invoiceId}. Cannot construct ViewModel.`);
+// Add check for client existence
+    if (!client) {
+      console.error(`!!! Critical Error: Client details not found for client_id ${invoice.client_id} associated with invoice ${invoiceId} !!!`);
+      throw new Error(`Customer client details not found for invoice ${invoiceId}. Cannot construct ViewModel.`);
     }
   
     // Ensure all monetary values are integers
@@ -534,19 +534,19 @@ export default class Invoice {
     try {
       // Fetch contact details (assuming a primary contact exists)
       const contact = await knexOrTrx('contacts')
-        .where({ company_id: invoice.company_id }) // Adjust if primary logic differs
+        .where({ client_id: invoice.client_id }) // Adjust if primary logic differs
         .first();
 
       const viewModel: InvoiceViewModel = {
         // Fields from the original InvoiceViewModel definition
         invoice_id: invoice.invoice_id,
         invoice_number: invoice.invoice_number,
-        company_id: invoice.company_id,
-        company: { // Populate company details
-          name: company.company_name || '',
-          address: company.location_address || '',
-          // Check tenant before calling getCompanyLogoUrl
-          logo: tenant ? (await getCompanyLogoUrl(invoice.company_id, tenant)) || '' : '',
+        client_id: invoice.client_id,
+        client: { // Populate client details
+          name: client.client_name || '',
+          address: client.location_address || '',
+          // Check tenant before calling getClientLogoUrl
+          logo: tenant ? (await getClientLogoUrl(invoice.client_id, tenant)) || '' : '',
         },
         contact: { // Populate contact details
           name: contact?.name || '',
@@ -593,7 +593,7 @@ export default class Invoice {
         errorMessage: error instanceof Error ? error.message : 'Unknown error',
         errorStack: error instanceof Error ? error.stack : undefined,
         invoiceData: invoice, // Log raw invoice data
-        tenantCompanyInfo: tenantCompanyInfo, // Log tenant info
+        tenantClientInfo: tenantClientInfo, // Log tenant info
         itemsData: invoice_items // Log items data
       });
       // Decide how to handle: re-throw, return null, or return specific error object

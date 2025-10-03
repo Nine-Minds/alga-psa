@@ -30,7 +30,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
     try {
       const db = await getAdminConnection();
       await Tenant.insert(db, {
-        company_name: userInfo.companyName,
+        client_name: userInfo.clientName,
         email: userInfo.email.toLowerCase(),
         created_at: new Date(),
       });
@@ -58,7 +58,7 @@ export async function verifyRegisterUser(token: string): Promise<VerifyResponse>
       analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: newUser.user_type,
         registration_method: 'email_verification',
-        company_created: true,
+        client_created: true,
       }, newUser.user_id);
       
       return {
@@ -159,7 +159,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
       username: '',
       email: email,
       password: '',
-      companyName: '',
+      clientName: '',
       user_type: userType  // Include the correct user type in token
     });
 
@@ -198,7 +198,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
       resetLink: resetLink,
       expirationTime: '1 hour',
       supportEmail: 'support@algapsa.com',
-      companyName: 'AlgaPSA',
+      clientName: 'AlgaPSA',
       currentYear: new Date().getFullYear()
     };
     
@@ -252,7 +252,7 @@ export async function recoverPassword(email: string, portal: 'msp' | 'client' = 
   }
 }
 
-export async function registerUser({ username, email, password, companyName }: IUserRegister): Promise<boolean> {
+export async function registerUser({ username, email, password, clientName }: IUserRegister): Promise<boolean> {
   logger.debug(`Checking if email [ ${email} ] already exists`);
   const existingEmail = await User.findUserByEmail(email);
   if (existingEmail) {
@@ -274,7 +274,7 @@ export async function registerUser({ username, email, password, companyName }: I
     username: username,
     email: email,
     password: hashedPassword,
-    companyName: companyName,
+    clientName: clientName,
     user_type: 'client'
   });
 
@@ -286,7 +286,7 @@ export async function registerUser({ username, email, password, companyName }: I
     const emailResult = await systemEmailService.sendEmailVerification({
       email: email,
       verificationUrl: verificationUrl,
-      companyName: companyName,
+      clientName: clientName,
       expirationTime: '24 hours'
     });
 
@@ -300,7 +300,7 @@ export async function registerUser({ username, email, password, companyName }: I
     try {
       const db = await getAdminConnection();
       await Tenant.insert(db, {
-        company_name: companyName,
+        client_name: clientName,
         email: email.toLowerCase(),
         created_at: new Date(),
       });
@@ -328,7 +328,7 @@ export async function registerUser({ username, email, password, companyName }: I
       analytics.capture(AnalyticsEvents.USER_SIGNED_UP, {
         user_type: 'internal',
         registration_method: 'direct',
-        company_created: true,
+        client_created: true,
         email_verification_required: VERIFY_EMAIL_ENABLED,
       }, newUser.user_id);
       

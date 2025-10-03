@@ -21,7 +21,7 @@ import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import BackNav from 'server/src/components/ui/BackNav';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 
-interface CompanyInfo {
+interface ClientInfo {
   id: string;
   name: string;
 }
@@ -50,7 +50,7 @@ const DiscrepancyDetail: React.FC = () => {
   // State for data
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<ICreditReconciliationReport | null>(null);
-  const [company, setCompany] = useState<CompanyInfo | null>(null);
+  const [client, setClient] = useState<ClientInfo | null>(null);
   const [transactionData, setTransactionData] = useState<TransactionData>({
     transactions: [],
     loading: true
@@ -99,11 +99,11 @@ const DiscrepancyDetail: React.FC = () => {
         const reportData = await response.json();
         setReport(reportData);
         
-        // Fetch company info
-        const companyResponse = await fetch(`/api/companies/${reportData.company_id}`);
-        if (companyResponse.ok) {
-          const companyData = await companyResponse.json();
-          setCompany(companyData);
+        // Fetch client info
+        const clientResponse = await fetch(`/api/clients/${reportData.client_id}`);
+        if (clientResponse.ok) {
+          const clientData = await clientResponse.json();
+          setClient(clientData);
         }
         
         setLoading(false);
@@ -119,14 +119,14 @@ const DiscrepancyDetail: React.FC = () => {
   // Fetch related transactions
   useEffect(() => {
     const fetchTransactions = async () => {
-      if (!report?.company_id) return;
+      if (!report?.client_id) return;
 
       try {
         setTransactionData(prev => ({ ...prev, loading: true }));
         
         // In a real implementation, this would be a server action to fetch transactions
         // For now, we'll simulate the API call
-        const response = await fetch(`/api/companies/${report.company_id}/transactions`);
+        const response = await fetch(`/api/clients/${report.client_id}/transactions`);
         if (!response.ok) {
           throw new Error('Failed to fetch transactions');
         }
@@ -143,19 +143,19 @@ const DiscrepancyDetail: React.FC = () => {
     };
 
     fetchTransactions();
-  }, [report?.company_id]);
+  }, [report?.client_id]);
 
   // Fetch credit tracking entries
   useEffect(() => {
     const fetchCreditTracking = async () => {
-      if (!report?.company_id) return;
+      if (!report?.client_id) return;
 
       try {
         setCreditTrackingData(prev => ({ ...prev, loading: true }));
         
         // In a real implementation, this would be a server action to fetch credit tracking entries
         // For now, we'll simulate the API call
-        const response = await fetch(`/api/companies/${report.company_id}/credit-tracking`);
+        const response = await fetch(`/api/clients/${report.client_id}/credit-tracking`);
         if (!response.ok) {
           throw new Error('Failed to fetch credit tracking entries');
         }
@@ -172,7 +172,7 @@ const DiscrepancyDetail: React.FC = () => {
     };
 
     fetchCreditTracking();
-  }, [report?.company_id]);
+  }, [report?.client_id]);
 
   // Handle resolving the report
   const handleResolveReport = async () => {
@@ -406,8 +406,8 @@ const DiscrepancyDetail: React.FC = () => {
                                   <p>{formatDateTime(parseISO(transaction.created_at), 'PPpp')}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Company ID</p>
-                                  <p className="font-mono">{transaction.company_id}</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Client ID</p>
+                                  <p className="font-mono">{transaction.client_id}</p>
                                 </div>
                                 {transaction.metadata?.user_id && (
                                   <div>
@@ -450,7 +450,7 @@ const DiscrepancyDetail: React.FC = () => {
           <CardHeader>
             <CardTitle>Credit Tracking Entries</CardTitle>
             <CardDescription>
-              Credit tracking entries related to this company
+              Credit tracking entries related to this client
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -528,8 +528,8 @@ const DiscrepancyDetail: React.FC = () => {
                                   <p className="font-mono">{entry.transaction_id}</p>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Company ID</p>
-                                  <p className="font-mono">{entry.company_id}</p>
+                                  <p className="text-xs text-[rgb(var(--color-text-500))]">Client ID</p>
+                                  <p className="font-mono">{entry.client_id}</p>
                                 </div>
                                 <div>
                                   <p className="text-xs text-[rgb(var(--color-text-500))]">Created At</p>
@@ -816,8 +816,8 @@ const DiscrepancyDetail: React.FC = () => {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <div>
-                  <p className="text-sm text-[rgb(var(--color-text-500))]">Company</p>
-                  <p className="font-medium">{company?.name || report.company_id}</p>
+                  <p className="text-sm text-[rgb(var(--color-text-500))]">Client</p>
+                  <p className="font-medium">{client?.name || report.client_id}</p>
                 </div>
                 <div>
                   <p className="text-sm text-[rgb(var(--color-text-500))]">Status</p>

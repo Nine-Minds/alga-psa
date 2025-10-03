@@ -37,22 +37,22 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
 
   const { knex, tenant } = await createTenantKnex();
 
-  // Get company_id from contact
+  // Get client_id from contact
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('contacts')
       .where({
         'contact_name_id': user.contact_id,
         'tenant': tenant
       })
-      .select('company_id')
+      .select('client_id')
       .first();
   });
 
   if (!contact) {
-    throw new Error('Unauthorized: Company information not found');
+    throw new Error('Unauthorized: Client information not found');
   }
 
-  const companyId = contact.company_id;
+  const clientId = contact.client_id;
 
   try {
     const [[ticketCount], [projectCount], [invoiceCount], [assetCount]] = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -61,7 +61,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         trx('tickets')
           .where({
             'tickets.tenant': tenant,
-            'tickets.company_id': companyId,
+            'tickets.client_id': clientId,
             'is_closed': false
           })
           .count('ticket_id as count'),
@@ -70,7 +70,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         trx('projects')
           .where({
             'projects.tenant': tenant,
-            'projects.company_id': companyId,
+            'projects.client_id': clientId,
             'is_inactive': false
           })
           .count('project_id as count'),
@@ -79,7 +79,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         trx('invoices')
           .where({
             'invoices.tenant': tenant,
-            'invoices.company_id': companyId
+            'invoices.client_id': clientId
           })
           .whereNull('finalized_at')
           .count('* as count'),
@@ -88,7 +88,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
         trx('assets')
           .where({
             'assets.tenant': tenant,
-            'assets.company_id': companyId
+            'assets.client_id': clientId
           })
           .andWhere('status', '!=', 'inactive')
           .count('* as count')
@@ -124,22 +124,22 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
 
   const { knex, tenant } = await createTenantKnex();
 
-  // Get company_id from contact
+  // Get client_id from contact
   const contact = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('contacts')
       .where({
         'contact_name_id': user.contact_id,
         'tenant': tenant
       })
-      .select('company_id')
+      .select('client_id')
       .first();
   });
 
   if (!contact) {
-    throw new Error('Unauthorized: Company information not found');
+    throw new Error('Unauthorized: Client information not found');
   }
 
-  const companyId = contact.company_id;
+  const clientId = contact.client_id;
 
   try {
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -156,7 +156,7 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       })
       .where({
         'tickets.tenant': tenant,
-        'tickets.company_id': companyId
+        'tickets.client_id': clientId
       })
       .orderBy('tickets.updated_at', 'desc')
       .limit(3);
@@ -170,7 +170,7 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       ])
       .where({
         'invoices.tenant': tenant,
-        'invoices.company_id': companyId
+        'invoices.client_id': clientId
       })
       .orderBy('updated_at', 'desc')
       .limit(3);
@@ -188,7 +188,7 @@ export async function getRecentActivity(): Promise<RecentActivity[]> {
       })
       .where({
         'asset_maintenance_history.tenant': tenant,
-        'assets.company_id': companyId
+        'assets.client_id': clientId
       })
       .orderBy('asset_maintenance_history.performed_at', 'desc')
       .limit(3);

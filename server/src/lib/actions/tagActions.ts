@@ -119,8 +119,8 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
     try {
       // Check permissions
       // Convert tagged_type to resource name (e.g., 'project_task' -> 'project_task')
-      // Map 'company' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -230,8 +230,8 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
       }
       
       // Check permissions
-      // Map 'company' to 'client' for permission checks
-      const entityResource = existingTag.tagged_type === 'company' ? 'client' : existingTag.tagged_type;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -300,8 +300,8 @@ export async function deleteTag(id: string): Promise<void> {
       }
       
       // Check basic update permission for entity
-      // Map 'company' to 'client' for permission checks
-      const entityResource = existingTag.tagged_type === 'company' ? 'client' : existingTag.tagged_type;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = existingTag.tagged_type === 'client' ? 'client' : existingTag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${existingTag.tagged_type.replace('_', ' ')}`);
@@ -468,8 +468,8 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
       }
       
       // Check permissions
-      // Map 'company' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -550,8 +550,8 @@ export async function updateTagText(tagId: string, newTagText: string): Promise<
       }
       
       // Check permissions
-      // Map 'company' to 'client' for permission checks
-      const entityResource = tag.tagged_type === 'company' ? 'client' : tag.tagged_type;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = tag.tagged_type === 'client' ? 'client' : tag.tagged_type;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${tag.tagged_type.replace('_', ' ')}`);
@@ -638,8 +638,8 @@ export async function checkTagPermissions(taggedType: TaggedEntityType): Promise
     const { knex: db } = await createTenantKnex();
     
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Map 'company' to 'client' for permission checks
-      const permissionEntity = taggedType === 'company' ? 'client' : taggedType;
+      // Map 'client' to 'client' for permission checks
+      const permissionEntity = taggedType === 'client' ? 'client' : taggedType;
       
       // Check all permissions in parallel
       const [entityUpdate, tagCreate, tagUpdate, tagDelete] = await Promise.all([
@@ -691,8 +691,8 @@ export async function deleteAllTagsByText(tagText: string, taggedType: TaggedEnt
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // Check permissions
-      // Map 'company' to 'client' for permission checks
-      const entityResource = taggedType === 'company' ? 'client' : taggedType;
+      // Map 'client' to 'client' for permission checks
+      const entityResource = taggedType === 'client' ? 'client' : taggedType;
       
       if (!await hasPermission(currentUser, entityResource, 'update', trx)) {
         throwPermissionError(`update ${taggedType.replace('_', ' ')}`);

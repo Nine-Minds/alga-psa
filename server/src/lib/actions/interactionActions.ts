@@ -41,8 +41,8 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
       throw new Error('User ID is missing');
     }
 
-    if (!interactionData.company_id && !interactionData.contact_name_id) {
-      throw new Error('Either company_id or contact_name_id must be provided');
+    if (!interactionData.client_id && !interactionData.contact_name_id) {
+      throw new Error('Either client_id or contact_name_id must be provided');
     }
 
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -60,7 +60,7 @@ export async function addInteraction(interactionData: Omit<IInteraction, 'intera
     console.log('New interaction created:', newInteraction);
 
     revalidatePath('/msp/contacts/[id]', 'page')
-    revalidatePath('/msp/companies/[id]', 'page')
+    revalidatePath('/msp/clients/[id]', 'page')
     return newInteraction;
   } catch (error) {
     console.error('Error adding interaction:', error)
@@ -84,7 +84,7 @@ export async function getInteractionTypes(): Promise<IInteractionType[]> {
   }
 }
 
-export async function getInteractionsForEntity(entityId: string, entityType: 'contact' | 'company'): Promise<IInteraction[]> {
+export async function getInteractionsForEntity(entityId: string, entityType: 'contact' | 'client'): Promise<IInteraction[]> {
   try {
     const { tenant } = await createTenantKnex();
     if (!tenant) {

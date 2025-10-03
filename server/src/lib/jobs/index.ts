@@ -91,7 +91,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 export type { JobFilter, GenerateInvoiceData, ExpiredCreditsJobData, ExpiringCreditsNotificationJobData, CreditReconciliationJobData, ReconcileBucketUsageJobData };
 // Export job scheduling helper functions
 export const scheduleInvoiceGeneration = async (
-  companyId: string,
+  clientId: string,
   billingCycleId: string,
   runAt: Date,
   tenantId: string
@@ -100,7 +100,7 @@ export const scheduleInvoiceGeneration = async (
   return await scheduler.scheduleScheduledJob<GenerateInvoiceData>(
     'generate-invoice',
     runAt,
-    { companyId, billingCycleId, tenantId }
+    { clientId, billingCycleId, tenantId }
   );
 };
 
@@ -136,20 +136,20 @@ export const scheduleImmediateJob = async <T extends Record<string, unknown>>(
  * Schedule a recurring job to process expired credits
  *
  * @param tenantId The tenant ID
- * @param companyId Optional company ID to limit processing to a specific company
+ * @param clientId Optional client ID to limit processing to a specific client
  * @param cronExpression Cron expression for job scheduling (e.g., '0 0 * * *' for daily at midnight)
  * @returns Job ID if successful, null otherwise
  */
 export const scheduleExpiredCreditsJob = async (
   tenantId: string,
-  companyId?: string,
+  clientId?: string,
   cronExpression: string = '0 0 * * *' // Default: daily at midnight
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ExpiredCreditsJobData>(
     'expired-credits',
     cronExpression,
-    { tenantId, companyId }
+    { tenantId, clientId }
   );
 };
 
@@ -157,20 +157,20 @@ export const scheduleExpiredCreditsJob = async (
  * Schedule a recurring job to send notifications about credits that will expire soon
  *
  * @param tenantId The tenant ID
- * @param companyId Optional company ID to limit processing to a specific company
+ * @param clientId Optional client ID to limit processing to a specific client
  * @param cronExpression Cron expression for job scheduling (e.g., '0 9 * * *' for daily at 9:00 AM)
  * @returns Job ID if successful, null otherwise
  */
 export const scheduleExpiringCreditsNotificationJob = async (
   tenantId: string,
-  companyId?: string,
+  clientId?: string,
   cronExpression: string = '0 9 * * *' // Default: daily at 9:00 AM
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<ExpiringCreditsNotificationJobData>(
     'expiring-credits-notification',
     cronExpression,
-    { tenantId, companyId }
+    { tenantId, clientId }
   );
 };
 
@@ -199,20 +199,20 @@ export const scheduleReconcileBucketUsageJob = async (
  * This job validates credit balances and creates reconciliation reports for any discrepancies
  *
  * @param tenantId The tenant ID
- * @param companyId Optional company ID to limit processing to a specific company
+ * @param clientId Optional client ID to limit processing to a specific client
  * @param cronExpression Cron expression for job scheduling (e.g., '0 2 * * *' for daily at 2:00 AM)
  * @returns Job ID if successful, null otherwise
  */
 export const scheduleCreditReconciliationJob = async (
   tenantId: string,
-  companyId?: string,
+  clientId?: string,
   cronExpression: string = '0 2 * * *' // Default: daily at 2:00 AM
 ): Promise<string | null> => {
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<CreditReconciliationJobData>(
     'credit-reconciliation',
     cronExpression,
-    { tenantId, companyId }
+    { tenantId, clientId }
   );
 };
 

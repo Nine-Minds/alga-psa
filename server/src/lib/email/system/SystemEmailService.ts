@@ -114,7 +114,7 @@ export class SystemEmailService extends BaseEmailService {
 
   // Template methods
   private getEmailVerificationTemplate(data: EmailVerificationData): SystemEmailTemplate {
-    const subject = `Verify your email${data.companyName ? ` for ${data.companyName}` : ''}`;
+    const subject = `Verify your email${data.clientName ? ` for ${data.clientName}` : ''}`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

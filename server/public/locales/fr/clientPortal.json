@@ -5,7 +5,7 @@
     "projects": "Projets",
     "billing": "Facturation",
     "assets": "Actifs",
-    "companySettings": "Paramètres de l'entreprise",
+    "clientSettings": "Paramètres de l'entreprise",
     "profile": "Profil",
     "signOut": "Déconnexion",
     "clientPortal": "Portail client",
@@ -95,7 +95,7 @@
       "updatedAt": "Dernière mise à jour",
       "assignedTo": "Attribué à",
       "requester": "Demandeur",
-      "company": "Entreprise",
+      "client": "Entreprise",
       "dueDate": "Date d'échéance",
       "resolution": "Résolution",
       "timeSpent": "Temps passé",
@@ -133,7 +133,7 @@
       "userNotFound": "ID utilisateur introuvable dans la session",
       "tenantNotFound": "Locataire introuvable dans la session. Veuillez vous déconnecter puis vous reconnecter.",
       "userNotAssociatedWithContact": "Utilisateur non associé à un contact",
-      "contactNotAssociatedWithCompany": "Contact non associé à une entreprise. Veuillez contacter le support.",
+      "contactNotAssociatedWithClient": "Contact non associé à une entreprise. Veuillez contacter le support.",
       "ticketNotFound": "Ticket introuvable",
       "commentNotFound": "Commentaire introuvable ou non autorisé",
       "noDefaultBoard": "Aucun canal par défaut configuré pour les tickets",
@@ -343,7 +343,7 @@
     "title": "Mon profil",
     "personalInfo": "Informations personnelles",
     "contactInfo": "Coordonnées",
-    "companyInfo": "Informations sur l'entreprise",
+    "clientInfo": "Informations sur l'entreprise",
     "preferences": "Préférences",
     "security": "Sécurité",
     "fields": {
@@ -354,7 +354,7 @@
       "mobile": "Téléphone portable",
       "title": "Titre du poste",
       "department": "Département",
-      "company": "Entreprise",
+      "client": "Entreprise",
       "address": "Adresse",
       "city": "Ville",
       "state": "État/Province",
@@ -434,33 +434,33 @@
       "deleteConfirm": "Voulez-vous vraiment supprimer ceci ? Cette action est irréversible."
     },
     "validation": {
-      "companyNameRequired": "Le nom de l'entreprise est obligatoire",
+      "clientNameRequired": "Le nom de l'entreprise est obligatoire",
       "emailRequired": "L'e-mail est obligatoire",
       "emailInvalid": "Veuillez saisir une adresse e-mail valide",
       "phoneInvalid": "Veuillez saisir un numéro de téléphone valide",
       "addressInvalid": "L'adresse ne peut pas être vide si elle est fournie"
     }
   },
-  "companySettings": {
+  "clientSettings": {
     "title": "Paramètres de l'entreprise",
     "details": "Informations sur l'entreprise",
     "billing": "Informations de facturation",
     "description": "Gérez les paramètres et configurations de votre entreprise.",
     "tabs": {
       "account": "Compte",
-      "companyDetails": "Détails de l'entreprise",
+      "clientDetails": "Détails de l'entreprise",
       "userManagement": "Gestion des utilisateurs"
     },
     "fields": {
-      "companyLogo": "Logo de l'entreprise",
-      "companyName": "Nom de l'entreprise",
-      "companyLocations": "Sites de l'entreprise",
+      "clientLogo": "Logo de l'entreprise",
+      "clientName": "Nom de l'entreprise",
+      "clientLocations": "Sites de l'entreprise",
       "manageLocations": "Gérer les sites",
       "mainOffice": "Siège social",
       "warehouse": "Entrepôt",
       "website": "Site web",
       "industry": "Secteur d'activité",
-      "companySize": "Taille de l'entreprise",
+      "clientSize": "Taille de l'entreprise",
       "annualRevenue": "Revenu annuel",
       "size": "Taille de l'entreprise",
       "taxId": "Numéro fiscal",
@@ -499,7 +499,7 @@
       "noRolesAssigned": "Aucun rôle attribué",
       "assignRole": "Attribuer un rôle",
       "resetPassword": "Réinitialiser le mot de passe utilisateur",
-      "companyNotFound": "Entreprise introuvable",
+      "clientNotFound": "Entreprise introuvable",
       "permissionError": "Vous n'avez pas l'autorisation de gérer les utilisateurs",
       "loadError": "Échec du chargement des utilisateurs",
       "emailExists": "Un contact avec cette adresse e-mail existe déjà",
@@ -514,7 +514,7 @@
       "userRemoved": "Utilisateur retiré avec succès",
       "inviteSent": "Invitation envoyée avec succès",
       "noPermission": "Vous n'avez pas l'autorisation d'accéder aux paramètres de l'entreprise",
-      "companyNotFound": "Entreprise introuvable",
+      "clientNotFound": "Entreprise introuvable",
       "detailsLoadError": "Échec du chargement des détails de l'entreprise",
       "updateError": "Échec de la mise à jour des détails de l'entreprise"
     }

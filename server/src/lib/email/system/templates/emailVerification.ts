@@ -8,7 +8,7 @@ interface SendVerificationEmailParams {
   email: string;
   token: string;
   registrationId: string;
-  companyName?: string;
+  clientName?: string;
 }
 
 /**
@@ -19,7 +19,7 @@ export async function sendVerificationEmail({
   email, 
   token, 
   registrationId,
-  companyName
+  clientName
 }: SendVerificationEmailParams): Promise<boolean> {
   try {
     // Get the base URL from environment variable or default to localhost
@@ -29,7 +29,7 @@ export async function sendVerificationEmail({
     const emailData: EmailVerificationData = {
       email,
       verificationUrl,
-      companyName,
+      clientName,
       expirationTime: '24 hours'
     };
 

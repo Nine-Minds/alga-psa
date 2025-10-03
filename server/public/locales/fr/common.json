@@ -78,7 +78,7 @@
       "tenantNotFound": "Locataire non trouvé dans la session. Veuillez vous déconnecter et vous reconnecter.",
       "userNotFound": "Utilisateur non trouvé",
       "contactNotFound": "Utilisateur non associé à un contact",
-      "companyNotFound": "Contact non associé à une entreprise"
+      "clientNotFound": "Contact non associé à une entreprise"
     },
     "permissions": {
       "tickets": {
@@ -124,7 +124,7 @@
       "notSet": "Non défini",
       "notSetWithSource": "Non défini (Paramètre par défaut du {{source}} : {{languageName}} - {{locale}})",
       "source": {
-        "company": "paramètre par défaut de l'entreprise",
+        "client": "paramètre par défaut de l'entreprise",
         "tenant": "paramètre par défaut du locataire",
         "system": "paramètre par défaut du système"
       }
@@ -132,11 +132,11 @@
   },
   "yes": "Oui",
   "no": "Non",
-  "companies": {
+  "clients": {
     "locations": {
       "sectionTitle": "Emplacements de l'entreprise",
       "manageButton": "Gérer les emplacements",
-      "dialogTitle": "Gérer les emplacements - {{company}}",
+      "dialogTitle": "Gérer les emplacements - {{client}}",
       "managerLabel": "Gestion des emplacements de l'entreprise",
       "listTitle": "Emplacements",
       "buttons": {

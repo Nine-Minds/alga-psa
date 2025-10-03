@@ -4,7 +4,7 @@ import { getEmailService } from 'server/src/services/emailService';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import Invoice from 'server/src/lib/models/invoice';
 import { createTenantKnex } from 'server/src/lib/db';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import ContactModel from 'server/src/lib/models/contact';
 import fs from 'fs/promises';
 import { getConnection } from 'server/src/lib/db/db';
@@ -64,28 +64,28 @@ export class InvoiceEmailHandler {
             throw new Error(`Failed to get details for Invoice ID ${invoiceId}`);
           }
 
-          const company = await getCompanyById(invoice.company_id);
-          if (!company) {
-            throw new Error(`Company not found for Invoice #${invoice.invoice_number}`);
+          const client = await getClientById(invoice.client_id);
+          if (!client) {
+            throw new Error(`Client not found for Invoice #${invoice.invoice_number}`);
           }
 
           // Determine recipient email with priority order first
-          let recipientEmail = company.location_email || '';
-          let recipientName = company.company_name;
+          let recipientEmail = client.location_email || '';
+          let recipientName = client.client_name;
 
-          if (company.billing_contact_id) {
+          if (client.billing_contact_id) {
             const knex = await createTenantKnex();
-            const contact = await ContactModel.get(knex.knex, company.billing_contact_id);
+            const contact = await ContactModel.get(knex.knex, client.billing_contact_id);
             if (contact) {
               recipientEmail = contact.email;
               recipientName = contact.full_name;
             }
-          } else if (company.billing_email) {
-            recipientEmail = company.billing_email;
+          } else if (client.billing_email) {
+            recipientEmail = client.billing_email;
           }
 
           if (!recipientEmail) {
-            throw new Error(`No valid email address found for ${company.company_name} (Invoice #${invoice.invoice_number})`);
+            throw new Error(`No valid email address found for ${client.client_name} (Invoice #${invoice.invoice_number})`);
           }
 
           // Create initial job detail records for both steps
@@ -95,7 +95,7 @@ export class InvoiceEmailHandler {
             'pending',
             {
               invoiceId,
-              details: `Preparing to generate PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
+              details: `Preparing to generate PDF for Invoice #${invoice.invoice_number} (${client.client_name})`
             }
           );
 
@@ -106,14 +106,14 @@ export class InvoiceEmailHandler {
             {
               invoiceId,
               recipientEmail,
-              details: `Preparing to send Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${company.company_name}`
+              details: `Preparing to send Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${client.client_name}`
             }
           );
 
           // Start PDF generation
           const pdfProcessingDetails = {
             invoiceId,
-            details: `Generating PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
+            details: `Generating PDF for Invoice #${invoice.invoice_number} (${client.client_name})`
           };
 
           await jobService.updateJobDetailRecord(
@@ -143,7 +143,7 @@ export class InvoiceEmailHandler {
           const pdfCompleteDetails = {
             invoiceId,
             file_id,
-            details: `Generated PDF for Invoice #${invoice.invoice_number} (${company.company_name})`
+            details: `Generated PDF for Invoice #${invoice.invoice_number} (${client.client_name})`
           };
 
           // Update the existing job detail record for PDF generation
@@ -167,7 +167,7 @@ export class InvoiceEmailHandler {
           const emailProcessingDetails = {
             invoiceId,
             recipientEmail,
-            details: `Sending Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${company.company_name}`
+            details: `Sending Invoice #${invoice.invoice_number} to ${recipientName} (${recipientEmail}) at ${client.client_name}`
           };
 
           await jobService.updateJobDetailRecord(
@@ -188,7 +188,7 @@ export class InvoiceEmailHandler {
           // Update invoice contact info
           invoice.contact = {
             name: recipientName,
-            address: company.location_address || ''
+            address: client.location_address || ''
           };
 
           // Get the PDF content and send email
@@ -203,10 +203,10 @@ export class InvoiceEmailHandler {
                 ...invoice,
                 recipientEmail,
                 tenantId,
-                company: {
-                  name: company.company_name,
+                client: {
+                  name: client.client_name,
                   logo: '',
-                  address: company.location_address || ''
+                  address: client.location_address || ''
                 }
               },
               tempPath
@@ -219,7 +219,7 @@ export class InvoiceEmailHandler {
             const emailCompleteDetails = {
               invoiceId,
               recipientEmail,
-              details: `Successfully sent Invoice #${invoice.invoice_number} to ${recipientName} at ${company.company_name}`
+              details: `Successfully sent Invoice #${invoice.invoice_number} to ${recipientName} at ${client.client_name}`
             };
 
             // Update the existing job detail record for email sending
@@ -247,12 +247,12 @@ export class InvoiceEmailHandler {
         } catch (error) {
           console.log('failed to process invoice:', error);
           const invoice = await getInvoiceForRendering(invoiceId);
-          const company = invoice ? await getCompanyById(invoice.company_id) : null;
+          const client = invoice ? await getClientById(invoice.client_id) : null;
           const invoiceNumber = invoice?.invoice_number || invoiceId;
-          const companyName = company?.company_name || 'Unknown Company';
+          const clientName = client?.client_name || 'Unknown Client';
           
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${companyName}: ${errorMessage}`;
+          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${clientName}: ${errorMessage}`;
           
           // Record the failure in job_details
           // Update existing job detail records to failed status
@@ -264,7 +264,7 @@ export class InvoiceEmailHandler {
                 error: contextualError,
                 invoiceId,
                 invoiceNumber,
-                companyName
+                clientName
               }
             );
           }
@@ -276,7 +276,7 @@ export class InvoiceEmailHandler {
                 error: contextualError,
                 invoiceId,
                 invoiceNumber,
-                companyName
+                clientName
               }
             );
           }

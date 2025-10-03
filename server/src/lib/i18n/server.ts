@@ -44,7 +44,7 @@ export const getServerLocale = cache(
   async (options?: {
     tenantId?: string;
     userId?: string;
-    companyId?: string;
+    clientId?: string;
   }): Promise<SupportedLocale> => {
     try {
       // 1. Check cookie (user's explicit choice)
@@ -77,19 +77,19 @@ export const getServerLocale = cache(
         }
       }
 
-      // 3. Check company default locale
-      if (options?.companyId && options?.tenantId) {
+      // 3. Check client default locale
+      if (options?.clientId && options?.tenantId) {
         const knex = await getConnection(options.tenantId);
-        const company = await knex('companies')
+        const client = await knex('clients')
           .where({
-            company_id: options.companyId,
+            client_id: options.clientId,
             tenant: options.tenantId
           })
           .first();
 
-        const companyLocale = company?.properties?.defaultLocale;
-        if (companyLocale && isSupportedLocale(companyLocale)) {
-          return companyLocale;
+        const clientLocale = client?.properties?.defaultLocale;
+        if (clientLocale && isSupportedLocale(clientLocale)) {
+          return clientLocale;
         }
       }
 

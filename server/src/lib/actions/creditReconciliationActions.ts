@@ -9,15 +9,15 @@ import CreditReconciliationReport from 'server/src/lib/models/creditReconciliati
 import { auditLog } from 'server/src/lib/logging/auditLog';
 
 /**
- * Validates a company's credit balance without making automatic corrections
+ * Validates a client's credit balance without making automatic corrections
  * Instead, it creates a reconciliation report when discrepancies are found
  * 
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report ID if a discrepancy was found
  */
 export async function validateCreditBalanceWithoutCorrection(
-    companyId: string,
+    clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
@@ -37,10 +37,10 @@ export async function validateCreditBalanceWithoutCorrection(
         // Get current date for expiration check
         const now = new Date().toISOString();
 
-        // Check if credit expiration is enabled for this company
-        const companySettings = await trx('company_billing_settings')
+        // Check if credit expiration is enabled for this client
+        const clientSettings = await trx('client_billing_settings')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .first();
@@ -50,10 +50,10 @@ export async function validateCreditBalanceWithoutCorrection(
             .first();
 
         // Determine if credit expiration is enabled
-        // Company setting overrides default, if not specified use default
+        // Client setting overrides default, if not specified use default
         let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (companySettings?.enable_credit_expiration !== undefined) {
-            isCreditExpirationEnabled = companySettings.enable_credit_expiration;
+        if (clientSettings?.enable_credit_expiration !== undefined) {
+            isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
         } else if (defaultSettings?.enable_credit_expiration !== undefined) {
             isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
         }
@@ -61,7 +61,7 @@ export async function validateCreditBalanceWithoutCorrection(
         // Get all credit-related transactions
         const transactions = await trx('transactions')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .whereIn('type', [
@@ -105,7 +105,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     const expirationTxId = uuidv4();
                     await trx('transactions').insert({
                         transaction_id: expirationTxId,
-                        company_id: companyId,
+                        client_id: clientId,
                         amount: -tx.amount, // Negative amount to reduce the balance
                         type: 'credit_expiration',
                         status: 'completed',
@@ -140,7 +140,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     // Add the expiration transaction to our list so it's included in the balance calculation
                     transactions.push({
                         transaction_id: expirationTxId,
-                        company_id: companyId,
+                        client_id: clientId,
                         amount: -tx.amount,
                         type: 'credit_expiration',
                         status: 'completed',
@@ -155,12 +155,12 @@ export async function validateCreditBalanceWithoutCorrection(
             }
         }
 
-        // Get the company's current credit balance
-        const [company] = await trx('companies')
-            .where({ company_id: companyId, tenant })
+        // Get the client's current credit balance
+        const [client] = await trx('clients')
+            .where({ client_id: clientId, tenant })
             .select('credit_balance');
 
-        const actualBalance = Number(company.credit_balance);
+        const actualBalance = Number(client.credit_balance);
         const expectedBalance = Number(calculatedBalance);
         const difference = expectedBalance - actualBalance;
         const isValid = expectedBalance === actualBalance;
@@ -171,7 +171,7 @@ export async function validateCreditBalanceWithoutCorrection(
         if (!isValid) {
             console.log(`Credit balance mismatch for tenant ${tenant}:`, {
                 tenant,
-                companyId,
+                clientId,
                 expectedBalance,
                 actualBalance,
                 difference
@@ -179,7 +179,7 @@ export async function validateCreditBalanceWithoutCorrection(
 
             // Create a reconciliation report
             const report = await CreditReconciliationReport.create({
-                company_id: companyId,
+                client_id: clientId,
                 tenant,
                 expected_balance: expectedBalance,
                 actual_balance: actualBalance,
@@ -205,7 +205,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     },
                     details: {
                         action: 'Credit balance discrepancy detected',
-                        company_id: companyId
+                        client_id: clientId
                     }
                 }
             );
@@ -230,15 +230,15 @@ export async function validateCreditBalanceWithoutCorrection(
 }
 
 /**
- * Run credit balance validation for all companies in the tenant or a specific company
+ * Run credit balance validation for all clients in the tenant or a specific client
  * Creates reconciliation reports for any discrepancies found
  * Also runs credit tracking validations to identify missing or inconsistent entries
  *
- * @param companyId Optional company ID to validate only a specific company
+ * @param clientId Optional client ID to validate only a specific client
  * @returns Summary of validation results
  */
-export async function runScheduledCreditBalanceValidation(companyId?: string, userId: string = 'system'): Promise<{
-    totalCompanies: number;
+export async function runScheduledCreditBalanceValidation(clientId?: string, userId: string = 'system'): Promise<{
+    totalClients: number;
     balanceValidCount: number;
     balanceDiscrepancyCount: number;
     missingTrackingCount: number;
@@ -247,7 +247,7 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
 }> {
     const { knex, tenant } = await createTenantKnex();
 
-    let companies: { company_id: string }[];
+    let clients: { client_id: string }[];
     const startTime = new Date().toISOString();
 
     // Create a transaction for audit logging
@@ -259,38 +259,38 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
                 userId,
                 operation: 'credit_validation_run_started',
                 tableName: 'credit_reconciliation_reports',
-                recordId: companyId || 'all',
+                recordId: clientId || 'all',
                 changedData: {},
                 details: {
                     action: 'Credit validation run started',
-                    company_id: companyId || 'all',
+                    client_id: clientId || 'all',
                     start_time: startTime
                 }
             }
         );
 
-        if (companyId) {
-            console.log(`Starting credit balance and tracking validation for company ${companyId} in tenant ${tenant}`);
+        if (clientId) {
+            console.log(`Starting credit balance and tracking validation for client ${clientId} in tenant ${tenant}`);
 
-            // Verify the company exists
-            const company = await trx('companies')
-                .where({ company_id: companyId, tenant })
+            // Verify the client exists
+            const client = await trx('clients')
+                .where({ client_id: clientId, tenant })
                 .first();
 
-            if (!company) {
-                throw new Error(`Company ${companyId} not found in tenant ${tenant}`);
+            if (!client) {
+                throw new Error(`Client ${clientId} not found in tenant ${tenant}`);
             }
 
-            companies = [{ company_id: companyId }];
-            console.log(`Validating 1 specific company`);
+            clients = [{ client_id: clientId }];
+            console.log(`Validating 1 specific client`);
         } else {
-            console.log(`Starting scheduled credit balance and tracking validation for all companies in tenant ${tenant}`);
+            console.log(`Starting scheduled credit balance and tracking validation for all clients in tenant ${tenant}`);
 
-            companies = await trx('companies')
+            clients = await trx('clients')
                 .where({ tenant })
-                .select('company_id');
+                .select('client_id');
 
-            console.log(`Found ${companies.length} companies to validate`);
+            console.log(`Found ${clients.length} clients to validate`);
         }
 
         let balanceValidCount = 0;
@@ -299,10 +299,10 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
         let inconsistentTrackingCount = 0;
         let errorCount = 0;
 
-        for (const company of companies) {
+        for (const client of clients) {
             try {
                 // Validate credit balance without making corrections
-                const balanceResult = await validateCreditBalanceWithoutCorrection(company.company_id);
+                const balanceResult = await validateCreditBalanceWithoutCorrection(client.client_id);
 
                 if (balanceResult.isValid) {
                     balanceValidCount++;
@@ -311,20 +311,20 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
                 }
 
                 // Log the balance validation result
-                console.log(`Credit balance validation for company ${company.company_id}: ${balanceResult.isValid ? 'Valid' : 'Invalid'}, Expected: ${balanceResult.expectedBalance}, Actual: ${balanceResult.actualBalance}, Difference: ${balanceResult.difference}`);
+                console.log(`Credit balance validation for client ${client.client_id}: ${balanceResult.isValid ? 'Valid' : 'Invalid'}, Expected: ${balanceResult.expectedBalance}, Actual: ${balanceResult.actualBalance}, Difference: ${balanceResult.difference}`);
 
                 // Validate credit tracking entries
-                const trackingResult = await validateAllCreditTracking(company.company_id);
+                const trackingResult = await validateAllCreditTracking(client.client_id);
 
                 missingTrackingCount += trackingResult.missingEntries;
                 inconsistentTrackingCount += trackingResult.inconsistentEntries;
 
                 // Log the tracking validation result
-                console.log(`Credit tracking validation for company ${company.company_id}: ${trackingResult.isValid ? 'Valid' : 'Invalid'}, Missing entries: ${trackingResult.missingEntries}, Inconsistent entries: ${trackingResult.inconsistentEntries}`);
+                console.log(`Credit tracking validation for client ${client.client_id}: ${trackingResult.isValid ? 'Valid' : 'Invalid'}, Missing entries: ${trackingResult.missingEntries}, Inconsistent entries: ${trackingResult.inconsistentEntries}`);
 
             } catch (error) {
                 errorCount++;
-                console.error(`Validation failed for company ${company.company_id}:`, error);
+                console.error(`Validation failed for client ${client.client_id}:`, error);
             }
         }
         console.log(`Completed scheduled credit validation for tenant ${tenant}`);
@@ -334,7 +334,7 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
 
         const endTime = new Date().toISOString();
         const results = {
-            totalCompanies: companies.length,
+            totalClients: clients.length,
             balanceValidCount,
             balanceDiscrepancyCount,
             missingTrackingCount,
@@ -349,11 +349,11 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
                 userId,
                 operation: 'credit_validation_run_completed',
                 tableName: 'credit_reconciliation_reports',
-                recordId: companyId || 'all',
+                recordId: clientId || 'all',
                 changedData: results,
                 details: {
                     action: 'Credit validation run completed',
-                    company_id: companyId || 'all',
+                    client_id: clientId || 'all',
                     start_time: startTime,
                     end_time: endTime,
                     duration_ms: new Date(endTime).getTime() - new Date(startTime).getTime()
@@ -366,15 +366,15 @@ export async function runScheduledCreditBalanceValidation(companyId?: string, us
 }
 
 /**
- * Validates credit tracking entries for a company to identify missing entries
+ * Validates credit tracking entries for a client to identify missing entries
  * Creates reconciliation reports for any discrepancies found
  *
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
 export async function validateCreditTrackingEntries(
-    companyId: string,
+    clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
@@ -394,7 +394,7 @@ export async function validateCreditTrackingEntries(
         // Get all credit-related transactions that should have corresponding tracking entries
         const transactions = await trx('transactions')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .whereIn('type', [
@@ -405,10 +405,10 @@ export async function validateCreditTrackingEntries(
             .where('amount', '>', 0) // Only positive credit transactions should have tracking entries
             .orderBy('created_at', 'asc');
 
-        // Get all credit tracking entries for this company
+        // Get all credit tracking entries for this client
         const creditTrackingEntries = await trx('credit_tracking')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             });
 
@@ -429,7 +429,7 @@ export async function validateCreditTrackingEntries(
 
             // Create a reconciliation report for the missing tracking entry
             const report = await CreditReconciliationReport.create({
-                company_id: companyId,
+                client_id: clientId,
                 tenant,
                 expected_balance: 0, // Not applicable for this type of report
                 actual_balance: 0,   // Not applicable for this type of report
@@ -463,7 +463,7 @@ export async function validateCreditTrackingEntries(
                     },
                     details: {
                         action: 'Missing credit tracking entry detected',
-                        company_id: companyId
+                        client_id: clientId
                     }
                 }
             );
@@ -488,12 +488,12 @@ export async function validateCreditTrackingEntries(
  * Validates credit tracking remaining amounts for consistency
  * Creates reconciliation reports for any discrepancies found
  *
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
 export async function validateCreditTrackingRemainingAmounts(
-    companyId: string,
+    clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
@@ -510,10 +510,10 @@ export async function validateCreditTrackingRemainingAmounts(
         const now = new Date().toISOString();
         const reportIds: string[] = [];
 
-        // Get all active (non-expired) credit tracking entries for this company
+        // Get all active (non-expired) credit tracking entries for this client
         const creditTrackingEntries = await trx('credit_tracking')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant,
                 is_expired: false
             })
@@ -589,7 +589,7 @@ export async function validateCreditTrackingRemainingAmounts(
 
                 // Create a reconciliation report for the inconsistent remaining amount
                 const report = await CreditReconciliationReport.create({
-                    company_id: companyId,
+                    client_id: clientId,
                     tenant,
                     expected_balance: expectedRemainingAmount,
                     actual_balance: actualRemainingAmount,
@@ -628,7 +628,7 @@ export async function validateCreditTrackingRemainingAmounts(
                         },
                         details: {
                             action: 'Inconsistent credit remaining amount detected',
-                            company_id: companyId
+                            client_id: clientId
                         }
                     }
                 );
@@ -651,15 +651,15 @@ export async function validateCreditTrackingRemainingAmounts(
 }
 
 /**
- * Run both credit tracking validations for a company
+ * Run both credit tracking validations for a client
  * This is a convenience function that runs both validateCreditTrackingEntries and validateCreditTrackingRemainingAmounts
  *
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results and report IDs if discrepancies were found
  */
 export async function validateAllCreditTracking(
-    companyId: string,
+    clientId: string,
     providedTrx?: Knex.Transaction
 ): Promise<{
     isValid: boolean;
@@ -675,8 +675,8 @@ export async function validateAllCreditTracking(
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
         // Run both validations
-        const missingEntriesResult = await validateCreditTrackingEntries(companyId, trx);
-        const inconsistentAmountsResult = await validateCreditTrackingRemainingAmounts(companyId, trx);
+        const missingEntriesResult = await validateCreditTrackingEntries(clientId, trx);
+        const inconsistentAmountsResult = await validateCreditTrackingRemainingAmounts(clientId, trx);
 
         // Combine the results
         return {
@@ -753,7 +753,7 @@ export async function resolveReconciliationReport(
                             action: 'Credit balance correction failed',
                             reason: 'Report already resolved',
                             report_id: reportId,
-                            company_id: report.company_id
+                            client_id: report.client_id
                         }
                     }
                 );
@@ -766,7 +766,7 @@ export async function resolveReconciliationReport(
             const transactionId = uuidv4();
             await transaction('transactions').insert({
                 transaction_id: transactionId,
-                company_id: report.company_id,
+                client_id: report.client_id,
                 amount: report.difference, // This will be positive or negative depending on the discrepancy
                 type: 'credit_adjustment',
                 status: 'completed',
@@ -776,9 +776,9 @@ export async function resolveReconciliationReport(
                 tenant
             });
 
-            // Update the company's credit balance
-            await transaction('companies')
-                .where({ company_id: report.company_id, tenant })
+            // Update the client's credit balance
+            await transaction('clients')
+                .where({ client_id: report.client_id, tenant })
                 .update({
                     credit_balance: report.expected_balance,
                     updated_at: now
@@ -801,8 +801,8 @@ export async function resolveReconciliationReport(
                 {
                     userId,
                     operation: 'credit_balance_correction',
-                    tableName: 'companies',
-                    recordId: report.company_id,
+                    tableName: 'clients',
+                    recordId: report.client_id,
                     changedData: {
                         previous_balance: report.actual_balance,
                         corrected_balance: report.expected_balance
@@ -846,25 +846,25 @@ export async function resolveReconciliationReport(
 }
 
 /**
- * Run credit balance validation for a specific company
- * This is a convenience function that calls runScheduledCreditBalanceValidation with a specific company ID
+ * Run credit balance validation for a specific client
+ * This is a convenience function that calls runScheduledCreditBalanceValidation with a specific client ID
  * Creates reconciliation reports for any discrepancies found
  * Also runs credit tracking validations to identify missing or inconsistent entries
  *
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @returns Summary of validation results
  */
-export async function validateCompanyCredit(companyId: string, userId: string = 'system'): Promise<{
-    totalCompanies: number;
+export async function validateClientCredit(clientId: string, userId: string = 'system'): Promise<{
+    totalClients: number;
     balanceValidCount: number;
     balanceDiscrepancyCount: number;
     missingTrackingCount: number;
     inconsistentTrackingCount: number;
     errorCount: number;
 }> {
-    if (!companyId) {
-        throw new Error('Company ID is required for company-specific validation');
+    if (!clientId) {
+        throw new Error('Client ID is required for client-specific validation');
     }
 
-    return await runScheduledCreditBalanceValidation(companyId, userId);
+    return await runScheduledCreditBalanceValidation(clientId, userId);
 }

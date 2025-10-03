@@ -29,7 +29,7 @@ export default function Register() {
 
   const router = useRouter();
   const [formData, setFormData] = useState({
-    companyName: '',
+    clientName: '',
     userName: '',
     email: '',
     password: '',
@@ -82,7 +82,7 @@ export default function Register() {
         username: formData.userName,
         email: formData.email,
         password: formData.password,
-        companyName: formData.companyName,
+        clientName: formData.clientName,
         user_type: 'internal'
       });
       if (wasSuccess) {
@@ -145,7 +145,7 @@ export default function Register() {
       <div className="hidden lg:flex lg:w-1/2 bg-white p-12 flex-col justify-center items-center">
         <Image
           src="/images/avatar-purple-big.png"
-          alt="Company Logo"
+          alt="Client Logo"
           width={200}
           height={200}
           className="rounded-full"
@@ -168,15 +168,15 @@ export default function Register() {
             <div className="space-y-4">
               <div>
                 <Label.Root className="block text-sm font-medium text-gray-700">
-                  Company name
+                  Client name
                 </Label.Root>
                 <Input
                   type="text"
-                  name="companyName"
-                  value={formData.companyName}
+                  name="clientName"
+                  value={formData.clientName}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your company name"
+                  placeholder="Enter your client name"
                   className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))] sm:text-sm"
                 />
               </div>

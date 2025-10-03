@@ -8,13 +8,13 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { createAsset } from 'server/src/lib/actions/asset-actions/assetActions';
 import { CreateAssetRequest } from 'server/src/interfaces/asset.interfaces';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
-import { ICompany } from 'server/src/interfaces';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import { IClient } from 'server/src/interfaces';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 
 interface QuickAddAssetProps {
-  companyId?: string;
+  clientId?: string;
   onAssetAdded: () => void;
 }
 
@@ -64,12 +64,12 @@ interface FormData {
   };
 }
 
-export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
+export function QuickAddAsset({ clientId, onAssetAdded }: QuickAddAssetProps) {
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(companyId || null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(clientId || null);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
 
   // Initialize with minimum required fields
@@ -103,26 +103,26 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
   });
 
   useEffect(() => {
-    const fetchCompanies = async () => {
+    const fetchClients = async () => {
       try {
-        if (!companyId) {
-          const companiesData = await getAllCompanies(false);
-          setCompanies(companiesData);
+        if (!clientId) {
+          const clientsData = await getAllClients(false);
+          setClients(clientsData);
         }
       } catch (error) {
-        console.error('Error fetching companies:', error);
-        setError('Failed to fetch companies');
+        console.error('Error fetching clients:', error);
+        setError('Failed to fetch clients');
       }
     };
     if (open) {
-      fetchCompanies();
+      fetchClients();
     }
-  }, [open, companyId]);
+  }, [open, clientId]);
 
   const validateForm = () => {
     const validationErrors: string[] = [];
-    const effectiveCompanyId = companyId || selectedCompanyId;
-    if (!effectiveCompanyId) validationErrors.push('Company');
+    const effectiveClientId = clientId || selectedClientId;
+    if (!effectiveClientId) validationErrors.push('Client');
     if (!formData.name.trim()) validationErrors.push('Asset Name');
     if (!formData.asset_tag.trim()) validationErrors.push('Asset Tag');
     if (!formData.asset_type) validationErrors.push('Asset Type');
@@ -149,19 +149,19 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
     setError(null);
 
     try {
-      const effectiveCompanyId = companyId || selectedCompanyId;
+      const effectiveClientId = clientId || selectedClientId;
 
       if (!formData.asset_type) {
         return; // This should never happen due to validation
       }
 
-      if (!effectiveCompanyId) {
+      if (!effectiveClientId) {
         return; // This should never happen due to validation
       }
 
       const assetData: CreateAssetRequest = {
         asset_type: formData.asset_type,
-        company_id: effectiveCompanyId,
+        client_id: effectiveClientId,
         asset_tag: formData.asset_tag,
         name: formData.name,
         status: formData.status,
@@ -244,8 +244,8 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
         mobile_device: { os_type: '', model: '', is_supervised: false },
         printer: { model: '' }
       });
-      if (!companyId) {
-        setSelectedCompanyId(null);
+      if (!clientId) {
+        setSelectedClientId(null);
       }
       setHasAttemptedSubmit(false);
     } catch (error) {
@@ -447,16 +447,16 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
           )}
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            {!companyId && (
+            {!clientId && (
               <div>
-                <label className="block text-sm font-medium text-gray-700">Company *</label>
-                <div className={hasAttemptedSubmit && !selectedCompanyId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                  <CompanyPicker
-                    {...withDataAutomationId({ id: 'company-picker' })}
-                    companies={companies}
-                    selectedCompanyId={selectedCompanyId}
+                <label className="block text-sm font-medium text-gray-700">Client *</label>
+                <div className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                  <ClientPicker
+                    {...withDataAutomationId({ id: 'client-picker' })}
+                    clients={clients}
+                    selectedClientId={selectedClientId}
                     onSelect={(id) => {
-                      setSelectedCompanyId(id);
+                      setSelectedClientId(id);
                       clearErrorIfSubmitted();
                     }}
                     filterState="active"
@@ -552,7 +552,7 @@ export function QuickAddAsset({ companyId, onAssetAdded }: QuickAddAssetProps) {
                 {...withDataAutomationId({ id: 'submit-button' })} 
                 type="submit" 
                 disabled={isSubmitting}
-                className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!companyId && !selectedCompanyId)) && !isSubmitting ? 'opacity-50' : ''}
+                className={(!formData.name.trim() || !formData.asset_tag.trim() || !formData.asset_type || (!clientId && !selectedClientId)) && !isSubmitting ? 'opacity-50' : ''}
               >
                 {isSubmitting ? 'Creating...' : 'Create Asset'}
               </Button>

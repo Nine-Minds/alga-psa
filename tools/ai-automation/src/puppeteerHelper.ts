@@ -305,7 +305,7 @@ export class PuppeteerHelper {
   }
 
   private async selectPicker(parentSelector: string, optionValue: string) {
-    console.log('[PuppeteerHelper] Starting company picker selection', {
+    console.log('[PuppeteerHelper] Starting client picker selection', {
       parentSelector,
       optionValue
     });
@@ -329,7 +329,7 @@ export class PuppeteerHelper {
       console.log('[PuppeteerHelper] Updated parent selector:', parentSelector);
     } else {
       // Generate toggle ID
-      const toggleId = parentSelector.replaceAll(/company-picker-company-picker/g, 'company-picker-toggle');
+      const toggleId = parentSelector.replaceAll(/client-picker-client-picker/g, 'client-picker-toggle');
       console.log('[PuppeteerHelper] Generated toggle ID:', toggleId);
 
       // Find toggle element
@@ -388,7 +388,7 @@ export class PuppeteerHelper {
 
     if (buttons.length === 0) {
       console.error('[PuppeteerHelper] No button found with text:', optionValue);
-      throw new Error(`Could not find company option with text "${optionValue}"`);
+      throw new Error(`Could not find client option with text "${optionValue}"`);
     }
       
     console.log('[PuppeteerHelper] Looking for button:', optionValue);
@@ -396,7 +396,7 @@ export class PuppeteerHelper {
 
     if (!button) {
       console.error('[PuppeteerHelper] No button found with id or text:', optionValue);
-      throw new Error(`Could not find company option button for "${optionValue}"`);
+      throw new Error(`Could not find client option button for "${optionValue}"`);
     }
 
     const selectionElement = await this.page.waitForSelector(`button[id='${button.id}']`);
@@ -409,7 +409,7 @@ export class PuppeteerHelper {
       // Cleanup
       console.log('[PuppeteerHelper] Cleaning up element handle...');
       await selectionElement.dispose();
-      console.log('[PuppeteerHelper] Company picker selection complete');
+      console.log('[PuppeteerHelper] Client picker selection complete');
     } else {
         console.log('[PuppeteerHelper] picker selection not found');
     }

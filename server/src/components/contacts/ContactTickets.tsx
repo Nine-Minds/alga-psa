@@ -25,15 +25,15 @@ import { getTicketingDisplaySettings, TicketingDisplaySettings } from 'server/sr
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { TagFilter } from 'server/src/components/tags';
 
 interface ContactTicketsProps {
   contactId: string;
   contactName?: string;
-  companyId?: string;
-  companyName?: string;
+  clientId?: string;
+  clientName?: string;
   initialBoards?: IBoard[];
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
@@ -57,8 +57,8 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 const ContactTickets: React.FC<ContactTicketsProps> = ({
   contactId,
   contactName = '',
-  companyId = '',
-  companyName = '',
+  clientId = '',
+  clientName = '',
   initialBoards = [],
   initialStatuses = [],
   initialPriorities = [],
@@ -118,7 +118,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       setIsLoading(true);
       
       const filters: ITicketListFilters = {
-        contactId: contactId, // Filter by contact instead of company
+        contactId: contactId, // Filter by contact instead of client
         boardId: selectedBoard || undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
@@ -195,7 +195,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
           initialBoard={ticketData.board}
-          initialCompany={ticketData.company}
+          initialClient={ticketData.client}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
@@ -206,7 +206,7 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialCompanies={ticketData.companies}
+          initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           currentUser={currentUser}
         />
@@ -221,25 +221,25 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
     ticketTagsRef.current[ticketId] = tags;
   }, []);
 
-  const handleCompanyClick = useCallback(async (companyId: string) => {
+  const handleClientClick = useCallback(async (clientId: string) => {
     try {
-      const company = await getCompanyById(companyId);
-      if (company) {
+      const client = await getClientById(clientId);
+      if (client) {
         openDrawer(
-          <CompanyDetails 
-            company={company} 
-            documents={[]} 
-            contacts={[]} 
+          <ClientDetails
+            client={client}
+            documents={[]}
+            contacts={[]}
             isInDrawer={true}
             quickView={true}
           />
         );
       } else {
-        toast.error('Company not found');
+        toast.error('Client not found');
       }
     } catch (error) {
-      console.error('Error loading company:', error);
-      toast.error('Failed to load company details');
+      console.error('Error loading client:', error);
+      toast.error('Failed to load client details');
     }
   }, [openDrawer]);
 
@@ -296,8 +296,8 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: true, // Show client column in contact view
-      onClientClick: handleCompanyClick,
-    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleCompanyClick]);
+      onClientClick: handleClientClick,
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, handleClientClick]);
 
   const handleCategorySelect = (
     selectedCategories: string[],
@@ -502,9 +502,9 @@ const ContactTickets: React.FC<ContactTicketsProps> = ({
           open={isQuickAddTicketOpen}
           onOpenChange={setIsQuickAddTicketOpen}
           onTicketAdded={handleTicketAdded}
-          prefilledCompany={{
-            id: companyId,
-            name: companyName
+          prefilledClient={{
+            id: clientId,
+            name: clientName
           }}
           prefilledContact={{
             id: contactId,

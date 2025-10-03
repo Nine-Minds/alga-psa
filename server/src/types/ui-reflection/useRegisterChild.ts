@@ -17,11 +17,11 @@ let childRegistrationCounter = 0;
  * 
  * @example
  * ```tsx
- * function CompanyPicker({ dialogId }: Props) {
+ * function ClientPicker({ dialogId }: Props) {
  *   const updatePicker = useRegisterChild<ContainerComponent>({
- *     id: `${dialogId}-company-picker`,
+ *     id: `${dialogId}-client-picker`,
  *     type: 'container',
- *     label: 'Company Picker'
+ *     label: 'Client Picker'
  *   });
  *   
  *   return <div>...</div>;
@@ -44,10 +44,10 @@ export function useRegisterChild<T extends UIComponent>(component: T): (partial:
  * 
  * @example
  * ```tsx
- * function CompanyPicker({ dialogId, label, disabled }: Props) {
+ * function ClientPicker({ dialogId, label, disabled }: Props) {
  *   useRegisterChildWithProps<ContainerComponent>(
  *     {
- *       id: `${dialogId}-company-picker`,
+ *       id: `${dialogId}-client-picker`,
  *       type: 'container',
  *       label,
  *       disabled

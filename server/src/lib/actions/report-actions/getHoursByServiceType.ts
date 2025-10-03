@@ -12,7 +12,7 @@ import { toPlainDate } from '../../utils/dateTimeUtils'; // Assuming this utilit
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  companyId: z.string().uuid(),
+  clientId: z.string().uuid(),
   startDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid start date format",
   }),
@@ -33,9 +33,9 @@ export interface HoursByServiceResult {
 
 /**
  * Server action to fetch total billable hours grouped by service type or service name
- * for a specific company within a given date range.
+ * for a specific client within a given date range.
  *
- * @param input - Object containing companyId, startDate, endDate, and groupByServiceType flag.
+ * @param input - Object containing clientId, startDate, endDate, and groupByServiceType flag.
  * @returns A promise that resolves to an array of aggregated hours by service.
  */
 export async function getHoursByServiceType(
@@ -47,7 +47,7 @@ export async function getHoursByServiceType(
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     throw new Error(`Validation Error: ${errorMessages}`);
   }
-  const { companyId, startDate, endDate, groupByServiceType } = validationResult.data;
+  const { clientId, startDate, endDate, groupByServiceType } = validationResult.data;
 
   const { knex, tenant } = await createTenantKnex();
 
@@ -55,7 +55,7 @@ export async function getHoursByServiceType(
     throw new Error('Tenant context is required.');
   }
 
-  console.log(`Fetching hours by service for company ${companyId} in tenant ${tenant} from ${startDate} to ${endDate}`);
+  console.log(`Fetching hours by service for client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
 
   try {
     const results: HoursByServiceResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -67,15 +67,15 @@ export async function getHoursByServiceType(
       .where('start_time', '<=', endDate); // Use start_time for date filtering
 
     // --- Join Logic based on work_item_type ---
-    // We need to join time_entries to either tickets or projects to filter by companyId
+    // We need to join time_entries to either tickets or projects to filter by clientId
 
-      // Subquery for tickets linked to the company
-      const ticketCompanySubquery = trx<ITicket>('tickets')
+      // Subquery for tickets linked to the client
+      const ticketClientSubquery = trx<ITicket>('tickets')
         .select('ticket_id')
-        .where({ company_id: companyId, tenant: tenant });
+        .where({ client_id: clientId, tenant: tenant });
 
-      // Subquery for project tasks linked to the company
-      const projectTaskCompanySubquery = trx<IProjectTask>('project_tasks')
+      // Subquery for project tasks linked to the client
+      const projectTaskClientSubquery = trx<IProjectTask>('project_tasks')
       .join<IProjectPhase>('project_phases', function() {
         this.on('project_tasks.phase_id', '=', 'project_phases.phase_id')
             .andOn('project_tasks.tenant', '=', 'project_phases.tenant');
@@ -85,19 +85,19 @@ export async function getHoursByServiceType(
             .andOn('project_phases.tenant', '=', 'projects.tenant');
       })
       .select('project_tasks.task_id')
-      .where('projects.company_id', '=', companyId)
+      .where('projects.client_id', '=', clientId)
       .andWhere('project_tasks.tenant', '=', tenant); // Ensure tenant filter on subquery joins
 
-      // Apply the company filter using the subqueries
+      // Apply the client filter using the subqueries
       timeEntriesQuery.where(function() {
       this.where(function() {
         this.where('work_item_type', '=', 'Ticket')
-            .whereIn('work_item_id', ticketCompanySubquery);
+            .whereIn('work_item_id', ticketClientSubquery);
       }).orWhere(function() {
         this.where('work_item_type', '=', 'Project Task')
-            .whereIn('work_item_id', projectTaskCompanySubquery);
+            .whereIn('work_item_id', projectTaskClientSubquery);
       });
-      // Note: Add other work_item_types if they can be linked to a company
+      // Note: Add other work_item_types if they can be linked to a client
     });
 
       // --- Join Service Catalog and Service Types ---
@@ -141,11 +141,11 @@ export async function getHoursByServiceType(
     });
 
 
-    console.log(`Found ${results.length} service groupings for company ${companyId}`);
+    console.log(`Found ${results.length} service groupings for client ${clientId}`);
     return results;
 
   } catch (error) {
-    console.error(`Error fetching hours by service for company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching hours by service for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

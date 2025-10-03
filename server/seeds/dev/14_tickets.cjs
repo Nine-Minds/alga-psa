@@ -32,7 +32,7 @@ exports.seed = async function (knex) {
 
     // Fetch all required IDs concurrently for efficiency
     const [
-        companyEmeraldCityId, companyWonderlandId,
+        clientEmeraldCityId, clientWonderlandId,
         contactAliceId, contactDorothyId,
         statusCuriousId, statusAwaitingId, statusUnfoldingId,
         boardUrgentId, boardProjectsId,
@@ -44,8 +44,8 @@ exports.seed = async function (knex) {
         impactRealmId, impactLocalId,
         userGlindaId, userTinmanId, userMadhatterId, userScarecrowId
     ] = await Promise.all([
-        getId('companies', { company_name: 'Emerald City' }, 'company_id'),
-        getId('companies', { company_name: 'Wonderland' }, 'company_id'),
+        getId('clients', { client_name: 'Emerald City' }, 'client_id'),
+        getId('clients', { client_name: 'Wonderland' }, 'client_id'),
         getContactId('alice'),
         getContactId('dorothy'),
         getId('statuses', { name: 'Curious Beginning' }, 'status_id'),
@@ -80,7 +80,7 @@ exports.seed = async function (knex) {
             tenant: tenant,
             title: 'Missing White Rabbit',
             ticket_number: 'TIC1001', // Explicitly included
-            company_id: companyEmeraldCityId,
+            client_id: clientEmeraldCityId,
             contact_name_id: contactAliceId,
             status_id: statusCuriousId,
             board_id: boardUrgentId,
@@ -98,7 +98,7 @@ exports.seed = async function (knex) {
             tenant: tenant,
             title: 'Survey Uncharted Areas in Wonderland',
             ticket_number: 'TIC1002', // Explicitly included
-            company_id: companyWonderlandId,
+            client_id: clientWonderlandId,
             contact_name_id: contactAliceId,
             status_id: statusAwaitingId,
             board_id: boardUrgentId,
@@ -116,7 +116,7 @@ exports.seed = async function (knex) {
             tenant: tenant,
             title: 'Enhance Emerald City Gardens',
             ticket_number: 'TIC1003', // Explicitly included
-            company_id: companyEmeraldCityId,
+            client_id: clientEmeraldCityId,
             contact_name_id: contactDorothyId,
             status_id: statusUnfoldingId,
             board_id: boardProjectsId,
@@ -134,7 +134,7 @@ exports.seed = async function (knex) {
 
     // Filter out any tickets where essential IDs might be missing (if lookups failed)
     const validTickets = ticketsToInsert.filter(ticket =>
-        ticket.company_id && ticket.contact_name_id && ticket.status_id &&
+        ticket.client_id && ticket.contact_name_id && ticket.status_id &&
         ticket.board_id && ticket.category_id && ticket.subcategory_id &&
         ticket.priority_id && ticket.severity_id && ticket.urgency_id &&
         ticket.impact_id && ticket.entered_by && ticket.assigned_to

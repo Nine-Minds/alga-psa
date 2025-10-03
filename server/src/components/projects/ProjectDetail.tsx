@@ -28,7 +28,7 @@ import ProjectPhases from './ProjectPhases';
 import KanbanBoard from './KanbanBoard';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { HelpCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
 import { generateKeyBetween } from 'fractional-indexing';
@@ -39,7 +39,7 @@ interface ProjectDetailProps {
   phases: IProjectPhase[];
   statuses: ProjectStatus[];
   users: IUserWithRoles[];
-  companies: ICompany[];
+  clients: IClient[];
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles;
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
@@ -50,7 +50,7 @@ export default function ProjectDetail({
   phases, 
   statuses: initialStatuses, 
   users,
-  companies,
+  clients,
   contact,
   assignedUser,
   onTagsUpdate

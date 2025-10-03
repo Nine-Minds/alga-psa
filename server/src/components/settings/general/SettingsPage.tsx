@@ -140,7 +140,7 @@ const SettingsPage = (): JSX.Element =>  {
           <CardHeader>
             <CardTitle>General Settings</CardTitle>
             <CardDescription>
-              Manage your organization name and default company. The default company is used for configuration purposes and represents your MSP.
+              Manage your organization name and default client. The default client is used for configuration purposes and represents your MSP.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

@@ -100,7 +100,7 @@ export class StorageService {
       // --- Image Processing Logic ---
       const isEntityImage = options.isImageAvatar ||
         (options.metadata?.context &&
-         ['user_avatar', 'contact_avatar', 'company_logo'].includes(options.metadata.context));
+         ['user_avatar', 'contact_avatar', 'client_logo'].includes(options.metadata.context));
 
       if (isEntityImage) {
         const detectedType = await fileTypeFromBuffer(fileBuffer);

@@ -10,8 +10,8 @@ import { Input } from "server/src/components/ui/Input";
 import { Label } from "server/src/components/ui/Label";
 import { TextArea } from "server/src/components/ui/TextArea";
 import { addContact } from 'server/src/lib/actions/contact-actions/contactActions';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
@@ -20,8 +20,8 @@ interface QuickAddContactProps {
   isOpen: boolean;
   onClose: () => void;
   onContactAdded: (newContact: IContact) => void;
-  companies: ICompany[];
-  selectedCompanyId?: string | null;
+  clients: IClient[];
+  selectedClientId?: string | null;
 }
 
 function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
@@ -45,13 +45,13 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   isOpen,
   onClose,
   onContactAdded,
-  companies,
-  selectedCompanyId = null
+  clients,
+  selectedClientId = null
 }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [companyId, setCompanyId] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isInactive, setIsInactive] = useState(false);
@@ -62,26 +62,26 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
 
-  // Set initial company ID when the component mounts or when selectedCompanyId changes
+  // Set initial client ID when the component mounts or when selectedClientId changes
   useEffect(() => {
-    if (selectedCompanyId) {
-      setCompanyId(selectedCompanyId);
+    if (selectedClientId) {
+      setClientId(selectedClientId);
     }
-  }, [selectedCompanyId]);
+  }, [selectedClientId]);
 
   // Reset form and error when dialog opens/closes
   useEffect(() => {
     if (isOpen) {
-      if (selectedCompanyId) {
-        setCompanyId(selectedCompanyId);
+      if (selectedClientId) {
+        setClientId(selectedClientId);
       }
       setError(null);
     } else {
       setFullName('');
       setEmail('');
       setPhoneNumber('');
-      if (!selectedCompanyId) {
-        setCompanyId(null);
+      if (!selectedClientId) {
+        setClientId(null);
       }
       setIsInactive(false);
       setRole('');
@@ -89,12 +89,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
       setHasAttemptedSubmit(false);
       setValidationErrors([]);
     }
-  }, [isOpen, selectedCompanyId]);
+  }, [isOpen, selectedClientId]);
 
-  const handleCompanySelect = (companyId: string | null) => {
-    // Prevent unintended company selection
-    if (typeof companyId === 'string' || companyId === null) {
-      setCompanyId(companyId);
+  const handleClientSelect = (clientId: string | null) => {
+    // Prevent unintended client selection
+    if (typeof clientId === 'string' || clientId === null) {
+      setClientId(clientId);
     }
   };
 
@@ -103,9 +103,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
     e.stopPropagation();
     setHasAttemptedSubmit(true);
 
-    // If the click target is inside the company picker, don't submit
+    // If the click target is inside the client picker, don't submit
     const target = e.target as HTMLElement;
-    if (target.closest('#quick-add-contact-company')) {
+    if (target.closest('#quick-add-contact-client')) {
       return;
     }
 
@@ -136,9 +136,9 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
         notes: notes.trim(),
       };
 
-      // Only include company_id if it's actually selected
-      if (companyId) {
-        Object.assign(contactData, { company_id: companyId });
+      // Only include client_id if it's actually selected
+      if (clientId) {
+        Object.assign(contactData, { client_id: clientId });
       }
 
       const newContact = await addContact(contactData);
@@ -250,12 +250,12 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
               />
             </div>
             <div>
-              <Label>Company (Optional)</Label>
-              <CompanyPicker
-                id="quick-add-contact-company"
-                companies={companies}
-                onSelect={handleCompanySelect}
-                selectedCompanyId={companyId}
+              <Label>Client (Optional)</Label>
+              <ClientPicker
+                id="quick-add-contact-client"
+                clients={clients}
+                onSelect={handleClientSelect}
+                selectedClientId={clientId}
                 filterState={filterState}
                 onFilterStateChange={setFilterState}
                 clientTypeFilter={clientTypeFilter}

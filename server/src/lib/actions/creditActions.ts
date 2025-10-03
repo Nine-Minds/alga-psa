@@ -3,7 +3,7 @@
 import { withTransaction } from '@alga-psa/shared/db';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { createTenantKnex } from 'server/src/lib/db';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { IInvoice } from 'server/src/interfaces/invoice.interfaces';
 import { ITransaction, ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,39 +14,39 @@ import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
 async function calculateNewBalance(
-    companyId: string, 
+    clientId: string, 
     changeAmount: number,
     trx?: Knex.Transaction
 ): Promise<number> {
     const { knex, tenant } = await createTenantKnex();
     
     if (trx) {
-        const [company] = await trx('companies')
-            .where({ company_id: companyId, tenant })
+        const [client] = await trx('clients')
+            .where({ client_id: clientId, tenant })
             .select('credit_balance');
-        return company.credit_balance + changeAmount;
+        return client.credit_balance + changeAmount;
     } else {
         return await withTransaction(knex, async (transaction: Knex.Transaction) => {
-            const [company] = await transaction('companies')
-                .where({ company_id: companyId, tenant })
+            const [client] = await transaction('clients')
+                .where({ client_id: clientId, tenant })
                 .select('credit_balance');
-            return company.credit_balance + changeAmount;
+            return client.credit_balance + changeAmount;
         });
     }
 }
 
 /**
- * Validates a company's credit balance and automatically corrects it if needed
+ * Validates a client's credit balance and automatically corrects it if needed
  * This function is maintained for backward compatibility
  * It uses validateCreditBalanceWithoutCorrection and then applies corrections if needed
  *
- * @param companyId The ID of the company to validate
+ * @param clientId The ID of the client to validate
  * @param expectedBalance Optional expected balance for validation without correction
  * @param providedTrx Optional transaction object
  * @returns Object containing validation results
  */
 export async function validateCreditBalance(
-    companyId: string,
+    clientId: string,
     expectedBalance?: number,
     providedTrx?: Knex.Transaction
 ): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction}> {
@@ -68,15 +68,15 @@ export async function validateCreditBalance(
     // Use provided transaction or create a new one
     const executeWithTransaction = async (trx: Knex.Transaction) => {
         // First, validate without making corrections
-        const validationResult = await validateCreditBalanceWithoutCorrection(companyId, trx);
+        const validationResult = await validateCreditBalanceWithoutCorrection(clientId, trx);
         
         // If there's a discrepancy and no expected balance is provided, apply the correction
         if (!validationResult.isValid && expectedBalance === undefined) {
             const now = new Date().toISOString();
             
-            // Update the company's credit balance to match the calculated balance
-            await trx('companies')
-                .where({ company_id: companyId, tenant })
+            // Update the client's credit balance to match the calculated balance
+            await trx('clients')
+                .where({ client_id: clientId, tenant })
                 .update({
                     credit_balance: validationResult.expectedBalance,
                     updated_at: now
@@ -88,8 +88,8 @@ export async function validateCreditBalance(
                 {
                     userId: 'system',
                     operation: 'credit_balance_correction',
-                    tableName: 'companies',
-                    recordId: companyId,
+                    tableName: 'clients',
+                    recordId: clientId,
                     changedData: {
                         previous_balance: validationResult.actualBalance,
                         corrected_balance: validationResult.expectedBalance
@@ -102,7 +102,7 @@ export async function validateCreditBalance(
                 }
             );
             
-            console.log(`Credit balance for company ${companyId} automatically corrected from ${validationResult.actualBalance} to ${validationResult.expectedBalance}`);
+            console.log(`Credit balance for client ${clientId} automatically corrected from ${validationResult.actualBalance} to ${validationResult.expectedBalance}`);
         }
         
         return {
@@ -121,7 +121,7 @@ export async function validateCreditBalance(
 }
 
 export async function validateTransactionBalance(
-    companyId: string,
+    clientId: string,
     amount: number,
     trx: Knex.Transaction,
     tenant: string,
@@ -131,7 +131,7 @@ export async function validateTransactionBalance(
     // we should also skip the negative balance check
     if (!skipCreditBalanceCheck) {
         // Get the available (non-expired) credit balance
-        const validation = await validateCreditBalance(companyId, undefined, trx);
+        const validation = await validateCreditBalance(clientId, undefined, trx);
         const availableBalance = validation.actualBalance;
         
         const newBalance = availableBalance + amount;
@@ -147,7 +147,7 @@ export async function validateTransactionBalance(
 }
 
 /**
- * Run scheduled credit balance validation for all companies
+ * Run scheduled credit balance validation for all clients
  * This function is maintained for backward compatibility
  * It now uses the new runScheduledCreditBalanceValidation function
  * which creates reconciliation reports instead of making automatic corrections
@@ -179,7 +179,7 @@ export async function scheduledCreditBalanceValidation(): Promise<void> {
 }
 
 export async function createPrepaymentInvoice(
-    companyId: string,
+    clientId: string,
     amount: number,
     manualExpirationDate?: string
 ): Promise<IInvoice> {
@@ -198,30 +198,30 @@ export async function createPrepaymentInvoice(
         throw new Error('No tenant found');
     }
 
-    if (!companyId) {
-        throw new Error('Company ID is required');
+    if (!clientId) {
+        throw new Error('Client ID is required');
     }
 
-    // Verify company exists
-    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('companies')
+    // Verify client exists
+    const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('clients')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .first();
     });
 
-    if (!company) {
-        throw new Error('Company not found');
+    if (!client) {
+        throw new Error('Client not found');
     }
     
     // Create prepayment invoice
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Get company's credit expiration settings or default settings
-        const companySettings = await trx('company_billing_settings')
+        // Get client's credit expiration settings or default settings
+        const clientSettings = await trx('client_billing_settings')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .first();
@@ -231,18 +231,18 @@ export async function createPrepaymentInvoice(
             .first();
         
         // Determine if credit expiration is enabled
-        // Company setting overrides default, if not specified use default
+        // Client setting overrides default, if not specified use default
         let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (companySettings?.enable_credit_expiration !== undefined) {
-            isCreditExpirationEnabled = companySettings.enable_credit_expiration;
+        if (clientSettings?.enable_credit_expiration !== undefined) {
+            isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
         } else if (defaultSettings?.enable_credit_expiration !== undefined) {
             isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
         }
         
-        // Determine expiration days - use company setting if available, otherwise use default
+        // Determine expiration days - use client setting if available, otherwise use default
         let expirationDays: number | undefined;
-        if (companySettings?.credit_expiration_days !== undefined) {
-            expirationDays = companySettings.credit_expiration_days;
+        if (clientSettings?.credit_expiration_days !== undefined) {
+            expirationDays = clientSettings.credit_expiration_days;
         } else if (defaultSettings?.credit_expiration_days !== undefined) {
             expirationDays = defaultSettings.credit_expiration_days;
         }
@@ -268,7 +268,7 @@ export async function createPrepaymentInvoice(
         // Create the prepayment invoice
         const [createdInvoice] = await trx('invoices')
             .insert({
-                company_id: companyId,
+                client_id: clientId,
                 tenant,
                 invoice_date: new Date().toISOString(),
                 due_date: new Date().toISOString(), // Due immediately
@@ -286,7 +286,7 @@ export async function createPrepaymentInvoice(
         // Create credit issuance transaction
         const currentBalance = await trx('transactions')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .orderBy('created_at', 'desc')
@@ -294,14 +294,14 @@ export async function createPrepaymentInvoice(
             .then(lastTx => lastTx?.balance_after || 0);
 
         const newBalance = currentBalance + amount;
-        await validateTransactionBalance(companyId, amount, trx, tenant, true); // Skip credit balance check for prepayment
+        await validateTransactionBalance(clientId, amount, trx, tenant, true); // Skip credit balance check for prepayment
 
         // Create transaction with expiration date if applicable
         const transactionId = uuidv4();
         console.log('createPrepaymentInvoice: Creating transaction with ID:', transactionId);
         console.log('createPrepaymentInvoice: Transaction data:', {
             transaction_id: transactionId,
-            company_id: companyId,
+            client_id: clientId,
             invoice_id: createdInvoice.invoice_id,
             amount: amount,
             type: 'credit_issuance',
@@ -317,7 +317,7 @@ export async function createPrepaymentInvoice(
         const query = trx('transactions')
             .insert({
                 transaction_id: transactionId,
-                company_id: companyId,
+                client_id: clientId,
                 invoice_id: createdInvoice.invoice_id,
                 amount: amount,
                 type: 'credit_issuance',
@@ -335,7 +335,7 @@ export async function createPrepaymentInvoice(
         try {
             await trx('transactions').insert({
                 transaction_id: transactionId,
-                company_id: companyId,
+                client_id: clientId,
                 invoice_id: createdInvoice.invoice_id,
                 amount: amount,
                 type: 'credit_issuance',
@@ -358,7 +358,7 @@ export async function createPrepaymentInvoice(
         console.log('createPrepaymentInvoice: Credit tracking data:', {
             credit_id: creditId,
             tenant,
-            company_id: companyId,
+            client_id: clientId,
             transaction_id: transactionId,
             amount: amount,
             remaining_amount: amount,
@@ -372,7 +372,7 @@ export async function createPrepaymentInvoice(
             await trx('credit_tracking').insert({
                 credit_id: creditId,
                 tenant,
-                company_id: companyId,
+                client_id: clientId,
                 transaction_id: transactionId,
                 amount: amount,
                 remaining_amount: amount, // Initially, remaining amount equals the full amount
@@ -405,7 +405,7 @@ export async function createPrepaymentInvoice(
         }
 
         // Note: Credit balance will be updated when the invoice is finalized
-        console.log('Prepayment invoice created for company', companyId, 'with amount', amount);
+        console.log('Prepayment invoice created for client', clientId, 'with amount', amount);
         if (expirationDate) {
             console.log('Credit will expire on', expirationDate);
         }
@@ -416,7 +416,7 @@ export async function createPrepaymentInvoice(
 }
 
 export async function applyCreditToInvoice(
-    companyId: string,
+    clientId: string,
     invoiceId: string,
     requestedAmount: number
 ): Promise<void> {
@@ -487,24 +487,24 @@ export async function applyCreditToInvoice(
         }
         
         // Get current credit balance
-        const [company] = await trx('companies')
-            .where({ company_id: companyId, tenant })
+        const [client] = await trx('clients')
+            .where({ client_id: clientId, tenant })
             .select('credit_balance');
         
         // Calculate the maximum amount of credit we can apply
-        const availableCredit = company.credit_balance || 0;
+        const availableCredit = client.credit_balance || 0;
         
         // If no credit to apply, exit early
         if (availableCredit <= 0 || requestedAmount <= 0) {
-            console.log(`No credit available to apply for company ${companyId}`);
+            console.log(`No credit available to apply for client ${clientId}`);
             return;
         }
         
-        // Get all active credit tracking entries for this company
+        // Get all active credit tracking entries for this client
         const now = new Date().toISOString();
         const creditEntries = await trx('credit_tracking')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant,
                 is_expired: false
             })
@@ -519,7 +519,7 @@ export async function applyCreditToInvoice(
             ]);
         
         if (creditEntries.length === 0) {
-            console.log(`No valid credit entries found for company ${companyId}`);
+            console.log(`No valid credit entries found for client ${clientId}`);
             return;
         }
         
@@ -560,7 +560,7 @@ export async function applyCreditToInvoice(
         
         // If no credits were applied, exit early
         if (totalAppliedAmount <= 0) {
-            console.log(`No credits were applied for company ${companyId}`);
+            console.log(`No credits were applied for client ${clientId}`);
             return;
         }
         
@@ -570,7 +570,7 @@ export async function applyCreditToInvoice(
         // Create the main credit application transaction
         const [creditTransaction] = await trx('transactions').insert({
             transaction_id: uuidv4(),
-            company_id: companyId,
+            client_id: clientId,
             invoice_id: invoiceId,
             amount: -totalAppliedAmount,
             type: 'credit_application',
@@ -585,7 +585,7 @@ export async function applyCreditToInvoice(
         // Record credit balance adjustment
         await trx('transactions').insert({
             transaction_id: uuidv4(),
-            company_id: companyId,
+            client_id: clientId,
             amount: -totalAppliedAmount,
             type: 'credit_adjustment',
             status: 'completed',
@@ -604,16 +604,16 @@ export async function applyCreditToInvoice(
             tenant
         });
 
-        // Verify company billing plan exists before update
-        const billingPlan = await trx('company_billing_plans')
-            .where({ company_id: companyId, tenant })
+        // Verify client billing plan exists before update
+        const billingPlan = await trx('client_billing_plans')
+            .where({ client_id: clientId, tenant })
             .first();
         
         if (!billingPlan) {
-            throw new Error(`No billing plan found for company ${companyId}`);
+            throw new Error(`No billing plan found for client ${clientId}`);
         }
 
-        // Update invoice and company credit balance
+        // Update invoice and client credit balance
         await Promise.all([
             trx('invoices')
                 .where({
@@ -622,9 +622,9 @@ export async function applyCreditToInvoice(
                 })
                 .increment('credit_applied', totalAppliedAmount)
                 .decrement('total_amount', totalAppliedAmount),
-            trx('companies')
+            trx('clients')
                 .where({
-                    company_id: companyId,
+                    client_id: clientId,
                     tenant
                 })
                 .update({
@@ -643,13 +643,13 @@ export async function applyCreditToInvoice(
         }
         
         // Log the credit application
-        console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for company ${companyId}. Remaining credit: ${newBalance}`);
+        console.log(`Applied ${totalAppliedAmount} credit to invoice ${invoiceId} for client ${clientId}. Remaining credit: ${newBalance}`);
         console.log(`Applied from ${appliedCredits.length} different credit sources, prioritized by expiration date.`);
     });
 }
 
 export async function getCreditHistory(
-    companyId: string,
+    clientId: string,
     startDate?: string,
     endDate?: string
 ): Promise<ITransaction[]> {
@@ -668,7 +668,7 @@ export async function getCreditHistory(
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
         const query = trx('transactions')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .whereIn('type', ['credit', 'prepayment', 'credit_application', 'credit_refund'])
@@ -686,15 +686,15 @@ export async function getCreditHistory(
 }
 
 /**
- * List all credits for a company with detailed information
- * @param companyId The ID of the company
+ * List all credits for a client with detailed information
+ * @param clientId The ID of the client
  * @param includeExpired Whether to include expired credits (default: false)
  * @param page Page number for pagination (default: 1)
  * @param pageSize Number of items per page (default: 20)
  * @returns Paginated list of credits with detailed information
  */
-export async function listCompanyCredits(
-    companyId: string,
+export async function listClientCredits(
+    clientId: string,
     includeExpired: boolean = false,
     page: number = 1,
     pageSize: number = 20
@@ -712,7 +712,7 @@ export async function listCompanyCredits(
 
     // Check permission for credit reading
     if (!await hasPermission(currentUser, 'credit', 'read')) {
-        throw new Error('Permission denied: Cannot read company credits');
+        throw new Error('Permission denied: Cannot read client credits');
     }
 
     const { knex, tenant } = await createTenantKnex();
@@ -725,7 +725,7 @@ export async function listCompanyCredits(
         // Build base query
         const baseQuery = trx('credit_tracking')
             .where({
-                'credit_tracking.company_id': companyId,
+                'credit_tracking.client_id': clientId,
                 'credit_tracking.tenant': tenant
             });
 
@@ -960,7 +960,7 @@ export async function updateCreditExpiration(
                 details: {
                     action: 'Credit expiration date updated',
                     credit_id: creditId,
-                    company_id: credit.company_id
+                    client_id: credit.client_id
                 }
             }
         );
@@ -1023,7 +1023,7 @@ export async function manuallyExpireCredit(
         // Create credit_expiration transaction
         await trx('transactions').insert({
             transaction_id: expirationTxId,
-            company_id: credit.company_id,
+            client_id: credit.client_id,
             amount: -Number(credit.remaining_amount), // Negative amount to reduce the balance
             type: 'credit_expiration',
             status: 'completed',
@@ -1033,19 +1033,19 @@ export async function manuallyExpireCredit(
             related_transaction_id: credit.transaction_id
         });
 
-        // Update company credit balance
-        const [company] = await trx('companies')
+        // Update client credit balance
+        const [client] = await trx('clients')
             .where({
-                company_id: credit.company_id,
+                client_id: credit.client_id,
                 tenant
             })
             .select('credit_balance');
 
-        const newBalance = Number(company.credit_balance) - Number(credit.remaining_amount);
+        const newBalance = Number(client.credit_balance) - Number(credit.remaining_amount);
         
-        await trx('companies')
+        await trx('clients')
             .where({
-                company_id: credit.company_id,
+                client_id: credit.client_id,
                 tenant
             })
             .update({
@@ -1082,7 +1082,7 @@ export async function manuallyExpireCredit(
                 details: {
                     action: 'Credit manually expired',
                     credit_id: creditId,
-                    company_id: credit.company_id,
+                    client_id: credit.client_id,
                     reason: reason || 'Manual expiration by administrator'
                 }
             }
@@ -1093,17 +1093,17 @@ export async function manuallyExpireCredit(
 }
 
 /**
- * Transfer credit from one company to another
+ * Transfer credit from one client to another
  * @param sourceCreditId The ID of the credit to transfer from
- * @param targetCompanyId The ID of the company to transfer to
+ * @param targetClientId The ID of the client to transfer to
  * @param amount The amount to transfer (must be <= remaining amount of source credit)
  * @param userId The ID of the user making the change (for audit)
  * @param reason Optional reason for the transfer
- * @returns The new credit created for the target company
+ * @returns The new credit created for the target client
  */
 export async function transferCredit(
     sourceCreditId: string,
-    targetCompanyId: string,
+    targetClientId: string,
     amount: number,
     userId: string,
     reason?: string
@@ -1115,7 +1115,7 @@ export async function transferCredit(
 
     // Check permission for credit transfers
     if (!await hasPermission(currentUser, 'credit', 'transfer')) {
-        throw new Error('Permission denied: Cannot transfer credits between companies');
+        throw new Error('Permission denied: Cannot transfer credits between clients');
     }
 
     const { knex, tenant } = await createTenantKnex();
@@ -1147,16 +1147,16 @@ export async function transferCredit(
             throw new Error(`Insufficient remaining amount (${sourceCredit.remaining_amount}) for transfer of ${amount}`);
         }
 
-        // Verify target company exists
-        const targetCompany = await trx('companies')
+        // Verify target client exists
+        const targetClient = await trx('clients')
             .where({
-                company_id: targetCompanyId,
+                client_id: targetClientId,
                 tenant
             })
             .first();
 
-        if (!targetCompany) {
-            throw new Error(`Target company with ID ${targetCompanyId} not found`);
+        if (!targetClient) {
+            throw new Error(`Target client with ID ${targetClientId} not found`);
         }
 
         const now = new Date().toISOString();
@@ -1173,36 +1173,36 @@ export async function transferCredit(
                 updated_at: now
             });
 
-        // 2. Create transfer-out transaction for source company
+        // 2. Create transfer-out transaction for source client
         const sourceTransactionId = uuidv4();
         await trx('transactions').insert({
             transaction_id: sourceTransactionId,
-            company_id: sourceCredit.company_id,
+            client_id: sourceCredit.client_id,
             amount: -amount,
             type: 'credit_transfer',
             status: 'completed',
-            description: reason || `Credit transferred to company ${targetCompanyId}`,
+            description: reason || `Credit transferred to client ${targetClientId}`,
             created_at: now,
             tenant,
             related_transaction_id: sourceCredit.transaction_id,
             metadata: {
-                transfer_to: targetCompanyId,
+                transfer_to: targetClientId,
                 transfer_reason: reason || 'Administrative transfer'
             }
         });
 
-        // 3. Update source company credit balance
-        const [sourceCompany] = await trx('companies')
+        // 3. Update source client credit balance
+        const [sourceClient] = await trx('clients')
             .where({
-                company_id: sourceCredit.company_id,
+                client_id: sourceCredit.client_id,
                 tenant
             })
             .select('credit_balance');
 
-        const newSourceBalance = Number(sourceCompany.credit_balance) - amount;
-        await trx('companies')
+        const newSourceBalance = Number(sourceClient.credit_balance) - amount;
+        await trx('clients')
             .where({
-                company_id: sourceCredit.company_id,
+                client_id: sourceCredit.client_id,
                 tenant
             })
             .update({
@@ -1210,36 +1210,36 @@ export async function transferCredit(
                 updated_at: now
             });
 
-        // 4. Create transfer-in transaction for target company
+        // 4. Create transfer-in transaction for target client
         const targetTransactionId = uuidv4();
         await trx('transactions').insert({
             transaction_id: targetTransactionId,
-            company_id: targetCompanyId,
+            client_id: targetClientId,
             amount: amount,
             type: 'credit_transfer',
             status: 'completed',
-            description: reason || `Credit transferred from company ${sourceCredit.company_id}`,
+            description: reason || `Credit transferred from client ${sourceCredit.client_id}`,
             created_at: now,
             tenant,
             metadata: {
-                transfer_from: sourceCredit.company_id,
+                transfer_from: sourceCredit.client_id,
                 transfer_reason: reason || 'Administrative transfer',
                 source_credit_id: sourceCreditId
             }
         });
 
-        // 5. Update target company credit balance
-        const [targetCompanyData] = await trx('companies')
+        // 5. Update target client credit balance
+        const [targetClientData] = await trx('clients')
             .where({
-                company_id: targetCompanyId,
+                client_id: targetClientId,
                 tenant
             })
             .select('credit_balance');
 
-        const newTargetBalance = Number(targetCompanyData.credit_balance) + amount;
-        await trx('companies')
+        const newTargetBalance = Number(targetClientData.credit_balance) + amount;
+        await trx('clients')
             .where({
-                company_id: targetCompanyId,
+                client_id: targetClientId,
                 tenant
             })
             .update({
@@ -1247,13 +1247,13 @@ export async function transferCredit(
                 updated_at: now
             });
 
-        // 6. Create new credit tracking entry for target company
+        // 6. Create new credit tracking entry for target client
         // Inherit expiration date from source credit if it exists
         const newCreditId = uuidv4();
         const [newCredit] = await trx('credit_tracking').insert({
             credit_id: newCreditId,
             tenant,
-            company_id: targetCompanyId,
+            client_id: targetClientId,
             transaction_id: targetTransactionId,
             amount: amount,
             remaining_amount: amount,
@@ -1275,14 +1275,14 @@ export async function transferCredit(
                     previous_remaining_amount: sourceCredit.remaining_amount,
                     new_remaining_amount: newSourceRemainingAmount,
                     amount_transferred: amount,
-                    target_company_id: targetCompanyId,
+                    target_client_id: targetClientId,
                     new_credit_id: newCreditId
                 },
                 details: {
-                    action: 'Credit transferred to another company',
+                    action: 'Credit transferred to another client',
                     source_credit_id: sourceCreditId,
-                    source_company_id: sourceCredit.company_id,
-                    target_company_id: targetCompanyId,
+                    source_client_id: sourceCredit.client_id,
+                    target_client_id: targetClientId,
                     amount: amount,
                     reason: reason || 'Administrative transfer'
                 }

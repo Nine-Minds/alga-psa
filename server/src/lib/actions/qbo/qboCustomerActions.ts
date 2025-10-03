@@ -202,15 +202,15 @@ async function getQboCustomerAction(params: Record<string, any>, context: Action
 // Add realmId to parameter definitions as it's needed by the actions
 const createQboCustomerParamsDefWithRealm: ActionParameterDefinition[] = [
   ...createQboCustomerParamsDef,
-  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Company ID) for the target tenant connection' },
+  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Client ID) for the target tenant connection' },
 ];
 const updateQboCustomerParamsDefWithRealm: ActionParameterDefinition[] = [
   ...updateQboCustomerParamsDef,
-  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Company ID) for the target tenant connection' },
+  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Client ID) for the target tenant connection' },
 ];
 const getQboCustomerParamsDefWithRealm: ActionParameterDefinition[] = [
   ...getQboCustomerParamsDef,
-  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Company ID) for the target tenant connection' },
+  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Client ID) for the target tenant connection' },
 ];
 
 

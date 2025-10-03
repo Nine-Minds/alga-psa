@@ -13,7 +13,7 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import Invoice from 'server/src/lib/models/invoice';
 
 // Helper function to create basic invoice view model
-async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promise<InvoiceViewModel> {
+async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise<InvoiceViewModel> {
   // Debug the invoice data, especially for the problematic invoice
   if (invoice.invoice_id === '758752dd-9aa4-43cb-945e-7232903f6615') {
     console.log('Processing problematic invoice:', {
@@ -32,11 +32,11 @@ async function getBasicInvoiceViewModel(invoice: IInvoice, company: any): Promis
   return {
     invoice_id: invoice.invoice_id,
     invoice_number: invoice.invoice_number,
-    company_id: invoice.company_id,
-    company: {
-      name: company.company_name,
-      logo: company.logo || '',
-      address: company.address || ''
+    client_id: invoice.client_id,
+    client: {
+      name: client.client_name,
+      logo: client.logo || '',
+      address: client.address || ''
     },
     contact: {
       name: '',  // Contact info not stored in invoice
@@ -61,25 +61,25 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
     console.log('Fetching basic invoice info');
     const { knex, tenant } = await createTenantKnex();
 
-    // Get invoices with company info and location data in a single query
+    // Get invoices with client info and location data in a single query
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
-        .join('companies', function () {
-          this.on('invoices.company_id', '=', 'companies.company_id')
-            .andOn('invoices.tenant', '=', 'companies.tenant');
+        .join('clients', function () {
+          this.on('invoices.client_id', '=', 'clients.client_id')
+            .andOn('invoices.tenant', '=', 'clients.tenant');
         })
-        .leftJoin('company_locations', function () {
-          this.on('companies.company_id', '=', 'company_locations.company_id')
-            .andOn('companies.tenant', '=', 'company_locations.tenant')
+        .leftJoin('client_locations', function () {
+          this.on('clients.client_id', '=', 'client_locations.client_id')
+            .andOn('clients.tenant', '=', 'client_locations.tenant')
             .andOn(function() {
-              this.on('company_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('company_locations.is_default', '=', trx.raw('true'));
+              this.on('client_locations.is_billing_address', '=', trx.raw('true'))
+                  .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
         })
         .where('invoices.tenant', tenant)
         .select(
           'invoices.invoice_id',
-          'invoices.company_id',
+          'invoices.client_id',
           'invoices.invoice_number',
           'invoices.invoice_date',
           'invoices.due_date',
@@ -91,21 +91,21 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          'companies.company_name',
-          'companies.properties',
+          'clients.client_name',
+          'clients.properties',
           // Location fields
-          'company_locations.address_line1',
-          'company_locations.address_line2',
-          'company_locations.city',
-          'company_locations.state_province',
-          'company_locations.postal_code',
-          'company_locations.country_name',
-          'company_locations.is_billing_address'
+          'client_locations.address_line1',
+          'client_locations.address_line2',
+          'client_locations.city',
+          'client_locations.state_province',
+          'client_locations.postal_code',
+          'client_locations.country_name',
+          'client_locations.is_billing_address'
         )
         .orderBy([
           { column: 'invoices.invoice_id' },
-          { column: 'company_locations.is_billing_address', order: 'desc', nulls: 'last' },
-          { column: 'company_locations.is_default', order: 'desc', nulls: 'last' }
+          { column: 'client_locations.is_billing_address', order: 'desc', nulls: 'last' },
+          { column: 'client_locations.is_default', order: 'desc', nulls: 'last' }
         ]);
     });
 
@@ -113,7 +113,7 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
 
     // Map to view models without line items
     return Promise.all(invoices.map(invoice => {
-      const companyProperties = invoice.properties as { logo?: string } || {};
+      const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
       const addressParts: string[] = [];
@@ -126,8 +126,8 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
       if (invoice.country_name) addressParts.push(invoice.country_name);
       
       return getBasicInvoiceViewModel(invoice, {
-        company_name: invoice.company_name,
-        logo: companyProperties.logo || '',
+        client_name: invoice.client_name,
+        logo: clientProperties.logo || '',
         address: addressParts.join(', ') || ''
       });
     }));
@@ -138,37 +138,37 @@ export async function fetchAllInvoices(): Promise<InvoiceViewModel[]> {
 }
 
 /**
- * Fetch invoices for a specific company
- * @param companyId The ID of the company to fetch invoices for
+ * Fetch invoices for a specific client
+ * @param clientId The ID of the client to fetch invoices for
  * @returns Array of invoice view models
  */
-export async function fetchInvoicesByCompany(companyId: string): Promise<InvoiceViewModel[]> {
+export async function fetchInvoicesByClient(clientId: string): Promise<InvoiceViewModel[]> {
   try {
-    console.log(`Fetching invoices for company: ${companyId}`);
+    console.log(`Fetching invoices for client: ${clientId}`);
     const { knex, tenant } = await createTenantKnex();
     
-    // Get invoices with company info and location data in a single query, filtered by company_id
+    // Get invoices with client info and location data in a single query, filtered by client_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('invoices')
-        .join('companies', function() {
-          this.on('invoices.company_id', '=', 'companies.company_id')
-              .andOn('invoices.tenant', '=', 'companies.tenant');
+        .join('clients', function() {
+          this.on('invoices.client_id', '=', 'clients.client_id')
+              .andOn('invoices.tenant', '=', 'clients.tenant');
         })
-        .leftJoin('company_locations', function () {
-          this.on('companies.company_id', '=', 'company_locations.company_id')
-            .andOn('companies.tenant', '=', 'company_locations.tenant')
+        .leftJoin('client_locations', function () {
+          this.on('clients.client_id', '=', 'client_locations.client_id')
+            .andOn('clients.tenant', '=', 'client_locations.tenant')
             .andOn(function() {
-              this.on('company_locations.is_billing_address', '=', trx.raw('true'))
-                  .orOn('company_locations.is_default', '=', trx.raw('true'));
+              this.on('client_locations.is_billing_address', '=', trx.raw('true'))
+                  .orOn('client_locations.is_default', '=', trx.raw('true'));
             });
         })
         .where({
-          'invoices.company_id': companyId,
+          'invoices.client_id': clientId,
           'invoices.tenant': tenant
         })
         .select(
           'invoices.invoice_id',
-          'invoices.company_id',
+          'invoices.client_id',
           'invoices.invoice_number',
           'invoices.invoice_date',
           'invoices.due_date',
@@ -180,29 +180,29 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
           trx.raw('CAST(invoices.tax AS BIGINT) as tax'),
           trx.raw('CAST(invoices.total_amount AS BIGINT) as total_amount'),
           trx.raw('CAST(invoices.credit_applied AS BIGINT) as credit_applied'),
-          'companies.company_name',
-          'companies.properties',
+          'clients.client_name',
+          'clients.properties',
           // Location fields
-          'company_locations.address_line1',
-          'company_locations.address_line2',
-          'company_locations.city',
-          'company_locations.state_province',
-          'company_locations.postal_code',
-          'company_locations.country_name',
-          'company_locations.is_billing_address'
+          'client_locations.address_line1',
+          'client_locations.address_line2',
+          'client_locations.city',
+          'client_locations.state_province',
+          'client_locations.postal_code',
+          'client_locations.country_name',
+          'client_locations.is_billing_address'
         )
         .orderBy([
           { column: 'invoices.invoice_id' },
-          { column: 'company_locations.is_billing_address', order: 'desc', nulls: 'last' },
-          { column: 'company_locations.is_default', order: 'desc', nulls: 'last' }
+          { column: 'client_locations.is_billing_address', order: 'desc', nulls: 'last' },
+          { column: 'client_locations.is_default', order: 'desc', nulls: 'last' }
         ]);
     });
 
-    console.log(`Got ${invoices.length} invoices for company ${companyId}`);
+    console.log(`Got ${invoices.length} invoices for client ${clientId}`);
 
     // Map to view models without line items
     return Promise.all(invoices.map(invoice => {
-      const companyProperties = invoice.properties as { logo?: string } || {};
+      const clientProperties = invoice.properties as { logo?: string } || {};
       
       // Format location address
       const addressParts: string[] = [];
@@ -215,14 +215,14 @@ export async function fetchInvoicesByCompany(companyId: string): Promise<Invoice
       if (invoice.country_name) addressParts.push(invoice.country_name);
       
       return getBasicInvoiceViewModel(invoice, {
-        company_name: invoice.company_name,
-        logo: companyProperties.logo || '',
+        client_name: invoice.client_name,
+        logo: clientProperties.logo || '',
         address: addressParts.join(', ') || ''
       });
     }));
   } catch (error) {
-    console.error(`Error fetching invoices for company ${companyId}:`, error);
-    throw new Error('Error fetching company invoices');
+    console.error(`Error fetching invoices for client ${clientId}:`, error);
+    throw new Error('Error fetching client invoices');
   }
 }
 

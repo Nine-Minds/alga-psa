@@ -49,7 +49,7 @@ type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
 export interface IBillingCharge extends TenantEntity {
   type: ChargeType;
   serviceId?: string;
-  company_billing_plan_id?: string; // Link back to the specific plan assignment
+  client_billing_plan_id?: string; // Link back to the specific plan assignment
   serviceName: string;
   rate: number;
   total: number;
@@ -60,7 +60,7 @@ export interface IBillingCharge extends TenantEntity {
   tax_rate: number;
   tax_region?: string;
   is_taxable?: boolean;
-  company_bundle_id?: string; // Reference to the company plan bundle
+  client_bundle_id?: string; // Reference to the client plan bundle
   bundle_name?: string; // Name of the bundle
 }
 
@@ -85,9 +85,9 @@ export interface IBillingResult extends TenantEntity {
   finalAmount: number;
 }
 
-export interface ICompanyBillingPlan extends TenantEntity {
-  company_billing_plan_id: string;
-  company_id: string;
+export interface IClientBillingPlan extends TenantEntity {
+  client_billing_plan_id: string;
+  client_id: string;
   plan_id: string;
   service_category?: string;
   service_category_name?: string; // Added field from join with service_categories
@@ -95,16 +95,16 @@ export interface ICompanyBillingPlan extends TenantEntity {
   end_date: ISO8601String | null;
   is_active: boolean;
   custom_rate?: number;
-  company_bundle_id?: string; // Reference to the company plan bundle
+  client_bundle_id?: string; // Reference to the client plan bundle
   // Added fields from join with billing_plans
   plan_name?: string;
   billing_frequency?: string;
   bundle_name?: string; // Name of the bundle (added dynamically for bundled plans)
 }
 
-export interface ICompanyBillingCycle extends TenantEntity {
+export interface IClientBillingCycle extends TenantEntity {
   billing_cycle_id?: string;
-  company_id: string;
+  client_id: string;
   billing_cycle: string;
   effective_date: ISO8601String;
   period_start_date: ISO8601String;
@@ -238,7 +238,7 @@ export interface IBucketPlan extends TenantEntity {
 export interface IBucketUsage extends TenantEntity {
   usage_id: string;
   plan_id?: string;
-  company_id: string;
+  client_id: string;
   period_start: ISO8601String;
   period_end: ISO8601String;
   minutes_used: number;
@@ -249,7 +249,7 @@ export interface IBucketUsage extends TenantEntity {
 
 export interface PaymentMethod extends TenantEntity {
   payment_method_id: string;
-  company_id: string;
+  client_id: string;
   type: 'credit_card' | 'bank_account';
   last4: string;
   exp_month?: string;
@@ -323,7 +323,7 @@ export interface IBillingCycleInvoiceRequest {
 
 export interface ITransaction extends TenantEntity {
   transaction_id: string;
-  company_id: string;
+  client_id: string;
   invoice_id?: string;
   amount: number;
   type: TransactionType;
@@ -341,7 +341,7 @@ export interface ITransaction extends TenantEntity {
 export interface ICreditTracking extends TenantEntity {
   credit_id: string;
   tenant: string;
-  company_id: string;
+  client_id: string;
   transaction_id: string;
   amount: number;
   remaining_amount: number;
@@ -366,9 +366,9 @@ export interface ITaxRate extends TenantEntity {
   end_date?: string | null;
 }
 
-export interface ICompanyTaxRate extends TenantEntity {
-  company_tax_rate_id?: string;
-  company_id: string;
+export interface IClientTaxRate extends TenantEntity {
+  client_tax_rate_id?: string;
+  client_id: string;
   tax_rate_id: string;
   is_default: boolean; // Added based on Phase 1.1 schema changes
   location_id?: string | null; // Added based on Phase 1.1 schema changes
@@ -384,8 +384,8 @@ export interface IDefaultBillingSettings extends TenantEntity {
   updated_at: ISO8601String;
 }
 
-export interface ICompanyBillingSettings extends TenantEntity {
-  company_id: string;
+export interface IClientBillingSettings extends TenantEntity {
+  client_id: string;
   zero_dollar_invoice_handling: 'normal' | 'finalized';
   suppress_zero_dollar_invoices: boolean;
   enable_credit_expiration?: boolean;
@@ -399,7 +399,7 @@ export type ReconciliationStatus = 'open' | 'in_review' | 'resolved';
 
 export interface ICreditReconciliationReport extends TenantEntity {
   report_id: string;
-  company_id: string;
+  client_id: string;
   expected_balance: number;
   actual_balance: number;
   difference: number;
@@ -413,3 +413,4 @@ export interface ICreditReconciliationReport extends TenantEntity {
   updated_at: ISO8601String;
   metadata?: Record<string, any>; // For storing additional information about the reconciliation issue
 }
+

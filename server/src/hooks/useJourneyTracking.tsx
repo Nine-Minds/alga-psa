@@ -109,7 +109,7 @@ function getExpectedSteps(journeyName: string): string[] {
   const journeySteps: Record<string, string[]> = {
     onboarding: [
       'account_created',
-      'company_setup',
+      'client_setup',
       'team_invited',
       'first_ticket_created',
       'first_time_entry',

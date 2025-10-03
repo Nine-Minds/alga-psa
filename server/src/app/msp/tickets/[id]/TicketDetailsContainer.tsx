@@ -15,7 +15,7 @@ interface TicketDetailsContainerProps {
     ticket: any;
     comments: any[];
     documents: any[];
-    company: any;
+    client: any;
     contacts: any[];
     contactInfo: any;
     createdByUser: any;
@@ -30,7 +30,7 @@ interface TicketDetailsContainerProps {
       priority: { value: string; label: string }[];
     };
     categories: any[];
-    companies: any[];
+    clients: any[];
     locations: any[];
     agentSchedules: any[];
   };
@@ -167,7 +167,7 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
           // Pass pre-fetched data as props
           initialComments={ticketData.comments}
           initialDocuments={ticketData.documents}
-          initialCompany={ticketData.company}
+          initialClient={ticketData.client}
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
@@ -180,7 +180,7 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialCompanies={ticketData.companies}
+          initialClients={ticketData.clients}
           initialLocations={ticketData.locations}
           initialAgentSchedules={ticketData.agentSchedules}
           // Pass optimized handlers

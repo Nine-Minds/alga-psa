@@ -174,8 +174,8 @@ export function TicketCard({ activity, onViewDetails, onActionComplete }: { acti
         <div className="mt-2 pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-xs">
             <span className="font-mono bg-gray-100 px-1 rounded">#{ticket.ticketNumber}</span>
-            {ticket.companyName && (
-              <span className="text-gray-600">{ticket.companyName}</span>
+            {ticket.clientName && (
+              <span className="text-gray-600">{ticket.clientName}</span>
             )}
           </div>
         </div>

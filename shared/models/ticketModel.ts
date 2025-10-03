@@ -16,7 +16,7 @@ import { z } from 'zod';
 export const ticketFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   board_id: z.string().uuid('Board ID must be a valid UUID'),
-  company_id: z.string().uuid('Company ID must be a valid UUID'),
+  client_id: z.string().uuid('Client ID must be a valid UUID'),
   location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
   contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
   status_id: z.string().uuid('Status ID must be a valid UUID'),
@@ -36,7 +36,7 @@ export const createTicketFromAssetSchema = z.object({
   description: z.string(),
   priority_id: z.string().uuid('Priority ID must be a valid UUID'),
   asset_id: z.string().uuid('Asset ID must be a valid UUID'),
-  company_id: z.string().uuid('Company ID must be a valid UUID')
+  client_id: z.string().uuid('Client ID must be a valid UUID')
 });
 
 // Complete ticket schema for validation
@@ -47,7 +47,7 @@ export const ticketSchema = z.object({
   title: z.string(),
   url: z.string().nullable(),
   board_id: z.string().uuid(),
-  company_id: z.string().uuid(),
+  client_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
   contact_name_id: z.string().uuid().nullable(),
   status_id: z.string().uuid(),
@@ -97,7 +97,7 @@ export const createCommentSchema = z.object({
 export interface CreateTicketInput {
   title: string;
   description?: string;
-  company_id?: string;
+  client_id?: string;
   contact_id?: string; // Note: Maps to contact_name_id in database
   location_id?: string;
   status_id?: string;
@@ -129,13 +129,13 @@ export interface CreateTicketFromAssetInput {
   description: string;
   priority_id: string;
   asset_id: string;
-  company_id: string;
+  client_id: string;
 }
 
 export interface UpdateTicketInput {
   title?: string;
   url?: string;
-  company_id?: string;
+  client_id?: string;
   location_id?: string;
   contact_name_id?: string;
   status_id?: string;
@@ -181,7 +181,7 @@ export interface CreateTicketOutput {
   ticket_id: string;
   ticket_number: string;
   title: string;
-  company_id?: string;
+  client_id?: string;
   contact_id?: string; // Note: Mapped from contact_name_id
   status_id?: string;
   priority_id?: string;
@@ -435,19 +435,19 @@ export class TicketModel {
   }
 
   /**
-   * Validates that a location belongs to the specified company
+   * Validates that a location belongs to the specified client
    */
-  static async validateLocationBelongsToCompany(
+  static async validateLocationBelongsToClient(
     locationId: string,
-    companyId: string,
+    clientId: string,
     tenant: string,
     trx: Knex.Transaction
   ): Promise<BusinessRuleResult> {
     try {
-      const location = await trx('company_locations')
+      const location = await trx('client_locations')
         .where({
           location_id: locationId,
-          company_id: companyId,
+          client_id: clientId,
           tenant: tenant
         })
         .first();
@@ -455,7 +455,7 @@ export class TicketModel {
       if (!location) {
         return {
           valid: false,
-          error: 'Invalid location: Location does not belong to the selected company'
+          error: 'Invalid location: Location does not belong to the selected client'
         };
       }
 
@@ -510,11 +510,11 @@ export class TicketModel {
     const errors: string[] = [];
 
     try {
-      // Validate location belongs to company if both are provided
-      if (!options.skipLocationValidation && input.location_id && input.company_id) {
-        const locationResult = await this.validateLocationBelongsToCompany(
+      // Validate location belongs to client if both are provided
+      if (!options.skipLocationValidation && input.location_id && input.client_id) {
+        const locationResult = await this.validateLocationBelongsToClient(
           input.location_id,
-          input.company_id,
+          input.client_id,
           tenant,
           trx
         );
@@ -633,7 +633,7 @@ export class TicketModel {
       tenant,
       title: cleanedInput.title,
       ticket_number: ticketNumber,
-      company_id: cleanedInput.company_id || null,
+      client_id: cleanedInput.client_id || null,
       contact_name_id: cleanedInput.contact_id || null, // Map contact_id to contact_name_id
       location_id: cleanedInput.location_id || null,
       status_id: cleanedInput.status_id || null,
@@ -694,7 +694,7 @@ export class TicketModel {
             source: cleanedInput.source,
             board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
-            company_id: cleanedInput.company_id
+            client_id: cleanedInput.client_id
           }
         });
       } catch (error) {
@@ -733,7 +733,7 @@ export class TicketModel {
       ticket_id: ticketId,
       ticket_number: ticketNumber,
       title: cleanedInput.title,
-      company_id: cleanedInput.company_id,
+      client_id: cleanedInput.client_id,
       contact_id: cleanedInput.contact_id,
       status_id: cleanedInput.status_id,
       priority_id: cleanedInput.priority_id,
@@ -773,7 +773,7 @@ export class TicketModel {
       title: validatedData.title,
       description: validatedData.description,
       priority_id: validatedData.priority_id,
-      company_id: validatedData.company_id,
+      client_id: validatedData.client_id,
       status_id: defaultStatusId,
       entered_by: enteredBy,
       attributes: {
@@ -843,12 +843,12 @@ export class TicketModel {
     // Clean up the data before update
     const updateData = cleanNullableFields({ ...validatedData });
 
-    // Validate location belongs to the company if provided
+    // Validate location belongs to the client if provided
     if (!validationOptions.skipLocationValidation && 'location_id' in updateData && updateData.location_id) {
-      const companyId = 'company_id' in updateData ? updateData.company_id : currentTicket.company_id;
-      const locationResult = await this.validateLocationBelongsToCompany(
+      const clientId = 'client_id' in updateData ? updateData.client_id : currentTicket.client_id;
+      const locationResult = await this.validateLocationBelongsToClient(
         updateData.location_id,
-        companyId,
+        clientId,
         tenant,
         trx
       );

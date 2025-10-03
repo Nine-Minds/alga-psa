@@ -350,7 +350,7 @@ export class I18nSystemEmailService extends BaseEmailService {
   private getEmailVerificationTemplate(data: EmailVerificationData, locale: SupportedLocale): SystemEmailTemplate {
     const templates = {
       en: {
-        subject: `Verify your email${data.companyName ? ` for ${data.companyName}` : ''}`,
+        subject: `Verify your email${data.clientName ? ` for ${data.clientName}` : ''}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Email Verification</h2>
@@ -367,7 +367,7 @@ export class I18nSystemEmailService extends BaseEmailService {
         text: `Email Verification\n\nPlease verify your email address by visiting:\n${data.verificationUrl}\n\n${data.expirationTime ? `This link will expire in ${data.expirationTime}.` : ''}\n\nIf you didn't request this email, please ignore it.`
       },
       fr: {
-        subject: `Vérifiez votre email${data.companyName ? ` pour ${data.companyName}` : ''}`,
+        subject: `Vérifiez votre email${data.clientName ? ` pour ${data.clientName}` : ''}`,
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Vérification d'email</h2>

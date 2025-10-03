@@ -34,7 +34,7 @@ export const projectStatusMappingSchema = tenantSchema.extend({
 
 export const projectSchema = tenantSchema.extend({
   project_id: z.string(),
-  company_id: z.string(),
+  client_id: z.string(),
   project_name: z.string(),
   description: z.string().nullable(),
   start_date: z.date().nullable(),

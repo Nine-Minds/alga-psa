@@ -68,7 +68,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
     } else if (qboStatus === 'success') { // Check for 'success' status from backend
       setSuccessMessage('Successfully connected to QuickBooks Online.');
       setError(null); // Clear any potential error message
-      shouldFetchStatus = true; // Still fetch status to get company name etc.
+      shouldFetchStatus = true; // Still fetch status to get client name etc.
     } else if (qboStatus === 'failure') { // Handle explicit failure status
        setError(`QuickBooks Connection Failed${qboMessage ? `: ${qboMessage}` : '.'}`);
        setSuccessMessage(null);
@@ -143,7 +143,7 @@ const QboIntegrationSettings: React.FC<QboIntegrationSettingsProps> = () => {
             <div>
               <p className="font-medium">Status: Connected</p>
               <p className="text-sm text-muted-foreground">
-                Connected to: {statusInfo.companyName || 'N/A'} (Realm ID: {statusInfo.realmId || 'N/A'})
+                Connected to: {statusInfo.clientName || 'N/A'} (Realm ID: {statusInfo.realmId || 'N/A'})
               </p>
             </div>
           </div>

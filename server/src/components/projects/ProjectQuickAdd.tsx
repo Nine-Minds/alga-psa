@@ -6,15 +6,15 @@ import { Button } from 'server/src/components/ui/Button';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
-import { IProject, ICompany, IStatus } from 'server/src/interfaces';
+import { IProject, IClient, IStatus } from 'server/src/interfaces';
 import { toast } from 'react-hot-toast';
 import { createProject, generateNextWbsCode, getProjectStatuses } from 'server/src/lib/actions/project-actions/projectActions';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker'; // Import ContactPicker
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getContactsByCompany, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getContactsByClient, getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { IContact } from 'server/src/interfaces';
 import { getCurrentUser, getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -22,13 +22,13 @@ import { IUser, IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 interface ProjectQuickAddProps {
   onClose: () => void;
   onProjectAdded: (newProject: IProject) => void;
-  companies: ICompany[];
+  clients: IClient[];
 }
 
-const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, companies }) => {
+const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdded, clients }) => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [contacts, setContacts] = useState<IContact[]>([]); 
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
@@ -63,8 +63,8 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const contactsData = selectedCompanyId 
-          ? await getContactsByCompany(selectedCompanyId, 'all')
+        const contactsData = selectedClientId 
+          ? await getContactsByClient(selectedClientId, 'all')
           : await getAllContacts('all'); 
         setContacts(contactsData);
       } catch (error) {
@@ -73,7 +73,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       }
     };
     fetchContacts();
-  }, [selectedCompanyId]);
+  }, [selectedClientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,7 +83,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
     if (projectName.trim() === '') {
       errors.push('Project name is required');
     }
-    if (!selectedCompanyId) {
+    if (!selectedClientId) {
       errors.push('Client is required');
     }
     if (!selectedStatusId) {
@@ -101,7 +101,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
 
     try {
       // These checks are redundant since we validate above, but TypeScript needs them
-      if (!selectedCompanyId || !selectedStatusId) {
+      if (!selectedClientId || !selectedStatusId) {
         return;
       }
       
@@ -109,7 +109,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
       const projectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at' | 'tenant'> = {
         project_name: projectName,
         description: description || null,
-        company_id: selectedCompanyId,
+        client_id: selectedClientId,
         start_date: startDate || null,
         end_date: endDate || null,
         wbs_code: wbsCode,
@@ -195,16 +195,16 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Client *</label>
-                <CompanyPicker
-                  id='company-picker'
-                  companies={companies}
-                  onSelect={setSelectedCompanyId}
-                  selectedCompanyId={selectedCompanyId}
+                <ClientPicker
+                  id='client-picker'
+                  clients={clients}
+                  onSelect={setSelectedClientId}
+                  selectedClientId={selectedClientId}
                   filterState={filterState}
                   onFilterStateChange={setFilterState}
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={setClientTypeFilter}
-                  className={hasAttemptedSubmit && !selectedCompanyId ? 'ring-1 ring-red-500' : ''}
+                  className={hasAttemptedSubmit && !selectedClientId ? 'ring-1 ring-red-500' : ''}
                 />
               </div>
               <div>
@@ -214,7 +214,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                   contacts={contacts}
                   value={selectedContactId || ''}
                   onValueChange={setSelectedContactId}
-                  companyId={selectedCompanyId || undefined} 
+                  clientId={selectedClientId || undefined} 
                   placeholder="Select Contact"
                   buttonWidth="full"
                 />
@@ -284,7 +284,7 @@ const ProjectQuickAdd: React.FC<ProjectQuickAddProps> = ({ onClose, onProjectAdd
                 }} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button id='create-button' type="submit" disabled={isSubmitting} className={!projectName.trim() || !selectedCompanyId || !selectedStatusId ? 'opacity-50' : ''}>
+                <Button id='create-button' type="submit" disabled={isSubmitting} className={!projectName.trim() || !selectedClientId || !selectedStatusId ? 'opacity-50' : ''}>
                   {isSubmitting ? 'Creating...' : 'Create Project'}
                 </Button>
               </div>

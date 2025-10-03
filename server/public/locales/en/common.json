@@ -78,7 +78,7 @@
       "tenantNotFound": "Tenant not found in session. Please log out and log back in.",
       "userNotFound": "User not found",
       "contactNotFound": "User not associated with a contact",
-      "companyNotFound": "Contact not associated with a company"
+      "clientNotFound": "Contact not associated with a client"
     },
     "permissions": {
       "tickets": {
@@ -127,7 +127,7 @@
       "notSet": "Not set",
       "notSetWithSource": "Not set (Uses {{source}}: {{languageName}} - {{locale}})",
       "source": {
-        "company": "company default",
+        "client": "client default",
         "tenant": "tenant default",
         "system": "system default"
       }
@@ -135,12 +135,12 @@
   },
   "yes": "Yes",
   "no": "No",
-  "companies": {
+  "clients": {
     "locations": {
-      "sectionTitle": "Company Locations",
+      "sectionTitle": "Client Locations",
       "manageButton": "Manage Locations",
-      "dialogTitle": "Manage Locations - {{company}}",
-      "managerLabel": "Company Locations Manager",
+      "dialogTitle": "Manage Locations - {{client}}",
+      "managerLabel": "Client Locations Manager",
       "listTitle": "Locations",
       "buttons": {
         "add": "Add Location",
@@ -189,7 +189,7 @@
         "notes": "Notes",
         "notesHelper": "Additional notes about this location",
         "defaultLocation": "Default Location",
-        "defaultLocationHelper": "Mark this as the default location for the company",
+        "defaultLocationHelper": "Mark this as the default location for the client",
         "billingAddress": "Billing Address",
         "billingAddressHelper": "Use this location as the billing address",
         "shippingAddress": "Shipping Address",
@@ -210,7 +210,7 @@
       "errors": {
         "loadTaxRegions": "Failed to load tax regions",
         "loadCountries": "Failed to load countries",
-        "loadLocations": "Failed to load company locations",
+        "loadLocations": "Failed to load client locations",
         "save": "Failed to save location",
         "delete": "Failed to delete location",
         "setDefault": "Failed to set default location"

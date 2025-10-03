@@ -14,10 +14,10 @@ exports.seed = function (knex) {
                             plan_name: 'Wonderland Basic' 
                         }).select('plan_id').first() 
                     }).select('bucket_plan_id').first(),
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Wonderland' 
-                    }).select('company_id').first(),
+                        client_name: 'Wonderland' 
+                    }).select('client_id').first(),
                     period_start: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     period_end: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day'"),
                     hours_used: 35,
@@ -36,10 +36,10 @@ exports.seed = function (knex) {
                             plan_name: 'Oz Premium' 
                         }).select('plan_id').first() 
                     }).select('bucket_plan_id').first(),
-                    company_id: knex('companies').where({ 
+                    client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
-                        company_name: 'Emerald City' 
-                    }).select('company_id').first(),
+                        client_name: 'Emerald City' 
+                    }).select('client_id').first(),
                     period_start: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 month'"),
                     period_end: knex.raw("DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '1 day'"),
                     hours_used: 110,

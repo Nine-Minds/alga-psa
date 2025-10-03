@@ -13,7 +13,7 @@ import {
     ITimeBasedCharge,
     IFixedPriceCharge,
     BillingCycleType,
-    ICompanyBillingCycle
+    IClientBillingCycle
 } from 'server/src/interfaces/billing.interfaces';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
@@ -59,7 +59,7 @@ export async function getChargeUnitPrice(charge: IBillingCharge): Promise<number
  * This ensures that when one tax rate ends and another begins,
  * there is no overlap or gap in coverage.
  */
-export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
+export async function getClientTaxRate(taxRegion: string, date: ISO8601String): Promise<number> {
     const { knex, tenant } = await createTenantKnex();
     const taxRates = await withTransaction(knex, async (trx: Knex.Transaction) => {
         return await trx('tax_rates')
@@ -80,8 +80,8 @@ export async function getCompanyTaxRate(taxRegion: string, date: ISO8601String):
     return totalTaxRate;
 }
 
-export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycle & {
-    company_name: string;
+export async function getAvailableBillingPeriods(): Promise<(IClientBillingCycle & {
+    client_name: string;
     total_unbilled: number;
     period_start_date: ISO8601String;
     period_end_date: ISO8601String;
@@ -97,9 +97,9 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
         // Get all billing cycles that don't have invoices
         console.log('Querying for available billing periods');
         const availablePeriods = await withTransaction(knex, async (trx: Knex.Transaction) => {
-            return await trx('company_billing_cycles as cbc')
-                .join('companies as c', function () {
-                    this.on('c.company_id', '=', 'cbc.company_id')
+            return await trx('client_billing_cycles as cbc')
+                .join('clients as c', function () {
+                    this.on('c.client_id', '=', 'cbc.client_id')
                         .andOn('c.tenant', '=', 'cbc.tenant');
                 })
                 .leftJoin('invoices as i', function () {
@@ -110,8 +110,8 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
                 .whereNotNull('cbc.period_end_date')
                 .whereNull('i.invoice_id')
                 .select(
-                    'cbc.company_id',
-                    'c.company_name',
+                    'cbc.client_id',
+                    'c.client_name',
                     'cbc.billing_cycle_id',
                     'cbc.billing_cycle',
                     'cbc.period_start_date',
@@ -125,8 +125,8 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
         // For each period, calculate the total unbilled amount
         console.log('Calculating unbilled amounts for each period');
-        const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<ICompanyBillingCycle & {
-            company_name: string;
+        const periodsWithTotals = await Promise.all(availablePeriods.map(async (period): Promise<IClientBillingCycle & {
+            client_name: string;
             total_unbilled: number;
             period_start_date: ISO8601String;
             period_end_date: ISO8601String;
@@ -134,12 +134,12 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
             is_early: boolean;
         }> => {
             try {
-                console.log(`Processing period for company: ${period.company_name} (${period.company_id})`);
+                console.log(`Processing period for client: ${period.client_name} (${period.client_id})`);
                 console.log(`Period dates: ${period.period_start_date} to ${period.period_end_date}`);
 
                 // Ensure we have valid dates before proceeding
                 if (!period.period_start_date || !period.period_end_date) {
-                    console.error(`Invalid dates for company ${period.company_name}: start=${period.period_start_date}, end=${period.period_end_date}`);
+                    console.error(`Invalid dates for client ${period.client_name}: start=${period.period_start_date}, end=${period.period_end_date}`);
                     return {
                         ...period,
                         total_unbilled: 0,
@@ -153,17 +153,17 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
 
                 try {
                     const billingResult = await billingEngine.calculateBilling(
-                        period.company_id,
+                        period.client_id,
                         period.period_start_date,
                         period.period_end_date,
                         period.billing_cycle_id
                     );
                     total_unbilled = billingResult.charges.reduce((sum, charge) => sum + charge.total, 0);
                 } catch (_error) {
-                    console.log(`No billable charges for company ${period.company_name} (${period.company_id})`);
+                    console.log(`No billable charges for client ${period.client_name} (${period.client_id})`);
                 }
 
-                console.log(`Total unbilled amount for ${period.company_name}: ${total_unbilled}`);
+                console.log(`Total unbilled amount for ${period.client_name}: ${total_unbilled}`);
 
                 // Allow generation of invoices even if period hasn't ended
                 const can_generate = true;
@@ -173,7 +173,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
                 try {
                     periodEndDate = toPlainDate(period.period_end_date);
                 } catch (error) {
-                    console.error(`Error converting period_end_date for company ${period.company_name}:`, error);
+                    console.error(`Error converting period_end_date for client ${period.client_name}:`, error);
                     return {
                         ...period,
                         total_unbilled: 0,
@@ -192,7 +192,7 @@ export async function getAvailableBillingPeriods(): Promise<(ICompanyBillingCycl
                     is_early
                 };
             } catch (error) {
-                console.error(`Error processing period for company ${period.company_name}:`, error);
+                console.error(`Error processing period for client ${period.client_name}:`, error);
                 return {
                     ...period,
                     total_unbilled: 0,
@@ -224,19 +224,19 @@ export async function getPaymentTermDays(paymentTerms: string): Promise<number> 
     }
 }
 
-export async function getDueDate(companyId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
+export async function getDueDate(clientId: string, billingEndDate: ISO8601String): Promise<ISO8601String> {
     const { knex, tenant } = await createTenantKnex();
-    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('companies')
+    const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('clients')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .select('payment_terms')
             .first();
     });
 
-    const paymentTerms = company?.payment_terms || 'net_30';
+    const paymentTerms = client?.payment_terms || 'net_30';
     const days = await getPaymentTermDays(paymentTerms); // Await the async function
     console.log('paymentTerms', paymentTerms, 'days', days);
 
@@ -254,19 +254,19 @@ export async function getDueDate(companyId: string, billingEndDate: ISO8601Strin
  * 2. The inclusive start date for the next period (>= this date)
  * This ensures continuous coverage with no gaps or overlaps between billing periods.
  */
-export async function getNextBillingDate(companyId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
+export async function getNextBillingDate(clientId: string, currentEndDate: ISO8601String): Promise<ISO8601String> {
     const { knex, tenant } = await createTenantKnex();
-    const company = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        return await trx('company_billing_cycles')
+    const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('client_billing_cycles')
             .where({
-                company_id: companyId,
+                client_id: clientId,
                 tenant
             })
             .select('billing_cycle')
             .first();
     });
 
-    const billingCycle = (company?.billing_cycle || 'monthly') as BillingCycleType;
+    const billingCycle = (client?.billing_cycle || 'monthly') as BillingCycleType;
 
     // Convert to PlainDate for consistent date arithmetic
     const currentDate = toPlainDate(currentEndDate);
@@ -302,7 +302,7 @@ export async function getNextBillingDate(companyId: string, currentEndDate: ISO8
 
 export async function calculatePreviewTax(
     charges: IBillingCharge[],
-    companyId: string,
+    clientId: string,
     cycleEnd: ISO8601String,
     defaultTaxRegion: string
 ): Promise<number> {
@@ -313,7 +313,7 @@ export async function calculatePreviewTax(
     for (const charge of charges) {
         if (charge.is_taxable && charge.total > 0) {
             const taxResult = await taxService.calculateTax(
-                companyId,
+                clientId,
                 charge.total,
                 cycleEnd,
                 charge.tax_region || defaultTaxRegion,
@@ -328,7 +328,7 @@ export async function calculatePreviewTax(
 
 export async function calculateChargeDetails(
     charge: IBillingCharge,
-    companyId: string,
+    clientId: string,
     endDate: ISO8601String,
     taxService: TaxService,
     defaultTaxRegion: string
@@ -346,7 +346,7 @@ export async function calculateChargeDetails(
     // Calculate tax only for taxable items with positive amounts
     const taxCalculationResult = charge.is_taxable !== false && netAmount > 0
         ? await taxService.calculateTax(
-            companyId,
+            clientId,
             netAmount,
             endDate,
             charge.tax_region || defaultTaxRegion

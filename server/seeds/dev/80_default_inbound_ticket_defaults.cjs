@@ -58,7 +58,7 @@ exports.seed = async function(knex) {
     board_id: defaultBoardId,
     status_id: defaultStatusId,
     priority_id: defaultPriorityId,
-    company_id: null,
+    client_id: null,
     entered_by: null, // System-generated tickets
     category_id: null,
     subcategory_id: null,
