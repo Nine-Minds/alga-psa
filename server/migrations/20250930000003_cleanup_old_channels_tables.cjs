@@ -18,69 +18,72 @@ exports.up = async function(knex) {
   console.log('Starting cleanup of old channels tables and columns...');
 
   // Step 0: Update views that use channel_id to use board_id instead
-  console.log('Updating views to use board_id instead of channel_id...');
+  // TODO: Handle this manually - update v_ticket_details view to use boards.board_id instead of channels.channel_id
+  console.log('Skipping view updates (handle manually)...');
 
-  const viewExists = await knex.raw(`
-    SELECT EXISTS (
-      SELECT FROM pg_views
-      WHERE viewname = 'v_ticket_details'
-    ) as exists
-  `);
+  //console.log('Updating views to use board_id instead of channel_id...');
 
-  if (viewExists.rows[0].exists) {
-    try {
-      // Drop and recreate the view with correct columns
-      await knex.raw(`DROP VIEW IF EXISTS v_ticket_details CASCADE`);
+  //const viewExists = await knex.raw(`
+  //  SELECT EXISTS (
+  //    SELECT FROM pg_views
+  //    WHERE viewname = 'v_ticket_details'
+  //  ) as exists
+  //`);
 
-      // Recreate view with board_id instead of channel_id
-      await knex.raw(`
-        CREATE VIEW v_ticket_details AS
-        SELECT
-          t.tenant,
-          t.ticket_id,
-          t.ticket_number,
-          t.title,
-          t.url,
-          c.company_name AS company,
-          cn.full_name AS contact_name,
-          s.name AS status,
-          b.board_name AS channel,
-          cat.category_name AS category,
-          subcat.category_name AS subcategory,
-          p.priority_name AS priority,
-          sev.severity_name AS severity,
-          u.urgency_name AS urgency,
-          i.impact_name AS impact,
-          ue.username AS entered_by,
-          uu.username AS updated_by,
-          ua.username AS assigned_to,
-          uc.username AS closed_by,
-          t.entered_at,
-          t.updated_at,
-          t.closed_at,
-          t.is_closed
-        FROM tickets t
-          LEFT JOIN companies c ON t.tenant = c.tenant AND t.company_id = c.company_id
-          LEFT JOIN contacts cn ON t.tenant = cn.tenant AND t.contact_name_id = cn.contact_name_id
-          LEFT JOIN statuses s ON t.tenant = s.tenant AND t.status_id = s.status_id
-          LEFT JOIN boards b ON t.tenant = b.tenant AND t.board_id = b.board_id
-          LEFT JOIN categories cat ON t.tenant = cat.tenant AND t.category_id = cat.category_id
-          LEFT JOIN categories subcat ON t.tenant = subcat.tenant AND t.subcategory_id = subcat.category_id
-          LEFT JOIN priorities p ON t.tenant = p.tenant AND t.priority_id = p.priority_id
-          LEFT JOIN severities sev ON t.tenant = sev.tenant AND t.severity_id = sev.severity_id
-          LEFT JOIN urgencies u ON t.tenant = u.tenant AND t.urgency_id = u.urgency_id
-          LEFT JOIN impacts i ON t.tenant = i.tenant AND t.impact_id = i.impact_id
-          LEFT JOIN users ue ON t.tenant = ue.tenant AND t.entered_by = ue.user_id
-          LEFT JOIN users uu ON t.tenant = uu.tenant AND t.updated_by = uu.user_id
-          LEFT JOIN users ua ON t.tenant = ua.tenant AND t.assigned_to = ua.user_id
-          LEFT JOIN users uc ON t.tenant = uc.tenant AND t.closed_by = uc.user_id
-      `);
-      console.log('  ✓ Recreated v_ticket_details view with board_id');
-    } catch (error) {
-      console.log(`  ⚠ Could not update v_ticket_details view: ${error.message}`);
-      console.log('  You may need to manually update this view');
-    }
-  }
+  //if (viewExists.rows[0].exists) {
+  //  try {
+  //    // Drop and recreate the view with correct columns
+  //    await knex.raw(`DROP VIEW IF EXISTS v_ticket_details CASCADE`);
+
+  //    // Recreate view with board_id instead of channel_id
+  //    await knex.raw(`
+  //      CREATE VIEW v_ticket_details AS
+  //      SELECT
+  //        t.tenant,
+  //        t.ticket_id,
+  //        t.ticket_number,
+  //        t.title,
+  //        t.url,
+  //        c.company_name AS company,
+  //        cn.full_name AS contact_name,
+  //        s.name AS status,
+  //        b.board_name AS channel,
+  //        cat.category_name AS category,
+  //        subcat.category_name AS subcategory,
+  //        p.priority_name AS priority,
+  //        sev.severity_name AS severity,
+  //        u.urgency_name AS urgency,
+  //        i.impact_name AS impact,
+  //        ue.username AS entered_by,
+  //        uu.username AS updated_by,
+  //        ua.username AS assigned_to,
+  //        uc.username AS closed_by,
+  //        t.entered_at,
+  //        t.updated_at,
+  //        t.closed_at,
+  //        t.is_closed
+  //      FROM tickets t
+  //        LEFT JOIN companies c ON t.tenant = c.tenant AND t.company_id = c.company_id
+  //        LEFT JOIN contacts cn ON t.tenant = cn.tenant AND t.contact_name_id = cn.contact_name_id
+  //        LEFT JOIN statuses s ON t.tenant = s.tenant AND t.status_id = s.status_id
+  //        LEFT JOIN boards b ON t.tenant = b.tenant AND t.board_id = b.board_id
+  //        LEFT JOIN categories cat ON t.tenant = cat.tenant AND t.category_id = cat.category_id
+  //        LEFT JOIN categories subcat ON t.tenant = subcat.tenant AND t.subcategory_id = subcat.category_id
+  //        LEFT JOIN priorities p ON t.tenant = p.tenant AND t.priority_id = p.priority_id
+  //        LEFT JOIN severities sev ON t.tenant = sev.tenant AND t.severity_id = sev.severity_id
+  //        LEFT JOIN urgencies u ON t.tenant = u.tenant AND t.urgency_id = u.urgency_id
+  //        LEFT JOIN impacts i ON t.tenant = i.tenant AND t.impact_id = i.impact_id
+  //        LEFT JOIN users ue ON t.tenant = ue.tenant AND t.entered_by = ue.user_id
+  //        LEFT JOIN users uu ON t.tenant = uu.tenant AND t.updated_by = uu.user_id
+  //        LEFT JOIN users ua ON t.tenant = ua.tenant AND t.assigned_to = ua.user_id
+  //        LEFT JOIN users uc ON t.tenant = uc.tenant AND t.closed_by = uc.user_id
+  //    `);
+  //    console.log('  ✓ Recreated v_ticket_details view with board_id');
+  //  } catch (error) {
+  //    console.log(`  ⚠ Could not update v_ticket_details view: ${error.message}`);
+  //    console.log('  You may need to manually update this view');
+  //  }
+  //}
 
   // Step 1: Make channel_id nullable in related tables (if not already)
   // This allows the app to use board_id while channel_id still exists
