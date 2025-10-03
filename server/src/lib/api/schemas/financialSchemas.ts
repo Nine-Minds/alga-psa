@@ -119,7 +119,7 @@ export const taxRateSchema = z.number().min(0).max(1);
 
 export const transactionBaseSchema = z.object({
   transaction_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   invoice_id: uuidSchema.optional(),
   amount: z.number(),
   type: transactionTypeSchema,
@@ -142,7 +142,7 @@ export const updateTransactionSchema = transactionBaseSchema.partial();
 export const transactionResponseSchema = transactionBaseSchema.merge(baseEntitySchema);
 
 export const transactionListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   type: transactionTypeSchema.optional(),
   status: transactionStatusSchema.optional(),
   amount_min: numberTransform.optional(),
@@ -156,7 +156,7 @@ export const transactionListQuerySchema = paginationQuerySchema.merge(baseFilter
 
 export const creditTrackingBaseSchema = z.object({
   credit_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   transaction_id: uuidSchema,
   amount: amountSchema,
   remaining_amount: amountSchema,
@@ -173,7 +173,7 @@ export const updateCreditTrackingSchema = creditTrackingBaseSchema.partial();
 export const creditTrackingResponseSchema = creditTrackingBaseSchema.merge(baseEntitySchema);
 
 export const creditListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   include_expired: booleanTransform.optional().default("false"),
   expiring_soon: booleanTransform.optional(),
   has_remaining: booleanTransform.optional()
@@ -181,13 +181,13 @@ export const creditListQuerySchema = paginationQuerySchema.merge(baseFilterSchem
 
 // Credit application schemas
 export const applyCreditToInvoiceSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   invoice_id: uuidSchema,
   requested_amount: amountSchema
 });
 
 export const createPrepaymentInvoiceSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   amount: amountSchema,
   manual_expiration_date: dateSchema.optional()
 });
@@ -206,7 +206,7 @@ export const manuallyExpireCreditSchema = z.object({
 
 export const transferCreditSchema = z.object({
   source_credit_id: uuidSchema,
-  target_company_id: uuidSchema,
+  target_client_id: uuidSchema,
   amount: amountSchema,
   user_id: uuidSchema,
   reason: z.string().optional()
@@ -232,7 +232,7 @@ export const creditAllocationResponseSchema = creditAllocationBaseSchema.merge(b
 
 export const paymentMethodBaseSchema = z.object({
   payment_method_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   type: paymentMethodTypeSchema,
   last4: z.string().length(4),
   exp_month: z.string().length(2).optional(),
@@ -250,7 +250,7 @@ export const updatePaymentMethodSchema = paymentMethodBaseSchema.partial();
 export const paymentMethodResponseSchema = paymentMethodBaseSchema.merge(baseEntitySchema);
 
 export const paymentMethodListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   type: paymentMethodTypeSchema.optional(),
   is_default: booleanTransform.optional(),
   exclude_deleted: booleanTransform.optional().default("true")
@@ -263,7 +263,7 @@ export const paymentMethodListQuerySchema = paginationQuerySchema.merge(baseFilt
 export const billingChargeBaseSchema = z.object({
   type: chargeTypeSchema,
   service_id: uuidSchema.optional(),
-  company_billing_plan_id: uuidSchema.optional(),
+  client_billing_plan_id: uuidSchema.optional(),
   service_name: z.string(),
   rate: z.number(),
   total: z.number(),
@@ -274,7 +274,7 @@ export const billingChargeBaseSchema = z.object({
   tax_rate: z.number().default(0),
   tax_region: z.string().optional(),
   is_taxable: z.boolean().optional().default(true),
-  company_bundle_id: uuidSchema.optional(),
+  client_bundle_id: uuidSchema.optional(),
   bundle_name: z.string().optional()
 });
 
@@ -375,7 +375,7 @@ export const billingResultSchema = z.object({
 
 export const invoiceBaseSchema = z.object({
   invoice_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   invoice_date: isoDateSchema,
   due_date: isoDateSchema,
   subtotal: z.number(),
@@ -398,7 +398,7 @@ export const updateInvoiceSchema = invoiceBaseSchema.partial();
 export const invoiceResponseSchema = invoiceBaseSchema.merge(baseEntitySchema);
 
 export const invoiceListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   status: invoiceStatusSchema.optional(),
   billing_cycle_id: uuidSchema.optional(),
   due_date_from: dateSchema.optional(),
@@ -430,7 +430,7 @@ export const invoiceItemBaseSchema = z.object({
   discount_percentage: z.number().optional(),
   applies_to_item_id: uuidSchema.optional(),
   applies_to_service_id: uuidSchema.optional(),
-  company_bundle_id: uuidSchema.optional(),
+  client_bundle_id: uuidSchema.optional(),
   bundle_name: z.string().optional(),
   is_bundle_header: z.boolean().optional().default(false),
   parent_item_id: uuidSchema.optional(),
@@ -514,8 +514,8 @@ export const taxCalculationResultSchema = z.object({
   applied_holidays: z.array(z.any()).optional()
 });
 
-export const companyTaxSettingsSchema = z.object({
-  company_id: uuidSchema,
+export const clientTaxSettingsSchema = z.object({
+  client_id: uuidSchema,
   is_reverse_charge_applicable: z.boolean().default(false),
   tax_components: z.array(taxComponentSchema).optional(),
   tax_rate_thresholds: z.array(z.any()).optional(),
@@ -558,10 +558,10 @@ export const billingPlanListQuerySchema = paginationQuerySchema.merge(baseFilter
   service_category: z.string().optional()
 });
 
-// Company billing plan schemas
-export const companyBillingPlanBaseSchema = z.object({
-  company_billing_plan_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+// Client billing plan schemas
+export const clientBillingPlanBaseSchema = z.object({
+  client_billing_plan_id: uuidSchema.optional(),
+  client_id: uuidSchema,
   plan_id: uuidSchema,
   service_category: z.string().optional(),
   service_category_name: z.string().optional(),
@@ -569,40 +569,40 @@ export const companyBillingPlanBaseSchema = z.object({
   end_date: dateSchema.nullable().optional(),
   is_active: z.boolean().default(true),
   custom_rate: z.number().optional(),
-  company_bundle_id: uuidSchema.optional(),
+  client_bundle_id: uuidSchema.optional(),
   plan_name: z.string().optional(),
   billing_frequency: billingCycleTypeSchema.optional(),
   bundle_name: z.string().optional()
 });
 
-export const createCompanyBillingPlanSchema = companyBillingPlanBaseSchema.extend({
+export const createClientBillingPlanSchema = clientBillingPlanBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateCompanyBillingPlanSchema = companyBillingPlanBaseSchema.partial();
+export const updateClientBillingPlanSchema = clientBillingPlanBaseSchema.partial();
 
-export const companyBillingPlanResponseSchema = companyBillingPlanBaseSchema.merge(baseEntitySchema);
+export const clientBillingPlanResponseSchema = clientBillingPlanBaseSchema.merge(baseEntitySchema);
 
 // ============================================================================
 // BILLING CYCLE SCHEMAS
 // ============================================================================
 
-export const companyBillingCycleBaseSchema = z.object({
+export const clientBillingCycleBaseSchema = z.object({
   billing_cycle_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   billing_cycle: billingCycleTypeSchema,
   effective_date: dateSchema,
   period_start_date: dateSchema,
   period_end_date: dateSchema
 });
 
-export const createCompanyBillingCycleSchema = companyBillingCycleBaseSchema.extend({
+export const createClientBillingCycleSchema = clientBillingCycleBaseSchema.extend({
   tenant: uuidSchema
 });
 
-export const updateCompanyBillingCycleSchema = companyBillingCycleBaseSchema.partial();
+export const updateClientBillingCycleSchema = clientBillingCycleBaseSchema.partial();
 
-export const companyBillingCycleResponseSchema = companyBillingCycleBaseSchema.merge(baseEntitySchema);
+export const clientBillingCycleResponseSchema = clientBillingCycleBaseSchema.merge(baseEntitySchema);
 
 export const billingCycleInvoiceRequestSchema = z.object({
   billing_cycle_id: uuidSchema
@@ -614,7 +614,7 @@ export const billingCycleInvoiceRequestSchema = z.object({
 
 export const creditReconciliationReportBaseSchema = z.object({
   report_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   expected_balance: z.number(),
   actual_balance: z.number(),
   difference: z.number(),
@@ -636,7 +636,7 @@ export const updateCreditReconciliationReportSchema = creditReconciliationReport
 export const creditReconciliationReportResponseSchema = creditReconciliationReportBaseSchema.merge(baseEntitySchema);
 
 export const reconciliationListQuerySchema = paginationQuerySchema.merge(baseFilterSchema).extend({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   status: reconciliationStatusSchema.optional(),
   detection_date_from: dateSchema.optional(),
   detection_date_to: dateSchema.optional(),
@@ -656,8 +656,8 @@ export const defaultBillingSettingsSchema = z.object({
   credit_expiration_notification_days: z.array(z.number().int().min(1))
 }).merge(baseEntitySchema);
 
-export const companyBillingSettingsSchema = z.object({
-  company_id: uuidSchema,
+export const clientBillingSettingsSchema = z.object({
+  client_id: uuidSchema,
   zero_dollar_invoice_handling: zeroInvoiceHandlingSchema,
   suppress_zero_dollar_invoices: z.boolean(),
   enable_credit_expiration: z.boolean().optional(),
@@ -678,7 +678,7 @@ export const updateBillingSettingsSchema = z.object({
 // ============================================================================
 
 export const accountBalanceReportSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   current_balance: z.number(),
   available_credit: z.number(),
   expired_credit: z.number(),
@@ -690,8 +690,8 @@ export const accountBalanceReportSchema = z.object({
 });
 
 export const agingReportItemSchema = z.object({
-  company_id: uuidSchema,
-  company_name: z.string(),
+  client_id: uuidSchema,
+  client_name: z.string(),
   current: z.number(),
   days_30: z.number(),
   days_60: z.number(),
@@ -710,11 +710,11 @@ export const agingReportSchema = z.object({
     total_over_90_days: z.number(),
     grand_total: z.number()
   }),
-  companies: z.array(agingReportItemSchema)
+  clients: z.array(agingReportItemSchema)
 });
 
 export const financialAnalyticsQuerySchema = z.object({
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   date_from: dateSchema,
   date_to: dateSchema,
   group_by: z.enum(['day', 'week', 'month']).optional().default('month'),
@@ -763,7 +763,7 @@ export const bulkCreditOperationSchema = z.object({
   operation: z.enum(['expire', 'extend_expiration', 'transfer']),
   parameters: z.object({
     expiration_date: dateSchema.optional(),
-    target_company_id: uuidSchema.optional(),
+    target_client_id: uuidSchema.optional(),
     reason: z.string().optional()
   }).optional()
 });
@@ -843,7 +843,7 @@ export const bucketPlanResponseSchema = bucketPlanBaseSchema.merge(baseEntitySch
 export const bucketUsageSchema = z.object({
   usage_id: uuidSchema.optional(),
   plan_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   period_start: dateSchema,
   period_end: dateSchema,
   minutes_used: z.number(),
@@ -930,7 +930,7 @@ export const bulkOperationSuccessResponseSchema = successResponseSchema.extend({
 // ============================================================================
 
 export const validateCreditBalanceSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   expected_balance: z.number().optional()
 });
 
@@ -944,7 +944,7 @@ export const creditValidationResultSchema = z.object({
 });
 
 export const calculateBillingSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   period_start: dateSchema,
   period_end: dateSchema,
   billing_cycle_id: uuidSchema.optional()

@@ -1,19 +1,19 @@
 /**
- * API Company Controller V2
+ * API Client Controller V2
  * Simplified version with proper API key authentication
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
-import { CompanyService } from '../services/CompanyService';
+import { ClientService } from '../services/ClientService';
 import { ContactService } from '../services/ContactService';
-import { 
-  createCompanySchema,
-  updateCompanySchema,
-  companyListQuerySchema,
-  createCompanyLocationSchema,
-  updateCompanyLocationSchema
-} from '../schemas/company';
+import {
+  createClientSchema,
+  updateClientSchema,
+  clientListQuerySchema,
+  createClientLocationSchema,
+  updateClientLocationSchema
+} from '../schemas/client';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
@@ -41,19 +41,19 @@ import {
 } from '../middleware/apiMiddleware';
 import { ZodError } from 'zod';
 
-export class ApiCompanyController extends ApiBaseController {
-  private companyService: CompanyService;
+export class ApiClientController extends ApiBaseController {
+  private clientService: ClientService;
   private contactService: ContactService;
 
   constructor() {
-    const companyService = new CompanyService();
+    const clientService = new ClientService();
     const contactService = new ContactService();
     
-    super(companyService, {
-      resource: 'company',
-      createSchema: createCompanySchema,
-      updateSchema: updateCompanySchema,
-      querySchema: companyListQuerySchema,
+    super(clientService, {
+      resource: 'client',
+      createSchema: createClientSchema,
+      updateSchema: updateClientSchema,
+      querySchema: clientListQuerySchema,
       permissions: {
         create: 'create',
         read: 'read',
@@ -63,12 +63,12 @@ export class ApiCompanyController extends ApiBaseController {
       }
     });
     
-    this.companyService = companyService;
+    this.clientService = clientService;
     this.contactService = contactService;
   }
 
   /**
-   * Get company statistics
+   * Get client statistics
    */
   stats() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -118,10 +118,10 @@ export class ApiCompanyController extends ApiBaseController {
           const knex = await getConnection(tenantId!);
           const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read company');
+            throw new ForbiddenError('Permission denied: Cannot read client');
           }
 
-          const stats = await this.companyService.getCompanyStats(apiRequest.context!);
+          const stats = await this.clientService.getClientStats(apiRequest.context!);
           
           return createSuccessResponse(stats);
         });
@@ -132,7 +132,7 @@ export class ApiCompanyController extends ApiBaseController {
   }
 
   /**
-   * Get company contacts
+   * Get client contacts
    */
   getContacts() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -176,11 +176,11 @@ export class ApiCompanyController extends ApiBaseController {
           user
         };
 
-        // Extract company ID from path
+        // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
-        const companiesIndex = pathParts.findIndex(part => part === 'companies');
-        const companyId = pathParts[companiesIndex + 1];
+        const clientsIndex = pathParts.findIndex(part => part === 'clients' || part === 'clients');
+        const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -188,25 +188,25 @@ export class ApiCompanyController extends ApiBaseController {
           const knex = await getConnection(tenantId!);
           const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read company');
+            throw new ForbiddenError('Permission denied: Cannot read client');
           }
 
-          // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context!);
-          if (!company) {
-            throw new NotFoundError('Company not found');
+          // Verify client exists
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
           }
 
           // Get pagination params
           const page = parseInt(url.searchParams.get('page') || '1');
           const limit = Math.min(parseInt(url.searchParams.get('limit') || '25'), 100);
 
-          // Use ContactService to get contacts for this company
+          // Use ContactService to get contacts for this client
           const contacts = await this.contactService.list(
             { 
               page, 
               limit,
-              filters: { company_id: companyId } 
+              filters: { client_id: clientId } 
             },
             apiRequest.context!
           );
@@ -225,7 +225,7 @@ export class ApiCompanyController extends ApiBaseController {
   }
 
   /**
-   * Create company location
+   * Create client location
    */
   createLocation() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -269,11 +269,11 @@ export class ApiCompanyController extends ApiBaseController {
           user
         };
 
-        // Extract company ID from path
+        // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
-        const companiesIndex = pathParts.findIndex(part => part === 'companies');
-        const companyId = pathParts[companiesIndex + 1];
+        const clientsIndex = pathParts.findIndex(part => part === 'clients' || part === 'clients');
+        const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -281,20 +281,20 @@ export class ApiCompanyController extends ApiBaseController {
           const knex = await getConnection(tenantId!);
           const hasAccess = await hasPermission(user, 'client', 'update', knex);
           if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot update company');
+            throw new ForbiddenError('Permission denied: Cannot update client');
           }
 
-          // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context!);
-          if (!company) {
-            throw new NotFoundError('Company not found');
+          // Verify client exists
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
           }
 
           // Validate data
           let data;
           try {
             const body = await req.json();
-            data = createCompanyLocationSchema.parse(body);
+            data = createClientLocationSchema.parse(body);
           } catch (error) {
             if (error instanceof ZodError) {
               throw new ValidationError('Validation failed', error.errors);
@@ -302,8 +302,8 @@ export class ApiCompanyController extends ApiBaseController {
             throw error;
           }
 
-          const location = await this.companyService.createLocation(
-            companyId,
+          const location = await this.clientService.createLocation(
+            clientId,
             data,
             apiRequest.context!
           );
@@ -317,7 +317,7 @@ export class ApiCompanyController extends ApiBaseController {
   }
 
   /**
-   * Get company locations
+   * Get client locations
    */
   getLocations() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -361,11 +361,11 @@ export class ApiCompanyController extends ApiBaseController {
           user
         };
 
-        // Extract company ID from path
+        // Extract client/client ID from path (support both old and new paths)
         const url = new URL(req.url);
         const pathParts = url.pathname.split('/');
-        const companiesIndex = pathParts.findIndex(part => part === 'companies');
-        const companyId = pathParts[companiesIndex + 1];
+        const clientsIndex = pathParts.findIndex(part => part === 'clients' || part === 'clients');
+        const clientId = pathParts[clientsIndex + 1];
 
         // Run within tenant context
         return await runWithTenant(tenantId!, async () => {
@@ -373,17 +373,17 @@ export class ApiCompanyController extends ApiBaseController {
           const knex = await getConnection(tenantId!);
           const hasAccess = await hasPermission(user, 'client', 'read', knex);
           if (!hasAccess) {
-            throw new ForbiddenError('Permission denied: Cannot read company');
+            throw new ForbiddenError('Permission denied: Cannot read client');
           }
 
-          // Verify company exists
-          const company = await this.companyService.getById(companyId, apiRequest.context!);
-          if (!company) {
-            throw new NotFoundError('Company not found');
+          // Verify client exists
+          const client = await this.clientService.getById(clientId, apiRequest.context!);
+          if (!client) {
+            throw new NotFoundError('Client not found');
           }
 
-          const locations = await this.companyService.getCompanyLocations(
-            companyId,
+          const locations = await this.clientService.getClientLocations(
+            clientId,
             apiRequest.context!
           );
           
