@@ -4,14 +4,12 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createTestDate } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
-  createFixedPlanAssignment,
   setupCompanyTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -143,7 +141,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Basic Negative Invoice Credit Creation', () => {
     it('should create a credit when finalizing an invoice with negative total', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Basic Negative Invoice Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -295,7 +293,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Mixed Invoice with Net Negative Amount', () => {
     it('should create a credit when finalizing a mixed invoice with negative total', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Mixed Invoice Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -479,7 +477,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Applying Credit from Negative Invoice to Future Invoice', () => {
     it('should automatically apply credit from a negative invoice to a future invoice', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Credit Application Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -727,7 +725,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Partial Application of Negative Invoice Credit', () => {
     it('should apply partial credit when the invoice amount exceeds the available credit', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Partial Credit Application Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -936,7 +934,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Full Credit Coverage from Negative Invoice', () => {
     it('should fully cover a smaller invoice with excess credit from a negative invoice', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Full Credit Coverage Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
