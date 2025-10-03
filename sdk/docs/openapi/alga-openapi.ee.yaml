@@ -20,7 +20,7 @@ tags:
   - name: categories
   - name: chat
   - name: companies
-  - name: company-billing-plans
+  - name: client-billing-plans
   - name: contacts
   - name: documents
   - name: email
@@ -4797,13 +4797,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/company-billing-plans:
+  /api/v1/client-billing-plans:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4831,7 +4831,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4862,13 +4862,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/company-billing-plans/{id}:
+  /api/v1/client-billing-plans/{id}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
