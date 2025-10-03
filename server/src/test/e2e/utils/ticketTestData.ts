@@ -9,7 +9,7 @@ export interface TicketTestData {
   assigned_to?: string;
   company_id?: string;
   contact_name_id?: string;
-  channel_id?: string;
+  board_id?: string;
   category_id?: string;
   subcategory_id?: string;
   url?: string;
@@ -79,7 +79,7 @@ export async function createTestTicket(
     assigned_to: data.assigned_to || null,
     company_id: data.company_id,
     contact_name_id: data.contact_name_id || null,
-    channel_id: data.channel_id,
+    board_id: data.board_id,
     category_id: data.category_id || null,
     subcategory_id: data.subcategory_id || null,
     attributes: data.attributes || (data.description ? { description: data.description } : null),
@@ -128,14 +128,14 @@ export async function createTestTicketSet(
   companyId: string,
   statusIds: { open: string; inProgress: string; closed: string },
   priorityIds: { low: string; medium: string; high: string },
-  channelId: string
+  boardId: string
 ): Promise<any[]> {
   const tickets = [];
 
   // Create tickets with different statuses
   tickets.push(await createTestTicket(db, tenant, {
     title: 'Open High Priority Ticket',
-    channel_id: channelId,
+    board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.high,
     company_id: companyId,
@@ -144,7 +144,7 @@ export async function createTestTicketSet(
 
   tickets.push(await createTestTicket(db, tenant, {
     title: 'In Progress Medium Priority Ticket',
-    channel_id: channelId,
+    board_id: boardId,
     status_id: statusIds.inProgress,
     priority_id: priorityIds.medium,
     company_id: companyId,
@@ -153,7 +153,7 @@ export async function createTestTicketSet(
 
   tickets.push(await createTestTicket(db, tenant, {
     title: 'Closed Low Priority Ticket',
-    channel_id: channelId,
+    board_id: boardId,
     status_id: statusIds.closed,
     priority_id: priorityIds.low,
     company_id: companyId,
@@ -163,7 +163,7 @@ export async function createTestTicketSet(
   // Create overdue ticket
   tickets.push(await createTestTicket(db, tenant, {
     title: 'Overdue Ticket',
-    channel_id: channelId,
+    board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.high,
     company_id: companyId,
@@ -178,7 +178,7 @@ export async function createTestTicketSet(
   const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
   tickets.push(await createTestTicket(db, tenant, {
     title: 'Scheduled Maintenance',
-    channel_id: channelId,
+    board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.medium,
     company_id: companyId,
@@ -200,7 +200,7 @@ export async function createTicketsForPagination(
   db: Knex,
   tenant: string,
   companyId: string,
-  channelId: string,
+  boardId: string,
   count: number = 30
 ): Promise<any[]> {
   const tickets = [];
@@ -209,7 +209,7 @@ export async function createTicketsForPagination(
   for (let i = 0; i < count; i++) {
     const ticket = await createTestTicket(db, tenant, {
       title: `Pagination Test Ticket ${i + 1}`,
-      channel_id: channelId,
+      board_id: boardId,
       company_id: companyId,
       description: `Ticket for pagination testing - item ${i + 1} of ${count}`,
       tags: ['pagination-test'],

@@ -22,7 +22,7 @@ export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTic
         'short_name',
         'display_name',
         'description',
-        'channel_id',
+        'board_id',
         'status_id',
         'priority_id',
         'company_id',
@@ -46,7 +46,7 @@ export async function createInboundTicketDefaults(data: {
   short_name: string;
   display_name: string;
   description?: string;
-  channel_id?: string;
+  board_id?: string;
   status_id?: string;
   priority_id?: string;
   company_id?: string;
@@ -68,8 +68,8 @@ export async function createInboundTicketDefaults(data: {
     const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
 
     // Validate required defaults fields
-    if (!data.channel_id || !data.status_id || !data.priority_id) {
-      throw new Error('Channel, status, and priority are required');
+    if (!data.board_id || !data.status_id || !data.priority_id) {
+      throw new Error('Board, status, and priority are required');
     }
 
     const [defaults] = await knex('inbound_ticket_defaults')
@@ -79,7 +79,7 @@ export async function createInboundTicketDefaults(data: {
         short_name: data.short_name,
         display_name: data.display_name,
         description: data.description,
-        channel_id: data.channel_id,
+        board_id: data.board_id,
         status_id: data.status_id,
         priority_id: data.priority_id,
         company_id: data.company_id,
@@ -97,7 +97,7 @@ export async function createInboundTicketDefaults(data: {
         'short_name',
         'display_name',
         'description',
-        'channel_id',
+        'board_id',
         'status_id',
         'priority_id',
         'company_id',
@@ -126,7 +126,7 @@ export async function updateInboundTicketDefaults(
     short_name?: string;
     display_name?: string;
     description?: string;
-    channel_id?: string;
+    board_id?: string;
     status_id?: string;
     priority_id?: string;
     company_id?: string;
@@ -147,19 +147,19 @@ export async function updateInboundTicketDefaults(
   try {
     const normalizeUuid = (v?: string | null) => (v && v !== 'no-category' ? v : null);
     // If updating defaults, validate required fields
-    if (data.channel_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
+    if (data.board_id !== undefined || data.status_id !== undefined || data.priority_id !== undefined) {
       // Get current values to check if all required fields will be present after update
       const current = await knex('inbound_ticket_defaults')
         .where({ id, tenant })
-        .select('channel_id', 'status_id', 'priority_id')
+        .select('board_id', 'status_id', 'priority_id')
         .first();
       
-      const finalChannelId = data.channel_id !== undefined ? data.channel_id : current?.channel_id;
+      const finalBoardId = data.board_id !== undefined ? data.board_id : current?.board_id;
       const finalStatusId = data.status_id !== undefined ? data.status_id : current?.status_id;
       const finalPriorityId = data.priority_id !== undefined ? data.priority_id : current?.priority_id;
       
-      if (!finalChannelId || !finalStatusId || !finalPriorityId) {
-        throw new Error('Channel, status, and priority are required');
+      if (!finalBoardId || !finalStatusId || !finalPriorityId) {
+        throw new Error('Board, status, and priority are required');
       }
     }
 
@@ -170,7 +170,7 @@ export async function updateInboundTicketDefaults(
     if (data.short_name !== undefined) updateData.short_name = data.short_name;
     if (data.display_name !== undefined) updateData.display_name = data.display_name;
     if (data.description !== undefined) updateData.description = data.description;
-    if (data.channel_id !== undefined) updateData.channel_id = data.channel_id;
+    if (data.board_id !== undefined) updateData.board_id = data.board_id;
     if (data.status_id !== undefined) updateData.status_id = data.status_id;
     if (data.priority_id !== undefined) updateData.priority_id = data.priority_id;
     if (data.company_id !== undefined) updateData.company_id = data.company_id;
@@ -189,7 +189,7 @@ export async function updateInboundTicketDefaults(
         'short_name',
         'display_name',
         'description',
-        'channel_id',
+        'board_id',
         'status_id',
         'priority_id',
         'company_id',

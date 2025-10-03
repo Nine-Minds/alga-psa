@@ -12,7 +12,7 @@ export * from './tenant.interface';
 export * from './auth.interfaces';
 export * from './document.interface';
 export * from './project.interfaces';
-export * from './channel.interface';
+export * from './board.interface';
 export * from './comment.interface';
 export * from './company.interfaces';
 export * from './contact.interfaces';
