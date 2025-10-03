@@ -22,21 +22,21 @@ exports.seed = async function(knex) {
     return;
   }
 
-  // Determine which channel/id we should associate the ITIL categories with.
-  // Prefer an ITIL specific channel if it already exists, otherwise fall back
-  // to the tenant's default channel so we can satisfy the non-null constraint.
-  const itilChannel = await knex('channels')
+  // Determine which board/id we should associate the ITIL categories with.
+  // Prefer an ITIL specific board if it already exists, otherwise fall back
+  // to the tenant's default board so we can satisfy the non-null constraint.
+  const itilBoard = await knex('boards')
     .where('tenant', tenant.tenant)
-    .where('channel_name', 'ITIL Support')
+    .where('board_name', 'ITIL Support')
     .first();
 
-  const defaultChannel = itilChannel || await knex('channels')
+  const defaultBoard = itilBoard || await knex('boards')
     .where('tenant', tenant.tenant)
     .orderBy('display_order')
     .first();
 
-  if (!defaultChannel) {
-    console.log('No channel found for tenant, skipping ITIL categories seed');
+  if (!defaultBoard) {
+    console.log('No board found for tenant, skipping ITIL categories seed');
     return;
   }
 
@@ -70,7 +70,7 @@ exports.seed = async function(knex) {
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
       .whereNull('parent_category')
-      .where('channel_id', defaultChannel.channel_id)
+      .where('board_id', defaultBoard.board_id)
       .first();
 
     if (!existing) {
@@ -79,7 +79,7 @@ exports.seed = async function(knex) {
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
         parent_category: null,
-        channel_id: defaultChannel.channel_id,
+        board_id: defaultBoard.board_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
@@ -91,7 +91,7 @@ exports.seed = async function(knex) {
         .where('tenant', tenant.tenant)
         .where('category_name', stdCategory.category_name)
         .whereNull('parent_category')
-        .where('channel_id', defaultChannel.channel_id)
+        .where('boardannel_id', defaultBoard.board_id)
         .first();
 
       parentIdMap[stdCategory.id] = inserted.category_id;
@@ -124,7 +124,7 @@ exports.seed = async function(knex) {
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
       .where('parent_category', parentId)
-      .where('channel_id', defaultChannel.channel_id)
+      .where('board_id', defaultBoard.board_id)
       .first();
 
     if (!existing) {
@@ -133,7 +133,7 @@ exports.seed = async function(knex) {
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
         parent_category: parentId,
-        channel_id: defaultChannel.channel_id,
+        board_id: defaultBoard.board_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
