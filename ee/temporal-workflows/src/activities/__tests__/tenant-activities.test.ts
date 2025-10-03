@@ -34,29 +34,29 @@ describe('Tenant Activities', () => {
   describe('createTenant', () => {
     it('should create a tenant with basic information', async () => {
       const input: CreateTenantActivityInput = {
-        tenantName: 'Test Company Inc',
-        companyName: 'Test Company'
+        tenantName: 'Test Client Inc',
+        clientName: 'Test Client'
       };
 
       const result = await createTenant(input);
 
       expect(result.tenantId).toBeDefined();
-      expect(result.companyId).toBeDefined();
+      expect(result.clientId).toBeDefined();
 
       // Verify tenant was created in database
       const tenant = await testDb.getTenant(result.tenantId);
       expect(tenant).toBeDefined();
-      expect(tenant.company_name).toBe('Test Company Inc');
+      expect(tenant.client_name).toBe('Test Client Inc');
 
-      // Verify company was created
-      if (result.companyId) {
-        const companies = await testDb.getCompaniesForTenant(result.tenantId);
-        expect(companies).toHaveLength(1);
-        expect(companies[0].company_name).toBe('Test Company');
+      // Verify client was created
+      if (result.clientId) {
+        const clients = await testDb.getClientsForTenant(result.tenantId);
+        expect(clients).toHaveLength(1);
+        expect(clients[0].client_name).toBe('Test Client');
       }
     });
 
-    it('should create a tenant without a company', async () => {
+    it('should create a tenant without a client', async () => {
       const input: CreateTenantActivityInput = {
         tenantName: 'Solo Tenant'
       };
@@ -64,16 +64,16 @@ describe('Tenant Activities', () => {
       const result = await createTenant(input);
 
       expect(result.tenantId).toBeDefined();
-      expect(result.companyId).toBeUndefined();
+      expect(result.clientId).toBeUndefined();
 
       // Verify tenant was created
       const tenant = await testDb.getTenant(result.tenantId);
       expect(tenant).toBeDefined();
-      expect(tenant.company_name).toBe('Solo Tenant');
+      expect(tenant.client_name).toBe('Solo Tenant');
 
-      // Verify no companies were created
-      const companies = await testDb.getCompaniesForTenant(result.tenantId);
-      expect(companies).toHaveLength(0);
+      // Verify no clients were created
+      const clients = await testDb.getClientsForTenant(result.tenantId);
+      expect(clients).toHaveLength(0);
     });
 
     it('should handle duplicate tenant names gracefully', async () => {
@@ -99,15 +99,15 @@ describe('Tenant Activities', () => {
     it('should set up complete tenant data with all features', async () => {
       // First create a tenant
       const createInput: CreateTenantActivityInput = {
-        tenantName: 'Setup Test Company',
-        companyName: 'Setup Test Co'
+        tenantName: 'Setup Test Client',
+        clientName: 'Setup Test Co'
       };
       const createResult = await createTenant(createInput);
 
       const setupInput: SetupTenantDataActivityInput = {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-123',
-        companyId: createResult.companyId,
+        clientId: createResult.clientId,
         billingPlan: 'Enterprise'
       };
 
@@ -140,15 +140,15 @@ describe('Tenant Activities', () => {
     it('should skip setup steps that already exist', async () => {
       // Create tenant and set up data once
       const createInput: CreateTenantActivityInput = {
-        tenantName: 'Existing Setup Company',
-        companyName: 'Existing Setup Co'
+        tenantName: 'Existing Setup Client',
+        clientName: 'Existing Setup Co'
       };
       const createResult = await createTenant(createInput);
 
       const setupInput: SetupTenantDataActivityInput = {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-456',
-        companyId: createResult.companyId,
+        clientId: createResult.clientId,
         billingPlan: 'Basic'
       };
 
@@ -169,15 +169,15 @@ describe('Tenant Activities', () => {
     it('should completely remove tenant and all associated data', async () => {
       // Create a complete tenant setup
       const createInput: CreateTenantActivityInput = {
-        tenantName: 'Rollback Test Company',
-        companyName: 'Rollback Test Co'
+        tenantName: 'Rollback Test Client',
+        clientName: 'Rollback Test Co'
       };
       const createResult = await createTenant(createInput);
 
       const setupInput: SetupTenantDataActivityInput = {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-789',
-        companyId: createResult.companyId,
+        clientId: createResult.clientId,
         billingPlan: 'Pro'
       };
       await setupTenantData(setupInput);
@@ -199,8 +199,8 @@ describe('Tenant Activities', () => {
       const statuses = await testDb.getStatusesForTenant(createResult.tenantId);
       expect(statuses).toHaveLength(0);
 
-      const companies = await testDb.getCompaniesForTenant(createResult.tenantId);
-      expect(companies).toHaveLength(0);
+      const clients = await testDb.getClientsForTenant(createResult.tenantId);
+      expect(clients).toHaveLength(0);
     });
 
     it('should handle rollback of non-existent tenant gracefully', async () => {
