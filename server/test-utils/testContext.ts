@@ -170,6 +170,15 @@ export class TestContext {
   }
 
   /**
+   * Rolls back any pending transactions
+   * This is called after each test to ensure a clean state
+   */
+  async rollback(): Promise<void> {
+    // No-op for now as we use reset() for cleanup
+    // This method exists to maintain compatibility with test helpers
+  }
+
+  /**
    * Cleans up the test context
    */
   async cleanup(): Promise<void> {
@@ -232,7 +241,7 @@ export class TestContext {
   static createHelpers() {
     const testContext = {
       context: undefined as TestContext | undefined,
-      
+
       beforeAll: async (options: TestContextOptions = {}) => {
         testContext.context = new TestContext(options);
         await testContext.context.initialize();
@@ -245,6 +254,13 @@ export class TestContext {
         }
         await testContext.context.reset();
         return testContext.context;
+      },
+
+      afterEach: async () => {
+        if (!testContext.context) {
+          throw new Error('Test context not initialized. Call beforeAll first.');
+        }
+        await testContext.context.rollback();
       },
 
       afterAll: async () => {

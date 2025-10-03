@@ -31,13 +31,50 @@ export async function createTestDbConnection(): Promise<Knex> {
   const dbName = 'sebastian_test';
   verifyTestDatabase(dbName);
 
+  // Always use port 5432 for tests to connect directly to PostgreSQL
+  // This bypasses pgbouncer which may be on port 6432 in the .env file
+  const testPort = 5432;
+
+  const password = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
+
+  // First, connect to postgres database to check if test database exists
+  const adminConfig: Knex.Config = {
+    client: 'pg',
+    connection: {
+      host: process.env.DB_HOST || 'localhost',
+      port: testPort,
+      user: process.env.DB_USER_ADMIN || 'postgres',
+      password,
+      database: 'postgres',
+    },
+  };
+
+  const adminDb = knex(adminConfig);
+
+  try {
+    // Check if test database exists
+    const { rows } = await adminDb.raw(
+      `SELECT 1 FROM pg_database WHERE datname = ?`,
+      [dbName]
+    );
+
+    // Create database if it doesn't exist
+    if (rows.length === 0) {
+      console.log(`Creating test database: ${dbName}`);
+      await adminDb.raw(`CREATE DATABASE ${dbName}`);
+    }
+  } finally {
+    await adminDb.destroy();
+  }
+
+  // Now connect to the test database
   const config: Knex.Config = {
     client: 'pg',
     connection: {
       host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT) || 5432,
+      port: testPort,
       user: process.env.DB_USER_ADMIN || 'postgres',
-      password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password'),
+      password,
       database: dbName,
     },
     asyncStackTraces: true,
