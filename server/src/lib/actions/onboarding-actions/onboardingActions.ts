@@ -58,7 +58,7 @@ export interface BillingData {
 }
 
 export interface TicketingData {
-  channelName: string;
+  boardName: string;
   supportEmail: string;
   categories: (string | {
     category_id: string;
@@ -75,8 +75,8 @@ export interface TicketingData {
   ticketPrefix?: string;
   ticketPaddingLength?: number;
   ticketStartNumber?: number;
-  channelId?: string;
-  isDefaultChannel?: boolean;
+  boardId?: string;
+  isDefaultBoard?: boolean;
   statuses?: any[];
 }
 
@@ -729,7 +729,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
     const { knex } = await createTenantKnex();
 
     const createdIds: Record<string, string[]> = {
-      channelId: [],
+      boardId: [],
       categoryIds: [],
       priorityIds: []
     };
@@ -764,41 +764,41 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
         }
       }
 
-      // Handle channel creation or import
-      let channelId: string = '';
+      // Handle board creation or import
+      let boardId: string = '';
       
-      if (data.channelId) {
-        // This is an imported channel
-        channelId = data.channelId;
-        const shouldBeDefault = data.isDefaultChannel || false;
+      if (data.boardId) {
+        // This is an imported board
+        boardId = data.boardId;
+        const shouldBeDefault = data.isDefaultBoard || false;
         
-        // If this imported channel should be default, clear existing defaults first
+        // If this imported board should be default, clear existing defaults first
         if (shouldBeDefault) {
-          await trx('channels')
+          await trx('boards')
             .where({ 
               tenant,
               is_default: true
             })
             .update({ is_default: false });
             
-          // Set the imported channel as default
-          await trx('channels')
+          // Set the imported board as default
+          await trx('boards')
             .where({
               tenant,
-              channel_id: channelId
+              board_id: boardId
             })
             .update({ is_default: true });
         }
         
-        createdIds.channelId.push(channelId);
-      } else if (data.channelName) {
-        // This is a manually created channel
-        channelId = require('crypto').randomUUID();
-        const shouldBeDefault = data.isDefaultChannel || false;
+        createdIds.boardId.push(boardId);
+      } else if (data.boardName) {
+        // This is a manually created board
+        boardId = require('crypto').randomUUID();
+        const shouldBeDefault = data.isDefaultBoard || false;
         
         // If setting as default, clear any existing defaults first
         if (shouldBeDefault) {
-          await trx('channels')
+          await trx('boards')
             .where({ 
               tenant,
               is_default: true
@@ -806,20 +806,20 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
             .update({ is_default: false });
         }
         
-        await trx('channels').insert({
-          channel_id: channelId,
+        await trx('boards').insert({
+          board_id: boardId,
           tenant,
-          channel_name: data.channelName,
+          board_name: data.boardName,
           email: data.supportEmail,
           is_active: true,
           is_default: shouldBeDefault
         });
         
-        createdIds.channelId.push(channelId);
+        createdIds.boardId.push(boardId);
       }
 
-      // Create categories only if we have a channel
-      if (channelId && data.categories) {
+      // Create categories only if we have a board
+      if (boardId && data.categories) {
         for (const category of data.categories) {
           // Skip if already has a real ID (imported category)
           if (typeof category === 'object' && category.category_id && !category.category_id.startsWith('manual-')) {
@@ -834,7 +834,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
             .where({ 
               tenant, 
               category_name: categoryName,
-              channel_id: channelId
+              board_id: boardId
             })
             .first();
           
@@ -843,11 +843,11 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
           let displayOrder = typeof category === 'object' && category.display_order ? category.display_order : null;
           
           if (displayOrder !== null) {
-            // Check if this display order already exists for this channel
+            // Check if this display order already exists for this board
             const existingWithOrder = await trx('categories')
               .where({ 
                 tenant, 
-                channel_id: channelId,
+                board_id: boardId,
                 display_order: displayOrder
               })
               .first();
@@ -855,7 +855,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
             if (existingWithOrder) {
               // Find the max display order and add 1
               const maxOrder = await trx('categories')
-                .where({ tenant, channel_id: channelId })
+                .where({ tenant, board_id: boardId })
                 .max('display_order as max')
                 .first();
               displayOrder = (maxOrder?.max || 0) + 1;
@@ -866,7 +866,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
             category_id: categoryId,
             tenant,
             category_name: categoryName,
-            channel_id: channelId,
+            board_id: boardId,
             display_order: displayOrder,
             parent_category: typeof category === 'object' ? category.parent_category : null,
             created_by: currentUser.user_id,
@@ -973,7 +973,7 @@ export async function configureTicketing(data: TicketingData): Promise<Onboardin
 
       // Save progress - convert categories and priorities to strings
       await saveTenantOnboardingProgress({
-        channelName: data.channelName,
+        boardName: data.boardName,
         supportEmail: data.supportEmail,
         categories: data.categories.map(cat => typeof cat === 'string' ? cat : cat.category_name),
         priorities: data.priorities.map(pri => typeof pri === 'string' ? pri : pri.priority_name),
@@ -1011,15 +1011,15 @@ export async function validateOnboardingDefaults(): Promise<OnboardingActionResu
     
     // Use withTransaction to check for defaults
     const validationResult = await withTransaction(db, async (trx) => {
-      // Check for default channel
-      const defaultChannel = await trx('channels')
+      // Check for default board
+      const defaultBoard = await trx('boards')
         .where({ 
           is_default: true,
           tenant 
         })
         .first();
       
-      if (!defaultChannel) {
+      if (!defaultBoard) {
         return { valid: false, error: 'No default board is set. Please set one board as default before completing setup.' };
       }
       
@@ -1157,7 +1157,7 @@ export async function getOnboardingInitialData(): Promise<{
 export async function getTenantTicketingData(): Promise<{
   success: boolean;
   data?: {
-    channels: any[];
+    boards: any[];
     categories: any[];
     statuses: any[];
     priorities: any[];
@@ -1177,12 +1177,12 @@ export async function getTenantTicketingData(): Promise<{
 
     const { knex } = await createTenantKnex();
 
-    const [channels, categories, statuses, priorities] = await Promise.all([
-      // Get channels
-      knex('channels')
+    const [boards, categories, statuses, priorities] = await Promise.all([
+      // Get boards
+      knex('boards')
         .where({ tenant })
         .orderBy('display_order', 'asc')
-        .orderBy('channel_name', 'asc'),
+        .orderBy('board_name', 'asc'),
 
       // Get categories
       knex('categories')
@@ -1206,7 +1206,7 @@ export async function getTenantTicketingData(): Promise<{
     return {
       success: true,
       data: {
-        channels,
+        boards,
         categories,
         statuses,
         priorities

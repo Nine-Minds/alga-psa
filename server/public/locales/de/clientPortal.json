@@ -136,7 +136,7 @@
       "contactNotAssociatedWithCompany": "Der Kontakt ist keinem Unternehmen zugeordnet. Bitte wende dich an den Support.",
       "ticketNotFound": "Ticket nicht gefunden",
       "commentNotFound": "Kommentar nicht gefunden oder nicht autorisiert",
-      "noDefaultChannel": "Kein Standardkanal für Tickets konfiguriert",
+      "noDefaultBoard": "Kein Standardkanal für Tickets konfiguriert",
       "failedToCreateTicket": "Ticket konnte nicht erstellt werden",
       "failedToFetchTicketDetails": "Ticketdetails konnten nicht abgerufen werden",
       "failedToAddComment": "Kommentar konnte nicht hinzugefügt werden",

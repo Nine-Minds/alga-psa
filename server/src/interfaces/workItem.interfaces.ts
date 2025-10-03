@@ -28,7 +28,7 @@ export interface IExtendedWorkItem extends IWorkItem {
   company_id?: string;
   company_name?: string;
   status_name?: string;
-  channel_name?: string;
+  board_name?: string;
   assigned_to_name?: string;
   contact_name?: string;
   due_date?: Date | string;

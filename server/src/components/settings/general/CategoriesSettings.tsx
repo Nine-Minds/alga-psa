@@ -10,8 +10,8 @@ import {
   updateCategory,
   deleteCategory
 } from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
+import { IBoard } from 'server/src/interfaces/board.interface';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -49,7 +49,7 @@ const CategoriesSettings: React.FC = () => {
   const [formData, setFormData] = useState({
     category_name: '',
     display_order: 0,
-    channel_id: '',
+    board_id: '',
     parent_category: ''
   });
   
@@ -59,13 +59,13 @@ const CategoriesSettings: React.FC = () => {
   const [selectedImportCategories, setSelectedImportCategories] = useState<string[]>([]);
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
-  const [importTargetChannel, setImportTargetChannel] = useState<string>('');
-  const [channels, setChannels] = useState<IChannel[]>([]);
-  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [importTargetBoard, setImportTargetBoard] = useState<string>('');
+  const [boards, setBoards] = useState<IBoard[]>([]);
+  const [boardFilter, setBoardFilter] = useState<string>('all');
 
   useEffect(() => {
     fetchCategories();
-    fetchChannels();
+    fetchBoards();
   }, []);
 
   const fetchCategories = async () => {
@@ -94,12 +94,12 @@ const CategoriesSettings: React.FC = () => {
     }
   };
 
-  const fetchChannels = async () => {
+  const fetchBoards = async () => {
     try {
-      const allChannels = await getAllChannels();
-      setChannels(allChannels.filter(ch => !ch.is_inactive));
+      const allBoards = await getAllBoards();
+      setBoards(allBoards.filter(ch => !ch.is_inactive));
     } catch (error) {
-      console.error('Error fetching channels:', error);
+      console.error('Error fetching boards:', error);
     }
   };
 
@@ -108,7 +108,7 @@ const CategoriesSettings: React.FC = () => {
     setFormData({
       category_name: category.category_name,
       display_order: category.display_order || 0,
-      channel_id: category.channel_id || '',
+      board_id: category.board_id || '',
       parent_category: category.parent_category || ''
     });
     setShowAddEditDialog(true);
@@ -164,16 +164,16 @@ const CategoriesSettings: React.FC = () => {
           display_order: formData.display_order
         };
         
-        // Only include channel_id for parent categories
+        // Only include board_id for parent categories
         if (!editingCategory.parent_category) {
-          updateData.channel_id = formData.channel_id;
+          updateData.board_id = formData.board_id;
         }
         
         await updateCategory(editingCategory.category_id, updateData);
         toast.success('Category updated successfully');
       } else {
         // For new categories
-        if (!formData.parent_category && !formData.channel_id) {
+        if (!formData.parent_category && !formData.board_id) {
           setError('Board is required for top-level categories');
           return;
         }
@@ -184,15 +184,15 @@ const CategoriesSettings: React.FC = () => {
         };
         
         if (formData.parent_category) {
-          // For subcategories, get channel from parent
+          // For subcategories, get board from parent
           const parentCategory = categories.find(cat => cat.category_id === formData.parent_category);
           if (parentCategory) {
-            createData.channel_id = parentCategory.channel_id;
+            createData.board_id = parentCategory.board_id;
             createData.parent_category = formData.parent_category;
           }
         } else {
           // For top-level categories
-          createData.channel_id = formData.channel_id;
+          createData.board_id = formData.board_id;
         }
         
         await createCategory(createData);
@@ -201,7 +201,7 @@ const CategoriesSettings: React.FC = () => {
       
       setShowAddEditDialog(false);
       setEditingCategory(null);
-      setFormData({ category_name: '', display_order: 0, channel_id: '', parent_category: '' });
+      setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
       await fetchCategories();
     } catch (error) {
       console.error('Error saving category:', error);
@@ -211,7 +211,7 @@ const CategoriesSettings: React.FC = () => {
 
   const handleImport = async () => {
     try {
-      if (!importTargetChannel) {
+      if (!importTargetBoard) {
         toast.error('Please select a board for the imported categories');
         return;
       }
@@ -235,7 +235,7 @@ const CategoriesSettings: React.FC = () => {
         return;
       }
 
-      const importOptions = { channel_id: importTargetChannel };
+      const importOptions = { board_id: importTargetBoard };
       
       if (importConflicts.length > 0) {
         await importReferenceData('categories', selectedImportCategories, importOptions, conflictResolutions);
@@ -251,7 +251,7 @@ const CategoriesSettings: React.FC = () => {
       toast.success('Categories imported successfully');
       setShowImportDialog(false);
       setSelectedImportCategories([]);
-      setImportTargetChannel('');
+      setImportTargetBoard('');
       setImportConflicts([]);
       setConflictResolutions({});
       await fetchCategories();
@@ -261,14 +261,14 @@ const CategoriesSettings: React.FC = () => {
     }
   };
 
-  // Filter categories based on selected channel while maintaining hierarchy
+  // Filter categories based on selected board while maintaining hierarchy
   const getFilteredCategories = () => {
-    if (channelFilter === 'all') {
+    if (boardFilter === 'all') {
       return categories;
     }
     
     // Filter and reorganize to maintain parent-child structure
-    const allFilteredCategories = categories.filter(cat => cat.channel_id === channelFilter);
+    const allFilteredCategories = categories.filter(cat => cat.board_id === boardFilter);
     const filteredParents = allFilteredCategories
       .filter(cat => !cat.parent_category)
       .sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
@@ -309,10 +309,10 @@ const CategoriesSettings: React.FC = () => {
     },
     {
       title: 'Board',
-      dataIndex: 'channel_id',
+      dataIndex: 'board_id',
       render: (value: string) => {
-        const channel = channels.find(ch => ch.channel_id === value);
-        return <span className="text-gray-600">{channel?.channel_name || '-'}</span>;
+        const board = boards.find(ch => ch.board_id === value);
+        return <span className="text-gray-600">{board?.board_name || '-'}</span>;
       },
     },
     {
@@ -390,13 +390,13 @@ const CategoriesSettings: React.FC = () => {
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-gray-800">Categories</h3>
           <CustomSelect
-            value={channelFilter}
-            onValueChange={setChannelFilter}
+            value={boardFilter}
+            onValueChange={setBoardFilter}
             options={[
               { value: 'all', label: 'All Boards' },
-              ...channels.map(ch => ({
-                value: ch.channel_id || '',
-                label: ch.channel_name || ''
+              ...boards.map(ch => ({
+                value: ch.board_id || '',
+                label: ch.board_name || ''
               }))
             ]}
             placeholder="Filter by board"
@@ -418,7 +418,7 @@ const CategoriesSettings: React.FC = () => {
             onClick={() => {
               setEditingCategory(null);
               // Start with empty form - order will be calculated based on parent selection
-              setFormData({ category_name: '', display_order: 0, channel_id: '', parent_category: '' });
+              setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
               setShowAddEditDialog(true);
               setError(null);
             }} 
@@ -461,7 +461,7 @@ const CategoriesSettings: React.FC = () => {
         onClose={() => {
           setShowAddEditDialog(false);
           setEditingCategory(null);
-          setFormData({ category_name: '', display_order: 0, channel_id: '', parent_category: '' });
+          setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
           setError(null);
         }} 
         title={editingCategory ? "Edit Category" : "Add Category"}
@@ -510,15 +510,15 @@ const CategoriesSettings: React.FC = () => {
             )}
             {!editingCategory && !formData.parent_category && (
               <div>
-                <Label htmlFor="channel_id">Board *</Label>
+                <Label htmlFor="board_id">Board *</Label>
                 <CustomSelect
-                  value={formData.channel_id}
-                  onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
-                  options={channels
+                  value={formData.board_id}
+                  onValueChange={(value) => setFormData({ ...formData, board_id: value })}
+                  options={boards
                     .filter(ch => ch.category_type !== 'itil')
                     .map(ch => ({
-                      value: ch.channel_id || '',
-                      label: ch.channel_name || ''
+                      value: ch.board_id || '',
+                      label: ch.board_name || ''
                     }))}
                   placeholder="Select a board"
                   className="w-full"
@@ -531,24 +531,24 @@ const CategoriesSettings: React.FC = () => {
             {editingCategory && !editingCategory.parent_category && (
               <>
                 <div>
-                  <Label htmlFor="channel_id">Board</Label>
+                  <Label htmlFor="board_id">Board</Label>
                   <CustomSelect
-                    value={formData.channel_id}
-                    onValueChange={(value) => setFormData({ ...formData, channel_id: value })}
-                    options={channels
+                    value={formData.board_id}
+                    onValueChange={(value) => setFormData({ ...formData, board_id: value })}
+                    options={boards
                       .filter(ch => ch.category_type !== 'itil')
                       .map(ch => ({
-                        value: ch.channel_id || '',
-                        label: ch.channel_name || ''
+                        value: ch.board_id || '',
+                        label: ch.board_name || ''
                       }))}
                     placeholder="Select a board"
                     className="w-full"
                   />
                 </div>
-                {formData.channel_id !== editingCategory.channel_id && (
+                {formData.board_id !== editingCategory.board_id && (
                   <Alert>
                     <AlertDescription>
-                      Changing the channel for this parent category will also update all its subcategories to the same channel.
+                      Changing the board for this parent category will also update all its subcategories to the same board.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -576,7 +576,7 @@ const CategoriesSettings: React.FC = () => {
             onClick={() => {
               setShowAddEditDialog(false);
               setEditingCategory(null);
-              setFormData({ category_name: '', display_order: 0, channel_id: '', parent_category: '' });
+              setFormData({ category_name: '', display_order: 0, board_id: '', parent_category: '' });
               setError(null);
             }}
           >
@@ -594,7 +594,7 @@ const CategoriesSettings: React.FC = () => {
         onClose={() => {
           setShowImportDialog(false);
           setSelectedImportCategories([]);
-          setImportTargetChannel('');
+          setImportTargetBoard('');
         }} 
         title="Import Standard Categories"
         className="max-w-3xl"
@@ -612,13 +612,13 @@ const CategoriesSettings: React.FC = () => {
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Target Board *</label>
                   <CustomSelect
-                    value={importTargetChannel}
-                    onValueChange={setImportTargetChannel}
-                    options={channels
+                    value={importTargetBoard}
+                    onValueChange={setImportTargetBoard}
+                    options={boards
                       .filter(ch => ch.category_type !== 'itil')
                       .map(ch => ({
-                        value: ch.channel_id || '',
-                        label: ch.channel_name || ''
+                        value: ch.board_id || '',
+                        label: ch.board_name || ''
                       }))}
                     placeholder="Select a board for imported categories"
                     className="w-full"
@@ -762,7 +762,7 @@ const CategoriesSettings: React.FC = () => {
             onClick={() => {
               setShowImportDialog(false);
               setSelectedImportCategories([]);
-              setImportTargetChannel('');
+              setImportTargetBoard('');
             }}
           >
             Cancel
@@ -770,7 +770,7 @@ const CategoriesSettings: React.FC = () => {
           <Button 
             id="import-selected-categories"
             onClick={handleImport} 
-            disabled={selectedImportCategories.length === 0 || !importTargetChannel}
+            disabled={selectedImportCategories.length === 0 || !importTargetBoard}
           >
             Import Selected
           </Button>
