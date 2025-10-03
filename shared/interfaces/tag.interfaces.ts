@@ -17,7 +17,7 @@ export interface TagDefinition {
   tenant?: string;
   tag_text: string;
   tagged_type: TaggedEntityType;
-  channel_id?: string | null;
+  board_id?: string | null;
   background_color?: string | null;
   text_color?: string | null;
   created_at: string;
@@ -43,7 +43,7 @@ export interface CreateTagInput {
   tag_text: string;
   tagged_id: string;
   tagged_type: TaggedEntityType;
-  channel_id?: string;
+  board_id?: string;
   background_color?: string | null;
   text_color?: string | null;
   created_by?: string;

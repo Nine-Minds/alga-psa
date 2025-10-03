@@ -79,9 +79,9 @@ export class TicketService extends BaseService<ITicket> {
         this.on('t.subcategory_id', '=', 'subcat.category_id')
             .andOn('t.tenant', '=', 'subcat.tenant');
       })
-      .leftJoin('channels as chan', function() {
-        this.on('t.channel_id', '=', 'chan.channel_id')
-            .andOn('t.tenant', '=', 'chan.tenant');
+      .leftJoin('boards as board', function() {
+        this.on('t.board_id', '=', 'board.board_id')
+            .andOn('t.tenant', '=', 'board.tenant');
       })
       .leftJoin('users as entered_user', function() {
         this.on('t.entered_by', '=', 'entered_user.user_id')
@@ -132,7 +132,7 @@ export class TicketService extends BaseService<ITicket> {
       'pri.priority_name',
       'cat.category_name',
       'subcat.category_name as subcategory_name',
-      'chan.channel_name',
+      'board.board_name as board_name',
       knex.raw(`CASE 
         WHEN entered_user.first_name IS NOT NULL AND entered_user.last_name IS NOT NULL 
         THEN CONCAT(entered_user.first_name, ' ', entered_user.last_name) 
@@ -225,8 +225,8 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
-      if (!data.company_id || !data.title || !data.channel_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: company_id, title, channel_id, status_id, priority_id');
+      if (!data.company_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: company_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -238,8 +238,8 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
-      if (!data.company_id || !data.title || !data.channel_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: company_id, title, channel_id, status_id, priority_id');
+      if (!data.company_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: company_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -252,7 +252,7 @@ export class TicketService extends BaseService<ITicket> {
         const createTicketInput: CreateTicketInput = {
           title: data.title,
           url: data.url,
-          channel_id: data.channel_id,
+          board_id: data.board_id,
           company_id: data.company_id,
           location_id: data.location_id,
           contact_id: data.contact_name_id, // Maps to contact_name_id in database
@@ -648,7 +648,7 @@ export class TicketService extends BaseService<ITicket> {
       statusStats,
       priorityStats,
       categoryStats,
-      channelStats,
+      boardStats,
       timeStats
     ] = await Promise.all([
       // Total and basic counts
@@ -697,15 +697,15 @@ export class TicketService extends BaseService<ITicket> {
         .groupBy('c.category_name')
         .select('c.category_name', knex.raw('COUNT(*) as count')),
 
-      // Tickets by channel
+      // Tickets by board
       knex('tickets as t')
-        .leftJoin('channels as ch', function() {
-          this.on('t.channel_id', '=', 'ch.channel_id')
+        .leftJoin('boards as ch', function() {
+          this.on('t.board_id', '=', 'ch.board_id')
               .andOn('t.tenant', '=', 'ch.tenant');
         })
         .where('t.tenant', context.tenant)
-        .groupBy('ch.channel_name')
-        .select('ch.channel_name', knex.raw('COUNT(*) as count')),
+        .groupBy('ch.board_name')
+        .select('ch.board_name', knex.raw('COUNT(*) as count')),
 
       // Time-based statistics
       knex('tickets')
@@ -736,8 +736,8 @@ export class TicketService extends BaseService<ITicket> {
         acc[row.category_name] = parseInt(row.count);
         return acc;
       }, {}),
-      tickets_by_channel: channelStats.reduce((acc: any, row: any) => {
-        acc[row.channel_name] = parseInt(row.count);
+      tickets_by_board: boardStats.reduce((acc: any, row: any) => {
+        acc[row.board_name] = parseInt(row.count);
         return acc;
       }, {}),
       average_resolution_time: null, // Would need to calculate from closed tickets
@@ -761,7 +761,7 @@ export class TicketService extends BaseService<ITicket> {
         case 'ticket_number':
           query.whereILike('t.ticket_number', `%${value}%`);
           break;
-        case 'channel_id':
+        case 'board_id':
         case 'company_id':
         case 'location_id':
         case 'contact_name_id':

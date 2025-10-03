@@ -49,7 +49,7 @@ export const createTagSchema = z.object({
     .regex(/^[a-zA-Z0-9\-_\s!@#$%^&*()+=\[\]{};':",./<>?]+$/, 'Tag contains invalid characters'),
   tagged_id: uuidSchema,
   tagged_type: taggedEntityTypeSchema,
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   background_color: hexColorSchema,
   text_color: hexColorSchema
 });
@@ -64,7 +64,7 @@ export const tagResponseSchema = z.object({
   tag_text: z.string(),
   tagged_id: uuidSchema,
   tagged_type: taggedEntityTypeSchema,
-  channel_id: uuidSchema.nullable(),
+  board_id: uuidSchema.nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
   tenant: uuidSchema,
@@ -106,7 +106,7 @@ export const createBulkTagsSchema = z.object({
     .max(20, 'Too many tags at once'),
   tagged_id: uuidSchema,
   tagged_type: taggedEntityTypeSchema,
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   default_colors: z.object({
     background_color: hexColorSchema,
     text_color: hexColorSchema
@@ -123,7 +123,7 @@ export const tagFilterSchema = baseFilterSchema.extend({
   tagged_type: taggedEntityTypeSchema.optional(),
   entity_type: taggedEntityTypeSchema.optional(),
   entity_id: uuidSchema.optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   has_color: booleanTransform.optional(),
   background_color: hexColorSchema,
   text_color: hexColorSchema,
@@ -198,7 +198,7 @@ export const bulkUntagEntitiesSchema = z.object({
 // Tag Usage Analytics
 export const tagAnalyticsFilterSchema = z.object({
   entity_type: taggedEntityTypeSchema.optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   date_from: dateSchema,
   date_to: dateSchema,
   tag_text: z.string().optional(),
@@ -250,7 +250,7 @@ export const tagSearchSchema = z.object({
   search_term: z.string().min(1, 'Search term is required'),
   entity_type: taggedEntityTypeSchema.optional(),
   entity_id: uuidSchema.optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   include_usage: booleanTransform.optional(),
   limit: numberTransform.optional(),
   offset: numberTransform.optional()
@@ -286,7 +286,7 @@ export const importTagsSchema = z.object({
     text_color: hexColorSchema
   })).min(1, 'At least one tag is required'),
   merge_strategy: z.enum(['skip', 'update', 'merge']).optional().default('skip'),
-  channel_id: uuidSchema.optional()
+  board_id: uuidSchema.optional()
 });
 
 // ============================================================================

@@ -23,7 +23,7 @@ exports.seed = async function(knex) {
   }
 
   // Copy ITIL categories from standard_categories to tenant's categories table
-  // This simulates what should happen automatically when an ITIL channel is created
+  // This simulates what should happen automatically when an ITIL board is created
   const itilStandardCategories = await knex('standard_categories')
     .where('is_itil_standard', true)
     .select('*');

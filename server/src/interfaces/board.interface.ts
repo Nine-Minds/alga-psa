@@ -3,9 +3,9 @@ import { TenantEntity } from './index';
 export type CategoryType = 'custom' | 'itil';
 export type PriorityType = 'custom' | 'itil';
 
-export interface IChannel extends TenantEntity {
-  channel_id?: string;
-  channel_name?: string;
+export interface IBoard extends TenantEntity {
+  board_id?: string;
+  board_name?: string;
   is_inactive: boolean;
   is_default?: boolean;
   description?: string;

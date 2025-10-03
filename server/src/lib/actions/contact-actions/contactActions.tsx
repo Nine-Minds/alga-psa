@@ -154,17 +154,17 @@ export async function deleteContact(contactId: string) {
         counts['project'] = Number(projectCount.count);
       }
 
-      // Check for channels
-      const channelCount = await trx('channels')
+      // Check for boards
+      const boardCount = await trx('boards')
         .where({
           contact_name_id: contactId,
           tenant
         })
         .count('* as count')
         .first();
-      if (channelCount && Number(channelCount.count) > 0) {
-        dependencies.push('channel');
-        counts['channel'] = Number(channelCount.count);
+      if (boardCount && Number(boardCount.count) > 0) {
+        dependencies.push('board');
+        counts['board'] = Number(boardCount.count);
       }
 
       // Check for comments

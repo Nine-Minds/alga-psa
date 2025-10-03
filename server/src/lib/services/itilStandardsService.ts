@@ -51,7 +51,7 @@ export class ItilStandardsService {
   /**
    * Copy ITIL standard categories to tenant's categories table
    */
-  static async copyItilCategoriesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string, channelId?: string): Promise<void> {
+  static async copyItilCategoriesToTenant(trx: Knex.Transaction, tenant: string, createdBy: string, boardId?: string): Promise<void> {
     // Get ITIL standard categories from reference table
     const itilCategories = await trx('standard_categories')
       .where('is_itil_standard', true)
@@ -79,7 +79,7 @@ export class ItilStandardsService {
           tenant: tenant,
           category_name: stdCategory.category_name,
           parent_category: null,
-          channel_id: channelId,
+          board_id: boardId,
           is_from_itil_standard: true,
           created_by: createdBy,
           created_at: trx.fn.now()
@@ -131,7 +131,7 @@ export class ItilStandardsService {
           tenant: tenant,
           category_name: stdCategory.category_name,
           parent_category: parentId,
-          channel_id: channelId,
+          board_id: boardId,
           is_from_itil_standard: true,
           created_by: createdBy,
           created_at: trx.fn.now()
@@ -148,14 +148,14 @@ export class ItilStandardsService {
   }
 
   /**
-   * Handle ITIL configuration for a channel
+   * Handle ITIL configuration for a board
    * Copies necessary ITIL standards to tenant tables when ITIL is enabled
    */
   static async handleItilConfiguration(
     trx: Knex.Transaction,
     tenant: string,
     createdBy: string,
-    channelId: string,
+    boardId: string,
     categoryType?: 'custom' | 'itil',
     priorityType?: 'custom' | 'itil'
   ): Promise<void> {
@@ -166,24 +166,24 @@ export class ItilStandardsService {
 
     // Copy ITIL categories if category_type is 'itil'
     if (categoryType === 'itil') {
-      await this.copyItilCategoriesToTenant(trx, tenant, createdBy, channelId);
+      await this.copyItilCategoriesToTenant(trx, tenant, createdBy, boardId);
     }
   }
 
   /**
-   * Remove ITIL standards from tenant if no channels use them
+   * Remove ITIL standards from tenant if no boards use them
    * This is called when switching from ITIL to custom
    */
   static async cleanupUnusedItilStandards(trx: Knex.Transaction, tenant: string): Promise<void> {
-    // Check if any channels still use ITIL priorities
-    const itilPriorityChannels = await trx('channels')
+    // Check if any boards still use ITIL priorities
+    const itilPriorityBoards = await trx('boards')
       .where('tenant', tenant)
       .where('priority_type', 'itil')
       .count('* as count')
       .first();
 
-    if (!itilPriorityChannels || itilPriorityChannels.count === 0) {
-      // No channels use ITIL priorities, but don't delete them if they're in use by tickets
+    if (!itilPriorityBoards || itilPriorityBoards.count === 0) {
+      // No boards use ITIL priorities, but don't delete them if they're in use by tickets
       const usedPriorities = await trx('tickets')
         .where('tenant', tenant)
         .whereIn('priority_id', function() {
@@ -204,15 +204,15 @@ export class ItilStandardsService {
       }
     }
 
-    // Check if any channels still use ITIL categories
-    const itilCategoryChannels = await trx('channels')
+    // Check if any boards still use ITIL categories
+    const itilCategoryBoards = await trx('boards')
       .where('tenant', tenant)
       .where('category_type', 'itil')
       .count('* as count')
       .first();
 
-    if (!itilCategoryChannels || itilCategoryChannels.count === 0) {
-      // No channels use ITIL categories, but don't delete them if they're in use by tickets
+    if (!itilCategoryBoards || itilCategoryBoards.count === 0) {
+      // No boards use ITIL categories, but don't delete them if they're in use by tickets
       const usedCategories = await trx('tickets')
         .where('tenant', tenant)
         .whereIn('category_id', function() {

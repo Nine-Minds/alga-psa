@@ -37,8 +37,7 @@ import CompanyAssets from './CompanyAssets';
 import CompanyTickets from './CompanyTickets';
 import CompanyLocations from './CompanyLocations';
 import TextEditor, { DEFAULT_BLOCK } from '../editor/TextEditor';
-import { ITicket, ITicketCategory } from 'server/src/interfaces';
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IBoard, ITicket, ITicketCategory } from 'server/src/interfaces';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { Card } from 'server/src/components/ui/Card';
 import { Input } from 'server/src/components/ui/Input';
@@ -182,7 +181,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [ticketFormOptions, setTicketFormOptions] = useState<{
     statusOptions: SelectOption[];
     priorityOptions: SelectOption[];
-    channelOptions: IChannel[];
+    boardOptions: IBoard[];
     categories: ITicketCategory[];
     tags?: string[];
   } | null>(null);
@@ -265,7 +264,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
         setTicketFormOptions({
           statusOptions: options.statusOptions,
           priorityOptions: options.priorityOptions,
-          channelOptions: options.channelOptions,
+          boardOptions: options.boardOptions,
           categories: options.categories,
           tags: options.tags
         });
@@ -680,7 +679,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             <CompanyTickets 
               companyId={company.company_id}
               companyName={company.company_name}
-              initialChannels={ticketFormOptions.channelOptions}
+              initialBoards={ticketFormOptions.boardOptions}
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
               initialCategories={ticketFormOptions.categories}

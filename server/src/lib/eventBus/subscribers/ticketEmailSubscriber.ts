@@ -133,7 +133,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         'au.email as assigned_to_email',
         db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
         db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
-        'ch.channel_name',
+        'ch.board_name',
         'cat.category_name',
         'subcat.category_name as subcategory_name',
         'cl.location_name',
@@ -174,8 +174,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         this.on('t.status_id', 's.status_id')
             .andOn('t.tenant', 's.tenant');
       })
-      .leftJoin('channels as ch', function() {
-        this.on('t.channel_id', 'ch.channel_id')
+      .leftJoin('boards as ch', function() {
+        this.on('t.board_id', 'ch.board_id')
             .andOn('t.tenant', 'ch.tenant');
       })
       .leftJoin('categories as cat', function() {
@@ -289,7 +289,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
     const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
 
-    const channelName = safeString(ticket.channel_name) || 'Not specified';
+    const boardName = safeString(ticket.board_name) || 'Not specified';
     const categoryName = safeString(ticket.category_name);
     const subcategoryName = safeString(ticket.subcategory_name);
     const categoryDetails = categoryName && subcategoryName
@@ -347,7 +347,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         requesterPhone,
         requesterContact,
         requesterDetails: requesterDetailsForText,
-        channel: channelName,
+        board: boardName,
         category: categoryName || 'Not categorized',
         subcategory: subcategoryName || 'Not specified',
         categoryDetails,

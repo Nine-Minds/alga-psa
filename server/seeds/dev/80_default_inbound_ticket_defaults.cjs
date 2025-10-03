@@ -19,12 +19,12 @@ exports.seed = async function(knex) {
 
   // Get default IDs for ticket creation
   const [
-    defaultChannelId,
+    defaultBoardId,
     defaultStatusId,
     defaultPriorityId
   ] = await Promise.all([
-    getDefaultId('channels', { is_default: true }, 'channel_id') || 
-    getDefaultId('channels', {}, 'channel_id'), // Fallback to first channel
+    getDefaultId('boards', { is_default: true }, 'board_id') || 
+    getDefaultId('boards', {}, 'board_id'), // Fallback to first board
     
     getDefaultId('statuses', { is_default: true, status_type: 'ticket' }, 'status_id') ||
     getDefaultId('statuses', { status_type: 'ticket' }, 'status_id'), // Fallback to first ticket status
@@ -33,7 +33,7 @@ exports.seed = async function(knex) {
     getDefaultId('priorities', { item_type: 'ticket' }, 'priority_id')
   ]);
 
-  if (!defaultChannelId || !defaultStatusId || !defaultPriorityId) {
+  if (!defaultBoardId || !defaultStatusId || !defaultPriorityId) {
     console.warn('Could not find required default values for ticket defaults. Skipping seed.');
     return;
   }
@@ -55,7 +55,7 @@ exports.seed = async function(knex) {
     short_name: 'email-general',
     display_name: 'General Email Support',
     description: 'Default configuration for tickets created from email processing',
-    channel_id: defaultChannelId,
+    board_id: defaultBoardId,
     status_id: defaultStatusId,
     priority_id: defaultPriorityId,
     company_id: null,
