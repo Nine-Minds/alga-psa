@@ -1,118 +1,152 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
-import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
-import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
+import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { runWithTenant } from 'server/src/lib/db';
-import '../../../test-utils/nextApiMock';
 
-global.TextEncoder = TextEncoder;
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+// This is critical for tests that use advisory locks or other features not supported by pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
 
 // Create test context helpers
-const { beforeAll: setupContext, beforeEach: resetContext, afterAll: cleanupContext } = TestContext.createHelpers();
-
-let context: TestContext;
-
-beforeAll(async () => {
-  // Initialize test context and set up mocks
-  context = await setupContext({
-    cleanupTables: [
-      'service_catalog',
-      'tax_rates',
-      'company_tax_settings',
-      'transactions',
-      'company_billing_cycles',
-      'company_billing_plans',
-      'bucket_plans',
-      'bucket_usage'
-    ]
-  });
-  setupCommonMocks({ tenantId: context.tenantId });
-});
-
-beforeEach(async () => {
-  await resetContext();
-});
-
-afterAll(async () => {
-  await cleanupContext();
-});
-
-/**
- * Helper to create a test service
- */
-async function createTestService(overrides = {}) {
-  const serviceId = uuidv4();
-  const defaultService = {
-    service_id: serviceId,
-    tenant: context.tenantId,
-    service_name: 'Test Service',
-    service_type: 'Fixed',
-    default_rate: 1000,
-    unit_of_measure: 'each',
-    is_taxable: true,
-    tax_region: 'US-NY'
-  };
-
-  await context.db('service_catalog').insert({ ...defaultService, ...overrides });
-  return serviceId;
-}
-
-/**
- * Helper to create a test plan
- */
-async function createTestPlan(serviceId: string, overrides = {}) {
-  const planId = uuidv4();
-  const defaultPlan = {
-    plan_id: planId,
-    tenant: context.tenantId,
-    plan_name: 'Test Plan',
-    billing_frequency: 'monthly',
-    is_custom: false,
-    plan_type: 'Fixed'
-  };
-
-  await context.db('billing_plans').insert({ ...defaultPlan, ...overrides });
-  await context.db('plan_services').insert({
-    plan_id: planId,
-    service_id: serviceId,
-    tenant: context.tenantId,
-    quantity: 1
-  });
-
-  return planId;
-}
-
-/**
- * Helper to set up tax configuration
- */
-async function setupTaxConfiguration() {
-  const taxRateId = uuidv4();
-  await context.db('tax_rates').insert({
-    tax_rate_id: taxRateId,
-    tenant: context.tenantId,
-    region: 'US-NY',
-    tax_percentage: 8.875,
-    description: 'NY State + City Tax',
-    start_date: createTestDateISO()
-  });
-
-  await context.db('company_tax_settings').insert({
-    company_id: context.companyId,
-    tenant: context.tenantId,
-    tax_rate_id: taxRateId,
-    is_reverse_charge_applicable: false
-  });
-
-  return taxRateId;
-}
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Prepayment Invoice System', () => {
+  let context: TestContext;
+
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
+  beforeAll(async () => {
+    context = await setupContext({
+      runSeeds: true,
+      cleanupTables: [
+        'invoice_items',
+        'invoices',
+        'transactions',
+        'credit_tracking',
+        'usage_tracking',
+        'bucket_usage',
+        'time_entries',
+        'tickets',
+        'company_billing_cycles',
+        'company_billing_plans',
+        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
+        'service_catalog',
+        'billing_plan_fixed_config',
+        'billing_plans',
+        'bucket_plans',
+        'tax_rates',
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates',
+        'company_billing_settings'
+      ],
+      companyName: 'Prepayment Test Company',
+      userType: 'internal'
+    });
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
+
+  beforeEach(async () => {
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    // Configure default tax for the test company
+    await configureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
+
+  afterAll(async () => {
+    await cleanupContext();
+  }, 30000);
+
   describe('Creating Prepayment Invoices', () => {
       it('creates a prepayment invoice with correct details', async () => {
         const prepaymentAmount = 100000;
@@ -295,13 +329,24 @@ describe('Prepayment Invoice System', () => {
 
     beforeEach(async () => {
       // Setup billing configuration
-      serviceId = await createTestService();
-      planId = await createTestPlan(serviceId);
-      await setupTaxConfiguration();
+      serviceId = await createTestService(context, {
+        service_name: 'Test Service',
+        billing_method: 'fixed',
+        default_rate: 1000,
+        tax_region: 'US-NY'
+      });
 
       const now = createTestDate();
       const startDate = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month');
-      
+
+      const { planId: createdPlanId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Test Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 1000,
+        startDate: dateHelpers.toISOString(startDate)
+      });
+      planId = createdPlanId;
+
       // Create billing cycle
       billingCycleId = uuidv4();
       await context.db('company_billing_cycles').insert({
@@ -314,19 +359,9 @@ describe('Prepayment Invoice System', () => {
         effective_date: startDate
       });
 
-      // Link plan to company
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate,
-        is_active: true
-      });
-
       // Create a service for bucket usage
-      const bucketServiceId = await createTestService({
-        service_type: 'Time',
+      const bucketServiceId = await createTestService(context, {
+        billing_method: 'time',
         service_name: 'Bucket Service',
         tax_region: 'US-NY'
       });
@@ -404,20 +439,99 @@ describe('Prepayment Invoice System', () => {
 });
 
 describe('Multiple Credit Applications', () => {
+  let context: TestContext;
   let serviceId: string;
   let planId: string;
   let billingCycleId1: string;
   let billingCycleId2: string;
 
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
+  beforeAll(async () => {
+    context = await setupContext({
+      runSeeds: true,
+      cleanupTables: [
+        'invoice_items',
+        'invoices',
+        'transactions',
+        'credit_tracking',
+        'usage_tracking',
+        'bucket_usage',
+        'time_entries',
+        'tickets',
+        'company_billing_cycles',
+        'company_billing_plans',
+        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
+        'service_catalog',
+        'billing_plan_fixed_config',
+        'billing_plans',
+        'bucket_plans',
+        'tax_rates',
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates',
+        'company_billing_settings'
+      ],
+      companyName: 'Multiple Credits Test Company',
+      userType: 'internal'
+    });
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
+
   beforeEach(async () => {
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    // Configure default tax for the test company
+    await configureDefaultTax();
+
     // Setup billing configuration
-    serviceId = await createTestService();
-    planId = await createTestPlan(serviceId);
-    await setupTaxConfiguration();
+    serviceId = await createTestService(context, {
+      service_name: 'Test Service',
+      billing_method: 'fixed',
+      default_rate: 1000,
+      tax_region: 'US-NY'
+    });
 
     const now = createTestDate();
     const startDate = dateHelpers.startOf(dateHelpers.subtractDuration(now, { months: 1 }), 'month');
-    
+
+    const { planId: createdPlanId } = await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Test Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 1000,
+      startDate: dateHelpers.toISOString(startDate)
+    });
+    planId = createdPlanId;
+
     // Create billing cycles
     billingCycleId1 = uuidv4();
     billingCycleId2 = uuidv4();
@@ -443,21 +557,9 @@ describe('Multiple Credit Applications', () => {
       }
     ]);
 
-    // Link plan to company
-    await context.db('company_billing_plans').insert([
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate,
-        is_active: true
-      }
-    ]);
-
     // Create a service for bucket usage
-    const bucketServiceId = await createTestService({
-      service_type: 'Time',
+    const bucketServiceId = await createTestService(context, {
+      billing_method: 'time',
       service_name: 'Bucket Service',
       tax_region: 'US-NY'
     });
@@ -498,7 +600,15 @@ describe('Multiple Credit Applications', () => {
         tenant: context.tenantId
       }
     ]);
-  });
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
+
+  afterAll(async () => {
+    await cleanupContext();
+  }, 30000);
 
   it('applies credit from multiple prepayment invoices to a single invoice', async () => {
     // Setup multiple prepayments

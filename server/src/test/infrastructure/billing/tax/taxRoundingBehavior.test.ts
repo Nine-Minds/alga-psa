@@ -1,94 +1,155 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { TaxService } from '../../lib/services/taxService';
-import { Temporal } from '@js-temporal/polyfill';
-import { ICompany } from '../../interfaces/company.interfaces';
-import { v4 as uuidv4 } from 'uuid';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
+import { v4 as uuidv4 } from 'uuid';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import {
+  createTestService,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+// This is critical for tests that use advisory locks or other features not supported by pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Tax Allocation Strategy', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
-  let taxService: TaxService;
-  let company_id: string;
   let default_service_id: string;
 
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'companies',
-        'tax_rates',
-        'company_tax_settings',
-        'invoices',
         'invoice_items',
-        'service_catalog'
+        'invoices',
+        'service_catalog',
+        'tax_rates',
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates',
+        'companies'
       ],
-      companyName: 'Test Company',
+      companyName: 'Tax Allocation Test Company',
       userType: 'internal'
     });
-    taxService = new TaxService();
-  });
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
+    context = await resetContext();
 
-    // Create test company
-    company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Tax Allocation Test Company',
-      billing_cycle: 'monthly',
-      company_id: uuidv4(),
-      tax_region: 'US-NY',
-      is_tax_exempt: false,
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
-      properties: {}
-    }, 'company_id');
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
 
     // Create a default service for testing
-    default_service_id = await context.createEntity('service_catalog', {
+    default_service_id = await createTestService(context, {
       service_name: 'Test Service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 1000,
       unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
-  });
+      tax_region: 'US-NY'
+    });
+
+    // Configure default tax for the test company
+    await configureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   describe('Tax Distribution Rules', () => {
     it('should distribute tax proportionally among positive line items only', async () => {
-      // Create tax rate of 10% for simple calculation
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10,
+      // Set up tax rate of 10% for simple calculation
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'Test Tax Rate',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: taxRateId,
-        is_reverse_charge_applicable: false
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 10
       });
 
       // Create invoice with mixed positive and negative amounts
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        companyId: context.companyId,
         items: [
           {
             service_id: default_service_id,
@@ -132,26 +193,18 @@ describe('Tax Allocation Strategy', () => {
     });
 
     it('should handle rounding by using Math.floor for all but last item', async () => {
-      // Create tax rate of 8.875% (NY rate)
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 8.875,
+      // Set up tax rate of 8.875% (NY rate)
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'NY State + City Tax',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Update company tax settings
-      await context.db('company_tax_settings')
-        .where({ company_id: company_id })
-        .update({
-          tax_rate_id: taxRateId,
-          is_reverse_charge_applicable: false
-        });
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 8.875
+      });
 
       // Create invoice with amounts that will produce fractional tax cents
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        companyId: context.companyId,
         items: [
           {
             service_id: default_service_id,
@@ -194,26 +247,18 @@ describe('Tax Allocation Strategy', () => {
     });
 
     it('should handle very small amounts by allocating to last positive item', async () => {
-      // Create tax rate of 1% for testing small amounts
-      const taxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 1,
+      // Set up tax rate of 1% for testing small amounts
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        regionName: 'New York',
         description: 'Test Tax Rate',
-        start_date: '2025-01-01',
-        is_active: true
-      }, 'tax_rate_id');
-
-      // Update company tax settings
-      await context.db('company_tax_settings')
-        .where({ company_id: company_id })
-        .update({
-          tax_rate_id: taxRateId,
-          is_reverse_charge_applicable: false
-        });
+        startDate: '2025-01-01T00:00:00.000Z',
+        taxPercentage: 1
+      });
 
       // Create invoice with small amounts
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        companyId: context.companyId,
         items: [
           {
             service_id: default_service_id,
