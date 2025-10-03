@@ -1297,11 +1297,11 @@ export class UserService extends BaseService<IUser> {
         case 'contact_id':
           query.where('contact_id', value);
           break;
-        case 'company_id':
+        case 'client_id':
           query.join('contacts', function() {
             this.on('users.contact_id', '=', 'contacts.contact_name_id')
                 .andOn('users.tenant', '=', 'contacts.tenant');
-          }).where('contacts.company_id', value);
+          }).where('contacts.client_id', value);
           break;
         case 'role_id':
           query.join('user_roles', function() {

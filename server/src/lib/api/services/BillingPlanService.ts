@@ -6,8 +6,8 @@
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult } from './BaseService';
 import { withTransaction } from '@shared/db';
-import { IBillingPlan, IBillingPlanFixedConfig, ICompanyBillingPlan, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
-import { IPlanBundle, IBundleBillingPlan, ICompanyPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
+import { IBillingPlan, IBillingPlanFixedConfig, IClientBillingPlan, IBucketUsage } from 'server/src/interfaces/billing.interfaces';
+import { IPlanBundle, IBundleBillingPlan, IClientPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
 import { v4 as uuidv4 } from 'uuid';
@@ -30,9 +30,9 @@ import {
   CreatePlanBundleData,
   UpdatePlanBundleData,
   PlanBundleResponse,
-  CreateCompanyBillingPlanData,
-  UpdateCompanyBillingPlanData,
-  CompanyBillingPlanResponse,
+  CreateClientBillingPlanData,
+  UpdateClientBillingPlanData,
+  ClientBillingPlanResponse,
   AddServiceToPlanData,
   UpdatePlanServiceData,
   CopyBillingPlanData,
@@ -40,7 +40,7 @@ import {
   PlanTemplateResponse,
   CreatePlanFromTemplateData,
   PlanActivationData,
-  CompanyPlanActivationData,
+  ClientPlanActivationData,
   BulkCreateBillingPlansData,
   BulkUpdateBillingPlansData,
   BulkDeleteBillingPlansData,
@@ -59,7 +59,7 @@ export interface BillingPlanServiceOptions {
   includeAnalytics?: boolean;
   includeServices?: boolean;
   includeUsage?: boolean;
-  includeCompanies?: boolean;
+  includeClients?: boolean;
 }
 
 export interface PlanTemplate {
@@ -754,15 +754,15 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
-      // Check if bundle plan is assigned to companies
-      const companyAssignments = await trx('company_billing_plans')
+      // Check if bundle plan is assigned to clients
+      const clientAssignments = await trx('client_billing_plans')
         .where('plan_id', planId)
-        .where('company_bundle_id', bundleId)
+        .where('client_bundle_id', bundleId)
         .where('tenant', context.tenant)
         .where('is_active', true);
       
-      if (companyAssignments.length > 0) {
-        throw new Error('Cannot remove plan from bundle: it is currently assigned to companies');
+      if (clientAssignments.length > 0) {
+        throw new Error('Cannot remove plan from bundle: it is currently assigned to clients');
       }
       
       // Remove plan from bundle
@@ -783,12 +783,12 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
   // ============================================================================
 
   /**
-   * Assign billing plan to company
+   * Assign billing plan to client
    */
-  async assignPlanToCompany(
-    data: CreateCompanyBillingPlanData,
+  async assignPlanToClient(
+    data: CreateClientBillingPlanData,
     context: ServiceContext
-  ): Promise<CompanyBillingPlanResponse> {
+  ): Promise<ClientBillingPlanResponse> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
@@ -796,38 +796,38 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       const plan = await this.getExistingPlan(data.plan_id, context, trx);
       // Plan existence check is sufficient - active plans are in the table
       
-      // Validate company exists
-      await this.validateCompanyExists(data.company_id, context, trx);
+      // Validate client exists
+      await this.validateClientExists(data.client_id, context, trx);
       
       // Check for overlapping assignments
       await this.validateNoOverlappingAssignments(data, context, trx);
       
       // Create assignment
       const assignmentData = this.addCreateAuditFields({
-        company_billing_plan_id: uuidv4(),
+        client_billing_plan_id: uuidv4(),
         ...data
       }, context);
       
-      const [assignment] = await trx('company_billing_plans')
+      const [assignment] = await trx('client_billing_plans')
         .insert(assignmentData)
         .returning('*');
       
-      return addHateoasLinks(assignment, this.generateCompanyPlanLinks(assignment.company_billing_plan_id, context)) as CompanyBillingPlanResponse;
+      return addHateoasLinks(assignment, this.generateClientPlanLinks(assignment.client_billing_plan_id, context)) as ClientBillingPlanResponse;
     });
   }
 
   /**
-   * Unassign billing plan from company
+   * Unassign billing plan from client
    */
-  async unassignPlanFromCompany(
-    companyBillingPlanId: string,
+  async unassignPlanFromClient(
+    clientBillingPlanId: string,
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
       // Check if there are pending invoices or active usage
-      await this.validateSafeUnassignment(companyBillingPlanId, context, trx);
+      await this.validateSafeUnassignment(clientBillingPlanId, context, trx);
       
       // Soft delete by setting end_date and is_active = false
       const updateData = this.addUpdateAuditFields({
@@ -835,13 +835,13 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
         is_active: false
       }, context);
       
-      const result = await trx('company_billing_plans')
-        .where('company_billing_plan_id', companyBillingPlanId)
+      const result = await trx('client_billing_plans')
+        .where('client_billing_plan_id', clientBillingPlanId)
         .where('tenant', context.tenant)
         .update(updateData);
       
       if (result === 0) {
-        throw new Error('Company billing plan assignment not found');
+        throw new Error('Client billing plan assignment not found');
       }
     });
   }
@@ -882,9 +882,9 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
         .update(updateData)
         .returning('*');
       
-      // If deactivating, also deactivate company assignments if requested
+      // If deactivating, also deactivate client assignments if requested
       if (!data.is_active && data.effective_date) {
-        await trx('company_billing_plans')
+        await trx('client_billing_plans')
           .where('plan_id', planId)
           .where('tenant', context.tenant)
           .where('is_active', true)
@@ -1079,8 +1079,8 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     
     // Get time entries for billable usage
     const timeEntries = await knex('time_entries as te')
-      .join('company_billing_plans as cbp', function() {
-        this.on('te.company_id', '=', 'cbp.company_id')
+      .join('client_billing_plans as cbp', function() {
+        this.on('te.client_id', '=', 'cbp.client_id')
             .andOn('te.tenant', '=', 'cbp.tenant');
       })
       .where('cbp.plan_id', planId)
@@ -1210,13 +1210,13 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     // Get basic plan info
     const plan = await this.getExistingPlan(planId, context);
     
-    // Get company assignments
-    const companyStats = await knex('company_billing_plans')
+    // Get client assignments
+    const clientStats = await knex('client_billing_plans')
       .where('plan_id', planId)
       .where('tenant', context.tenant)
       .select(
-        knex.raw('COUNT(*) as total_companies'),
-        knex.raw('COUNT(CASE WHEN is_active = true THEN 1 END) as active_companies')
+        knex.raw('COUNT(*) as total_clients'),
+        knex.raw('COUNT(CASE WHEN is_active = true THEN 1 END) as active_clients')
       )
       .first();
     
@@ -1225,7 +1225,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       monthly: 0,
       quarterly: 0,
       yearly: 0,
-      average_per_company: 0
+      average_per_client: 0
     };
     
     // Get service usage stats
@@ -1240,8 +1240,8 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       plan_id: planId,
       plan_name: plan.plan_name,
       plan_type: plan.plan_type,
-      total_companies: parseInt(companyStats?.total_companies || '0'),
-      active_companies: parseInt(companyStats?.active_companies || '0'),
+      total_clients: parseInt(clientStats?.total_clients || '0'),
+      active_clients: parseInt(clientStats?.active_clients || '0'),
       revenue: revenueStats,
       usage_stats: {
         total_services: serviceStats.length,
@@ -1250,10 +1250,10 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
           service_name: s.service_name,
           usage_count: parseInt(s.usage_count)
         })),
-        average_services_per_company: serviceStats.length / (parseInt(companyStats?.total_companies || '1'))
+        average_services_per_client: serviceStats.length / (parseInt(clientStats?.total_clients || '1'))
       },
       growth_metrics: {
-        new_companies_this_month: 0,
+        new_clients_this_month: 0,
         churn_rate: 0,
         revenue_growth_rate: 0
       }
@@ -1270,7 +1270,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     const [planCount, bundleCount, assignmentCount] = await Promise.all([
       knex('billing_plans').where('tenant', context.tenant).count('* as count').first(),
       knex('plan_bundles').where('tenant', context.tenant).count('* as count').first(),
-      knex('company_billing_plans').where('tenant', context.tenant).where('is_active', true).count('* as count').first()
+      knex('client_billing_plans').where('tenant', context.tenant).where('is_active', true).count('* as count').first()
     ]);
     
     // Get plans by type
@@ -1333,7 +1333,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     // Add analytics if requested
     if (options.includeAnalytics) {
       query = query
-        .leftJoin('company_billing_plans as cbp', function() {
+        .leftJoin('client_billing_plans as cbp', function() {
           this.on('bp.plan_id', '=', 'cbp.plan_id')
               .andOn('bp.tenant', '=', 'cbp.tenant')
               .andOn('cbp.is_active', '=', knex.raw('true'));
@@ -1341,7 +1341,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
         .groupBy('bp.plan_id')
         .select(
           'bp.*',
-          knex.raw('COUNT(cbp.company_id) as companies_using_plan'),
+          knex.raw('COUNT(cbp.client_id) as clients_using_plan'),
           knex.raw('AVG(cbp.custom_rate) as average_monthly_revenue')
         );
     } else {
@@ -1387,12 +1387,12 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       }
     }
     
-    if (filters.companies_count_min !== undefined) {
-      query = query.havingRaw('COUNT(cbp.company_id) >= ?', [filters.companies_count_min]);
+    if (filters.clients_count_min !== undefined) {
+      query = query.havingRaw('COUNT(cbp.client_id) >= ?', [filters.clients_count_min]);
     }
     
-    if (filters.companies_count_max !== undefined) {
-      query = query.havingRaw('COUNT(cbp.company_id) <= ?', [filters.companies_count_max]);
+    if (filters.clients_count_max !== undefined) {
+      query = query.havingRaw('COUNT(cbp.client_id) <= ?', [filters.clients_count_max]);
     }
     
     return query;
@@ -1482,25 +1482,25 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
   ): Promise<{ inUse: boolean; reason?: string }> {
     const { knex } = trx ? { knex: trx } : await this.getKnex();
     
-    // Check company assignments
-    const companyAssignments = await knex('company_billing_plans')
+    // Check client assignments
+    const clientAssignments = await knex('client_billing_plans')
       .where('plan_id', planId)
       .where('tenant', context.tenant)
       .where('is_active', true)
       .count('* as count')
       .first();
     
-    const companyCount = parseInt(String(companyAssignments?.count || '0'));
-    if (companyCount > 0) {
+    const clientCount = parseInt(String(clientAssignments?.count || '0'));
+    if (clientCount > 0) {
       return {
         inUse: true,
-        reason: `Plan is currently assigned to ${companyCount} ${companyCount === 1 ? 'company' : 'companies'}`
+        reason: `Plan is currently assigned to ${clientCount} ${clientCount === 1 ? 'client' : 'clients'}`
       };
     }
     
-    // Check if plan is in bundles that are assigned to companies
+    // Check if plan is in bundles that are assigned to clients
     const bundleAssignments = await knex('bundle_billing_plans as bbp')
-      .join('company_plan_bundles as cpb', 'bbp.bundle_id', 'cpb.bundle_id')
+      .join('client_plan_bundles as cpb', 'bbp.bundle_id', 'cpb.bundle_id')
       .where('bbp.plan_id', planId)
       .where('bbp.tenant', context.tenant)
       .where('cpb.is_active', true)
@@ -1511,7 +1511,7 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     if (bundleCount > 0) {
       return {
         inUse: true,
-        reason: `Plan is in bundles assigned to ${bundleCount} ${bundleCount === 1 ? 'company' : 'companies'}`
+        reason: `Plan is in bundles assigned to ${bundleCount} ${bundleCount === 1 ? 'client' : 'clients'}`
       };
     }
     
@@ -1583,28 +1583,28 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     }
   }
 
-  private async validateCompanyExists(
-    companyId: string,
+  private async validateClientExists(
+    clientId: string,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const company = await trx('companies')
-      .where('company_id', companyId)
+    const client = await trx('clients')
+      .where('client_id', clientId)
       .where('tenant', context.tenant)
       .first();
     
-    if (!company) {
-      throw new Error('Company not found');
+    if (!client) {
+      throw new Error('Client not found');
     }
   }
 
   private async validateNoOverlappingAssignments(
-    data: CreateCompanyBillingPlanData,
+    data: CreateClientBillingPlanData,
     context: ServiceContext,
     trx: Knex.Transaction
   ): Promise<void> {
-    const overlapping = await trx('company_billing_plans')
-      .where('company_id', data.company_id)
+    const overlapping = await trx('client_billing_plans')
+      .where('client_id', data.client_id)
       .where('plan_id', data.plan_id)
       .where('tenant', context.tenant)
       .where('is_active', true)
@@ -1615,18 +1615,18 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       .first();
     
     if (overlapping) {
-      throw new Error('Company already has an active assignment for this plan in the specified period');
+      throw new Error('Client already has an active assignment for this plan in the specified period');
     }
   }
 
   private async validateSafeUnassignment(
-      companyBillingPlanId: string,
+      clientBillingPlanId: string,
       context: ServiceContext,
       trx: Knex.Transaction
     ): Promise<void> {
       // Check for pending invoices
       const pendingInvoices = await trx('invoices')
-        .where('company_billing_plan_id', companyBillingPlanId)
+        .where('client_billing_plan_id', clientBillingPlanId)
         .where('tenant', context.tenant)
         .where('status', 'pending')
         .count('* as count')
@@ -1638,11 +1638,11 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
       
       // Check for active usage tracking
       const activeUsage = await trx('bucket_usage')
-        .join('company_billing_plans as cbp', function() {
-          this.on('bucket_usage.company_id', '=', 'cbp.company_id')
+        .join('client_billing_plans as cbp', function() {
+          this.on('bucket_usage.client_id', '=', 'cbp.client_id')
               .andOn('bucket_usage.tenant', '=', 'cbp.tenant');
         })
-        .where('cbp.company_billing_plan_id', companyBillingPlanId)
+        .where('cbp.client_billing_plan_id', clientBillingPlanId)
         .where('bucket_usage.period_end', '>', new Date())
         .count('* as count')
         .first();
@@ -1733,8 +1733,8 @@ export class BillingPlanService extends BaseService<IBillingPlan> {
     return generateResourceLinks('plan-bundles', bundleId, baseUrl, ['read', 'update', 'delete']);
   }
 
-  private generateCompanyPlanLinks(companyBillingPlanId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
-    const baseUrl = '/api/v1/company-billing-plans';
-    return generateResourceLinks('company-billing-plans', companyBillingPlanId, baseUrl, ['read', 'update', 'delete']);
+  private generateClientPlanLinks(clientBillingPlanId: string, context: ServiceContext): Record<string, { href: string; method: string; rel: string }> {
+    const baseUrl = '/api/v1/client-billing-plans';
+    return generateResourceLinks('client-billing-plans', clientBillingPlanId, baseUrl, ['read', 'update', 'delete']);
   }
 }

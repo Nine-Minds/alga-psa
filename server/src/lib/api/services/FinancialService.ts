@@ -95,7 +95,7 @@ import {
   ITaxRate,
   ICreditReconciliationReport,
   IDefaultBillingSettings,
-  ICompanyBillingSettings
+  IClientBillingSettings
 } from '../../../interfaces/billing.interfaces';
 
 // Import existing actions to integrate with
@@ -218,7 +218,7 @@ export class FinancialService extends BaseService<ITransaction> {
             rel: 'transfer',
             href: `${baseUrl}/credits/${resourceId}/transfer`,
             method: 'POST',
-            description: 'Transfer credit to another company'
+            description: 'Transfer credit to another client'
           },
           {
             rel: 'expire',
@@ -292,7 +292,7 @@ export class FinancialService extends BaseService<ITransaction> {
     return withTransaction(knex, async (trx) => {
       // Calculate balance after transaction
       const lastTransaction = await trx('transactions')
-        .where({ company_id: data.company_id, tenant: context.tenant })
+        .where({ client_id: data.client_id, tenant: context.tenant })
         .orderBy('created_at', 'desc')
         .first();
       
@@ -310,10 +310,10 @@ export class FinancialService extends BaseService<ITransaction> {
         .insert(transactionData)
         .returning('*');
 
-      // Update company credit balance if this is a credit-related transaction
+      // Update client credit balance if this is a credit-related transaction
       if (['credit_issuance', 'credit_application', 'credit_adjustment'].includes(data.type)) {
-        await trx('companies')
-          .where({ company_id: data.company_id, tenant: context.tenant })
+        await trx('clients')
+          .where({ client_id: data.client_id, tenant: context.tenant })
           .update({
             credit_balance: balanceAfter,
             updated_at: new Date().toISOString()
@@ -377,7 +377,7 @@ export class FinancialService extends BaseService<ITransaction> {
     const {
       page = 1,
       limit = 25,
-      company_id,
+      client_id,
       type,
       status,
       amount_min,
@@ -389,7 +389,7 @@ export class FinancialService extends BaseService<ITransaction> {
     } = query;
 
     let dataQuery = knex('transactions as t')
-      .leftJoin('companies as c', 't.company_id', 'c.company_id')
+      .leftJoin('clients as c', 't.client_id', 'c.client_id')
       .leftJoin('invoices as i', 't.invoice_id', 'i.invoice_id')
       .where('t.tenant', context.tenant);
 
@@ -397,9 +397,9 @@ export class FinancialService extends BaseService<ITransaction> {
       .where('tenant', context.tenant);
 
     // Apply filters
-    if (company_id) {
-      dataQuery = dataQuery.where('t.company_id', company_id);
-      countQuery = countQuery.where('company_id', company_id);
+    if (client_id) {
+      dataQuery = dataQuery.where('t.client_id', client_id);
+      countQuery = countQuery.where('client_id', client_id);
     }
 
     if (type) {
@@ -436,7 +436,7 @@ export class FinancialService extends BaseService<ITransaction> {
       dataQuery = dataQuery.where(builder => {
         builder.whereILike('t.description', `%${search}%`)
                .orWhereILike('t.reference_number', `%${search}%`)
-               .orWhereILike('c.company_name', `%${search}%`);
+               .orWhereILike('c.client_name', `%${search}%`);
       });
       countQuery = countQuery.where(builder => {
         builder.whereILike('description', `%${search}%`)
@@ -448,7 +448,7 @@ export class FinancialService extends BaseService<ITransaction> {
     dataQuery = dataQuery
       .select(
         't.*',
-        'c.company_name',
+        'c.client_name',
         'i.invoice_number'
       )
       .orderBy(`t.${sort}`, order)
@@ -485,7 +485,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'credit', context);
     
     await creditActions.applyCreditToInvoice(
-      request.company_id,
+      request.client_id,
       request.invoice_id,
       request.requested_amount
     );
@@ -503,10 +503,10 @@ export class FinancialService extends BaseService<ITransaction> {
           description: 'View updated invoice'
         },
         {
-          rel: 'company-credits',
-          href: `/api/v1/financial/credits?company_id=${request.company_id}`,
+          rel: 'client-credits',
+          href: `/api/v1/financial/credits?client_id=${request.client_id}`,
           method: 'GET',
-          description: 'View company credits'
+          description: 'View client credits'
         }
       ]
     };
@@ -522,7 +522,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('create', 'credit', context);
     
     const invoice = await creditActions.createPrepaymentInvoice(
-      request.company_id,
+      request.client_id,
       request.amount,
       request.manual_expiration_date
     );
@@ -534,7 +534,7 @@ export class FinancialService extends BaseService<ITransaction> {
   }
 
   /**
-   * Transfer credit between companies
+   * Transfer credit between clients
    */
   async transferCredit(
     request: TransferCreditRequest,
@@ -544,7 +544,7 @@ export class FinancialService extends BaseService<ITransaction> {
     
     const newCredit = await creditActions.transferCredit(
       request.source_credit_id,
-      request.target_company_id,
+      request.target_client_id,
       request.amount,
       request.user_id,
       request.reason
@@ -557,9 +557,9 @@ export class FinancialService extends BaseService<ITransaction> {
   }
 
   /**
-   * List company credits with detailed information
+   * List client credits with detailed information
    */
-  async listCompanyCredits(
+  async listClientCredits(
     query: CreditListQuery,
     context: ServiceContext
   ): Promise<ListResult<FinancialResponse<CreditTrackingResponse>>> {
@@ -568,18 +568,18 @@ export class FinancialService extends BaseService<ITransaction> {
     const {
       page = 1,
       limit = 25,
-      company_id,
+      client_id,
       include_expired = false,
       expiring_soon,
       has_remaining
     } = query;
 
-    if (!company_id) {
-      throw new Error('Company ID is required for credit listing');
+    if (!client_id) {
+      throw new Error('Client ID is required for credit listing');
     }
 
-    const result = await creditActions.listCompanyCredits(
-      company_id,
+    const result = await creditActions.listClientCredits(
+      client_id,
       include_expired,
       page,
       limit
@@ -597,15 +597,15 @@ export class FinancialService extends BaseService<ITransaction> {
   }
 
   /**
-   * Validate credit balance for a company
+   * Validate credit balance for a client
    */
   async validateCreditBalance(
-    companyId: string,
+    clientId: string,
     context: ServiceContext
   ): Promise<FinancialResponse<CreditValidationResult>> {
     await this.validatePermissions('read', 'credit', context);
     
-    const result = await creditActions.validateCreditBalance(companyId);
+    const result = await creditActions.validateCreditBalance(clientId);
     
     return {
       data: {
@@ -621,14 +621,14 @@ export class FinancialService extends BaseService<ITransaction> {
       },
       links: [
         {
-          rel: 'company',
-          href: `/api/v1/companies/${companyId}`,
+          rel: 'client',
+          href: `/api/v1/clients/${clientId}`,
           method: 'GET',
-          description: 'View company details'
+          description: 'View client details'
         },
         {
           rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation?company_id=${companyId}`,
+          href: `/api/v1/financial/reconciliation?client_id=${clientId}`,
           method: 'GET',
           description: 'View reconciliation reports'
         }
@@ -641,10 +641,10 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Calculate billing for a company and period
+   * Calculate billing for a client and period
    */
   async calculateBilling(
-    companyId: string,
+    clientId: string,
     periodStart: string,
     periodEnd: string,
     billingCycleId?: string,
@@ -655,7 +655,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const result = await this.billingEngine.calculateBilling(
-      companyId,
+      clientId,
       periodStart,
       periodEnd,
       billingCycleId!
@@ -666,7 +666,7 @@ export class FinancialService extends BaseService<ITransaction> {
     for (const charge of result.charges) {
       if (charge.is_taxable && charge.total > 0) {
         const taxResult = await this.taxService.calculateTax(
-          companyId,
+          clientId,
           charge.total,
           periodEnd,
           charge.tax_region || 'default'
@@ -699,10 +699,10 @@ export class FinancialService extends BaseService<ITransaction> {
           description: 'Generate invoice from billing calculation'
         },
         {
-          rel: 'company',
-          href: `/api/v1/companies/${companyId}`,
+          rel: 'client',
+          href: `/api/v1/clients/${clientId}`,
           method: 'GET',
-          description: 'View company details'
+          description: 'View client details'
         }
       ] : []
     };
@@ -731,11 +731,11 @@ export class FinancialService extends BaseService<ITransaction> {
         updated_at: new Date().toISOString()
       };
 
-      // If this is set as default, unset other defaults for the company
+      // If this is set as default, unset other defaults for the client
       if (data.is_default) {
         await trx('payment_methods')
           .where({
-            company_id: data.company_id,
+            client_id: data.client_id,
             tenant: context.tenant
           })
           .update({ is_default: false });
@@ -764,10 +764,10 @@ export class FinancialService extends BaseService<ITransaction> {
             description: 'Get payment method details'
           },
           {
-            rel: 'company',
-            href: `/api/v1/companies/${data.company_id}`,
+            rel: 'client',
+            href: `/api/v1/clients/${data.client_id}`,
             method: 'GET',
-            description: 'View company details'
+            description: 'View client details'
           }
         ]
       };
@@ -779,10 +779,10 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Generate account balance report for a company
+   * Generate account balance report for a client
    */
   async getAccountBalanceReport(
-    companyId: string,
+    clientId: string,
     asOfDate?: string,
     context?: ServiceContext
   ): Promise<FinancialResponse<AccountBalanceReport>> {
@@ -794,23 +794,23 @@ export class FinancialService extends BaseService<ITransaction> {
     const reportDate = asOfDate || new Date().toISOString();
     
     // Get current credit balance
-    const company = await knex('companies')
+    const client = await knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: context?.tenant || await this.getKnex().then(({tenant}) => tenant)
       })
       .first();
 
-    if (!company) {
-      throw new Error('Company not found');
+    if (!client) {
+      throw new Error('Client not found');
     }
 
     // Get available (non-expired) credits
     const now = new Date().toISOString();
     const availableCredits = await knex('credit_tracking')
       .where({
-        company_id: companyId,
-        tenant: company.tenant,
+        client_id: clientId,
+        tenant: client.tenant,
         is_expired: false
       })
       .where(function() {
@@ -822,8 +822,8 @@ export class FinancialService extends BaseService<ITransaction> {
     // Get expired credits
     const expiredCredits = await knex('credit_tracking')
       .where({
-        company_id: companyId,
-        tenant: company.tenant,
+        client_id: clientId,
+        tenant: client.tenant,
         is_expired: true
       })
       .sum('amount as total');
@@ -831,8 +831,8 @@ export class FinancialService extends BaseService<ITransaction> {
     // Get pending invoices
     const pendingInvoices = await knex('invoices')
       .where({
-        company_id: companyId,
-        tenant: company.tenant,
+        client_id: clientId,
+        tenant: client.tenant,
         status: 'sent'
       })
       .sum('total_amount as total');
@@ -840,8 +840,8 @@ export class FinancialService extends BaseService<ITransaction> {
     // Get overdue invoices
     const overdueInvoices = await knex('invoices')
       .where({
-        company_id: companyId,
-        tenant: company.tenant,
+        client_id: clientId,
+        tenant: client.tenant,
         status: 'overdue'
       })
       .sum('total_amount as total');
@@ -849,16 +849,16 @@ export class FinancialService extends BaseService<ITransaction> {
     // Get last payment
     const lastPayment = await knex('transactions')
       .where({
-        company_id: companyId,
-        tenant: company.tenant,
+        client_id: clientId,
+        tenant: client.tenant,
         type: 'payment'
       })
       .orderBy('created_at', 'desc')
       .first();
 
     const report: AccountBalanceReport = {
-      company_id: companyId,
-      current_balance: company.credit_balance || 0,
+      client_id: clientId,
+      current_balance: client.credit_balance || 0,
       available_credit: Number(availableCredits[0]?.total) || 0,
       expired_credit: Number(expiredCredits[0]?.total) || 0,
       pending_invoices: Number(pendingInvoices[0]?.total) || 0,
@@ -872,14 +872,14 @@ export class FinancialService extends BaseService<ITransaction> {
       data: report,
       links: context ? [
         {
-          rel: 'company',
-          href: `/api/v1/companies/${companyId}`,
+          rel: 'client',
+          href: `/api/v1/clients/${clientId}`,
           method: 'GET',
-          description: 'View company details'
+          description: 'View client details'
         },
         {
           rel: 'aging-report',
-          href: `/api/v1/financial/reports/aging?company_id=${companyId}`,
+          href: `/api/v1/financial/reports/aging?client_id=${clientId}`,
           method: 'GET',
           description: 'View aging report'
         }
@@ -891,7 +891,7 @@ export class FinancialService extends BaseService<ITransaction> {
    * Generate aging report for outstanding invoices
    */
   async getAgingReport(
-    companyId?: string,
+    clientId?: string,
     context?: ServiceContext
   ): Promise<FinancialResponse<AgingReport>> {
     if (context) {
@@ -904,23 +904,23 @@ export class FinancialService extends BaseService<ITransaction> {
     const now = new Date();
 
     let query = knex('invoices as i')
-      .join('companies as c', 'i.company_id', 'c.company_id')
+      .join('clients as c', 'i.client_id', 'c.client_id')
       .where('i.tenant', tenant)
       .whereIn('i.status', ['sent', 'overdue']);
 
-    if (companyId) {
-      query = query.where('i.company_id', companyId);
+    if (clientId) {
+      query = query.where('i.client_id', clientId);
     }
 
     const invoices = await query.select(
       'i.*',
-      'c.company_name'
+      'c.client_name'
     );
 
-    // Group by company and calculate aging buckets
-    const companyAging = new Map<string, {
-      company_id: string;
-      company_name: string;
+    // Group by client and calculate aging buckets
+    const clientAging = new Map<string, {
+      client_id: string;
+      client_name: string;
       current: number;
       days_30: number;
       days_60: number;
@@ -934,10 +934,10 @@ export class FinancialService extends BaseService<ITransaction> {
       const daysPastDue = Math.floor((now.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       const amount = invoice.total_amount - (invoice.credit_applied || 0);
 
-      if (!companyAging.has(invoice.company_id)) {
-        companyAging.set(invoice.company_id, {
-          company_id: invoice.company_id,
-          company_name: invoice.company_name,
+      if (!clientAging.has(invoice.client_id)) {
+        clientAging.set(invoice.client_id, {
+          client_id: invoice.client_id,
+          client_name: invoice.client_name,
           current: 0,
           days_30: 0,
           days_60: 0,
@@ -947,7 +947,7 @@ export class FinancialService extends BaseService<ITransaction> {
         });
       }
 
-      const aging = companyAging.get(invoice.company_id)!;
+      const aging = clientAging.get(invoice.client_id)!;
 
       if (daysPastDue <= 0) {
         aging.current += amount;
@@ -964,22 +964,22 @@ export class FinancialService extends BaseService<ITransaction> {
       aging.total_outstanding += amount;
     }
 
-    const companies = Array.from(companyAging.values());
+    const clients = Array.from(clientAging.values());
     
     // Calculate summary totals
     const summary = {
-      total_current: companies.reduce((sum, c) => sum + c.current, 0),
-      total_30_days: companies.reduce((sum, c) => sum + c.days_30, 0),
-      total_60_days: companies.reduce((sum, c) => sum + c.days_60, 0),
-      total_90_days: companies.reduce((sum, c) => sum + c.days_90, 0),
-      total_over_90_days: companies.reduce((sum, c) => sum + c.days_over_90, 0),
-      grand_total: companies.reduce((sum, c) => sum + c.total_outstanding, 0)
+      total_current: clients.reduce((sum, c) => sum + c.current, 0),
+      total_30_days: clients.reduce((sum, c) => sum + c.days_30, 0),
+      total_60_days: clients.reduce((sum, c) => sum + c.days_60, 0),
+      total_90_days: clients.reduce((sum, c) => sum + c.days_90, 0),
+      total_over_90_days: clients.reduce((sum, c) => sum + c.days_over_90, 0),
+      grand_total: clients.reduce((sum, c) => sum + c.total_outstanding, 0)
     };
 
     const report: AgingReport = {
       report_date: reportDate,
       summary,
-      companies
+      clients
     };
 
     return {
@@ -987,7 +987,7 @@ export class FinancialService extends BaseService<ITransaction> {
       links: context ? [
         {
           rel: 'account-balance',
-          href: `/api/v1/financial/reports/account-balance${companyId ? `?company_id=${companyId}` : ''}`,
+          href: `/api/v1/financial/reports/account-balance${clientId ? `?client_id=${clientId}` : ''}`,
           method: 'GET',
           description: 'View account balance report'
         }
@@ -1005,7 +1005,7 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('read', 'financial_report', context);
     
     const { knex } = await this.getKnex();
-    const { company_id, date_from, date_to, group_by = 'month' } = query;
+    const { client_id, date_from, date_to, group_by = 'month' } = query;
 
     // Build date grouping based on group_by parameter
     let dateGrouping: string;
@@ -1067,9 +1067,9 @@ export class FinancialService extends BaseService<ITransaction> {
       .groupBy(knex.raw(dateGrouping))
       .orderBy('period');
 
-    if (company_id) {
-      revenueQuery = revenueQuery.where('company_id', company_id);
-      creditQuery = creditQuery.where('company_id', company_id);
+    if (client_id) {
+      revenueQuery = revenueQuery.where('client_id', client_id);
+      creditQuery = creditQuery.where('client_id', client_id);
     }
 
     const [revenueData, creditData] = await Promise.all([
@@ -1081,12 +1081,12 @@ export class FinancialService extends BaseService<ITransaction> {
     const creditAnalytics = await Promise.all(
       creditData.map(async (period: any) => {
         // Get credit balance at end of period
-        const balanceQuery = knex('companies')
+        const balanceQuery = knex('clients')
           .sum('credit_balance as total_balance')
           .where('tenant', context.tenant);
         
-        if (company_id) {
-          balanceQuery.where('company_id', company_id);
+        if (client_id) {
+          balanceQuery.where('client_id', client_id);
         }
         
         const balanceResult = await balanceQuery.first();
@@ -1131,13 +1131,13 @@ export class FinancialService extends BaseService<ITransaction> {
       links: [
         {
           rel: 'aging-report',
-          href: `/api/v1/financial/reports/aging${company_id ? `?company_id=${company_id}` : ''}`,
+          href: `/api/v1/financial/reports/aging${client_id ? `?client_id=${client_id}` : ''}`,
           method: 'GET',
           description: 'View aging report'
         },
         {
           rel: 'account-balance',
-          href: `/api/v1/financial/reports/account-balance${company_id ? `?company_id=${company_id}` : ''}`,
+          href: `/api/v1/financial/reports/account-balance${client_id ? `?client_id=${client_id}` : ''}`,
           method: 'GET',
           description: 'View account balance report'
         }
@@ -1150,13 +1150,13 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Run credit reconciliation for companies
+   * Run credit reconciliation for clients
    */
   async runCreditReconciliation(
-    companyId?: string,
+    clientId?: string,
     context?: ServiceContext
   ): Promise<FinancialResponse<{
-    totalCompanies: number;
+    totalClients: number;
     balanceValidCount: number;
     balanceDiscrepancyCount: number;
     missingTrackingCount: number;
@@ -1168,14 +1168,14 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const userId = context?.userId || 'system';
-    const result = await creditReconciliationActions.runScheduledCreditBalanceValidation(companyId, userId);
+    const result = await creditReconciliationActions.runScheduledCreditBalanceValidation(clientId, userId);
 
     return {
       data: result,
       links: context ? [
         {
           rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation${companyId ? `?company_id=${companyId}` : ''}`,
+          href: `/api/v1/financial/reconciliation${clientId ? `?client_id=${clientId}` : ''}`,
           method: 'GET',
           description: 'View reconciliation reports'
         }
@@ -1212,10 +1212,10 @@ export class FinancialService extends BaseService<ITransaction> {
           description: 'View reconciliation report'
         },
         {
-          rel: 'company',
-          href: `/api/v1/companies/${resolvedReport.company_id}`,
+          rel: 'client',
+          href: `/api/v1/clients/${resolvedReport.client_id}`,
           method: 'GET',
-          description: 'View company details'
+          description: 'View client details'
         }
       ] : []
     };
@@ -1365,7 +1365,7 @@ export class FinancialService extends BaseService<ITransaction> {
    * Calculate tax for a given amount and region
    */
   async calculateTax(
-    companyId: string,
+    clientId: string,
     amount: number,
     taxRegion: string,
     date?: string,
@@ -1376,7 +1376,7 @@ export class FinancialService extends BaseService<ITransaction> {
     }
     
     const result = await this.taxService.calculateTax(
-      companyId,
+      clientId,
       amount,
       date || new Date().toISOString(),
       taxRegion
@@ -1386,10 +1386,10 @@ export class FinancialService extends BaseService<ITransaction> {
       data: result,
       links: context ? [
         {
-          rel: 'company',
-          href: `/api/v1/companies/${companyId}`,
+          rel: 'client',
+          href: `/api/v1/clients/${clientId}`,
           method: 'GET',
-          description: 'View company details'
+          description: 'View client details'
         }
       ] : []
     };

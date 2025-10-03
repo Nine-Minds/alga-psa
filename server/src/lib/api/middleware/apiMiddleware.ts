@@ -363,7 +363,20 @@ export function createSuccessResponse(data: any, status: number = 200, metadata?
     response.meta = metadata;
   }
 
-  return NextResponse.json(response, { status });
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+
+  // Add deprecation warning if metadata indicates deprecated endpoint
+  if (metadata?.deprecated) {
+    headers['X-API-Deprecated'] = 'true';
+    headers['X-API-Deprecation-Message'] = metadata.deprecationMessage || 'This endpoint is deprecated';
+    if (metadata.deprecationUrl) {
+      headers['X-API-Deprecation-Url'] = metadata.deprecationUrl;
+    }
+  }
+
+  return NextResponse.json(response, { status, headers });
 }
 
 /**
@@ -378,6 +391,19 @@ export function createPaginatedResponse(
 ): NextResponse {
   const totalPages = Math.ceil(total / limit);
 
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json'
+  };
+
+  // Add deprecation warning if metadata indicates deprecated endpoint
+  if (metadata?.deprecated) {
+    headers['X-API-Deprecated'] = 'true';
+    headers['X-API-Deprecation-Message'] = metadata.deprecationMessage || 'This endpoint is deprecated';
+    if (metadata.deprecationUrl) {
+      headers['X-API-Deprecation-Url'] = metadata.deprecationUrl;
+    }
+  }
+
   return NextResponse.json({
     data,
     pagination: {
@@ -389,7 +415,70 @@ export function createPaginatedResponse(
       hasPrev: page > 1
     },
     meta: metadata
-  });
+  }, { headers });
+}
+
+/**
+ * Transform client response to include deprecated client fields
+ * This ensures backward compatibility during the client → client migration
+ */
+export function addDeprecatedClientFields(data: any): any {
+  if (!data) return data;
+
+  // Handle arrays
+  if (Array.isArray(data)) {
+    return data.map(item => addDeprecatedClientFields(item));
+  }
+
+  // Handle single object
+  if (typeof data === 'object') {
+    const transformed: any = { ...data };
+
+    // Map client fields to client fields (deprecated)
+    if ('client_id' in data) {
+      transformed.client_id = data.client_id;
+    }
+    if ('client_name' in data) {
+      transformed.client_name = data.client_name;
+    }
+    if ('client_type' in data) {
+      // client_type is the same in both schemas, no change needed
+    }
+
+    // Handle nested locations
+    if (data.locations && Array.isArray(data.locations)) {
+      transformed.locations = data.locations.map((loc: any) => ({
+        ...loc,
+        client_id: loc.client_id
+      }));
+    }
+
+    return transformed;
+  }
+
+  return data;
+}
+
+/**
+ * Transform client request to client fields
+ * This allows old API calls with client fields to work with new client schema
+ */
+export function transformClientToClientFields(data: any): any {
+  if (!data) return data;
+
+  const transformed: any = { ...data };
+
+  // Map client fields to client fields
+  if ('client_name' in data) {
+    transformed.client_name = data.client_name;
+    delete transformed.client_name;
+  }
+  if ('client_id' in data) {
+    transformed.client_id = data.client_id;
+    delete transformed.client_id;
+  }
+
+  return transformed;
 }
 
 /**

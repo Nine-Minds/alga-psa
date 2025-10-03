@@ -1781,7 +1781,7 @@ export class PermissionRoleService extends BaseService<IRole> {
     const descriptions: Record<string, string> = {
       'ticket': 'Support ticket management',
       'user': 'User account management',
-      'company': 'Company and client management',
+      'client': 'Client and client management',
       'project': 'Project management',
       'billing': 'Billing and invoicing',
       'report': 'Reports and analytics',

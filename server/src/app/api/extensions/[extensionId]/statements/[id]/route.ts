@@ -22,7 +22,7 @@ const dummyStatements = [
     taxAmount: 1000,
     description: 'Monthly Microsoft 365 E3 license fees for January 2024',
     billingAddress: {
-      company: 'Acme Corporation',
+      client: 'Acme Corporation',
       street: '123 Business Ave',
       city: 'New York',
       state: 'NY',
@@ -49,7 +49,7 @@ const dummyStatements = [
     taxAmount: 300,
     description: 'Adobe Creative Cloud annual subscription for design team',
     billingAddress: {
-      company: 'Design Studio LLC',
+      client: 'Design Studio LLC',
       street: '456 Creative St',
       city: 'San Francisco',
       state: 'CA',
@@ -76,7 +76,7 @@ const dummyStatements = [
     taxAmount: 500,
     description: 'Salesforce Professional CRM monthly fees for February 2024',
     billingAddress: {
-      company: 'Tech Innovations Inc',
+      client: 'Tech Innovations Inc',
       street: '789 Tech Blvd',
       city: 'Austin',
       state: 'TX',
@@ -103,7 +103,7 @@ const dummyStatements = [
     taxAmount: 1500,
     description: 'AWS Enterprise Support and cloud infrastructure costs for February 2024',
     billingAddress: {
-      company: 'CloudFirst Solutions',
+      client: 'CloudFirst Solutions',
       street: '321 Cloud Way',
       city: 'Seattle',
       state: 'WA',

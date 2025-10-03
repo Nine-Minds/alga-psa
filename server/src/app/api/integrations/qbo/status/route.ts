@@ -4,12 +4,12 @@ import { getCurrentUser } from '../../../../../lib/actions/user-actions/userActi
 // TODO: Import necessary functions for secret retrieval (ISecretProvider)
 // import { getSecretProvider } from '../../../../../lib/secrets'; // Hypothetical import using relative path
 // TODO: Import or define QBO client/API interaction logic
-// import { getQboCompanyInfo, isTokenValid } from '@/lib/qbo'; // Hypothetical imports
+// import { getQboClientInfo, isTokenValid } from '@/lib/qbo'; // Hypothetical imports
 
 // Define the expected response structure based on Sec 5.5.2
 interface QboStatusResponse {
   status: 'Connected' | 'Not Connected' | 'Error';
-  companyName?: string;
+  clientName?: string;
   realmId?: string;
   errorMessage?: string;
 }
@@ -51,7 +51,7 @@ export async function GET(request: Request) { // request might not be needed if 
     // 2. Attempting to refresh the token if it's expired or close to expiry using the refreshToken.
     // 3. If refresh is successful, update the stored tokens via the secretProvider.
     // 4. If refresh fails or the token is invalid, return an error state.
-    // 5. If valid, fetch CompanyInfo to get the company name.
+    // 5. If valid, fetch ClientInfo to get the client name.
 
     // Placeholder validation logic:
     // const { isValid, needsRefresh } = await isTokenValid(accessToken); // Hypothetical
@@ -73,25 +73,25 @@ export async function GET(request: Request) { // request might not be needed if 
     //    return NextResponse.json(response);
     // }
 
-    // Placeholder for fetching company info if token is valid
-    // const companyInfo = await getQboCompanyInfo(accessToken, realmId); // Hypothetical
-    const companyName = 'Placeholder QBO Company'; // Placeholder: Fetch actual company name from companyInfo
+    // Placeholder for fetching client info if token is valid
+    // const clientInfo = await getQboClientInfo(accessToken, realmId); // Hypothetical
+    const clientName = 'Placeholder QBO Client'; // Placeholder: Fetch actual client name from clientInfo
     const isConnectionValid = true; // Placeholder based on successful validation/refresh
 
-    if (isConnectionValid && companyName) {
-      console.log(`QBO Status: Connected for tenant ${tenantId}, Realm: ${realmId}, Company: ${companyName}`);
+    if (isConnectionValid && clientName) {
+      console.log(`QBO Status: Connected for tenant ${tenantId}, Realm: ${realmId}, Client: ${clientName}`);
       const response: QboStatusResponse = {
         status: 'Connected',
-        companyName: companyName,
+        clientName: clientName,
         realmId: realmId,
       };
       return NextResponse.json(response);
     } else {
-      // This path might be reached if fetching company info failed after validation
-      console.error(`QBO Status: Failed to fetch company info for tenant ${tenantId} even with valid token.`);
+      // This path might be reached if fetching client info failed after validation
+      console.error(`QBO Status: Failed to fetch client info for tenant ${tenantId} even with valid token.`);
       const response: QboStatusResponse = {
         status: 'Error',
-        errorMessage: 'Connected, but failed to retrieve company details.',
+        errorMessage: 'Connected, but failed to retrieve client details.',
         realmId: realmId, // Still useful to return realmId if known
       };
       return NextResponse.json(response);

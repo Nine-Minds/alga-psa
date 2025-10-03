@@ -84,7 +84,7 @@ export class TimeEntryService extends BaseService<any> {
     if (filters.billing_plan_id) {
       query.where(`${this.tableName}.billing_plan_id`, filters.billing_plan_id);
     }
-    if (filters.company_id) {
+    if (filters.client_id) {
       query.leftJoin('tickets', function() {
         this.on(`time_entries.work_item_id`, 'tickets.ticket_id')
           .andOn(`time_entries.work_item_type`, '=', 'ticket');
@@ -96,8 +96,8 @@ export class TimeEntryService extends BaseService<any> {
       .leftJoin('project_phases', 'project_tasks.phase_id', 'project_phases.phase_id')
       .leftJoin('projects', 'project_phases.project_id', 'projects.project_id')
       .where(function() {
-        this.where('tickets.company_id', filters.company_id!)
-          .orWhere('projects.company_id', filters.company_id!);
+        this.where('tickets.client_id', filters.client_id!)
+          .orWhere('projects.client_id', filters.client_id!);
       });
     }
     if (filters.duration_min !== undefined) {
@@ -1022,7 +1022,7 @@ export class TimeEntryService extends BaseService<any> {
       case 'ticket':
         return knex('tickets')
           .where({ ticket_id: workItemId, tenant: context.tenant })
-          .select('ticket_id as id', 'title', knex.raw('? as type', [workItemType]), 'company_id')
+          .select('ticket_id as id', 'title', knex.raw('? as type', [workItemType]), 'client_id')
           .first();
       case 'project_task':
         return knex('project_tasks')
@@ -1033,7 +1033,7 @@ export class TimeEntryService extends BaseService<any> {
             'project_tasks.task_id as id', 
             'project_tasks.task_name as title', 
             knex.raw('? as type', [workItemType]),
-            'projects.company_id',
+            'projects.client_id',
             'projects.project_id'
           )
           .first();

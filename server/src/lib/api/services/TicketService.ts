@@ -55,8 +55,8 @@ export class TicketService extends BaseService<ITicket> {
 
     // Build base query with all necessary joins
     let dataQuery = knex('tickets as t')
-      .leftJoin('companies as comp', function() {
-        this.on('t.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
       })
       .leftJoin('contacts as cont', function() {
@@ -108,8 +108,8 @@ export class TicketService extends BaseService<ITicket> {
     const mappedSortField = sortField === 'created_at' ? 'entered_at' : sortField;
     
     // Handle sorting by related fields
-    if (mappedSortField === 'company_name') {
-      dataQuery = dataQuery.orderBy('comp.company_name', sortOrder);
+    if (mappedSortField === 'client_name') {
+      dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
     } else if (mappedSortField === 'status_name') {
       dataQuery = dataQuery.orderBy('stat.name', sortOrder);
     } else if (mappedSortField === 'priority_name') {
@@ -125,7 +125,7 @@ export class TicketService extends BaseService<ITicket> {
     // Select fields
     dataQuery = dataQuery.select(
       't.*',
-      'comp.company_name',
+      'comp.client_name',
       'cont.full_name as contact_name',
       'stat.name as status_name',
       'stat.is_closed as status_is_closed',
@@ -170,8 +170,8 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const ticket = await knex('tickets as t')
-      .leftJoin('companies as comp', function() {
-        this.on('t.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
       })
       .leftJoin('contacts as cont', function() {
@@ -196,9 +196,9 @@ export class TicketService extends BaseService<ITicket> {
       })
       .select(
         't.*',
-        'comp.company_name',
-        'comp.email as company_email',
-        'comp.phone_no as company_phone',
+        'comp.client_name',
+        'comp.email as client_email',
+        'comp.phone_no as client_phone',
         'cont.full_name as contact_name',
         'cont.email as contact_email',
         'cont.phone_number as contact_phone',
@@ -225,8 +225,8 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
-      if (!data.company_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: company_id, title, board_id, status_id, priority_id');
+      if (!data.client_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -238,8 +238,8 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData, context: ServiceContext): Promise<ITicket>;
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
-      if (!data.company_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: company_id, title, board_id, status_id, priority_id');
+      if (!data.client_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
+        throw new Error('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -253,7 +253,7 @@ export class TicketService extends BaseService<ITicket> {
           title: data.title,
           url: data.url,
           board_id: data.board_id,
-          company_id: data.company_id,
+          client_id: data.client_id,
           location_id: data.location_id,
           contact_id: data.contact_name_id, // Maps to contact_name_id in database
           status_id: data.status_id,
@@ -410,7 +410,7 @@ export class TicketService extends BaseService<ITicket> {
           description: data.description || '',
           priority_id: data.priority_id,
           asset_id: data.asset_id,
-          company_id: data.company_id
+          client_id: data.client_id
         },
         context.userId,
         context.tenant,
@@ -532,8 +532,8 @@ export class TicketService extends BaseService<ITicket> {
     const searchStartTime = Date.now();
 
     let query = knex('tickets as t')
-      .leftJoin('companies as comp', function() {
-        this.on('t.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('t.client_id', '=', 'comp.client_id')
             .andOn('t.tenant', '=', 'comp.tenant');
       })
       .leftJoin('contacts as cont', function() {
@@ -559,8 +559,8 @@ export class TicketService extends BaseService<ITicket> {
       query = query.whereIn('t.priority_id', searchData.priority_ids);
     }
 
-    if (searchData.company_ids && searchData.company_ids.length > 0) {
-      query = query.whereIn('t.company_id', searchData.company_ids);
+    if (searchData.client_ids && searchData.client_ids.length > 0) {
+      query = query.whereIn('t.client_id', searchData.client_ids);
     }
 
     if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
@@ -571,11 +571,11 @@ export class TicketService extends BaseService<ITicket> {
     const searchFields = searchData.fields || ['title', 'ticket_number'];
     query = query.where(subQuery => {
       searchFields.forEach((field, index) => {
-        if (field === 'company_name') {
+        if (field === 'client_name') {
           if (index === 0) {
-            subQuery.whereILike('comp.company_name', `%${searchData.query}%`);
+            subQuery.whereILike('comp.client_name', `%${searchData.query}%`);
           } else {
-            subQuery.orWhereILike('comp.company_name', `%${searchData.query}%`);
+            subQuery.orWhereILike('comp.client_name', `%${searchData.query}%`);
           }
         } else if (field === 'contact_name') {
           if (index === 0) {
@@ -595,7 +595,7 @@ export class TicketService extends BaseService<ITicket> {
 
     // Execute query
     const tickets = await query
-      .select('t.*', 'comp.company_name', 'cont.full_name as contact_name')
+      .select('t.*', 'comp.client_name', 'cont.full_name as contact_name')
       .limit(searchData.limit || 25)
       .orderBy('t.entered_at', 'desc');
 
@@ -608,7 +608,7 @@ export class TicketService extends BaseService<ITicket> {
       filters_used: {
         status: !!searchData.status_ids?.length,
         priority: !!searchData.priority_ids?.length,
-        company: !!searchData.company_ids?.length,
+        client: !!searchData.client_ids?.length,
         assigned_to: !!searchData.assigned_to_ids?.length,
         include_closed: searchData.include_closed,
       },
@@ -628,7 +628,7 @@ export class TicketService extends BaseService<ITicket> {
     //     filter_count: Object.values({
     //       status: !!searchData.status_ids?.length,
     //       priority: !!searchData.priority_ids?.length,
-    //       company: !!searchData.company_ids?.length,
+    //       client: !!searchData.client_ids?.length,
     //       assigned_to: !!searchData.assigned_to_ids?.length,
     //     }).filter(Boolean).length
     //   }
@@ -762,7 +762,7 @@ export class TicketService extends BaseService<ITicket> {
           query.whereILike('t.ticket_number', `%${value}%`);
           break;
         case 'board_id':
-        case 'company_id':
+        case 'client_id':
         case 'location_id':
         case 'contact_name_id':
         case 'status_id':
@@ -802,13 +802,13 @@ export class TicketService extends BaseService<ITicket> {
             query.whereNull('t.assigned_to');
           }
           break;
-        case 'company_name':
+        case 'client_name':
           query.whereExists(function() {
             this.select('*')
-                .from('companies as c')
-                .whereRaw('c.company_id = t.company_id')
+                .from('clients as c')
+                .whereRaw('c.client_id = t.client_id')
                 .andWhere('c.tenant', query.client.raw('t.tenant'))
-                .andWhereILike('c.company_name', `%${value}%`);
+                .andWhereILike('c.client_name', `%${value}%`);
           });
           break;
         case 'search':
@@ -822,13 +822,13 @@ export class TicketService extends BaseService<ITicket> {
                 }
               });
               
-              // Also search in company name
+              // Also search in client name
               subQuery.orWhereExists(function() {
                 this.select('*')
-                    .from('companies as c')
-                    .whereRaw('c.company_id = t.company_id')
+                    .from('clients as c')
+                    .whereRaw('c.client_id = t.client_id')
                     .andWhere('c.tenant', query.client.raw('t.tenant'))
-                    .andWhereILike('c.company_name', `%${value}%`);
+                    .andWhereILike('c.client_name', `%${value}%`);
               });
             });
           }

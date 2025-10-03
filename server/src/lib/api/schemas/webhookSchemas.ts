@@ -31,8 +31,8 @@ export const webhookEventTypeSchema = z.enum([
   'project.task.created',
   'project.task.updated',
   'project.task.completed',
-  'company.created',
-  'company.updated',
+  'client.created',
+  'client.updated',
   'contact.created',
   'contact.updated',
   'time.entry.created',
@@ -346,7 +346,7 @@ export const bulkWebhookOperationSchema = z.object({
 export const webhookSubscriptionSchema = z.object({
   subscription_id: uuidSchema,
   webhook_id: uuidSchema,
-  entity_type: z.string(), // e.g., 'ticket', 'project', 'company'
+  entity_type: z.string(), // e.g., 'ticket', 'project', 'client'
   entity_id: uuidSchema.optional(), // Optional for entity-specific subscriptions
   event_types: z.array(webhookEventTypeSchema),
   

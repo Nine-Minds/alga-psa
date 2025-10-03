@@ -97,7 +97,7 @@ export const billingPlanResponseSchema = z.object({
   
   // Additional computed fields
   total_services: z.number().optional(),
-  companies_using_plan: z.number().optional(),
+  clients_using_plan: z.number().optional(),
   average_monthly_revenue: z.number().optional()
 });
 
@@ -336,7 +336,7 @@ export const planBundleResponseSchema = z.object({
   
   // Computed fields
   total_plans: z.number().optional(),
-  companies_using_bundle: z.number().optional()
+  clients_using_bundle: z.number().optional()
 });
 
 // Bundle billing plan (plan in bundle)
@@ -372,23 +372,23 @@ export const updatePlanInBundleSchema = z.object({
 // COMPANY BILLING PLAN ASSIGNMENT SCHEMAS
 // ============================================================================
 
-// Company billing plan assignment
-export const createCompanyBillingPlanSchema = z.object({
-  company_id: uuidSchema,
+// Client billing plan assignment
+export const createClientBillingPlanSchema = z.object({
+  client_id: uuidSchema,
   plan_id: uuidSchema,
   service_category: z.string().optional(),
   start_date: z.string().datetime(),
   end_date: z.string().datetime().optional(),
   is_active: z.boolean().optional().default(true),
   custom_rate: z.number().min(0).optional(),
-  company_bundle_id: uuidSchema.optional()
+  client_bundle_id: uuidSchema.optional()
 });
 
-export const updateCompanyBillingPlanSchema = createUpdateSchema(createCompanyBillingPlanSchema);
+export const updateClientBillingPlanSchema = createUpdateSchema(createClientBillingPlanSchema);
 
-export const companyBillingPlanResponseSchema = z.object({
-  company_billing_plan_id: uuidSchema,
-  company_id: uuidSchema,
+export const clientBillingPlanResponseSchema = z.object({
+  client_billing_plan_id: uuidSchema,
+  client_id: uuidSchema,
   plan_id: uuidSchema,
   service_category: z.string().nullable(),
   service_category_name: z.string().nullable(),
@@ -396,7 +396,7 @@ export const companyBillingPlanResponseSchema = z.object({
   end_date: z.string().datetime().nullable(),
   is_active: z.boolean(),
   custom_rate: z.number().nullable(),
-  company_bundle_id: uuidSchema.nullable(),
+  client_bundle_id: uuidSchema.nullable(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
@@ -405,23 +405,23 @@ export const companyBillingPlanResponseSchema = z.object({
   plan_name: z.string().optional(),
   billing_frequency: billingFrequencySchema.optional(),
   bundle_name: z.string().optional(),
-  company_name: z.string().optional()
+  client_name: z.string().optional()
 });
 
-// Company plan bundle assignment
-export const createCompanyPlanBundleSchema = z.object({
-  company_id: uuidSchema,
+// Client plan bundle assignment
+export const createClientPlanBundleSchema = z.object({
+  client_id: uuidSchema,
   bundle_id: uuidSchema,
   start_date: z.string().datetime(),
   end_date: z.string().datetime().optional(),
   is_active: z.boolean().optional().default(true)
 });
 
-export const updateCompanyPlanBundleSchema = createUpdateSchema(createCompanyPlanBundleSchema);
+export const updateClientPlanBundleSchema = createUpdateSchema(createClientPlanBundleSchema);
 
-export const companyPlanBundleResponseSchema = z.object({
-  company_bundle_id: uuidSchema,
-  company_id: uuidSchema,
+export const clientPlanBundleResponseSchema = z.object({
+  client_bundle_id: uuidSchema,
+  client_id: uuidSchema,
   bundle_id: uuidSchema,
   start_date: z.string().datetime(),
   end_date: z.string().datetime().nullable(),
@@ -432,7 +432,7 @@ export const companyPlanBundleResponseSchema = z.object({
   
   // Joined data
   bundle_name: z.string().optional(),
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   total_plans: z.number().optional()
 });
 
@@ -444,7 +444,7 @@ export const companyPlanBundleResponseSchema = z.object({
 export const bucketUsageResponseSchema = z.object({
   usage_id: uuidSchema,
   plan_id: uuidSchema.optional(),
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   period_start: z.string().datetime(),
   period_end: z.string().datetime(),
   minutes_used: z.number(),
@@ -490,8 +490,8 @@ export const billingPlanFilterSchema = baseFilterSchema.extend({
   is_active: booleanTransform.optional(),
   service_category: z.string().optional(),
   has_services: booleanTransform.optional(),
-  companies_count_min: numberTransform.optional(),
-  companies_count_max: numberTransform.optional(),
+  clients_count_min: numberTransform.optional(),
+  clients_count_max: numberTransform.optional(),
   revenue_min: numberTransform.optional(),
   revenue_max: numberTransform.optional()
 });
@@ -501,13 +501,13 @@ export const planBundleFilterSchema = baseFilterSchema.extend({
   bundle_name: z.string().optional(),
   is_active: booleanTransform.optional(),
   has_plans: booleanTransform.optional(),
-  companies_count_min: numberTransform.optional(),
-  companies_count_max: numberTransform.optional()
+  clients_count_min: numberTransform.optional(),
+  clients_count_max: numberTransform.optional()
 });
 
-// Company billing plan filters
-export const companyBillingPlanFilterSchema = baseFilterSchema.extend({
-  company_id: uuidSchema.optional(),
+// Client billing plan filters
+export const clientBillingPlanFilterSchema = baseFilterSchema.extend({
+  client_id: uuidSchema.optional(),
   plan_id: uuidSchema.optional(),
   service_category: z.string().optional(),
   is_active: booleanTransform.optional(),
@@ -522,7 +522,7 @@ export const companyBillingPlanFilterSchema = baseFilterSchema.extend({
 // List query schemas
 export const billingPlanListQuerySchema = createListQuerySchema(billingPlanFilterSchema);
 export const planBundleListQuerySchema = createListQuerySchema(planBundleFilterSchema);
-export const companyBillingPlanListQuerySchema = createListQuerySchema(companyBillingPlanFilterSchema);
+export const clientBillingPlanListQuerySchema = createListQuerySchema(clientBillingPlanFilterSchema);
 
 // ============================================================================
 // ANALYTICS AND REPORTING SCHEMAS
@@ -533,13 +533,13 @@ export const planAnalyticsResponseSchema = z.object({
   plan_id: uuidSchema,
   plan_name: z.string(),
   plan_type: planTypeSchema,
-  total_companies: z.number(),
-  active_companies: z.number(),
+  total_clients: z.number(),
+  active_clients: z.number(),
   revenue: z.object({
     monthly: z.number(),
     quarterly: z.number(),
     yearly: z.number(),
-    average_per_company: z.number()
+    average_per_client: z.number()
   }),
   usage_stats: z.object({
     total_services: z.number(),
@@ -548,10 +548,10 @@ export const planAnalyticsResponseSchema = z.object({
       service_name: z.string(),
       usage_count: z.number()
     })),
-    average_services_per_company: z.number()
+    average_services_per_client: z.number()
   }),
   growth_metrics: z.object({
-    new_companies_this_month: z.number(),
+    new_clients_this_month: z.number(),
     churn_rate: z.number(),
     revenue_growth_rate: z.number()
   })
@@ -562,18 +562,18 @@ export const bundleAnalyticsResponseSchema = z.object({
   bundle_id: uuidSchema,
   bundle_name: z.string(),
   total_plans: z.number(),
-  total_companies: z.number(),
-  active_companies: z.number(),
+  total_clients: z.number(),
+  active_clients: z.number(),
   revenue: z.object({
     monthly: z.number(),
     quarterly: z.number(),
     yearly: z.number(),
-    average_per_company: z.number()
+    average_per_client: z.number()
   }),
   plan_utilization: z.array(z.object({
     plan_id: uuidSchema,
     plan_name: z.string(),
-    companies_using: z.number(),
+    clients_using: z.number(),
     utilization_percentage: z.number()
   }))
 });
@@ -634,14 +634,14 @@ export const bulkRemoveServicesFromPlanSchema = z.object({
   service_ids: z.array(uuidSchema).min(1).max(20)
 });
 
-// Bulk company assignments
-export const bulkAssignPlansToCompanySchema = z.object({
-  company_id: uuidSchema,
-  assignments: z.array(createCompanyBillingPlanSchema.omit({ company_id: true })).min(1).max(10)
+// Bulk client assignments
+export const bulkAssignPlansToClientSchema = z.object({
+  client_id: uuidSchema,
+  assignments: z.array(createClientBillingPlanSchema.omit({ client_id: true })).min(1).max(10)
 });
 
-export const bulkUnassignPlansFromCompanySchema = z.object({
-  company_id: uuidSchema,
+export const bulkUnassignPlansFromClientSchema = z.object({
+  client_id: uuidSchema,
   plan_ids: z.array(uuidSchema).min(1).max(10)
 });
 
@@ -720,17 +720,17 @@ export const planActivationSchema = z.object({
   is_active: z.boolean(),
   effective_date: z.string().datetime().optional(),
   reason: z.string().optional(),
-  notify_companies: z.boolean().optional().default(false)
+  notify_clients: z.boolean().optional().default(false)
 });
 
-// Company plan activation/deactivation
-export const companyPlanActivationSchema = z.object({
-  company_billing_plan_id: uuidSchema,
+// Client plan activation/deactivation
+export const clientPlanActivationSchema = z.object({
+  client_billing_plan_id: uuidSchema,
   is_active: z.boolean(),
   effective_date: z.string().datetime().optional(),
   end_date: z.string().datetime().optional(),
   reason: z.string().optional(),
-  notify_company: z.boolean().optional().default(false)
+  notify_client: z.boolean().optional().default(false)
 });
 
 // ============================================================================
@@ -769,18 +769,18 @@ export type BundleBillingPlanResponse = z.infer<typeof bundleBillingPlanResponse
 export type AddPlanToBundleData = z.infer<typeof addPlanToBundleSchema>;
 export type UpdatePlanInBundleData = z.infer<typeof updatePlanInBundleSchema>;
 
-export type CreateCompanyBillingPlanData = z.infer<typeof createCompanyBillingPlanSchema>;
-export type UpdateCompanyBillingPlanData = z.infer<typeof updateCompanyBillingPlanSchema>;
-export type CompanyBillingPlanResponse = z.infer<typeof companyBillingPlanResponseSchema>;
-export type CreateCompanyPlanBundleData = z.infer<typeof createCompanyPlanBundleSchema>;
-export type UpdateCompanyPlanBundleData = z.infer<typeof updateCompanyPlanBundleSchema>;
-export type CompanyPlanBundleResponse = z.infer<typeof companyPlanBundleResponseSchema>;
+export type CreateClientBillingPlanData = z.infer<typeof createClientBillingPlanSchema>;
+export type UpdateClientBillingPlanData = z.infer<typeof updateClientBillingPlanSchema>;
+export type ClientBillingPlanResponse = z.infer<typeof clientBillingPlanResponseSchema>;
+export type CreateClientPlanBundleData = z.infer<typeof createClientPlanBundleSchema>;
+export type UpdateClientPlanBundleData = z.infer<typeof updateClientPlanBundleSchema>;
+export type ClientPlanBundleResponse = z.infer<typeof clientPlanBundleResponseSchema>;
 
 export type BucketUsageResponse = z.infer<typeof bucketUsageResponseSchema>;
 export type UsageMetricsResponse = z.infer<typeof usageMetricsResponseSchema>;
 
 export type PlanBundleFilterData = z.infer<typeof planBundleFilterSchema>;
-export type CompanyBillingPlanFilterData = z.infer<typeof companyBillingPlanFilterSchema>;
+export type ClientBillingPlanFilterData = z.infer<typeof clientBillingPlanFilterSchema>;
 
 export type PlanAnalyticsResponse = z.infer<typeof planAnalyticsResponseSchema>;
 export type BundleAnalyticsResponse = z.infer<typeof bundleAnalyticsResponseSchema>;
@@ -791,8 +791,8 @@ export type BulkUpdateBillingPlansData = z.infer<typeof bulkUpdateBillingPlansSc
 export type BulkDeleteBillingPlansData = z.infer<typeof bulkDeleteBillingPlansSchema>;
 export type BulkAddServicesToPlanData = z.infer<typeof bulkAddServicesToPlanSchema>;
 export type BulkRemoveServicesFromPlanData = z.infer<typeof bulkRemoveServicesFromPlanSchema>;
-export type BulkAssignPlansToCompanyData = z.infer<typeof bulkAssignPlansToCompanySchema>;
-export type BulkUnassignPlansFromCompanyData = z.infer<typeof bulkUnassignPlansFromCompanySchema>;
+export type BulkAssignPlansToClientData = z.infer<typeof bulkAssignPlansToClientSchema>;
+export type BulkUnassignPlansFromClientData = z.infer<typeof bulkUnassignPlansFromClientSchema>;
 
 export type CopyBillingPlanData = z.infer<typeof copyBillingPlanSchema>;
 export type CreatePlanTemplateData = z.infer<typeof createPlanTemplateSchema>;
@@ -800,4 +800,4 @@ export type PlanTemplateResponse = z.infer<typeof planTemplateResponseSchema>;
 export type CreatePlanFromTemplateData = z.infer<typeof createPlanFromTemplateSchema>;
 
 export type PlanActivationData = z.infer<typeof planActivationSchema>;
-export type CompanyPlanActivationData = z.infer<typeof companyPlanActivationSchema>;
+export type ClientPlanActivationData = z.infer<typeof clientPlanActivationSchema>;

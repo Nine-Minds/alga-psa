@@ -146,7 +146,7 @@ async function computeVanityRedirect({
             name: typeof token.name === 'string' ? token.name : undefined,
             tenant: tenantId,
             user_type: userType,
-            companyId: typeof token.companyId === 'string' ? token.companyId : undefined,
+            clientId: typeof token.clientId === 'string' ? token.clientId : undefined,
             contactId: typeof token.contactId === 'string' ? token.contactId : undefined,
         };
 
@@ -191,7 +191,7 @@ interface ExtendedUser {
     proToken: string;
     tenant?: string;
     user_type: string;
-    companyId?: string;
+    clientId?: string;
     contactId?: string;
 }
 
@@ -311,8 +311,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         hasTwoFactor: user.two_factor_enabled
                     });
 
-                    // If it's a client user, get the contact and company information
-                    let companyId: string | undefined = undefined;
+                    // If it's a client user, get the contact and client information
+                    let clientId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -331,11 +331,11 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id || undefined;
-                            console.log('Company information found:', { companyId });
-                            logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
+                            clientId = contact.client_id || undefined;
+                            console.log('Client information found:', { clientId });
+                            logger.info(`Found client ${clientId} for contact ${user.contact_id}`);
                         } else {
-                            console.log('No company information found for contact');
+                            console.log('No client information found for contact');
                             logger.warn(`No contact found for user ${user.email} with contact_id ${user.contact_id}`);
                     }
                     }
@@ -375,7 +375,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                         proToken: '',
                         tenant: user.tenant,
                         user_type: user.user_type,
-                        companyId: companyId ?? undefined,
+                        clientId: clientId ?? undefined,
                         contactId: user.contact_id
                     };
                     console.log('Authorization successful. Returning user data:', {
@@ -413,7 +413,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     proToken: '',
                     tenant: profile.tenant,
                     user_type: profile.user_type,
-                    companyId: profile.companyId
+                    clientId: profile.clientId
                 }
             },
         }),
@@ -529,7 +529,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                                 name: extendedUser.name,
                                 tenant: extendedUser.tenant,
                                 user_type: extendedUser.user_type,
-                                companyId: extendedUser.companyId,
+                                clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
                             },
                         });
@@ -557,7 +557,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
             console.log('JWT callback - initial token:', {
                 id: token.id,
                 email: token.email,
-                companyId: token.companyId,
+                clientId: token.clientId,
                 hasUser: !!user
             });
 
@@ -567,7 +567,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     id: extendedUser.id,
                     email: extendedUser.email,
                     tenant: extendedUser.tenant,
-                    companyId: extendedUser.companyId
+                    clientId: extendedUser.clientId
                 });
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
@@ -577,7 +577,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.user_type = extendedUser.user_type;
-                token.companyId = extendedUser.companyId;
+                token.clientId = extendedUser.clientId;
                 token.contactId = extendedUser.contactId;
               }
 
@@ -595,12 +595,12 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 tenant: validatedUser.tenant
             });
 
-            // For client users, fetch companyId if missing
-            let companyId = token.companyId;
+            // For client users, fetch clientId if missing
+            let clientId = token.clientId;
             let contactId = token.contactId || validatedUser.contact_id;
 
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !companyId) {
-                console.log('JWT callback - fetching companyId for client user');
+            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
+                console.log('JWT callback - fetching clientId for client user');
                 const { getAdminConnection } = await import("@shared/db/admin");
                 const connection = await getAdminConnection();
                 const contact = await connection('contacts')
@@ -611,8 +611,8 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                     .first();
 
                 if (contact) {
-                    companyId = contact.company_id;
-                    console.log('JWT callback - found companyId:', companyId);
+                    clientId = contact.client_id;
+                    console.log('JWT callback - found clientId:', clientId);
                 }
             }
 
@@ -623,7 +623,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
                 user_type: validatedUser.user_type,
-                companyId: companyId, // Use fetched or preserved companyId
+                clientId: clientId, // Use fetched or preserved clientId
                 contactId: contactId  // Use fetched or preserved contactId
             };
 
@@ -631,7 +631,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 id: result.id,
                 email: result.email,
                 tenant: result.tenant,
-                companyId: result.companyId
+                clientId: result.clientId
             });
 
             return result;
@@ -649,7 +649,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 email: token.email,
                 tenant: token.tenant,
                 user_type: token.user_type,
-                companyId: token.companyId,
+                clientId: token.clientId,
                 contactId: token.contactId
             });
 
@@ -668,7 +668,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 user.proToken = token.proToken as string;
                 user.tenant = token.tenant as string;
                 user.user_type = token.user_type as string;
-                user.companyId = token.companyId as string;
+                user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
             }
             logger.trace("Session Object:", session);
@@ -676,7 +676,7 @@ export async function buildAuthOptions(): Promise<NextAuthConfig> {
                 id: session.user?.id,
                 email: session.user?.email,
                 tenant: session.user?.tenant,
-                companyId: session.user?.companyId
+                clientId: session.user?.clientId
             });
             return session;
         },
@@ -771,8 +771,8 @@ export const options: NextAuthConfig = {
                         hasTwoFactor: user.two_factor_enabled
                     });
 
-                    // If it's a client user, get the contact and company information
-                    let companyId: string | undefined = undefined;
+                    // If it's a client user, get the contact and client information
+                    let clientId: string | undefined = undefined;
                     if (user.user_type === 'client' && user.contact_id) {
                         console.log('Processing client user with contact_id:', user.contact_id);
                       const connection = await getAdminConnection();
@@ -791,11 +791,11 @@ export const options: NextAuthConfig = {
                             tenant: user.tenant
                         });
                         if (contact) {
-                            companyId = contact.company_id || undefined;
-                            console.log('Company information found:', { companyId });
-                            logger.info(`Found company ${companyId} for contact ${user.contact_id}`);
+                            clientId = contact.client_id || undefined;
+                            console.log('Client information found:', { clientId });
+                            logger.info(`Found client ${clientId} for contact ${user.contact_id}`);
                         } else {
-                            console.log('No company information found for contact');
+                            console.log('No client information found for contact');
                             logger.warn(`No contact found for user ${user.email} with contact_id ${user.contact_id}`);
                     }
                     }
@@ -835,7 +835,7 @@ export const options: NextAuthConfig = {
                         proToken: '',
                         tenant: user.tenant,
                         user_type: user.user_type,
-                        companyId: companyId,
+                        clientId: clientId,
                         contactId: user.contact_id
                     };
                     console.log('Authorization successful. Returning user data:', {
@@ -871,7 +871,7 @@ export const options: NextAuthConfig = {
                     proToken: '',
                     tenant: '',
                     user_type: 'internal',
-                    companyId: (profile as any).companyId
+                    clientId: (profile as any).clientId
                 };
             },
         }),
@@ -984,7 +984,7 @@ export const options: NextAuthConfig = {
                                 name: extendedUser.name,
                                 tenant: extendedUser.tenant,
                                 user_type: extendedUser.user_type,
-                                companyId: extendedUser.companyId,
+                                clientId: extendedUser.clientId,
                                 contactId: extendedUser.contactId,
                             },
                         });
@@ -1009,7 +1009,7 @@ export const options: NextAuthConfig = {
             console.log('JWT callback - initial token:', {
                 id: token.id,
                 email: token.email,
-                companyId: token.companyId,
+                clientId: token.clientId,
                 hasUser: !!user
             });
 
@@ -1019,7 +1019,7 @@ export const options: NextAuthConfig = {
                     id: extendedUser.id,
                     email: extendedUser.email,
                     tenant: extendedUser.tenant,
-                    companyId: extendedUser.companyId
+                    clientId: extendedUser.clientId
                 });
                 token.id = extendedUser.id;
                 token.email = extendedUser.email;
@@ -1029,7 +1029,7 @@ export const options: NextAuthConfig = {
                 token.proToken = extendedUser.proToken;
                 token.tenant = extendedUser.tenant;
                 token.user_type = extendedUser.user_type;
-                token.companyId = extendedUser.companyId;
+                token.clientId = extendedUser.clientId;
                 token.contactId = extendedUser.contactId;
               }
 
@@ -1047,12 +1047,12 @@ export const options: NextAuthConfig = {
                 tenant: validatedUser.tenant
             });
 
-            // For client users, fetch companyId if missing
-            let companyId = token.companyId;
+            // For client users, fetch clientId if missing
+            let clientId = token.clientId;
             let contactId = token.contactId || validatedUser.contact_id;
 
-            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !companyId) {
-                console.log('JWT callback - fetching companyId for client user');
+            if (validatedUser.user_type === 'client' && validatedUser.contact_id && !clientId) {
+                console.log('JWT callback - fetching clientId for client user');
                 const { getAdminConnection } = await import("@shared/db/admin");
                 const connection = await getAdminConnection();
                 const contact = await connection('contacts')
@@ -1063,8 +1063,8 @@ export const options: NextAuthConfig = {
                     .first();
 
                 if (contact) {
-                    companyId = contact.company_id;
-                    console.log('JWT callback - found companyId:', companyId);
+                    clientId = contact.client_id;
+                    console.log('JWT callback - found clientId:', clientId);
                 }
             }
 
@@ -1075,7 +1075,7 @@ export const options: NextAuthConfig = {
                 email: validatedUser.email,
                 tenant: validatedUser.tenant,
                 user_type: validatedUser.user_type,
-                companyId: companyId, // Use fetched or preserved companyId
+                clientId: clientId, // Use fetched or preserved clientId
                 contactId: contactId  // Use fetched or preserved contactId
             };
 
@@ -1083,7 +1083,7 @@ export const options: NextAuthConfig = {
                 id: result.id,
                 email: result.email,
                 tenant: result.tenant,
-                companyId: result.companyId
+                clientId: result.clientId
             });
 
             return result;
@@ -1101,7 +1101,7 @@ export const options: NextAuthConfig = {
                 email: token.email,
                 tenant: token.tenant,
                 user_type: token.user_type,
-                companyId: token.companyId,
+                clientId: token.clientId,
                 contactId: token.contactId
             });
 
@@ -1120,7 +1120,7 @@ export const options: NextAuthConfig = {
                 user.proToken = token.proToken as string;
                 user.tenant = token.tenant as string;
                 user.user_type = token.user_type as string;
-                user.companyId = token.companyId as string;
+                user.clientId = token.clientId as string;
                 user.contactId = token.contactId as string;
             }
             logger.trace("Session Object:", session);
@@ -1128,7 +1128,7 @@ export const options: NextAuthConfig = {
                 id: session.user?.id,
                 email: session.user?.email,
                 tenant: session.user?.tenant,
-                companyId: session.user?.companyId
+                clientId: session.user?.clientId
             });
             return session;
         },

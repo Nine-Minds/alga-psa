@@ -61,8 +61,8 @@ export class ProjectService extends BaseService<IProject> {
         if (filters.project_name) {
           query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
         }
-        if (filters.company_id) {
-          query.where(`${this.tableName}.company_id`, filters.company_id);
+        if (filters.client_id) {
+          query.where(`${this.tableName}.client_id`, filters.client_id);
         }
         if (filters.status) {
           query.where(`${this.tableName}.status`, filters.status);
@@ -138,7 +138,7 @@ export class ProjectService extends BaseService<IProject> {
       const { knex } = await this.getKnex();
       
       const project = await knex(this.tableName)
-        .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+        .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
         .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
         .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
         .where({
@@ -147,7 +147,7 @@ export class ProjectService extends BaseService<IProject> {
         })
         .select(
           `${this.tableName}.*`,
-          'companies.company_name as client_name',
+          'clients.client_name as client_name',
           'contacts.full_name as contact_name',
           knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
         )
@@ -161,17 +161,17 @@ export class ProjectService extends BaseService<IProject> {
     const project = await this.getById(id, context);
     if (!project) return null;
 
-    const [phases, statistics, company, contact, assignedUser] = await Promise.all([
+    const [phases, statistics, client, contact, assignedUser] = await Promise.all([
       this.getPhases(id, context),
       this.getProjectStatistics(id, context),
-      this.getProjectCompany(project.company_id, context),
+      this.getProjectClient(project.client_id, context),
       project.contact_name_id ? this.getProjectContact(project.contact_name_id, context) : null,
       project.assigned_to ? this.getProjectAssignedUser(project.assigned_to, context) : null
     ]);
 
     return {
       ...project,
-      company,
+      client,
       contact,
       assigned_user: assignedUser,
       phases,
@@ -239,7 +239,7 @@ export class ProjectService extends BaseService<IProject> {
           tenantId: context.tenant,
           projectId: project.project_id,
           projectName: project.project_name,
-          companyId: project.company_id,
+          clientId: project.client_id,
           userId: context.userId,
           timestamp: new Date().toISOString()
         }
@@ -608,7 +608,7 @@ export class ProjectService extends BaseService<IProject> {
       
       return knex('project_ticket_links')
         .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-        .leftJoin('companies', 'tickets.company_id', 'companies.company_id')
+        .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
         .where({
           'project_ticket_links.project_id': projectId,
           'project_ticket_links.tenant': context.tenant
@@ -618,7 +618,7 @@ export class ProjectService extends BaseService<IProject> {
           'tickets.title as ticket_title',
           'tickets.ticket_number',
           'tickets.status as ticket_status',
-          'companies.company_name'
+          'clients.client_name'
         );
     }
 
@@ -653,8 +653,8 @@ export class ProjectService extends BaseService<IProject> {
       if (searchData.fields && searchData.fields.length > 0) {
         query.where(function() {
           searchData.fields!.forEach(field => {
-            if (field === 'company_name') {
-              this.orWhere('companies.company_name', 'ilike', `%${searchData.query}%`);
+            if (field === 'client_name') {
+              this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
             } else {
               this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
             }
@@ -673,8 +673,8 @@ export class ProjectService extends BaseService<IProject> {
       if (searchData.status && searchData.status.length > 0) {
         query.whereIn(`${tableName}.status`, searchData.status);
       }
-      if (searchData.company_ids && searchData.company_ids.length > 0) {
-        query.whereIn(`${tableName}.company_id`, searchData.company_ids);
+      if (searchData.client_ids && searchData.client_ids.length > 0) {
+        query.whereIn(`${tableName}.client_id`, searchData.client_ids);
       }
       if (searchData.assigned_to_ids && searchData.assigned_to_ids.length > 0) {
         query.whereIn(`${tableName}.assigned_to`, searchData.assigned_to_ids);
@@ -683,9 +683,9 @@ export class ProjectService extends BaseService<IProject> {
         query.where(`${tableName}.is_inactive`, false);
       }
   
-      // Add company join for company name search
-      query.leftJoin('companies', `${tableName}.company_id`, 'companies.company_id')
-        .select(`${tableName}.*`, 'companies.company_name')
+      // Add client join for client name search
+      query.leftJoin('clients', `${tableName}.client_id`, 'clients.client_id')
+        .select(`${tableName}.*`, 'clients.client_name')
         .orderBy(`${tableName}.project_name`)
         .limit(searchData.limit || 25);
   
@@ -727,12 +727,12 @@ export class ProjectService extends BaseService<IProject> {
         .groupBy('statuses.name')
         .select('statuses.name as status', knex.raw('COUNT(*) as count'));
   
-      // Get projects by company
-      const projectsByCompany = await knex(tableName)
-        .join('companies', `${tableName}.company_id`, 'companies.company_id')
+      // Get projects by client
+      const projectsByClient = await knex(tableName)
+        .join('clients', `${tableName}.client_id`, 'clients.client_id')
         .where(`${tableName}.tenant`, context.tenant)
-        .groupBy('companies.company_name')
-        .select('companies.company_name', knex.raw('COUNT(*) as count'))
+        .groupBy('clients.client_name')
+        .select('clients.client_name', knex.raw('COUNT(*) as count'))
         .limit(10);
   
       return {
@@ -749,8 +749,8 @@ export class ProjectService extends BaseService<IProject> {
           acc[row.status] = parseInt(row.count);
           return acc;
         }, {}),
-        top_companies_by_project_count: projectsByCompany.map((row: any) => ({
-          company_name: row.company_name,
+        top_clients_by_project_count: projectsByClient.map((row: any) => ({
+          client_name: row.client_name,
           project_count: parseInt(row.count)
         }))
       };
@@ -887,12 +887,12 @@ export class ProjectService extends BaseService<IProject> {
     }
 
 
-  private async getProjectCompany(companyId: string, context: ServiceContext): Promise<any> {
+  private async getProjectClient(clientId: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
       
-      return knex('companies')
-        .where({ company_id: companyId, tenant: context.tenant })
-        .select('company_id', 'company_name', 'email', 'phone_no')
+      return knex('clients')
+        .where({ client_id: clientId, tenant: context.tenant })
+        .select('client_id', 'client_name', 'email', 'phone_no')
         .first();
     }
 
@@ -928,13 +928,13 @@ export class ProjectService extends BaseService<IProject> {
   async exportProjects(filters: any, format: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
     const query = knex(this.tableName)
-      .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+      .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
       .leftJoin('contacts', `${this.tableName}.contact_name_id`, 'contacts.contact_name_id')
       .leftJoin('users', `${this.tableName}.assigned_to`, 'users.user_id')
       .where(`${this.tableName}.tenant`, context.tenant)
       .select(
         `${this.tableName}.*`,
-        'companies.company_name',
+        'clients.client_name',
         'contacts.full_name as contact_name',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
       )
@@ -944,8 +944,8 @@ export class ProjectService extends BaseService<IProject> {
     if (filters.project_name) {
       query.where(`${this.tableName}.project_name`, 'ilike', `%${filters.project_name}%`);
     }
-    if (filters.company_id) {
-      query.where(`${this.tableName}.company_id`, filters.company_id);
+    if (filters.client_id) {
+      query.where(`${this.tableName}.client_id`, filters.client_id);
     }
     if (filters.status) {
       query.where(`${this.tableName}.status`, filters.status);
@@ -983,7 +983,7 @@ export class ProjectService extends BaseService<IProject> {
     // Get tickets related to this project through project_ticket_links
     const baseQuery = knex('project_ticket_links')
       .leftJoin('tickets', 'project_ticket_links.ticket_id', 'tickets.ticket_id')
-      .leftJoin('companies', 'tickets.company_id', 'companies.company_id')
+      .leftJoin('clients', 'tickets.client_id', 'clients.client_id')
       .leftJoin('users', 'tickets.assigned_to', 'users.user_id')
       .where({
         'project_ticket_links.project_id': projectId,
@@ -991,7 +991,7 @@ export class ProjectService extends BaseService<IProject> {
       })
       .select(
         'tickets.*',
-        'companies.company_name',
+        'clients.client_name',
         knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`),
         'project_ticket_links.created_at as link_created_at'
       );

@@ -116,7 +116,7 @@ const qboOAuthCallbackSchema = z.object({
 const qboConnectionStatusResponseSchema = z.object({
   connected: z.boolean(),
   status: qboConnectionStatusSchema,
-  companyName: z.string().optional(),
+  clientName: z.string().optional(),
   realmId: z.string().optional(),
   errorMessage: z.string().optional(),
   connectionDate: z.string().datetime().optional(),
@@ -125,7 +125,7 @@ const qboConnectionStatusResponseSchema = z.object({
 
 // Connection test schema
 const qboConnectionTestSchema = z.object({
-  testType: z.enum(['companyInfo', 'items', 'customers', 'full']).default('companyInfo'),
+  testType: z.enum(['clientInfo', 'items', 'customers', 'full']).default('clientInfo'),
   forceRefresh: z.boolean().default(false)
 });
 
@@ -141,7 +141,7 @@ const qboCustomerSchema = z.object({
   GivenName: z.string().optional(),
   MiddleName: z.string().optional(),
   FamilyName: z.string().optional(),
-  CompanyName: z.string().optional(),
+  ClientName: z.string().optional(),
   PrimaryEmailAddr: qboEmailAddrSchema.optional(),
   BillAddr: qboAddressSchema.optional(),
   ShipAddr: qboAddressSchema.optional(),
@@ -153,7 +153,7 @@ const qboCustomerSchema = z.object({
 
 // Customer sync request schema
 const customerSyncRequestSchema = z.object({
-  company_id: uuidSchema.optional(), // Sync specific company, or all if omitted
+  client_id: uuidSchema.optional(), // Sync specific client, or all if omitted
   sync_type: z.enum(['create', 'update', 'bidirectional']).default('bidirectional'),
   force_update: z.boolean().default(false),
   include_inactive: z.boolean().default(false)
@@ -167,7 +167,7 @@ const customerSyncResponseSchema = z.object({
   updated_customers: z.number().min(0),
   failed_customers: z.number().min(0),
   errors: z.array(z.object({
-    company_id: uuidSchema.optional(),
+    client_id: uuidSchema.optional(),
     qbo_customer_id: z.string().optional(),
     error_message: z.string(),
     error_code: z.string().optional()
@@ -178,7 +178,7 @@ const customerSyncResponseSchema = z.object({
 
 // Customer mapping schema
 const customerMappingSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   qbo_customer_id: z.string(),
   display_name: z.string(),
   sync_status: z.enum(['synced', 'pending', 'error', 'conflict']),
@@ -268,7 +268,7 @@ const invoiceExportRequestSchema = z.object({
     end_date: qboDateSchema
   }).optional(),
   status_filter: z.array(z.enum(['draft', 'sent', 'paid', 'overdue', 'cancelled'])).optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   export_format: z.enum(['qbo', 'json']).default('qbo'),
   include_line_items: z.boolean().default(true),
   auto_create_items: z.boolean().default(true),
@@ -300,7 +300,7 @@ const invoiceImportRequestSchema = z.object({
     end_date: qboDateSchema
   }).optional(),
   import_payments: z.boolean().default(true),
-  auto_create_companies: z.boolean().default(false),
+  auto_create_clients: z.boolean().default(false),
   update_existing: z.boolean().default(true)
 });
 

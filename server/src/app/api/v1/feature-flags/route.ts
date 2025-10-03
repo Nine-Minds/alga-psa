@@ -8,7 +8,7 @@ const featureFlagRequestSchema = z.object({
   flags: z.array(z.string()).optional(),
   context: z.object({
     userRole: z.string().optional(),
-    companySize: z.enum(['small', 'medium', 'large', 'enterprise']).optional(),
+    clientSize: z.enum(['small', 'medium', 'large', 'enterprise']).optional(),
     subscriptionPlan: z.string().optional(),
     customProperties: z.record(z.any()).optional(),
   }).optional(),
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
       userId: session.user.id,
       tenantId: session.user.tenant,
       userRole: validatedData.context?.userRole || session.user.user_type,
-      companySize: validatedData.context?.companySize,
+      clientSize: validatedData.context?.clientSize,
       subscriptionPlan: validatedData.context?.subscriptionPlan,
       customProperties: validatedData.context?.customProperties,
     };

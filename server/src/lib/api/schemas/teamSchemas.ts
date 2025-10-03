@@ -330,7 +330,7 @@ export const teamPerformanceMetricsSchema = z.object({
   }),
   benchmarks: z.object({
     industry_velocity: z.number().optional(),
-    company_velocity: z.number().optional(),
+    client_velocity: z.number().optional(),
     target_quality_score: z.number().optional()
   })
 });

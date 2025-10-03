@@ -1,6 +1,6 @@
 /**
  * Financial Credit Transfer API Route
- * POST /api/v1/financial/credits/transfer - Transfer credit between companies
+ * POST /api/v1/financial/credits/transfer - Transfer credit between clients
  */
 
 import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';

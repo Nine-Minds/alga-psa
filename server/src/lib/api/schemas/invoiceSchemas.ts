@@ -77,7 +77,7 @@ const baseInvoiceItemSchema = z.object({
   discount_percentage: z.number().min(0).max(100).optional(),
   applies_to_item_id: uuidSchema.optional(),
   applies_to_service_id: uuidSchema.optional(),
-  company_bundle_id: uuidSchema.optional(),
+  client_bundle_id: uuidSchema.optional(),
   bundle_name: z.string().optional(),
   is_bundle_header: z.boolean().default(false),
   parent_item_id: uuidSchema.optional(),
@@ -117,7 +117,7 @@ const invoiceItemResponseSchema = baseInvoiceItemSchema.merge(baseEntitySchema);
 // Base invoice schema
 const baseInvoiceSchema = z.object({
   invoice_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   invoice_date: invoiceDateSchema,
   due_date: dueDateSchema,
   subtotal: monetaryAmountSchema,
@@ -156,8 +156,8 @@ const invoiceResponseSchema = baseInvoiceSchema.merge(baseEntitySchema).extend({
 // Invoice View Model Schemas
 // ============================================================================
 
-// Company info schema for invoice view model
-const invoiceCompanySchema = z.object({
+// Client info schema for invoice view model
+const invoiceClientSchema = z.object({
   name: z.string(),
   logo: z.string().optional(),
   address: z.string().optional()
@@ -173,8 +173,8 @@ const invoiceContactSchema = z.object({
 const invoiceViewModelSchema = z.object({
   invoice_id: uuidSchema,
   invoice_number: z.string(),
-  company_id: uuidSchema,
-  company: invoiceCompanySchema,
+  client_id: uuidSchema,
+  client: invoiceClientSchema,
   contact: invoiceContactSchema,
   invoice_date: z.string(),
   due_date: z.string(),
@@ -262,7 +262,7 @@ const generateInvoicePDFSchema = z.object({
 
 // Manual invoice request schema
 const manualInvoiceRequestSchema = z.object({
-  companyId: uuidSchema,
+  clientId: uuidSchema,
   items: z.array(manualInvoiceItemSchema).min(1),
   expirationDate: z.string().optional(),
   isPrepayment: z.boolean().default(false)
@@ -333,10 +333,10 @@ const invoiceAmountFilterSchema = z.object({
   has_credit_applied: z.boolean().optional()
 });
 
-// Invoice company filter
-const invoiceCompanyFilterSchema = z.object({
-  company_id: z.array(uuidSchema).optional(),
-  company_name: z.string().optional()
+// Invoice client filter
+const invoiceClientFilterSchema = z.object({
+  client_id: z.array(uuidSchema).optional(),
+  client_name: z.string().optional()
 });
 
 // Invoice type filter
@@ -351,7 +351,7 @@ const invoiceFilterSchema = baseFilterSchema
   .merge(invoiceStatusFilterSchema)
   .merge(invoiceDateRangeSchema)
   .merge(invoiceAmountFilterSchema)
-  .merge(invoiceCompanyFilterSchema)
+  .merge(invoiceClientFilterSchema)
   .merge(invoiceTypeFilterSchema)
   .extend({
     invoice_number: z.string().optional(),
@@ -417,7 +417,7 @@ const bulkInvoiceCreditSchema = z.object({
 
 // Tax calculation request
 const taxCalculationRequestSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   amount: monetaryAmountSchema,
   tax_region: taxRegionSchema,
   calculation_date: invoiceDateSchema.optional()
@@ -447,7 +447,7 @@ const recurrenceFrequencySchema = z.enum([
 // Recurring invoice template schema
 const recurringInvoiceTemplateSchema = z.object({
   template_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   name: z.string().min(1).max(100),
   frequency: recurrenceFrequencySchema,
   start_date: invoiceDateSchema,
@@ -488,7 +488,7 @@ const invoicePreviewResponseSchema = z.union([
         name: z.string(),
         address: z.string()
       }),
-      tenantCompany: z.object({
+      tenantClient: z.object({
         name: z.string(),
         address: z.string(),
         logoUrl: z.string().nullable()
@@ -673,7 +673,7 @@ export {
   invoiceResponseSchema,
   
   // View model schemas
-  invoiceCompanySchema,
+  invoiceClientSchema,
   invoiceContactSchema,
   invoiceViewModelSchema,
   
@@ -700,7 +700,7 @@ export {
   invoiceStatusFilterSchema,
   invoiceDateRangeSchema,
   invoiceAmountFilterSchema,
-  invoiceCompanyFilterSchema,
+  invoiceClientFilterSchema,
   invoiceTypeFilterSchema,
   invoiceFilterSchema,
   invoiceListQuerySchema,
