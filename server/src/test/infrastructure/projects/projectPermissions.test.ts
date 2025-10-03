@@ -13,7 +13,7 @@ import {
 } from '../../../test-utils/testMocks';
 import {
   createTenant,
-  createCompany,
+  createClient,
   createUser,
   createTestEnvironment
 } from '../../../test-utils/testDataFactory';
@@ -29,7 +29,7 @@ import {
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['projects', 'companies', 'users', 'roles', 'permissions'],
+    cleanupTables: ['projects', 'clients', 'users', 'roles', 'permissions'],
     runSeeds: true
   });
   let testProject: IProject;
@@ -50,8 +50,8 @@ describe('Project Permissions Infrastructure', () => {
     await resetDatabase(context.db);
 
     // Set up common test environment
-    const { tenantId, companyId } = await createTestEnvironment(context.db, {
-      companyName: 'Test Company'
+    const { tenantId, clientId } = await createTestEnvironment(context.db, {
+      clientName: 'Test Client'
     });
 
     // Create users with different roles
@@ -111,7 +111,7 @@ describe('Project Permissions Infrastructure', () => {
     testProject = {
       tenant: tenantId,
       project_id: uuidv4(),
-      company_id: companyId,
+      client_id: clientId,
       project_name: 'Test Project',
       description: 'A test project',
       start_date: new Date(),
@@ -127,7 +127,7 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   // Use cleanup hook for test isolation
-  const cleanup = createCleanupHook(context.db, ['projects', 'companies', 'users', 'roles', 'permissions']);
+  const cleanup = createCleanupHook(context.db, ['projects', 'clients', 'users', 'roles', 'permissions']);
   afterEach(cleanup);
 
   it('should allow regular user to view projects', async () => {
@@ -169,7 +169,7 @@ describe('Project Permissions Infrastructure', () => {
     
     const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
       tenant: tenantId,
-      company_id: testProject.company_id,
+      client_id: testProject.client_id,
       project_name: 'New Test Project',
       description: 'A new test project',
       start_date: new Date(),
@@ -193,7 +193,7 @@ describe('Project Permissions Infrastructure', () => {
 
     const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
       tenant: tenantId,
-      company_id: testProject.company_id,
+      client_id: testProject.client_id,
       project_name: 'New Test Project',
       description: 'A new test project',
       start_date: new Date(),

@@ -33,16 +33,16 @@ describe('Email Settings Webhook Processing Tests', () => {
       
       // 1. Setup provider
       console.log('  1️⃣ Setting up email provider and test scenario...');
-      const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      const { tenant, client, contact } = await context.emailTestFactory.createBasicEmailScenario();
       console.log(`     ✓ Created tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Created company: ${company.company_name}`);
+      console.log(`     ✓ Created client: ${client.client_name}`);
       console.log(`     ✓ Created contact: ${contact.email}`);
       
       const provider = await context.createEmailProvider({
         provider: 'microsoft',
         mailbox: 'webhook-test@example.com',
         tenant_id: tenant.tenant,
-        company_id: company.company_id
+        client_id: client.client_id
       });
       console.log(`     ✓ Created Microsoft provider: ${provider.mailbox}`);
       
@@ -139,12 +139,12 @@ describe('Email Settings Webhook Processing Tests', () => {
   describe('Google Pub/Sub Processing', () => {
     it('should process Pub/Sub message and create ticket', async () => {
       // 1. Setup
-      const { tenant, company, contact } = await context.emailTestFactory.createBasicEmailScenario();
+      const { tenant, client, contact } = await context.emailTestFactory.createBasicEmailScenario();
       const provider = await context.createEmailProvider({
         provider: 'google',
         mailbox: 'webhook-google@example.com',
         tenant_id: tenant.tenant,
-        company_id: company.company_id
+        client_id: client.client_id
       });
       
       // 2. Create Pub/Sub message

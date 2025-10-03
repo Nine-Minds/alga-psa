@@ -11,7 +11,7 @@ vi.mock('../../lib/models/user', () => ({
 import UserModel from '../../lib/models/user';
 import { hasPermission } from '../../lib/auth/rbac';
 
-describe('Company permission resource mapping', () => {
+describe('Client permission resource mapping', () => {
   const tenantId = 'test-tenant';
   const user: IUser = {
     user_id: 'user-1',
@@ -51,7 +51,7 @@ describe('Company permission resource mapping', () => {
     await expect(hasPermission(user, 'client', 'create', {} as any)).resolves.toBe(true);
   });
 
-  it('should also grant access when the controller requests the company resource alias', async () => {
-    await expect(hasPermission(user, 'company', 'create', {} as any)).resolves.toBe(true);
+  it('should also grant access when the controller requests the client resource alias', async () => {
+    await expect(hasPermission(user, 'client', 'create', {} as any)).resolves.toBe(true);
   });
 });

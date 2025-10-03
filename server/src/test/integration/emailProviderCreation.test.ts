@@ -35,8 +35,8 @@ describe('Email Provider Creation', () => {
     // Create test tenant
     await testDb('tenants').insert({
       tenant: testTenant,
-      company_name: 'Test Company',
-      email: 'test@company.com',
+      client_name: 'Test Client',
+      email: 'test@client.com',
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -57,8 +57,8 @@ describe('Email Provider Creation', () => {
       // Arrange
       const providerData = {
         providerType: 'google' as const,
-        providerName: 'Company Gmail Support',
-        mailbox: 'support@company.com',
+        providerName: 'Client Gmail Support',
+        mailbox: 'support@client.com',
         vendorConfig: {
           clientId: 'test-client-id.apps.googleusercontent.com',
           clientSecret: 'test-client-secret',
@@ -77,8 +77,8 @@ describe('Email Provider Creation', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
-      expect(result.providerName).toBe('Company Gmail Support');
-      expect(result.mailbox).toBe('support@company.com');
+      expect(result.providerName).toBe('Client Gmail Support');
+      expect(result.mailbox).toBe('support@client.com');
       expect(result.providerType).toBe('google');
       expect(result.isActive).toBe(true);
       expect(result.status).toBe('disconnected');
@@ -97,7 +97,7 @@ describe('Email Provider Creation', () => {
 
       expect(dbRecord).toBeDefined();
       expect(dbRecord.tenant).toBe(testTenant);
-      expect(dbRecord.mailbox).toBe('support@company.com');
+      expect(dbRecord.mailbox).toBe('support@client.com');
     });
 
     it('should create a Google provider with OAuth tokens', async () => {
@@ -134,8 +134,8 @@ describe('Email Provider Creation', () => {
       // Arrange
       const providerData = {
         providerType: 'microsoft' as const,
-        providerName: 'Company Outlook',
-        mailbox: 'support@company.com',
+        providerName: 'Client Outlook',
+        mailbox: 'support@client.com',
         vendorConfig: {
           clientId: 'microsoft-client-id',
           clientSecret: 'microsoft-client-secret',
@@ -149,8 +149,8 @@ describe('Email Provider Creation', () => {
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.providerName).toBe('Company Outlook');
-      expect(result.mailbox).toBe('support@company.com');
+      expect(result.providerName).toBe('Client Outlook');
+      expect(result.mailbox).toBe('support@client.com');
       expect(result.providerType).toBe('microsoft');
       expect(result.isActive).toBe(true);
       expect(result.vendorConfig).toMatchObject({
@@ -167,7 +167,7 @@ describe('Email Provider Creation', () => {
       await createEmailProvider({
         providerType: 'google',
         providerName: 'Gmail Provider 1',
-        mailbox: 'gmail1@company.com',
+        mailbox: 'gmail1@client.com',
         vendorConfig: {
           clientId: 'client1.apps.googleusercontent.com',
           clientSecret: 'secret1',
@@ -180,7 +180,7 @@ describe('Email Provider Creation', () => {
       await createEmailProvider({
         providerType: 'microsoft',
         providerName: 'Outlook Provider',
-        mailbox: 'outlook@company.com',
+        mailbox: 'outlook@client.com',
         vendorConfig: {
           clientId: 'ms-client',
           clientSecret: 'ms-secret'
@@ -194,8 +194,8 @@ describe('Email Provider Creation', () => {
 
       // Assert
       expect(providers.length).toBeGreaterThanOrEqual(2);
-      expect(providers.some(p => p.mailbox === 'gmail1@company.com')).toBe(true);
-      expect(providers.some(p => p.mailbox === 'outlook@company.com')).toBe(true);
+      expect(providers.some(p => p.mailbox === 'gmail1@client.com')).toBe(true);
+      expect(providers.some(p => p.mailbox === 'outlook@client.com')).toBe(true);
     });
 
     it('should set default values correctly', async () => {

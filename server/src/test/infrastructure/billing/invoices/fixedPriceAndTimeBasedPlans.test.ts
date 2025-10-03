@@ -26,17 +26,17 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings',
+        'client_tax_settings',
         'next_number'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -71,8 +71,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       description: 'Test Tax Rate'
     }, 'tax_rate_id');
 
-    // Create default tax settings for the test company
-    await createDefaultTaxSettings(context.company.company_id);
+    // Create default tax settings for the test client
+    await createDefaultTaxSettings(context.client.client_id);
 
     // Re-create tax rate
     await context.createEntity('tax_rates', {
@@ -124,17 +124,17 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       ]);
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -146,7 +146,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
 
       // Assert
       expect(result).toMatchObject({
-        company: { name: 'Test Company' },
+        client: { name: 'Test Client' },
         subtotal: 25000,
         status: 'draft'
       });
@@ -199,17 +199,17 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -256,17 +256,17 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -280,7 +280,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
 
       const ticketId = await context.createEntity('tickets', {
         title: 'Test Ticket',
-        company_id: context.companyId,
+        client_id: context.clientId,
         status_id: statusId,
         entered_by: context.userId,
         entered_at: createTestDateISO(),

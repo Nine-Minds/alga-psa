@@ -4,7 +4,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { ICompany } from '../../interfaces/company.interfaces';
+import { IClient } from '../../interfaces/client.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 describe('Tax Exemption Handling', () => {
@@ -16,11 +16,11 @@ describe('Tax Exemption Handling', () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
       cleanupTables: [
-        'companies',
+        'clients',
         'tax_rates',
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
     taxService = new TaxService();
@@ -47,13 +47,13 @@ describe('Tax Exemption Handling', () => {
     await testHelpers.afterAll();
   });
 
-  it('should not apply tax to exempt companies', async () => {
-    // Create a tax-exempt company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Exempt Company',
+  it('should not apply tax to exempt clients', async () => {
+    // Create a tax-exempt client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Exempt Client',
       is_tax_exempt: true,
       tax_region: 'US-NY',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -63,27 +63,27 @@ describe('Tax Exemption Handling', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       billing_cycle: 'weekly'
-    }, 'company_id');
+    }, 'client_id');
 
     // Create default tax settings
-    await createDefaultTaxSettings(company_id);
+    await createDefaultTaxSettings(client_id);
 
     // Create a test charge
     const chargeAmount = 10000; // $100.00 in cents
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const taxResult = await taxService.calculateTax(company_id, chargeAmount, currentDate);
+    const taxResult = await taxService.calculateTax(client_id, chargeAmount, currentDate);
 
     expect(taxResult.taxAmount).toBe(0);
     expect(taxResult.taxRate).toBe(0);
   });
 
-  it('should apply tax to non-exempt companies', async () => {
-    // Create a non-exempt company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Non-Exempt Company',
+  it('should apply tax to non-exempt clients', async () => {
+    // Create a non-exempt client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Non-Exempt Client',
       is_tax_exempt: false,
       tax_region: 'US-NY',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '123-456-7890',
       credit_balance: 0,
       email: 'test@example.com',
@@ -94,27 +94,27 @@ describe('Tax Exemption Handling', () => {
       is_inactive: false,
       billing_cycle: 'weekly',
       properties: {}
-    }, 'company_id');
+    }, 'client_id');
 
     // Create default tax settings
-    await createDefaultTaxSettings(company_id);
+    await createDefaultTaxSettings(client_id);
 
     // Create a test charge
     const chargeAmount = 10000; // $100.00 in cents
     const currentDate = Temporal.Now.plainDateISO().toString();
-    const taxResult = await taxService.calculateTax(company_id, chargeAmount, currentDate);
+    const taxResult = await taxService.calculateTax(client_id, chargeAmount, currentDate);
 
     expect(taxResult.taxAmount).toBeGreaterThan(0);
     expect(parseInt(taxResult.taxRate.toString())).toBeGreaterThan(0);
   });
 
   it('should handle tax exemption status changes', async () => {
-    // Create a company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Status Change Company',
+    // Create a client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Status Change Client',
       is_tax_exempt: false,
       tax_region: 'US-NY',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -124,24 +124,24 @@ describe('Tax Exemption Handling', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       billing_cycle: 'weekly'
-    }, 'company_id');
+    }, 'client_id');
 
     // Create default tax settings
-    await createDefaultTaxSettings(company_id);
+    await createDefaultTaxSettings(client_id);
 
     // Test as non-exempt
     const chargeAmount = 10000;
     const currentDate = Temporal.Now.plainDateISO().toString();
-    let taxResult = await taxService.calculateTax(company_id, chargeAmount, currentDate);
+    let taxResult = await taxService.calculateTax(client_id, chargeAmount, currentDate);
     expect(taxResult.taxAmount).toBeGreaterThan(0);
 
     // Update to exempt
-    await context.db('companies')
-      .where({ company_id: company_id })
+    await context.db('clients')
+      .where({ client_id: client_id })
       .update({ is_tax_exempt: true });
 
     // Test as exempt
-    taxResult = await taxService.calculateTax(company_id, chargeAmount, currentDate);
+    taxResult = await taxService.calculateTax(client_id, chargeAmount, currentDate);
     expect(taxResult.taxAmount).toBe(0);
   });
 });

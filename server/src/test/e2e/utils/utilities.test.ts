@@ -20,7 +20,7 @@ describe('E2E Test Utilities', () => {
     it('should create a complete test environment', () => {
       expect(env).toBeDefined();
       expect(env.tenant).toBeDefined();
-      expect(env.companyId).toBeDefined();
+      expect(env.clientId).toBeDefined();
       expect(env.locationId).toBeDefined();
       expect(env.userId).toBeDefined();
       expect(env.apiKey).toBeDefined();
@@ -73,13 +73,13 @@ describe('E2E Test Utilities', () => {
       const contact = await createTestContact(env.db, env.tenant, {
         full_name: 'John Doe',
         email: 'john.doe@example.com',
-        company_id: env.companyId
+        client_id: env.clientId
       });
 
       expect(contact.contact_name_id).toBeDefined();
       expect(contact.full_name).toBe('John Doe');
       expect(contact.email).toBe('john.doe@example.com');
-      expect(contact.company_id).toBe(env.companyId);
+      expect(contact.client_id).toBe(env.clientId);
       expect(contact.tenant).toBe(env.tenant);
     });
 

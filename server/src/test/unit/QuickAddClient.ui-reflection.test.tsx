@@ -4,7 +4,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import QuickAddCompany from '../../components/companies/QuickAddCompany';
+import QuickAddClient from '../../components/clients/QuickAddClient';
 import { UIStateProvider } from '../../types/ui-reflection/UIStateContext';
 
 // Mock the external dependencies
@@ -12,8 +12,8 @@ vi.mock('../../lib/actions/user-actions/userActions', () => ({
   getAllUsers: vi.fn().mockResolvedValue([])
 }));
 
-vi.mock('../../lib/actions/companyActions', () => ({
-  createCompany: vi.fn().mockResolvedValue({ company_id: 'test-id', company_name: 'Test Company' })
+vi.mock('../../lib/actions/clientActions', () => ({
+  createClient: vi.fn().mockResolvedValue({ client_id: 'test-id', client_name: 'Test Client' })
 }));
 
 vi.mock('react-hot-toast', () => ({
@@ -38,11 +38,11 @@ const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   );
 };
 
-describe('QuickAddCompany UI Reflection', () => {
+describe('QuickAddClient UI Reflection', () => {
   const defaultProps = {
     open: true,
     onOpenChange: vi.fn(),
-    onCompanyAdded: vi.fn()
+    onClientAdded: vi.fn()
   };
 
   beforeEach(() => {
@@ -52,54 +52,54 @@ describe('QuickAddCompany UI Reflection', () => {
   it('should render with automation ID attributes', () => {
     render(
       <TestWrapper>
-        <QuickAddCompany {...defaultProps} />
+        <QuickAddClient {...defaultProps} />
       </TestWrapper>
     );
 
     // Check for dialog automation ID
-    const dialogElement = document.querySelector('[data-automation-id="quick-add-company-dialog"]');
+    const dialogElement = document.querySelector('[data-automation-id="quick-add-client-dialog"]');
     expect(dialogElement).toBeTruthy();
   });
 
   it('should have form elements with proper IDs', () => {
     render(
       <TestWrapper>
-        <QuickAddCompany {...defaultProps} />
+        <QuickAddClient {...defaultProps} />
       </TestWrapper>
     );
 
     // Check for key form elements
-    expect(document.getElementById('company_name')).toBeTruthy();
+    expect(document.getElementById('client_name')).toBeTruthy();
     expect(document.getElementById('client_type_select')).toBeTruthy();
     expect(document.getElementById('email')).toBeTruthy();
     expect(document.getElementById('phone_no')).toBeTruthy();
-    expect(document.getElementById('create-company-btn')).toBeTruthy();
-    expect(document.getElementById('cancel-quick-add-company-btn')).toBeTruthy();
+    expect(document.getElementById('create-client-btn')).toBeTruthy();
+    expect(document.getElementById('cancel-quick-add-client-btn')).toBeTruthy();
   });
 
   it('should render ReflectionContainer', () => {
     render(
       <TestWrapper>
-        <QuickAddCompany {...defaultProps} />
+        <QuickAddClient {...defaultProps} />
       </TestWrapper>
     );
 
     // The ReflectionContainer should register components in the UI state
     // We can test this by looking for the container structure
     const formContainer = document.querySelector('[data-testid="reflection-container"]') ||
-                         document.getElementById('quick-add-company-form');
+                         document.getElementById('quick-add-client-form');
     expect(formContainer).toBeTruthy();
   });
 
   it('should not render when closed', () => {
     render(
       <TestWrapper>
-        <QuickAddCompany {...defaultProps} open={false} />
+        <QuickAddClient {...defaultProps} open={false} />
       </TestWrapper>
     );
 
     // Dialog should not be visible when closed
-    const dialogElement = document.querySelector('[data-automation-id="quick-add-company-dialog"]');
+    const dialogElement = document.querySelector('[data-automation-id="quick-add-client-dialog"]');
     expect(dialogElement).toBeFalsy();
   });
 });

@@ -1,14 +1,14 @@
 /**
- * Company Factory for E2E Tests
- * Creates company test data with realistic values
+ * Client Factory for E2E Tests
+ * Creates client test data with realistic values
  */
 
 import { faker } from '@faker-js/faker';
 
-interface CompanyInput {
+interface ClientInput {
   tenant: string;
-  company_name?: string;
-  client_type?: 'company' | 'individual';
+  client_name?: string;
+  client_type?: 'client' | 'individual';
   email?: string;
   phone?: string;
   is_inactive?: boolean;
@@ -16,12 +16,12 @@ interface CompanyInput {
   createLocation?: boolean;
 }
 
-export async function companyFactory(db: any, input: CompanyInput) {
-  const company = {
-    company_id: faker.string.uuid(),
+export async function clientFactory(db: any, input: ClientInput) {
+  const client = {
+    client_id: faker.string.uuid(),
     tenant: input.tenant,
-    company_name: input.company_name || faker.company.name(),
-    client_type: input.client_type || 'company',
+    client_name: input.client_name || faker.company.name(),
+    client_type: input.client_type || 'client',
     url: input.url || faker.internet.url(),
     is_inactive: input.is_inactive !== undefined ? input.is_inactive : false,
     billing_cycle: 'monthly',
@@ -31,31 +31,31 @@ export async function companyFactory(db: any, input: CompanyInput) {
     updated_at: new Date()
   };
 
-  const result = await db('companies')
+  const result = await db('clients')
     .insert({
-      company_id: company.company_id,
-      tenant: company.tenant,
-      company_name: company.company_name,
-      client_type: company.client_type,
-      url: company.url,
-      is_inactive: company.is_inactive,
-      billing_cycle: company.billing_cycle,
-      is_tax_exempt: company.is_tax_exempt,
-      credit_balance: company.credit_balance,
-      created_at: company.created_at,
-      updated_at: company.updated_at
+      client_id: client.client_id,
+      tenant: client.tenant,
+      client_name: client.client_name,
+      client_type: client.client_type,
+      url: client.url,
+      is_inactive: client.is_inactive,
+      billing_cycle: client.billing_cycle,
+      is_tax_exempt: client.is_tax_exempt,
+      credit_balance: client.credit_balance,
+      created_at: client.created_at,
+      updated_at: client.updated_at
     })
     .returning('*');
 
-  const createdCompany = result[0];
+  const createdClient = result[0];
 
   // Create a default location if email or phone is provided or if explicitly requested
   if (input.createLocation !== false && (input.email || input.phone)) {
-    await db('company_locations').insert({
-      location_id: faker.string.uuid(),
-      company_id: createdCompany.company_id,
+    await db('client_addresses').insert({
+      address_id: faker.string.uuid(),
+      client_id: createdClient.client_id,
       tenant: input.tenant,
-      location_name: 'Main Office',
+      address_name: 'Main Office',
       address_line1: faker.location.streetAddress(),
       city: faker.location.city(),
       state_province: faker.location.state({ abbreviated: true }),
@@ -73,5 +73,8 @@ export async function companyFactory(db: any, input: CompanyInput) {
     });
   }
 
-  return createdCompany;
+  return createdClient;
 }
+
+// Backward compatibility alias
+export const clientFactory = clientFactory;

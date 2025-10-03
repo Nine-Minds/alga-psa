@@ -90,7 +90,7 @@ describe.todo('Ticket Permissions Unit Tests', () => {
       title: 'Test Ticket',
       url: null,
       board_id: 'board-1',
-      company_id: 'company-1',
+      client_id: 'client-1',
       contact_name_id: null,
       status_id: 'status-1',
       category_id: null,
@@ -169,7 +169,7 @@ describe.todo('Ticket Permissions Unit Tests', () => {
     const mockFormData = new FormData();
     mockFormData.append('title', 'New Test Ticket');
     mockFormData.append('board_id', 'CH-2');
-    mockFormData.append('company_id', 'COMP-2');
+    mockFormData.append('client_id', 'COMP-2');
     mockFormData.append('contact_name_id', 'CNT-2');
     mockFormData.append('status_id', 'ST-1');
     mockFormData.append('category_id', 'CAT-2');

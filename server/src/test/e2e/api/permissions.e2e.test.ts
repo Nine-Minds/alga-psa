@@ -19,7 +19,7 @@ describe('Permissions API E2E Tests', () => {
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
-      companyName: 'Permissions API Test Company',
+      clientName: 'Permissions API Test Client',
       userName: 'permissions_api_test'
     });
 
@@ -155,7 +155,7 @@ describe('Permissions API E2E Tests', () => {
       const resources = response.data.data.categories.map((cat: any) => cat.resource);
       expect(resources).toContain('user');
       expect(resources).toContain('role');
-      expect(resources).toContain('company');
+      expect(resources).toContain('client');
     });
   });
 
@@ -282,7 +282,7 @@ describe('Permissions API E2E Tests', () => {
       await env.db('tenants').insert({
         tenant: otherTenant,
         company_name: 'Other Company',
-        email: 'other@company.com',
+        email: 'other@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -308,7 +308,7 @@ describe('Permissions API E2E Tests', () => {
   describe('Filtering and Search', () => {
     it('should filter permissions by resource', async () => {
       // Create permissions with different resources
-      const resources = ['filter_user', 'filter_role', 'filter_company'];
+      const resources = ['filter_user', 'filter_role', 'filter_client'];
       for (const resource of resources) {
         const permission = await env.db('permissions').insert({
           permission_id: uuidv4(),

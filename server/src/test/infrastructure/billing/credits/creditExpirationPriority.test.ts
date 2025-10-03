@@ -6,9 +6,9 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -34,24 +34,24 @@ describe('Credit Expiration Prioritization Tests', () => {
         'invoices',
         'transactions',
         'credit_tracking',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
-        'company_tax_settings',
-        'company_billing_settings',
+        'client_tax_settings',
+        'client_billing_settings',
         'default_billing_settings'
       ],
-      companyName: 'Credit Expiration Test Company',
+      clientName: 'Credit Expiration Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   beforeEach(async () => {
@@ -63,11 +63,11 @@ describe('Credit Expiration Prioritization Tests', () => {
   });
 
   it('should validate that credits without expiration dates are used last', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Credit Priority Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Credit Priority Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -78,11 +78,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Set up company billing settings with expiration days
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
+    // Set up client billing settings with expiration days
+    await context.db('client_billing_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
@@ -101,9 +101,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -140,18 +140,18 @@ describe('Credit Expiration Prioritization Tests', () => {
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
     
-    const billingCycleId = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       period_start_date: startDate,
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // Link plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Link plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
@@ -165,7 +165,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const creditWithExpirationAmount = 8000; // $80.00 credit
     const creditWithExpirationInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       creditWithExpirationAmount,
       expirationDate
     );
@@ -178,7 +178,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const creditWithoutExpirationAmount = 10000; // $100.00 credit
     const creditWithoutExpirationInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       creditWithoutExpirationAmount
     );
     
@@ -189,7 +189,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 4: Get the credit transactions
     const creditWithExpirationTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: creditWithExpirationInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -197,7 +197,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const creditWithoutExpirationTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: creditWithoutExpirationInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -216,7 +216,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .update({ expiration_date: null });
     
     // Step 6: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
     expect(initialCredit).toBe(creditWithExpirationAmount + creditWithoutExpirationAmount);
     
     // Step 7: Generate an invoice that will use some but not all of the credits
@@ -252,7 +252,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: invoice.invoice_id,
         type: 'credit_application'
       })
@@ -298,16 +298,16 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(creditWithoutExpirationTracking.remaining_amount)).toBe(0);
     
     // Step 14: Verify final credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
     expect(finalCredit).toBe(0); // All credit should be used
   });
 
   it('should test credit application across multiple invoices respects expiration priority', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Multiple Invoice Priority Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Multiple Invoice Priority Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -318,11 +318,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Set up company billing settings with expiration days
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
+    // Set up client billing settings with expiration days
+    await context.db('client_billing_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
@@ -341,9 +341,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -382,8 +382,8 @@ describe('Credit Expiration Prioritization Tests', () => {
     const startDate1 = Temporal.PlainDate.from(now).subtract({ months: 2 }).toString();
     const endDate1 = Temporal.PlainDate.from(now).subtract({ months: 1, days: 1 }).toString();
     
-    const billingCycleId1 = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycleId1 = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       period_start_date: startDate1,
       period_end_date: endDate1,
@@ -394,18 +394,18 @@ describe('Credit Expiration Prioritization Tests', () => {
     const startDate2 = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate2 = Temporal.PlainDate.from(now).toString();
     
-    const billingCycleId2 = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycleId2 = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       period_start_date: startDate2,
       period_end_date: endDate2,
       effective_date: startDate2
     }, 'billing_cycle_id');
 
-    // Link plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Link plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       tenant: context.tenantId,
       start_date: startDate1, // Start from the first billing cycle
@@ -421,7 +421,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const credit1Amount = 5000; // $50.00
     const credit1Invoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       credit1Amount,
       expiringSoonDateStr
     );
@@ -433,7 +433,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const credit2Amount = 7000; // $70.00
     const credit2Invoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       credit2Amount,
       expiringLaterDateStr
     );
@@ -445,7 +445,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const credit3Amount = 9000; // $90.00
     const credit3Invoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       credit3Amount,
       expiringMuchLaterDateStr
     );
@@ -458,7 +458,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 3: Get the credit transactions
     const credit1Tx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: credit1Invoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -466,7 +466,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const credit2Tx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: credit2Invoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -474,14 +474,14 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const credit3Tx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: credit3Invoice.invoice_id,
         type: 'credit_issuance'
       })
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
     expect(initialCredit).toBe(credit1Amount + credit2Amount + credit3Amount);
     
     // Step 5: Generate first invoice
@@ -517,7 +517,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 9: Verify credit application transaction for first invoice
     const creditApplicationTx1 = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: invoice1.invoice_id,
         type: 'credit_application'
       })
@@ -579,7 +579,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 15: Verify credit application transaction for second invoice
     const creditApplicationTx2 = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: invoice2.invoice_id,
         type: 'credit_application'
       })
@@ -644,18 +644,18 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(actualCredit3Remaining).toBeGreaterThanOrEqual(0);
     
     // Step 18: Verify final credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
     
     // Verify final credit balance matches the actual remaining amount
     expect(finalCredit).toBe(actualCredit3Remaining);
   });
 
   it('should verify credit application behavior when credits expire between invoice generations', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Expiration Between Invoices Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Expiration Between Invoices Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -666,11 +666,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Set up company billing settings with expiration days
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
+    // Set up client billing settings with expiration days
+    await context.db('client_billing_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
@@ -689,9 +689,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -728,18 +728,18 @@ describe('Credit Expiration Prioritization Tests', () => {
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
     
-    const billingCycleId = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       period_start_date: startDate,
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
 
-    // Link plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Link plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
@@ -751,14 +751,14 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Credit 1: Will be manually expired
     const expiringCreditAmount = 10000; // $100.00
     const expiringCreditInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       expiringCreditAmount
     );
     
     // Credit 2: Will remain active
     const activeCreditAmount = 8000; // $80.00
     const activeCreditInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       activeCreditAmount
     );
     
@@ -769,7 +769,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 3: Get the credit transactions
     const expiringCreditTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: expiringCreditInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -777,14 +777,14 @@ describe('Credit Expiration Prioritization Tests', () => {
     
     const activeCreditTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: activeCreditInvoice.invoice_id,
         type: 'credit_issuance'
       })
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
     expect(initialCredit).toBe(expiringCreditAmount + activeCreditAmount);
     
     // Step 5: Generate an invoice but don't finalize it yet
@@ -810,7 +810,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Create expiration transaction
     await context.db('transactions').insert({
       transaction_id: uuidv4(),
-      company_id: company_id,
+      client_id: client_id,
       amount: -expiringCreditAmount,
       type: 'credit_expiration',
       status: 'completed',
@@ -820,16 +820,16 @@ describe('Credit Expiration Prioritization Tests', () => {
       related_transaction_id: expiringCreditTx.transaction_id
     });
     
-    // Update company credit balance
-    await context.db('companies')
-      .where({ company_id: company_id, tenant: context.tenantId })
+    // Update client credit balance
+    await context.db('clients')
+      .where({ client_id: client_id, tenant: context.tenantId })
       .update({
         credit_balance: activeCreditAmount, // Only the active credit remains
         updated_at: new Date().toISOString()
       });
     
     // Step 7: Verify credit balance after expiration
-    const creditAfterExpiration = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterExpiration = await ClientBillingPlan.getClientCredit(client_id);
     expect(creditAfterExpiration).toBe(activeCreditAmount);
     
     // Step 8: Now finalize the invoice
@@ -859,7 +859,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: invoice.invoice_id,
         type: 'credit_application'
       })
@@ -903,7 +903,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(activeCreditTracking.remaining_amount)).toBe(0); // Fully used
     
     // Step 15: Verify final credit balance is zero
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
   });
 });

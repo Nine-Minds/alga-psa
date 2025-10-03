@@ -34,9 +34,9 @@ describe('Email Settings OAuth Flow Tests', () => {
       
       // 1. Use base test data from fixture
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company } = testHelpers.getBaseTestData();
+      const { tenant, client } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       
       // 2. Initiate OAuth flow
       // Note: In a real implementation, you would call your API endpoint here
@@ -185,9 +185,9 @@ describe('Email Settings OAuth Flow Tests', () => {
       
       // 1. Use base test data from fixture
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company } = testHelpers.getBaseTestData();
+      const { tenant, client } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       
       // 2. Create a Google provider
       console.log('  2️⃣ Setting up Google OAuth provider...');
@@ -270,9 +270,9 @@ describe('Email Settings OAuth Flow Tests', () => {
       console.log('\n🔐 Testing Token Storage and Security...');
       
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company } = testHelpers.getBaseTestData();
+      const { tenant, client } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       
       // Create provider
       console.log('  2️⃣ Creating email provider with OAuth tokens...');

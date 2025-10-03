@@ -140,7 +140,7 @@ describe('Email Processing E2E Tests', () => {
       // Assert
       const tickets = await scenario.getTickets();
       EmailTestHelpers.assertTicketCreated(tickets, 'Request from Known Client', scenario.contact.email);
-      expect(tickets[0].company_name).toBe(scenario.company.company_name);
+      expect(tickets[0].client_name).toBe(scenario.client.client_name);
     }, 30000);
 
     it('should handle unknown email addresses with manual fallback', async () => {
