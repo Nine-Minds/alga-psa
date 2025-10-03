@@ -27,7 +27,7 @@ import { ITaxCalculationResult } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from 'server/src/lib/logging/auditLog';
 import { getCompanyLogoUrl } from '../utils/avatarUtils';
-import { getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
+import { calculateAndDistributeTax, getCompanyDetails, persistInvoiceItems, updateInvoiceTotalsAndRecordTransaction } from 'server/src/lib/services/invoiceService';
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { analytics } from '../analytics/posthog';
@@ -765,147 +765,19 @@ export async function createInvoiceFromBillingResult(
     // Use the subtotal returned by persistInvoiceItems + discount adjustment
     const subtotal = calculatedSubtotal + discountSubtotalAdjustment;
 
-    // Calculate tax, respecting pre-calculated fixed fee tax
-    let totalTax = 0;
-    let precalculatedFixedFeeTax = 0;
-
-    // Get all invoice items
-    const items = await trx('invoice_items')
-      .where({
-        invoice_id: newInvoice!.invoice_id,
-        tenant
-      })
-      .orderBy('net_amount', 'desc');
-
-    // Separate the consolidated fixed fee item (no service_id) if it exists and has tax
-    const consolidatedFixedFeeItem = items.find((item: IInvoiceItem) =>
-      item.service_id === null && // Consolidated fixed fee charges have null service_id
-      item.is_taxable &&
-      item.tax_amount > 0 // Check if it has pre-calculated tax
+    // Leverage the shared tax helper so automated invoices mirror manual invoices
+    const calculatedTax = await calculateAndDistributeTax(
+      trx,
+      newInvoice!.invoice_id,
+      company,
+      taxService
     );
 
-    if (consolidatedFixedFeeItem) {
-      precalculatedFixedFeeTax = parseInt(consolidatedFixedFeeItem.tax_amount);
-      console.log(`Found pre-calculated fixed fee tax: ${precalculatedFixedFeeTax}`);
-    }
-
-    // Get other positive taxable items (excluding the consolidated fixed fee one)
-    const otherPositiveTaxableItems = items.filter((item: IInvoiceItem) =>
-      item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude the fixed fee item
-      item.is_taxable &&
-      item.net_amount > 0
-    );
-
-    // Calculate tax for each item based on its region, ignoring discounts
-    // Calculate tax for other items if any exist
-    let recalculatedTaxForOtherItems = 0;
-    if (otherPositiveTaxableItems.length > 0) {
-      // Group items by tax region
-      const regionTotals = new Map<string, number>();
-      // Group OTHER items by tax region
-      for (const item of otherPositiveTaxableItems) {
-        const region = item.tax_region || company.tax_region; // Use item's region or company default
-        const amount = parseInt(item.net_amount);
-        regionTotals.set(region, (regionTotals.get(region) || 0) + amount);
-      }
-
-      // Calculate tax for each region on full amounts (no discount factor)
-      for (const [region, amount] of regionTotals) {
-        const rawTaxResult = await taxService.calculateTax(
-          companyId,
-          amount,
-          cycleEnd,
-          region,
-          true
-        );
-        recalculatedTaxForOtherItems += rawTaxResult.taxAmount; // Accumulate tax for non-fixed items
-      }
-
-      // Distribute tax proportionally among items within each region
-
-      // Group items by region
-      // Group OTHER items by region for distribution
-      const itemsByRegion = new Map<string, typeof otherPositiveTaxableItems>();
-      for (const item of otherPositiveTaxableItems) {
-        const region = item.tax_region || company.tax_region;
-        if (!itemsByRegion.has(region)) {
-          itemsByRegion.set(region, []);
-        }
-        itemsByRegion.get(region)!.push(item);
-      }
-
-      // For each region, distribute the calculated tax among items
-      for (const [region, items] of itemsByRegion) {
-        // Calculate regional total from positive taxable items
-        // Calculate regional total from OTHER positive taxable items
-        const regionalTotal = items.reduce((sum: number, item: IInvoiceItem) => sum + item.net_amount, 0);
-
-        // Get tax rate and amount for this region
-        const regionalTaxResult = await taxService.calculateTax(
-          companyId,
-          regionalTotal,  // Use full amount before discounts
-          cycleEnd,
-          region,
-          true
-        );
-
-        // Distribute full tax amount proportionally
-        let remainingRegionalTax = regionalTaxResult.taxAmount;  // Use full tax amount
-        for (let i = 0; i < items.length; i++) {
-          const item = items[i];
-          const isLastItem = i === items.length - 1;
-          const itemTax = isLastItem
-            ? remainingRegionalTax
-            : Math.floor((parseInt(item.net_amount) / regionalTotal) * regionalTaxResult.taxAmount);
-
-          remainingRegionalTax -= itemTax;
-
-          await trx('invoice_items')
-            .where({ item_id: item.item_id })
-            .update({
-              tax_amount: itemTax,
-              tax_rate: regionalTaxResult.taxRate,
-              total_price: parseInt(item.net_amount) + itemTax
-            });
-        }
-      }
-
-      // Ensure all other items have zero tax
-      // Ensure all other items (non-taxable or discounts), EXCLUDING the fixed fee item, have zero tax
-      const itemsToZeroOut = items.filter((item: IInvoiceItem) =>
-        item.item_id !== consolidatedFixedFeeItem?.item_id && // Exclude fixed fee
-        !otherPositiveTaxableItems.find((taxable: IInvoiceItem) => taxable.item_id === item.item_id) // Exclude already processed taxable items
-      ).map((item: IInvoiceItem) => item.item_id);
-
-      if (itemsToZeroOut.length > 0) {
-        await trx('invoice_items')
-          .where({ invoice_id: newInvoice!.invoice_id, tenant })
-          .whereIn('item_id', itemsToZeroOut)
-          .update({
-            tax_amount: 0,
-            tax_rate: 0,
-            total_price: trx.raw('net_amount')
-          });
-      }
-    }
-
-    // Calculate final amounts
-    // Final total tax is the sum of pre-calculated and recalculated tax
-    totalTax = precalculatedFixedFeeTax + recalculatedTaxForOtherItems;
-    console.log(`Final total tax: ${totalTax} (Precalculated: ${precalculatedFixedFeeTax}, Recalculated: ${recalculatedTaxForOtherItems})`);
-
-    // Final total tax is the sum of pre-calculated and recalculated tax
-    totalTax = precalculatedFixedFeeTax + recalculatedTaxForOtherItems;
-    console.log(`[createInvoiceFromBillingResult] Final total tax: ${totalTax} (Precalculated: ${precalculatedFixedFeeTax}, Recalculated: ${recalculatedTaxForOtherItems})`);
-
-    // Use the subtotal calculated above
-    const totalAmount = subtotal + totalTax;
+    const finalSubtotal = Math.ceil(subtotal);
+    const finalTax = Math.ceil(calculatedTax);
+    const totalAmount = finalSubtotal + finalTax;
     const availableCredit = await CompanyBillingPlan.getCompanyCredit(companyId);
     const creditToApply = Math.min(availableCredit, Math.ceil(totalAmount));
-
-    // Update invoice with final totals, ensuring tax is properly stored
-    const finalTax = Math.ceil(totalTax);
-    const finalSubtotal = Math.ceil(subtotal);
 
     // Update the invoice with subtotal, tax, and total amount
     await trx('invoices')
@@ -913,7 +785,7 @@ export async function createInvoiceFromBillingResult(
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,
-        total_amount: Math.ceil(finalSubtotal + finalTax),
+        total_amount: Math.ceil(totalAmount),
         credit_applied: 0
       });
 
