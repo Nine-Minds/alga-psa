@@ -26,24 +26,36 @@ exports.up = async function(knex) {
     } else {
       console.log('Creating clients table...');
       createdTables.push('clients');
-      // Clone structure from companies table
+      // Clone structure from companies table with ALL columns
       await knex.schema.createTable('clients', (table) => {
       table.uuid('tenant').notNullable();
       table.uuid('client_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
       table.text('client_name').notNullable();
       table.text('url');
-      table.boolean('is_inactive').defaultTo(false);
+      table.jsonb('properties');
+      table.text('billing_type');
       table.text('payment_terms');
+      table.bigInteger('credit_limit');
+      table.text('preferred_payment_method');
+      table.boolean('auto_invoice').defaultTo(false);
+      table.text('invoice_delivery_method');
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
+      table.boolean('is_inactive').defaultTo(false);
+      table.text('client_type');
+      table.boolean('is_tax_exempt').notNullable().defaultTo(false);
+      table.string('tax_exemption_certificate', 255);
+      table.string('tax_id_number', 255);
+      table.text('notes');
+      table.integer('credit_balance');
+      table.text('billing_cycle').notNullable().defaultTo('monthly');
+      table.string('timezone', 255);
       table.uuid('notes_document_id');
       table.uuid('invoice_template_id');
       table.uuid('billing_contact_id');
+      table.string('billing_email', 255);
+      table.string('region_code', 255);
       table.uuid('account_manager_id');
-      table.text('tax_id_number');
-      table.text('region_code');
-      table.text('client_type');
-      table.text('billing_email');
-      table.timestamp('created_at').defaultTo(knex.fn.now());
-      table.timestamp('updated_at').defaultTo(knex.fn.now());
 
       table.primary(['tenant', 'client_id']);
     });
@@ -59,11 +71,20 @@ exports.up = async function(knex) {
       ADD CONSTRAINT clients_tenant_client_name_unique UNIQUE (tenant, client_name)
     `);
 
+    // Add CHECK constraint for billing_cycle
+    await knex.raw(`
+      ALTER TABLE clients
+      ADD CONSTRAINT clients_billing_cycle_check
+      CHECK (billing_cycle = ANY (ARRAY['weekly'::text, 'bi-weekly'::text, 'monthly'::text, 'quarterly'::text, 'semi-annually'::text, 'annually'::text]))
+    `);
+
     // Add indexes matching companies table
     await knex.raw('CREATE INDEX idx_clients_tenant_client_name ON clients(tenant, client_name)');
     await knex.raw('CREATE INDEX idx_clients_tenant_inactive_name ON clients(tenant, is_inactive, client_name)');
     await knex.raw('CREATE INDEX idx_clients_tenant_client_type ON clients(tenant, client_type)');
     await knex.raw('CREATE INDEX idx_clients_tenant_url ON clients(tenant, url)');
+    await knex.raw('CREATE INDEX idx_clients_tenant_region_code ON clients(tenant, region_code)');
+    await knex.raw('CREATE INDEX idx_clients_tenant_account_manager ON clients(tenant, account_manager_id)');
 
     // Add foreign keys (will be validated after backfill)
     // Skip FK in Citus - it will be added by Citus migration after distribution
@@ -87,25 +108,26 @@ exports.up = async function(knex) {
       console.log('✓ clients table created');
     }
 
-      // Step 2: Backfill clients from companies
+      // Step 2: Backfill clients from companies with ALL columns
     console.log('Backfilling clients from companies...');
     await knex.raw(`
       INSERT INTO clients (
-        tenant, client_id, client_name, url, is_inactive, payment_terms,
-        notes_document_id, invoice_template_id, billing_contact_id,
-        account_manager_id, tax_id_number, region_code, client_type,
-        billing_email, created_at, updated_at
+        tenant, client_id, client_name, url, properties, billing_type, payment_terms,
+        credit_limit, preferred_payment_method, auto_invoice, invoice_delivery_method,
+        created_at, updated_at, is_inactive, client_type, is_tax_exempt,
+        tax_exemption_certificate, tax_id_number, notes, credit_balance, billing_cycle,
+        timezone, notes_document_id, invoice_template_id, billing_contact_id,
+        billing_email, region_code, account_manager_id
       )
       SELECT
-        c.tenant, c.company_id, c.company_name, c.url, c.is_inactive, c.payment_terms,
-        c.notes_document_id, c.invoice_template_id, c.billing_contact_id,
-        c.account_manager_id, c.tax_id_number, c.region_code, c.client_type,
-        c.billing_email, c.created_at, c.updated_at
-      FROM companies c
-      WHERE NOT EXISTS (
-        SELECT 1 FROM clients cl
-        WHERE cl.tenant = c.tenant AND cl.client_id = c.company_id
-      )
+        tenant, company_id, company_name, url, properties, billing_type, payment_terms,
+        credit_limit, preferred_payment_method, auto_invoice, invoice_delivery_method,
+        created_at, updated_at, is_inactive, client_type, is_tax_exempt,
+        tax_exemption_certificate, tax_id_number, notes, credit_balance, billing_cycle,
+        timezone, notes_document_id, invoice_template_id, billing_contact_id,
+        billing_email, region_code, account_manager_id
+      FROM companies
+      ON CONFLICT (tenant, client_id) DO NOTHING
     `);
 
     const count = await knex('clients').count('* as count');
@@ -216,15 +238,12 @@ async function createClientLocations(knex, createdTables) {
       phone, fax, email, notes, is_active, created_at, updated_at
     )
     SELECT
-      cl.location_id, cl.tenant, cl.company_id, cl.location_name, cl.address_line1, cl.address_line2,
-      cl.address_line3, cl.city, cl.state_province, cl.postal_code, cl.country_code, cl.country_name,
-      cl.region_code, cl.is_billing_address, cl.is_shipping_address, cl.is_default,
-      cl.phone, cl.fax, cl.email, cl.notes, cl.is_active, cl.created_at, cl.updated_at
-    FROM company_locations cl
-    WHERE NOT EXISTS (
-      SELECT 1 FROM client_locations cll
-      WHERE cll.location_id = cl.location_id AND cll.tenant = cl.tenant
-    )
+      location_id, tenant, company_id, location_name, address_line1, address_line2,
+      address_line3, city, state_province, postal_code, country_code, country_name,
+      region_code, is_billing_address, is_shipping_address, is_default,
+      phone, fax, email, notes, is_active, created_at, updated_at
+    FROM company_locations
+    ON CONFLICT (location_id, tenant) DO NOTHING
   `);
 
   const count = await knex('client_locations').count('* as count');
@@ -262,13 +281,10 @@ async function createClientBillingCycles(knex, createdTables) {
       period_start_date, period_end_date, is_active, created_at, updated_at
     )
     SELECT
-      cbc.tenant, cbc.billing_cycle_id, cbc.company_id, cbc.billing_cycle, cbc.effective_date,
-      cbc.period_start_date, cbc.period_end_date, cbc.is_active, cbc.created_at, cbc.updated_at
-    FROM company_billing_cycles cbc
-    WHERE NOT EXISTS (
-      SELECT 1 FROM client_billing_cycles cbc2
-      WHERE cbc2.tenant = cbc.tenant AND cbc2.billing_cycle_id = cbc.billing_cycle_id
-    )
+      tenant, billing_cycle_id, company_id, billing_cycle, effective_date,
+      period_start_date, period_end_date, is_active, created_at, updated_at
+    FROM company_billing_cycles
+    ON CONFLICT (tenant, billing_cycle_id) DO NOTHING
   `);
 
   const count = await knex('client_billing_cycles').count('* as count');
@@ -306,14 +322,11 @@ async function createClientBillingSettings(knex, createdTables) {
       created_at, updated_at
     )
     SELECT
-      cbs.tenant, cbs.company_id, cbs.zero_dollar_invoice_handling, cbs.suppress_zero_dollar_invoices,
-      cbs.credit_expiration_days, cbs.credit_expiration_notification_days, cbs.enable_credit_expiration,
-      cbs.created_at, cbs.updated_at
-    FROM company_billing_settings cbs
-    WHERE NOT EXISTS (
-      SELECT 1 FROM client_billing_settings cbs2
-      WHERE cbs2.tenant = cbs.tenant AND cbs2.client_id = cbs.company_id
-    )
+      tenant, company_id, zero_dollar_invoice_handling, suppress_zero_dollar_invoices,
+      credit_expiration_days, credit_expiration_notification_days, enable_credit_expiration,
+      created_at, updated_at
+    FROM company_billing_settings
+    ON CONFLICT (tenant, client_id) DO NOTHING
   `);
 
   const count = await knex('client_billing_settings').count('* as count');
@@ -343,12 +356,9 @@ async function createClientTaxSettings(knex, createdTables) {
       tenant, client_id, is_reverse_charge_applicable
     )
     SELECT
-      cts.tenant, cts.company_id, cts.is_reverse_charge_applicable
-    FROM company_tax_settings cts
-    WHERE NOT EXISTS (
-      SELECT 1 FROM client_tax_settings cts2
-      WHERE cts2.tenant = cts.tenant AND cts2.client_id = cts.company_id
-    )
+      tenant, company_id, is_reverse_charge_applicable
+    FROM company_tax_settings
+    ON CONFLICT (tenant, client_id) DO NOTHING
   `);
 
   const count = await knex('client_tax_settings').count('* as count');
@@ -384,13 +394,10 @@ async function createClientTaxRates(knex, createdTables) {
       is_default, created_at, updated_at
     )
     SELECT
-      ctr.tenant, ctr.company_tax_rates_id, ctr.company_id, ctr.tax_rate_id, ctr.location_id,
-      ctr.is_default, ctr.created_at, ctr.updated_at
-    FROM company_tax_rates ctr
-    WHERE NOT EXISTS (
-      SELECT 1 FROM client_tax_rates ctr2
-      WHERE ctr2.tenant = ctr.tenant AND ctr2.client_tax_rates_id = ctr.company_tax_rates_id
-    )
+      tenant, company_tax_rates_id, company_id, tax_rate_id, location_id,
+      is_default, created_at, updated_at
+    FROM company_tax_rates
+    ON CONFLICT (client_tax_rates_id, tenant) DO NOTHING
   `);
 
   const count = await knex('client_tax_rates').count('* as count');
