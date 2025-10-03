@@ -9,7 +9,7 @@ export interface ITagDefinition {
   tag_id: string;
   tag_text: string;
   tagged_type: TaggedEntityType;
-  channel_id?: string | null;
+  board_id?: string | null;
   background_color?: string | null;
   text_color?: string | null;
   created_at?: Date;
@@ -192,7 +192,7 @@ const TagDefinition = {
     tag_text: string,
     tagged_type: TaggedEntityType,
     defaults?: {
-      channel_id?: string | null;
+      board_id?: string | null;
       background_color?: string | null;
       text_color?: string | null;
     }

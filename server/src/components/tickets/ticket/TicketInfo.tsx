@@ -14,7 +14,7 @@ import UserPicker from 'server/src/components/ui/UserPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { TagManager } from 'server/src/components/tags';
 import styles from './TicketDetails.module.css';
-import { getTicketCategories, getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
+import { getTicketCategories, getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
 import { ItilLabels, calculateItilPriority } from 'server/src/lib/utils/itilUtils';
 import { Pencil, Check, HelpCircle } from 'lucide-react';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
@@ -27,7 +27,7 @@ interface TicketInfoProps {
   conversations: IComment[];
   statusOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
-  channelOptions: { value: string; label: string }[];
+  boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
   onUpdateDescription?: (content: string) => Promise<boolean>;
@@ -51,7 +51,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   conversations,
   statusOptions,
   agentOptions,
-  channelOptions,
+  boardOptions,
   priorityOptions,
   onSelectChange,
   onUpdateDescription,
@@ -67,7 +67,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   itilSubcategory,
 }) => {
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
-  const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
+  const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
     display_itil_impact: false,
@@ -144,25 +144,25 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [ticket, conversations]);
 
-  // Separate useEffect for fetching categories based on channel
+  // Separate useEffect for fetching categories based on board
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        if (ticket.channel_id) {
-          // Fetch categories for the specific channel
-          const data = await getTicketCategoriesByChannel(ticket.channel_id);
+        if (ticket.board_id) {
+          // Fetch categories for the specific board
+          const data = await getTicketCategoriesByBoard(ticket.board_id);
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories) {
             // Extra safety check - ensure it's actually an array
             const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
             setCategories(categoriesArray);
-            if (data.channelConfig) {
-              setChannelConfig(data.channelConfig);
+            if (data.boardConfig) {
+              setBoardConfig(data.boardConfig);
             }
           } else {
             console.error('Invalid categories data received:', data);
             setCategories([]);
-            setChannelConfig({
+            setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
               display_itil_impact: false,
@@ -170,7 +170,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
               });
           }
         } else {
-          // If no channel, fetch all categories and use custom categories
+          // If no board, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
           // Ensure fetchedCategories is an array
           if (Array.isArray(fetchedCategories)) {
@@ -179,7 +179,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             console.error('Invalid categories data received:', fetchedCategories);
             setCategories([]);
           }
-          setChannelConfig({
+          setBoardConfig({
             category_type: 'custom',
             priority_type: 'custom',
             display_itil_impact: false,
@@ -190,7 +190,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         console.error('Failed to fetch categories:', error);
         // Set empty defaults on error
         setCategories([]);
-        setChannelConfig({
+        setBoardConfig({
           category_type: 'custom',
           priority_type: 'custom',
           display_itil_impact: false,
@@ -200,7 +200,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     };
 
     fetchCategories();
-  }, [ticket.channel_id]); // Re-fetch when channel changes
+  }, [ticket.board_id]); // Re-fetch when board changes
 
   useEffect(() => {
     setTitleValue(ticket.title);
@@ -246,8 +246,8 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       onSelectChange('subcategory_id', null);
     }
 
-    // Don't automatically change the channel - categories are now filtered by current channel
-    // This prevents unwanted channel switches when selecting categories
+    // Don't automatically change the board - categories are now filtered by current board
+    // This prevents unwanted board switches when selecting categories
   };
 
   const getSelectedCategoryId = () => {
@@ -359,15 +359,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             <div>
               <h5 className="font-bold mb-2">Board</h5>
               <CustomSelect
-                value={ticket.channel_id || ''}
-                options={channelOptions}
+                value={ticket.board_id || ''}
+                options={boardOptions}
                 onValueChange={(value) => {
-                  onSelectChange('channel_id', value);
-                  // Clear categories when channel changes
+                  onSelectChange('board_id', value);
+                  // Clear categories when board changes
                   onSelectChange('category_id', null);
                   onSelectChange('subcategory_id', null);
 
-                  // Clear priority fields when channel changes
+                  // Clear priority fields when board changes
                   // This ensures that switching between custom and ITIL priority types
                   // doesn't retain the wrong priority data
                   onSelectChange('priority_id', null);
@@ -382,7 +382,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
             </div>
             <div>
               <h5 className="font-bold mb-2">Priority</h5>
-              {channelConfig.priority_type === 'itil' ? (
+              {boardConfig.priority_type === 'itil' ? (
                 calculatedItilPriority ? (
                   <div className="flex items-center gap-2">
                     <div
@@ -425,61 +425,65 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                 />
               )}
             </div>
-            {channelConfig.category_type && (
+            {boardConfig.category_type && (
               <div className="col-span-2">
-                <h5 className="font-bold mb-1">{channelConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
+                <h5 className="font-bold mb-1">{boardConfig.category_type === 'custom' ? 'Category' : 'ITIL Category'}</h5>
                 <div className="w-fit">
                   <CategoryPicker
                     id={`${id}-category-picker`}
                     categories={categories}
                     selectedCategories={[getSelectedCategoryId()]}
                     onSelect={handleCategoryChange}
-                    placeholder={channelConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
+                    placeholder={boardConfig.category_type === 'custom' ? "Select a category..." : "Select ITIL category..."}
                   />
                 </div>
               </div>
             )}
-            {/* ITIL Fields for ITIL priority channels */}
-            {channelConfig.priority_type === 'itil' && (
+            {/* ITIL Fields for ITIL priority boards */}
+            {boardConfig.priority_type === 'itil' && (
               <>
                 <div>
                   <h5 className="font-bold mb-2">Impact</h5>
-                  <CustomSelect
-                    options={[
-                      { value: '1', label: '1 - High (Critical business function affected)' },
-                      { value: '2', label: '2 - Medium-High (Important function affected)' },
-                      { value: '3', label: '3 - Medium (Minor function affected)' },
-                      { value: '4', label: '4 - Medium-Low (Minimal impact)' },
-                      { value: '5', label: '5 - Low (No business impact)' }
-                    ]}
-                    value={itilImpact?.toString() || null}
-                    onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
-                    placeholder="Select Impact"
-                  />
+                  <div className="w-fit">
+                    <CustomSelect
+                      options={[
+                        { value: '1', label: '1 - High (Critical business function affected)' },
+                        { value: '2', label: '2 - Medium-High (Important function affected)' },
+                        { value: '3', label: '3 - Medium (Minor function affected)' },
+                        { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+                        { value: '5', label: '5 - Low (No business impact)' }
+                      ]}
+                      value={itilImpact?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_impact', Number(value))}
+                      placeholder="Select Impact"
+                    />
+                  </div>
                 </div>
                 <div>
                   <h5 className="font-bold mb-2">Urgency</h5>
-                  <CustomSelect
-                    options={[
-                      { value: '1', label: '1 - High (Work cannot continue)' },
-                      { value: '2', label: '2 - Medium-High (Work severely impaired)' },
-                      { value: '3', label: '3 - Medium (Work continues with limitations)' },
-                      { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
-                      { value: '5', label: '5 - Low (Work continues normally)' }
-                    ]}
-                    value={itilUrgency?.toString() || null}
-                    onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
-                    placeholder="Select Urgency"
-                  />
+                  <div className="w-fit">
+                    <CustomSelect
+                      options={[
+                        { value: '1', label: '1 - High (Work cannot continue)' },
+                        { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+                        { value: '3', label: '3 - Medium (Work continues with limitations)' },
+                        { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+                        { value: '5', label: '5 - Low (Work continues normally)' }
+                      ]}
+                      value={itilUrgency?.toString() || null}
+                      onValueChange={(value) => handleItilFieldChange('itil_urgency', Number(value))}
+                      placeholder="Select Urgency"
+                    />
+                  </div>
                 </div>
               </>
             )}
-            {/* ITIL Categories for ITIL category channels */}
+            {/* ITIL Categories for ITIL category boards */}
             {/* ITIL Categories are now handled by the unified CategoryPicker above */}
           </div>
 
           {/* ITIL Priority Matrix - Show when help icon is clicked */}
-          {showPriorityMatrix && channelConfig.priority_type === 'itil' && (
+          {showPriorityMatrix && boardConfig.priority_type === 'itil' && (
             <div className="mt-4 p-4 bg-gray-50 border rounded-lg">
               <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
               <div className="overflow-x-auto">

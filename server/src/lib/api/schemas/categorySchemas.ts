@@ -65,7 +65,7 @@ export const createTicketCategorySchema = z.object({
     .min(1, 'Category name is required')
     .max(255, 'Category name too long')
     .trim(),
-  channel_id: uuidSchema,
+  board_id: uuidSchema,
   parent_category: uuidSchema.optional(),
   description: z.string()
     .max(1000, 'Description too long')
@@ -78,7 +78,7 @@ export const ticketCategoryResponseSchema: z.ZodType<any> = z.object({
   category_id: uuidSchema,
   category_name: z.string(),
   parent_category: uuidSchema.nullable(),
-  channel_id: uuidSchema,
+  board_id: uuidSchema,
   description: z.string().nullable(),
   created_by: uuidSchema,
   updated_by: uuidSchema,
@@ -113,7 +113,7 @@ export const serviceCategoryListQuerySchema = createListQuerySchema(serviceCateg
 // Ticket Category Filters
 export const ticketCategoryFilterSchema = baseFilterSchema.extend({
   category_name: z.string().optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   parent_category: uuidSchema.optional(),
   is_parent: booleanTransform.optional(), // Categories without parents
   is_child: booleanTransform.optional(),  // Categories with parents
@@ -164,7 +164,7 @@ export const categoryTreeResponseSchema: z.ZodType<any> = z.object({
 // Category Usage Analytics
 export const categoryAnalyticsFilterSchema = z.object({
   category_type: categoryTypeSchema.optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   date_from: dateSchema,
   date_to: dateSchema,
   include_usage: booleanTransform.optional()
@@ -193,7 +193,7 @@ export const categoryAnalyticsResponseSchema = z.object({
 export const categorySearchSchema = z.object({
   search_term: z.string().min(1, 'Search term is required'),
   category_type: categoryTypeSchema.optional(),
-  channel_id: uuidSchema.optional(),
+  board_id: uuidSchema.optional(),
   include_inactive: booleanTransform.optional(),
   limit: numberTransform.optional(),
   offset: numberTransform.optional()
@@ -227,7 +227,7 @@ export const importCategoriesSchema = z.object({
     category_name: z.string().min(1).max(255),
     parent_name: z.string().optional(), // Parent category name for hierarchy
     description: z.string().max(1000).optional(),
-    channel_id: uuidSchema.optional() // For ticket categories
+    board_id: uuidSchema.optional() // For ticket categories
   })).min(1, 'At least one category is required'),
   category_type: categoryTypeSchema,
   merge_strategy: z.enum(['skip', 'update', 'merge']).optional().default('skip')
