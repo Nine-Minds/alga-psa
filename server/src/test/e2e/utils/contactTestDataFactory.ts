@@ -8,7 +8,7 @@ import { faker } from '@faker-js/faker';
 export interface TestContact {
   contact_name_id: string;
   full_name: string;
-  company_id: string | null;
+  client_id: string | null;
   phone_number: string | null;
   email: string;
   role: string | null;
@@ -24,7 +24,7 @@ export interface TestContact {
  */
 export interface CreateContactOptions {
   full_name?: string;
-  company_id?: string | null;
+  client_id?: string | null;
   phone_number?: string | null;
   email?: string;
   role?: string | null;
@@ -35,7 +35,7 @@ export interface CreateContactOptions {
 /**
  * Generate random contact data
  */
-export function generateContactData(options: CreateContactOptions = {}): Omit<CreateContactOptions, 'company_id'> {
+export function generateContactData(options: CreateContactOptions = {}): Omit<CreateContactOptions, 'client_id'> {
   return {
     full_name: options.full_name || faker.person.fullName(),
     phone_number: options.phone_number !== undefined ? options.phone_number : faker.phone.number(),
@@ -66,7 +66,7 @@ export async function createTestContact(
   const contact: TestContact = {
     contact_name_id: contactId,
     full_name: contactData.full_name!,
-    company_id: options.company_id !== undefined ? options.company_id : null,
+    client_id: options.client_id !== undefined ? options.client_id : null,
     phone_number: contactData.phone_number!,
     email: contactData.email!,
     role: contactData.role!,
@@ -112,47 +112,47 @@ export async function createTestContacts(
 export async function createTestContactSet(
   db: Knex,
   tenant: string,
-  companyId?: string
+  clientId?: string
 ): Promise<{
   activeContacts: TestContact[];
   inactiveContacts: TestContact[];
-  contactsWithCompany: TestContact[];
-  contactsWithoutCompany: TestContact[];
+  contactsWithClient: TestContact[];
+  contactsWithoutClient: TestContact[];
   contactsWithRoles: TestContact[];
 }> {
   // Create active contacts
   const activeContacts = await createTestContacts(db, tenant, 3, {
     is_inactive: false,
-    company_id: companyId
+    client_id: clientId
   });
 
   // Create inactive contacts
   const inactiveContacts = await createTestContacts(db, tenant, 2, {
     is_inactive: true,
-    company_id: companyId
+    client_id: clientId
   });
 
-  // Create contacts with company
-  const contactsWithCompany = companyId ? 
-    await createTestContacts(db, tenant, 2, { company_id: companyId }) : [];
+  // Create contacts with client
+  const contactsWithClient = clientId ? 
+    await createTestContacts(db, tenant, 2, { client_id: clientId }) : [];
 
-  // Create contacts without company
-  const contactsWithoutCompany = await createTestContacts(db, tenant, 2, {
-    company_id: null
+  // Create contacts without client
+  const contactsWithoutClient = await createTestContacts(db, tenant, 2, {
+    client_id: null
   });
 
   // Create contacts with specific roles
   const contactsWithRoles = await Promise.all([
-    createTestContact(db, tenant, { role: 'CEO', company_id: companyId }),
-    createTestContact(db, tenant, { role: 'CTO', company_id: companyId }),
-    createTestContact(db, tenant, { role: 'Manager', company_id: companyId })
+    createTestContact(db, tenant, { role: 'CEO', client_id: clientId }),
+    createTestContact(db, tenant, { role: 'CTO', client_id: clientId }),
+    createTestContact(db, tenant, { role: 'Manager', client_id: clientId })
   ]);
 
   return {
     activeContacts,
     inactiveContacts,
-    contactsWithCompany,
-    contactsWithoutCompany,
+    contactsWithClient,
+    contactsWithoutClient,
     contactsWithRoles
   };
 }

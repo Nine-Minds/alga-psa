@@ -35,9 +35,9 @@ describe('Email Threading Tests', () => {
       
       // 1. Use optimized base test data
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company, contact } = testHelpers.getBaseTestData();
+      const { tenant, client, contact } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       console.log(`     ✓ Using contact: ${contact.email}`);
       
       // 2. Create email provider for receiving emails
@@ -108,9 +108,9 @@ describe('Email Threading Tests', () => {
       
       // 1. Use optimized base test data
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company, contact } = testHelpers.getBaseTestData();
+      const { tenant, client, contact } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       console.log(`     ✓ Using contact: ${contact.email}`);
       
       // 2. Create email provider
@@ -222,9 +222,9 @@ describe('Email Threading Tests', () => {
       
       // 1. Use optimized base test data
       console.log('  1️⃣ Using optimized base test data...');
-      const { tenant, company, contact } = testHelpers.getBaseTestData();
+      const { tenant, client, contact } = testHelpers.getBaseTestData();
       console.log(`     ✓ Using tenant: ${tenant.tenant}`);
-      console.log(`     ✓ Using company: ${company.company_name}`);
+      console.log(`     ✓ Using client: ${client.client_name}`);
       console.log(`     ✓ Using contact: ${contact.email}`);
       
       // 2. Create Google email provider for thread testing
@@ -254,7 +254,7 @@ describe('Email Threading Tests', () => {
       const [ticket] = await context.db('tickets').insert({
         ticket_id: `TICKET-${Date.now()}`,
         tenant: tenant.tenant,
-        company_id: company.company_id,
+        client_id: client.client_id,
         contact_name_id: contact.contact_name_id,
         title: 'Thread test',
         board_id: 'email',

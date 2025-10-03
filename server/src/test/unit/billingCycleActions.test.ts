@@ -51,14 +51,14 @@ describe('Billing Cycle Actions', () => {
   });
 
   describe('getBillingCycle', () => {
-    it('should return the billing cycle for a company', async () => {
+    it('should return the billing cycle for a client', async () => {
       const mockKnex = createMockKnex();
       (mockKnex as any).first.mockResolvedValue({ billing_cycle: 'monthly' });
       mockCreateTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: 'test-tenant' });
 
-      const result = await getBillingCycle('company-1');
+      const result = await getBillingCycle('client-1');
       expect(result).toBe('monthly');
-      expect((mockKnex as any).where).toHaveBeenCalledWith('company_id', 'company-1');
+      expect((mockKnex as any).where).toHaveBeenCalledWith('client_id', 'client-1');
     });
 
     it('should return "monthly" if no billing cycle is set', async () => {
@@ -66,33 +66,33 @@ describe('Billing Cycle Actions', () => {
       (mockKnex as any).first.mockResolvedValue(null);
       mockCreateTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: 'test-tenant' });
 
-      const result = await getBillingCycle('company-2');
+      const result = await getBillingCycle('client-2');
       expect(result).toBe('monthly');
     });
 
     it('should throw an error if user is not authenticated', async () => {
       (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
-      await expect(getBillingCycle('company-1')).rejects.toThrow('Unauthorized');
+      await expect(getBillingCycle('client-1')).rejects.toThrow('Unauthorized');
     });
   });
 
   describe('updateBillingCycle', () => {
-    it('should update the billing cycle for a company', async () => {
+    it('should update the billing cycle for a client', async () => {
       const mockKnex = createMockKnex();
       mockCreateTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: 'test-tenant' });
 
-      await updateBillingCycle('company-1', 'quarterly');
+      await updateBillingCycle('client-1', 'quarterly');
 
-      expect((mockKnex as any).insert).toHaveBeenCalledWith({ company_id: 'company-1', billing_cycle: 'quarterly' });
-      expect((mockKnex as any).onConflict).toHaveBeenCalledWith('company_id');
+      expect((mockKnex as any).insert).toHaveBeenCalledWith({ client_id: 'client-1', billing_cycle: 'quarterly' });
+      expect((mockKnex as any).onConflict).toHaveBeenCalledWith('client_id');
       expect((mockKnex as any).merge).toHaveBeenCalled();
     });
 
     it('should throw an error if user is not authenticated', async () => {
       (getSession as ReturnType<typeof vi.fn>).mockResolvedValue(null);
 
-      await expect(updateBillingCycle('company-1', 'quarterly')).rejects.toThrow('Unauthorized');
+      await expect(updateBillingCycle('client-1', 'quarterly')).rejects.toThrow('Unauthorized');
     });
   });
 
@@ -100,15 +100,15 @@ describe('Billing Cycle Actions', () => {
     it('should return all billing cycles', async () => {
       const mockKnex = createMockKnex();
       (mockKnex as any).select.mockResolvedValue([
-        { company_id: 'company-1', billing_cycle: 'monthly' },
-        { company_id: 'company-2', billing_cycle: 'quarterly' }
+        { client_id: 'client-1', billing_cycle: 'monthly' },
+        { client_id: 'client-2', billing_cycle: 'quarterly' }
       ]);
       mockCreateTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: 'test-tenant' });
 
       const result = await getAllBillingCycles();
       expect(result).toEqual({
-        'company-1': 'monthly',
-        'company-2': 'quarterly'
+        'client-1': 'monthly',
+        'client-2': 'quarterly'
       });
     });
 

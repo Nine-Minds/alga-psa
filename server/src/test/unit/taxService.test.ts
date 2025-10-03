@@ -1,14 +1,14 @@
 import { TaxService } from '../../lib/services/taxService';
-import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../../interfaces/tax.interfaces';
-import CompanyTaxSettings from '../../lib/models/companyTaxSettings';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from '../../interfaces/tax.interfaces';
+import ClientTaxSettings from '../../lib/models/clientTaxSettings';
 
 import { describe, it, expect, vi, beforeEach, beforeAll, afterEach, afterAll, Mocked } from 'vitest';
 
-vi.mock('../../lib/models/companyTaxSettings');
+vi.mock('../../lib/models/clientTaxSettings');
 
 describe('TaxService', () => {
     let taxService: TaxService;
-    const mockCompanyTaxSettings = CompanyTaxSettings as Mocked<typeof CompanyTaxSettings>;
+    const mockClientTaxSettings = ClientTaxSettings as Mocked<typeof ClientTaxSettings>;
 
     beforeEach(() => {
         taxService = new TaxService('test_tenant');
@@ -17,9 +17,9 @@ describe('TaxService', () => {
 
     describe('calculateTax', () => {
         it('should calculate simple tax correctly', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: false,
             };
@@ -36,20 +36,20 @@ describe('TaxService', () => {
                 name: 'Standard VAT',
             };
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockCompanyTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
-            mockCompanyTaxSettings.getTaxRateThresholds.mockResolvedValue([]);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue([]);
 
-            const result = await taxService.calculateTax('company1', 100, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 100, '2023-06-01');
 
             expect(result.taxAmount).toBe(10);
             expect(result.taxRate).toBe(10);
         });
 
         it.todo('should calculate composite tax correctly', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: false,
             };
@@ -85,12 +85,12 @@ describe('TaxService', () => {
                 },
             ];
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockCompanyTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
-            mockCompanyTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
-            mockCompanyTaxSettings.getTaxHolidays.mockResolvedValue([]);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
+            mockClientTaxSettings.getTaxHolidays.mockResolvedValue([]);
 
-            const result = await taxService.calculateTax('company1', 100, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 100, '2023-06-01');
 
             // Expected calculation:
             // State Tax: 100 * 5% = 5
@@ -102,9 +102,9 @@ describe('TaxService', () => {
         });
 
         it('should apply threshold-based tax correctly', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: false,
             };
@@ -144,11 +144,11 @@ describe('TaxService', () => {
                 },
             ];
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockCompanyTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
-            mockCompanyTaxSettings.getTaxRateThresholds.mockResolvedValue(mockThresholds);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockClientTaxSettings.getTaxRateThresholds.mockResolvedValue(mockThresholds);
 
-            const result = await taxService.calculateTax('company1', 250, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 250, '2023-06-01');
 
             // Expected calculation:
             // 0-100: 100 * 5% = 5
@@ -161,9 +161,9 @@ describe('TaxService', () => {
         });
 
         it('should apply tax holiday correctly', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: false,
             };
@@ -201,12 +201,12 @@ describe('TaxService', () => {
                 },
             ];
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockCompanyTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
-            mockCompanyTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
-            mockCompanyTaxSettings.getTaxHolidays.mockResolvedValue(mockHolidays);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
+            mockClientTaxSettings.getTaxHolidays.mockResolvedValue(mockHolidays);
 
-            const result = await taxService.calculateTax('company1', 100, '2023-06-15');
+            const result = await taxService.calculateTax('client1', 100, '2023-06-15');
 
             expect(result.taxAmount).toBe(0);
             expect(result.taxRate).toBe(0);
@@ -214,16 +214,16 @@ describe('TaxService', () => {
         });
 
         it('should apply reverse charge correctly', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: true,
             };
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
 
-            const result = await taxService.calculateTax('company1', 100, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 100, '2023-06-01');
 
             expect(result.taxAmount).toBe(0);
             expect(result.taxRate).toBe(0);
@@ -232,16 +232,16 @@ describe('TaxService', () => {
 
     describe('isReverseChargeApplicable', () => {
         it('should return correct reverse charge applicability', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: true,
             };
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
 
-            const result = await taxService.isReverseChargeApplicable('company1');
+            const result = await taxService.isReverseChargeApplicable('client1');
 
             expect(result).toBe(true);
         });
@@ -249,9 +249,9 @@ describe('TaxService', () => {
 
     describe('getTaxType', () => {
         it('should return correct tax type', async () => {
-            const mockTaxSettings: ICompanyTaxSettings = {
+            const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
-                company_id: 'company1',
+                client_id: 'client1',
                 tax_rate_id: 'rate1',
                 is_reverse_charge_applicable: false,
             };
@@ -268,10 +268,10 @@ describe('TaxService', () => {
                 name: 'Standard VAT',
             };
 
-            mockCompanyTaxSettings.get.mockResolvedValue(mockTaxSettings);
-            mockCompanyTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
+            mockClientTaxSettings.get.mockResolvedValue(mockTaxSettings);
+            mockClientTaxSettings.getTaxRate.mockResolvedValue(mockTaxRate);
 
-            const result = await taxService.getTaxType('company1');
+            const result = await taxService.getTaxType('client1');
 
             expect(result).toBe('VAT');
         });

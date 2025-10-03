@@ -71,7 +71,7 @@ export class EmailSettingsTestContext extends E2ETestContext {
     provider: 'microsoft' | 'google';
     mailbox: string;
     tenant_id: string;
-    company_id?: string;
+    client_id?: string;
   }) {
     console.log(`     📋 Generating OAuth tokens for ${config.provider} provider...`);
     

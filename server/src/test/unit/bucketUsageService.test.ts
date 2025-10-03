@@ -13,7 +13,7 @@ import {
 
 // Mock data and setup
 const mockTenant = 'test-tenant';
-const mockCompanyId = 'company-uuid-123';
+const mockClientId = 'client-uuid-123';
 const mockServiceId = 'service-uuid-456';
 const mockPlanId = 'plan-uuid-789';
 const mockUsageId = 'usage-uuid-abc';
@@ -197,7 +197,7 @@ describe('BucketUsageService Unit Tests', () => {
     it.skip('should correctly calculate total minutes from time entries and usage tracking and update the record', async () => {
       // TODO: Implement test
       // Mock DB calls:
-      // - trx('bucket_usage').join(...).where(...).first() returns a record with period, company, service, total_minutes=6000
+      // - trx('bucket_usage').join(...).where(...).first() returns a record with period, client, service, total_minutes=6000
       // - trx('time_entries').where(...).sum(...) returns { total_duration_minutes: 7200 } (120 hours)
       // - trx('usage_tracking').where(...).sum(...) returns { total_quantity: 1800 } (30 hours)
       // - trx('bucket_usage').where(...).update(...) returns 1

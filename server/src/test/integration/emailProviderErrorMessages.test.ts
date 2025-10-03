@@ -30,8 +30,8 @@ describe('Email Provider Error Messages', () => {
     try {
       await testDb('tenants').insert({
         tenant: testTenant,
-        company_name: 'Error Test Company',
-        email: 'error-test@company.com',
+        client_name: 'Error Test Client',
+        email: 'error-test@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });

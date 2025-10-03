@@ -43,7 +43,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
     board_id: board.board_id,
     status_id: status.status_id,
     priority_id: priority.priority_id,
-    company_id: null,
+    client_id: null,
     entered_by: null, // System-generated tickets
     category_id: null,
     subcategory_id: null,

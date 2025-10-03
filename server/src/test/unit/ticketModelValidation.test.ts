@@ -20,7 +20,7 @@ describe('TicketModel Validation Logic', () => {
       const validData = {
         title: 'Test Ticket',
         board_id: '123e4567-e89b-12d3-a456-426614174000',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
         assigned_to: null,
@@ -38,7 +38,7 @@ describe('TicketModel Validation Logic', () => {
       const invalidData = {
         title: 'Test Ticket',
         board_id: 'invalid-uuid',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
         assigned_to: null,
@@ -54,7 +54,7 @@ describe('TicketModel Validation Logic', () => {
     test('should throw error for missing required fields', () => {
       const invalidData = {
         board_id: '123e4567-e89b-12d3-a456-426614174000',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
       expect(() => validateData(ticketFormSchema, invalidData)).toThrow('title: Required');
@@ -105,7 +105,7 @@ describe('TicketModel Validation Logic', () => {
       const input = {
         title: 'Test Ticket',
         description: 'Test description',
-        company_id: '123e4567-e89b-12d3-a456-426614174000',
+        client_id: '123e4567-e89b-12d3-a456-426614174000',
         priority_id: '123e4567-e89b-12d3-a456-426614174001'
       };
 
@@ -145,7 +145,7 @@ describe('TicketModel Validation Logic', () => {
       const formData = {
         title: 'Test Ticket',
         board_id: '123e4567-e89b-12d3-a456-426614174000',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
         assigned_to: null,
@@ -165,7 +165,7 @@ describe('TicketModel Validation Logic', () => {
       const formData = {
         title: 'Test Ticket',
         board_id: 'invalid-uuid',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
       const result = TicketModel.validateTicketFormData(formData);
@@ -182,7 +182,7 @@ describe('TicketModel Validation Logic', () => {
         description: 'Issue with asset',
         priority_id: '123e4567-e89b-12d3-a456-426614174000',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
-        company_id: '123e4567-e89b-12d3-a456-426614174002'
+        client_id: '123e4567-e89b-12d3-a456-426614174002'
       };
 
       const result = TicketModel.validateCreateTicketFromAssetData(data);
@@ -197,7 +197,7 @@ describe('TicketModel Validation Logic', () => {
         description: 'Issue with asset',
         priority_id: 'invalid-uuid',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
-        company_id: '123e4567-e89b-12d3-a456-426614174002'
+        client_id: '123e4567-e89b-12d3-a456-426614174002'
       };
 
       const result = TicketModel.validateCreateTicketFromAssetData(data);
@@ -301,7 +301,7 @@ describe('TicketModel Validation Logic', () => {
       const validFormData = {
         title: 'Test Ticket',
         board_id: '123e4567-e89b-12d3-a456-426614174000',
-        company_id: '123e4567-e89b-12d3-a456-426614174001',
+        client_id: '123e4567-e89b-12d3-a456-426614174001',
         location_id: null,
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
@@ -321,7 +321,7 @@ describe('TicketModel Validation Logic', () => {
         description: 'Problem with the asset',
         priority_id: '123e4567-e89b-12d3-a456-426614174000',
         asset_id: '123e4567-e89b-12d3-a456-426614174001',
-        company_id: '123e4567-e89b-12d3-a456-426614174002'
+        client_id: '123e4567-e89b-12d3-a456-426614174002'
       };
 
       expect(() => validateData(createTicketFromAssetSchema, validAssetData)).not.toThrow();

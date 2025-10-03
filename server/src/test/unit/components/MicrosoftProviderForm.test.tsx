@@ -46,7 +46,7 @@ describe('MicrosoftProviderForm', () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     expect(screen.getByPlaceholderText('e.g., Support Email')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('support@company.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('support@client.com')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('common (or specific tenant ID)')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Enter client secret')).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('MicrosoftProviderForm', () => {
     // redirectUri already has default value
     
     // Type invalid email
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     await user.type(emailInput, 'invalid-email');
     
     const saveButton = screen.getByText(/add provider/i);
@@ -102,7 +102,7 @@ describe('MicrosoftProviderForm', () => {
       // Re-render for each test to ensure clean state
       const { unmount } = renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
       
-      const emailInput = screen.getByPlaceholderText('support@company.com');
+      const emailInput = screen.getByPlaceholderText('support@client.com');
       
       // Type invalid email to trigger validation
       await user.type(emailInput, invalidEmail);
@@ -127,7 +127,7 @@ describe('MicrosoftProviderForm', () => {
     const validEmails = [
       'user@microsoft.com',
       'firstname.lastname@outlook.com',
-      'user+tag@company.com',
+      'user+tag@client.com',
       'user123@hotmail.com',
       'user_name@organization.org',
       'u@domain.com'
@@ -137,7 +137,7 @@ describe('MicrosoftProviderForm', () => {
       // Re-render for each test to ensure clean state
       const { unmount } = renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
       
-      const emailInput = screen.getByPlaceholderText('support@company.com');
+      const emailInput = screen.getByPlaceholderText('support@client.com');
       
       // Type email to trigger validation
       await user.type(emailInput, validEmail);
@@ -157,7 +157,7 @@ describe('MicrosoftProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Type invalid email to trigger validation
     await user.type(emailInput, 'invalid-email');
@@ -170,7 +170,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Clear and type valid email
     await user.clear(emailInput);
-    await user.type(emailInput, 'valid@company.com');
+    await user.type(emailInput, 'valid@client.com');
 
     // Error should disappear after typing valid email
     await waitFor(() => {
@@ -185,7 +185,7 @@ describe('MicrosoftProviderForm', () => {
     const user = userEvent.setup();
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Type invalid email
     await user.type(emailInput, 'invalid-email');
@@ -219,7 +219,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Fill all fields with valid data including custom domain email
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'user@customdomain.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'user@customdomain.com');
     await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
     await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
@@ -260,7 +260,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Fill in the form
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Microsoft Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@microsoft.com');
     await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
     await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
@@ -302,7 +302,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Fill in required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@microsoft.com');
     await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
     await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
@@ -410,7 +410,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Fill in required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@microsoft.com');
     await user.type(screen.getByPlaceholderText('common (or specific tenant ID)'), 'test-tenant-id');
     await user.type(screen.getByPlaceholderText('xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'), 'test-client-id');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'test-client-secret');
@@ -434,7 +434,7 @@ describe('MicrosoftProviderForm', () => {
 
     // Fill in some but not all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'test@microsoft.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'test@microsoft.com');
     
     // Button should still be disabled
     expect(submitButton).toBeDisabled();
@@ -454,7 +454,7 @@ describe('MicrosoftProviderForm', () => {
     renderWithProviders(<MicrosoftProviderForm {...defaultProps} />);
 
     const submitButton = screen.getByText(/add provider/i);
-    const emailInput = screen.getByPlaceholderText('support@company.com');
+    const emailInput = screen.getByPlaceholderText('support@client.com');
     
     // Fill all required fields
     await user.type(screen.getByPlaceholderText('e.g., Support Email'), 'Test Provider');

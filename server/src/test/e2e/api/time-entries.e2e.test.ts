@@ -65,7 +65,7 @@ describe('Time Entries API E2E Tests', () => {
       it('should create a new time entry', async () => {
         // Create related entities
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -107,7 +107,7 @@ describe('Time Entries API E2E Tests', () => {
 
       it('should validate time periods overlap', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -146,7 +146,7 @@ describe('Time Entries API E2E Tests', () => {
     describe('Get Time Entry (GET /api/v1/time-entries/:id)', () => {
       it('should retrieve a time entry by ID', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -179,7 +179,7 @@ describe('Time Entries API E2E Tests', () => {
       it('should not return time entries from other tenants', async () => {
         // Create another tenant with proper setup
         const otherTenant = uuidv4();
-        const otherCompanyId = uuidv4();
+        const otherClientId = uuidv4();
         const otherUserId = uuidv4();
         
         // Create the other tenant
@@ -196,11 +196,11 @@ describe('Time Entries API E2E Tests', () => {
           plan: 'test'
         });
         
-        // Create company for other tenant
-        await env.db('companies').insert({
-          company_id: otherCompanyId,
+        // Create client for other tenant
+        await env.db('clients').insert({
+          client_id: otherClientId,
           tenant: otherTenant,
-          company_name: 'Other Company',
+          client_name: 'Other Client',
           created_at: new Date()
         });
         
@@ -218,7 +218,7 @@ describe('Time Entries API E2E Tests', () => {
         });
         
         const ticket = await createTestTicket(env.db, otherTenant, {
-          company_id: otherCompanyId,
+          client_id: otherClientId,
           entered_by: otherUserId,
           assigned_to: otherUserId
         });
@@ -239,7 +239,7 @@ describe('Time Entries API E2E Tests', () => {
     describe('Update Time Entry (PUT /api/v1/time-entries/:id)', () => {
       it('should update a time entry', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -274,7 +274,7 @@ describe('Time Entries API E2E Tests', () => {
 
       it('should not allow updating approved entries', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -299,7 +299,7 @@ describe('Time Entries API E2E Tests', () => {
     describe('Delete Time Entry (DELETE /api/v1/time-entries/:id)', () => {
       it('should delete a time entry', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -328,7 +328,7 @@ describe('Time Entries API E2E Tests', () => {
 
       it('should not allow deleting approved entries', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          company_id: env.companyId,
+          client_id: env.clientId,
           entered_by: env.userId,
           assigned_to: env.userId
         });
@@ -352,7 +352,7 @@ describe('Time Entries API E2E Tests', () => {
     it('should list time entries with default pagination', async () => {
       // Create multiple time entries
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -402,7 +402,7 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -457,7 +457,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should filter by user', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -513,7 +513,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should filter by billable status', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -547,7 +547,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should sort by date', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -580,7 +580,7 @@ describe('Time Entries API E2E Tests', () => {
   describe('Time Tracking', () => {
     it('should start a tracking session', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -607,7 +607,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should stop a tracking session', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -643,7 +643,7 @@ describe('Time Entries API E2E Tests', () => {
   describe.skip('Approval Workflow', () => {
     it('should approve time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -683,7 +683,7 @@ describe('Time Entries API E2E Tests', () => {
   describe('Export', () => {
     it('should export time entries to CSV', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -710,7 +710,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should export time entries to JSON', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -739,7 +739,7 @@ describe('Time Entries API E2E Tests', () => {
   describe('Statistics', () => {
     it('should get time entry statistics', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -796,7 +796,7 @@ describe('Time Entries API E2E Tests', () => {
       });
 
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -832,7 +832,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should bulk update time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -867,7 +867,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should bulk delete time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -998,7 +998,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should enforce update permissions', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -1053,7 +1053,7 @@ describe('Time Entries API E2E Tests', () => {
 
     it('should enforce delete permissions', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -1109,7 +1109,7 @@ describe('Time Entries API E2E Tests', () => {
     it('should isolate time entries by tenant', async () => {
       // Create entry for current tenant
       const ticket = await createTestTicket(env.db, env.tenant, {
-        company_id: env.companyId,
+        client_id: env.clientId,
         entered_by: env.userId,
         assigned_to: env.userId
       });
@@ -1124,7 +1124,7 @@ describe('Time Entries API E2E Tests', () => {
 
       // Create entry for another tenant
       const otherTenant = uuidv4();
-      const otherCompanyId = uuidv4();
+      const otherClientId = uuidv4();
       const otherUserId = uuidv4();
       
       // Create the other tenant
@@ -1141,11 +1141,11 @@ describe('Time Entries API E2E Tests', () => {
         plan: 'test'
       });
       
-      // Create company for other tenant
-      await env.db('companies').insert({
-        company_id: otherCompanyId,
+      // Create client for other tenant
+      await env.db('clients').insert({
+        client_id: otherClientId,
         tenant: otherTenant,
-        company_name: 'Other Company',
+        client_name: 'Other Client',
         created_at: new Date()
       });
       
@@ -1163,7 +1163,7 @@ describe('Time Entries API E2E Tests', () => {
       });
       
       const otherTicket = await createTestTicket(env.db, otherTenant, {
-        company_id: otherCompanyId,
+        client_id: otherClientId,
         entered_by: otherUserId,
         assigned_to: otherUserId
       });

@@ -9,7 +9,7 @@ export class EmailSettingsTestFixture {
   private context: EmailSettingsTestContext | null = null;
   private baseTestData: {
     tenant: any;
-    company: any;
+    client: any;
     contact: any;
   } | null = null;
 
@@ -61,7 +61,7 @@ export class EmailSettingsTestFixture {
     this.baseTestData = await this.context.emailTestFactory.createBasicEmailScenario();
     
     console.log(`     ✓ Base tenant: ${this.baseTestData.tenant.tenant}`);
-    console.log(`     ✓ Base company: ${this.baseTestData.company.company_name}`);
+    console.log(`     ✓ Base client: ${this.baseTestData.client.client_name}`);
     console.log(`     ✓ Base contact: ${this.baseTestData.contact.email}`);
     
     // Seed test defaults for email processing
@@ -80,7 +80,7 @@ export class EmailSettingsTestFixture {
   }
 
   /**
-   * Get base test data (tenant, company, contact) that's shared across tests
+   * Get base test data (tenant, client, contact) that's shared across tests
    */
   getBaseTestData() {
     if (!this.baseTestData) {
@@ -102,7 +102,7 @@ export class EmailSettingsTestFixture {
       await this.context.mailhogClient.clearMessages();
     }
 
-    // Only clean up email providers created during tests (not base tenant/company/contact)
+    // Only clean up email providers created during tests (not base tenant/client/contact)
     const emailProviders = this.context.emailTestFactory.getCreatedResources().emailProviders;
     if (emailProviders.length > 0) {
       console.log(`  🗑️ Removing ${emailProviders.length} test email providers...`);
@@ -115,7 +115,7 @@ export class EmailSettingsTestFixture {
     }
 
     // Clean up any additional test-specific tickets, workflows, etc.
-    // But preserve the base tenant, company, and contact
+    // But preserve the base tenant, client, and contact
     console.log('✅ Test-specific cleanup completed');
   }
 
@@ -176,7 +176,7 @@ export class EmailSettingsTestFixture {
       provider: overrides.provider,
       mailbox: overrides.mailbox,
       tenant_id: baseData.tenant.tenant,
-      company_id: baseData.company.company_id
+      client_id: baseData.client.client_id
     });
 
     // Track this provider for cleanup

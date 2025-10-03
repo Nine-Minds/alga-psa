@@ -26,17 +26,17 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings',
+        'client_tax_settings',
         'next_number'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -71,8 +71,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       description: 'Test Tax Rate'
     }, 'tax_rate_id');
 
-    // Create default tax settings for the test company
-    await createDefaultTaxSettings(context.company.company_id);
+    // Create default tax settings for the test client
+    await createDefaultTaxSettings(context.client.client_id);
 
     // Re-create tax rate
     await context.createEntity('tax_rates', {
@@ -130,59 +130,59 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       tenant: context.tenantId
     });
 
-    // Create two companies - one for successful generations, one for failed attempt
-    const successCompanyId = await context.createEntity('companies', {
-      company_name: 'Success Company',
+    // Create two clients - one for successful generations, one for failed attempt
+    const successClientId = await context.createEntity('clients', {
+      client_name: 'Success Client',
       billing_cycle: 'monthly'
-    }, 'company_id');
+    }, 'client_id');
 
-    const failCompanyId = await context.createEntity('companies', {
-      company_name: 'Fail Company',
+    const failClientId = await context.createEntity('clients', {
+      client_name: 'Fail Client',
       billing_cycle: 'monthly'
-    }, 'company_id');
+    }, 'client_id');
 
-    // Create default tax settings for both companies
-    await createDefaultTaxSettings(successCompanyId);
-    await createDefaultTaxSettings(failCompanyId);
+    // Create default tax settings for both clients
+    await createDefaultTaxSettings(successClientId);
+    await createDefaultTaxSettings(failClientId);
 
     // Create billing cycles
-    const successCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: successCompanyId,
+    const successCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: successClientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const failCycle = await context.createEntity('company_billing_cycles', {
-      company_id: failCompanyId,
+    const failCycle = await context.createEntity('client_billing_cycles', {
+      client_id: failClientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const successCycle2 = await context.createEntity('company_billing_cycles', {
-      company_id: successCompanyId,
+    const successCycle2 = await context.createEntity('client_billing_cycles', {
+      client_id: successClientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    // Only assign billing plan to success company
-    await context.db('company_billing_plans').insert([
+    // Only assign billing plan to success client
+    await context.db('client_billing_plans').insert([
       {
-        company_billing_plan_id: uuidv4(),
-        company_id: successCompanyId,
+        client_billing_plan_id: uuidv4(),
+        client_id: successClientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
       },
       {
-        company_billing_plan_id: uuidv4(),
-        company_id: successCompanyId,
+        client_billing_plan_id: uuidv4(),
+        client_id: successClientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         is_active: true,
@@ -197,11 +197,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }
     expect(invoice1.invoice_number).toBe('INV-000001');
 
-    // Failed generation attempt (no billing plan for this company)
+    // Failed generation attempt (no billing plan for this client)
     await expectError(
       () => generateInvoice(failCycle),
       {
-        messagePattern: new RegExp(`No active billing plans found for company ${failCompanyId}`)
+        messagePattern: new RegExp(`No active billing plans found for client ${failClientId}`)
       }
     );
 
@@ -226,22 +226,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
   it('should handle various prefix lengths and special characters', async () => {
     // Test cases for different prefixes
     const prefixTests = [
-      { prefix: 'VERY-LONG-PREFIX-', expected: 'VERY-LONG-PREFIX-000001', companyName: 'Long Prefix Co' },
-      { prefix: 'INV/2024/', expected: 'INV/2024/000001', companyName: 'Slash Prefix Co' },
-      { prefix: '#Special@_', expected: '#Special@_000001', companyName: 'Special Chars Co' },
-      { prefix: '測試-', expected: '測試-000001', companyName: 'Unicode Co' },
-      { prefix: '$$_##_', expected: '$$_##_000001', companyName: 'Multiple Special Co' }
+      { prefix: 'VERY-LONG-PREFIX-', expected: 'VERY-LONG-PREFIX-000001', clientName: 'Long Prefix Co' },
+      { prefix: 'INV/2024/', expected: 'INV/2024/000001', clientName: 'Slash Prefix Co' },
+      { prefix: '#Special@_', expected: '#Special@_000001', clientName: 'Special Chars Co' },
+      { prefix: '測試-', expected: '測試-000001', clientName: 'Unicode Co' },
+      { prefix: '$$_##_', expected: '$$_##_000001', clientName: 'Multiple Special Co' }
     ];
 
     for (const testCase of prefixTests) {
-      // Create a new company for each test case
-      const companyId = await context.createEntity('companies', {
-        company_name: testCase.companyName,
+      // Create a new client for each test case
+      const clientId = await context.createEntity('clients', {
+        client_name: testCase.clientName,
         billing_cycle: 'monthly'
-      }, 'company_id');
+      }, 'client_id');
 
-      // Create default tax settings for the new company
-      await createDefaultTaxSettings(companyId);
+      // Create default tax settings for the new client
+      await createDefaultTaxSettings(clientId);
 
       // Set up invoice numbering settings with test prefix
       await context.db('next_number').where({
@@ -281,18 +281,18 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         tenant: context.tenantId
       });
 
-      // Create billing cycle for this company
-      const billingCycle = await context.createEntity('company_billing_cycles', {
-        company_id: companyId,
+      // Create billing cycle for this client
+      const billingCycle = await context.createEntity('client_billing_cycles', {
+        client_id: clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -348,35 +348,35 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     });
 
     // Create billing cycles for consecutive months
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle2 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle2 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    // Assign plan to company for both periods
-    await context.db('company_billing_plans').insert([
+    // Assign plan to client for both periods
+    await context.db('client_billing_plans').insert([
       {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
       },
       {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         is_active: true,

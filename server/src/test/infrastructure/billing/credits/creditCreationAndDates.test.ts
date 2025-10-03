@@ -6,9 +6,9 @@ import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientBillingPlan from 'server/src/lib/models/clientBilling';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -17,8 +17,8 @@ import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
  * Tests for credit creation with expiration dates.
  * 
  * These tests focus on how expiration dates are assigned to credits:
- * - Using company-specific settings to determine expiration dates
- * - Falling back to default settings when company settings are not available
+ * - Using client-specific settings to determine expiration dates
+ * - Falling back to default settings when client settings are not available
  * - Supporting custom expiration dates specified during credit creation
  */
 
@@ -34,24 +34,24 @@ describe('Credit Creation and Dates Tests', () => {
         'invoices',
         'transactions',
         'credit_tracking',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
-        'company_tax_settings',
-        'company_billing_settings',
+        'client_tax_settings',
+        'client_billing_settings',
         'default_billing_settings'
       ],
-      companyName: 'Credit Expiration Test Company',
+      clientName: 'Credit Expiration Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   beforeEach(async () => {
@@ -62,12 +62,12 @@ describe('Credit Creation and Dates Tests', () => {
     await testHelpers.afterAll();
   });
 
-  it('should create credits with expiration dates based on company settings', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Company Settings Expiration Test',
+  it('should create credits with expiration dates based on client settings', async () => {
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Client Settings Expiration Test',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -78,12 +78,12 @@ describe('Credit Creation and Dates Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Set up company billing settings with specific expiration days and explicitly enable credit expiration
+    // Set up client billing settings with specific expiration days and explicitly enable credit expiration
     const expirationDays = 45; // 45-day expiration period
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
+    await context.db('client_billing_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
@@ -119,12 +119,12 @@ describe('Credit Creation and Dates Tests', () => {
     }
 
     // Create prepayment invoice WITHOUT specifying an expiration date
-    // This should use the company settings to determine the expiration date
+    // This should use the client settings to determine the expiration date
     const prepaymentAmount = 15000; // $150.00 credit
     const prepaymentInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       prepaymentAmount
-      // No expiration date provided - should use company settings
+      // No expiration date provided - should use client settings
     );
     
     // Finalize the prepayment invoice
@@ -133,7 +133,7 @@ describe('Credit Creation and Dates Tests', () => {
     // Get the credit transaction
     const creditTransaction = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: prepaymentInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -153,7 +153,7 @@ describe('Credit Creation and Dates Tests', () => {
     const actualDateString = actualExpirationDate.toISOString().split('T')[0];
     const expectedDateString = expectedExpirationDate.toISOString().split('T')[0];
     
-    // Verify the expiration date matches company settings
+    // Verify the expiration date matches client settings
     expect(actualDateString).toBe(expectedDateString);
     
     // Get the credit tracking entry
@@ -171,12 +171,12 @@ describe('Credit Creation and Dates Tests', () => {
     expect(Number(creditTracking.remaining_amount)).toBe(prepaymentAmount);
   });
 
-  it('should create credits with expiration dates based on default settings when company settings are not available', async () => {
-    // Create test company without company-specific billing settings
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Default Settings Expiration Test',
+  it('should create credits with expiration dates based on default settings when client settings are not available', async () => {
+    // Create test client without client-specific billing settings
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Default Settings Expiration Test',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -187,11 +187,11 @@ describe('Credit Creation and Dates Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Ensure no company-specific billing settings exist
-    await context.db('company_billing_settings')
-      .where({ company_id, tenant: context.tenantId })
+    // Ensure no client-specific billing settings exist
+    await context.db('client_billing_settings')
+      .where({ client_id, tenant: context.tenantId })
       .delete();
     
     // Set up default billing settings with specific expiration days
@@ -218,7 +218,7 @@ describe('Credit Creation and Dates Tests', () => {
     // This should use the default settings to determine the expiration date
     const prepaymentAmount = 20000; // $200.00 credit
     const prepaymentInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       prepaymentAmount
       // No expiration date provided - should use default settings
     );
@@ -229,7 +229,7 @@ describe('Credit Creation and Dates Tests', () => {
     // Get the credit transaction
     const creditTransaction = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: prepaymentInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -268,11 +268,11 @@ describe('Credit Creation and Dates Tests', () => {
   });
 
   it('should allow prepayment invoices to specify custom expiration dates', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Custom Expiration Date Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Custom Expiration Date Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -283,17 +283,17 @@ describe('Credit Creation and Dates Tests', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
-    // Set up company billing settings with expiration days
-    const companyExpirationDays = 30; // 30-day company expiration period
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
+    // Set up client billing settings with expiration days
+    const clientExpirationDays = 30; // 30-day client expiration period
+    await context.db('client_billing_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       zero_dollar_invoice_handling: 'normal',
       suppress_zero_dollar_invoices: false,
       enable_credit_expiration: true,
-      credit_expiration_days: companyExpirationDays,
+      credit_expiration_days: clientExpirationDays,
       credit_expiration_notification_days: [7, 1],
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -326,7 +326,7 @@ describe('Credit Creation and Dates Tests', () => {
     // Create prepayment invoice WITH a custom expiration date
     const prepaymentAmount = 12500; // $125.00 credit
     const prepaymentInvoice = await createPrepaymentInvoice(
-      company_id,
+      client_id,
       prepaymentAmount,
       customExpirationDateString // Specify custom expiration date
     );
@@ -337,7 +337,7 @@ describe('Credit Creation and Dates Tests', () => {
     // Get the credit transaction
     const creditTransaction = await context.db('transactions')
       .where({
-        company_id: company_id,
+        client_id: client_id,
         invoice_id: prepaymentInvoice.invoice_id,
         type: 'credit_issuance'
       })
@@ -352,21 +352,21 @@ describe('Credit Creation and Dates Tests', () => {
     const actualDateString = actualExpirationDate.toISOString().split('T')[0];
     const expectedDateString = customExpirationDate.toISOString().split('T')[0];
     
-    // Verify the expiration date matches the custom date, not company or default settings
+    // Verify the expiration date matches the custom date, not client or default settings
     expect(actualDateString).toBe(expectedDateString);
     
-    // Calculate company settings expiration date for comparison
-    const companyExpirationDate = new Date(today);
-    companyExpirationDate.setDate(today.getDate() + companyExpirationDays);
-    const companyExpirationDateString = companyExpirationDate.toISOString().split('T')[0];
+    // Calculate client settings expiration date for comparison
+    const clientExpirationDate = new Date(today);
+    clientExpirationDate.setDate(today.getDate() + clientExpirationDays);
+    const clientExpirationDateString = clientExpirationDate.toISOString().split('T')[0];
     
     // Calculate default settings expiration date for comparison
     const defaultExpirationDate = new Date(today);
     defaultExpirationDate.setDate(today.getDate() + defaultExpirationDays);
     const defaultExpirationDateString = defaultExpirationDate.toISOString().split('T')[0];
     
-    // Verify the expiration date does NOT match company or default settings
-    expect(actualDateString).not.toBe(companyExpirationDateString);
+    // Verify the expiration date does NOT match client or default settings
+    expect(actualDateString).not.toBe(clientExpirationDateString);
     expect(actualDateString).not.toBe(defaultExpirationDateString);
     
     // Get the credit tracking entry

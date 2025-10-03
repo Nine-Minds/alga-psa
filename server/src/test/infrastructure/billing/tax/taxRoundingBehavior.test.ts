@@ -3,7 +3,7 @@ import '../../../test-utils/nextApiMock';
 import { TestContext } from '../../../test-utils/testContext';
 import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
-import { ICompany } from '../../interfaces/company.interfaces';
+import { IClient } from '../../interfaces/client.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 
@@ -11,21 +11,21 @@ describe('Tax Allocation Strategy', () => {
   const testHelpers = TestContext.createHelpers();
   let context: TestContext;
   let taxService: TaxService;
-  let company_id: string;
+  let client_id: string;
   let default_service_id: string;
 
   beforeAll(async () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
       cleanupTables: [
-        'companies',
+        'clients',
         'tax_rates',
-        'company_tax_settings',
+        'client_tax_settings',
         'invoices',
         'invoice_items',
         'service_catalog'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
     taxService = new TaxService();
@@ -34,11 +34,11 @@ describe('Tax Allocation Strategy', () => {
   beforeEach(async () => {
     await testHelpers.beforeEach();
 
-    // Create test company
-    company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Tax Allocation Test Company',
+    // Create test client
+    client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Tax Allocation Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       tax_region: 'US-NY',
       is_tax_exempt: false,
       phone_no: '',
@@ -50,7 +50,7 @@ describe('Tax Allocation Strategy', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       properties: {}
-    }, 'company_id');
+    }, 'client_id');
 
     // Create a default service for testing
     default_service_id = await context.createEntity('service_catalog', {
@@ -78,9 +78,9 @@ describe('Tax Allocation Strategy', () => {
         is_active: true
       }, 'tax_rate_id');
 
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
+      // Set up client tax settings
+      await context.db('client_tax_settings').insert({
+        client_id: client_id,
         tenant: context.tenantId,
         tax_rate_id: taxRateId,
         is_reverse_charge_applicable: false
@@ -88,7 +88,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with mixed positive and negative amounts
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        clientId: client_id,
         items: [
           {
             service_id: default_service_id,
@@ -141,9 +141,9 @@ describe('Tax Allocation Strategy', () => {
         is_active: true
       }, 'tax_rate_id');
 
-      // Update company tax settings
-      await context.db('company_tax_settings')
-        .where({ company_id: company_id })
+      // Update client tax settings
+      await context.db('client_tax_settings')
+        .where({ client_id: client_id })
         .update({
           tax_rate_id: taxRateId,
           is_reverse_charge_applicable: false
@@ -151,7 +151,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with amounts that will produce fractional tax cents
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        clientId: client_id,
         items: [
           {
             service_id: default_service_id,
@@ -203,9 +203,9 @@ describe('Tax Allocation Strategy', () => {
         is_active: true
       }, 'tax_rate_id');
 
-      // Update company tax settings
-      await context.db('company_tax_settings')
-        .where({ company_id: company_id })
+      // Update client tax settings
+      await context.db('client_tax_settings')
+        .where({ client_id: client_id })
         .update({
           tax_rate_id: taxRateId,
           is_reverse_charge_applicable: false
@@ -213,7 +213,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with small amounts
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        clientId: client_id,
         items: [
           {
             service_id: default_service_id,

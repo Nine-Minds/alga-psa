@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createCompanyBillingCycles } from '../../lib/billing/createBillingCycles';
+import { createClientBillingCycles } from '../../lib/billing/createBillingCycles';
 import { TestContext } from '../../../test-utils/testContext';
 import { dateHelpers } from '../../../test-utils/dateUtils';
 import { Temporal } from '@js-temporal/polyfill';
@@ -8,7 +8,7 @@ import { TextEncoder } from 'util';
 // Required for tests
 global.TextEncoder = TextEncoder;
 
-describe('Company Billing Cycle Creation', () => {
+describe('Client Billing Cycle Creation', () => {
   const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
@@ -16,8 +16,8 @@ describe('Company Billing Cycle Creation', () => {
   beforeAll(async () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
-      cleanupTables: ['company_billing_cycles'],
-      companyName: 'Test Company',
+      cleanupTables: ['client_billing_cycles'],
+      clientName: 'Test Client',
       userType: 'internal'
     });
   });
@@ -33,33 +33,33 @@ describe('Company Billing Cycle Creation', () => {
   });
 
   it('creates a monthly billing cycle if none exists', async () => {
-    const { db, company } = context;
+    const { db, client } = context;
 
     // Verify no cycles exist initially
-    const initialCycles = await db('company_billing_cycles')
+    const initialCycles = await db('client_billing_cycles')
       .where({ 
-        company_id: company.company_id,
-        tenant: company.tenant 
+        client_id: client.client_id,
+        tenant: client.tenant 
       })
       .orderBy('effective_date', 'asc');
     expect(initialCycles).toHaveLength(0);
 
     // Create billing cycles
-    await createCompanyBillingCycles(db, company);
+    await createClientBillingCycles(db, client);
 
     // Verify cycles were created
-    const cycles = await db('company_billing_cycles')
+    const cycles = await db('client_billing_cycles')
       .where({ 
-        company_id: company.company_id,
-        tenant: company.tenant 
+        client_id: client.client_id,
+        tenant: client.tenant 
       })
       .orderBy('effective_date', 'asc');
 
     expect(cycles).toHaveLength(1);
     expect(cycles[0]).toMatchObject({
-      company_id: company.company_id,
+      client_id: client.client_id,
       billing_cycle: 'monthly',
-      tenant: company.tenant
+      tenant: client.tenant
     });
 
     // Verify period dates

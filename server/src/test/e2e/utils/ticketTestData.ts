@@ -7,7 +7,8 @@ export interface TicketTestData {
   status_id?: string;
   priority_id?: string;
   assigned_to?: string;
-  company_id?: string;
+  entered_by?: string;
+  client_id?: string;
   contact_name_id?: string;
   board_id?: string;
   category_id?: string;
@@ -77,13 +78,13 @@ export async function createTestTicket(
     status_id: data.status_id,
     priority_id: data.priority_id,
     assigned_to: data.assigned_to || null,
-    company_id: data.company_id,
+    client_id: data.client_id,
     contact_name_id: data.contact_name_id || null,
     board_id: data.board_id,
     category_id: data.category_id || null,
     subcategory_id: data.subcategory_id || null,
     attributes: data.attributes || (data.description ? { description: data.description } : null),
-    entered_by: data.assigned_to || uuidv4(),
+    entered_by: data.entered_by || data.assigned_to || uuidv4(),
     entered_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     updated_by: null,
@@ -125,7 +126,7 @@ export async function createTestTickets(
 export async function createTestTicketSet(
   db: Knex,
   tenant: string,
-  companyId: string,
+  clientId: string,
   statusIds: { open: string; inProgress: string; closed: string },
   priorityIds: { low: string; medium: string; high: string },
   boardId: string
@@ -138,7 +139,7 @@ export async function createTestTicketSet(
     board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.high,
-    company_id: companyId,
+    client_id: clientId,
     tags: ['urgent', 'customer-issue']
   }));
 
@@ -147,7 +148,7 @@ export async function createTestTicketSet(
     board_id: boardId,
     status_id: statusIds.inProgress,
     priority_id: priorityIds.medium,
-    company_id: companyId,
+    client_id: clientId,
     tags: ['in-progress', 'feature-request']
   }));
 
@@ -156,7 +157,7 @@ export async function createTestTicketSet(
     board_id: boardId,
     status_id: statusIds.closed,
     priority_id: priorityIds.low,
-    company_id: companyId,
+    client_id: clientId,
     tags: ['resolved', 'maintenance']
   }));
 
@@ -166,7 +167,7 @@ export async function createTestTicketSet(
     board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.high,
-    company_id: companyId,
+    client_id: clientId,
     attributes: { 
       description: 'This ticket is overdue',
       due_date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Yesterday
@@ -181,7 +182,7 @@ export async function createTestTicketSet(
     board_id: boardId,
     status_id: statusIds.open,
     priority_id: priorityIds.medium,
-    company_id: companyId,
+    client_id: clientId,
     attributes: {
       description: 'Scheduled maintenance task',
       scheduled_start: tomorrow.toISOString(),
@@ -199,7 +200,7 @@ export async function createTestTicketSet(
 export async function createTicketsForPagination(
   db: Knex,
   tenant: string,
-  companyId: string,
+  clientId: string,
   boardId: string,
   count: number = 30
 ): Promise<any[]> {
@@ -210,7 +211,7 @@ export async function createTicketsForPagination(
     const ticket = await createTestTicket(db, tenant, {
       title: `Pagination Test Ticket ${i + 1}`,
       board_id: boardId,
-      company_id: companyId,
+      client_id: clientId,
       description: `Ticket for pagination testing - item ${i + 1} of ${count}`,
       tags: ['pagination-test'],
       // Stagger creation times for consistent ordering - store as component in attributes

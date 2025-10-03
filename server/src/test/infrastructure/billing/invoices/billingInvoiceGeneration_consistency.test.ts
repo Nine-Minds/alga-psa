@@ -20,21 +20,21 @@ describe('Billing Invoice Consistency Checks', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   afterAll(async () => {
@@ -61,8 +61,8 @@ describe('Billing Invoice Consistency Checks', () => {
       }, 'tax_rate_id');
 
       // Create billing cycle for automatic invoice
-      const billingCycle = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycle = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: '2025-02-01',
         period_start_date: '2025-02-01',
@@ -84,9 +84,9 @@ describe('Billing Invoice Consistency Checks', () => {
         tenant: context.tenantId
       });
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: '2025-02-01',
         is_active: true,
@@ -98,7 +98,7 @@ describe('Billing Invoice Consistency Checks', () => {
 
       // Generate manual invoice with same parameters
       const manualInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,

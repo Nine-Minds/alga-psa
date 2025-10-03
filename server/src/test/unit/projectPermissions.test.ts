@@ -194,7 +194,7 @@ describe('Project Permissions', () => {
     mockProject = {
       tenant: 'test-tenant',
       project_id: 'P-1',
-      company_id: 'COMP-1',
+      client_id: 'COMP-1',
       project_name: 'Test Project',
       description: 'This is a test project',
       start_date: new Date(),
@@ -273,7 +273,7 @@ describe('Project Permissions', () => {
 
   const newProjectData: Omit<IProject, 'project_id' | 'created_at' | 'updated_at'> = {
     tenant: 'test-tenant',
-    company_id: 'COMP-1',
+    client_id: 'COMP-1',
     project_name: 'New Project',
     description: 'This is a new project',
     start_date: new Date(),

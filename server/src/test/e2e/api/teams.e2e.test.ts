@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { 
   setupE2ETestEnvironment, 
   E2ETestEnvironment 
@@ -22,11 +22,11 @@ describe('Teams API E2E Tests', () => {
   let env: E2ETestEnvironment;
   const API_BASE = '/api/v1/teams';
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     env = await setupE2ETestEnvironment();
   });
 
-  afterEach(async () => {
+  afterAll(async () => {
     if (env) {
       await env.cleanup();
     }
@@ -268,28 +268,25 @@ describe('Teams API E2E Tests', () => {
   });
 
   describe('Team Manager Assignment', () => {
-    let testTeam: any;
-    let testUser: any;
-
-    beforeEach(async () => {
-      testTeam = await createTestTeam(env.db, env.tenant, {
-        team_name: 'Team for Manager Tests'
-      });
-      
-      // Create a test user to use as manager
-      const { createUserTestData } = await import('../utils/userTestData');
-      const newUserData = createUserTestData();
-      const userResponse = await env.apiClient.post('/api/v1/users', newUserData);
-      
-      if (userResponse.status !== 201) {
-        throw new Error('Failed to create test user');
-      }
-      
-      testUser = userResponse.data.data;
-    });
-
     describe('Assign Team Manager (PUT /api/v1/teams/:id/manager)', () => {
       it('should assign manager and automatically add them as team member', async () => {
+        // Create team for this test
+        const testTeam = await createTestTeam(env.db, env.tenant, {
+          team_name: `Team for Manager Tests ${Date.now()}`,
+          manager_id: env.userId
+        });
+
+        // Create a test user to use as manager
+        const { createUserTestData } = await import('../utils/userTestData');
+        const newUserData = createUserTestData();
+        const userResponse = await env.apiClient.post('/api/v1/users', newUserData);
+
+        if (userResponse.status !== 201) {
+          throw new Error('Failed to create test user');
+        }
+
+        const testUser = userResponse.data.data;
+
         const response = await env.apiClient.put(
           `${API_BASE}/${testTeam.team_id}/manager`,
           { manager_id: testUser.user_id }
@@ -309,6 +306,23 @@ describe('Teams API E2E Tests', () => {
       });
 
       it('should not duplicate member if manager is already a team member', async () => {
+        // Create team for this test
+        const testTeam = await createTestTeam(env.db, env.tenant, {
+          team_name: `Team for Manager Tests ${Date.now()}`,
+          manager_id: env.userId
+        });
+
+        // Create a test user to use as manager
+        const { createUserTestData } = await import('../utils/userTestData');
+        const newUserData = createUserTestData();
+        const userResponse = await env.apiClient.post('/api/v1/users', newUserData);
+
+        if (userResponse.status !== 201) {
+          throw new Error('Failed to create test user');
+        }
+
+        const testUser = userResponse.data.data;
+
         // First add user as team member
         await env.apiClient.post(
           `${API_BASE}/${testTeam.team_id}/members`,

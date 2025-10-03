@@ -2,7 +2,7 @@ import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { BillingCycleType } from '../src/interfaces/billing.interfaces';
 import { TenantEntity } from '../src/interfaces/index';
-import { ICompany, ICompanyLocation } from '../src/interfaces/company.interfaces';
+import { IClient, IClientLocation } from '../src/interfaces/client.interfaces';
 
 /**
  * Creates a new tenant in the database
@@ -34,25 +34,25 @@ export async function createTenant(
 }
 
 /**
- * Creates a new company in the database
+ * Creates a new client in the database
  * @param db Knex database instance
- * @param tenantId ID of the tenant this company belongs to
- * @param name Optional company name (defaults to "Test Company")
- * @param options Optional additional company properties
- * @returns The ID of the created company
+ * @param tenantId ID of the tenant this client belongs to
+ * @param name Optional client name (defaults to "Test Client")
+ * @param options Optional additional client properties
+ * @returns The ID of the created client
  */
-export async function createCompany(
+export async function createClient(
   db: Knex,
   tenantId: string,
-  name: string = 'Test Company',
-  options: Partial<ICompany> = {}
+  name: string = 'Test Client',
+  options: Partial<IClient> = {}
 ): Promise<string> {
-  const companyId = uuidv4();
+  const clientId = uuidv4();
   const now = new Date().toISOString();
 
-  const company: ICompany = {
-    company_id: companyId,
-    company_name: name,
+  const client: IClient = {
+    client_id: clientId,
+    client_name: name,
     tenant: tenantId,
     billing_cycle: options.billing_cycle || 'monthly' as BillingCycleType,
     is_tax_exempt: options.is_tax_exempt ?? false,
@@ -79,31 +79,31 @@ export async function createCompany(
     billing_email: options.billing_email
   };
 
-  await db('companies').insert(company);
+  await db('clients').insert(client);
 
-  return companyId;
+  return clientId;
 }
 
 /**
- * Creates a new company location in the database
+ * Creates a new client location in the database
  * @param db Knex database instance
- * @param companyId ID of the company this location belongs to
+ * @param clientId ID of the client this location belongs to
  * @param tenantId ID of the tenant this location belongs to
  * @param options Optional location properties
  * @returns The ID of the created location
  */
-export async function createCompanyLocation(
+export async function createClientLocation(
   db: Knex,
-  companyId: string,
+  clientId: string,
   tenantId: string,
-  options: Partial<ICompanyLocation> = {}
+  options: Partial<IClientLocation> = {}
 ): Promise<string> {
   const locationId = uuidv4();
   const now = new Date();
 
-  const location: ICompanyLocation = {
+  const location: IClientLocation = {
     location_id: locationId,
-    company_id: companyId,
+    client_id: clientId,
     tenant: tenantId,
     address_line1: options.address_line1 || '123 Test St',
     address_line2: options.address_line2,
@@ -117,7 +117,7 @@ export async function createCompanyLocation(
     updated_at: now.toISOString()
   };
 
-  await db('company_locations').insert(location);
+  await db('client_locations').insert(location);
 
   return locationId;
 }
@@ -176,7 +176,7 @@ export async function createUser(
 }
 
 /**
- * Creates a complete test environment with tenant, company, location, and user
+ * Creates a complete test environment with tenant, client, location, and user
  * @param db Knex database instance
  * @param options Optional properties for the created entities
  * @returns Object containing the created IDs
@@ -184,28 +184,28 @@ export async function createUser(
 export async function createTestEnvironment(
   db: Knex,
   options: {
-    companyName?: string;
+    clientName?: string;
     userName?: string;
     billingCycle?: BillingCycleType;
   } = {}
 ): Promise<{
   tenantId: string;
-  companyId: string;
+  clientId: string;
   locationId: string;
   userId: string;
 }> {
   const tenantId = await createTenant(db);
-  const companyId = await createCompany(db, tenantId, options.companyName, {
+  const clientId = await createClient(db, tenantId, options.clientName, {
     billing_cycle: options.billingCycle || 'monthly'
   });
   // For now, skip location creation due to region_code foreign key constraint
-  // const locationId = await createCompanyLocation(db, companyId, tenantId);
+  // const locationId = await createClientLocation(db, clientId, tenantId);
   const locationId = ''; // Empty for now
   const userId = await createUser(db, tenantId, {
     username: options.userName
   });
 
-  return { tenantId, companyId, locationId, userId };
+  return { tenantId, clientId, locationId, userId };
 }
 
 /**

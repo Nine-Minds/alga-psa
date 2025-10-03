@@ -7,20 +7,28 @@ import { faker } from '@faker-js/faker';
 
 interface TicketInput {
   tenant: string;
-  company_id: string;
+  client_id: string;
   title?: string;
   description?: string;
   status?: string;
   priority?: string;
   assigned_to?: string;
+  // Backward compatibility
+  client_id?: string;
 }
 
 export async function ticketFactory(db: any, input: TicketInput) {
+  // Support both client_id and client_id (backward compatibility)
+  const clientId = input.client_id || input.client_id;
+  if (!clientId) {
+    throw new Error('Either client_id or client_id must be provided');
+  }
+
   const ticket = {
     ticket_id: faker.string.uuid(),
     ticket_number: faker.number.int({ min: 1000, max: 9999 }).toString(),
     tenant: input.tenant,
-    company_id: input.company_id,
+    client_id: clientId,
     title: input.title || faker.lorem.sentence(),
     description: input.description || faker.lorem.paragraph(),
     status: input.status || 'open',
@@ -35,7 +43,7 @@ export async function ticketFactory(db: any, input: TicketInput) {
       ticket_id: ticket.ticket_id,
       ticket_number: ticket.ticket_number,
       tenant: ticket.tenant,
-      company_id: ticket.company_id,
+      client_id: ticket.client_id,
       title: ticket.title,
       description: ticket.description,
       status: ticket.status,

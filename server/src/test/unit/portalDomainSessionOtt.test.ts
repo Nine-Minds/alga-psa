@@ -190,7 +190,7 @@ describe('PortalDomainSessionToken helpers', () => {
     email: 'user@example.com',
     tenant: 'tenant-1',
     user_type: 'client',
-    companyId: 'company-1',
+    clientId: 'client-1',
   };
 
   beforeEach(() => {

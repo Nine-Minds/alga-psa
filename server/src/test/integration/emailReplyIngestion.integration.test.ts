@@ -5,7 +5,7 @@ import process from 'node:process';
 import { v4 as uuidv4 } from 'uuid';
 
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createCompany } from '../../../test-utils/testDataFactory';
+import { createClient } from '../../../test-utils/testDataFactory';
 
 let db: Knex;
 let tenantId: string;
@@ -91,13 +91,13 @@ describe('Email reply ingestion integration', () => {
     await db('comments').where({ tenant: tenantId }).delete();
     await db('tickets').where({ tenant: tenantId, title: 'Existing Ticket' }).delete();
     await db('contacts').where({ tenant: tenantId, full_name: 'Integration Contact' }).delete();
-    await db('companies').where({ tenant: tenantId, company_name: 'Integration Company' }).delete();
+    await db('clients').where({ tenant: tenantId, client_name: 'Integration Client' }).delete();
   });
 
   it('persists full comment content when reply markers are missing', async () => {
-    const companyId = await createCompany(db, tenantId, 'Integration Company');
+    const clientId = await createClient(db, tenantId, 'Integration Client');
     const contactEmail = `integration-contact-${uuidv4()}@example.com`;
-    const contactId = await createContact(db, tenantId, companyId, contactEmail);
+    const contactId = await createContact(db, tenantId, clientId, contactEmail);
 
     const statusId = await ensureStatus(db, tenantId);
     const priorityId = await ensurePriority(db, tenantId);
@@ -109,7 +109,7 @@ describe('Email reply ingestion integration', () => {
       tenant: tenantId,
       ticketId,
       contactId,
-      companyId,
+      clientId,
       statusId,
       priorityId,
       boardId,
@@ -189,9 +189,9 @@ describe('Email reply ingestion integration', () => {
   });
 
   it('stores only content above reply marker when present', async () => {
-    const companyId = await createCompany(db, tenantId, 'Integration Company');
+    const clientId = await createClient(db, tenantId, 'Integration Client');
     const contactEmail = `integration-contact-marker-${uuidv4()}@example.com`;
-    const contactId = await createContact(db, tenantId, companyId, contactEmail);
+    const contactId = await createContact(db, tenantId, clientId, contactEmail);
 
     const statusId = await ensureStatus(db, tenantId);
     const priorityId = await ensurePriority(db, tenantId);
@@ -203,7 +203,7 @@ describe('Email reply ingestion integration', () => {
       tenant: tenantId,
       ticketId,
       contactId,
-      companyId,
+      clientId,
       statusId,
       priorityId,
       boardId,
@@ -323,7 +323,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
   const newTenantId = uuidv4();
   await connection('tenants').insert({
     tenant: newTenantId,
-    company_name: 'Email Reply Test Tenant',
+    client_name: 'Email Reply Test Tenant',
     email: 'email-reply@test.co',
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),
@@ -334,7 +334,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
 async function createContact(
   connection: Knex,
   tenant: string,
-  companyId: string,
+  clientId: string,
   email: string,
 ): Promise<string> {
   const contactId = uuidv4();
@@ -342,7 +342,7 @@ async function createContact(
     tenant,
     contact_name_id: contactId,
     full_name: 'Integration Contact',
-    company_id: companyId,
+    client_id: clientId,
     email,
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),
@@ -384,7 +384,7 @@ async function insertTicket(connection: Knex, params: {
   tenant: string;
   ticketId: string;
   contactId: string;
-  companyId: string;
+  clientId: string;
   statusId: string;
   priorityId: string;
   boardId: string;
@@ -397,7 +397,7 @@ async function insertTicket(connection: Knex, params: {
     ticket_id: params.ticketId,
     ticket_number: ticketNumber,
     title: 'Existing Ticket',
-    company_id: params.companyId,
+    client_id: params.clientId,
     contact_name_id: params.contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,

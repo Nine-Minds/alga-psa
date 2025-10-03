@@ -8,13 +8,13 @@ import * as planDisambiguation from '../../lib/utils/planDisambiguation';
 
 // Mock the planDisambiguation module
 vi.mock('../../lib/utils/planDisambiguation', () => ({
-  getCompanyIdForWorkItem: vi.fn(),
+  getClientIdForWorkItem: vi.fn(),
   getEligibleBillingPlansForUI: vi.fn()
 }));
 
 describe('TimeEntryEditForm with Billing Plan Selection', () => {
   const mockEntry = {
-    company_id: 'test-company-id', // Add company ID to the mock entry
+    client_id: 'test-client-id', // Add client ID to the mock entry
     entry_id: 'test-entry-id',
     work_item_id: 'test-work-item-id',
     work_item_type: 'project_task' as WorkItemType,
@@ -51,13 +51,13 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
   });
 
   test('should display billing plan selector with disabled dropdown when only one plan is available', async () => {
-    // Mock the getCompanyIdForWorkItem function to return a company ID
-    vi.mocked(planDisambiguation.getCompanyIdForWorkItem).mockResolvedValue('test-company-id');
+    // Mock the getClientIdForWorkItem function to return a client ID
+    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
     // Mock the getEligibleBillingPlansForUI function to return a single plan
     vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
       {
-        company_billing_plan_id: 'test-plan-id',
+        client_billing_plan_id: 'test-plan-id',
         plan_name: 'Test Plan',
         plan_type: 'Fixed'
       }
@@ -82,7 +82,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getCompanyIdForWorkItem).toHaveBeenCalledWith(
+      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
@@ -90,7 +90,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     await waitFor(() => {
       expect(planDisambiguation.getEligibleBillingPlansForUI).toHaveBeenCalledWith(
-        'test-company-id',
+        'test-client-id',
         'test-service-id'
       );
     });
@@ -112,9 +112,9 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
   });
 
-  test('should display billing plan selector with disabled dropdown when no company ID is available', async () => {
-    // Mock the getCompanyIdForWorkItem function to return null (no company ID)
-    vi.mocked(planDisambiguation.getCompanyIdForWorkItem).mockResolvedValue(null);
+  test('should display billing plan selector with disabled dropdown when no client ID is available', async () => {
+    // Mock the getClientIdForWorkItem function to return null (no client ID)
+    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue(null);
     
     render(
       <TimeEntryEditForm
@@ -135,7 +135,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getCompanyIdForWorkItem).toHaveBeenCalledWith(
+      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
@@ -149,22 +149,22 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
-    expect(screen.getByText('Company information not available. The system will use the default billing plan.')).toBeInTheDocument();
+    expect(screen.getByText('Client information not available. The system will use the default billing plan.')).toBeInTheDocument();
   });
 
   test('should display billing plan selector when multiple plans are available', async () => {
-    // Mock the getCompanyIdForWorkItem function to return a company ID
-    vi.mocked(planDisambiguation.getCompanyIdForWorkItem).mockResolvedValue('test-company-id');
+    // Mock the getClientIdForWorkItem function to return a client ID
+    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
     // Mock the getEligibleBillingPlansForUI function to return multiple plans
     vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
       {
-        company_billing_plan_id: 'plan-id-1',
+        client_billing_plan_id: 'plan-id-1',
         plan_name: 'Fixed Plan',
         plan_type: 'Fixed'
       },
       {
-        company_billing_plan_id: 'plan-id-2',
+        client_billing_plan_id: 'plan-id-2',
         plan_name: 'Bucket Plan',
         plan_type: 'Bucket'
       }
@@ -189,7 +189,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     // Wait for the component to load and fetch data
     await waitFor(() => {
-      expect(planDisambiguation.getCompanyIdForWorkItem).toHaveBeenCalledWith(
+      expect(planDisambiguation.getClientIdForWorkItem).toHaveBeenCalledWith(
         'test-work-item-id',
         'project_task'
       );
@@ -197,7 +197,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
 
     await waitFor(() => {
       expect(planDisambiguation.getEligibleBillingPlansForUI).toHaveBeenCalledWith(
-        'test-company-id',
+        'test-client-id',
         'test-service-id'
       );
     });
@@ -213,18 +213,18 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
   });
 
   test('should allow saving without billing plan selection', async () => {
-    // Mock the getCompanyIdForWorkItem function to return a company ID
-    vi.mocked(planDisambiguation.getCompanyIdForWorkItem).mockResolvedValue('test-company-id');
+    // Mock the getClientIdForWorkItem function to return a client ID
+    vi.mocked(planDisambiguation.getClientIdForWorkItem).mockResolvedValue('test-client-id');
     
     // Mock the getEligibleBillingPlansForUI function to return multiple plans
     vi.mocked(planDisambiguation.getEligibleBillingPlansForUI).mockResolvedValue([
       {
-        company_billing_plan_id: 'plan-id-1',
+        client_billing_plan_id: 'plan-id-1',
         plan_name: 'Fixed Plan',
         plan_type: 'Fixed'
       },
       {
-        company_billing_plan_id: 'plan-id-2',
+        client_billing_plan_id: 'plan-id-2',
         plan_name: 'Bucket Plan',
         plan_type: 'Bucket'
       }

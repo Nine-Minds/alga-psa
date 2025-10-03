@@ -12,7 +12,7 @@ describe('Users API E2E Tests', () => {
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
-      companyName: 'Users API Test Company',
+      clientName: 'Users API Test Client',
       userName: 'users_api_test'
     });
   });
@@ -221,35 +221,35 @@ describe('Users API E2E Tests', () => {
   });
 
   describe('User Search', () => {
-    beforeEach(async () => {
+    it('should search users by query', async () => {
       // Create test users with different attributes
       const timestamp = Date.now();
+      const testUserIds: string[] = [];
       const users = [
         { first_name: 'John', last_name: 'Doe', email: `john.doe.${timestamp}@test.com` },
         { first_name: 'Jane', last_name: 'Smith', email: `jane.smith.${timestamp}@test.com` },
         { first_name: 'Bob', last_name: 'Johnson', email: `bob.johnson.${timestamp}@test.com` }
       ];
-      
+
       for (const user of users) {
         const response = await env.apiClient.post('/api/v1/users', createUserTestData(user));
         if (response.status === 201) {
+          testUserIds.push(response.data.data.user_id);
           createdUserIds.push(response.data.data.user_id);
         }
       }
-    });
 
-    it('should search users by query', async () => {
       // Search for 'test' which should match our Test User or email addresses
       const response = await env.apiClient.get('/api/v1/users/search?query=test');
-      
+
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       expect(response.data.data.length).toBeGreaterThan(0);
-      
+
       // Verify search matches username, name, or email
-      const hasMatch = response.data.data.some((u: any) => 
+      const hasMatch = response.data.data.some((u: any) =>
         u.username?.toLowerCase().includes('test') ||
-        u.first_name?.toLowerCase().includes('test') || 
+        u.first_name?.toLowerCase().includes('test') ||
         u.last_name?.toLowerCase().includes('test') ||
         u.email?.toLowerCase().includes('test')
       );

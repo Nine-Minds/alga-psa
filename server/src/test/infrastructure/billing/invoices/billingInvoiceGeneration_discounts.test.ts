@@ -4,7 +4,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 
 describe('Billing Invoice Discount Applications', () => {
@@ -21,21 +21,21 @@ describe('Billing Invoice Discount Applications', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   afterAll(async () => {
@@ -44,11 +44,11 @@ describe('Billing Invoice Discount Applications', () => {
 
   describe('Service-Based Discount Application', () => {
     it('should correctly apply discounts using service references', async () => {
-      // Create test company
-      const company_id = await context.createEntity<ICompany>('companies', {
-        company_name: 'Service Discount Test Company',
+      // Create test client
+      const client_id = await context.createEntity<IClient>('clients', {
+        client_name: 'Service Discount Test Client',
         billing_cycle: 'monthly',
-        company_id: uuidv4(),
+        client_id: uuidv4(),
         tax_region: 'US-NY',
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
@@ -59,7 +59,7 @@ describe('Billing Invoice Discount Applications', () => {
         url: '',
         address: '',
         is_inactive: false
-      }, 'company_id');
+      }, 'client_id');
 
       // Create NY tax rate
       const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -69,9 +69,9 @@ describe('Billing Invoice Discount Applications', () => {
         start_date: '2025-01-01'
       }, 'tax_rate_id');
 
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
+      // Set up client tax settings
+      await context.db('client_tax_settings').insert({
+        client_id: client_id,
         tenant: context.tenantId,
         tax_rate_id: nyTaxRateId,
         is_reverse_charge_applicable: false
@@ -98,7 +98,7 @@ describe('Billing Invoice Discount Applications', () => {
 
       // Generate invoice with service-based discount
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        clientId: client_id,
         items: [
           {
             // Service A
@@ -163,11 +163,11 @@ describe('Billing Invoice Discount Applications', () => {
     });
 
     it('should correctly apply fixed amount discount to the entire invoice', async () => {
-      // Create test company
-      const company_id = await context.createEntity<ICompany>('companies', {
-        company_name: 'Invoice Discount Test Company',
+      // Create test client
+      const client_id = await context.createEntity<IClient>('clients', {
+        client_name: 'Invoice Discount Test Client',
         billing_cycle: 'monthly',
-        company_id: uuidv4(),
+        client_id: uuidv4(),
         tax_region: 'US-NY',
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
@@ -178,7 +178,7 @@ describe('Billing Invoice Discount Applications', () => {
         url: '',
         address: '',
         is_inactive: false
-      }, 'company_id');
+      }, 'client_id');
 
       // Create NY tax rate
       const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -188,9 +188,9 @@ describe('Billing Invoice Discount Applications', () => {
         start_date: '2025-01-01'
       }, 'tax_rate_id');
 
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
+      // Set up client tax settings
+      await context.db('client_tax_settings').insert({
+        client_id: client_id,
         tenant: context.tenantId,
         tax_rate_id: nyTaxRateId,
         is_reverse_charge_applicable: false
@@ -226,7 +226,7 @@ describe('Billing Invoice Discount Applications', () => {
 
       // Generate invoice with multiple services and a fixed discount applied to the entire invoice
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        clientId: client_id,
         items: [
           {
             // Service A
@@ -311,11 +311,11 @@ describe('Billing Invoice Discount Applications', () => {
   });
 
   it('should correctly apply multiple discounts in sequence', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Multiple Discount Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Multiple Discount Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       tax_region: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -326,7 +326,7 @@ describe('Billing Invoice Discount Applications', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create NY tax rate
     const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -336,9 +336,9 @@ describe('Billing Invoice Discount Applications', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -356,7 +356,7 @@ describe('Billing Invoice Discount Applications', () => {
 
     // Generate invoice with multiple discounts applied in sequence
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      clientId: client_id,
       items: [
         {
           // Base service
@@ -447,11 +447,11 @@ describe('Billing Invoice Discount Applications', () => {
   });
 
   it('should handle discount application when discounts exceed the subtotal amount', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Excessive Discount Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Excessive Discount Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       tax_region: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -462,7 +462,7 @@ describe('Billing Invoice Discount Applications', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create NY tax rate
     const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -472,9 +472,9 @@ describe('Billing Invoice Discount Applications', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -492,7 +492,7 @@ describe('Billing Invoice Discount Applications', () => {
 
     // Generate invoice with discounts exceeding the service price
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      clientId: client_id,
       items: [
         {
           // Base service

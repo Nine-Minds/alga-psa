@@ -1,5 +1,5 @@
 /**
- * Static analysis tool to validate QuickAddCompany UI reflection integration
+ * Static analysis tool to validate QuickAddClient UI reflection integration
  * This runs without requiring DOM or complex test environment setup
  */
 
@@ -10,10 +10,10 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const QUICK_ADD_COMPANY_PATH = path.join(__dirname, '../../components/companies/QuickAddCompany.tsx');
+const QUICK_ADD_COMPANY_PATH = path.join(__dirname, '../../components/companies/QuickAddClient.tsx');
 
-function analyzeQuickAddCompanyUIReflection() {
-  console.log('📋 Analyzing QuickAddCompany UI Reflection Integration...\n');
+function analyzeQuickAddClientUIReflection() {
+  console.log('📋 Analyzing QuickAddClient UI Reflection Integration...\n');
   
   const fileContent = fs.readFileSync(QUICK_ADD_COMPANY_PATH, 'utf8');
   
@@ -40,7 +40,7 @@ function analyzeQuickAddCompanyUIReflection() {
     },
     {
       name: 'Dialog registration with ID',
-      test: () => fileContent.includes("id: 'quick-add-company-dialog'"),
+      test: () => fileContent.includes("id: 'quick-add-client-dialog'"),
       required: true
     },
     {
@@ -50,7 +50,7 @@ function analyzeQuickAddCompanyUIReflection() {
     },
     {
       name: 'ReflectionContainer wrapper',
-      test: () => fileContent.includes("<ReflectionContainer") && fileContent.includes("quick-add-company-form"),
+      test: () => fileContent.includes("<ReflectionContainer") && fileContent.includes("quick-add-client-form"),
       required: true
     },
     {
@@ -77,12 +77,12 @@ function analyzeQuickAddCompanyUIReflection() {
       name: 'Form element IDs present',
       test: () => {
         const requiredIds = [
-          'company_name',
+          'client_name',
           'client_type_select', 
           'email',
           'phone_no',
-          'create-company-btn',
-          'cancel-quick-add-company-btn'
+          'create-client-btn',
+          'cancel-quick-add-client-btn'
         ];
         return requiredIds.every(id => fileContent.includes(`id="${id}"`));
       },
@@ -115,7 +115,7 @@ function analyzeQuickAddCompanyUIReflection() {
   
   if (failedCount === 0) {
     console.log(`\n🎉 All UI reflection integration checks passed!`);
-    console.log(`   The QuickAddCompany dialog should now be visible in UI state.`);
+    console.log(`   The QuickAddClient dialog should now be visible in UI state.`);
   } else {
     console.log(`\n⚠️  Some checks failed. UI reflection may not work properly.`);
   }
@@ -141,6 +141,6 @@ function analyzeQuickAddCompanyUIReflection() {
 }
 
 // Run the analysis
-analyzeQuickAddCompanyUIReflection();
+analyzeQuickAddClientUIReflection();
 
-export { analyzeQuickAddCompanyUIReflection };
+export { analyzeQuickAddClientUIReflection };

@@ -55,8 +55,8 @@ const {
 
 let context: TestContext;
 const serviceTypeCache: Record<string, string> = {};
-let companyTaxSettingsColumns: Record<string, unknown> | null = null;
-let companyTaxRatesColumns: Record<string, unknown> | null = null;
+let clientTaxSettingsColumns: Record<string, unknown> | null = null;
+let clientTaxRatesColumns: Record<string, unknown> | null = null;
 
 beforeAll(async () => {
   // Initialize test context and set up mocks
@@ -223,95 +223,95 @@ async function setupTaxConfiguration() {
     start_date: '2025-02-22T00:00:00.000Z'
   });
 
-  await upsertCompanyTaxSettings(taxRateId);
-  await upsertCompanyDefaultTaxRate(taxRateId);
+  await upsertClientTaxSettings(taxRateId);
+  await upsertClientDefaultTaxRate(taxRateId);
 
   await assignServiceTaxRate('*', 'US-NY', { onlyUnset: true });
 
   return taxRateId;
 }
 
-async function upsertCompanyTaxSettings(taxRateId: string) {
+async function upsertClientTaxSettings(taxRateId: string) {
   try {
-    if (!companyTaxSettingsColumns) {
-      companyTaxSettingsColumns = await context.db('company_tax_settings').columnInfo();
+    if (!clientTaxSettingsColumns) {
+      clientTaxSettingsColumns = await context.db('client_tax_settings').columnInfo();
     }
   } catch (error) {
-    companyTaxSettingsColumns = null;
+    clientTaxSettingsColumns = null;
   }
 
-  if (!companyTaxSettingsColumns || Object.keys(companyTaxSettingsColumns).length === 0) {
+  if (!clientTaxSettingsColumns || Object.keys(clientTaxSettingsColumns).length === 0) {
     return;
   }
 
-  const companyExists = await context.db('companies')
-    .where({ tenant: context.tenantId, company_id: context.companyId })
+  const clientExists = await context.db('clients')
+    .where({ tenant: context.tenantId, client_id: context.clientId })
     .first();
 
-  if (!companyExists) {
+  if (!clientExists) {
     return;
   }
 
   const baseData: Record<string, unknown> = {
     tenant: context.tenantId,
-    company_id: context.companyId,
+    client_id: context.clientId,
     is_reverse_charge_applicable: false
   };
 
-  if ('tax_rate_id' in companyTaxSettingsColumns) {
+  if ('tax_rate_id' in clientTaxSettingsColumns) {
     baseData.tax_rate_id = taxRateId;
   }
 
-  await context.db('company_tax_settings')
+  await context.db('client_tax_settings')
     .insert(baseData)
-    .onConflict(['tenant', 'company_id'])
+    .onConflict(['tenant', 'client_id'])
     .merge(baseData);
 }
 
-async function upsertCompanyDefaultTaxRate(taxRateId: string) {
+async function upsertClientDefaultTaxRate(taxRateId: string) {
   try {
-    if (!companyTaxRatesColumns) {
-      companyTaxRatesColumns = await context.db('company_tax_rates').columnInfo();
+    if (!clientTaxRatesColumns) {
+      clientTaxRatesColumns = await context.db('client_tax_rates').columnInfo();
     }
   } catch (error) {
-    companyTaxRatesColumns = null;
+    clientTaxRatesColumns = null;
   }
 
-  if (!companyTaxRatesColumns || Object.keys(companyTaxRatesColumns).length === 0) {
+  if (!clientTaxRatesColumns || Object.keys(clientTaxRatesColumns).length === 0) {
     return;
   }
 
-  const companyExists = await context.db('companies')
-    .where({ tenant: context.tenantId, company_id: context.companyId })
+  const clientExists = await context.db('clients')
+    .where({ tenant: context.tenantId, client_id: context.clientId })
     .first();
 
-  if (!companyExists) {
+  if (!clientExists) {
     return;
   }
 
-  if ('is_default' in companyTaxRatesColumns) {
-    await context.db('company_tax_rates')
-      .where({ tenant: context.tenantId, company_id: context.companyId })
+  if ('is_default' in clientTaxRatesColumns) {
+    await context.db('client_tax_rates')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
       .update({ is_default: false });
   }
 
   const rateData: Record<string, unknown> = {
     tenant: context.tenantId,
-    company_id: context.companyId,
+    client_id: context.clientId,
     tax_rate_id: taxRateId
   };
 
-  if ('is_default' in companyTaxRatesColumns) {
+  if ('is_default' in clientTaxRatesColumns) {
     rateData.is_default = true;
   }
 
-  if ('location_id' in companyTaxRatesColumns) {
+  if ('location_id' in clientTaxRatesColumns) {
     rateData.location_id = null;
   }
 
-  await context.db('company_tax_rates')
+  await context.db('client_tax_rates')
     .insert(rateData)
-    .onConflict(['company_id', 'tax_rate_id', 'tenant'])
+    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
     .merge(rateData);
 }
 
@@ -322,7 +322,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -332,7 +332,7 @@ describe('Manual Invoice Generation', () => {
       });
 
       expect(result).toMatchObject({
-        company_id: context.companyId,
+        client_id: context.clientId,
         invoice_number: expect.stringMatching(/^TIC\d{6}$/),
         status: 'draft'
       });
@@ -348,7 +348,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: service1Id,
@@ -375,7 +375,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: serviceId,
@@ -424,13 +424,13 @@ describe('Manual Invoice Generation', () => {
   });
 
   describe('Validation and Error Handling', () => {
-    it('rejects invalid company IDs', async () => {
+    it('rejects invalid client IDs', async () => {
       const serviceId = await createTestService();
-      const invalidCompanyId = uuidv4();
+      const invalidClientId = uuidv4();
       
       await expectNotFound(
         () => generateManualInvoice({
-          companyId: invalidCompanyId,
+          clientId: invalidClientId,
           items: [{
             service_id: serviceId,
             quantity: 1,
@@ -438,7 +438,7 @@ describe('Manual Invoice Generation', () => {
             rate: 1000
           }]
         }),
-        'Company'
+        'Client'
       );
     });
 
@@ -447,7 +447,7 @@ describe('Manual Invoice Generation', () => {
       
       await expectNotFound(
         () => generateManualInvoice({
-          companyId: context.companyId,
+          clientId: context.clientId,
           items: [{
             service_id: invalidServiceId,
             quantity: 1,
@@ -471,7 +471,7 @@ describe('Manual Invoice Generation', () => {
         .update({ tax_percentage: 10 });
 
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -484,17 +484,17 @@ describe('Manual Invoice Generation', () => {
       expect(result.total_amount).toBe(1100);
     });
 
-    it('handles tax exempt companies correctly', async () => {
+    it('handles tax exempt clients correctly', async () => {
       const serviceId = await createTestService();
       await setupTaxConfiguration();
   
-      // Make company tax exempt
-      await context.db('companies')
-        .where({ company_id: context.companyId })
+      // Make client tax exempt
+      await context.db('clients')
+        .where({ client_id: context.clientId })
         .update({ is_tax_exempt: true });
   
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -551,21 +551,21 @@ describe('Manual Invoice Generation', () => {
       await assignServiceTaxRate(serviceNY, 'US-NY');
       await assignServiceTaxRate(serviceCA, 'US-CA');
       
-      // First remove any existing tax settings for this company
-      await context.db('company_tax_rates')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      // First remove any existing tax settings for this client
+      await context.db('client_tax_rates')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('company_tax_settings')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      await context.db('client_tax_settings')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await upsertCompanyTaxSettings(taxRateNyId);
-      await upsertCompanyDefaultTaxRate(taxRateNyId);
+      await upsertClientTaxSettings(taxRateNyId);
+      await upsertClientDefaultTaxRate(taxRateNyId);
       
       // Generate an invoice with one item from each service
       const result = await generateManualInvoice({
-         companyId: context.companyId,
+         clientId: context.clientId,
          items: [
            {
              service_id: serviceNY,
@@ -598,7 +598,7 @@ describe('Manual Invoice Generation', () => {
       await setupTaxConfiguration();
 
       const result = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -615,7 +615,7 @@ describe('Manual Invoice Generation', () => {
 
       expect(transactions).toHaveLength(1);
       expect(transactions[0] as ITransaction).toMatchObject({
-        company_id: context.companyId,
+        client_id: context.clientId,
         type: 'invoice_generated',
         status: 'completed',
         amount: 1089 // Including tax
@@ -631,7 +631,7 @@ describe('Manual Invoice Generation', () => {
 
       // 2. Create initial invoice with one item
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -660,7 +660,7 @@ describe('Manual Invoice Generation', () => {
       
       // 5. Update the invoice with new items
       const updatedInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Include the original item
           {
@@ -701,7 +701,7 @@ describe('Manual Invoice Generation', () => {
       const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
       expect(adjustmentTransaction).toMatchObject({
-        company_id: context.companyId,
+        client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
         amount: 2178 // Updated amount including tax
@@ -715,7 +715,7 @@ describe('Manual Invoice Generation', () => {
 
       // 2. Create initial invoice with one item
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -738,7 +738,7 @@ describe('Manual Invoice Generation', () => {
 
       // 5. Update the invoice with a mix of items including a discount
       const updatedInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Include the original item
           {
@@ -829,21 +829,21 @@ describe('Manual Invoice Generation', () => {
       await assignServiceTaxRate(serviceNY, 'US-NY');
       await assignServiceTaxRate(serviceCA, 'US-CA');
       
-      // First remove any existing tax settings for this company
-      await context.db('company_tax_rates')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      // First remove any existing tax settings for this client
+      await context.db('client_tax_rates')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('company_tax_settings')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      await context.db('client_tax_settings')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await upsertCompanyTaxSettings(taxRateNyId);
-      await upsertCompanyDefaultTaxRate(taxRateNyId);
+      await upsertClientTaxSettings(taxRateNyId);
+      await upsertClientDefaultTaxRate(taxRateNyId);
       
       // 3. Create initial invoice with NY service
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceNY,
           quantity: 1,
@@ -866,7 +866,7 @@ describe('Manual Invoice Generation', () => {
       
       // 5. Update invoice by adding a CA service item
       const updatedInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Include the original NY item
           {
@@ -914,7 +914,7 @@ describe('Manual Invoice Generation', () => {
 
       // 2. Create initial invoice with one item
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,
@@ -943,7 +943,7 @@ describe('Manual Invoice Generation', () => {
       
       // 5. Update the invoice by modifying the existing item (changing quantity and rate)
       const updatedInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Same item but with modified quantity and rate
           {
@@ -983,7 +983,7 @@ describe('Manual Invoice Generation', () => {
       const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
       expect(adjustmentTransaction as ITransaction).toMatchObject({
-        company_id: context.companyId,
+        client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
         amount: 3267 // Updated amount including tax (with tax rounded up)
@@ -998,7 +998,7 @@ describe('Manual Invoice Generation', () => {
 
       // 2. Create initial invoice with multiple items
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: service1Id,
@@ -1035,7 +1035,7 @@ describe('Manual Invoice Generation', () => {
       
       // 5. Update the invoice by removing one item (the second service)
       const updatedInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Only include the first item, effectively removing the second item
           {
@@ -1071,7 +1071,7 @@ describe('Manual Invoice Generation', () => {
       const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
       expect(adjustmentTransaction as ITransaction).toMatchObject({
-        company_id: context.companyId,
+        client_id: context.clientId,
         type: 'invoice_adjustment',
         status: 'completed',
         amount: 1089 // Updated amount after item removal
@@ -1135,20 +1135,20 @@ describe('Manual Invoice Generation', () => {
         .where({ tenant: context.tenantId, service_id: nonTaxableServiceId })
         .update({ tax_rate_id: null });
 
-      await context.db('company_tax_rates')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      await context.db('client_tax_rates')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await context.db('company_tax_settings')
-        .where({ company_id: context.companyId, tenant: context.tenantId })
+      await context.db('client_tax_settings')
+        .where({ client_id: context.clientId, tenant: context.tenantId })
         .delete();
 
-      await upsertCompanyTaxSettings(taxRateNyId);
-      await upsertCompanyDefaultTaxRate(taxRateNyId);
+      await upsertClientTaxSettings(taxRateNyId);
+      await upsertClientDefaultTaxRate(taxRateNyId);
 
       // 2. Create initial invoice with a mix of taxable and non-taxable items
       const initialInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Taxable NY service
           {
@@ -1193,7 +1193,7 @@ describe('Manual Invoice Generation', () => {
       
       // 4. First adjustment: Change tax region of the taxable item
       const regionChangeInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Change the tax region by using the CA service instead
           {
@@ -1224,7 +1224,7 @@ describe('Manual Invoice Generation', () => {
       
       // 6. Second adjustment: Convert non-taxable item to taxable, and vice versa
       const taxStatusChangeInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Change previously taxable item to use non-taxable service
           {
@@ -1258,7 +1258,7 @@ describe('Manual Invoice Generation', () => {
       
       // 8. Third adjustment: Add a discount that affects tax calculation
       const discountAdjustmentInvoice = await updateManualInvoice(invoiceId, {
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           // Keep the taxable item
           {

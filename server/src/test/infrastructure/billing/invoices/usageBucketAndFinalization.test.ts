@@ -26,17 +26,17 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings',
+        'client_tax_settings',
         'next_number'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -71,8 +71,8 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       description: 'Test Tax Rate'
     }, 'tax_rate_id');
 
-    // Create default tax settings for the test company
-    await createDefaultTaxSettings(context.company.company_id);
+    // Create default tax settings for the test client
+    await createDefaultTaxSettings(context.client.client_id);
 
     // Re-create tax rate
     await context.createEntity('tax_rates', {
@@ -117,17 +117,17 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -139,7 +139,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         {
           tenant: context.tenantId,
           usage_id: uuidv4(),
-          company_id: context.companyId,
+          client_id: context.clientId,
           service_id: serviceId,
           usage_date: '2023-01-15',
           quantity: '50'
@@ -147,7 +147,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         {
           tenant: context.tenantId,
           usage_id: uuidv4(),
-          company_id: context.companyId,
+          client_id: context.clientId,
           service_id: serviceId,
           usage_date: '2023-01-20',
           quantity: '30'
@@ -215,17 +215,17 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       }, 'bucket_plan_id');
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -236,7 +236,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       await context.db('bucket_usage').insert({
         usage_id: uuidv4(),
         bucket_plan_id: bucketPlanId,
-        company_id: context.companyId,
+        client_id: context.clientId,
         period_start: '2023-01-01',
         period_end: '2023-01-31',
         minutes_used: 45,
@@ -295,15 +295,15 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       });
 
       // Create billing cycle and assign plan
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,

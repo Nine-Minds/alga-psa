@@ -65,8 +65,8 @@ describe('Email Provider Database Integration Tests', () => {
       if (!tenantExists) {
         await testDb('tenants').insert({
           tenant: testTenant,
-          company_name: 'Email Provider Test Company',
-          email: 'test@company.com',
+          client_name: 'Email Provider Test Client',
+          email: 'test@client.com',
           created_at: new Date(),
           updated_at: new Date()
         });
@@ -170,13 +170,13 @@ describe('Email Provider Database Integration Tests', () => {
       const workspaceProviderData = {
         tenant: testTenant,
         providerType: 'google' as const,
-        providerName: 'Company Workspace Account',
-        mailbox: 'support@company.com', // Non-gmail domain
+        providerName: 'Client Workspace Account',
+        mailbox: 'support@client.com', // Non-gmail domain
         isActive: true,
         vendorConfig: {
           clientId: 'workspace-client-id.apps.googleusercontent.com',
           clientSecret: 'workspace-secret',
-          projectId: 'company-project',
+          projectId: 'client-project',
           redirectUri: 'http://localhost:3000/api/auth/google/callback',
           pubSubTopic: 'workspace-notifications',
           pubSubSubscription: 'workspace-subscription',
@@ -189,7 +189,7 @@ describe('Email Provider Database Integration Tests', () => {
       const createdProvider = await emailProviderService.createProvider(workspaceProviderData);
 
       // Verify the provider was created with custom domain
-      expect(createdProvider.mailbox).toBe('support@company.com');
+      expect(createdProvider.mailbox).toBe('support@client.com');
       expect(createdProvider.provider_type).toBe('google');
       
       // Verify in database
@@ -198,7 +198,7 @@ describe('Email Provider Database Integration Tests', () => {
         .where('tenant', testTenant)
         .first();
 
-      expect(dbRecord.mailbox).toBe('support@company.com');
+      expect(dbRecord.mailbox).toBe('support@client.com');
       
       const providerConfig = typeof dbRecord.provider_config === 'string' 
         ? JSON.parse(dbRecord.provider_config)
@@ -287,7 +287,7 @@ describe('Email Provider Database Integration Tests', () => {
         tenant: testTenant,
         providerType: 'google',
         providerName: 'Gmail Provider 2',
-        mailbox: 'provider2@company.com',
+        mailbox: 'provider2@client.com',
         isActive: true,
         vendorConfig: { 
           clientId: 'client2.apps.googleusercontent.com',
@@ -320,7 +320,7 @@ describe('Email Provider Database Integration Tests', () => {
       expect(googleProviders).toHaveLength(2);
       expect(googleProviders.map(p => p.mailbox).sort()).toEqual([
         'provider1@gmail.com',
-        'provider2@company.com'
+        'provider2@client.com'
       ]);
 
       // List all providers

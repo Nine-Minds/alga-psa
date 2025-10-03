@@ -1,11 +1,11 @@
 import { faker } from '@faker-js/faker';
 
 /**
- * Create test company data
+ * Create test client data
  */
-export function createCompanyTestData(overrides: Partial<any> = {}) {
+export function createClientTestData(overrides: Partial<any> = {}) {
   return {
-    company_name: faker.company.name(),
+    client_name: faker.company.name(),
     email: faker.internet.email(),
     phone_no: faker.phone.number(),
     address: faker.location.streetAddress(),
@@ -24,11 +24,11 @@ export function createCompanyTestData(overrides: Partial<any> = {}) {
 }
 
 /**
- * Create test company location data
+ * Create test client address data
  */
-export function createCompanyLocationTestData(overrides: Partial<any> = {}) {
+export function createClientAddressTestData(overrides: Partial<any> = {}) {
   return {
-    location_name: faker.company.name() + ' ' + faker.helpers.arrayElement(['Office', 'Warehouse', 'Store']),
+    address_name: faker.company.name() + ' ' + faker.helpers.arrayElement(['Office', 'Warehouse', 'Store']),
     address_line1: faker.location.streetAddress(),
     address_line2: faker.datatype.boolean() ? faker.location.secondaryAddress() : '',
     city: faker.location.city(),
@@ -44,35 +44,39 @@ export function createCompanyLocationTestData(overrides: Partial<any> = {}) {
 }
 
 /**
- * Create multiple test companies
+ * Create multiple test clients
  */
-export function createMultipleCompanies(count: number) {
-  return Array.from({ length: count }, () => createCompanyTestData());
+export function createMultipleClients(count: number) {
+  return Array.from({ length: count }, () => createClientTestData());
 }
 
 /**
- * Create company with specific attributes for testing
+ * Create client with specific attributes for testing
  */
-export function createCompanyWithContacts() {
-  const company = createCompanyTestData();
+export function createClientWithContacts() {
+  const client = createClientTestData();
   const contacts = Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, () => ({
     full_name: faker.person.fullName(),
     email: faker.internet.email(),
     phone_number: faker.phone.number(),
     role: faker.person.jobTitle()
   }));
-  
-  return { company, contacts };
+
+  return { client, contacts };
 }
 
 /**
- * Create company with locations
+ * Create client with addresses
  */
-export function createCompanyWithLocations() {
-  const company = createCompanyTestData();
-  const locations = Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, (_, index) => 
-    createCompanyLocationTestData({ is_default: index === 0 })
+export function createClientWithAddresses() {
+  const client = createClientTestData();
+  const addresses = Array.from({ length: faker.number.int({ min: 1, max: 3 }) }, (_, index) =>
+    createClientAddressTestData({ is_default: index === 0 })
   );
-  
-  return { company, locations };
+
+  return { client, addresses };
 }
+
+// Additional aliases for convenience
+export const createClientLocationTestData = createClientAddressTestData;
+export const createClientWithLocations = createClientWithAddresses;

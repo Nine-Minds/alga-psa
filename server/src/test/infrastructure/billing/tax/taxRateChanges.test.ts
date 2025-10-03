@@ -4,24 +4,24 @@ import { TestContext } from '../../../test-utils/testContext';
 import { TaxService } from '../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { ICompany } from '../../interfaces/company.interfaces';
+import { IClient } from '../../interfaces/client.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
 describe('Tax Rate Changes Mid-Billing Period', () => {
   const testHelpers = TestContext.createHelpers();
   let context: TestContext;
   let taxService: TaxService;
-  let company_id: string;
+  let client_id: string;
 
   beforeAll(async () => {
     context = await testHelpers.beforeAll({
       runSeeds: true,
       cleanupTables: [
-        'companies',
+        'clients',
         'tax_rates', 
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
     taxService = new TaxService();
@@ -30,12 +30,12 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
   beforeEach(async () => {
     await testHelpers.beforeEach();
     
-    // Create test company with US-NY tax region
-    company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 1',
+    // Create test client with US-NY tax region
+    client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 1',
       is_tax_exempt: false,
       tax_region: 'US-NY',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '123-456-7890',
       credit_balance: 0,
       email: 'test@example.com',
@@ -46,17 +46,17 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
       is_inactive: false,
       billing_cycle: 'weekly',
       properties: {}
-    }, 'company_id');
+    }, 'client_id');
 
     // Create default tax settings
-    await createDefaultTaxSettings(company_id);
+    await createDefaultTaxSettings(client_id);
 
     // Create initial tax rate (10%) for US-NY ending just before new rate starts
     await context.createEntity('tax_rates', {
       tax_type: 'VAT',
       country_code: 'US',
       tax_percentage: 10,
-      region: 'US-NY', // Changed to match company tax_region
+      region: 'US-NY', // Changed to match client tax_region
       is_reverse_charge_applicable: false,
       is_composite: false,
       start_date: '2024-10-01',
@@ -70,7 +70,7 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
       tax_type: 'VAT',
       country_code: 'US',
       tax_percentage: 12,
-      region: 'US-NY', // Changed to match company tax_region
+      region: 'US-NY', // Changed to match client tax_region
       is_reverse_charge_applicable: false,
       is_composite: false,
       start_date: '2024-10-15',
@@ -98,13 +98,13 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
 
     // Calculate taxes with explicit tax region
     const taxResult1 = await taxService.calculateTax(
-      company_id, 
+      client_id, 
       charge1.amount, 
       charge1.date,
       'US-NY' // Explicitly pass tax region
     );
     const taxResult2 = await taxService.calculateTax(
-      company_id, 
+      client_id, 
       charge2.amount, 
       charge2.date,
       'US-NY' // Explicitly pass tax region

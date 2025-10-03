@@ -80,7 +80,7 @@ export function createAdminUser(overrides: Partial<any> = {}) {
 /**
  * Create client user
  */
-export function createClientUser(companyId: string, overrides: Partial<any> = {}) {
+export function createClientUser(clientId: string, overrides: Partial<any> = {}) {
   return createUserTestData({
     ...overrides,
     user_type: 'client'

@@ -12,8 +12,8 @@ import { v4 as uuidv4 } from 'uuid';
 export interface E2ETestEnvironment {
   db: Knex;
   tenant: string;
-  companyId: string;
-  locationId: string;
+  clientId: string;
+  addressId: string;
   userId: string;
   apiKey: string;
   apiClient: ApiTestClient;
@@ -28,21 +28,21 @@ export interface E2ETestEnvironment {
  */
 export async function setupE2ETestEnvironment(options: {
   baseUrl?: string;
-  companyName?: string;
+  clientName?: string;
   userName?: string;
 } = {}): Promise<E2ETestEnvironment> {
   const db = await createTestDbConnection();
-  
+
   try {
-    // Create test environment with tenant, company, location and user
-    const { tenantId, companyId, locationId, userId } = await createTestEnvironment(db, {
-      companyName: options.companyName,
+    // Create test environment with tenant, client, address and user
+    const { tenantId, clientId, locationId, userId } = await createTestEnvironment(db, {
+      clientName: options.clientName,
       userName: options.userName
     });
 
     // Setup permissions for the test user
     await setupTestUserWithPermissions(db, userId, tenantId);
-    
+
     // Create default statuses for projects and tickets
     await createDefaultStatuses(db, tenantId, userId);
 
@@ -169,13 +169,13 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
         
-        // Clean up company locations
-        await db('company_locations')
+        // Clean up client locations
+        await db('client_locations')
           .where('tenant', tenantId)
           .delete();
-        
-        // Clean up companies
-        await db('companies')
+
+        // Clean up clients
+        await db('clients')
           .where('tenant', tenantId)
           .delete();
         
@@ -200,12 +200,12 @@ export async function setupE2ETestEnvironment(options: {
     return {
       db,
       tenant: tenantId,
-      companyId,
-      locationId,
+      clientId,
+      addressId: locationId,
       userId,
       apiKey: apiKeyRecord.api_key,
       apiClient,
-      cleanup
+      cleanup,
     };
   } catch (error) {
     // If setup fails, clean up the database connection

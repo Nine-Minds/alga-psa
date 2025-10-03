@@ -44,8 +44,8 @@ describe('Google Provider Data Persistence Tests', () => {
       // Create tenant record
       await testDb('tenants').insert({
         tenant: testTenant,
-        company_name: 'Integration Test Company',
-        email: 'integration-test@company.com',
+        client_name: 'Integration Test Client',
+        email: 'integration-test@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -149,13 +149,13 @@ describe('Google Provider Data Persistence Tests', () => {
     const workspaceConfig = {
       tenant: testTenant,
       providerType: 'google' as const,
-      providerName: 'Company Google Workspace',
+      providerName: 'Client Google Workspace',
       mailbox: 'support@customdomain.com',
       isActive: true,
       vendorConfig: {
         clientId: 'workspace-client.apps.googleusercontent.com',
         clientSecret: 'workspace-secret',
-        projectId: 'company-workspace-project',
+        projectId: 'client-workspace-project',
         pubSubTopic: 'workspace-email-notifications',
         pubSubSubscription: 'workspace-webhook-sub',
         labelFilters: ['INBOX', 'Support', 'CustomerService'],
