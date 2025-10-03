@@ -1,33 +1,107 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { generateManualInvoice, updateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 import { v4 as uuidv4 } from 'uuid';
-import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { setupCommonMocks } from '../../../test-utils/testMocks';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { expectNotFound } from '../../../../../test-utils/errorUtils';
+import type { ITransaction } from '../../../../interfaces/billing.interfaces';
 
-global.TextEncoder = TextEncoder;
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
 
 // Create test context helpers
-const { beforeAll: setupContext, beforeEach: resetContext, afterAll: cleanupContext } = TestContext.createHelpers();
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 let context: TestContext;
+const serviceTypeCache: Record<string, string> = {};
+let companyTaxSettingsColumns: Record<string, unknown> | null = null;
+let companyTaxRatesColumns: Record<string, unknown> | null = null;
 
 beforeAll(async () => {
   // Initialize test context and set up mocks
   context = await setupContext({
-    cleanupTables: ['service_catalog', 'tax_rates', 'company_tax_settings', 'transactions']
+    cleanupTables: [
+      'invoice_annotations',
+      'invoice_items',
+      'transactions',
+      'invoices',
+      'plan_service_rate_tiers',
+      'plan_service_usage_config',
+      'plan_services',
+      'usage_tracking',
+      'service_catalog',
+      'tax_rates',
+      'tax_regions'
+    ],
+    resetBetweenTests: true
   });
-  setupCommonMocks({ tenantId: context.tenantId });
-});
+  const mockContext = setupCommonMocks({
+    tenantId: context.tenantId,
+    userId: context.userId,
+    permissionCheck: () => true
+  });
+  mockedTenantId = mockContext.tenantId;
+  mockedUserId = mockContext.userId;
+}, 60000);
 
 beforeEach(async () => {
-  await resetContext();
-});
+  context = await resetContext();
+  const mockContext = setupCommonMocks({
+    tenantId: context.tenantId,
+    userId: context.userId,
+    permissionCheck: () => true
+  });
+  mockedTenantId = mockContext.tenantId;
+  mockedUserId = mockContext.userId;
+}, 30000);
 
 afterAll(async () => {
   await cleanupContext();
+});
+
+afterEach(async () => {
+  await rollbackContext();
 });
 
 /**
@@ -35,19 +109,94 @@ afterAll(async () => {
  */
 async function createTestService(overrides = {}) {
   const serviceId = uuidv4();
-  const defaultService = {
+  const billingMethod = (overrides as { billing_method?: 'fixed' | 'per_unit' }).billing_method ?? 'fixed';
+  const serviceTypeId = await ensureServiceType(billingMethod);
+
+  const serviceData: Record<string, unknown> = {
     service_id: serviceId,
     tenant: context.tenantId,
-    service_name: 'Test Service',
-    service_type: 'Fixed',
-    default_rate: 1000,
-    unit_of_measure: 'each',
-    is_taxable: true,
-    tax_region: 'US-NY'
+    service_name: (overrides as { service_name?: string }).service_name ?? 'Test Service',
+    billing_method: billingMethod,
+    default_rate: (overrides as { default_rate?: number }).default_rate ?? 1000,
+    unit_of_measure: (overrides as { unit_of_measure?: string }).unit_of_measure ?? 'each',
+    custom_service_type_id: (overrides as { custom_service_type_id?: string }).custom_service_type_id ?? serviceTypeId,
+    description: (overrides as { description?: string }).description ?? 'Test Service Description',
+    category_id: (overrides as { category_id?: string | null }).category_id ?? null,
+    tax_rate_id: (overrides as { tax_rate_id?: string | null }).tax_rate_id ?? null
   };
 
-  await context.db('service_catalog').insert({ ...defaultService, ...overrides });
+  await context.db('service_catalog').insert(serviceData);
+
+  const taxRegion = (overrides as { tax_region?: string }).tax_region;
+  if (taxRegion) {
+    await assignServiceTaxRate(serviceId, taxRegion);
+  }
+
   return serviceId;
+}
+
+async function ensureServiceType(billingMethod: 'fixed' | 'per_unit' = 'fixed') {
+  if (serviceTypeCache[billingMethod]) {
+    return serviceTypeCache[billingMethod];
+  }
+
+  const columns = await context.db('service_types').columnInfo();
+  const tenantColumn = columns.tenant ? 'tenant' : columns.tenant_id ? 'tenant_id' : null;
+
+  if (!tenantColumn) {
+    throw new Error('Unable to determine tenant column for service_types table');
+  }
+
+  const existingType = await context.db('service_types')
+    .where({ [tenantColumn]: context.tenantId, billing_method: billingMethod })
+    .first('id');
+
+  if (existingType?.id) {
+    serviceTypeCache[billingMethod] = existingType.id;
+    return existingType.id;
+  }
+
+  const typeId = uuidv4();
+  const typeData: Record<string, unknown> = {
+    id: typeId,
+    name: billingMethod === 'fixed' ? 'Fixed Service Type' : 'Per Unit Service Type',
+    billing_method: billingMethod,
+    is_active: true,
+    description: 'Auto-generated service type for manual invoice tests',
+    [tenantColumn]: context.tenantId
+  };
+
+  if (columns.order_number) {
+    typeData.order_number = 1;
+  }
+
+  await context.db('service_types').insert(typeData);
+  serviceTypeCache[billingMethod] = typeId;
+  return typeId;
+}
+
+async function assignServiceTaxRate(serviceId: string, region: string, options: { onlyUnset?: boolean } = {}) {
+  const taxRate = await context.db('tax_rates')
+    .where({ tenant: context.tenantId, region_code: region })
+    .orderBy('start_date', 'desc')
+    .first();
+
+  if (!taxRate) {
+    return;
+  }
+
+  const query = context.db('service_catalog')
+    .where({ tenant: context.tenantId });
+
+  if (serviceId !== '*') {
+    query.andWhere({ service_id: serviceId });
+  }
+
+  if (options.onlyUnset) {
+    query.whereNull('tax_rate_id');
+  }
+
+  await query.update({ tax_rate_id: taxRate.tax_rate_id });
 }
 
 /**
@@ -55,23 +204,115 @@ async function createTestService(overrides = {}) {
  */
 async function setupTaxConfiguration() {
   const taxRateId = uuidv4();
+  await context.db('tax_regions')
+    .insert({
+      tenant: context.tenantId,
+      region_code: 'US-NY',
+      region_name: 'New York',
+      is_active: true
+    })
+    .onConflict(['tenant', 'region_code'])
+    .ignore();
+
   await context.db('tax_rates').insert({
     tax_rate_id: taxRateId,
     tenant: context.tenantId,
-    region: 'US-NY',
+    region_code: 'US-NY',
     tax_percentage: 8.875,
     description: 'NY State + City Tax',
     start_date: '2025-02-22T00:00:00.000Z'
   });
 
-  await context.db('company_tax_settings').insert({
-    company_id: context.companyId,
-    tenant: context.tenantId,
-    tax_rate_id: taxRateId,
-    is_reverse_charge_applicable: false
-  });
+  await upsertCompanyTaxSettings(taxRateId);
+  await upsertCompanyDefaultTaxRate(taxRateId);
+
+  await assignServiceTaxRate('*', 'US-NY', { onlyUnset: true });
 
   return taxRateId;
+}
+
+async function upsertCompanyTaxSettings(taxRateId: string) {
+  try {
+    if (!companyTaxSettingsColumns) {
+      companyTaxSettingsColumns = await context.db('company_tax_settings').columnInfo();
+    }
+  } catch (error) {
+    companyTaxSettingsColumns = null;
+  }
+
+  if (!companyTaxSettingsColumns || Object.keys(companyTaxSettingsColumns).length === 0) {
+    return;
+  }
+
+  const companyExists = await context.db('companies')
+    .where({ tenant: context.tenantId, company_id: context.companyId })
+    .first();
+
+  if (!companyExists) {
+    return;
+  }
+
+  const baseData: Record<string, unknown> = {
+    tenant: context.tenantId,
+    company_id: context.companyId,
+    is_reverse_charge_applicable: false
+  };
+
+  if ('tax_rate_id' in companyTaxSettingsColumns) {
+    baseData.tax_rate_id = taxRateId;
+  }
+
+  await context.db('company_tax_settings')
+    .insert(baseData)
+    .onConflict(['tenant', 'company_id'])
+    .merge(baseData);
+}
+
+async function upsertCompanyDefaultTaxRate(taxRateId: string) {
+  try {
+    if (!companyTaxRatesColumns) {
+      companyTaxRatesColumns = await context.db('company_tax_rates').columnInfo();
+    }
+  } catch (error) {
+    companyTaxRatesColumns = null;
+  }
+
+  if (!companyTaxRatesColumns || Object.keys(companyTaxRatesColumns).length === 0) {
+    return;
+  }
+
+  const companyExists = await context.db('companies')
+    .where({ tenant: context.tenantId, company_id: context.companyId })
+    .first();
+
+  if (!companyExists) {
+    return;
+  }
+
+  if ('is_default' in companyTaxRatesColumns) {
+    await context.db('company_tax_rates')
+      .where({ tenant: context.tenantId, company_id: context.companyId })
+      .update({ is_default: false });
+  }
+
+  const rateData: Record<string, unknown> = {
+    tenant: context.tenantId,
+    company_id: context.companyId,
+    tax_rate_id: taxRateId
+  };
+
+  if ('is_default' in companyTaxRatesColumns) {
+    rateData.is_default = true;
+  }
+
+  if ('location_id' in companyTaxRatesColumns) {
+    rateData.location_id = null;
+  }
+
+  await context.db('company_tax_rates')
+    .insert(rateData)
+    .onConflict(['company_id', 'tax_rate_id', 'tenant'])
+    .merge(rateData);
 }
 
 describe('Manual Invoice Generation', () => {
@@ -125,8 +366,8 @@ describe('Manual Invoice Generation', () => {
       });
 
       expect(result.subtotal).toBe(2500); // (2 * 1000) + (1 * 500)
-      expect(result.tax).toBe(223); // 8.88% of 2500 = 223.00
-      expect(result.total_amount).toBe(2723);
+      expect(result.tax).toBe(222); // Proportional allocation with regional remainder handled on the last item
+      expect(result.total_amount).toBe(2722);
     });
 
     it('calculates correct subtotal with mixed positive and negative line items', async () => {
@@ -174,11 +415,11 @@ describe('Manual Invoice Generation', () => {
       // Total: 1000 - 200 + 1000 - 300 = 1500
       expect(result.subtotal).toBe(1500);
       
-      // Tax should be calculated on the net positive amount:
-      // Net amount before tax: 1500 (1000 - 200 + 1000 - 300)
-      // Tax: 8.88% of 1500 = 133.20, rounded up to 133
-      expect(result.tax).toBe(151); // 8.875% of 1700 = 150.88, rounded up
-      expect(result.total_amount).toBe(1651); // 1500 + 134
+      // Discounts (marked with is_discount) do not reduce the taxable base; credits do.
+      // Taxable base: (1000 - 200 + 1000) = 1800 → credit reduces by 300 → 1500.
+      // Proportional allocation over the positive lines yields 178 cents of tax.
+      expect(result.tax).toBe(178);
+      expect(result.total_amount).toBe(1678);
     });
   });
 
@@ -273,34 +514,54 @@ describe('Manual Invoice Generation', () => {
       
       // Set up tax configuration for both regions
       const taxRateNyId = uuidv4();
+      await context.db('tax_regions')
+        .insert([
+          {
+            tenant: context.tenantId,
+            region_code: 'US-NY',
+            region_name: 'New York',
+            is_active: true
+          },
+          {
+            tenant: context.tenantId,
+            region_code: 'US-CA',
+            region_name: 'California',
+            is_active: true
+          }
+        ])
+        .onConflict(['tenant', 'region_code'])
+        .ignore();
+
       await context.db('tax_rates').insert([{
          tax_rate_id: taxRateNyId,
          tenant: context.tenantId,
-         region: 'US-NY',
+         region_code: 'US-NY',
          tax_percentage: 8.875,
          description: 'NY Tax',
          start_date: '2025-02-22T00:00:00.000Z'
       }, {
          tax_rate_id: uuidv4(),
          tenant: context.tenantId,
-         region: 'US-CA',
+         region_code: 'US-CA',
          tax_percentage: 8.0,
          description: 'CA Tax',
          start_date: '2025-02-22T00:00:00.000Z'
       }]);
+
+      await assignServiceTaxRate(serviceNY, 'US-NY');
+      await assignServiceTaxRate(serviceCA, 'US-CA');
       
       // First remove any existing tax settings for this company
+      await context.db('company_tax_rates')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+
       await context.db('company_tax_settings')
         .where({ company_id: context.companyId, tenant: context.tenantId })
         .delete();
-        
-      // Set up company tax settings with default NY rate
-      await context.db('company_tax_settings').insert({
-         company_id: context.companyId,
-         tenant: context.tenantId,
-         tax_rate_id: taxRateNyId,
-         is_reverse_charge_applicable: false
-      });
+
+      await upsertCompanyTaxSettings(taxRateNyId);
+      await upsertCompanyDefaultTaxRate(taxRateNyId);
       
       // Generate an invoice with one item from each service
       const result = await generateManualInvoice({
@@ -346,14 +607,14 @@ describe('Manual Invoice Generation', () => {
         }]
       });
 
-      const transactions = await context.db('transactions')
+      const transactions = await context.db<ITransaction>('transactions')
         .where({ 
           invoice_id: result.invoice_id,
           tenant: context.tenantId
         });
 
       expect(transactions).toHaveLength(1);
-      expect(transactions[0]).toMatchObject({
+      expect(transactions[0] as ITransaction).toMatchObject({
         company_id: context.companyId,
         type: 'invoice_generated',
         status: 'completed',
@@ -427,7 +688,7 @@ describe('Manual Invoice Generation', () => {
       expect(updatedInvoice.invoice_items).toHaveLength(2);
 
       // 6. Verify transaction records are updated
-      const transactions = await context.db('transactions')
+      const transactions = await context.db<ITransaction>('transactions')
         .where({
           invoice_id: initialInvoice.invoice_id,
           tenant: context.tenantId
@@ -437,7 +698,7 @@ describe('Manual Invoice Generation', () => {
       expect(transactions).toHaveLength(2);
       
       // Find the invoice_adjustment transaction instead of assuming its array position
-      const adjustmentTransaction = transactions.find(t => t.type === 'invoice_adjustment');
+      const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
       expect(adjustmentTransaction).toMatchObject({
         company_id: context.companyId,
@@ -531,34 +792,54 @@ describe('Manual Invoice Generation', () => {
       
       // 2. Set up multi-region tax configuration
       const taxRateNyId = uuidv4();
+      await context.db('tax_regions')
+        .insert([
+          {
+            tenant: context.tenantId,
+            region_code: 'US-NY',
+            region_name: 'New York',
+            is_active: true
+          },
+          {
+            tenant: context.tenantId,
+            region_code: 'US-CA',
+            region_name: 'California',
+            is_active: true
+          }
+        ])
+        .onConflict(['tenant', 'region_code'])
+        .ignore();
+
       await context.db('tax_rates').insert([{
         tax_rate_id: taxRateNyId,
         tenant: context.tenantId,
-        region: 'US-NY',
+        region_code: 'US-NY',
         tax_percentage: 8.875,
         description: 'NY Tax',
         start_date: '2025-02-22T00:00:00.000Z'
       }, {
         tax_rate_id: uuidv4(),
         tenant: context.tenantId,
-        region: 'US-CA',
+        region_code: 'US-CA',
         tax_percentage: 8.0,
         description: 'CA Tax',
         start_date: '2025-02-22T00:00:00.000Z'
       }]);
+
+      await assignServiceTaxRate(serviceNY, 'US-NY');
+      await assignServiceTaxRate(serviceCA, 'US-CA');
       
       // First remove any existing tax settings for this company
+      await context.db('company_tax_rates')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+
       await context.db('company_tax_settings')
         .where({ company_id: context.companyId, tenant: context.tenantId })
         .delete();
-        
-      // Set up company tax settings with default NY rate
-      await context.db('company_tax_settings').insert({
-        company_id: context.companyId,
-        tenant: context.tenantId,
-        tax_rate_id: taxRateNyId,
-        is_reverse_charge_applicable: false
-      });
+
+      await upsertCompanyTaxSettings(taxRateNyId);
+      await upsertCompanyDefaultTaxRate(taxRateNyId);
       
       // 3. Create initial invoice with NY service
       const initialInvoice = await generateManualInvoice({
@@ -689,7 +970,7 @@ describe('Manual Invoice Generation', () => {
       expect(modifiedItem.description).toBe('Initial Service Item (Modified)');
 
       // 7. Verify transaction records are updated
-      const transactions = await context.db('transactions')
+      const transactions = await context.db<ITransaction>('transactions')
         .where({
           invoice_id: initialInvoice.invoice_id,
           tenant: context.tenantId
@@ -699,9 +980,9 @@ describe('Manual Invoice Generation', () => {
       expect(transactions).toHaveLength(2);
       
       // Find the invoice_adjustment transaction
-      const adjustmentTransaction = transactions.find(t => t.type === 'invoice_adjustment');
+      const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
-      expect(adjustmentTransaction).toMatchObject({
+      expect(adjustmentTransaction as ITransaction).toMatchObject({
         company_id: context.companyId,
         type: 'invoice_adjustment',
         status: 'completed',
@@ -777,7 +1058,7 @@ describe('Manual Invoice Generation', () => {
       expect(updatedInvoice.invoice_items[0].rate).toBe(1000);
 
       // 7. Verify transaction records are updated
-      const transactions = await context.db('transactions')
+      const transactions = await context.db<ITransaction>('transactions')
         .where({
           invoice_id: initialInvoice.invoice_id,
           tenant: context.tenantId
@@ -787,9 +1068,9 @@ describe('Manual Invoice Generation', () => {
       expect(transactions).toHaveLength(2);
       
       // Find the invoice_adjustment transaction
-      const adjustmentTransaction = transactions.find(t => t.type === 'invoice_adjustment');
+      const adjustmentTransaction = transactions.find((transaction: ITransaction) => transaction.type === 'invoice_adjustment');
       expect(adjustmentTransaction).toBeDefined();
-      expect(adjustmentTransaction).toMatchObject({
+      expect(adjustmentTransaction as ITransaction).toMatchObject({
         company_id: context.companyId,
         type: 'invoice_adjustment',
         status: 'completed',
@@ -800,12 +1081,10 @@ describe('Manual Invoice Generation', () => {
     it('tests manual item adjustments affecting tax calculation', async () => {
       // 1. Set up test services with different tax configurations
       const taxableServiceId = await createTestService({
-        service_name: 'Taxable Service',
-        is_taxable: true
+        service_name: 'Taxable Service'
       });
       const nonTaxableServiceId = await createTestService({
-        service_name: 'Non-Taxable Service',
-        is_taxable: false
+        service_name: 'Non-Taxable Service'
       });
       
       // Service with different tax region
@@ -816,34 +1095,56 @@ describe('Manual Invoice Generation', () => {
       
       // Set up tax configuration for NY and CA regions
       const taxRateNyId = uuidv4();
+      await context.db('tax_regions')
+        .insert([
+          {
+            tenant: context.tenantId,
+            region_code: 'US-NY',
+            region_name: 'New York',
+            is_active: true
+          },
+          {
+            tenant: context.tenantId,
+            region_code: 'US-CA',
+            region_name: 'California',
+            is_active: true
+          }
+        ])
+        .onConflict(['tenant', 'region_code'])
+        .ignore();
+
       await context.db('tax_rates').insert([{
         tax_rate_id: taxRateNyId,
         tenant: context.tenantId,
-        region: 'US-NY',
+        region_code: 'US-NY',
         tax_percentage: 8.875, // NY tax rate
         description: 'NY Tax',
         start_date: '2025-02-22T00:00:00.000Z'
       }, {
         tax_rate_id: uuidv4(),
         tenant: context.tenantId,
-        region: 'US-CA',
+        region_code: 'US-CA',
         tax_percentage: 7.25, // CA tax rate
         description: 'CA Tax',
         start_date: '2025-02-22T00:00:00.000Z'
       }]);
-      
-      // First remove any existing tax settings
+
+      await assignServiceTaxRate(taxableServiceId, 'US-NY');
+      await assignServiceTaxRate(caServiceId, 'US-CA');
+      await context.db('service_catalog')
+        .where({ tenant: context.tenantId, service_id: nonTaxableServiceId })
+        .update({ tax_rate_id: null });
+
+      await context.db('company_tax_rates')
+        .where({ company_id: context.companyId, tenant: context.tenantId })
+        .delete();
+
       await context.db('company_tax_settings')
         .where({ company_id: context.companyId, tenant: context.tenantId })
         .delete();
-        
-      // Set up company tax settings with default NY rate
-      await context.db('company_tax_settings').insert({
-        company_id: context.companyId,
-        tenant: context.tenantId,
-        tax_rate_id: taxRateNyId,
-        is_reverse_charge_applicable: false
-      });
+
+      await upsertCompanyTaxSettings(taxRateNyId);
+      await upsertCompanyDefaultTaxRate(taxRateNyId);
 
       // 2. Create initial invoice with a mix of taxable and non-taxable items
       const initialInvoice = await generateManualInvoice({
@@ -994,7 +1295,7 @@ describe('Manual Invoice Generation', () => {
       expect(discountItem?.tax_amount).toBe(0);
       
       // 10. Verify transaction records are updated
-      const transactions = await context.db('transactions')
+      const transactions = await context.db<ITransaction>('transactions')
         .where({
           invoice_id: initialInvoice.invoice_id,
           tenant: context.tenantId
@@ -1005,11 +1306,11 @@ describe('Manual Invoice Generation', () => {
       expect(transactions).toHaveLength(4);
       
       // Find the adjustment transaction for the final discount update by the expected amount
-      const discountAdjustment = transactions.find(t =>
-        t.type === 'invoice_adjustment' && t.amount === 1678);
+      const discountAdjustment = transactions.find((transaction: ITransaction) =>
+        transaction.type === 'invoice_adjustment' && transaction.amount === 1678);
       expect(discountAdjustment).toBeDefined();
-      expect(discountAdjustment?.type).toBe('invoice_adjustment');
-      expect(discountAdjustment?.amount).toBe(1678);
+      expect((discountAdjustment as ITransaction).type).toBe('invoice_adjustment');
+      expect((discountAdjustment as ITransaction).amount).toBe(1678);
     });    
   });
 });

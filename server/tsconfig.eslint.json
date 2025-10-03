@@ -12,7 +12,8 @@
     "src/lib/workflows/**/*.ts",
     "index.ts",
     "tailwind.config.ts",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "test-utils/**/*.ts"
   ],
   "exclude": [
     "node_modules",

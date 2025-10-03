@@ -12,7 +12,9 @@ import { DynamicExtensionProvider } from '../components/extensions/DynamicExtens
 import { PostHogProvider } from "../components/PostHogProvider";
 import { I18nWrapper } from "../components/i18n/I18nWrapper";
 import { getServerLocale } from "../lib/i18n/server";
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { getTenantBrandingByDomain } from "../lib/actions/tenant-actions/getTenantBrandingByDomain";
+import { generateBrandingStyles } from "../lib/branding/generateBrandingStyles";
 
 // Removed Google Fonts to avoid network fetch during build
 const inter = { className: "" } as const;
@@ -66,16 +68,40 @@ async function MainContent({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Check if this is a client portal route and inject branding styles
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const pathname = headersList.get('x-pathname')
+    || headersList.get('x-middleware-pathname')
+    || '';
+
+  // Determine if we're on a client portal page
+  const isClientPortal = pathname.includes('/client-portal') || pathname.includes('/auth/client-portal');
+
+  let brandingStyles = '';
+  if (isClientPortal) {
+    const branding = await getTenantBrandingByDomain(host);
+    // Use precomputed styles if available, otherwise generate them
+    brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
+  }
+
   return (
     <html lang="en">
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
+        {/* Inject client portal branding styles directly in head for immediate application */}
+        {brandingStyles && (
+          <style
+            id="server-tenant-branding-styles"
+            dangerouslySetInnerHTML={{ __html: brandingStyles }}
+          />
+        )}
       </head>
       <body className={`light`} suppressHydrationWarning>
         <PostHogProvider>

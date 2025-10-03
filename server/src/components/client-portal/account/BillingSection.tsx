@@ -182,7 +182,7 @@ export default function BillingSection() {
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading billing information...</div>;
+    return <div className="text-center py-8">{t('account.billing.loadingBillingInfo', 'Loading billing information...')}</div>;
   }
 
   if (error) {
@@ -197,14 +197,14 @@ export default function BillingSection() {
     <div className="space-y-8">
       {/* Billing Overview */}
       <section>
-        <h3 className="text-lg font-medium mb-4">Billing Overview</h3>
+        <h3 className="text-lg font-medium mb-4">{t('account.billing.overviewTitle', 'Billing Overview')}</h3>
         <Card className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h4 className="text-sm font-medium mb-2">Payment Methods</h4>
+              <h4 className="text-sm font-medium mb-2">{t('account.billing.paymentMethodsTitle', 'Payment Methods')}</h4>
               {paymentMethods.length === 0 ? (
                 <p className="text-sm text-gray-600 mb-4">
-                  No payment methods on file
+                  {t('account.billing.noPaymentMethods', 'No payment methods on file')}
                 </p>
               ) : (
                 <div className="space-y-4">
@@ -215,7 +215,7 @@ export default function BillingSection() {
                           {method.type === 'credit_card' ? '•••• ' : ''}
                           {method.last4}
                           {method.expMonth && method.expYear && ` (${method.expMonth}/${method.expYear})`}
-                          {method.isDefault && ' (Default)'}
+                          {method.isDefault && ` ${t('account.billing.labels.defaultTag', '(Default)')}`}
                         </p>
                       </div>
                       <div className="flex space-x-2">
@@ -226,7 +226,7 @@ export default function BillingSection() {
                             size="sm"
                             onClick={() => handleSetDefaultPayment(method.id)}
                           >
-                            Set Default
+                            {t('account.billing.actions.setDefault', 'Set Default')}
                           </Button>
                         )}
                         <Button
@@ -235,7 +235,7 @@ export default function BillingSection() {
                           size="sm"
                           onClick={() => handleRemovePayment(method.id)}
                         >
-                          Remove
+                          {t('account.billing.actions.remove', 'Remove')}
                         </Button>
                       </div>
                     </div>
@@ -248,13 +248,13 @@ export default function BillingSection() {
                 className="mt-4"
                 onClick={() => setIsAddingPayment(true)}
               >
-                Add Payment Method
+                {t('account.billing.actions.addPaymentMethod', 'Add Payment Method')}
               </Button>
             </div>
             <div>
-              <h4 className="text-sm font-medium mb-2">Billing Cycle</h4>
+              <h4 className="text-sm font-medium mb-2">{t('account.billing.billingCycleTitle', 'Billing Cycle')}</h4>
               <p className="text-sm text-gray-600">
-                {billingCycles[0]?.period || 'No billing cycle found'}
+                {billingCycles[0]?.period || t('account.billing.noBillingCycle', 'No billing cycle found')}
               </p>
             </div>
           </div>
@@ -265,11 +265,11 @@ export default function BillingSection() {
       <Dialog isOpen={isAddingPayment} onClose={() => setIsAddingPayment(false)}>
         <DialogContent>
           <form onSubmit={handleAddPayment} className="space-y-4">
-            <h3 className="text-lg font-medium">Add Payment Method</h3>
+            <h3 className="text-lg font-medium">{t('account.billing.actions.addPaymentMethod', 'Add Payment Method')}</h3>
             
             <div>
               <label htmlFor="cardNumber" className="block text-sm font-medium mb-1">
-                Card Number
+                {t('account.billing.fields.cardNumber', 'Card Number')}
               </label>
               <Input
                 id="cardNumber"
@@ -290,7 +290,7 @@ export default function BillingSection() {
             <div className="grid grid-cols-3 gap-4">
               <div>
                 <label htmlFor="expMonth" className="block text-sm font-medium mb-1">
-                  Month
+                  {t('account.billing.fields.expiryMonth', 'Month')}
                 </label>
                 <Input
                   id="expMonth"
@@ -310,7 +310,7 @@ export default function BillingSection() {
 
               <div>
                 <label htmlFor="expYear" className="block text-sm font-medium mb-1">
-                  Year
+                  {t('account.billing.fields.expiryYear', 'Year')}
                 </label>
                 <Input
                   id="expYear"
@@ -330,7 +330,7 @@ export default function BillingSection() {
 
               <div>
                 <label htmlFor="cvv" className="block text-sm font-medium mb-1">
-                  CVV
+                  {t('account.billing.fields.cvv', 'CVV')}
                 </label>
                 <Input
                   id="cvv"
@@ -359,6 +359,9 @@ export default function BillingSection() {
                   setDefault: (e.target as HTMLInputElement).checked
                 }))}
               />
+              <label htmlFor="setDefault" className="text-sm">
+                {t('account.billing.fields.setAsDefault', 'Set as default payment method')}
+              </label>
             </div>
 
             {addPaymentError && (
@@ -373,14 +376,16 @@ export default function BillingSection() {
                 onClick={() => setIsAddingPayment(false)}
                 disabled={isProcessing}
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </Button>
               <Button
                 id="submit-add-payment"
                 type="submit"
                 disabled={isProcessing}
               >
-                {isProcessing ? 'Adding...' : 'Add Payment Method'}
+                {isProcessing
+                  ? t('account.billing.actions.adding', 'Adding...')
+                  : t('account.billing.actions.addPaymentMethod', 'Add Payment Method')}
               </Button>
             </div>
           </form>
@@ -389,15 +394,15 @@ export default function BillingSection() {
 
       {/* Recent Invoices */}
       <section>
-        <h3 className="text-lg font-medium mb-4">Recent Invoices</h3>
+        <h3 className="text-lg font-medium mb-4">{t('account.billing.recentInvoicesTitle', 'Recent Invoices')}</h3>
         <Table>
           <thead>
             <tr>
-              <th>Invoice #</th>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>{t('billing.invoice.number', 'Invoice #')}</th>
+              <th>{t('billing.invoice.date', 'Invoice Date')}</th>
+              <th>{t('billing.invoice.amount', 'Amount')}</th>
+              <th>{t('billing.invoice.status', 'Status')}</th>
+              <th>{t('clientPortal.common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -424,7 +429,7 @@ export default function BillingSection() {
                   </td>
                   <td>
                     <Button id={`view-invoice-${invoice.id}`} variant="ghost" size="sm">
-                      View
+                      {t('account.billing.actions.view', 'View')}
                     </Button>
                   </td>
                 </tr>
@@ -436,21 +441,21 @@ export default function BillingSection() {
 
       {/* Billing History */}
       <section>
-        <h3 className="text-lg font-medium mb-4">Billing History</h3>
+        <h3 className="text-lg font-medium mb-4">{t('account.billing.billingHistoryTitle', 'Billing History')}</h3>
         <Table>
           <thead>
             <tr>
-              <th>Period</th>
-              <th>Start Date</th>
-              <th>End Date</th>
-              <th>Status</th>
+              <th>{t('account.billing.history.period', 'Period')}</th>
+              <th>{t('account.billing.history.startDate', 'Start Date')}</th>
+              <th>{t('account.billing.history.endDate', 'End Date')}</th>
+              <th>{t('account.billing.history.status', 'Status')}</th>
             </tr>
           </thead>
           <tbody>
             {billingCycles.length === 0 ? (
               <tr>
                 <td colSpan={4} className="text-center py-4 text-gray-500">
-                  No billing history available
+                  {t('account.billing.history.empty', 'No billing history available')}
                 </td>
               </tr>
             ) : (

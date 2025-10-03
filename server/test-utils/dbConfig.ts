@@ -28,71 +28,73 @@ export function verifyTestDatabase(dbName: string): void {
  * @returns Knex instance configured for testing
  */
 export async function createTestDbConnection(): Promise<Knex> {
-  const dbName = 'sebastian_test';
+  const dbName = process.env.DB_NAME_SERVER || 'sebastian_test';
   verifyTestDatabase(dbName);
 
-  // Always use port 5432 for tests to connect directly to PostgreSQL
-  // This bypasses pgbouncer which may be on port 6432 in the .env file
-  const testPort = 5432;
+  const baseConnection = await buildBaseConnectionConfig();
+  await ensureTestDatabaseExists(dbName, baseConnection);
 
-  const password = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
-
-  // First, connect to postgres database to check if test database exists
-  const adminConfig: Knex.Config = {
+  return knex({
     client: 'pg',
     connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: testPort,
-      user: process.env.DB_USER_ADMIN || 'postgres',
-      password,
-      database: 'postgres',
-    },
-  };
-
-  const adminDb = knex(adminConfig);
-
-  try {
-    // Check if test database exists
-    const { rows } = await adminDb.raw(
-      `SELECT 1 FROM pg_database WHERE datname = ?`,
-      [dbName]
-    );
-
-    // Create database if it doesn't exist
-    if (rows.length === 0) {
-      console.log(`Creating test database: ${dbName}`);
-      await adminDb.raw(`CREATE DATABASE ${dbName}`);
-    }
-  } finally {
-    await adminDb.destroy();
-  }
-
-  // Now connect to the test database
-  const config: Knex.Config = {
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST || 'localhost',
-      port: testPort,
-      user: process.env.DB_USER_ADMIN || 'postgres',
-      password,
-      database: dbName,
+      ...baseConnection,
+      database: dbName
     },
     asyncStackTraces: true,
     pool: {
       min: 2,
-      max: 20,
+      max: 20
     },
     migrations: {
-      directory: path.join(serverRoot, 'migrations'),
+      directory: path.join(serverRoot, 'migrations')
     },
     seeds: {
-      directory: path.join(serverRoot, 'seeds', 'dev'),
-    },
+      directory: path.join(serverRoot, 'seeds', 'dev')
+    }
+  });
+}
+
+async function buildBaseConnectionConfig(): Promise<Knex.StaticConnectionConfig> {
+  const directHost = process.env.DB_DIRECT_HOST || process.env.DB_HOST || 'localhost';
+  const directPort = Number(process.env.DB_DIRECT_PORT || 5432);
+
+  return {
+    host: directHost,
+    port: directPort,
+    user: process.env.DB_USER_ADMIN || 'postgres',
+    password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password')
   };
+}
 
-  console.log(config);
+async function ensureTestDatabaseExists(
+  databaseName: string,
+  baseConnection: Knex.StaticConnectionConfig
+): Promise<void> {
+  const adminDb = knex({
+    client: 'pg',
+    connection: {
+      ...baseConnection,
+      database: 'postgres'
+    },
+    pool: {
+      min: 1,
+      max: 2
+    }
+  });
 
-  return knex(config);
+  try {
+    const { rows } = await adminDb.raw('SELECT 1 FROM pg_database WHERE datname = ?', [databaseName]);
+    if (!rows?.length) {
+      const safeDbName = databaseName.replace(/"/g, '""');
+      await adminDb.raw(`CREATE DATABASE "${safeDbName}"`);
+    }
+  } catch (error) {
+    if (!/already exists/i.test(String(error))) {
+      throw error;
+    }
+  } finally {
+    await adminDb.destroy().catch(() => undefined);
+  }
 }
 
 /**
