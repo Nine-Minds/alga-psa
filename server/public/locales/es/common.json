@@ -81,7 +81,7 @@
       "tenantNotFound": "Inquilino no encontrado en la sesión. Cierra sesión y vuelve a entrar.",
       "userNotFound": "Usuario no encontrado",
       "contactNotFound": "Usuario no asociado a un contacto",
-      "companyNotFound": "El contacto no está asociado a una empresa"
+      "clientNotFound": "El contacto no está asociado a una empresa"
     },
     "permissions": {
       "tickets": {
@@ -127,7 +127,7 @@
       "notSet": "Sin definir",
       "notSetWithSource": "Sin definir (Usa {{source}}: {{languageName}} - {{locale}})",
       "source": {
-        "company": "predeterminado de la empresa",
+        "client": "predeterminado de la empresa",
         "tenant": "predeterminado del inquilino",
         "system": "predeterminado del sistema"
       }
@@ -135,11 +135,11 @@
   },
   "yes": "Sí",
   "no": "No",
-  "companies": {
+  "clients": {
     "locations": {
       "sectionTitle": "Ubicaciones de la empresa",
       "manageButton": "Gestionar ubicaciones",
-      "dialogTitle": "Gestionar ubicaciones - {{company}}",
+      "dialogTitle": "Gestionar ubicaciones - {{client}}",
       "managerLabel": "Gestor de ubicaciones de la empresa",
       "listTitle": "Ubicaciones",
       "buttons": {

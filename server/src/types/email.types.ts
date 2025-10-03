@@ -225,7 +225,7 @@ export interface InboundTicketDefaults {
   board_id?: string;
   status_id?: string;
   priority_id?: string;
-  company_id?: string;
+  client_id?: string;
   entered_by?: string | null;
   category_id?: string;
   subcategory_id?: string;
@@ -243,7 +243,7 @@ export interface TicketFieldOptions {
   statuses: Array<{ id: string; name: string; is_default?: boolean }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
   categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
-  companies: Array<{ id: string; name: string }>;
+  clients: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string; username: string }>;
-  locations: Array<{ id: string; name: string; company_id: string }>;
+  locations: Array<{ id: string; name: string; client_id: string }>;
 }

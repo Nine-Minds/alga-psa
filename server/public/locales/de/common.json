@@ -78,7 +78,7 @@
       "tenantNotFound": "Mandant wurde in der Sitzung nicht gefunden. Bitte ab- und wieder anmelden.",
       "userNotFound": "Benutzer nicht gefunden",
       "contactNotFound": "Benutzer ist keinem Kontakt zugeordnet",
-      "companyNotFound": "Kontakt ist keinem Unternehmen zugeordnet"
+      "clientNotFound": "Kontakt ist keinem Unternehmen zugeordnet"
     },
     "permissions": {
       "tickets": {
@@ -124,7 +124,7 @@
       "notSet": "Nicht festgelegt",
       "notSetWithSource": "Nicht festgelegt (verwendet {{source}}: {{languageName}} - {{locale}})",
       "source": {
-        "company": "Unternehmensstandard",
+        "client": "Unternehmensstandard",
         "tenant": "Mandantenstandard",
         "system": "Systemstandard"
       }
@@ -132,11 +132,11 @@
   },
   "yes": "Ja",
   "no": "Nein",
-  "companies": {
+  "clients": {
     "locations": {
       "sectionTitle": "Standorte des Unternehmens",
       "manageButton": "Standorte verwalten",
-      "dialogTitle": "Standorte verwalten - {{company}}",
+      "dialogTitle": "Standorte verwalten - {{client}}",
       "managerLabel": "Standortmanager des Unternehmens",
       "listTitle": "Standorte",
       "buttons": {

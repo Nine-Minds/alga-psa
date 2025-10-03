@@ -22,7 +22,7 @@ interface Args {
   email: string;
   firstName?: string;
   lastName?: string;
-  companyName?: string;
+  clientName?: string;
   password?: string;
   help?: boolean;
 }
@@ -33,7 +33,7 @@ const args = parse<Args>(
     email: { type: String, description: 'Admin user email' },
     firstName: { type: String, optional: true, defaultValue: 'Admin', description: 'Admin first name' },
     lastName: { type: String, optional: true, defaultValue: 'User', description: 'Admin last name' },
-    companyName: { type: String, optional: true, description: 'Company name (defaults to tenant name)' },
+    clientName: { type: String, optional: true, description: 'Client name (defaults to tenant name)' },
     password: { type: String, optional: true, description: 'Admin password (generated if not provided)' },
     help: { type: Boolean, optional: true, alias: 'h', description: 'Show help' }
   },
@@ -75,13 +75,13 @@ async function main() {
         lastName: args.lastName || 'User',
         email: args.email
       },
-      companyName: args.companyName || args.tenant
+      clientName: args.clientName || args.tenant
     });
 
     console.log('\n✅ Tenant created successfully!');
     console.log(`Tenant ID: ${result.tenantId}`);
     console.log(`Admin User ID: ${result.adminUserId}`);
-    console.log(`Company ID: ${result.companyId}`);
+    console.log(`Client ID: ${result.clientId}`);
     console.log(`Admin Email: ${args.email}`);
     console.log(`Temporary Password: ${result.temporaryPassword}`);
 

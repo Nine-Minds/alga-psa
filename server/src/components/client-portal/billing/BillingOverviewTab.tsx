@@ -6,7 +6,7 @@ import { Card } from 'server/src/components/ui/Card';
 import { Package, FileText, AlertCircle } from 'lucide-react';
 import BucketUsageChart from './BucketUsageChart';
 import type {
-  ICompanyBillingPlan
+  IClientBillingPlan
 } from 'server/src/interfaces/billing.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
@@ -18,7 +18,7 @@ import { useTranslation } from 'server/src/lib/i18n/client';
 const SHOW_USAGE_FEATURES = false;
 
 interface BillingOverviewTabProps {
-  billingPlan: ICompanyBillingPlan | null;
+  billingPlan: IClientBillingPlan | null;
   invoices: InvoiceViewModel[];
   bucketUsage: ClientBucketUsageResult[];
   isBucketUsageLoading: boolean;

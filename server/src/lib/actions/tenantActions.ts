@@ -15,7 +15,7 @@ export async function getCurrentTenant(): Promise<string | null> {
   }
 }
 
-export async function getTenantDetails(): Promise<Tenant & { companies: TenantCompany[] }> {
+export async function getTenantDetails(): Promise<Tenant & { clients: TenantCompany[] }> {
   const tenantId = await getCurrentTenant();
   if (!tenantId) throw new Error('No tenant found');
 
@@ -25,14 +25,14 @@ export async function getTenantDetails(): Promise<Tenant & { companies: TenantCo
       .select('*')
       .where('tenant', tenantId);
 
-    const companies = await trx('tenant_companies as tc')
-      .join('companies as c', function() {
-        this.on('tc.company_id', '=', 'c.company_id')
+    const clients = await trx('tenant_companies as tc')
+      .join('clients as c', function() {
+        this.on('tc.client_id', '=', 'c.client_id')
             .andOn('tc.tenant', '=', 'c.tenant');
       })
       .select(
-        'c.company_id',
-        'c.company_name',
+        'c.client_id',
+        'c.client_name',
         'tc.is_default',
         'tc.created_at',
         'tc.updated_at'
@@ -42,7 +42,7 @@ export async function getTenantDetails(): Promise<Tenant & { companies: TenantCo
 
     return {
       ...tenantDetails,
-      companies
+      clients
     };
   });
 }
@@ -55,11 +55,11 @@ export async function updateTenantName(name: string): Promise<void> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('tenants')
       .where('tenant', tenantId)
-      .update({ company_name: name });
+      .update({ client_name: name });
   });
 }
 
-export async function addCompanyToTenant(companyId: string): Promise<void> {
+export async function addClientToTenant(clientId: string): Promise<void> {
   const tenantId = await getCurrentTenant();
   if (!tenantId) throw new Error('No tenant found');
 
@@ -68,13 +68,13 @@ export async function addCompanyToTenant(companyId: string): Promise<void> {
     await trx('tenant_companies')
       .insert({
         tenant: tenantId,
-        company_id: companyId,
+        client_id: clientId,
         is_default: false
       });
   });
 }
 
-export async function removeCompanyFromTenant(companyId: string): Promise<void> {
+export async function removeClientFromTenant(clientId: string): Promise<void> {
   const tenantId = await getCurrentTenant();
   if (!tenantId) throw new Error('No tenant found');
 
@@ -82,12 +82,12 @@ export async function removeCompanyFromTenant(companyId: string): Promise<void> 
   return withTransaction(db, async (trx: Knex.Transaction) => {
     await trx('tenant_companies')
       .where('tenant', tenantId)
-      .where('company_id', companyId)
+      .where('client_id', clientId)
       .update({ deleted_at: trx.fn.now() });
   });
 }
 
-export async function setDefaultCompany(companyId: string): Promise<void> {
+export async function setDefaultClient(clientId: string): Promise<void> {
   const tenantId = await getCurrentTenant();
   if (!tenantId) throw new Error('No tenant found');
 
@@ -102,7 +102,7 @@ export async function setDefaultCompany(companyId: string): Promise<void> {
     // Set new default
     await trx('tenant_companies')
       .where('tenant', tenantId)
-      .where('company_id', companyId)
+      .where('client_id', clientId)
       .update({ is_default: true });
   });
 }

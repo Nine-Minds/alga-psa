@@ -2512,7 +2512,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             type="email"
             value={data.supportEmail}
             onChange={(e) => updateData({ supportEmail: e.target.value })}
-            placeholder="support@yourcompany.com"
+            placeholder="support@yourclient.com"
           />
           <p className="text-xs text-gray-600">
             This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system.

@@ -24,7 +24,7 @@ interface QboCredentials {
 export interface QboConnectionStatus { // Exporting for use in UI components
   connected: boolean; // Added to match client expectation
   status: 'Connected' | 'Not Connected' | 'Error';
-  companyName?: string;
+  clientName?: string;
   realmId?: string;
   errorMessage?: string; // Renamed from 'error' for clarity
 }
@@ -67,29 +67,29 @@ async function deleteTenantQboCredentials(secretProvider: ISecretProvider, tenan
 
 // --- QBO API Call Helper ---
 
-interface QboCompanyInfoResponse {
-  CompanyInfo: {
-    CompanyName: string;
+interface QboClientInfoResponse {
+  ClientInfo: {
+    ClientName: string;
     // Add other fields if needed
   }
 }
 
-async function getQboCompanyName(accessToken: string, realmId: string): Promise<string | null> {
-  const url = `${QBO_BASE_URL}/v3/company/${realmId}/companyinfo/${realmId}`;
+async function getQboClientName(accessToken: string, realmId: string): Promise<string | null> {
+  const url = `${QBO_BASE_URL}/v3/client/${realmId}/clientinfo/${realmId}`;
   try {
-    const response = await axios.get<QboCompanyInfoResponse>(url, {
+    const response = await axios.get<QboClientInfoResponse>(url, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Accept': 'application/json',
       },
       timeout: 10000, // 10 seconds timeout
     });
-    return response.data?.CompanyInfo?.CompanyName || null;
+    return response.data?.ClientInfo?.ClientName || null;
   } catch (error: any) {
-    console.error(`Error fetching QBO Company Info for realm ${realmId}:`, error.response?.data || error.message);
+    console.error(`Error fetching QBO Client Info for realm ${realmId}:`, error.response?.data || error.message);
     // Handle specific errors like 401 Unauthorized (token expired/invalid)
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      console.warn(`QBO API returned 401 for Company Info fetch (Realm: ${realmId}). Token may need refresh.`);
+      console.warn(`QBO API returned 401 for Client Info fetch (Realm: ${realmId}). Token may need refresh.`);
     }
     return null; // Return null on error
   }
@@ -218,14 +218,14 @@ export async function getQboConnectionStatus(): Promise<QboConnectionStatus> {
         console.log(`QBO Status Action: Attempting to create client for tenant ${tenantId}, realm ${realmId}`);
         const qboClient = await QboClientService.create(tenantId, realmId);
         
-        // Try to fetch company info using the client (this will use refreshed tokens)
-        const companyInfoResult = await qboClient.query<any>(`SELECT CompanyName FROM CompanyInfo`);
-        const companyName = companyInfoResult?.[0]?.CompanyName || 'Unknown Company';
+        // Try to fetch client info using the client (this will use refreshed tokens)
+        const clientInfoResult = await qboClient.query<any>(`SELECT ClientName FROM ClientInfo`);
+        const clientName = clientInfoResult?.[0]?.ClientName || 'Unknown Client';
 
-        console.log(`QBO Status Action: Successfully connected for tenant ${tenantId}, Realm: ${realmId}, Company: ${companyName}`);
+        console.log(`QBO Status Action: Successfully connected for tenant ${tenantId}, Realm: ${realmId}, Client: ${clientName}`);
         return {
           status: 'Connected',
-          companyName: companyName,
+          clientName: clientName,
           realmId: realmId,
           connected: true,
         };
@@ -448,7 +448,7 @@ export async function getQboTaxCodes(): Promise<QboTaxCode[]> {
     console.log(`[QBO Action] Fetching TaxCodes for tenant ${tenantId}, realm ${validRealmId}`);
 
     const query = 'SELECT Id, Name FROM TaxCode MAXRESULTS 1000';
-    const queryUrl = `${QBO_BASE_URL}/v3/company/${validRealmId}/query?query=${encodeURIComponent(query)}`;
+    const queryUrl = `${QBO_BASE_URL}/v3/client/${validRealmId}/query?query=${encodeURIComponent(query)}`;
 
     const response = await axios.get(queryUrl, {
         headers: {
@@ -527,7 +527,7 @@ export async function getQboTerms(): Promise<QboTerm[]> {
     console.log(`[QBO Action] Fetching Terms for tenant ${tenantId}, realm ${validRealmId}`);
 
     const query = 'SELECT Id, Name FROM Term MAXRESULTS 1000';
-    const queryUrl = `${QBO_BASE_URL}/v3/company/${validRealmId}/query?query=${encodeURIComponent(query)}`;
+    const queryUrl = `${QBO_BASE_URL}/v3/client/${validRealmId}/query?query=${encodeURIComponent(query)}`;
 
     const response = await axios.get(queryUrl, {
         headers: {

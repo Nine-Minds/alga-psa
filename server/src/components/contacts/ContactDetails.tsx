@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -30,14 +30,14 @@ import { getTicketFormOptions } from 'server/src/lib/actions/ticket-actions/opti
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { TagManager } from 'server/src/components/tags';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { useTags } from 'server/src/context/TagContext';
 import ContactAvatarUpload from 'server/src/components/client-portal/contacts/ContactAvatarUpload';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import ClientAvatar from 'server/src/components/ui/ClientAvatar';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { ContactPortalTab } from './ContactPortalTab';
 
 const SwitchDetailItem: React.FC<{
@@ -127,7 +127,7 @@ const DateDetailItem: React.FC<{
 interface ContactDetailsProps {
   id?: string;
   contact: IContact;
-  companies: ICompany[];
+  clients: IClient[];
   documents?: IDocument[];
   isInDrawer?: boolean;
   quickView?: boolean;
@@ -145,7 +145,7 @@ interface ContactDetailsProps {
 const ContactDetails: React.FC<ContactDetailsProps> = ({
   id = 'contact-details',
   contact,
-  companies,
+  clients,
   documents = [],
   isInDrawer = false,
   quickView = false,
@@ -167,8 +167,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
   const { tags: allTags } = useTags();
-  const [isEditingCompany, setIsEditingCompany] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [ticketFormOptions, setTicketFormOptions] = useState<{
@@ -209,7 +209,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   useEffect(() => {
     setEditedContact(contact);
     setOriginalContact(contact);
-    setSelectedCompanyId(contact.company_id || null);
+    setSelectedClientId(contact.client_id || null);
     setHasUnsavedChanges(false);
   }, [contact]);
 
@@ -316,11 +316,11 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setTags(updatedTags);
   };
 
-  const handleCompanyClick = async () => {
-    if (editedContact.company_id) {
+  const handleClientClick = async () => {
+    if (editedContact.client_id) {
       try {
-        const company = await getCompanyById(editedContact.company_id);
-        if (company) {
+        const client = await getClientById(editedContact.client_id);
+        if (client) {
           // In quick view mode, avoid URL manipulation to prevent navigation issues
           if (!quickView) {
             // Use router to temporarily set tab to details for the drawer
@@ -333,23 +333,23 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           const delay = quickView ? 0 : 10;
           setTimeout(() => {
             drawer.openDrawer(
-              <CompanyDetails 
-                company={company} 
-                documents={[]} 
-                contacts={[]} 
+              <ClientDetails
+                client={client}
+                documents={[]}
+                contacts={[]}
                 isInDrawer={true}
                 quickView={true}
               />
             );
           }, delay);
         } else {
-          console.error('Company not found');
+          console.error('Client not found');
         }
       } catch (error) {
-        console.error('Error fetching company details:', error);
+        console.error('Error fetching client details:', error);
       }
     } else {
-      console.log('No company associated with this contact');
+      console.log('No client associated with this contact');
     }
   };
 
@@ -373,9 +373,9 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     router.push(`${pathname}?${params.toString()}`);
   };
 
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.company_id === companyId);
-    return company ? company.company_name : 'Unknown Company';
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c.client_id === clientId);
+    return client ? client.client_name : 'Unknown Client';
   };
 
   const formatDateForDisplay = (dateString: string | null | undefined): string => {
@@ -396,20 +396,20 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               onEdit={(value) => handleFieldChange('full_name', value)}
             />
             <div className="space-y-2">
-              <Text as="label" size="2" className="text-gray-700 font-medium">Company</Text>
-              {isEditingCompany ? (
-                // Show company picker when editing
+              <Text as="label" size="2" className="text-gray-700 font-medium">Client</Text>
+              {isEditingClient ? (
+                // Show client picker when editing
                 <div className="flex items-center gap-2">
                   <div className="flex-1">
-                    <CompanyPicker
-                      id="contact-company-picker"
-                      onSelect={(companyId) => {
-                        handleFieldChange('company_id', companyId || '');
-                        setSelectedCompanyId(companyId);
-                        setIsEditingCompany(false);
+                    <ClientPicker
+                      id="contact-client-picker"
+                      onSelect={(clientId) => {
+                        handleFieldChange('client_id', clientId || '');
+                        setSelectedClientId(clientId);
+                        setIsEditingClient(false);
                       }}
-                      selectedCompanyId={selectedCompanyId}
-                      companies={companies}
+                      selectedClientId={selectedClientId}
+                      clients={clients}
                       filterState={filterState}
                       onFilterStateChange={setFilterState}
                       clientTypeFilter={clientTypeFilter}
@@ -418,26 +418,26 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
                   </div>
                 </div>
               ) : (
-                // Display company with edit button
+                // Display client with edit button
                 <div className="flex items-center justify-between">
-                  {editedContact.company_id ? (
-                    <div className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 rounded px-2 flex-1" onClick={handleCompanyClick}>
-                      <CompanyAvatar 
-                        companyId={editedContact.company_id}
-                        companyName={getCompanyName(editedContact.company_id)}
-                        logoUrl={companies.find(c => c.company_id === editedContact.company_id)?.logoUrl || null}
+                  {editedContact.client_id ? (
+                    <div className="flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 rounded px-2 flex-1" onClick={handleClientClick}>
+                      <ClientAvatar 
+                        clientId={editedContact.client_id}
+                        clientName={getClientName(editedContact.client_id)}
+                        logoUrl={clients.find(c => c.client_id === editedContact.client_id)?.logoUrl || null}
                         size="sm"
                       />
-                      <span className="text-blue-500 hover:underline text-sm">{getCompanyName(editedContact.company_id)}</span>
+                      <span className="text-blue-500 hover:underline text-sm">{getClientName(editedContact.client_id)}</span>
                     </div>
                   ) : (
-                    <span className="text-gray-500 italic text-sm py-2 px-2">No company assigned</span>
+                    <span className="text-gray-500 italic text-sm py-2 px-2">No client assigned</span>
                   )}
                   <Button
-                    id="edit-company-btn"
+                    id="edit-client-btn"
                     variant="ghost"
                     size="sm"
-                    onClick={() => setIsEditingCompany(true)}
+                    onClick={() => setIsEditingClient(true)}
                     className="p-1"
                   >
                     <Pencil className="h-3 w-3 text-gray-600" />
@@ -512,8 +512,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             <ContactTickets 
               contactId={editedContact.contact_name_id}
               contactName={editedContact.full_name}
-              companyId={editedContact.company_id || ''}
-              companyName={getCompanyName(editedContact.company_id || '')}
+              clientId={editedContact.client_id || ''}
+              clientName={getClientName(editedContact.client_id || '')}
               initialBoards={ticketFormOptions.boardOptions}
               initialStatuses={ticketFormOptions.statusOptions}
               initialPriorities={ticketFormOptions.priorityOptions}
@@ -555,7 +555,7 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           <InteractionsFeed
             entityId={editedContact.contact_name_id}
             entityType="contact"
-            companyId={editedContact.company_id!}
+            clientId={editedContact.client_id!}
             interactions={interactions}
             setInteractions={setInteractions}
           />

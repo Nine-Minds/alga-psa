@@ -50,7 +50,7 @@ interface SelectOption {
   assigned_to?: string;
   board_id?: string;
   priority_id?: string;
-  company_id?: string;
+  client_id?: string;
 }
 
 interface TicketDetails {
@@ -84,7 +84,7 @@ export default function TaskTicketLinks({
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedBoard, setSelectedBoard] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedClient, setSelectedClient] = useState('');
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
   const [boards, setBoards] = useState<IBoard[]>([]);
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([
@@ -94,7 +94,7 @@ export default function TaskTicketLinks({
     { value: 'all', label: 'All Priorities' }
   ]);
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
-  const [companyOptions, setCompanyOptions] = useState<SelectOption[]>([]);
+  const [clientOptions, setClientOptions] = useState<SelectOption[]>([]);
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedTicketId, setSelectedTicketId] = useState('');
 
@@ -388,7 +388,7 @@ export default function TaskTicketLinks({
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
           initialBoard={ticketData.board}
-          initialCompany={ticketData.company}
+          initialClient={ticketData.client}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
@@ -397,7 +397,7 @@ export default function TaskTicketLinks({
           boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
-          initialCompanies={ticketData.companies}
+          initialClients={ticketData.clients}
           initialAgentSchedules={ticketData.agentSchedules}
           initialUserMap={ticketData.userMap}
           initialAvailableAgents={ticketData.availableAgents}

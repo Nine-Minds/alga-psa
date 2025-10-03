@@ -111,7 +111,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
             <p>{result.error || "Failed to send invitation"}</p>
             {result.error?.includes('default location') && (
               <p className="text-sm mt-1">
-                Configure a default location with email in Company Settings → Locations
+                Configure a default location with email in Client Settings → Locations
               </p>
             )}
           </div>
@@ -291,7 +291,7 @@ export function ContactPortalTab({ contact, currentUserPermissions }: ContactPor
                   <Info className="h-4 w-4" />
                   <AlertDescription>
                     Invitation emails will be sent from your organization's email system. 
-                    Replies will go to your company's default location email address.
+                    Replies will go to your client's default location email address.
                   </AlertDescription>
                 </Alert>
                 <div className="flex items-center justify-between">

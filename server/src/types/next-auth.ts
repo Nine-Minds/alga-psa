@@ -6,7 +6,7 @@ declare module "next-auth" {
         proToken: string;
         tenant?: string;
         user_type: string;
-        companyId?: string;
+        clientId?: string;
         contactId?: string;
     }
 
@@ -20,7 +20,7 @@ declare module "next-auth" {
             proToken: string;
             tenant?: string;
             user_type: string;
-            companyId?: string;
+            clientId?: string;
             contactId?: string;
         };
     }
@@ -34,7 +34,7 @@ declare module "next-auth" {
         proToken: string;
         tenant?: string;
         user_type: string;
-        companyId?: string;
+        clientId?: string;
         contactId?: string;
     }
 }

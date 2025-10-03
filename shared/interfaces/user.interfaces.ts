@@ -85,7 +85,7 @@ export interface CreatePortalUserInput {
   email: string;
   password: string;
   contactId: string;
-  companyId: string;
+  clientId: string;
   tenantId: string;
   firstName?: string;
   lastName?: string;
@@ -107,8 +107,8 @@ export interface CreatePortalUserResult {
  * Portal user with additional context
  */
 export interface PortalUserWithContext extends IUser {
-  company_id: string;
-  company_name?: string;
+  client_id: string;
+  client_name?: string;
   contact_name?: string;
   roles: IRole[];
 }

@@ -5,7 +5,7 @@
     "projects": "Projecten",
     "billing": "Facturatie",
     "assets": "Assets",
-    "companySettings": "Bedrijfsinstellingen",
+    "clientSettings": "Bedrijfsinstellingen",
     "profile": "Profiel",
     "signOut": "Afmelden",
     "clientPortal": "Klantenportaal",
@@ -95,7 +95,7 @@
       "updatedAt": "Laatst bijgewerkt",
       "assignedTo": "Toegewezen aan",
       "requester": "Aanvrager",
-      "company": "Bedrijf",
+      "client": "Bedrijf",
       "dueDate": "Vervaldatum",
       "resolution": "Oplossing",
       "timeSpent": "Bestede tijd",
@@ -133,7 +133,7 @@
       "userNotFound": "Gebruikers-ID niet gevonden in sessie",
       "tenantNotFound": "Tenant niet gevonden in sessie. Meld je af en weer aan.",
       "userNotAssociatedWithContact": "Gebruiker is niet gekoppeld aan een contact",
-      "contactNotAssociatedWithCompany": "Contact is niet gekoppeld aan een bedrijf. Neem contact op met support.",
+      "contactNotAssociatedWithClient": "Contact is niet gekoppeld aan een bedrijf. Neem contact op met support.",
       "ticketNotFound": "Ticket niet gevonden",
       "commentNotFound": "Reactie niet gevonden of geen toestemming",
       "noDefaultBoard": "Geen standaardkanaal geconfigureerd voor tickets",
@@ -343,7 +343,7 @@
     "title": "Mijn profiel",
     "personalInfo": "Persoonlijke gegevens",
     "contactInfo": "Contactgegevens",
-    "companyInfo": "Bedrijfsgegevens",
+    "clientInfo": "Bedrijfsgegevens",
     "preferences": "Voorkeuren",
     "security": "Beveiliging",
     "fields": {
@@ -354,7 +354,7 @@
       "mobile": "Mobiel nummer",
       "title": "Functietitel",
       "department": "Afdeling",
-      "company": "Bedrijf",
+      "client": "Bedrijf",
       "address": "Adres",
       "city": "Stad",
       "state": "Staat/Provincie",
@@ -434,33 +434,33 @@
       "deleteConfirm": "Weet je zeker dat je dit wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
     },
     "validation": {
-      "companyNameRequired": "Bedrijfsnaam is verplicht",
+      "clientNameRequired": "Bedrijfsnaam is verplicht",
       "emailRequired": "E-mail is verplicht",
       "emailInvalid": "Voer een geldig e-mailadres in",
       "phoneInvalid": "Voer een geldig telefoonnummer in",
       "addressInvalid": "Adres mag niet leeg zijn als het wordt ingevuld"
     }
   },
-  "companySettings": {
+  "clientSettings": {
     "title": "Bedrijfsinstellingen",
     "details": "Bedrijfsgegevens",
     "billing": "Facturatiegegevens",
     "description": "Beheer je bedrijfsinstellingen en configuraties.",
     "tabs": {
       "account": "Account",
-      "companyDetails": "Bedrijfsgegevens",
+      "clientDetails": "Bedrijfsgegevens",
       "userManagement": "Gebruikersbeheer"
     },
     "fields": {
-      "companyLogo": "Bedrijfslogo",
-      "companyName": "Bedrijfsnaam",
-      "companyLocations": "Bedrijfslocaties",
+      "clientLogo": "Bedrijfslogo",
+      "clientName": "Bedrijfsnaam",
+      "clientLocations": "Bedrijfslocaties",
       "manageLocations": "Locaties beheren",
       "mainOffice": "Hoofdkantoor",
       "warehouse": "Magazijn",
       "website": "Website",
       "industry": "Sector",
-      "companySize": "Bedrijfsgrootte",
+      "clientSize": "Bedrijfsgrootte",
       "annualRevenue": "Jaarlijkse omzet",
       "size": "Bedrijfsgrootte",
       "taxId": "BTW-nummer",
@@ -499,7 +499,7 @@
       "noRolesAssigned": "Geen rollen toegewezen",
       "assignRole": "Rol toewijzen",
       "resetPassword": "Wachtwoord resetten",
-      "companyNotFound": "Bedrijf niet gevonden",
+      "clientNotFound": "Bedrijf niet gevonden",
       "permissionError": "Je hebt geen toestemming om gebruikers te beheren",
       "loadError": "Gebruikers konden niet worden geladen",
       "emailExists": "Er bestaat al een contact met dit e-mailadres",
@@ -514,7 +514,7 @@
       "userRemoved": "Gebruiker succesvol verwijderd",
       "inviteSent": "Uitnodiging succesvol verzonden",
       "noPermission": "Je hebt geen toestemming voor toegang tot bedrijfsinstellingen",
-      "companyNotFound": "Bedrijf niet gevonden",
+      "clientNotFound": "Bedrijf niet gevonden",
       "detailsLoadError": "Bedrijfsgegevens laden is mislukt",
       "updateError": "Bijwerken van bedrijfsgegevens is mislukt"
     }

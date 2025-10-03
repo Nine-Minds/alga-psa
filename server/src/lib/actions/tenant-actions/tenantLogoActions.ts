@@ -52,7 +52,7 @@ export async function uploadTenantLogo(tenantId: string, formData: FormData) {
           // Keep existing colors
           primaryColor: existingSettings.branding?.primaryColor,
           secondaryColor: existingSettings.branding?.secondaryColor,
-          companyName: existingSettings.branding?.companyName,
+          clientName: existingSettings.branding?.clientName,
         }
       };
 
@@ -127,7 +127,7 @@ export async function deleteTenantLogo(tenantId: string) {
             // Keep existing colors
             primaryColor: existingSettings.branding?.primaryColor,
             secondaryColor: existingSettings.branding?.secondaryColor,
-            companyName: existingSettings.branding?.companyName,
+            clientName: existingSettings.branding?.clientName,
           }
         };
 

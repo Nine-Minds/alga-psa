@@ -85,17 +85,17 @@ export function generateLayout(dataString: string): string {
 
 function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionElement {
   // DSL: section header grid 12 x 3 {
-  //          field company.logo at 1 1 span 3 2
-  //          field company.name at 4 1 span 5 1
+  //          field client.logo at 1 1 span 3 2
+  //          field client.name at 4 1 span 5 1
   //          field invoice_number at 10 1 span 3 1
   //          field invoice_date at 10 2 span 3 1
   //      }
   
   // --- Logo Column ---
   let logoCol: ColumnElement;
-  // Check if tenantCompany and logoUrl exist
-  if (viewModel.tenantCompany != null && viewModel.tenantCompany!.logoUrl != null && viewModel.tenantCompany!.logoUrl!.length > 0) {
-    const logoElement = new ImageElement(viewModel.tenantCompany!.logoUrl!, "Tenant Company Logo");
+  // Check if tenantClient and logoUrl exist
+  if (viewModel.tenantClient != null && viewModel.tenantClient!.logoUrl != null && viewModel.tenantClient!.logoUrl!.length > 0) {
+    const logoElement = new ImageElement(viewModel.tenantClient!.logoUrl!, "Tenant Client Logo");
     
     // Apply proper sizing to logo
     const logoStyle = new PartialStyle();
@@ -109,25 +109,25 @@ function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionEle
   }
   logoCol.span = 3;
 
-  // --- Company Info Column ---
-  const tenantName = viewModel.tenantCompany != null && viewModel.tenantCompany!.name != null ? 
-                    viewModel.tenantCompany!.name! : 
+  // --- Client Info Column ---
+  const tenantName = viewModel.tenantClient != null && viewModel.tenantClient!.name != null ? 
+                    viewModel.tenantClient!.name! : 
                     "[Tenant Name]";
-  const tenantAddress = viewModel.tenantCompany != null && viewModel.tenantCompany!.address != null ? 
-                        viewModel.tenantCompany!.address! : 
+  const tenantAddress = viewModel.tenantClient != null && viewModel.tenantClient!.address != null ? 
+                        viewModel.tenantClient!.address! : 
                         "[Tenant Address]";
   
-  const companyInfoCol = new ColumnElement([
+  const clientInfoCol = new ColumnElement([
     new TextElement(tenantName, "heading3"),
     new TextElement(tenantAddress)
   ]);
-  companyInfoCol.span = 5;
+  clientInfoCol.span = 5;
   
-  // Apply padding to company info
-  const companyInfoStyle = new PartialStyle();
-  companyInfoStyle.paddingLeft = "0.5em";
-  companyInfoStyle.paddingTop = "0.5em";
-  applyStyle(companyInfoCol, instantiateStyle(companyInfoStyle));
+  // Apply padding to client info
+  const clientInfoStyle = new PartialStyle();
+  clientInfoStyle.paddingLeft = "0.5em";
+  clientInfoStyle.paddingTop = "0.5em";
+  applyStyle(clientInfoCol, instantiateStyle(clientInfoStyle));
 
   // --- Invoice Info Column ---
   const invoiceInfoCol = new ColumnElement([
@@ -157,7 +157,7 @@ function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionEle
   applyStyle(customerInfoCol, instantiateStyle(customerInfoStyle));
   
   // Create header rows
-  const headerRow1 = new RowElement([logoCol, companyInfoCol, invoiceInfoCol]);
+  const headerRow1 = new RowElement([logoCol, clientInfoCol, invoiceInfoCol]);
   const headerRow2 = new RowElement([customerInfoCol]);
   
   // Create and return the header section

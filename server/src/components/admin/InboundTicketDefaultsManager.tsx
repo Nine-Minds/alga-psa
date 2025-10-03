@@ -38,7 +38,7 @@ export function InboundTicketDefaultsManager({ onDefaultsChange }: InboundTicket
     statuses: [],
     priorities: [],
     categories: [],
-    companies: [],
+    clients: [],
     users: [],
     locations: []
   });

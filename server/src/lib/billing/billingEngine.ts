@@ -4,7 +4,7 @@ import {
   IBillingPeriod,
   IBillingResult,
   IBillingCharge,
-  ICompanyBillingPlan,
+  IClientBillingPlan,
   IBucketPlan,
   IBucketUsage,
   IBucketCharge,
@@ -15,7 +15,7 @@ import {
   IFixedPriceCharge,
   IProductCharge,
   ILicenseCharge,
-  ICompanyBillingCycle,
+  IClientBillingCycle,
   BillingCycleType
 } from 'server/src/interfaces/billing.interfaces';
 import {
@@ -29,16 +29,16 @@ import {
 // Use the Temporal polyfill for all date arithmetic and plain‐date handling
 import { Temporal } from '@js-temporal/polyfill';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getCompanyTaxRate
+import { getNextBillingDate } from 'server/src/lib/actions/billingAndTax'; // Removed getClientTaxRate
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
-import { ICompany } from 'server/src/interfaces';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { IClient } from 'server/src/interfaces';
 import { get } from 'http';
 // Removed TaxService import as it's no longer directly used here
 // Import necessary functions from invoiceService
-import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getCompanyDetails } from 'server/src/lib/services/invoiceService';
+import { calculateAndDistributeTax, updateInvoiceTotalsAndRecordTransaction, getClientDetails } from 'server/src/lib/services/invoiceService';
 import { v4 as uuidv4 } from 'uuid';
-import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/company-actions/companyTaxRateActions'; // Import the correct lookup function
+import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the correct lookup function
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig'; // Added import for new model
 import { string, number } from 'zod';
 import billingPlan from '../models/billingPlan';
@@ -112,25 +112,25 @@ export class BillingEngine {
   // Removed getDefaultTaxRatePercentage function as it uses outdated logic
   // and tax calculation is now delegated to invoiceService.
 
-  private async hasExistingInvoiceForCycle(companyId: string, billingCycleId: string): Promise<boolean> {
+  private async hasExistingInvoiceForCycle(clientId: string, billingCycleId: string): Promise<boolean> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const existingInvoice = await this.knex('invoices')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         billing_cycle_id: billingCycleId,
         tenant: this.tenant
       })
@@ -138,17 +138,17 @@ export class BillingEngine {
     return !!existingInvoice;
   }
 
-  async calculateBilling(companyId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
+  async calculateBilling(clientId: string, startDate: ISO8601String, endDate: ISO8601String, billingCycleId: string): Promise<IBillingResult & { error?: string }> {
     try {
       await this.initKnex();
-      const company = await getCompanyById(companyId);
-      console.log(`Calculating billing for company ${company?.company_name} (${companyId}) using billingCycleId: ${billingCycleId}`);
+      const client = await getClientById(clientId);
+      console.log(`Calculating billing for client ${client?.client_name} (${clientId}) using billingCycleId: ${billingCycleId}`);
 
       // Fetch the specific billing cycle record
-      const cycleRecord = await this.knex('company_billing_cycles')
+      const cycleRecord = await this.knex('client_billing_cycles')
         .where({
           billing_cycle_id: billingCycleId,
-          company_id: companyId, // Ensure it matches the company
+          client_id: clientId, // Ensure it matches the client
           tenant: this.tenant
         })
         .first();
@@ -160,12 +160,12 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          error: `Billing cycle ${billingCycleId} not found for company ${companyId}`
+          error: `Billing cycle ${billingCycleId} not found for client ${clientId}`
         };
       }
 
       // Check for existing invoice in this billing cycle (using the fetched cycleRecord)
-      const hasExistingInvoice = await this.hasExistingInvoiceForCycle(companyId, cycleRecord.billing_cycle_id);
+      const hasExistingInvoice = await this.hasExistingInvoiceForCycle(clientId, cycleRecord.billing_cycle_id);
       if (hasExistingInvoice) {
         // Return zero-amount billing result if already invoiced
         return {
@@ -191,10 +191,10 @@ export class BillingEngine {
         // Ensure effective_date is in the correct plain date format
         const effectivePlainDate = toPlainDate(cycleRecord.effective_date);
         periodStartDate = toISODate(effectivePlainDate); // Start date is the effective date
-        // Need company billing frequency to calculate end date accurately
+        // Need client billing frequency to calculate end date accurately
         // Use the cycle's effective date to determine the relevant frequency
-        const companyBillingFrequency = await this.getBillingCycle(companyId, periodStartDate);
-        const nextBillingDate = await getNextBillingDate(companyId, periodStartDate); // Pass the determined start date
+        const clientBillingFrequency = await this.getBillingCycle(clientId, periodStartDate);
+        const nextBillingDate = await getNextBillingDate(clientId, periodStartDate); // Pass the determined start date
         // The end date is one day before the start of the next cycle
         periodEndDate = toISODate(toPlainDate(nextBillingDate).subtract({ days: 1 }));
         console.log(`Calculated period: ${periodStartDate} to ${periodEndDate}`);
@@ -215,7 +215,7 @@ export class BillingEngine {
 
 
       // Validate that the billing period doesn't cross a cycle change
-      const validationResult = await this.validateBillingPeriod(companyId, periodStartDate, periodEndDate);
+      const validationResult = await this.validateBillingPeriod(clientId, periodStartDate, periodEndDate);
       if (!validationResult.success) {
         return {
           charges: [],
@@ -231,11 +231,11 @@ export class BillingEngine {
       let totalCharges: IBillingCharge[] = [];
 
       // Get billing plans and cycle
-      const plansResult = await this.getCompanyBillingPlansAndCycle(companyId, billingPeriod);
+      const plansResult = await this.getClientBillingPlansAndCycle(clientId, billingPeriod);
 
       // Type assertion to include error property
-      const { companyBillingPlans, billingCycle: cycle, error: plansError } = plansResult as {
-        companyBillingPlans: ICompanyBillingPlan[];
+      const { clientBillingPlans, billingCycle: cycle, error: plansError } = plansResult as {
+        clientBillingPlans: IClientBillingPlan[];
         billingCycle: string;
         error?: string;
       };
@@ -251,22 +251,22 @@ export class BillingEngine {
         };
       }
 
-      if (companyBillingPlans.length === 0) {
+      if (clientBillingPlans.length === 0) {
         return {
           charges: [],
           totalAmount: 0,
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          error: `No active billing plans found for company ${companyId} in the given period`
+          error: `No active billing plans found for client ${clientId} in the given period`
         };
       }
 
-      console.log(`Found ${companyBillingPlans.length} active billing plan(s) for company ${companyId}`);
+      console.log(`Found ${clientBillingPlans.length} active billing plan(s) for client ${clientId}`);
       console.log(`Billing cycle: ${cycle}`);
 
-      for (const companyBillingPlan of companyBillingPlans) {
-        console.log(`Processing billing plan: ${companyBillingPlan.plan_name}`);
+      for (const clientBillingPlan of clientBillingPlans) {
+        console.log(`Processing billing plan: ${clientBillingPlan.plan_name}`);
         const [
           fixedPriceCharges,
           timeBasedCharges,
@@ -275,12 +275,12 @@ export class BillingEngine {
           productCharges,
           licenseCharges
         ] = await Promise.all([
-          this.calculateFixedPriceCharges(companyId, billingPeriod, companyBillingPlan),
-          this.calculateTimeBasedCharges(companyId, billingPeriod, companyBillingPlan),
-          this.calculateUsageBasedCharges(companyId, billingPeriod, companyBillingPlan),
-          this.calculateBucketPlanCharges(companyId, billingPeriod, companyBillingPlan),
-          this.calculateProductCharges(companyId, billingPeriod, companyBillingPlan),
-          this.calculateLicenseCharges(companyId, billingPeriod, companyBillingPlan)
+          this.calculateFixedPriceCharges(clientId, billingPeriod, clientBillingPlan),
+          this.calculateTimeBasedCharges(clientId, billingPeriod, clientBillingPlan),
+          this.calculateUsageBasedCharges(clientId, billingPeriod, clientBillingPlan),
+          this.calculateBucketPlanCharges(clientId, billingPeriod, clientBillingPlan),
+          this.calculateProductCharges(clientId, billingPeriod, clientBillingPlan),
+          this.calculateLicenseCharges(clientId, billingPeriod, clientBillingPlan)
         ]);
 
         console.log(`Fixed price charges: ${fixedPriceCharges.length}`);
@@ -294,7 +294,7 @@ export class BillingEngine {
         console.log(`Total fixed charges before proration: $${(totalBeforeProration / 100).toFixed(2)} (${totalBeforeProration} cents)`);
 
         // Only prorate fixed price charges
-        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, companyBillingPlan.start_date, companyBillingPlan.end_date, cycle);
+        const proratedFixedCharges = this.applyProrationToPlan(fixedPriceCharges, billingPeriod, clientBillingPlan.start_date, clientBillingPlan.end_date, cycle);
 
         const totalAfterProration = proratedFixedCharges.reduce((sum: number, charge: IBillingCharge) => sum + charge.total, 0);
         console.log(`Total fixed charges after proration: $${(totalAfterProration / 100).toFixed(2)} (${totalAfterProration} cents)`);
@@ -342,7 +342,7 @@ export class BillingEngine {
           adjustments: [],
           finalAmount: totalAmount
         },
-        companyId,
+        clientId,
         billingPeriod
       );
 
@@ -364,49 +364,49 @@ export class BillingEngine {
     }
   }
 
-  private async getCompanyBillingPlansAndCycle(companyId: string, billingPeriod: IBillingPeriod): Promise<{ companyBillingPlans: ICompanyBillingPlan[], billingCycle: string }> {
+  private async getClientBillingPlansAndCycle(clientId: string, billingPeriod: IBillingPeriod): Promise<{ clientBillingPlans: IClientBillingPlan[], billingCycle: string }> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
+    const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
     const tenant = this.tenant; // Capture tenant value here
 
     // Get directly assigned billing plans
-    const directBillingPlans = await this.knex('company_billing_plans')
+    const directBillingPlans = await this.knex('client_billing_plans')
       .join('billing_plans', function () {
-        this.on('company_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-          .andOn('billing_plans.tenant', '=', 'company_billing_plans.tenant');
+        this.on('client_billing_plans.plan_id', '=', 'billing_plans.plan_id')
+          .andOn('billing_plans.tenant', '=', 'client_billing_plans.tenant');
       })
       .where({
-        'company_billing_plans.company_id': companyId,
-        'company_billing_plans.is_active': true,
-        'company_billing_plans.tenant': this.tenant
+        'client_billing_plans.client_id': clientId,
+        'client_billing_plans.is_active': true,
+        'client_billing_plans.tenant': this.tenant
       })
-      .whereNull('company_billing_plans.company_bundle_id') // Only get plans not associated with bundles
-      .where('company_billing_plans.start_date', '<=', billingPeriod.endDate)
+      .whereNull('client_billing_plans.client_bundle_id') // Only get plans not associated with bundles
+      .where('client_billing_plans.start_date', '<=', billingPeriod.endDate)
       .where(function (this: any) {
-        this.where('company_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('company_billing_plans.end_date');
+        this.where('client_billing_plans.end_date', '>=', billingPeriod.startDate).orWhereNull('client_billing_plans.end_date');
       })
       .select(
-        'company_billing_plans.*',
+        'client_billing_plans.*',
         'billing_plans.plan_name',
         'billing_plans.billing_frequency'
       );
 
     // Get plans from active bundles, joining to get the service_id
-    const bundlePlans = await this.knex('company_plan_bundles as cpb')
+    const bundlePlans = await this.knex('client_plan_bundles as cpb')
       .join('bundle_billing_plans as bbp', function () {
         this.on('cpb.bundle_id', '=', 'bbp.bundle_id')
           .andOn('bbp.tenant', '=', 'cpb.tenant');
@@ -431,7 +431,7 @@ export class BillingEngine {
       })
       // })
       .where({
-        'cpb.company_id': companyId,
+        'cpb.client_id': clientId,
         'cpb.is_active': true,
         'cpb.tenant': this.tenant
       })
@@ -446,7 +446,7 @@ export class BillingEngine {
         'bbp.custom_rate',
         'cpb.start_date',
         'cpb.end_date',
-        'cpb.company_bundle_id',
+        'cpb.client_bundle_id',
         'pb.bundle_name'
         // REMOVED: 'sc.service_id' - Not needed for bundle-level custom rates
       )
@@ -458,16 +458,16 @@ export class BillingEngine {
         'bbp.custom_rate',
         'cpb.start_date',
         'cpb.end_date',
-        'cpb.company_bundle_id',
+        'cpb.client_bundle_id',
         'pb.bundle_name'
         // REMOVED: 'sc.service_id' - Grouping by service_id caused duplicates
       );
 
-    // Convert bundle plans to company billing plan format, including service_id
+    // Convert bundle plans to client billing plan format, including service_id
     const formattedBundlePlans = bundlePlans.map((plan: any) => {
       return {
-        company_billing_plan_id: `bundle-${plan.company_bundle_id}-${plan.plan_id}`, // Generate a virtual ID
-        company_id: companyId,
+        client_billing_plan_id: `bundle-${plan.client_bundle_id}-${plan.plan_id}`, // Generate a virtual ID
+        client_id: clientId,
         plan_id: plan.plan_id,
         service_id: null, // Set service_id to null as it's not relevant/fetched for bundle custom rates
         start_date: plan.start_date,
@@ -477,7 +477,7 @@ export class BillingEngine {
         custom_rate: plan.custom_rate === null || plan.custom_rate === undefined
           ? null // Pass null through
           : Math.round(parseFloat(plan.custom_rate) * 100), // Convert non-null string to cents
-        company_bundle_id: plan.company_bundle_id,
+        client_bundle_id: plan.client_bundle_id,
         plan_name: plan.plan_name,
         billing_frequency: plan.billing_frequency,
         bundle_name: plan.bundle_name,
@@ -486,47 +486,47 @@ export class BillingEngine {
     });
 
     // Combine direct plans and bundle plans
-    const companyBillingPlans = [...directBillingPlans, ...formattedBundlePlans];
+    const clientBillingPlans = [...directBillingPlans, ...formattedBundlePlans];
 
     // Convert dates from the DB into plain ISO strings using our date utilities
-    companyBillingPlans.forEach((plan: any) => {
+    clientBillingPlans.forEach((plan: any) => {
       plan.start_date = toISODate(toPlainDate(plan.start_date));
       plan.end_date = plan.end_date ? toISODate(toPlainDate(plan.end_date)) : null;
     });
 
-    return { companyBillingPlans, billingCycle };
+    return { clientBillingPlans, billingCycle };
   }
 
-  private async getBillingCycle(companyId: string, date: ISO8601String = toISODate(Temporal.Now.plainDateISO())): Promise<string> {
+  private async getBillingCycle(clientId: string, date: ISO8601String = toISODate(Temporal.Now.plainDateISO())): Promise<string> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    const result = await this.knex('company_billing_cycles')
+    const result = await this.knex('client_billing_cycles')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .where('effective_date', '<=', date)
       .orderBy('effective_date', 'desc')
-      .first() as ICompanyBillingCycle | undefined;
+      .first() as IClientBillingCycle | undefined;
 
     if (!result) {
       // Check again for existing cycle to handle race conditions
-      const existingCycle = await this.knex('company_billing_cycles')
+      const existingCycle = await this.knex('client_billing_cycles')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant: this.tenant
         })
         .first();
@@ -536,25 +536,25 @@ export class BillingEngine {
       }
 
       try {
-        const defaultCycle: Partial<ICompanyBillingCycle> = {
-          company_id: companyId,
+        const defaultCycle: Partial<IClientBillingCycle> = {
+          client_id: clientId,
           billing_cycle: 'monthly',
           effective_date: '2023-01-01T00:00:00Z',
           tenant: this.tenant
         };
 
-        await this.knex('company_billing_cycles').insert(defaultCycle);
+        await this.knex('client_billing_cycles').insert(defaultCycle);
       } catch (error) {
         // If insert fails due to race condition, get the existing record
-        const cycle = await this.knex('company_billing_cycles')
+        const cycle = await this.knex('client_billing_cycles')
           .where({
-            company_id: companyId,
+            client_id: clientId,
             tenant: this.tenant
           })
           .first();
 
         if (!cycle) {
-          throw new Error(`Failed to create or retrieve billing cycle for company ${companyId} in tenant ${this.tenant}`);
+          throw new Error(`Failed to create or retrieve billing cycle for client ${clientId} in tenant ${this.tenant}`);
         }
 
         return cycle.billing_cycle;
@@ -565,7 +565,7 @@ export class BillingEngine {
     return result.billing_cycle as BillingCycleType;
   }
 
-  private async validateBillingPeriod(companyId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<{ success: boolean; error?: string }> {
+  private async validateBillingPeriod(clientId: string, startDate: ISO8601String, endDate: ISO8601String): Promise<{ success: boolean; error?: string }> {
     try {
       await this.initKnex();
       if (!this.tenant) {
@@ -575,22 +575,22 @@ export class BillingEngine {
         };
       }
 
-      const company = await this.knex('companies')
+      const client = await this.knex('clients')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant: this.tenant
         })
         .first();
-      if (!company) {
+      if (!client) {
         return {
           success: false,
-          error: `Company ${companyId} not found in tenant ${this.tenant}`
+          error: `Client ${clientId} not found in tenant ${this.tenant}`
         };
       }
 
-      const cycles = await this.knex('company_billing_cycles')
+      const cycles = await this.knex('client_billing_cycles')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant: this.tenant
         })
         .where('effective_date', '<=', endDate)
@@ -613,7 +613,7 @@ export class BillingEngine {
 
       if (!currentCycle) {
         // If no cycle found, create default monthly cycle
-        await this.getBillingCycle(companyId, startDate);
+        await this.getBillingCycle(clientId, startDate);
       }
 
       return { success: true };
@@ -624,7 +624,7 @@ export class BillingEngine {
       };
     }
   }
-  private async calculateFixedPriceCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IFixedPriceCharge[]> {
+  private async calculateFixedPriceCharges(clientId: string, billingPeriod: IBillingPeriod, clientBillingPlan: IClientBillingPlan): Promise<IFixedPriceCharge[]> {
     // Note: Fixed plan rates are stored as dollars (decimal) in the database,
     // but need to be converted to cents (integer) for consistency with other monetary values in the system.
     // Custom rates from bundles are assumed to be in cents already.
@@ -636,23 +636,23 @@ export class BillingEngine {
     // --- Custom Rate Check (Bundled Plans) ---
     // Check if a custom rate is defined for this plan assignment (likely from a bundle)
     // Ensure custom_rate is not null and not undefined before using it.
-    if (companyBillingPlan.custom_rate !== null && companyBillingPlan.custom_rate !== undefined) {
+    if (clientBillingPlan.custom_rate !== null && clientBillingPlan.custom_rate !== undefined) {
       // Assuming custom_rate is already in cents. Add logging to confirm.
-      console.log(`Using custom rate ${companyBillingPlan.custom_rate} cents for plan ${companyBillingPlan.plan_name} (ID: ${companyBillingPlan.plan_id}) from bundle ${companyBillingPlan.bundle_name || 'N/A'}`);
+      console.log(`Using custom rate ${clientBillingPlan.custom_rate} cents for plan ${clientBillingPlan.plan_name} (ID: ${clientBillingPlan.plan_id}) from bundle ${clientBillingPlan.bundle_name || 'N/A'}`);
 
       // If a custom rate exists, create a single charge item for the entire plan at that rate.
       // This charge represents the entire plan when a custom bundle rate is applied.
       const customCharge: IFixedPriceCharge = {
         // Properties from IFixedPriceCharge & IBillingCharge
         type: 'fixed',
-        serviceName: `${companyBillingPlan.plan_name}${companyBillingPlan.bundle_name ? ` (Bundle: ${companyBillingPlan.bundle_name})` : ''}`,
+        serviceName: `${clientBillingPlan.plan_name}${clientBillingPlan.bundle_name ? ` (Bundle: ${clientBillingPlan.bundle_name})` : ''}`,
         quantity: 1, // Represents the single bundled plan item
-        rate: companyBillingPlan.custom_rate, // Use the custom rate (assumed cents)
-        total: companyBillingPlan.custom_rate, // Total is the custom rate (assumed cents)
-        // planId: companyBillingPlan.plan_id, // Removed - planId not part of IFixedPriceCharge
-        company_billing_plan_id: companyBillingPlan.company_billing_plan_id, // Link back to the plan assignment
-        company_bundle_id: companyBillingPlan.company_bundle_id || undefined, // Use correct property name
-        bundle_name: companyBillingPlan.bundle_name || undefined,
+        rate: clientBillingPlan.custom_rate, // Use the custom rate (assumed cents)
+        total: clientBillingPlan.custom_rate, // Total is the custom rate (assumed cents)
+        // planId: clientBillingPlan.plan_id, // Removed - planId not part of IFixedPriceCharge
+        client_billing_plan_id: clientBillingPlan.client_billing_plan_id, // Link back to the plan assignment
+        client_bundle_id: clientBillingPlan.client_bundle_id || undefined, // Use correct property name
+        bundle_name: clientBillingPlan.bundle_name || undefined,
         // Tax properties (defaulting to 0/non-taxable for now, needs review)
         tax_amount: 0,
         tax_rate: 0,
@@ -667,27 +667,27 @@ export class BillingEngine {
 
 
     // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
-    console.log(`No custom rate found for plan ${companyBillingPlan.plan_name} (ID: ${companyBillingPlan.plan_id}). Calculating based on services/plan rate.`);
-    const company = await this.knex('companies')
+    console.log(`No custom rate found for plan ${clientBillingPlan.plan_name} (ID: ${clientBillingPlan.plan_id}). Calculating based on services/plan rate.`);
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
-      .first() as ICompany;
+      .first() as IClient;
 
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    // Removed old logic fetching tax region via company_tax_settings (Phase 1.2)
+    // Removed old logic fetching tax region via client_tax_settings (Phase 1.2)
 
     const tenant = this.tenant; // Capture tenant value for joins
 
     // Get the billing plan details to determine if this is a fixed fee plan
     const billingPlanDetails = await this.knex('billing_plans')
       .where({
-        'plan_id': companyBillingPlan.plan_id,
-        'tenant': company.tenant // Use company.tenant here for consistency
+        'plan_id': clientBillingPlan.plan_id,
+        'tenant': client.tenant // Use client.tenant here for consistency
       })
       .first();
 
@@ -702,7 +702,7 @@ export class BillingEngine {
       // Fetch directly from the table as per the new schema feedback
       const planConfig = await this.knex('billing_plan_fixed_config')
         .where({
-          plan_id: companyBillingPlan.plan_id,
+          plan_id: clientBillingPlan.plan_id,
           tenant: tenant
         })
         .first();
@@ -712,9 +712,9 @@ export class BillingEngine {
         planLevelBaseRate = planConfig.base_rate ? parseFloat(planConfig.base_rate) : null;
         planLevelEnableProration = planConfig.enable_proration;
         planLevelBillingCycleAlignment = planConfig.billing_cycle_alignment;
-        console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Fetched Plan Level Config: BaseRate=${planLevelBaseRate}, Proration=${planLevelEnableProration}, Alignment=${planLevelBillingCycleAlignment}`);
+        console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Fetched Plan Level Config: BaseRate=${planLevelBaseRate}, Proration=${planLevelEnableProration}, Alignment=${planLevelBillingCycleAlignment}`);
       } else {
-        console.warn(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Plan Level Fixed Config not found in billing_plan_fixed_config. Cannot determine plan base rate or settings.`);
+        console.warn(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Plan Level Fixed Config not found in billing_plan_fixed_config. Cannot determine plan base rate or settings.`);
         // If the config is missing, we cannot proceed with fixed plan calculation accurately.
         // Return empty or throw error? Returning empty for now.
         return [];
@@ -722,14 +722,14 @@ export class BillingEngine {
 
       // Validate planLevelBaseRate
       if (planLevelBaseRate === null || isNaN(planLevelBaseRate)) {
-          console.error(`[DEBUG] Invalid or missing base_rate in billing_plan_fixed_config for plan ${companyBillingPlan.plan_id}. Value: ${planConfig?.base_rate}`);
+          console.error(`[DEBUG] Invalid or missing base_rate in billing_plan_fixed_config for plan ${clientBillingPlan.plan_id}. Value: ${planConfig?.base_rate}`);
           return []; // Cannot proceed without a valid plan base rate
       }
     }
     // --- End Fetch Plan-Level Fixed Config ---
     // Use the new plan_service_configuration tables
     const planServices = await this.knex('plan_service_configuration') // Start from plan_service_configuration
-      // Removed join to company_billing_plans
+      // Removed join to client_billing_plans
       .join('plan_service_fixed_config', function () {
         this.on('plan_service_configuration.config_id', '=', 'plan_service_fixed_config.config_id')
           .andOn('plan_service_fixed_config.tenant', '=', 'plan_service_configuration.tenant');
@@ -739,7 +739,7 @@ export class BillingEngine {
           .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant'); // Ensure tenant match on service_catalog
       })
       .where({
-        'plan_service_configuration.plan_id': companyBillingPlan.plan_id, // Use plan_id directly
+        'plan_service_configuration.plan_id': clientBillingPlan.plan_id, // Use plan_id directly
         'plan_service_configuration.tenant': this.tenant, // Ensure tenant match on plan_service_configuration
         'plan_service_configuration.configuration_type': 'Fixed'
       })
@@ -766,7 +766,7 @@ export class BillingEngine {
 
       // Use the plan-level base rate fetched earlier
       const baseRate = planLevelBaseRate!; // Assert non-null based on checks above
-      console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Using Plan Level Base Rate: ${baseRate}`);
+      console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Using Plan Level Base Rate: ${baseRate}`);
 
       // Calculate the total FMV (Fair Market Value) of all services
       // Calculate the total FMV (Fair Market Value) of all services in CENTS
@@ -776,11 +776,11 @@ export class BillingEngine {
         // console.log(`[DEBUG] Service ${service.service_id} - FMV (cents): ${serviceFMV} (Rate: ${service.default_rate}, Qty: ${service.quantity || 1})`); // DEBUG LOG - Moved inside loop
         return sum + serviceFMV;
       }, 0);
-      console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
+      console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
 
       // If totalFMVCents is zero, we can't allocate properly
       if (totalFMVCents <= 0) {
-        console.log(`Total FMV (cents) for services in plan ${companyBillingPlan.plan_id} is zero or negative`);
+        console.log(`Total FMV (cents) for services in plan ${clientBillingPlan.plan_id} is zero or negative`);
         return [];
       }
 
@@ -794,7 +794,7 @@ export class BillingEngine {
       // Instantiate TaxService
       const taxServiceInstance = new TaxService(); // Corrected instantiation
       // Fetch billing cycle once for proration calculation if needed
-      const billingCycle = await this.getBillingCycle(companyId, billingPeriod.startDate);
+      const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
       const serviceAllocations = await Promise.all(planServices.map(async (service) => {
         // Calculate the FMV for this service in CENTS
         // Use custom_rate from plan config if available (assume dollars), otherwise fallback to service default_rate (assume cents).
@@ -817,8 +817,8 @@ export class BillingEngine {
         if (planLevelEnableProration) {
           prorationFactor = this._calculateProrationFactor(
             billingPeriod,
-            companyBillingPlan.start_date,
-            companyBillingPlan.end_date,
+            clientBillingPlan.start_date,
+            clientBillingPlan.end_date,
             billingCycle
           );
           effectiveBaseRateInCents = Math.round(effectiveBaseRateInCents * prorationFactor);
@@ -840,19 +840,19 @@ export class BillingEngine {
         let taxRate = 0;
 
         // ***** START OF CORRECTED BLOCK *****
-        if (!company.is_tax_exempt && isTaxable) {
-          // Use the region derived from tax_rate_id, fallback to company default ONLY if service region is null
-          const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? '';
+        if (!client.is_tax_exempt && isTaxable) {
+          // Use the region derived from tax_rate_id, fallback to client default ONLY if service region is null
+          const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? '';
           if (effectiveTaxRegion) {
             // Use TaxService to calculate tax
             // allocatedAmount is already in cents
-            const taxResult = await taxServiceInstance.calculateTax(company.company_id, allocatedAmount, billingPeriod.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(client.client_id, allocatedAmount, billingPeriod.endDate, effectiveTaxRegion);
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
             console.log(`[DEBUG] Service ${service.service_id} - Tax calculated (TaxService): Rate=${taxRate}, Amount=${taxAmount}, Base=${allocatedAmount}, Region=${effectiveTaxRegion}`); // DEBUG LOG
           } else {
-            // No region from service's tax_rate_id AND no company default region.
-            console.warn(`[BillingEngine] No tax region found (from service tax_rate_id or company default via getCompanyDefaultTaxRegionCode) for service ${service.service_id} / company ${companyId}. Using zero tax rate.`);
+            // No region from service's tax_rate_id AND no client default region.
+            console.warn(`[BillingEngine] No tax region found (from service tax_rate_id or client default via getClientDefaultTaxRegionCode) for service ${service.service_id} / client ${clientId}. Using zero tax rate.`);
             taxRate = 0;
             taxAmount = 0;
             console.log(`[DEBUG] Service ${service.service_id} - Tax calculation skipped (No effective region found)`); // DEBUG LOG
@@ -864,7 +864,7 @@ export class BillingEngine {
         else {
           // Add to the total non-taxable amount
           totalNonTaxableAmount += allocatedAmount;
-          console.log(`[DEBUG] Service ${service.service_id} - Tax calculation skipped (Company exempt: ${company.is_tax_exempt} or service not taxable: ${!isTaxable})`); // DEBUG LOG
+          console.log(`[DEBUG] Service ${service.service_id} - Tax calculation skipped (Client exempt: ${client.is_tax_exempt} or service not taxable: ${!isTaxable})`); // DEBUG LOG
         }
 
         // Add to the total tax amount
@@ -883,7 +883,7 @@ export class BillingEngine {
       }));
 
       // Log the detailed allocation for audit purposes
-      console.log(`Fixed fee plan ${companyBillingPlan.plan_id} tax allocation:`, {
+      console.log(`Fixed fee plan ${clientBillingPlan.plan_id} tax allocation:`, {
         baseRate: baseRate, // Dollar amount from database
         baseRateInCents: baseRate * 100, // Converted to cents for calculations
         totalFMVCents,
@@ -902,7 +902,7 @@ export class BillingEngine {
         const planService = planServices.find(ps => ps.service_id === allocation.serviceId);
 
         if (!planService) {
-          console.warn(`Could not find planService data for serviceId: ${allocation.serviceId} in plan ${companyBillingPlan.plan_id}`);
+          console.warn(`Could not find planService data for serviceId: ${allocation.serviceId} in plan ${clientBillingPlan.plan_id}`);
           continue; // Skip this allocation if data is missing
         }
 
@@ -922,13 +922,13 @@ export class BillingEngine {
           // Let's re-fetch it here for clarity, although it was calculated during allocation.
           // Ideally, the allocation object would carry the derived taxRegion.
           // For now, re-derive:
-          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined, // Use derived region, fallback to company default lookup
-          // planId: companyBillingPlan.plan_id, // Removed - planId not part of IFixedPriceCharge
-          company_billing_plan_id: companyBillingPlan.company_billing_plan_id, // Link back to the plan assignment
+          tax_region: (await this.getTaxInfoFromService(planService)).taxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
+          // planId: clientBillingPlan.plan_id, // Removed - planId not part of IFixedPriceCharge
+          client_billing_plan_id: clientBillingPlan.client_billing_plan_id, // Link back to the plan assignment
           
           // Add bundle information for all fixed charges when the plan is part of a bundle
-          company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-          bundle_name: companyBillingPlan.bundle_name || undefined,
+          client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+          bundle_name: clientBillingPlan.bundle_name || undefined,
 
           // IFixedPriceCharge specific fields (newly added)
           config_id: planService.config_id, // From the modified query
@@ -945,7 +945,7 @@ export class BillingEngine {
         detailedCharges.push(detailedCharge);
       }
 
-      console.log(`Detailed fixed price charges for company ${companyId}, plan ${companyBillingPlan.plan_id}:`, detailedCharges);
+      console.log(`Detailed fixed price charges for client ${clientId}, plan ${clientBillingPlan.plan_id}:`, detailedCharges);
       return detailedCharges;
     } else {
       // This block handles cases where the plan type isn't 'Fixed', but a service within it
@@ -953,7 +953,7 @@ export class BillingEngine {
       // We should still use the plan-level proration/alignment settings if the plan *was* fixed.
       // If the plan itself isn't fixed, proration likely doesn't apply anyway.
       // TODO: Review if this logic block is still necessary or correct after the refactor.
-      console.warn(`[BillingEngine] Processing fixed service config for a non-fixed plan type (${billingPlanDetails?.plan_type}) for plan ${companyBillingPlan.plan_id}. Review this logic.`);
+      console.warn(`[BillingEngine] Processing fixed service config for a non-fixed plan type (${billingPlanDetails?.plan_type}) for plan ${clientBillingPlan.plan_id}. Review this logic.`);
 
       const fixedCharges: IFixedPriceCharge[] = await Promise.all(planServices.map(async (service: any): Promise<IFixedPriceCharge> => {
         // Use base_rate from the fixed config, fallback to default_rate? Or throw error?
@@ -974,7 +974,7 @@ export class BillingEngine {
           type: 'fixed',
           tax_amount: 0,
           tax_rate: 0,
-          tax_region: serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined, // Use derived region, fallback to company default lookup
+          tax_region: serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined, // Use derived region, fallback to client default lookup
           is_taxable: isTaxable, // Use derived value
           // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
           // This maintains consistency if a plan type was changed.
@@ -986,12 +986,12 @@ export class BillingEngine {
           // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
         };
         // Recalculate tax based on derived info for this edge case
-        if (!company.is_tax_exempt && charge.is_taxable) {
-          const effectiveTaxRegion = charge.tax_region ?? ''; // Use the already set region (derived or company default fallback)
+        if (!client.is_tax_exempt && charge.is_taxable) {
+          const effectiveTaxRegion = charge.tax_region ?? ''; // Use the already set region (derived or client default fallback)
           if (effectiveTaxRegion) {
             // Use TaxService instance if available, or instantiate if needed
             const taxServiceInstance = new TaxService(); // Assuming it's okay to instantiate here
-            const taxResult = await taxServiceInstance.calculateTax(company.company_id, charge.total, billingPeriod.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(client.client_id, charge.total, billingPeriod.endDate, effectiveTaxRegion);
             charge.tax_rate = taxResult.taxRate;
             charge.tax_amount = taxResult.taxAmount;
           } else {
@@ -1004,37 +1004,37 @@ export class BillingEngine {
         return charge;
       }));
 
-      console.log(`Fixed price charges for company ${companyId}:`, fixedCharges);
+      console.log(`Fixed price charges for client ${clientId}:`, fixedCharges);
       return fixedCharges;
     }
   }
 
-  private async calculateTimeBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ITimeBasedCharge[]> {
+  private async calculateTimeBasedCharges(clientId: string, billingPeriod: IBillingPeriod, clientBillingPlan: IClientBillingPlan): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     // Fetch the billing plan details to get plan-wide settings
     const plan = await this.knex('billing_plans')
       .where({
-        plan_id: companyBillingPlan.plan_id,
+        plan_id: clientBillingPlan.plan_id,
         tenant: this.tenant
       })
       .first();
 
     if (!plan) {
-      throw new Error(`Billing plan ${companyBillingPlan.plan_id} not found for company ${companyId}`);
+      throw new Error(`Billing plan ${clientBillingPlan.plan_id} not found for client ${clientId}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
@@ -1046,7 +1046,7 @@ export class BillingEngine {
           .andOn('plan_service_hourly_config.tenant', '=', 'plan_service_configuration.tenant');
       })
       .where({
-        'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
+        'plan_service_configuration.plan_id': clientBillingPlan.plan_id,
         'plan_service_configuration.configuration_type': 'Hourly',
         'plan_service_configuration.tenant': tenant
       })
@@ -1108,14 +1108,14 @@ export class BillingEngine {
           .andOn('service_catalog.tenant', '=', 'time_entries.tenant');
       })
       .where({
-        'time_entries.tenant': company.tenant
+        'time_entries.tenant': client.tenant
       })
       .where('time_entries.start_time', '>=', billingPeriod.startDate)
       .where('time_entries.end_time', '<', billingPeriod.endDate)
       .where('time_entries.invoiced', false)
       .where(function (this: Knex.QueryBuilder) {
         // Either the time entry has the specific billing plan ID (use plan_id for bundles)
-        this.where('time_entries.billing_plan_id', companyBillingPlan.plan_id) // Use plan_id here
+        this.where('time_entries.billing_plan_id', clientBillingPlan.plan_id) // Use plan_id here
           // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('time_entries.billing_plan_id');
@@ -1131,8 +1131,8 @@ export class BillingEngine {
         })
       })
       .where(function (this: Knex.QueryBuilder) {
-        this.where('projects.company_id', companyId)
-          .orWhere('tickets.company_id', companyId)
+        this.where('projects.client_id', clientId)
+          .orWhere('tickets.client_id', clientId)
       })
       .where('time_entries.approval_status', 'APPROVED')
       .select(
@@ -1205,12 +1205,12 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later in invoiceService, but set initial values)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
-      if (!company.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(company.company_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1228,12 +1228,12 @@ export class BillingEngine {
         type: 'time',
         tax_amount: taxAmount, // Set initial tax amount
         tax_rate: taxRate,     // Set initial tax rate
-        tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
+        tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         entryId: entry.entry_id,
         is_taxable: isTaxable, // Use derived value
         // Add bundle information when the plan is part of a bundle
-        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-        bundle_name: companyBillingPlan.bundle_name || undefined
+        client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+        bundle_name: clientBillingPlan.bundle_name || undefined
       };
     });
 
@@ -1242,20 +1242,20 @@ export class BillingEngine {
     return timeBasedCharges;
   }
 
-  private async calculateUsageBasedCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IUsageBasedCharge[]> {
+  private async calculateUsageBasedCharges(clientId: string, billingPeriod: IBillingPeriod, clientBillingPlan: IClientBillingPlan): Promise<IUsageBasedCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
@@ -1267,7 +1267,7 @@ export class BillingEngine {
           .andOn('plan_service_usage_config.tenant', '=', 'plan_service_configuration.tenant');
       })
       .where({
-        'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
+        'plan_service_configuration.plan_id': clientBillingPlan.plan_id,
         'plan_service_configuration.configuration_type': 'Usage',
         'plan_service_configuration.tenant': tenant
       })
@@ -1304,7 +1304,7 @@ export class BillingEngine {
           .andOn('service_catalog.tenant', '=', 'usage_tracking.tenant');
       })
       .where({
-        'usage_tracking.company_id': companyId,
+        'usage_tracking.client_id': clientId,
         'usage_tracking.tenant': this.tenant,
         'usage_tracking.invoiced': false
       })
@@ -1312,7 +1312,7 @@ export class BillingEngine {
       .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
       .where(function (this: Knex.QueryBuilder) {
         // Either the usage record has the specific billing plan ID (use plan_id for bundles)
-        this.where('usage_tracking.billing_plan_id', companyBillingPlan.plan_id) // Use plan_id here
+        this.where('usage_tracking.billing_plan_id', clientBillingPlan.plan_id) // Use plan_id here
           // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('usage_tracking.billing_plan_id');
@@ -1370,12 +1370,12 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
-      if (!company.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(company.company_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1389,15 +1389,15 @@ export class BillingEngine {
         quantity,
         rate,
         total,
-        tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
+        tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         type: 'usage',
         tax_amount: taxAmount, // Set initial tax amount
         tax_rate: taxRate,     // Set initial tax rate
         usageId: record.usage_id,
         is_taxable: isTaxable, // Use derived value
         // Add bundle information when the plan is part of a bundle
-        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-        bundle_name: companyBillingPlan.bundle_name || undefined
+        client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+        bundle_name: clientBillingPlan.bundle_name || undefined
       };
     });
 
@@ -1406,21 +1406,21 @@ export class BillingEngine {
     return usageBasedCharges;
   }
 
-  private async calculateProductCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<IProductCharge[]> {
+  private async calculateProductCharges(clientId: string, billingPeriod: IBillingPeriod, clientBillingPlan: IClientBillingPlan): Promise<IProductCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
-      .first() as ICompany;
+      .first() as IClient;
 
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
@@ -1445,12 +1445,12 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
-      if (!company.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(company.company_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1467,11 +1467,11 @@ export class BillingEngine {
         total: total,
         tax_amount: taxAmount,
         tax_rate: taxRate,
-        tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
+        tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         is_taxable: isTaxable,
         // Add bundle information when the plan is part of a bundle
-        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-        bundle_name: companyBillingPlan.bundle_name || undefined
+        client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+        bundle_name: clientBillingPlan.bundle_name || undefined
       };
       return charge;
     });
@@ -1479,21 +1479,21 @@ export class BillingEngine {
     return productCharges;
   }
 
-  private async calculateLicenseCharges(companyId: string, billingPeriod: IBillingPeriod, companyBillingPlan: ICompanyBillingPlan): Promise<ILicenseCharge[]> {
+  private async calculateLicenseCharges(clientId: string, billingPeriod: IBillingPeriod, clientBillingPlan: IClientBillingPlan): Promise<ILicenseCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
-      .first() as ICompany;
+      .first() as IClient;
 
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
@@ -1517,12 +1517,12 @@ export class BillingEngine {
       // Calculate tax amount (will be recalculated later)
       let taxAmount = 0;
       let taxRate = 0;
-      const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined;
+      const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
-      if (!company.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+      if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
         try {
           const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(company.company_id, total, billingPeriod.endDate, effectiveTaxRegion);
+          const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, billingPeriod.endDate, effectiveTaxRegion);
           taxRate = taxResult.taxRate;
           taxAmount = taxResult.taxAmount;
         } catch (error) {
@@ -1539,13 +1539,13 @@ export class BillingEngine {
         total: total,
         tax_amount: taxAmount,
         tax_rate: taxRate,
-        tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
+        tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         period_start: billingPeriod.startDate,
         period_end: billingPeriod.endDate,
         is_taxable: isTaxable,
         // Add bundle information when the plan is part of a bundle
-        company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-        bundle_name: companyBillingPlan.bundle_name || undefined
+        client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+        bundle_name: clientBillingPlan.bundle_name || undefined
       };
       return charge;
     });
@@ -1554,20 +1554,20 @@ export class BillingEngine {
     return licenseCharges;
   }
 
-  private async calculateBucketPlanCharges(companyId: string, period: IBillingPeriod, billingPlan: ICompanyBillingPlan): Promise<IBucketCharge[]> {
+  private async calculateBucketPlanCharges(clientId: string, period: IBillingPeriod, billingPlan: IClientBillingPlan): Promise<IBucketCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     // Get bucket configurations for this plan
@@ -1583,7 +1583,7 @@ export class BillingEngine {
       .where({
         'plan_service_configuration.plan_id': billingPlan.plan_id,
         'plan_service_configuration.configuration_type': 'Bucket',
-        'plan_service_configuration.tenant': company.tenant
+        'plan_service_configuration.tenant': client.tenant
       })
       .select(
         'plan_service_configuration.*',
@@ -1602,7 +1602,7 @@ export class BillingEngine {
       const timeEntries = await this.knex('time_entries')
         .where({
           service_id: bucketConfig.service_id,
-          tenant: company.tenant,
+          tenant: client.tenant,
           invoiced: false
         })
         .where('start_time', '>=', period.startDate)
@@ -1635,12 +1635,12 @@ export class BillingEngine {
         // Calculate tax amount (will be recalculated later)
         let taxAmount = 0;
         let taxRate = 0;
-        const effectiveTaxRegion = serviceTaxRegion ?? await getCompanyDefaultTaxRegionCode(company.company_id) ?? undefined;
+        const effectiveTaxRegion = serviceTaxRegion ?? await getClientDefaultTaxRegionCode(client.client_id) ?? undefined;
 
-        if (!company.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+        if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
           try {
             const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(company.company_id, total, period.endDate, effectiveTaxRegion);
+            const taxResult = await taxServiceInstance.calculateTax(client.client_id, total, period.endDate, effectiveTaxRegion);
             taxRate = taxResult.taxRate;
             taxAmount = taxResult.taxAmount;
           } catch (error) {
@@ -1658,12 +1658,12 @@ export class BillingEngine {
           overageHours: overageHours,
           overageRate: overageRate,
           tax_rate: taxRate,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
+          tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
           serviceId: bucketConfig.service_id, // Common field
           tax_amount: taxAmount,
           is_taxable: isTaxable,
           // Add bundle information when the plan is part of a bundle
-          company_bundle_id: billingPlan.company_bundle_id || undefined,
+          client_bundle_id: billingPlan.client_bundle_id || undefined,
           bundle_name: billingPlan.bundle_name || undefined
         };
         return charge;
@@ -1787,11 +1787,11 @@ export class BillingEngine {
 
   private async applyDiscountsAndAdjustments(
     billingResult: IBillingResult,
-    companyId: string,
+    clientId: string,
     billingPeriod: IBillingPeriod
   ): Promise<IBillingResult> {
     // Fetch applicable discounts within the billing period
-    const discounts = await this.fetchDiscounts(companyId, billingPeriod);
+    const discounts = await this.fetchDiscounts(clientId, billingPeriod);
 
     let discountTotal = 0;
     for (const discount of discounts) {
@@ -1813,20 +1813,20 @@ export class BillingEngine {
     };
   }
 
-  private async fetchDiscounts(companyId: string, billingPeriod: IBillingPeriod): Promise<IDiscount[]> {
+  private async fetchDiscounts(clientId: string, billingPeriod: IBillingPeriod): Promise<IDiscount[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const { startDate, endDate } = billingPeriod;
@@ -1835,14 +1835,14 @@ export class BillingEngine {
         this.on('discounts.discount_id', '=', 'plan_discounts.discount_id')
           .andOn('plan_discounts.tenant', '=', 'discounts.tenant');
       })
-      .join('company_billing_plans', function (this: Knex.JoinClause) {
-        this.on('company_billing_plans.plan_id', '=', 'plan_discounts.plan_id')
-          .andOn('company_billing_plans.company_id', '=', 'plan_discounts.company_id')
-          .andOn('company_billing_plans.tenant', '=', 'plan_discounts.tenant');
+      .join('client_billing_plans', function (this: Knex.JoinClause) {
+        this.on('client_billing_plans.plan_id', '=', 'plan_discounts.plan_id')
+          .andOn('client_billing_plans.client_id', '=', 'plan_discounts.client_id')
+          .andOn('client_billing_plans.tenant', '=', 'plan_discounts.tenant');
       })
       .where({
-        'company_billing_plans.company_id': companyId,
-        'company_billing_plans.tenant': company.tenant,
+        'client_billing_plans.client_id': clientId,
+        'client_billing_plans.tenant': client.tenant,
         'discounts.is_active': true
       })
       .andWhere('discounts.start_date', '<=', endDate)
@@ -1858,44 +1858,44 @@ export class BillingEngine {
 
 
 
-  private async fetchAdjustments(companyId: string): Promise<IAdjustment[]> {
+  private async fetchAdjustments(clientId: string): Promise<IAdjustment[]> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
     const adjustments = await this.knex('adjustments')
       .where({
-        company_id: companyId,
-        tenant: company.tenant
+        client_id: clientId,
+        tenant: client.tenant
       });
     return Array.isArray(adjustments) ? adjustments : [];
   }
 
-  async rolloverUnapprovedTime(companyId: string, currentPeriodEnd: ISO8601String, nextPeriodStart: ISO8601String): Promise<void> {
+  async rolloverUnapprovedTime(clientId: string, currentPeriodEnd: ISO8601String, nextPeriodStart: ISO8601String): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: this.tenant
       })
       .first();
-    if (!company) {
-      throw new Error(`Company ${companyId} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
     // Fetch unapproved time entries
     const knex = this.knex;
@@ -1919,11 +1919,11 @@ export class BillingEngine {
           .andOn('projects.tenant', '=', 'project_phases.tenant')
       })
       .where({
-        'time_entries.tenant': company.tenant
+        'time_entries.tenant': client.tenant
       })
       .where(function (this: Knex.QueryBuilder) {
-        this.where('tickets.company_id', companyId)
-          .orWhere('projects.company_id', companyId)
+        this.where('tickets.client_id', clientId)
+          .orWhere('projects.client_id', clientId)
       })
       .whereIn('time_entries.approval_status', ['DRAFT', 'SUBMITTED', 'CHANGES_REQUESTED'])
       .where('time_entries.end_time', '<=', currentPeriodEnd)
@@ -1970,7 +1970,7 @@ export class BillingEngine {
         });
     }
 
-    console.log(`Rolled over ${unapprovedEntries.length} unapproved time entries for company ${companyId}`);
+    console.log(`Rolled over ${unapprovedEntries.length} unapproved time entries for client ${clientId}`);
   }
 
   /**
@@ -2002,15 +2002,15 @@ export class BillingEngine {
       throw new Error(`Invoice ${invoiceId} not found in tenant ${this.tenant}`);
     }
 
-    const company = await this.knex('companies')
+    const client = await this.knex('clients')
       .where({
-        company_id: invoice.company_id,
+        client_id: invoice.client_id,
         tenant: this.tenant
       })
       .first();
 
-    if (!company) {
-      throw new Error(`Company ${invoice.company_id} not found in tenant ${this.tenant}`);
+    if (!client) {
+      throw new Error(`Client ${invoice.client_id} not found in tenant ${this.tenant}`);
     }
 
     // Removed direct use of TaxService here.
@@ -2018,11 +2018,11 @@ export class BillingEngine {
 
     console.log('Starting invoice recalculation:', {
       invoiceId,
-      company: {
-        id: company.company_id,
-        name: company.company_name,
-        isTaxExempt: company.is_tax_exempt,
-        // region_code is still on company table for default fallback, but not primary source for service tax
+      client: {
+        id: client.client_id,
+        name: client.client_name,
+        isTaxExempt: client.is_tax_exempt,
+        // region_code is still on client table for default fallback, but not primary source for service tax
       }
     });
 
@@ -2030,7 +2030,7 @@ export class BillingEngine {
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(`[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`);
       const taxService = new TaxService(); // Instantiate TaxService here
-      await calculateAndDistributeTax(trx, invoiceId, company, taxService); // Pass company object and taxService instance
+      await calculateAndDistributeTax(trx, invoiceId, client, taxService); // Pass client object and taxService instance
       console.log(`[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`);
 
       // Step 2: Update invoice totals and record the transaction using the service function
@@ -2038,7 +2038,7 @@ export class BillingEngine {
       await updateInvoiceTotalsAndRecordTransaction(
         trx,
         invoiceId,
-        company, // Pass company object
+        client, // Pass client object
         tenant, // Pass tenant
         invoice.invoice_number, // Pass invoice number
         undefined,

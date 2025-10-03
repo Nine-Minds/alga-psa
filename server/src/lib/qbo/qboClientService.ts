@@ -262,9 +262,9 @@ export class QboClientService {
     
     logger.debug({ tenantId: this.tenantId, realmId: this.realmId, query: selectQuery }, 'Executing QBO query');
 
-    // Handle special cases for company info
+    // Handle special cases for client info
     if (selectQuery.toUpperCase().includes('COMPANYINFO')) {
-      return this.getCompanyInfo<T>();
+      return this.getClientInfo<T>();
     }
 
     // For other queries, use the findItems method which is available in node-quickbooks
@@ -300,22 +300,22 @@ export class QboClientService {
   }
 
   /**
-   * Gets company information using the specific QBO method.
+   * Gets client information using the specific QBO method.
    */
-  private async getCompanyInfo<T>(): Promise<T[]> {
+  private async getClientInfo<T>(): Promise<T[]> {
     const client = this.getClient();
     
     return new Promise((resolve, reject) => {
-      // Use getCompanyInfo method for company information
-      (client as any).getCompanyInfo(this.realmId, (err: any, result: any) => {
+      // Use getClientInfo method for client information
+      (client as any).getClientInfo(this.realmId, (err: any, result: any) => {
         if (err) {
-          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err }, 'QBO getCompanyInfo failed');
-          reject(this.mapQboError(err, 'getCompanyInfo'));
+          logger.error({ tenantId: this.tenantId, realmId: this.realmId, error: err }, 'QBO getClientInfo failed');
+          reject(this.mapQboError(err, 'getClientInfo'));
         } else {
-          // Company info usually returns a single object, but we return as array for consistency
-          const companyInfo = result?.CompanyInfo || result;
-          if (companyInfo) {
-            resolve([companyInfo] as T[]);
+          // Client info usually returns a single object, but we return as array for consistency
+          const clientInfo = result?.ClientInfo || result;
+          if (clientInfo) {
+            resolve([clientInfo] as T[]);
           } else {
             resolve([]);
           }

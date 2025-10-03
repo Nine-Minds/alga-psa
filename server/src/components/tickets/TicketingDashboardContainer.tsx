@@ -6,7 +6,7 @@ import TicketingDashboard from './TicketingDashboard';
 import { loadMoreTickets } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { IBoard } from 'server/src/interfaces';
@@ -20,7 +20,7 @@ interface TicketingDashboardContainerProps {
       boardOptions: IBoard[];
       agentOptions: SelectOption[];
       categories: ITicketCategory[];
-      companies: ICompany[];
+      clients: IClient[];
       users: IUser[];
       tags?: string[];
     };
@@ -53,7 +53,7 @@ export default function TicketingDashboardContainer({
       showOpenOnly: true,
       boardId: undefined,
       categoryId: undefined,
-      companyId: undefined,
+      clientId: undefined,
     };
   });
 
@@ -63,7 +63,7 @@ export default function TicketingDashboardContainer({
     
     // Only add non-default/non-empty values to URL
     if (filters.boardId) params.set('boardId', filters.boardId);
-    if (filters.companyId) params.set('companyId', filters.companyId);
+    if (filters.clientId) params.set('clientId', filters.clientId);
     if (filters.statusId && filters.statusId !== 'open') params.set('statusId', filters.statusId);
     if (filters.priorityId && filters.priorityId !== 'all') params.set('priorityId', filters.priorityId);
     if (filters.categoryId) params.set('categoryId', filters.categoryId);
@@ -94,7 +94,7 @@ export default function TicketingDashboardContainer({
         statusId: filters.statusId || 'all',
         priorityId: filters.priorityId || 'all',
         categoryId: filters.categoryId || undefined,
-        companyId: filters.companyId || undefined,
+        clientId: filters.clientId || undefined,
         searchQuery: filters.searchQuery || '',
         boardFilterState: filters.boardFilterState || 'active',
         showOpenOnly: (filters.statusId === 'open') || (filters.showOpenOnly === true) 
@@ -157,7 +157,7 @@ export default function TicketingDashboardContainer({
       initialStatuses={consolidatedData.options.statusOptions}
       initialPriorities={consolidatedData.options.priorityOptions}
       initialCategories={consolidatedData.options.categories}
-      initialCompanies={consolidatedData.options.companies}
+      initialClients={consolidatedData.options.clients}
       initialTags={consolidatedData.options.tags || []}
       nextCursor={nextCursor}
       onLoadMore={handleLoadMore} 

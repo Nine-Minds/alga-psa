@@ -5,9 +5,9 @@ import { getConnection } from '@/lib/db/db';
 import { SupportedLocale, isSupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
 
 /**
- * Get the user's company ID from their contact
+ * Get the user's client ID from their contact
  */
-async function getUserCompanyId(userId: string, tenantId: string): Promise<string | null> {
+async function getUserClientId(userId: string, tenantId: string): Promise<string | null> {
   const knex = await getConnection(tenantId);
 
   // Get user's contact_id
@@ -20,7 +20,7 @@ async function getUserCompanyId(userId: string, tenantId: string): Promise<strin
 
   if (!user?.contact_id) return null;
 
-  // Get contact's company
+  // Get contact's client
   const contact = await knex('contacts')
     .where({
       contact_name_id: user.contact_id,
@@ -28,16 +28,16 @@ async function getUserCompanyId(userId: string, tenantId: string): Promise<strin
     })
     .first();
 
-  return contact?.company_id || null;
+  return contact?.client_id || null;
 }
 
 /**
  * Get what locale would be inherited if the user had no personal preference
- * This checks company -> tenant -> system default
+ * This checks client -> tenant -> system default
  */
 export async function getInheritedLocaleAction(): Promise<{
   locale: SupportedLocale;
-  source: 'company' | 'tenant' | 'system';
+  source: 'client' | 'tenant' | 'system';
 }> {
   const user = await getCurrentUser();
 
@@ -50,27 +50,27 @@ export async function getInheritedLocaleAction(): Promise<{
 
   const knex = await getConnection(user.tenant);
 
-  // 1. Check company preference
-  let companyId: string | null = null;
+  // 1. Check client preference
+  let clientId: string | null = null;
 
-  // For client users, get their company
+  // For client users, get their client
   if (user.user_type === 'client') {
-    companyId = await getUserCompanyId(user.user_id, user.tenant);
+    clientId = await getUserClientId(user.user_id, user.tenant);
   }
 
-  if (companyId) {
-    const company = await knex('companies')
+  if (clientId) {
+    const client = await knex('clients')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: user.tenant
       })
       .first();
 
-    const companyLocale = company?.properties?.defaultLocale;
-    if (companyLocale && isSupportedLocale(companyLocale)) {
+    const clientLocale = client?.properties?.defaultLocale;
+    if (clientLocale && isSupportedLocale(clientLocale)) {
       return {
-        locale: companyLocale,
-        source: 'company'
+        locale: clientLocale,
+        source: 'client'
       };
     }
   }

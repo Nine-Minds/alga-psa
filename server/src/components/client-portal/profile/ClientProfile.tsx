@@ -42,7 +42,7 @@ export function ClientProfile() {
   const [timezone, setTimezone] = useState('');
   const [language, setLanguage] = useState<SupportedLocale | null>(null);
   const [currentEffectiveLocale, setCurrentEffectiveLocale] = useState<SupportedLocale>('en');
-  const [inheritedSource, setInheritedSource] = useState<'company' | 'tenant' | 'system'>('system');
+  const [inheritedSource, setInheritedSource] = useState<'client' | 'tenant' | 'system'>('system');
 
   useEffect(() => {
     const init = async () => {

@@ -228,7 +228,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     { value: 'count', label: 'After' }
   ];
 
-   // US Federal Holidays for the next year (can be tied to company location later to apply holidays from different countries)
+   // US Federal Holidays for the next year (can be tied to client location later to apply holidays from different countries)
    const getHolidays = (startDate: Date): Date[] => {
     const year = startDate.getFullYear();
     const nextYear = addYears(startDate, 1);

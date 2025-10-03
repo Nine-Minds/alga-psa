@@ -16,17 +16,17 @@ import { getTicketFieldOptions, getCategoriesByBoard } from '../../lib/actions/e
 import type { InboundTicketDefaults, TicketFieldOptions } from '../../types/email.types';
 // Dedicated pickers used elsewhere in the app
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import { PrioritySelect } from 'server/src/components/tickets/PrioritySelect';
 import UserPicker from 'server/src/components/ui/UserPicker';
 // Loaders to hydrate pickers with full data
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import type { IBoard, IPriority } from 'server/src/interfaces';
-import type { ICompany } from 'server/src/interfaces/company.interfaces';
+import type { IClient } from 'server/src/interfaces/client.interfaces';
 import type { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import type { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 
@@ -49,7 +49,7 @@ export function InboundTicketDefaultsForm({
     board_id: '',
     status_id: '',
     priority_id: '',
-    company_id: '',
+    client_id: '',
     category_id: '',
     subcategory_id: '',
     location_id: '',
@@ -61,7 +61,7 @@ export function InboundTicketDefaultsForm({
     statuses: [],
     priorities: [],
     categories: [],
-    companies: [],
+    clients: [],
     users: [],
     locations: []
   });
@@ -72,11 +72,11 @@ export function InboundTicketDefaultsForm({
 
   // Data for dedicated pickers
   const [boards, setBoards] = useState<IBoard[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [usersWithRoles, setUsersWithRoles] = useState<IUserWithRoles[]>([]);
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   // Note: category/subcategory are now selected via CategoryPicker
@@ -116,7 +116,7 @@ export function InboundTicketDefaultsForm({
         board_id: defaults.board_id || '',
         status_id: defaults.status_id || '',
         priority_id: defaults.priority_id || '',
-        company_id: defaults.company_id || '',
+        client_id: defaults.client_id || '',
         category_id: defaults.category_id || '',
         subcategory_id: defaults.subcategory_id || '',
         location_id: defaults.location_id || '',
@@ -133,14 +133,14 @@ export function InboundTicketDefaultsForm({
 
       // Hydrate dedicated pickers with richer datasets
       // Boards with full metadata for BoardPicker
-      const [allBoards, allCompanies, allPriorities, allUsers] = await Promise.all([
+      const [allBoards, allClients, allPriorities, allUsers] = await Promise.all([
         getAllBoards(true),
-        getAllCompanies(true),
+        getAllClients(true),
         getAllPriorities('ticket'),
         getAllUsers(true, 'internal')
       ]);
       setBoards(allBoards || []);
-      setCompanies(allCompanies || []);
+      setClients(allClients || []);
       setPriorities((allPriorities as IPriority[]) || []);
       setUsersWithRoles(allUsers || []);
     } catch (err: any) {
@@ -175,7 +175,7 @@ export function InboundTicketDefaultsForm({
         board_id: formData.board_id,
         status_id: formData.status_id,
         priority_id: formData.priority_id,
-        company_id: formData.company_id || undefined,
+        client_id: formData.client_id || undefined,
         category_id: formData.category_id || undefined,
         subcategory_id: formData.subcategory_id || undefined,
         location_id: formData.location_id || undefined,
@@ -208,8 +208,8 @@ export function InboundTicketDefaultsForm({
       if (field === 'category_id') {
         next.subcategory_id = '';
       }
-      if (field === 'company_id' && prev.company_id !== value) {
-        // Clear location if company changes
+      if (field === 'client_id' && prev.client_id !== value) {
+        // Clear location if client changes
         next.location_id = '';
       }
       return next;
@@ -332,20 +332,20 @@ export function InboundTicketDefaultsForm({
 
           {/* Optional Fields */}
           <div>
-            <Label htmlFor="company_id">Company</Label>
-            <CompanyPicker
-              id="company_id"
-              companies={companies}
-              selectedCompanyId={formData.company_id || null}
-              onSelect={(value) => handleDefaultChange('company_id', value || '')}
-              filterState={companyFilterState}
-              onFilterStateChange={setCompanyFilterState}
+            <Label htmlFor="client_id">Client</Label>
+            <ClientPicker
+              id="client_id"
+              clients={clients}
+              selectedClientId={formData.client_id || null}
+              onSelect={(value) => handleDefaultChange('client_id', value || '')}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={setClientTypeFilter}
               placeholder="Select Client"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used as a catch-all when no company can be matched from the email; otherwise ignored.
+              Used as a catch-all when no client can be matched from the email; otherwise ignored.
             </p>
           </div>
 
@@ -402,14 +402,14 @@ export function InboundTicketDefaultsForm({
               value={formData.location_id}
               onValueChange={(value) => handleDefaultChange('location_id', value || '')}
               options={fieldOptions.locations
-                .filter(l => !formData.company_id || l.company_id === formData.company_id)
+                .filter(l => !formData.client_id || l.client_id === formData.client_id)
                 .map(l => ({ value: l.id, label: l.name }))}
-              placeholder={formData.company_id ? 'Select location' : 'Select company first (optional)'}
-              disabled={!formData.company_id}
+              placeholder={formData.client_id ? 'Select location' : 'Select client first (optional)'}
+              disabled={!formData.client_id}
               allowClear
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Only applied when the catch-all company is used (no match case).
+              Only applied when the catch-all client is used (no match case).
             </p>
           </div>
 
@@ -425,7 +425,7 @@ export function InboundTicketDefaultsForm({
               buttonWidth="full"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Used only when we cannot match a contact or company. System tickets will show "System" as creator.
+              Used only when we cannot match a contact or client. System tickets will show "System" as creator.
             </p>
           </div>
         </div>

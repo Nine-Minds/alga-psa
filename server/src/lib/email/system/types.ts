@@ -46,7 +46,7 @@ export interface SystemEmailResult {
 export interface EmailVerificationData {
   email: string;
   verificationUrl: string;
-  companyName?: string;
+  clientName?: string;
   expirationTime?: string;
 }
 

@@ -21,7 +21,7 @@ interface ClientPortalLayoutProps {
 
 export default function ClientPortalLayout({ children }: ClientPortalLayoutProps) {
   const [userData, setUserData] = useState<IUserWithRoles | null>(null);
-  const [hasCompanySettingsAccess, setHasCompanySettingsAccess] = useState(false);
+  const [hasClientSettingsAccess, setHasClientSettingsAccess] = useState(false);
   const [hasBillingAccess, setHasBillingAccess] = useState(false);
   const [hasUserManagementAccess, setHasUserManagementAccess] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -52,7 +52,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
 
         // Check permissions using the server action
         const permissions = await checkClientPortalPermissions();
-        setHasCompanySettingsAccess(permissions.hasCompanySettingsAccess);
+        setHasClientSettingsAccess(permissions.hasClientSettingsAccess);
         setHasBillingAccess(permissions.hasBillingAccess);
         setHasUserManagementAccess(permissions.hasUserManagementAccess);
 
@@ -91,7 +91,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                       {console.log('ClientPortalLayout: Rendering logo with URL:', branding.logoUrl)}
                       <img
                         src={branding.logoUrl}
-                        alt={branding.companyName || 'Company Logo'}
+                        alt={branding.clientName || 'Client Logo'}
                         className="h-8 object-contain"
                       />
                     </>
@@ -108,7 +108,7 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                   )}
                   <span className="text-lg font-semibold flex items-center">
                     <span className="text-[rgb(var(--color-text-900))]">
-                      {branding?.companyName ? `${branding.companyName} ${t('nav.portal')}` : t('nav.clientPortal')}
+                      {branding?.clientName ? `${branding.clientName} ${t('nav.portal')}` : t('nav.clientPortal')}
                     </span>
                   </span>
                 </Link>
@@ -148,12 +148,12 @@ export default function ClientPortalLayout({ children }: ClientPortalLayoutProps
                   Assets
                 </Link>
                 */}
-                {hasCompanySettingsAccess && (
+                {hasClientSettingsAccess && (
                   <Link 
-                    href="/client-portal/company-settings" 
+                    href="/client-portal/client-settings" 
                     className="px-3 py-2 text-sm font-medium text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-500))]"
                   >
-                    {t('nav.companySettings')}
+                    {t('nav.clientSettings')}
                   </Link>
                 )}
               </div>

@@ -5,10 +5,10 @@ export const CustomTitleField = (props: FieldProps) => {
   const { id, title, uiSchema, registry, schema } = props;
 
   // Log all props for debugging
-  if (id === 'root_algaCompanyDisplay') {
-    console.log('CTF props for root_algaCompanyDisplay:', props);
+  if (id === 'root_algaClientDisplay') {
+    console.log('CTF props for root_algaClientDisplay:', props);
     // For more targeted logging if the above is too verbose:
-    // console.log('CTF (root_algaCompanyDisplay) - id:', props.id, 'title:', props.title, 'schema.type:', props.schema?.type, 'uiSchema:', props.uiSchema);
+    // console.log('CTF (root_algaClientDisplay) - id:', props.id, 'title:', props.title, 'schema.type:', props.schema?.type, 'uiSchema:', props.uiSchema);
   }
 
   const description = schema?.description as string | undefined;

@@ -30,8 +30,8 @@ export async function fetchTaxRegions(): Promise<TaxRegion[]> {
   return regions;
 }
 
-// Phase 1.2: Fetch the default tax rate percentage for the company associated with the work item.
-export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<number | undefined> {
+// Phase 1.2: Fetch the default tax rate percentage for the client associated with the work item.
+export async function fetchClientTaxRateForWorkItem(workItemId: string, workItemType: string): Promise<number | undefined> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
@@ -55,9 +55,9 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
           'tickets.ticket_id': workItemId,
           'tickets.tenant': tenant
         })
-        .join('companies', function(this: Knex.JoinClause) {
-          this.on('tickets.company_id', '=', 'companies.company_id')
-              .andOn('tickets.tenant', '=', 'companies.tenant');
+        .join('clients', function(this: Knex.JoinClause) {
+          this.on('tickets.client_id', '=', 'clients.client_id')
+              .andOn('tickets.tenant', '=', 'clients.tenant');
         });
     } else if (workItemType === 'project_task') {
       query = db('project_tasks')
@@ -73,9 +73,9 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
           this.on('project_phases.project_id', '=', 'projects.project_id')
               .andOn('project_phases.tenant', '=', 'projects.tenant');
         })
-        .join('companies', function(this: Knex.JoinClause) {
-          this.on('projects.company_id', '=', 'companies.company_id')
-              .andOn('projects.tenant', '=', 'companies.tenant');
+        .join('clients', function(this: Knex.JoinClause) {
+          this.on('projects.client_id', '=', 'clients.client_id')
+              .andOn('projects.tenant', '=', 'clients.tenant');
         });
     } else {
       console.log(`Unsupported work item type: ${workItemType}`);
@@ -83,17 +83,17 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
     }
 
     query = query
-      .join('company_tax_rates', function(this: Knex.JoinClause) {
-        this.on('companies.company_id', '=', 'company_tax_rates.company_id');
-        this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
+      .join('client_tax_rates', function(this: Knex.JoinClause) {
+        this.on('clients.client_id', '=', 'client_tax_rates.client_id');
+        this.andOn('clients.tenant', '=', 'client_tax_rates.tenant');
       })
       .join('tax_rates', function(this: Knex.JoinClause) {
-        this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-            .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
+        this.on('client_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('client_tax_rates.tenant', '=', 'tax_rates.tenant');
       })
       // Phase 1.2: Filter for the default rate AFTER the join
-      .where('company_tax_rates.is_default', true)
-      .whereNull('company_tax_rates.location_id')
+      .where('client_tax_rates.is_default', true)
+      .whereNull('client_tax_rates.location_id')
       .select('tax_rates.tax_percentage'); // Select the percentage
 
     console.log('Executing query:', query.toString());
@@ -104,7 +104,7 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
       console.log(`Found default tax percentage: ${result.tax_percentage}`);
       return result.tax_percentage; // Return the percentage
     } else {
-      console.log('No default tax rate found for the company associated with this work item.');
+      console.log('No default tax rate found for the client associated with this work item.');
       return undefined; // Return undefined if no default rate is found
     }
   } catch (error) {
@@ -113,8 +113,8 @@ export async function fetchCompanyTaxRateForWorkItem(workItemId: string, workIte
   }
 }
 
-// Fetch the default tax rate ID and percentage for the company associated with the work item.
-export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: string, workItemType: string): Promise<DefaultTaxRateInfo | null> {
+// Fetch the default tax rate ID and percentage for the client associated with the work item.
+export async function fetchDefaultClientTaxRateInfoForWorkItem(workItemId: string, workItemType: string): Promise<DefaultTaxRateInfo | null> {
   const currentUser = await getCurrentUser();
   if (!currentUser) {
     throw new Error('No authenticated user found');
@@ -138,9 +138,9 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
           'tickets.ticket_id': workItemId,
           'tickets.tenant': tenant
         })
-        .join('companies', function(this: Knex.JoinClause) {
-          this.on('tickets.company_id', '=', 'companies.company_id')
-              .andOn('tickets.tenant', '=', 'companies.tenant');
+        .join('clients', function(this: Knex.JoinClause) {
+          this.on('tickets.client_id', '=', 'clients.client_id')
+              .andOn('tickets.tenant', '=', 'clients.tenant');
         });
     } else if (workItemType === 'project_task') {
       query = db('project_tasks')
@@ -156,9 +156,9 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
           this.on('project_phases.project_id', '=', 'projects.project_id')
               .andOn('project_phases.tenant', '=', 'projects.tenant');
         })
-        .join('companies', function(this: Knex.JoinClause) {
-          this.on('projects.company_id', '=', 'companies.company_id')
-              .andOn('projects.tenant', '=', 'companies.tenant');
+        .join('clients', function(this: Knex.JoinClause) {
+          this.on('projects.client_id', '=', 'clients.client_id')
+              .andOn('projects.tenant', '=', 'clients.tenant');
         });
     } else {
       console.log(`Unsupported work item type: ${workItemType}`);
@@ -166,17 +166,17 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
     }
 
     query = query
-      .join('company_tax_rates', function(this: Knex.JoinClause) {
-        this.on('companies.company_id', '=', 'company_tax_rates.company_id');
-        this.andOn('companies.tenant', '=', 'company_tax_rates.tenant');
+      .join('client_tax_rates', function(this: Knex.JoinClause) {
+        this.on('clients.client_id', '=', 'client_tax_rates.client_id');
+        this.andOn('clients.tenant', '=', 'client_tax_rates.tenant');
       })
       .join('tax_rates', function(this: Knex.JoinClause) {
-        this.on('company_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
-            .andOn('company_tax_rates.tenant', '=', 'tax_rates.tenant');
+        this.on('client_tax_rates.tax_rate_id', '=', 'tax_rates.tax_rate_id')
+            .andOn('client_tax_rates.tenant', '=', 'tax_rates.tenant');
       })
       // Filter for the default rate AFTER the join
-      .where('company_tax_rates.is_default', true)
-      .whereNull('company_tax_rates.location_id')
+      .where('client_tax_rates.is_default', true)
+      .whereNull('client_tax_rates.location_id')
       .select(
         'tax_rates.tax_rate_id', // Select the ID
         'tax_rates.tax_percentage', // Select the percentage
@@ -195,7 +195,7 @@ export async function fetchDefaultCompanyTaxRateInfoForWorkItem(workItemId: stri
         region_code: result.region_code // Use the correct column name
       };
     } else {
-      console.log('No default tax rate info found for the company associated with this work item.');
+      console.log('No default tax rate info found for the client associated with this work item.');
       return null; // Return null if no default rate is found
     }
   } catch (error) {

@@ -83,7 +83,7 @@ export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
 // Invoice event payload schema
 export const InvoiceEventPayloadSchema = BasePayloadSchema.extend({
   invoiceId: z.string().uuid(),
-  companyId: z.string().uuid(),
+  clientId: z.string().uuid(),
   userId: z.string().uuid(),
   amount: z.number(),
 });

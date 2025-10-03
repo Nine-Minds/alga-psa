@@ -36,10 +36,10 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
       // Convert Temporal dates to ISO strings
       issueDate: sample.invoice_date.toString(),
       dueDate: sample.due_date.toString(),
-      tenantCompany: {
-        name: sample.company?.name || null, // Use company name from sample
-        address: sample.company?.address || null, // Use company address
-        logoUrl: sample.company?.logo || null // Use company logo if available
+      tenantClient: {
+        name: sample.client?.name || null, // Use client name from sample
+        address: sample.client?.address || null, // Use client address
+        logoUrl: sample.client?.logo || null // Use client logo if available
       },
       customer: {
         name: sample.contact?.name || 'N/A', // Use contact name for customer name
@@ -96,7 +96,7 @@ const InvoiceTemplateManager: React.FC<InvoiceTemplateManagerProps> = ({
                 }`}
                 onClick={() => handleSampleInvoiceSelect(invoice.invoice_number)}
               >
-                Invoice #{invoice.invoice_number} - {invoice.company?.name} {/* Display company name from sample */}
+                Invoice #{invoice.invoice_number} - {invoice.client?.name} {/* Display client name from sample */}
               </div>
             ))}
           </div>
