@@ -5,7 +5,6 @@ import { publishEvent } from '@alga-psa/shared/events/publisher';
 import { GmailAdapter } from '@/services/email/providers/GmailAdapter';
 import type { EmailProviderConfig } from '@/interfaces/email.interfaces';
 import { OAuth2Client } from 'google-auth-library';
-import type { Knex } from 'knex';
 
 interface GooglePubSubMessage {
   message: {
@@ -19,49 +18,6 @@ interface GooglePubSubMessage {
 interface GmailNotification {
   emailAddress: string;
   historyId: string;
-}
-
-type ProviderErrorUpdateResult = 'connection' | 'status' | 'failed';
-
-async function persistProviderError(
-  trx: Knex.Transaction,
-  providerId: string,
-  message: string
-): Promise<ProviderErrorUpdateResult> {
-  try {
-    await trx('email_providers')
-      .where('id', providerId)
-      .update({
-        connection_status: 'error',
-        connection_error_message: message
-      });
-    return 'connection';
-  } catch (err: any) {
-    const errMessage = err?.message || err;
-    console.warn('⚠️ Failed to update provider connection_status:', errMessage);
-    const columnMissing = typeof errMessage === 'string' && (
-      errMessage.includes('connection_status') ||
-      errMessage.includes('connection_error_message')
-    );
-    const postgresColumnMissing = err?.code === '42703';
-
-    if (columnMissing || postgresColumnMissing) {
-      try {
-        await trx('email_providers')
-          .where('id', providerId)
-          .update({
-            status: 'error',
-            error_message: message
-          });
-        return 'status';
-      } catch (fallbackErr: any) {
-        console.warn('⚠️ Fallback provider status update failed:', fallbackErr?.message || fallbackErr);
-        return 'failed';
-      }
-    }
-
-    return 'failed';
-  }
 }
 
 export async function POST(request: NextRequest) {
@@ -234,14 +190,13 @@ export async function POST(request: NextRequest) {
       if (!googleConfig.access_token || !googleConfig.refresh_token) {
         console.warn(`⚠️  Gmail OAuth tokens missing for provider ${provider.id}. Skipping fetch and marking provider as error.`);
         const missingTokensMessage = 'Gmail OAuth tokens missing. Reconnect the Gmail provider to continue.';
-        const updateResult = await persistProviderError(trx, provider.id, missingTokensMessage);
-        if (updateResult === 'connection') {
-          console.log('🚨 Flagged Gmail provider connection_status as error because OAuth tokens are missing.');
-        } else if (updateResult === 'status') {
-          console.log('🚨 Flagged Gmail provider status as error (fallback) because OAuth tokens are missing.');
-        } else {
-          console.warn('⚠️ Unable to persist Gmail provider error state after detecting missing OAuth tokens.');
-        }
+        await trx('email_providers')
+          .where('id', provider.id)
+          .update({
+            status: 'error',
+            error_message: missingTokensMessage
+          });
+        console.log('🚨 Flagged Gmail provider status as error because OAuth tokens are missing.');
         return; // Exit transaction early; webhook will be acked below without events
       }
 
@@ -335,14 +290,13 @@ export async function POST(request: NextRequest) {
           }
 
           const cursorExpiredMessage = 'Gmail history cursor expired. Resync Gmail provider to continue processing.';
-          const updateResult = await persistProviderError(trx, provider.id, cursorExpiredMessage);
-          if (updateResult === 'connection') {
-            console.log('🚨 Flagged Gmail provider connection_status as error to prompt resync.');
-          } else if (updateResult === 'status') {
-            console.log('🚨 Flagged Gmail provider status as error (fallback) to prompt resync.');
-          } else {
-            console.warn('⚠️ Unable to persist Gmail provider error state after cursor invalidation.');
-          }
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              status: 'error',
+              error_message: cursorExpiredMessage
+            });
+          console.log('🚨 Flagged Gmail provider status as error to prompt resync.');
         } else if (msg.includes('invalid_grant') || msg.includes('invalid_rapt')) {
           console.error('⚠️ Gmail OAuth requires re-authorization (invalid_grant/invalid_rapt). Marking provider as error.');
           try {
