@@ -100,7 +100,7 @@ describe('Email Activities - Temporal Unit Tests', () => {
           lastName: 'Doe',
         },
         temporaryPassword: 'TestPass123!',
-        companyName: 'Test Company',
+        clientName: 'Test Client',
         loginUrl: 'https://test.example.com/login',
       };
 
@@ -165,7 +165,7 @@ describe('Email Activities - Temporal Unit Tests', () => {
           lastName: 'Smith',
         },
         temporaryPassword: 'MinimalPass123!',
-        // No companyName or loginUrl - should use defaults
+        // No clientName or loginUrl - should use defaults
       };
 
       const result = await sendWelcomeEmail(input);
@@ -191,7 +191,7 @@ describe('Email Activities - Temporal Unit Tests', () => {
           lastName: 'User',
         },
         temporaryPassword: 'TempPass123!',
-        companyName: 'Template Company',
+        clientName: 'Template Client',
         loginUrl: 'https://template.example.com/login',
       };
 
@@ -224,7 +224,7 @@ describe('Email Activities - Temporal Unit Tests', () => {
           lastName: 'User',
         },
         temporaryPassword: generatedPassword,
-        companyName: 'Variable Company',
+        clientName: 'Variable Client',
       };
 
       const result = await sendWelcomeEmail(input);

@@ -211,7 +211,7 @@ export function generateTestInput(overrides: Partial<TenantCreationInput> = {}):
       lastName: 'Admin',
       email: `test-${timestamp}@example.com`,
     },
-    companyName: `Test Company ${timestamp}`,
+    clientName: `Test Client ${timestamp}`,
     ...overrides,
   };
 }

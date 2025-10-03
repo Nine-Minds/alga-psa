@@ -79,7 +79,7 @@ export async function createAdminUserInDB(
           role_id: roleId
         });
 
-      // Note: Skipping company association for now - table structure unknown
+      // Note: Skipping client association for now - table structure unknown
 
       log.info('Admin user created successfully', { 
         userId, 
@@ -115,7 +115,7 @@ export async function rollbackUserInDB(userId: string, tenantId: string): Promis
 
     await knex.transaction(async (trx: Knex.Transaction) => {
       // Delete user associations in reverse order
-      await trx('user_companies')
+      await trx('user_clients')
         .where({ user_id: userId })
         .delete();
       

@@ -13,7 +13,7 @@ interface TestDatabase {
   getTenant: (tenantId: string) => Promise<any>;
   getUserById: (userId: string, tenantId: string) => Promise<any>;
   getUserRoles: (userId: string, tenantId: string) => Promise<any[]>;
-  getCompaniesForTenant: (tenantId: string) => Promise<any[]>;
+  getClientsForTenant: (tenantId: string) => Promise<any[]>;
   getRolesForTenant: (tenantId: string) => Promise<any[]>;
   getStatusesForTenant: (tenantId: string) => Promise<any[]>;
 }
@@ -29,7 +29,7 @@ function createMockTestDatabase(): TestDatabase {
       // Mock tenant data
       return {
         tenant: tenantId,
-        company_name: 'Mock Tenant',
+        client_name: 'Mock Tenant',
         email: 'mock@example.com',
         created_at: new Date(),
       };
@@ -57,12 +57,12 @@ function createMockTestDatabase(): TestDatabase {
       }];
     },
     
-    async getCompaniesForTenant(tenantId: string) {
-      // Mock company data
+    async getClientsForTenant(tenantId: string) {
+      // Mock client data
       return [{
-        company_id: 'mock-company-id',
+        client_id: 'mock-client-id',
         tenant: tenantId,
-        company_name: 'Mock Company',
+        client_name: 'Mock Client',
         account_manager_id: 'mock-user-id',
       }];
     },
@@ -115,11 +115,11 @@ async function setupTestDatabase(): Promise<TestDatabase> {
         
         for (const tenantId of createdTenants) {
           // Clear references first
-          await db('companies').where({ tenant: tenantId }).update({ account_manager_id: null });
+          await db('clients').where({ tenant: tenantId }).update({ account_manager_id: null });
           await db('user_roles').where({ tenant: tenantId }).del();
           await db('tenant_companies').where({ tenant: tenantId }).del();
-          await db('companies').where({ tenant: tenantId }).del();
-          await db('company_billing_plans').where({ tenant: tenantId }).del();
+          await db('clients').where({ tenant: tenantId }).del();
+          await db('client_billing_plans').where({ tenant: tenantId }).del();
           await db('billing_plans').where({ tenant: tenantId }).del();
           await db('statuses').where({ tenant: tenantId }).del();
           await db('roles').where({ tenant: tenantId }).del();
@@ -158,8 +158,8 @@ async function setupTestDatabase(): Promise<TestDatabase> {
         .select('r.*', 'ur.*');
     },
     
-    async getCompaniesForTenant(tenantId: string) {
-      return await db('companies').where({ tenant: tenantId }).select('*');
+    async getClientsForTenant(tenantId: string) {
+      return await db('clients').where({ tenant: tenantId }).select('*');
     },
     
     async getRolesForTenant(tenantId: string) {
@@ -242,7 +242,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
           lastName: 'Admin',
           email: `admin-${timestamp}@e2etest.com`,
         },
-        companyName: `E2E Test Company ${timestamp}`,
+        clientName: `E2E Test Client ${timestamp}`,
         billingPlan: 'Enterprise',
       };
 
@@ -259,7 +259,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
       expect(result.success).toBe(true);
       expect(result.tenantId).toBeDefined();
       expect(result.adminUserId).toBeDefined();
-      expect(result.companyId).toBeDefined();
+      expect(result.clientId).toBeDefined();
       expect(result.temporaryPassword).toBeDefined();
       expect(result.temporaryPassword).toHaveLength(12);
       expect(result.createdAt).toBeDefined();
@@ -268,7 +268,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
       try {
         const tenant = await testDb.getTenant(result.tenantId);
         expect(tenant).toBeDefined();
-        expect(tenant.company_name).toBe(input.tenantName);
+        expect(tenant.client_name).toBe(input.tenantName);
         
         const user = await testDb.getUserById(result.adminUserId, result.tenantId);
         expect(user).toBeDefined();

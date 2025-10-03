@@ -82,7 +82,7 @@ export interface Consumer {
   id: string;
   name: string;
   email: string;
-  companyId?: string; // Mapped to Alga company
+  clientId?: string; // Mapped to Alga company
 }
 
 export interface SyncResult {

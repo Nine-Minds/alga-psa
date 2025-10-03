@@ -53,13 +53,13 @@ export interface TestDatabase {
   getUserById: (userId: string, tenantId: string) => Promise<any>;
   getUserRoles: (userId: string, tenantId: string) => Promise<any[]>;
   getRoleById: (roleId: string, tenantId: string) => Promise<any>;
-  getCompanyById: (companyId: string, tenantId: string) => Promise<any>;
+  getClientById: (clientId: string, tenantId: string) => Promise<any>;
   getTenantsMatching: (name: string) => Promise<any[]>;
-  getCompaniesForTenant: (tenantId: string) => Promise<any[]>;
+  getClientsForTenant: (tenantId: string) => Promise<any[]>;
   getRolesForTenant: (tenantId: string) => Promise<any[]>;
   getStatusesForTenant: (tenantId: string) => Promise<any[]>;
   createTenant: (input: { tenantId: string; tenantName: string; email: string }) => Promise<void>;
-  createCompany: (input: { companyId: string; tenantId: string; companyName: string }) => Promise<void>;
+  createClient: (input: { clientId: string; tenantId: string; clientName: string }) => Promise<void>;
   createRole: (input: { roleId: string; tenantId: string; roleName: string; description: string }) => Promise<void>;
   blockUserTable: () => Promise<void>;
   unblockUserTable: () => Promise<void>;
@@ -101,9 +101,9 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
           await trx('user_roles').where({ tenant: tenantId }).del();
         }
         
-        // Clear account manager references in companies before deleting users
+        // Clear account manager references in clients before deleting users
         for (const tenantId of createdTenants) {
-          await trx('companies')
+          await trx('clients')
             .where({ tenant: tenantId })
             .update({ account_manager_id: null });
         }
@@ -113,19 +113,19 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
           await trx('users').where({ user_id: userId }).del();
         }
         
-        // Remove tenant companies
+        // Remove tenant clients
         for (const tenantId of createdTenants) {
           await trx('tenant_companies').where({ tenant: tenantId }).del();
         }
         
-        // Remove companies
+        // Remove clients
         for (const tenantId of createdTenants) {
-          await trx('companies').where({ tenant: tenantId }).del();
+          await trx('clients').where({ tenant: tenantId }).del();
         }
         
         // Remove billing plans and associations
         for (const tenantId of createdTenants) {
-          await trx('company_billing_plans').where({ tenant: tenantId }).del();
+          await trx('client_billing_plans').where({ tenant: tenantId }).del();
           await trx('billing_plans').where({ tenant: tenantId }).del();
         }
         
@@ -186,10 +186,10 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
       });
     },
 
-    async getCompanyById(companyId: string, tenantId: string) {
+    async getClientById(clientId: string, tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('companies')
-          .where({ company_id: companyId, tenant: tenantId })
+        return await trx('clients')
+          .where({ client_id: clientId, tenant: tenantId })
           .first();
       });
     },
@@ -197,14 +197,14 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     async getTenantsMatching(name: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
         return await trx('tenants')
-          .where('company_name', 'like', `%${name}%`)
+          .where('client_name', 'like', `%${name}%`)
           .select('*');
       });
     },
 
-    async getCompaniesForTenant(tenantId: string) {
+    async getClientsForTenant(tenantId: string) {
       return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('companies')
+        return await trx('clients')
           .where({ tenant: tenantId })
           .select('*');
       });
@@ -241,7 +241,7 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
       await withAdminTransaction(async (trx: Knex.Transaction) => {
         await trx('tenants').insert({
           tenant: input.tenantId,
-          company_name: input.tenantName,
+          client_name: input.tenantName,
           email: input.email,
           created_at: new Date(),
           updated_at: new Date(),
@@ -250,12 +250,12 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
       });
     },
 
-    async createCompany(input: { companyId: string; tenantId: string; companyName: string }) {
+    async createClient(input: { clientId: string; tenantId: string; clientName: string }) {
       await withAdminTransaction(async (trx: Knex.Transaction) => {
-        await trx('companies').insert({
-          company_id: input.companyId,
+        await trx('clients').insert({
+          client_id: input.clientId,
           tenant: input.tenantId,
-          company_name: input.companyName,
+          client_name: input.clientName,
           is_inactive: false,
           created_at: new Date(),
           updated_at: new Date(),
@@ -311,7 +311,7 @@ export function createTestTenantInput(overrides: any = {}) {
       lastName: 'Admin',
       email: `test-admin-${timestamp}@example.com`
     },
-    companyName: `test-company-${timestamp}`,
+    clientName: `test-client-${timestamp}`,
     ...overrides
   };
 }

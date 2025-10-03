@@ -12,7 +12,7 @@ async function createAdminUserInDB(
     firstName: string;
     lastName: string;
     email: string;
-    companyId?: string;
+    clientId?: string;
   },
   testDb?: TestDatabase
 ) {
@@ -78,11 +78,11 @@ async function createAdminUserInDB(
       created_at: new Date(),
     });
 
-    // If a company was created, associate the user as the account manager
-    if (input.companyId) {
-      await trx('companies')
+    // If a client was created, associate the user as the account manager
+    if (input.clientId) {
+      await trx('clients')
         .where({ 
-          company_id: input.companyId,
+          client_id: input.clientId,
           tenant: input.tenantId 
         })
         .update({ 
@@ -119,8 +119,8 @@ async function rollbackUserInDB(userId: string, tenantId: string): Promise<void>
       })
       .del();
 
-    // Remove user as account manager from companies
-    await trx('companies')
+    // Remove user as account manager from clients
+    await trx('clients')
       .where({ 
         account_manager_id: userId,
         tenant: tenantId 
@@ -166,7 +166,7 @@ describe('User Activities Database Logic', () => {
         tenantId,
         firstName: 'John',
         lastName: 'Admin',
-        email: `john.admin-${timestamp}@testcompany.com`
+        email: `john.admin-${timestamp}@testclient.com`
       };
 
       const result = await createAdminUserInDB(input, testDb);
@@ -181,7 +181,7 @@ describe('User Activities Database Logic', () => {
       expect(user).toBeDefined();
       expect(user.first_name).toBe('John');
       expect(user.last_name).toBe('Admin');
-      expect(user.email).toBe(`john.admin-${timestamp}@testcompany.com`);
+      expect(user.email).toBe(`john.admin-${timestamp}@testclient.com`);
       expect(user.user_type).toBe('internal');
       expect(user.is_inactive).toBe(false);
 
@@ -196,10 +196,10 @@ describe('User Activities Database Logic', () => {
       expect(role.role_name).toBe('Admin');
     });
 
-    it('should create user and associate with company as account manager', async () => {
-      // First create a tenant and company
+    it('should create user and associate with client as account manager', async () => {
+      // First create a tenant and client
       const tenantId = uuidv4();
-      const companyId = uuidv4();
+      const clientId = uuidv4();
       const timestamp = Date.now();
       
       await testDb.createTenant({
@@ -208,18 +208,18 @@ describe('User Activities Database Logic', () => {
         email: 'tenant@test.com'
       });
 
-      await testDb.createCompany({
-        companyId,
+      await testDb.createClient({
+        clientId,
         tenantId,
-        companyName: 'Test Company'
+        clientName: 'Test Client'
       });
 
       const input = {
         tenantId,
         firstName: 'Jane',
         lastName: 'Manager',
-        email: `jane.manager-${timestamp}@testcompany.com`,
-        companyId
+        email: `jane.manager-${timestamp}@testclient.com`,
+        clientId
       };
 
       const result = await createAdminUserInDB(input, testDb);
@@ -231,9 +231,9 @@ describe('User Activities Database Logic', () => {
       expect(user).toBeDefined();
 
       // Verify user was set as account manager
-      const company = await testDb.getCompanyById(companyId, tenantId);
-      expect(company).toBeDefined();
-      expect(company.account_manager_id).toBe(result.userId);
+      const client = await testDb.getClientById(clientId, tenantId);
+      expect(client).toBeDefined();
+      expect(client.account_manager_id).toBe(result.userId);
     });
 
     it('should reuse existing Admin role if it exists', async () => {
@@ -259,7 +259,7 @@ describe('User Activities Database Logic', () => {
         tenantId,
         firstName: 'Bob',
         lastName: 'Admin',
-        email: `bob.admin-${timestamp}@testcompany.com`
+        email: `bob.admin-${timestamp}@testclient.com`
       };
 
       const result = await createAdminUserInDB(input, testDb);
@@ -309,9 +309,9 @@ describe('User Activities Database Logic', () => {
 
   describe('rollbackUserInDB', () => {
     it('should completely remove user and all associated data', async () => {
-      // Create tenant, company, and user
+      // Create tenant, client, and user
       const tenantId = uuidv4();
-      const companyId = uuidv4();
+      const clientId = uuidv4();
       const timestamp = Date.now();
       
       await testDb.createTenant({
@@ -320,18 +320,18 @@ describe('User Activities Database Logic', () => {
         email: 'tenant@test.com'
       });
 
-      await testDb.createCompany({
-        companyId,
+      await testDb.createClient({
+        clientId,
         tenantId,
-        companyName: 'Test Company'
+        clientName: 'Test Client'
       });
 
       const input = {
         tenantId,
         firstName: 'To',
         lastName: 'Delete',
-        email: `to.delete-${timestamp}@testcompany.com`,
-        companyId
+        email: `to.delete-${timestamp}@testclient.com`,
+        clientId
       };
 
       const result = await createAdminUserInDB(input, testDb);
@@ -341,9 +341,9 @@ describe('User Activities Database Logic', () => {
       const userBefore = await testDb.getUserById(userId, tenantId);
       expect(userBefore).toBeDefined();
 
-      // Verify company has account manager set
-      const companyBefore = await testDb.getCompanyById(companyId, tenantId);
-      expect(companyBefore.account_manager_id).toBe(userId);
+      // Verify client has account manager set
+      const clientBefore = await testDb.getClientById(clientId, tenantId);
+      expect(clientBefore.account_manager_id).toBe(userId);
 
       // Perform rollback
       await rollbackUserInDB(userId, tenantId);
@@ -356,9 +356,9 @@ describe('User Activities Database Logic', () => {
       const userRoles = await testDb.getUserRoles(userId, tenantId);
       expect(userRoles).toHaveLength(0);
 
-      // Verify account manager is cleared from company
-      const companyAfter = await testDb.getCompanyById(companyId, tenantId);
-      expect(companyAfter.account_manager_id).toBeNull();
+      // Verify account manager is cleared from client
+      const clientAfter = await testDb.getClientById(clientId, tenantId);
+      expect(clientAfter.account_manager_id).toBeNull();
     });
   });
 

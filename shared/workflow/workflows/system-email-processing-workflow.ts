@@ -175,8 +175,8 @@ export async function systemEmailProcessingWorkflow(context) {
         return {
           contactId: result.contact.contact_id,
           contactName: result.contact.name,
-          companyId: result.contact.company_id,
-          companyName: result.contact.company_name
+          clientId: result.contact.client_id,
+          clientName: result.contact.client_name
         };
       }
       
@@ -195,27 +195,27 @@ export async function systemEmailProcessingWorkflow(context) {
     emailData,
     actions
   ) => {
-    let companyId = matchingResult.selectedCompanyId;
-    let companyName = '';
+    let clientId = matchingResult.selectedClientId;
+    let clientName = '';
     let contactId = null;
     
-    // Create new company if requested
-    if (matchingResult.createNewCompany && matchingResult.newCompanyName) {
-      const result = await actions.create_company_from_email({
-        company_name: matchingResult.newCompanyName,
+    // Create new client if requested
+    if (matchingResult.createNewClient && matchingResult.newClientName) {
+      const result = await actions.create_client_from_email({
+        client_name: matchingResult.newClientName,
         email: emailData.from.email,
         source: 'email'
       });
       
       if (result.success) {
-        companyId = result.company.company_id;
-        companyName = result.company.company_name;
+        clientId = result.client.client_id;
+        clientName = result.client.client_name;
       }
     } else {
-      // Get existing company details
-      const result = await actions.get_company_by_id_for_email({ companyId });
-      if (result.success && result.company) {
-        companyName = result.company.company_name || '';
+      // Get existing client details
+      const result = await actions.get_client_by_id_for_email({ clientId });
+      if (result.success && result.client) {
+        clientName = result.client.client_name || '';
       }
     }
     
@@ -224,7 +224,7 @@ export async function systemEmailProcessingWorkflow(context) {
       const result = await actions.create_or_find_contact({
         email: emailData.from.email,
         name: matchingResult.contactName || emailData.from.name,
-        company_id: companyId
+        client_id: clientId
       });
       
       if (result.success) {
@@ -236,14 +236,14 @@ export async function systemEmailProcessingWorkflow(context) {
     if (matchingResult.saveEmailAssociation) {
       await actions.save_email_client_association({
         email: emailData.from.email,
-        company_id: companyId,
+        client_id: clientId,
         contact_id: contactId || undefined
       });
     }
     
     return {
-      companyId,
-      companyName,
+      clientId,
+      clientName,
       contactId,
       contactName: matchingResult.contactName || emailData.from.name
     };
@@ -346,10 +346,10 @@ export async function systemEmailProcessingWorkflow(context) {
         data.set('matchedClient', matchedClient);
       } else {
         console.warn('Manual client matching was not completed successfully');
-        // Continue without client match - ticket will be created without company association
+        // Continue without client match - ticket will be created without client association
       }
     } else {
-      console.log(`Found exact email match: ${matchedClient.companyName}`);
+      console.log(`Found exact email match: ${matchedClient.clientName}`);
       data.set('matchedClient', matchedClient);
     }
     
@@ -377,13 +377,13 @@ export async function systemEmailProcessingWorkflow(context) {
     console.log('Creating new ticket from email with resolved defaults');
     
     // Override defaults with matched client info if available
-    const finalCompanyId = matchedClient?.companyId || ticketDefaults.company_id;
+    const finalClientId = matchedClient?.clientId || ticketDefaults.client_id;
     const finalContactId = matchedClient?.contactId || null;
     
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject,
       description: parsedEmailBody.sanitizedText || emailData.body.text,
-      company_id: finalCompanyId,
+      client_id: finalClientId,
       contact_id: finalContactId,
       source: 'email',
       board_id: ticketDefaults.board_id,
@@ -448,7 +448,7 @@ export async function systemEmailProcessingWorkflow(context) {
     console.log('Email processing completed successfully');
     
     // Step 7: Optional notification (if we have a matched client)
-    if (matchedClient?.companyId) {
+    if (matchedClient?.clientId) {
       try {
         // TODO: Implement notification system
         console.log('Sent ticket creation acknowledgment email');

@@ -5,52 +5,52 @@ import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 
 // Simple database operations that mirror the activity logic without Temporal context
-async function createTenantInDB(input: { tenantName: string; email: string; companyName?: string }) {
+async function createTenantInDB(input: { tenantName: string; email: string; clientName?: string }) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
     const tenantId = uuidv4();
     
     // Create tenant record
     await trx('tenants').insert({
       tenant: tenantId,
-      company_name: input.tenantName,
+      client_name: input.tenantName,
       email: input.email,
       created_at: new Date(),
       updated_at: new Date(),
     });
 
-    let companyId: string | undefined;
+    let clientId: string | undefined;
 
-    // Create default company if company name is provided
-    if (input.companyName) {
-      companyId = uuidv4();
+    // Create default client if client name is provided
+    if (input.clientName) {
+      clientId = uuidv4();
       
-      await trx('companies').insert({
-        company_id: companyId,
+      await trx('clients').insert({
+        client_id: clientId,
         tenant: tenantId,
-        company_name: input.companyName,
+        client_name: input.clientName,
         is_inactive: false,
         created_at: new Date(),
         updated_at: new Date(),
       });
 
-      // Create tenant-company association
+      // Create tenant-client association
       await trx('tenant_companies').insert({
         tenant: tenantId,
-        company_id: companyId,
+        client_id: clientId,
         is_default: true,
         created_at: new Date(),
         updated_at: new Date(),
       });
     }
 
-    return { tenantId, companyId };
+    return { tenantId, clientId };
   });
 }
 
 async function setupTenantDataInDB(input: {
   tenantId: string;
   adminUserId?: string;
-  companyId?: string;
+  clientId?: string;
   billingPlan?: string;
 }) {
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
@@ -127,31 +127,31 @@ describe('Tenant Activities Database Logic', () => {
   describe('createTenantInDB', () => {
     it('should create a tenant with basic information', async () => {
       const input = {
-        tenantName: 'Test Company Inc',
-        email: 'admin@testcompany.com',
-        companyName: 'Test Company'
+        tenantName: 'Test Client Inc',
+        email: 'admin@testclient.com',
+        clientName: 'Test Client'
       };
 
       const result = await createTenantInDB(input);
 
       expect(result.tenantId).toBeDefined();
-      expect(result.companyId).toBeDefined();
+      expect(result.clientId).toBeDefined();
 
       // Verify tenant was created in database
       const tenant = await testDb.getTenant(result.tenantId);
       expect(tenant).toBeDefined();
-      expect(tenant.company_name).toBe('Test Company Inc');
-      expect(tenant.email).toBe('admin@testcompany.com');
+      expect(tenant.client_name).toBe('Test Client Inc');
+      expect(tenant.email).toBe('admin@testclient.com');
 
-      // Verify company was created
-      if (result.companyId) {
-        const companies = await testDb.getCompaniesForTenant(result.tenantId);
-        expect(companies).toHaveLength(1);
-        expect(companies[0].company_name).toBe('Test Company');
+      // Verify client was created
+      if (result.clientId) {
+        const clients = await testDb.getClientsForTenant(result.tenantId);
+        expect(clients).toHaveLength(1);
+        expect(clients[0].client_name).toBe('Test Client');
       }
     });
 
-    it('should create a tenant without a company', async () => {
+    it('should create a tenant without a client', async () => {
       const input = {
         tenantName: 'Solo Tenant',
         email: 'admin@solotenant.com'
@@ -160,16 +160,16 @@ describe('Tenant Activities Database Logic', () => {
       const result = await createTenantInDB(input);
 
       expect(result.tenantId).toBeDefined();
-      expect(result.companyId).toBeUndefined();
+      expect(result.clientId).toBeUndefined();
 
       // Verify tenant was created
       const tenant = await testDb.getTenant(result.tenantId);
       expect(tenant).toBeDefined();
-      expect(tenant.company_name).toBe('Solo Tenant');
+      expect(tenant.client_name).toBe('Solo Tenant');
 
-      // Verify no companies were created
-      const companies = await testDb.getCompaniesForTenant(result.tenantId);
-      expect(companies).toHaveLength(0);
+      // Verify no clients were created
+      const clients = await testDb.getClientsForTenant(result.tenantId);
+      expect(clients).toHaveLength(0);
     });
 
     it('should handle duplicate tenant names gracefully', async () => {
@@ -197,15 +197,15 @@ describe('Tenant Activities Database Logic', () => {
     it('should set up complete tenant data', async () => {
       // First create a tenant
       const createResult = await createTenantInDB({
-        tenantName: 'Setup Test Company',
+        tenantName: 'Setup Test Client',
         email: 'admin@setup.com',
-        companyName: 'Setup Test Co'
+        clientName: 'Setup Test Co'
       });
 
       const setupInput = {
         tenantId: createResult.tenantId,
         adminUserId: 'admin-user-123',
-        companyId: createResult.companyId,
+        clientId: createResult.clientId,
         billingPlan: 'Enterprise'
       };
 
@@ -238,7 +238,7 @@ describe('Tenant Activities Database Logic', () => {
     it('should validate input parameters', async () => {
       // Test with invalid email format
       const invalidInput = {
-        tenantName: 'Test Company',
+        tenantName: 'Test Client',
         email: 'invalid-email' // Invalid email format
       };
 
