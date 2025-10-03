@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "sample:create-service-category": "tsx samples/node/create-service-category.ts",
-    "sample:create-company": "tsx samples/node/create-company.ts",
+    "sample:create-client": "tsx samples/node/create-client.ts",
     "openapi:generate": "tsx scripts/generate-openapi.ts"
   },
   "dependencies": {

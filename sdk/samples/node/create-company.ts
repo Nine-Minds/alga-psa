@@ -1,14 +1,14 @@
 export {};
 
 /**
- * Standalone sample: create a company via the Alga PSA API.
+ * Standalone sample: create a client via the Alga PSA API.
  *
  * Usage:
  *   ALGA_API_URL="https://algapsa.com" \\
  *   ALGA_API_KEY="your-api-key" \\
  *   ALGA_TENANT_ID="your-tenant-id" \\
- *   npm run sample:create-company -- \\
- *     --name "Example Company" \\
+ *   npm run sample:create-client -- \\
+ *     --name "Example Client" \\
  *     --phone "+1 555 0100" \\
  *     --url "https://example.com" \\
  *     --billing-cycle "monthly" \\
@@ -17,7 +17,7 @@ export {};
  *
  * Notes:
  * - Required fields (name, phone, URL, billing cycle) can be provided via CLI flags.
- * - There are currently no required foreign key IDs for company creation, but this
+ * - There are currently no required foreign key IDs for client creation, but this
  *   sample demonstrates how to accept a human-friendly value (e.g. account manager
  *   name or email) and resolve it to an ID automatically when supplied.
  */
@@ -30,8 +30,8 @@ type BillingCycle =
   | "semi-annually"
   | "annually";
 
-interface CreateCompanyInput {
-  company_name: string;
+interface CreateClientInput {
+  client_name: string;
   phone_no: string;
   url: string;
   billing_cycle: BillingCycle;
@@ -48,9 +48,9 @@ interface ApiSuccessResponse<T> {
   meta?: unknown;
 }
 
-interface CompanyResponse {
-  company_id: string;
-  company_name: string;
+interface ClientResponse {
+  client_id: string;
+  client_name: string;
   phone_no: string | null;
   email: string | null;
   url: string | null;
@@ -137,7 +137,7 @@ async function resolveAccountManagerId(query: string): Promise<string> {
   return match.user_id;
 }
 
-async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse> {
+async function createClient(input: CreateClientInput): Promise<ClientResponse> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "x-api-key": API_KEY!,
@@ -147,7 +147,7 @@ async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse
     headers["x-tenant-id"] = TENANT_ID;
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/v1/companies`, {
+  const response = await fetch(`${API_BASE_URL}/api/v1/clients`, {
     method: "POST",
     headers,
     body: JSON.stringify(input),
@@ -155,10 +155,10 @@ async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse
 
   if (!response.ok) {
     const detail = await response.text();
-    throw new Error(`Company creation failed: ${response.status} ${response.statusText} – ${detail}`);
+    throw new Error(`Client creation failed: ${response.status} ${response.statusText} – ${detail}`);
   }
 
-  const payload = (await response.json()) as ApiSuccessResponse<CompanyResponse>;
+  const payload = (await response.json()) as ApiSuccessResponse<ClientResponse>;
   return payload.data;
 }
 
@@ -180,7 +180,7 @@ async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse
     process.exit(1);
   }
 
-  const companyName = flags.name ?? "Sample API Company";
+  const clientName = flags.name ?? "Sample API Client";
   const phoneNumber = flags.phone ?? "+1 555 0100";
   const url = flags.url ?? "https://example.com";
   const email = flags.email;
@@ -188,8 +188,8 @@ async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse
   const notes = flags.notes;
   const tags = flags.tags ? flags.tags.split(",").map(tag => tag.trim()).filter(Boolean) : undefined;
 
-  const input: CreateCompanyInput = {
-    company_name: companyName,
+  const input: CreateClientInput = {
+    client_name: clientName,
     phone_no: phoneNumber,
     url,
     billing_cycle: billingCycle,
@@ -210,9 +210,9 @@ async function createCompany(input: CreateCompanyInput): Promise<CompanyResponse
   }
 
   try {
-    const company = await createCompany(input);
-    console.log("Created company:");
-    console.log(JSON.stringify(company, null, 2));
+    const client = await createClient(input);
+    console.log("Created client:");
+    console.log(JSON.stringify(client, null, 2));
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
     process.exit(1);
