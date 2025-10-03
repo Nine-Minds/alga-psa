@@ -6,7 +6,7 @@ export type TaggedEntityType = 'contact' | 'company' | 'ticket' | 'project' | 'p
 // ITag represents a tag in the server context
 export interface ITag extends TenantEntity {
   tag_id: string;
-  channel_id?: string;
+  board_id?: string;
   tag_text: string;
   tagged_id: string;
   tagged_type: TaggedEntityType;

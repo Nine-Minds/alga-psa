@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ticketFormSchema = z.object({
     title: z.string(),
-    channel_id: z.string().uuid(),
+    board_id: z.string().uuid(),
     company_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
@@ -32,7 +32,7 @@ export const ticketSchema = z.object({
     ticket_number: z.string(),
     title: z.string(),
     url: z.string().nullable(),
-    channel_id: z.string().uuid(),
+    board_id: z.string().uuid(),
     company_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
@@ -89,14 +89,14 @@ const baseTicketSchema = z.object({
 export const ticketListItemSchema = baseTicketSchema.extend({
     status_id: z.string().uuid().nullable(),
     priority_id: z.string().uuid().nullable(),
-    channel_id: z.string().uuid().nullable(),
+    board_id: z.string().uuid().nullable(),
     category_id: z.string().uuid().nullable(),
     subcategory_id: z.string().uuid().nullable(),
     entered_by: z.string().uuid().nullable(),
     status_name: z.string(),
     priority_name: z.string(),
     priority_color: z.string().optional(),
-    channel_name: z.string(),
+    board_name: z.string(),
     category_name: z.string(),
     company_name: z.string(),
     entered_by_name: z.string(),
@@ -108,13 +108,13 @@ export const ticketListItemSchema = baseTicketSchema.extend({
 });
 
 export const ticketListFiltersSchema = z.object({
-    channelId: z.string().uuid().nullish(),
+    boardId: z.string().uuid().nullish(),
     statusId: z.string().optional(),
     priorityId: z.string().optional(),
     categoryId: z.string().nullish(),
     companyId: z.string().uuid().nullish(),
     contactId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),
-    channelFilterState: z.enum(['active', 'inactive', 'all']),
+    boardFilterState: z.enum(['active', 'inactive', 'all']),
     showOpenOnly: z.boolean().optional()
 });

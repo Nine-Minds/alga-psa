@@ -6,6 +6,17 @@
   if (el) {
     el.textContent = `extensionId: ${extensionId}`;
   }
-  // Signal ready (placeholder; real SDK would postMessage to host)
-  // console.log("Hello World extension loaded");
+
+  // Signal ready to host using Alga envelope protocol
+  if (window.parent && window.parent !== window) {
+    window.parent.postMessage(
+      {
+        alga: true,
+        version: '1',
+        type: 'ready',
+        payload: {}
+      },
+      '*' // In production, this should be the specific parent origin
+    );
+  }
 })();

@@ -28,13 +28,13 @@ import {
 
 describe('Ticket Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['tickets', 'categories', 'channels', 'contacts', 'companies', 'users', 'roles', 'permissions'],
+    cleanupTables: ['tickets', 'categories', 'boards', 'contacts', 'companies', 'users', 'roles', 'permissions'],
     runSeeds: true
   });
   let testTicket: ITicket;
   let regularUser: any;
   let adminUser: any;
-  let channelId: string;
+  let boardId: string;
   let categoryId: string;
   let contactId: string;
   let statusId: string;
@@ -90,11 +90,11 @@ describe('Ticket Permissions Infrastructure', () => {
       .where('users.user_id', adminUserId)
       .first();
 
-    // Create channel
-    channelId = uuidv4();
-    await context.db('channels').insert({
-      channel_id: channelId,
-      channel_name: 'Test Channel',
+    // Create board
+    boardId = uuidv4();
+    await context.db('boards').insert({
+      board_id: boardId,
+      board_name: 'Test Board',
       tenant: tenantId,
     });
 
@@ -117,7 +117,7 @@ describe('Ticket Permissions Infrastructure', () => {
       category_id: categoryId,
       category_name: 'Test Category',
       tenant: tenantId,
-      channel_id: channelId,
+      board_id: boardId,
       created_by: adminUser.user_id,
     });
 
@@ -153,7 +153,7 @@ describe('Ticket Permissions Infrastructure', () => {
       ticket_number: 'TKT-001',
       title: 'Test Ticket',
       url: null,
-      channel_id: channelId,
+      board_id: boardId,
       company_id: companyId,
       contact_name_id: contactId,
       status_id: statusId,
@@ -176,7 +176,7 @@ describe('Ticket Permissions Infrastructure', () => {
 
   // Use cleanup hook for test isolation
   const cleanup = createCleanupHook(context.db, [
-    'tickets', 'categories', 'channels', 'contacts',
+    'tickets', 'categories', 'boards', 'contacts',
     'companies', 'users', 'roles', 'permissions'
   ]);
   afterEach(cleanup);
@@ -218,7 +218,7 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('title', 'New Test Ticket');
     mockFormData.append('ticket_number', 'TKT-002');
     mockFormData.append('status_id', statusId);
-    mockFormData.append('channel_id', channelId);
+    mockFormData.append('board_id', boardId);
     mockFormData.append('company_id', testTicket.company_id);
     mockFormData.append('contact_name_id', contactId);
     mockFormData.append('category_id', categoryId);
@@ -241,7 +241,7 @@ describe('Ticket Permissions Infrastructure', () => {
     mockFormData.append('title', 'New Test Ticket');
     mockFormData.append('ticket_number', 'TKT-002');
     mockFormData.append('status_id', statusId);
-    mockFormData.append('channel_id', channelId);
+    mockFormData.append('board_id', boardId);
     mockFormData.append('company_id', testTicket.company_id);
     mockFormData.append('contact_name_id', contactId);
     mockFormData.append('category_id', categoryId);

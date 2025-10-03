@@ -775,8 +775,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           this.on('t.status_id', '=', 's.status_id')
               .andOn('t.tenant', '=', 's.tenant');
         })
-        .leftJoin('channels as ch', function() {
-          this.on('t.channel_id', '=', 'ch.channel_id')
+        .leftJoin('boards as ch', function() {
+          this.on('t.board_id', '=', 'ch.board_id')
               .andOn('t.tenant', '=', 'ch.tenant');
         })
         .leftJoin('users as u_assignee', function() {
@@ -813,7 +813,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           't.company_id',
           'co.company_name',
           's.name as status_name',
-          'ch.channel_name as channel_name',
+          'ch.board_name as board_name',
           db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
           'ct.full_name as contact_name',
           db.raw('NULL::text as project_name'),
@@ -957,7 +957,7 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         company_id: workItem.company_id,
         company_name: workItem.company_name,
         status_name: workItem.status_name,
-        channel_name: workItem.channel_name,
+        board_name: workItem.board_name,
         assigned_to_name: workItem.assigned_to_name,
         contact_name: workItem.contact_name,
         additional_user_ids: workItem.additional_user_ids || [],

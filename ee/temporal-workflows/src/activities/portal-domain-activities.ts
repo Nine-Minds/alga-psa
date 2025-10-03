@@ -315,6 +315,8 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     return { success: false, appliedCount: 0, errors: [message] };
   }
 
+  const triggeringDomain = rows.find((row) => row.id === args.portalDomainId);
+
   const config = getPortalDomainConfig();
   const managedRows = rows.filter((row) => shouldManageStatus(row.status));
   const manifests = managedRows.map((row) =>
@@ -431,10 +433,46 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
     }
   }
 
+  if (getBasePortalVirtualService()) {
+    try {
+      const domainToCleanup = triggeringDomain && !shouldManageStatus(triggeringDomain.status)
+        ? triggeringDomain.domain
+        : undefined;
+      console.log('[applyPortalDomainResources] Calling syncBaseVirtualServiceRouting', {
+        triggeringDomainId: args.portalDomainId,
+        triggeringDomainStatus: triggeringDomain?.status,
+        triggeringDomainName: triggeringDomain?.domain,
+        domainToCleanup,
+        manifestCount: manifests.length,
+        manifestRoot,
+      });
+      await syncBaseVirtualServiceRouting(manifests, config, manifestRoot, domainToCleanup);
+      console.log('[applyPortalDomainResources] syncBaseVirtualServiceRouting completed successfully');
+    } catch (error) {
+      console.error('[applyPortalDomainResources] syncBaseVirtualServiceRouting failed', error);
+      errors.push(
+        formatErrorMessage(
+          error,
+          'Failed to update base VirtualService routing',
+        ),
+      );
+    }
+  } else {
+    console.log('[applyPortalDomainResources] Skipping base VirtualService sync (not configured)');
+  }
+
   try {
     await runGit(["add", "--all", gitConfig.relativePathPosix], gitConfig, {
       suppressOutput: true,
     });
+
+    if (getBasePortalVirtualService()) {
+      const baseVsPath = joinPath(gitConfig.relativePathSegments[0], 'istio-virtualservice.yaml');
+      console.log('[applyPortalDomainResources] Adding base VirtualService to git', { path: baseVsPath });
+      await runGit(["add", baseVsPath], gitConfig, {
+        suppressOutput: true,
+      });
+    }
   } catch (error) {
     errors.push(formatErrorMessage(error, "Failed to stage manifest changes"));
   }
@@ -447,6 +485,24 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
         formatErrorMessage(
           error,
           "Failed to apply manifest changes to cluster",
+        ),
+      );
+    }
+  }
+
+  if (getBasePortalVirtualService()) {
+    try {
+      const repoDir = dirname(manifestRoot);
+      const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
+      console.log('[applyPortalDomainResources] Applying base VirtualService to Kubernetes', { path: vsFilePath });
+      await runKubectl(["apply", "-f", vsFilePath]);
+      console.log('[applyPortalDomainResources] Successfully applied base VirtualService to Kubernetes');
+    } catch (error) {
+      console.error('[applyPortalDomainResources] Failed to apply base VirtualService to Kubernetes', error);
+      errors.push(
+        formatErrorMessage(
+          error,
+          "Failed to apply base VirtualService to cluster",
         ),
       );
     }
@@ -467,19 +523,6 @@ export async function applyPortalDomainResources(args: { tenantId: string; porta
           ),
         );
       }
-    }
-  }
-
-  if (getBasePortalVirtualService()) {
-    try {
-      await syncBaseVirtualServiceRouting(manifests, config);
-    } catch (error) {
-      errors.push(
-        formatErrorMessage(
-          error,
-          'Failed to update base VirtualService routing',
-        ),
-      );
     }
   }
 
@@ -1316,11 +1359,22 @@ async function syncGatewaySecret(
 async function syncBaseVirtualServiceRouting(
   manifests: RenderedPortalDomainResources[],
   config: PortalDomainConfig,
+  manifestRoot: string,
+  domainToCleanup?: string,
 ): Promise<void> {
+  console.log('[syncBaseVS] Starting sync', {
+    manifestCount: manifests.length,
+    manifestRoot,
+    domainToCleanup: domainToCleanup || '(none)',
+  });
+
   const baseRef = getBasePortalVirtualService();
   if (!baseRef) {
+    console.log('[syncBaseVS] No PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE configured, skipping sync');
     return;
   }
+
+  console.log('[syncBaseVS] Base VirtualService reference:', baseRef);
 
   const parsed = parseNamespacedResourceRef(
     baseRef,
@@ -1333,6 +1387,8 @@ async function syncBaseVirtualServiceRouting(
   }
 
   const { namespace, name } = parsed;
+
+  console.log('[syncBaseVS] Fetching base VirtualService', { namespace, name });
 
   let baseVirtualService: any;
   try {
@@ -1360,6 +1416,12 @@ async function syncBaseVirtualServiceRouting(
   const baseHttpRoutes = Array.isArray(baseVirtualService?.spec?.http)
     ? [...baseVirtualService.spec.http]
     : [];
+
+  console.log('[syncBaseVS] Current state:', {
+    baseHosts,
+    baseGateways,
+    baseHttpRouteCount: baseHttpRoutes.length,
+  });
 
   const desiredHostsSet = new Set<string>();
   const desiredGatewaysSet = new Set<string>();
@@ -1395,12 +1457,42 @@ async function syncBaseVirtualServiceRouting(
     ],
   );
 
+  console.log('[syncBaseVS] Desired from manifests:', {
+    desiredHosts: Array.from(desiredHostsSet),
+    desiredGateways: Array.from(desiredGatewaysSet),
+  });
+
+  console.log('[syncBaseVS] Managed annotations:', {
+    managedHosts: Array.from(managedHosts),
+    managedGateways: Array.from(managedGateways),
+  });
+
   const retainedHosts = baseHosts.filter(
-    (host) => !managedHosts.has(host) || desiredHostsSet.has(host),
+    (host) => {
+      // If this is the domain being cleaned up, always remove it
+      if (domainToCleanup && host === domainToCleanup) {
+        return false;
+      }
+      // Keep if not managed OR if managed and still desired
+      return !managedHosts.has(host) || desiredHostsSet.has(host);
+    },
   );
   const retainedGateways = baseGateways.filter(
-    (gateway) =>
-      !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway),
+    (gateway) => {
+      // If cleaning up a domain, remove portal domain gateways that aren't in the desired set
+      // Portal domain gateways follow the pattern: {namespace}/portal-domain-gw-{id}
+      if (domainToCleanup) {
+        const isPortalDomainGateway = gateway.includes('/portal-domain-gw-');
+        const isStillDesired = desiredGatewaysSet.has(gateway);
+
+        // Remove orphaned portal domain gateways
+        if (isPortalDomainGateway && !isStillDesired) {
+          return false;
+        }
+      }
+      // Keep if not managed OR if managed and still desired
+      return !managedGateways.has(gateway) || desiredGatewaysSet.has(gateway);
+    },
   );
 
   const desiredHosts = combineUniqueStrings(
@@ -1412,8 +1504,24 @@ async function syncBaseVirtualServiceRouting(
     Array.from(desiredGatewaysSet),
   );
 
+  console.log('[syncBaseVS] After filtering:', {
+    retainedHosts,
+    retainedGateways,
+    desiredHosts,
+    desiredGateways,
+  });
+
   const hostsChanged = !arraysShallowEqual(baseHosts, desiredHosts);
   const gatewaysChanged = !arraysShallowEqual(baseGateways, desiredGateways);
+
+  console.log('[syncBaseVS] Change detection:', {
+    hostsChanged,
+    gatewaysChanged,
+    baseHosts,
+    desiredHosts,
+    baseGateways,
+    desiredGateways,
+  });
 
   const desiredManagedHostsList = Array.from(desiredHostsSet).sort();
   const desiredManagedGatewaysList = Array.from(desiredGatewaysSet).sort();
@@ -1472,6 +1580,14 @@ async function syncBaseVirtualServiceRouting(
     desiredManagedGatewaysList,
   );
 
+  console.log('[syncBaseVS] All change flags:', {
+    hostsChanged,
+    gatewaysChanged,
+    managedHostsChanged,
+    managedGatewaysChanged,
+    httpRoutesChanged,
+  });
+
   if (
     !hostsChanged &&
     !gatewaysChanged &&
@@ -1479,52 +1595,70 @@ async function syncBaseVirtualServiceRouting(
     !managedGatewaysChanged &&
     !httpRoutesChanged
   ) {
+    console.log('[syncBaseVS] No changes detected, skipping file write');
     return;
   }
 
-  const patch: Record<string, any> = {};
+  console.log('[syncBaseVS] Changes detected, updating base VirtualService');
 
-  if (hostsChanged || gatewaysChanged || httpRoutesChanged) {
-    patch.spec = {};
-    if (hostsChanged) {
-      patch.spec.hosts = desiredHosts;
-    }
-    if (gatewaysChanged) {
-      patch.spec.gateways = desiredGateways;
-    }
-    if (httpRoutesChanged) {
-      patch.spec.http = desiredHttpRoutes;
-    }
+  if (hostsChanged) {
+    baseVirtualService.spec.hosts = desiredHosts;
+  }
+  if (gatewaysChanged) {
+    baseVirtualService.spec.gateways = desiredGateways;
+  }
+  if (httpRoutesChanged) {
+    baseVirtualService.spec.http = desiredHttpRoutes;
   }
 
-  if (managedHostsChanged || managedGatewaysChanged) {
-    patch.metadata = { annotations: {} };
-    patch.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
-      desiredManagedHostsList.length > 0
-        ? JSON.stringify(desiredManagedHostsList)
-        : null;
-    patch.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
-      desiredManagedGatewaysList.length > 0
-        ? JSON.stringify(desiredManagedGatewaysList)
-        : null;
+  if (!baseVirtualService.metadata.annotations) {
+    baseVirtualService.metadata.annotations = {};
   }
+
+  if (desiredManagedHostsList.length > 0) {
+    baseVirtualService.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION] =
+      JSON.stringify(desiredManagedHostsList);
+  } else {
+    delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_HOSTS_ANNOTATION];
+  }
+
+  if (desiredManagedGatewaysList.length > 0) {
+    baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION] =
+      JSON.stringify(desiredManagedGatewaysList);
+  } else {
+    delete baseVirtualService.metadata.annotations[PORTAL_MANAGED_GATEWAYS_ANNOTATION];
+  }
+
+  // Write the base VirtualService to the repo root (not the portal-domains folder)
+  const repoDir = dirname(manifestRoot);
+  const vsFilePath = joinPath(repoDir, 'istio-virtualservice.yaml');
+
+  console.log('[syncBaseVS] File path construction:', {
+    manifestRoot,
+    repoDir,
+    vsFilePath,
+  });
 
   try {
-    await runKubectl([
-      'patch',
-      'virtualservice',
-      name,
-      '-n',
-      namespace,
-      '--type=merge',
-      '-p',
-      JSON.stringify(patch),
-    ]);
+    await ensureDirectory(dirname(vsFilePath));
+    const yamlContent = dumpYaml(baseVirtualService, { sortKeys: true, noRefs: true });
+    console.log('[syncBaseVS] Writing base VirtualService to file', {
+      path: vsFilePath,
+      contentLength: yamlContent.length,
+      hosts: baseVirtualService.spec.hosts,
+      gateways: baseVirtualService.spec.gateways,
+    });
+    await fs.writeFile(vsFilePath, yamlContent, 'utf8');
+    console.log('[syncBaseVS] Successfully wrote base VirtualService to file');
   } catch (error) {
+    console.error('[syncBaseVS] Failed to write base VirtualService', {
+      path: vsFilePath,
+      error: formatErrorMessage(error),
+    });
     throw new Error(
       formatErrorMessage(
         error,
-        `Failed to update base portal VirtualService ${namespace}/${name}`,
+        `Failed to write base VirtualService to ${vsFilePath}`,
       ),
     );
   }

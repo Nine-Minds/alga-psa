@@ -146,14 +146,14 @@ export function WorkItemDrawer({
                                 isInDrawer={true}
                                 initialTicket={ticketData.ticket}
                                 initialComments={ticketData.comments}
-                                initialChannel={ticketData.channel}
+                                initialBoard={ticketData.board}
                                 initialCompany={ticketData.company}
                                 initialContactInfo={ticketData.contactInfo}
                                 initialCreatedByUser={ticketData.createdByUser}
                                 initialAdditionalAgents={ticketData.additionalAgents}
                                 statusOptions={ticketData.options.status}
                                 agentOptions={ticketData.options.agent}
-                                channelOptions={ticketData.options.channel}
+                                boardOptions={ticketData.options.board}
                                 priorityOptions={ticketData.options.priority}
                                 initialCategories={ticketData.categories}
                                 initialCompanies={ticketData.companies}

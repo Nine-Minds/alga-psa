@@ -57,9 +57,15 @@ const generateColorShades = (hex: string): Record<number, string> => {
   return shades;
 };
 
-export function BrandingProvider({ children }: { children: React.ReactNode }) {
-  const [branding, setBranding] = useState<TenantBranding | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+export function BrandingProvider({
+  children,
+  initialBranding = null
+}: {
+  children: React.ReactNode;
+  initialBranding?: TenantBranding | null;
+}) {
+  const [branding, setBranding] = useState<TenantBranding | null>(initialBranding);
+  const [isLoading, setIsLoading] = useState(!initialBranding);
   const [styleElement, setStyleElement] = useState<HTMLStyleElement | null>(null);
 
   const loadBranding = async () => {
@@ -74,13 +80,23 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    loadBranding();
-  }, []);
+    // Only fetch branding if not provided initially
+    if (!initialBranding) {
+      loadBranding();
+    }
+  }, [initialBranding]);
 
   useEffect(() => {
     console.log('BrandingProvider: Branding data:', branding);
     if (branding?.logoUrl) {
       console.log('BrandingProvider: Logo URL:', branding.logoUrl);
+    }
+
+    // Check if server-side styles already exist
+    const serverStyles = document.getElementById('server-tenant-branding-styles');
+    if (serverStyles) {
+      console.log('BrandingProvider: Server-side styles already present, skipping client-side injection');
+      return;
     }
 
     // Clean up previous style element if it exists

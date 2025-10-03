@@ -6,19 +6,19 @@ exports.seed = async function (knex) {
     const tagDefinitions = await knex('tag_definitions').insert([
         {
             tenant: tenant.tenant,
-            channel_id: knex('channels')
+            board_id: knex('boards')
                 .where({
                     tenant: tenant.tenant,
-                    channel_name: 'Urgent Matters'
+                    board_name: 'Urgent Matters'
                 })
-                .select('channel_id')
+                .select('board_id')
                 .first(),
             tag_text: 'Urgent',
             tagged_type: 'ticket'
         },
         {
             tenant: tenant.tenant,
-            channel_id: null,
+            board_id: null,
             tag_text: 'White Rabbit',
             tagged_type: 'ticket'
         }

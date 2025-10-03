@@ -20,7 +20,7 @@ export interface ITagWithDefinition {
   tag_text: string;
   tagged_id: string;
   tagged_type: TaggedEntityType;
-  channel_id?: string | null;
+  board_id?: string | null;
   background_color?: string | null;
   text_color?: string | null;
   created_at?: Date;
@@ -56,7 +56,7 @@ const TagMapping = {
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
-          'td.channel_id',
+          'td.board_id',
           'td.background_color',
           'td.text_color',
           'tm.created_at',
@@ -103,7 +103,7 @@ const TagMapping = {
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
-          'td.channel_id',
+          'td.board_id',
           'td.background_color',
           'td.text_color',
           'tm.created_at',

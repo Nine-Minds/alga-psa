@@ -7,10 +7,10 @@ exports.seed = async function(knex) {
     // Check if migration has already populated the standard tables
     // The migration file already includes data, so we'll only add this as a safeguard
     
-    // Check if standard_channels already has data
-    const channelCount = await knex('standard_channels').count('* as count').first();
+    // Check if standard_boards already has data
+    const boardCount = await knex('standard_boards').count('* as count').first();
     
-    if (channelCount && channelCount.count > 0) {
+    if (boardCount && boardCount.count > 0) {
         console.log('Standard reference tables already populated by migration');
         return;
     }
@@ -18,18 +18,18 @@ exports.seed = async function(knex) {
     // If for some reason the migration didn't populate the data, we can add it here
     console.log('Populating standard reference tables...');
     
-    // Standard Channels
-    await knex('standard_channels').insert([
-        { channel_name: 'General Support', description: 'Account management, service requests, ticket escalation, and knowledge base', display_order: 1, is_default: true },
-        { channel_name: 'Technical Issues', description: 'System failures, configuration issues, performance issues, and hardware failures', display_order: 2 },
-        { channel_name: 'Projects', description: 'Project planning, execution, client feedback, and project closure', display_order: 3 },
-        { channel_name: 'Urgent Matters', description: 'Critical incidents, data loss, security breaches, and priority support', display_order: 4 },
-        { channel_name: 'Administration', description: 'Account management, billing, service settings, and policy compliance', display_order: 5 },
-        { channel_name: 'Software Support', description: 'Installation, updates, troubleshooting, and customizations', display_order: 6 },
-        { channel_name: 'Hardware Support', description: 'Device failures, installations, maintenance, and device monitoring', display_order: 7 },
-        { channel_name: 'Network Support', description: 'Connectivity issues, configuration, security, and performance', display_order: 8 },
-        { channel_name: 'Security & Compliance', description: 'Security issues, compliance, security updates, and access control', display_order: 9 },
-        { channel_name: 'Client Communication', description: 'Customer support, reporting, onboarding, and general inquiries', display_order: 10 },
+    // Standard Boards
+    await knex('standard_boards').insert([
+        { board_name: 'General Support', description: 'Account management, service requests, ticket escalation, and knowledge base', display_order: 1, is_default: true },
+        { board_name: 'Technical Issues', description: 'System failures, configuration issues, performance issues, and hardware failures', display_order: 2 },
+        { board_name: 'Projects', description: 'Project planning, execution, client feedback, and project closure', display_order: 3 },
+        { board_name: 'Urgent Matters', description: 'Critical incidents, data loss, security breaches, and priority support', display_order: 4 },
+        { board_name: 'Administration', description: 'Account management, billing, service settings, and policy compliance', display_order: 5 },
+        { board_name: 'Software Support', description: 'Installation, updates, troubleshooting, and customizations', display_order: 6 },
+        { board_name: 'Hardware Support', description: 'Device failures, installations, maintenance, and device monitoring', display_order: 7 },
+        { board_name: 'Network Support', description: 'Connectivity issues, configuration, security, and performance', display_order: 8 },
+        { board_name: 'Security & Compliance', description: 'Security issues, compliance, security updates, and access control', display_order: 9 },
+        { board_name: 'Client Communication', description: 'Customer support, reporting, onboarding, and general inquiries', display_order: 10 },
     ]);
     
     // Standard Service Categories

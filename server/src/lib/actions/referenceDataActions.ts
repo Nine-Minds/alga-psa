@@ -9,7 +9,7 @@ import { IStandardServiceType } from 'server/src/interfaces/billing.interfaces';
 import { IInteractionType } from 'server/src/interfaces';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 
-export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'channels';
+export type ReferenceDataType = 'priorities' | 'statuses' | 'service_types' | 'task_types' | 'interaction_types' | 'service_categories' | 'categories' | 'boards';
 
 interface ReferenceDataConfig {
   sourceTable: string;
@@ -164,7 +164,7 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       category_name: source.category_name,
       display_order: source.display_order,
       tenant: tenantId,
-      channel_id: options?.channel_id,
+      board_id: options?.board_id,
       created_by: userId
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
@@ -178,11 +178,11 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
       return !!existing;
     }
   },
-  channels: {
-    sourceTable: 'standard_channels',
-    targetTable: 'channels',
+  boards: {
+    sourceTable: 'standard_boards',
+    targetTable: 'boards',
     mapFields: (source: any, tenantId: string, userId: string, options?: any) => ({
-      channel_name: source.channel_name,
+      board_name: source.board_name,
       description: source.description,
       display_order: source.display_order,
       is_inactive: source.is_inactive || false,
@@ -191,10 +191,10 @@ const referenceDataConfigs: Record<ReferenceDataType, ReferenceDataConfig> = {
     }),
     conflictCheck: async (data: any, tenantId: string, trx?: Knex.Transaction) => {
       const db = trx || (await createTenantKnex()).knex;
-      const existing = await db('channels')
+      const existing = await db('boards')
         .where({
           tenant: tenantId,
-          channel_name: data.channel_name
+          board_name: data.board_name
         })
         .first();
       return !!existing;
@@ -209,10 +209,10 @@ export async function getReferenceData(dataType: ReferenceDataType, filters?: an
   let query = db(config.sourceTable);
   
   if (filters) {
-    // For categories, channel_id is only relevant for tenant data, not standard data
+    // For categories, board_id is only relevant for tenant data, not standard data
     const filteredFilters = { ...filters };
-    if (dataType === 'categories' && 'channel_id' in filteredFilters) {
-      delete filteredFilters.channel_id;
+    if (dataType === 'categories' && 'board_id' in filteredFilters) {
+      delete filteredFilters.board_id;
     }
     
     Object.entries(filteredFilters).forEach(([key, value]) => {
@@ -224,7 +224,7 @@ export async function getReferenceData(dataType: ReferenceDataType, filters?: an
   if (dataType === 'priorities') {
     query = query.orderBy('order_number', 'asc');
   } else if (dataType === 'statuses' || dataType === 'task_types' || dataType === 'service_types' || 
-             dataType === 'service_categories' || dataType === 'channels') {
+             dataType === 'service_categories' || dataType === 'boards') {
     query = query.orderBy('display_order', 'asc');
   } else if (dataType === 'categories') {
     // For categories, order by parent_category_uuid first (nulls first) then by display_order
@@ -288,7 +288,7 @@ export async function checkImportConflicts(
     // Check order conflict for data types that have order (even if there's a name conflict)
     if (dataType === 'priorities' || dataType === 'statuses' || dataType === 'service_types' || 
         dataType === 'interaction_types' || dataType === 'service_categories' || 
-        dataType === 'categories' || dataType === 'channels') {
+        dataType === 'categories' || dataType === 'boards') {
       const orderField = (dataType === 'priorities' || dataType === 'service_types' || dataType === 'statuses') ? 'order_number' : 'display_order';
       const orderValue = mappedData[orderField];
       
@@ -367,7 +367,7 @@ export async function importReferenceData(
   }
   
   // Validate required filters for specific data types
-  if (dataType === 'categories' && !filters?.channel_id) {
+  if (dataType === 'categories' && !filters?.board_id) {
     throw new Error('Board ID is required when importing categories');
   }
 
@@ -392,7 +392,7 @@ export async function importReferenceData(
     const resolution = conflictResolutions?.[itemId];
     
     if (resolution?.action === 'skip') {
-      const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
+      const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
       skippedItems.push({
         name: itemName,
         reason: 'Skipped by user'
@@ -419,7 +419,7 @@ export async function importReferenceData(
     if (config.conflictCheck && !resolution) {
       const hasConflict = await config.conflictCheck(mappedData, currentUser.tenant, trx);
       if (hasConflict) {
-        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
         skippedItems.push({
           name: itemName,
           reason: 'Already exists'
@@ -433,7 +433,7 @@ export async function importReferenceData(
     const hasOrderField = dataType === 'priorities' || dataType === 'statuses' || 
                           dataType === 'service_types' || dataType === 'interaction_types' || 
                           dataType === 'service_categories' || dataType === 'categories' || 
-                          dataType === 'channels';
+                          dataType === 'boards';
     
     if (hasOrderField && mappedData[orderField] !== undefined) {
       // Skip order conflict checking for subcategories
@@ -499,7 +499,7 @@ export async function importReferenceData(
             .where({
               tenant: currentUser.tenant,
               category_name: standardParentCategory.category_name,
-              channel_id: filters?.channel_id
+              board_id: filters?.board_id
             })
             .first();
             
@@ -517,9 +517,9 @@ export async function importReferenceData(
       }
       
       // Check for existing defaults before inserting
-      if (dataType === 'channels' && mappedData.is_default === true) {
-        // Check if there's already a default channel
-        const existingDefault = await trx('channels')
+      if (dataType === 'boards' && mappedData.is_default === true) {
+        // Check if there's already a default board
+        const existingDefault = await trx('boards')
           .where({ tenant: currentUser.tenant, is_default: true })
           .first();
         
@@ -554,13 +554,13 @@ export async function importReferenceData(
       
       if (insertError.code === '23505') {
         // Unique constraint violation
-        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
         skippedItems.push({
           name: itemName,
           reason: 'Already exists'
         });
       } else {
-        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.channel_name;
+        const itemName = item.name || item.priority_name || item.type_name || item.service_type || item.category_name || item.board_name;
         skippedItems.push({
           name: itemName,
           reason: insertError.message || 'Unknown error'
@@ -631,7 +631,7 @@ export async function deleteReferenceDataItem(
       interaction_types: 'id',
       service_categories: 'id',
       categories: 'category_id',
-      channels: 'channel_id'
+      boards: 'board_id'
     };
 
     const idField = idFieldMap[dataType];
@@ -652,11 +652,11 @@ export async function deleteReferenceDataItem(
         throw new Error('Item not found or access denied');
       }
 
-      // Special handling for channels - check if it has categories
-      if (dataType === 'channels') {
+      // Special handling for boards - check if it has categories
+      if (dataType === 'boards') {
         const categoryCount = await trx('categories')
           .where({
-            channel_id: itemId,
+            board_id: itemId,
             tenant: currentUser.tenant
           })
           .count('* as count')

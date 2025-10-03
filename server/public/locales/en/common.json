@@ -29,11 +29,22 @@
     "download": "Download",
     "upload": "Upload",
     "refresh": "Refresh",
-    "close": "Close"
+    "close": "Close",
+    "confirm": "Confirm",
+    "add": "Add",
+    "remove": "Remove",
+    "clear": "Clear",
+    "reset": "Reset",
+    "view": "View",
+    "copy": "Copy",
+    "duplicate": "Duplicate",
+    "openMenu": "Open menu",
+    "confirmDeletion": "Confirm Deletion"
   },
   "status": {
     "loading": "Loading...",
     "saving": "Saving...",
+    "processing": "Processing...",
     "success": "Success",
     "error": "Error",
     "warning": "Warning",
@@ -47,6 +58,7 @@
   "messages": {
     "welcome": "Welcome",
     "confirmDelete": "Are you sure you want to delete this item?",
+    "confirmDeletion": "Confirm Deletion",
     "saveSuccess": "Changes saved successfully",
     "saveError": "Failed to save changes",
     "loadError": "Failed to load data",
@@ -80,6 +92,9 @@
         "deleteComments": "Insufficient permissions to delete comments"
       }
     }
+  },
+  "fields": {
+    "notes": "Notes"
   },
   "time": {
     "today": "Today",

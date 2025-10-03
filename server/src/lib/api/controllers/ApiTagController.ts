@@ -462,7 +462,7 @@ export class ApiTagController extends ApiBaseController {
             validatedData.tagged_type,
             validatedData.tag_texts,
             {
-              channel_id: validatedData.channel_id,
+              board_id: validatedData.board_id,
               default_colors: validatedData.default_colors
             },
             apiRequest.context!

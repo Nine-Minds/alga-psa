@@ -23,10 +23,10 @@ import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
-import { IChannel } from 'server/src/interfaces';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
+import { IBoard } from 'server/src/interfaces';
 import { getTicketCategories } from 'server/src/lib/actions/ticketCategoryActions';
-import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
@@ -48,7 +48,7 @@ interface SelectOption {
   status_id?: string;
   category_id?: string;
   assigned_to?: string;
-  channel_id?: string;
+  board_id?: string;
   priority_id?: string;
   company_id?: string;
 }
@@ -82,18 +82,18 @@ export default function TaskTicketLinks({
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState('');
+  const [selectedBoard, setSelectedBoard] = useState('');
   const [selectedPriority, setSelectedPriority] = useState('');
   const [selectedCompany, setSelectedCompany] = useState('');
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
-  const [channels, setChannels] = useState<IChannel[]>([]);
+  const [boards, setBoards] = useState<IBoard[]>([]);
   const [statusOptions, setStatusOptions] = useState<SelectOption[]>([
     { value: 'all', label: 'All Statuses' }
   ]);
   const [priorityOptions, setPriorityOptions] = useState<SelectOption[]>([
     { value: 'all', label: 'All Priorities' }
   ]);
-  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('all');
+  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('all');
   const [companyOptions, setCompanyOptions] = useState<SelectOption[]>([]);
   const [selectedTicketStatus, setSelectedTicketStatus] = useState('all');
   const [selectedTicketId, setSelectedTicketId] = useState('');
@@ -102,10 +102,10 @@ export default function TaskTicketLinks({
     setSearchTerm('');
     setSelectedCategories([]);
     setSelectedUser('');
-    setSelectedChannel('');
+    setSelectedBoard('');
     setSelectedPriority('');
     setSelectedTicketStatus('all');
-    setChannelFilterState('all');
+    setBoardFilterState('all');
   };
 
   const removeFilter = (filterType: string) => {
@@ -119,9 +119,9 @@ export default function TaskTicketLinks({
       case 'user':
         setSelectedUser('');
         break;
-      case 'channel':
-        setSelectedChannel('');
-        setChannelFilterState('all');
+      case 'board':
+        setSelectedBoard('');
+        setBoardFilterState('all');
         break;
       case 'priority':
         setSelectedPriority('');
@@ -141,7 +141,7 @@ export default function TaskTicketLinks({
       if (!user) return;
 
       const filters: ITicketListFilters = {
-        channelFilterState: 'all'
+        boardFilterState: 'all'
       };
       const tickets = await getTicketsForList(user, filters);
       setAvailableTickets(tickets || []);
@@ -170,18 +170,18 @@ export default function TaskTicketLinks({
     try {
       const [
         fetchedCategories,
-        fetchedChannels,
+        fetchedBoards,
         statuses,
         priorities
       ] = await Promise.all([
         getTicketCategories().catch(() => []),
-        getAllChannels().catch(() => []),
+        getAllBoards().catch(() => []),
         getTicketStatuses().catch(() => []),
         getAllPriorities('ticket').catch(() => [])
       ]);
 
       setCategories(fetchedCategories || []);
-      setChannels(fetchedChannels || []);
+      setBoards(fetchedBoards || []);
       
       // Find the default status
       if (statuses && statuses.length > 0) {
@@ -210,7 +210,7 @@ export default function TaskTicketLinks({
     } catch (error) {
       console.error('Error fetching filter options:', error);
       setCategories([]);
-      setChannels([]);
+      setBoards([]);
       setStatusOptions([{ value: 'all', label: 'All Statuses' }]);
       setPriorityOptions([{ value: 'all', label: 'All Priorities' }]);
     }
@@ -263,8 +263,8 @@ export default function TaskTicketLinks({
       const matchesUser = !selectedUser || 
         ticket.assigned_to === selectedUser;
       
-      const matchesChannel = !selectedChannel || selectedChannel === 'all' || 
-        ticket.channel_id === selectedChannel;
+      const matchesBoard = !selectedBoard || selectedBoard === 'all' || 
+        ticket.board_id === selectedBoard;
       
       const matchesPriority = !selectedPriority || selectedPriority === 'all' || 
         ticket.priority_id === selectedPriority;
@@ -273,7 +273,7 @@ export default function TaskTicketLinks({
         ticket.status_id === selectedTicketStatus;
 
       return matchesSearch && matchesCategory && matchesUser && 
-             matchesChannel && matchesPriority && matchesStatus;
+             matchesBoard && matchesPriority && matchesStatus;
     })
     .map((ticket): SelectOption => ({
       value: ticket.ticket_id!,
@@ -282,7 +282,7 @@ export default function TaskTicketLinks({
       status_id: ticket.status_id || undefined,
       category_id: ticket.category_id || undefined,
       assigned_to: ticket.assigned_to || undefined,
-      channel_id: ticket.channel_id || undefined,
+      board_id: ticket.board_id || undefined,
       priority_id: ticket.priority_id || undefined
     }));
 
@@ -387,14 +387,14 @@ export default function TaskTicketLinks({
           isInDrawer={true}
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
-          initialChannel={ticketData.channel}
+          initialBoard={ticketData.board}
           initialCompany={ticketData.company}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
           initialAdditionalAgents={ticketData.additionalAgents}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}
-          channelOptions={ticketData.options.channel}
+          boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
           initialCompanies={ticketData.companies}
@@ -432,9 +432,9 @@ export default function TaskTicketLinks({
     }
   };
 
-  const handleChannelSelect = (channelId: string) => {
-    setSelectedChannel(channelId);
-    setChannelFilterState('all');
+  const handleBoardSelect = (boardId: string) => {
+    setSelectedBoard(boardId);
+    setBoardFilterState('all');
   };
 
   const onNewTicketCreated = async (ticket: ITicket) => {
@@ -484,7 +484,7 @@ export default function TaskTicketLinks({
             status_id: defaultStatus?.status_id,
             category_id: ticket.category_id,
             assigned_to: ticket.assigned_to,
-            channel_id: ticket.channel_id,
+            board_id: ticket.board_id,
             priority_id: ticket.priority_id
           } as ITicketListItem
         ]);
@@ -614,15 +614,15 @@ export default function TaskTicketLinks({
                         </div>
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Channel
+                            Board
                           </label>
-                          <ChannelPicker
-                            id='channel-picker'
-                            channels={channels}
-                            onSelect={handleChannelSelect}
-                            selectedChannelId={selectedChannel}
-                            filterState={channelFilterState}
-                            onFilterStateChange={setChannelFilterState}
+                          <BoardPicker
+                            id='board-picker'
+                            boards={boards}
+                            onSelect={handleBoardSelect}
+                            selectedBoardId={selectedBoard}
+                            filterState={boardFilterState}
+                            onFilterStateChange={setBoardFilterState}
                           />
                         </div>
                       </div>
@@ -656,7 +656,7 @@ export default function TaskTicketLinks({
                     {/* Active Filters */}
                     <div className="mt-4 mb-2">
                       {(searchTerm || selectedCategories.length > 0 || selectedUser || 
-                        selectedChannel || selectedTicketStatus !== 'all' || 
+                        selectedBoard || selectedTicketStatus !== 'all' || 
                         (selectedPriority && selectedPriority !== 'all')) && (
                         <div className="flex flex-wrap gap-2 mb-4">
                           {searchTerm && (
@@ -683,10 +683,10 @@ export default function TaskTicketLinks({
                               </button>
                             </span>
                           )}
-                          {selectedChannel && (
+                          {selectedBoard && (
                             <span className="inline-flex items-center gap-1 text-sm bg-gray-100 px-2 py-1 rounded">
-                              Channel: {channels.find(c => c.channel_id === selectedChannel)?.channel_name}
-                              <button onClick={() => removeFilter('channel')} className="text-gray-500 hover:text-gray-700">
+                              Board: {boards.find(c => c.board_id === selectedBoard)?.board_name}
+                              <button onClick={() => removeFilter('board')} className="text-gray-500 hover:text-gray-700">
                                 <X className="h-3 w-3" />
                               </button>
                             </span>

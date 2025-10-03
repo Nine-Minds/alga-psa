@@ -1,8 +1,8 @@
 'use server'
 
-import { IUser, IChannel, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
+import { IUser, IBoard, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllChannels } from 'server/src/lib/actions/channel-actions/channelActions';
+import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
 import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
@@ -10,7 +10,7 @@ import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/con
 
 export interface TicketFormData {
   users: IUser[];
-  channels: IChannel[];
+  boards: IBoard[];
   statuses: ITicketStatus[];
   priorities: IPriority[];
   companies: ICompany[];
@@ -31,13 +31,13 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
     }
 
     // Fetch required data first
-    const [users, channels, statuses, priorities, companies] = await Promise.all([
+    const [users, boards, statuses, priorities, companies] = await Promise.all([
       getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
       }),
-      getAllChannels().catch(error => {
-        console.error('Error fetching channels:', error);
+      getAllBoards().catch(error => {
+        console.error('Error fetching boards:', error);
         return [];
       }),
       getTicketStatuses().catch(error => {
@@ -72,7 +72,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
 
     return {
       users: users || [],
-      channels: channels || [],
+      boards: boards || [],
       statuses: statuses || [],
       priorities: priorities || [],
       companies: companies || [],
@@ -88,7 +88,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
     // Return empty data instead of throwing
     return {
       users: [],
-      channels: [],
+      boards: [],
       statuses: [],
       priorities: [],
       companies: [],
@@ -114,7 +114,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       priorities,
       // Other fields are not needed for client portal ticket creation
       users: [],
-      channels: [],
+      boards: [],
       statuses: [],
       companies: [],
     };
@@ -122,7 +122,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
     console.error('Error fetching client ticket form data:', error);
     return {
       users: [],
-      channels: [],
+      boards: [],
       statuses: [],
       priorities: [],
       companies: [],

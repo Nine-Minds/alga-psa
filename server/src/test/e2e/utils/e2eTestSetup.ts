@@ -114,8 +114,8 @@ export async function setupE2ETestEnvironment(options: {
           .where('tenant', tenantId)
           .delete();
           
-        // Clean up channels (they reference tenants)
-        await db('channels')
+        // Clean up boards (they reference tenants)
+        await db('boards')
           .where('tenant', tenantId)
           .delete();
           
@@ -377,13 +377,13 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
     });
   }
   
-  // Create a default channel for tickets
-  const existingChannels = await db('channels').where({ tenant: tenantId }).count('* as count');
-  if (parseInt(existingChannels[0].count) === 0) {
-    await db('channels').insert({
-      channel_id: uuidv4(),
+  // Create a default board for tickets
+  const existingBoards = await db('boards').where({ tenant: tenantId }).count('* as count');
+  if (parseInt(existingBoards[0].count) === 0) {
+    await db('boards').insert({
+      board_id: uuidv4(),
       tenant: tenantId,
-      channel_name: 'Default',
+      board_name: 'Default',
       is_default: true,
       display_order: 1
     });

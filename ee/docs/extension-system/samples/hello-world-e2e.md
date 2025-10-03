@@ -6,6 +6,7 @@ This sample provides a minimal UI-only extension that displays “Hello World”
 - Manifest: [ee/extensions/samples/hello-world/manifest.json](ee/extensions/samples/hello-world/manifest.json)
 - UI entry: [ee/extensions/samples/hello-world/ui/index.html](ee/extensions/samples/hello-world/ui/index.html)
 - UI script: [ee/extensions/samples/hello-world/ui/main.js](ee/extensions/samples/hello-world/ui/main.js)
+- App menu: declares `ui.hooks.appMenu.label = "Hello World"` so the sample appears in the host navigation menu once installed.
 
 ## A) Install via the Install UI
 

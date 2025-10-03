@@ -99,9 +99,6 @@ impl RegistryClient for HttpRegistryClient {
         // Keep fast timeout
         let mut rb = self.http.get(url);
 
-        // Temporary canary routing header for testing; remove after canary period
-        rb = rb.header("x-canary", "robert");
-
         if let Some(key) = &self.api_key {
             rb = rb.header("x-api-key", key);
         }

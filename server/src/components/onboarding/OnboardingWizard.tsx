@@ -76,8 +76,8 @@ export function OnboardingWizard({
     planName: 'hourly',
 
     // Ticketing
-    channelName: '',
-    channelId: undefined,
+    boardName: '',
+    boardId: undefined,
     supportEmail: '',
     categories: [],
     priorities: [],
@@ -268,7 +268,7 @@ export function OnboardingWizard({
     setIsLoading(true);
     try {
       // Validate we have required defaults before finishing
-      if (wizardData.channelName || wizardData.channelId) {
+      if (wizardData.boardName || wizardData.boardId) {
         const validationResult = await validateOnboardingDefaults();
         
         if (!validationResult.success) {
@@ -279,16 +279,16 @@ export function OnboardingWizard({
       }
       
       // Save final step (ticketing)
-      if (wizardData.channelName || wizardData.channelId) {
+      if (wizardData.boardName || wizardData.boardId) {
         const ticketingResult = await configureTicketing({
-          channelName: wizardData.channelName,
+          boardName: wizardData.boardName,
           supportEmail: wizardData.supportEmail,
           categories: wizardData.categories,
           priorities: wizardData.priorities,
           ticketPrefix: wizardData.ticketPrefix,
           ticketPaddingLength: wizardData.ticketPaddingLength,
           ticketStartNumber: wizardData.ticketStartNumber,
-          channelId: wizardData.channelId,
+          boardId: wizardData.boardId,
           statuses: wizardData.statuses
         });
         
@@ -338,11 +338,11 @@ export function OnboardingWizard({
   };
 
   const isTicketingStepValid = () => {
-    const { channelName, channelId, priorities } = wizardData;
-    // Check if we have either a channel name or channel ID (from import)
-    const hasChannel = (channelName && channelName.trim()) || channelId;
+    const { boardName, boardId, priorities } = wizardData;
+    // Check if we have either a board name or board ID (from import)
+    const hasBoard = (boardName && boardName.trim()) || boardId;
     // Categories are optional, but we need at least one priority
-    return !!(hasChannel && priorities.length > 0);
+    return !!(hasBoard && priorities.length > 0);
   };
 
   const hasAtLeastOneFieldFilled = () => {

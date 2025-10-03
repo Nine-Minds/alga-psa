@@ -96,7 +96,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.ticket_number',
         't.title',
         't.url',
-        't.channel_id',
+        't.board_id',
         't.company_id',
         't.contact_name_id',
         't.status_id',
@@ -115,7 +115,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
-        'c.channel_name',
+        'c.board_name',
         'cat.category_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         db.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
@@ -128,8 +128,8 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         this.on('t.priority_id', '=', 'p.priority_id')
             .andOn('t.tenant', '=', 'p.tenant');
       })
-      .leftJoin('channels as c', function() {
-        this.on('t.channel_id', '=', 'c.channel_id')
+      .leftJoin('boards as c', function() {
+        this.on('t.board_id', '=', 'c.board_id')
             .andOn('t.tenant', '=', 'c.tenant');
       })
       .leftJoin('categories as cat', function() {
@@ -781,16 +781,16 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         throw new Error('Contact not associated with a company');
       }
 
-      // Fetch default channel for client portal tickets
-      const defaultChannel = await trx('channels')
+      // Fetch default board for client portal tickets
+      const defaultBoard = await trx('boards')
         .where({
           tenant,
           is_default: true
         })
         .first();
 
-      if (!defaultChannel) {
-        throw new Error('No default channel configured for tickets');
+      if (!defaultBoard) {
+        throw new Error('No default board configured for tickets');
       }
 
       // Fetch default status for tickets
@@ -822,7 +822,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         contact_id: user.contact_id, // Maps to contact_name_id in database
         entered_by: session.user.id,
         source: 'client_portal',
-        channel_id: defaultChannel.channel_id,
+        board_id: defaultBoard.board_id,
         status_id: defaultStatus.status_id
       };
 

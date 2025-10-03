@@ -25,7 +25,7 @@ describe('Ticket API E2E Tests', () => {
   const API_BASE = '/api/v1/tickets';
   let statusIds: { open: string; inProgress: string; closed: string };
   let priorityIds: { low: string; medium: string; high: string };
-  let channelId: string;
+  let boardId: string;
 
   beforeAll(async () => {
     env = await setupE2ETestEnvironment();
@@ -33,19 +33,19 @@ describe('Ticket API E2E Tests', () => {
     // Set up test data - create necessary entities
     const db = env.db;
     
-    // Get the default channel created by setupE2ETestEnvironment
-    const existingChannel = await db('channels')
+    // Get the default board created by setupE2ETestEnvironment
+    const existingBoard = await db('boards')
       .where({ tenant: env.tenant, is_default: true })
       .first();
     
-    if (existingChannel) {
-      channelId = existingChannel.channel_id;
+    if (existingBoard) {
+      boardId = existingBoard.board_id;
     } else {
-      // Create a test channel if none exists
-      channelId = uuidv4();
-      await db('channels').insert({
-        channel_id: channelId,
-        channel_name: 'Test Channel',
+      // Create a test board if none exists
+      boardId = uuidv4();
+      await db('boards').insert({
+        board_id: boardId,
+        board_name: 'Test Board',
         tenant: env.tenant,
         display_order: 99
       });
@@ -128,7 +128,7 @@ describe('Ticket API E2E Tests', () => {
       it('should create a new ticket', async () => {
         const newTicket = createTicketTestData({
           company_id: env.companyId,
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium
         });
@@ -172,7 +172,7 @@ describe('Ticket API E2E Tests', () => {
         const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
         const fullTicket = createTicketTestData({
           company_id: env.companyId,
-          channel_id: channelId,
+          board_id: boardId,
           contact_name_id: contactId,
           status_id: statusIds.open,
           priority_id: priorityIds.high,
@@ -203,7 +203,7 @@ describe('Ticket API E2E Tests', () => {
           title: 'Test Ticket for Retrieval',
           description: 'This ticket will be retrieved',
           company_id: env.companyId,
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.low
         });
@@ -238,7 +238,7 @@ describe('Ticket API E2E Tests', () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
           title: 'Original Title',
           description: 'Original description',
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.low
         });
@@ -274,7 +274,7 @@ describe('Ticket API E2E Tests', () => {
 
       it('should validate update data', async () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium
         });
@@ -293,7 +293,7 @@ describe('Ticket API E2E Tests', () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
           title: 'To Delete',
           description: 'This ticket will be deleted',
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.low
         });
@@ -334,7 +334,7 @@ describe('Ticket API E2E Tests', () => {
     });
 
     it('should support pagination parameters', async () => {
-      await createTicketsForPagination(env.db, env.tenant, env.companyId, channelId, 15);
+      await createTicketsForPagination(env.db, env.tenant, env.companyId, boardId, 15);
 
       const query = buildQueryString({ page: 2, limit: 5 });
       const response = await env.apiClient.get(`${API_BASE}${query}`);
@@ -380,7 +380,7 @@ describe('Ticket API E2E Tests', () => {
       // Create ticket assigned to specific user
       await createTestTicket(env.db, env.tenant, {
         title: 'Assigned Ticket',
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium,
         assigned_to: env.userId
@@ -424,7 +424,7 @@ describe('Ticket API E2E Tests', () => {
       const ticket1 = await createTestTicket(env.db, env.tenant, {
         title: 'Important ticket for search test',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
@@ -434,7 +434,7 @@ describe('Ticket API E2E Tests', () => {
       const ticket2 = await createTestTicket(env.db, env.tenant, {
         title: 'Another ticket to find',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
         priority_id: priorityIds.high
@@ -444,7 +444,7 @@ describe('Ticket API E2E Tests', () => {
       const ticket3 = await createTestTicket(env.db, env.tenant, {
         title: 'Special ticket case',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
         priority_id: priorityIds.low
@@ -481,7 +481,7 @@ describe('Ticket API E2E Tests', () => {
       const uniqueTicket = await createTestTicket(env.db, env.tenant, {
         title: 'UniqueTitle123',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
@@ -515,7 +515,7 @@ describe('Ticket API E2E Tests', () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
         title: 'Ticket for Comments',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
       });
@@ -585,7 +585,7 @@ describe('Ticket API E2E Tests', () => {
     beforeEach(async () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
         title: 'Ticket for Status Updates',
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
       });
@@ -621,7 +621,7 @@ describe('Ticket API E2E Tests', () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
         title: 'Ticket for Assignment',
         company_id: env.companyId,
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
       });
@@ -790,7 +790,7 @@ describe('Ticket API E2E Tests', () => {
       for (let i = 0; i < 3; i++) {
         const ticket = await createTestTicket(env.db, env.tenant, {
           title: `Bulk Update Test ${i}`,
-          channel_id: channelId,
+          board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium
         });
@@ -838,7 +838,7 @@ describe('Ticket API E2E Tests', () => {
     it('should track ticket history', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
         title: 'History Test Ticket',
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
       });

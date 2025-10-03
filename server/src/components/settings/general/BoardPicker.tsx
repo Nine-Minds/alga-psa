@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { IChannel } from 'server/src/interfaces';
+import { IBoard } from 'server/src/interfaces';
 import { ChevronDown } from 'lucide-react';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ContainerComponent, AutomationProps, FormFieldComponent } from 'server/src/types/ui-reflection/types';
@@ -12,22 +12,22 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { Button } from 'server/src/components/ui/Button';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 
-interface ChannelPickerProps {
+interface BoardPickerProps {
   id?: string;
-  channels: IChannel[];
-  onSelect: (channelId: string) => void;
-  selectedChannelId: string | null;
+  boards: IBoard[];
+  onSelect: (boardId: string) => void;
+  selectedBoardId: string | null;
   filterState: 'active' | 'inactive' | 'all';
   onFilterStateChange: (state: 'active' | 'inactive' | 'all') => void;
   fitContent?: boolean;
   placeholder?: string;
 }
 
-export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
-  id = 'channel-picker',
-  channels = [],
+export const BoardPicker: React.FC<BoardPickerProps & AutomationProps> = ({
+  id = 'board-picker',
+  boards = [],
   onSelect,
-  selectedChannelId,
+  selectedBoardId,
   filterState,
   onFilterStateChange,
   fitContent = false,
@@ -39,18 +39,18 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   const dropdownRef = useRef<HTMLButtonElement>(null);
 
   const mappedOptions = useMemo(() => 
-    channels.map(channel => ({
-      value: channel.channel_id || '',
-      label: channel.channel_name || ''
+    boards.map(board => ({
+      value: board.board_id || '',
+      label: board.board_name || ''
     })), 
-    [channels]
+    [boards]
   );
 
-  const { automationIdProps: channelPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
+  const { automationIdProps: boardPickerProps, updateMetadata } = useAutomationIdAndRegister<FormFieldComponent>({
     type: 'formField',
     fieldType: 'select',
     id,
-    value: selectedChannelId || '',
+    value: selectedBoardId || '',
     disabled: false,
     required: false,
     options: mappedOptions
@@ -68,12 +68,12 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   useEffect(() => {
     if (!updateMetadata) return;
 
-    const selectedChannel = channels.find(c => c.channel_id === selectedChannelId);
+    const selectedBoard = boards.find(c => c.board_id === selectedBoardId);
 
     // Construct the new metadata
     const newMetadata = {
-      value: selectedChannelId || '',
-      label: selectedChannel?.channel_name || '',
+      value: selectedBoardId || '',
+      label: selectedBoard?.board_name || '',
       disabled: false,
       required: false,
       options: mappedOptions
@@ -117,30 +117,30 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
       // Update the ref with the new metadata
       prevMetadataRef.current = newMetadata;
     }
-  }, [selectedChannelId, channels, updateMetadata]); // updateMetadata intentionally omitted
+  }, [selectedBoardId, boards, updateMetadata]); // updateMetadata intentionally omitted
 
-  const selectedChannel = useMemo(() =>
-    channels.find((c) => c.channel_id === selectedChannelId),
-    [channels, selectedChannelId]
+  const selectedBoard = useMemo(() =>
+    boards.find((c) => c.board_id === selectedBoardId),
+    [boards, selectedBoardId]
   );
 
-  const filteredChannels = useMemo(() => {
-    return channels.filter(channel => {
-      const matchesSearch = (channel.channel_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredBoards = useMemo(() => {
+    return boards.filter(board => {
+      const matchesSearch = (board.board_name || '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesState =
         filterState === 'all' ? true :
-          filterState === 'active' ? !channel.is_inactive :
-            filterState === 'inactive' ? channel.is_inactive :
+          filterState === 'active' ? !board.is_inactive :
+            filterState === 'inactive' ? board.is_inactive :
               true;
 
       return matchesSearch && matchesState;
     });
-  }, [channels, filterState, searchTerm]);
+  }, [boards, filterState, searchTerm]);
 
 
-  const handleSelect = (channelId: string, e: React.MouseEvent) => {
+  const handleSelect = (boardId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(channelId);
+    onSelect(boardId);
     setIsOpen(false);
   };
 
@@ -156,14 +156,14 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
   };
 
   return (
-    <ReflectionContainer id={`${id}-channel`} data-automation-type={dataAutomationType} label="Board Picker">
+    <ReflectionContainer id={`${id}-board`} data-automation-type={dataAutomationType} label="Board Picker">
       <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
         <Popover.Trigger asChild>
           <Button
             variant="outline"
             onClick={handleToggle}
             className="w-full justify-between"
-            label={selectedChannel?.channel_name || placeholder}
+            label={selectedBoard?.board_name || placeholder}
             type="button"
             ref={dropdownRef}
             aria-expanded={isOpen}
@@ -171,8 +171,8 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
             {...withDataAutomationId({ id })}
             data-automation-type={dataAutomationType}
           >
-            <span className={`flex-1 text-left ${!selectedChannelId ? 'text-gray-400' : ''}`}>
-              {selectedChannel?.channel_name || (selectedChannelId ? `Loading...` : placeholder)}
+            <span className={`flex-1 text-left ${!selectedBoardId ? 'text-gray-400' : ''}`}>
+              {selectedBoard?.board_name || (selectedBoardId ? `Loading...` : placeholder)}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </Button>
@@ -228,23 +228,23 @@ export const ChannelPicker: React.FC<ChannelPickerProps & AutomationProps> = ({
                 e.stopPropagation();
               }}
             >
-              {filteredChannels.length === 0 ? (
+              {filteredBoards.length === 0 ? (
                 <div className="px-4 py-2 text-gray-500">No boards found</div>
               ) : (
-                filteredChannels.map((channel): JSX.Element => (
+                filteredBoards.map((board): JSX.Element => (
                   <Button
-                    key={channel.channel_id}
-                    id={`${id}-channel-picker-channel-${channel.channel_id}`}
+                    key={board.board_id}
+                    id={`${id}-board-picker-board-${board.board_id}`}
                     variant="ghost"
-                    onClick={(e) => handleSelect(channel.channel_id!, e)}
-                    className={`w-full justify-start ${channel.channel_id === selectedChannelId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
-                    label={channel.channel_name || ''}
+                    onClick={(e) => handleSelect(board.board_id!, e)}
+                    className={`w-full justify-start ${board.board_id === selectedBoardId ? 'bg-blue-100 hover:bg-blue-200' : ''}`}
+                    label={board.board_name || ''}
                     role="option"
-                    aria-selected={channel.channel_id === selectedChannelId}
+                    aria-selected={board.board_id === selectedBoardId}
                     type="button"
                   >
-                    {channel.channel_name || ''}
-                    {channel.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
+                    {board.board_name || ''}
+                    {board.is_inactive && <span className="ml-2 text-gray-500">(Inactive)</span>}
                   </Button>
                 ))
               )}

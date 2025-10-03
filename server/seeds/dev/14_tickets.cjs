@@ -35,7 +35,7 @@ exports.seed = async function (knex) {
         companyEmeraldCityId, companyWonderlandId,
         contactAliceId, contactDorothyId,
         statusCuriousId, statusAwaitingId, statusUnfoldingId,
-        channelUrgentId, channelProjectsId,
+        boardUrgentId, boardProjectsId,
         categoryMagicalArtifactsId, categoryCharacterAssistId, categoryRealmMaintenanceId,
         subCategoryEnchantedAccId, subCategoryQuestGuidanceId, subCategoryMagicalInfraId,
         priorityEnchantedId, priorityCuriousId,
@@ -51,8 +51,8 @@ exports.seed = async function (knex) {
         getId('statuses', { name: 'Curious Beginning' }, 'status_id'),
         getId('statuses', { name: 'Awaiting Wisdom' }, 'status_id'),
         getId('statuses', { name: 'Unfolding Adventure' }, 'status_id'),
-        getId('channels', { channel_name: 'Urgent Matters' }, 'channel_id'),
-        getId('channels', { channel_name: 'Projects' }, 'channel_id'),
+        getId('boards', { board_name: 'Urgent Matters' }, 'board_id'),
+        getId('boards', { board_name: 'Projects' }, 'board_id'),
         getId('categories', { category_name: 'Magical Artifacts' }, 'category_id'),
         getId('categories', { category_name: 'Character Assistance' }, 'category_id'),
         getId('categories', { category_name: 'Realm Maintenance' }, 'category_id'),
@@ -83,7 +83,7 @@ exports.seed = async function (knex) {
             company_id: companyEmeraldCityId,
             contact_name_id: contactAliceId,
             status_id: statusCuriousId,
-            channel_id: channelUrgentId,
+            board_id: boardUrgentId,
             category_id: categoryMagicalArtifactsId,
             subcategory_id: subCategoryEnchantedAccId,
             priority_id: priorityEnchantedId,
@@ -101,7 +101,7 @@ exports.seed = async function (knex) {
             company_id: companyWonderlandId,
             contact_name_id: contactAliceId,
             status_id: statusAwaitingId,
-            channel_id: channelUrgentId,
+            board_id: boardUrgentId,
             category_id: categoryCharacterAssistId,
             subcategory_id: subCategoryQuestGuidanceId,
             priority_id: priorityEnchantedId,
@@ -119,7 +119,7 @@ exports.seed = async function (knex) {
             company_id: companyEmeraldCityId,
             contact_name_id: contactDorothyId,
             status_id: statusUnfoldingId,
-            channel_id: channelProjectsId,
+            board_id: boardProjectsId,
             category_id: categoryRealmMaintenanceId,
             subcategory_id: subCategoryMagicalInfraId,
             priority_id: priorityCuriousId,
@@ -135,7 +135,7 @@ exports.seed = async function (knex) {
     // Filter out any tickets where essential IDs might be missing (if lookups failed)
     const validTickets = ticketsToInsert.filter(ticket =>
         ticket.company_id && ticket.contact_name_id && ticket.status_id &&
-        ticket.channel_id && ticket.category_id && ticket.subcategory_id &&
+        ticket.board_id && ticket.category_id && ticket.subcategory_id &&
         ticket.priority_id && ticket.severity_id && ticket.urgency_id &&
         ticket.impact_id && ticket.entered_by && ticket.assigned_to
     );

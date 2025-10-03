@@ -8,7 +8,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   ticket_number: string;
   title: string;
   url: string | null;
-  channel_id: string;
+  board_id: string;
   company_id: string | null;
   location_id?: string | null;
   contact_name_id: string | null;
@@ -32,17 +32,17 @@ export interface ITicket extends TenantEntity, ITaggable {
   itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
 }
 
-export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'channel_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
+export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
   status_id: string | null;
   priority_id: string | null;
-  channel_id: string | null;
+  board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
   entered_by: string | null;
   status_name: string;
   priority_name: string;
   priority_color?: string;
-  channel_name: string;
+  board_name: string;
   category_name: string;
   company_name: string;
   entered_by_name: string;
@@ -50,14 +50,14 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
 }
 
 export interface ITicketListFilters {
-  channelId?: string;
+  boardId?: string;
   statusId?: string;
   priorityId?: string;
   categoryId?: string;
   companyId?: string;
   contactId?: string;
   searchQuery?: string;
-  channelFilterState: 'active' | 'inactive' | 'all';
+  boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
 }
@@ -95,7 +95,7 @@ export interface ITicketCategory extends TenantEntity {
   category_id: string;
   category_name: string;
   parent_category?: string;
-  channel_id?: string;
+  board_id?: string;
   created_by?: string;
   created_at?: Date;
   description?: string;

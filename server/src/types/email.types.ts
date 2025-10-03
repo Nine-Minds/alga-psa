@@ -222,7 +222,7 @@ export interface InboundTicketDefaults {
   short_name: string;
   display_name: string;
   description?: string;
-  channel_id?: string;
+  board_id?: string;
   status_id?: string;
   priority_id?: string;
   company_id?: string;
@@ -239,10 +239,10 @@ export interface InboundTicketDefaults {
  * Options for ticket field dropdowns
  */
 export interface TicketFieldOptions {
-  channels: Array<{ id: string; name: string; is_default: boolean }>;
+  boards: Array<{ id: string; name: string; is_default: boolean }>;
   statuses: Array<{ id: string; name: string; is_default?: boolean }>;
   priorities: Array<{ id: string; name: string; is_default?: boolean }>;
-  categories: Array<{ id: string; name: string; parent_id?: string; channel_id?: string }>;
+  categories: Array<{ id: string; name: string; parent_id?: string; board_id?: string }>;
   companies: Array<{ id: string; name: string }>;
   users: Array<{ id: string; name: string; username: string }>;
   locations: Array<{ id: string; name: string; company_id: string }>;

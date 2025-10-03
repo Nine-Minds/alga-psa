@@ -1,3 +1,5 @@
+export {};
+
 /**
  * Standalone sample: create a service category via the Alga PSA API.
  *
@@ -42,13 +44,18 @@ interface ServiceCategoryResponse {
 }
 
 async function createServiceCategory(input: CreateServiceCategoryInput): Promise<ServiceCategoryResponse> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-api-key": API_KEY!,
+  };
+
+  if (TENANT_ID) {
+    headers["x-tenant-id"] = TENANT_ID;
+  }
+
   const res = await fetch(`${API_BASE_URL}/api/v1/categories/service`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": API_KEY,
-      ...(TENANT_ID ? { "x-tenant-id": TENANT_ID } : {}),
-    },
+    headers,
     body: JSON.stringify(input),
   });
 

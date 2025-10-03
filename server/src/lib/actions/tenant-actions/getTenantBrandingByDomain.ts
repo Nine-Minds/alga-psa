@@ -3,119 +3,140 @@
 import { getConnection } from '@/lib/db/db';
 import { TenantBranding } from './tenantBrandingActions';
 import { unstable_cache } from 'next/cache';
+import { LOCALE_CONFIG, SupportedLocale, isSupportedLocale } from '@/lib/i18n/config';
 
-/**
- * Get tenant branding by domain with caching
- */
-async function fetchTenantBrandingByDomain(domain: string): Promise<TenantBranding | null> {
+const DEV_HOSTS = new Set([
+  '',
+  'localhost',
+  '127.0.0.1',
+  '::1',
+  '[::1]',
+]);
+
+interface TenantPortalConfig {
+  branding: TenantBranding | null;
+  locale: SupportedLocale | null;
+}
+
+async function getTenantSettings(tenantId: string) {
+  const tenantKnex = await getConnection(tenantId);
+  return tenantKnex('tenant_settings')
+    .where({ tenant: tenantId })
+    .first();
+}
+
+async function lookupTenantSettingsByDomain(normalizedDomain: string) {
+  if (normalizedDomain.includes('.algapsa.com') || normalizedDomain.includes('.9minds.ai')) {
+    const parts = normalizedDomain.split('.');
+    if (parts.length >= 3 && parts[1] === 'portal') {
+      const tenantPrefix = parts[0];
+      const knex = await getConnection();
+
+      const portalDomain = await knex('portal_domains')
+        .where('canonical_host', 'like', `${tenantPrefix}.portal.%`)
+        .andWhere('status', 'active')
+        .first();
+
+      if (!portalDomain) {
+        console.log('[getTenantBrandingByDomain] No portal found for subdomain:', tenantPrefix);
+        return { tenantSettings: null, tenantId: null };
+      }
+
+      const tenantSettings = await getTenantSettings(portalDomain.tenant);
+      return { tenantSettings, tenantId: portalDomain.tenant };
+    }
+
+    return { tenantSettings: null, tenantId: null };
+  }
+
+  const knex = await getConnection();
+  const portalDomain = await knex('portal_domains')
+    .whereRaw('lower(domain) = ?', [normalizedDomain])
+    .first();
+
+  console.log('[getTenantBrandingByDomain] Portal domain query result:', portalDomain);
+
+  if (!portalDomain) {
+    console.log('[getTenantBrandingByDomain] No portal domain found for:', normalizedDomain);
+    return { tenantSettings: null, tenantId: null };
+  }
+
+  if (portalDomain.status !== 'active') {
+    console.log('[getTenantBrandingByDomain] Portal domain not active. Status:', portalDomain.status);
+  }
+
+  const tenantSettings = await getTenantSettings(portalDomain.tenant);
+  return { tenantSettings, tenantId: portalDomain.tenant };
+}
+
+async function fetchTenantPortalConfig(domain: string): Promise<TenantPortalConfig> {
   console.log('[getTenantBrandingByDomain] Input domain:', domain);
 
   try {
-    // Normalize domain (remove protocol, www, port, trailing slash)
     const normalizedDomain = domain
       .toLowerCase()
       .replace(/^https?:\/\//, '')
       .replace(/^www\./, '')
-      .replace(/:\d+$/, '') // Remove port number
+      .replace(/:\d+$/, '')
       .replace(/\/$/, '');
 
     console.log('[getTenantBrandingByDomain] Normalized domain:', normalizedDomain);
 
-    // For default domains, extract tenant from subdomain
-    if (normalizedDomain.includes('.algapsa.com') || normalizedDomain.includes('.9minds.ai')) {
-      // Extract subdomain (e.g., 'abc123.portal' from 'abc123.portal.algapsa.com')
-      const parts = normalizedDomain.split('.');
-      if (parts.length >= 3 && parts[1] === 'portal') {
-        const tenantPrefix = parts[0];
-
-        // Get default connection to query portal_domains
-        const knex = await getConnection();
-
-        // Find tenant by canonical_host pattern
-        const portalDomain = await knex('portal_domains')
-          .where('canonical_host', 'like', `${tenantPrefix}.portal.%`)
-          .andWhere('status', 'active')
-          .first();
-
-        if (!portalDomain) {
-          console.log('[getTenantBrandingByDomain] No portal found for subdomain:', tenantPrefix);
-          return null;
-        }
-
-        const tenantKnex = await getConnection(portalDomain.tenant);
-        const tenantSettings = await tenantKnex('tenant_settings')
-          .where({ tenant: portalDomain.tenant })
-          .first();
-
-        if (!tenantSettings?.settings?.branding) {
-          console.log('[getTenantBrandingByDomain] No branding settings found for tenant:', portalDomain.tenant);
-          return null;
-        }
-
-        console.log('[getTenantBrandingByDomain] Found branding for tenant:', portalDomain.tenant);
-        return tenantSettings.settings.branding;
-      }
-      return null; // No portal found for subdomain
-    } else {
-      // Custom domain - look it up directly
-      console.log('[getTenantBrandingByDomain] Looking up custom domain:', normalizedDomain);
-      const knex = await getConnection();
-
-      // First check all portal domains to debug
-      const allDomains = await knex('portal_domains').select('domain', 'status', 'tenant');
-      console.log('[getTenantBrandingByDomain] All portal domains in DB:', allDomains);
-
-      const portalDomain = await knex('portal_domains')
-        .whereRaw('lower(domain) = ?', [normalizedDomain])
-        .first();
-
-      console.log('[getTenantBrandingByDomain] Portal domain query result:', portalDomain);
-
-      if (!portalDomain) {
-        console.log('[getTenantBrandingByDomain] No portal domain found for:', normalizedDomain);
-        return null;
-      }
-
-      // Check status
-      if (portalDomain.status !== 'active') {
-        console.log('[getTenantBrandingByDomain] Portal domain not active. Status:', portalDomain.status);
-        // For pending domains, still try to show branding
-      }
-
-      // Get tenant's branding
-      const tenantKnex = await getConnection(portalDomain.tenant);
-      const tenantSettings = await tenantKnex('tenant_settings')
-        .where({ tenant: portalDomain.tenant })
-        .first();
-
-      if (!tenantSettings?.settings?.branding) {
-        console.log('[getTenantBrandingByDomain] No branding settings found for tenant:', portalDomain.tenant);
-        return null;
-      }
-
-      console.log('[getTenantBrandingByDomain] Found branding for custom domain:', normalizedDomain);
-      return tenantSettings.settings.branding;
+    if (DEV_HOSTS.has(normalizedDomain) || normalizedDomain.endsWith('.localhost')) {
+      console.log('[getTenantBrandingByDomain] Skipping portal config lookup for dev host');
+      return { branding: null, locale: null };
     }
+
+    const { tenantSettings, tenantId } = await lookupTenantSettingsByDomain(normalizedDomain);
+    if (!tenantSettings?.settings) {
+      if (tenantId) {
+        console.log('[getTenantBrandingByDomain] No tenant settings found for tenant:', tenantId);
+      }
+      return { branding: null, locale: null };
+    }
+
+    const branding: TenantBranding | null = tenantSettings.settings.branding || null;
+
+    const rawLocale = tenantSettings.settings.clientPortal?.defaultLocale
+      || tenantSettings.settings.defaultLocale
+      || null;
+    const locale = typeof rawLocale === 'string' && isSupportedLocale(rawLocale)
+      ? rawLocale
+      : null;
+
+    return {
+      branding,
+      locale,
+    };
   } catch (error) {
-    console.error('Error fetching tenant branding by domain:', error);
-    return null;
+    console.error('Error fetching tenant portal config by domain:', error);
+    return {
+      branding: null,
+      locale: null,
+    };
   }
 }
 
-// Cache the branding data for 5 minutes per domain
-export const getTenantBrandingByDomain = unstable_cache(
-  fetchTenantBrandingByDomain,
-  ['tenant-branding-by-domain'],
+const getTenantPortalConfigCached = unstable_cache(
+  fetchTenantPortalConfig,
+  ['tenant-portal-config-by-domain'],
   {
-    revalidate: 300, // 5 minutes
-    tags: ['tenant-branding'],
+    revalidate: 300,
+    tags: ['tenant-portal-config'],
   }
 );
 
-/**
- * Clear cached branding for a specific domain (domain param reserved for future use)
- */
+export async function getTenantBrandingByDomain(domain: string): Promise<TenantBranding | null> {
+  const config = await getTenantPortalConfigCached(domain);
+  return config.branding;
+}
+
+export async function getTenantLocaleByDomain(domain: string): Promise<SupportedLocale | null> {
+  const config = await getTenantPortalConfigCached(domain);
+  return config.locale ?? (isSupportedLocale(LOCALE_CONFIG.defaultLocale) ? LOCALE_CONFIG.defaultLocale : null);
+}
+
 export async function invalidateDomainBrandingCache(_domain: string): Promise<void> {
   const { revalidateTag } = await import('next/cache');
-  revalidateTag('tenant-branding');
+  revalidateTag('tenant-portal-config');
 }

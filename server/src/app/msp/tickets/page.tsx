@@ -25,8 +25,8 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     // Parse search parameters into filter values
     const filtersFromURL: Partial<ITicketListFilters> = {};
     
-    if (params?.channelId && typeof params.channelId === 'string') {
-      filtersFromURL.channelId = params.channelId;
+    if (params?.boardId && typeof params.boardId === 'string') {
+      filtersFromURL.boardId = params.boardId;
     }
     if (params?.companyId && typeof params.companyId === 'string') {
       filtersFromURL.companyId = params.companyId;
@@ -43,10 +43,10 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
     if (params?.searchQuery && typeof params.searchQuery === 'string') {
       filtersFromURL.searchQuery = params.searchQuery;
     }
-    if (params?.channelFilterState && typeof params.channelFilterState === 'string') {
-      const channelFilterState = params.channelFilterState;
-      if (channelFilterState === 'active' || channelFilterState === 'inactive' || channelFilterState === 'all') {
-        filtersFromURL.channelFilterState = channelFilterState;
+    if (params?.boardFilterState && typeof params.boardFilterState === 'string') {
+      const boardFilterState = params.boardFilterState;
+      if (boardFilterState === 'active' || boardFilterState === 'inactive' || boardFilterState === 'all') {
+        filtersFromURL.boardFilterState = boardFilterState;
       }
     }
     if (params?.tags) {
@@ -63,7 +63,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Apply defaults for missing parameters
     const initialFilters: Partial<ITicketListFilters> = {
-      channelFilterState: 'active',
+      boardFilterState: 'active',
       statusId: 'open',
       priorityId: 'all',
       ...filtersFromURL
@@ -71,13 +71,13 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     // Create full filter object for data fetching
     const fetchFilters: ITicketListFilters = {
-      channelId: initialFilters.channelId || undefined,
+      boardId: initialFilters.boardId || undefined,
       statusId: initialFilters.statusId || 'open',
       priorityId: initialFilters.priorityId || 'all',
       categoryId: initialFilters.categoryId || undefined,
       companyId: initialFilters.companyId || undefined,
       searchQuery: initialFilters.searchQuery || '',
-      channelFilterState: initialFilters.channelFilterState || 'active',
+      boardFilterState: initialFilters.boardFilterState || 'active',
       showOpenOnly: (initialFilters.statusId === 'open') || false,
       tags: initialFilters.tags || undefined
     };

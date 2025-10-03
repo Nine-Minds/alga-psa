@@ -6,13 +6,13 @@
 
 exports.seed = async function(knex) {
     // Check if standard tables already have data
-    const [channelCount, serviceCategoryCount, categoryCount] = await Promise.all([
-        knex('standard_channels').count('* as count').first(),
+    const [boardCount, serviceCategoryCount, categoryCount] = await Promise.all([
+        knex('standard_boards').count('* as count').first(),
         knex('standard_service_categories').count('* as count').first(),
         knex('standard_categories').count('* as count').first()
     ]);
     
-    if (channelCount?.count > 0 && serviceCategoryCount?.count > 0 && categoryCount?.count > 0) {
+    if (boardCount?.count > 0 && serviceCategoryCount?.count > 0 && categoryCount?.count > 0) {
         console.log('Standard reference tables already populated');
         return;
     }

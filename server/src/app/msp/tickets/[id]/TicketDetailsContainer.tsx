@@ -19,14 +19,14 @@ interface TicketDetailsContainerProps {
     contacts: any[];
     contactInfo: any;
     createdByUser: any;
-    channel: any;
+    board: any;
     additionalAgents: any[];
     availableAgents: any[];
     userMap: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     options: {
       status: { value: string; label: string }[];
       agent: { value: string; label: string }[];
-      channel: { value: string; label: string }[];
+      board: { value: string; label: string }[];
       priority: { value: string; label: string }[];
     };
     categories: any[];
@@ -171,13 +171,13 @@ export default function TicketDetailsContainer({ ticketData }: TicketDetailsCont
           initialContacts={ticketData.contacts}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
-          initialChannel={ticketData.channel}
+          initialBoard={ticketData.board}
           initialAdditionalAgents={ticketData.additionalAgents}
           initialAvailableAgents={ticketData.availableAgents}
           initialUserMap={ticketData.userMap}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}
-          channelOptions={ticketData.options.channel}
+          boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
           initialCompanies={ticketData.companies}

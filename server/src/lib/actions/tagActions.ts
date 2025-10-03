@@ -20,7 +20,7 @@ export async function findTagsByEntityId(entityId: string, entityType: string): 
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
         tenant,
-        channel_id: tag.channel_id || undefined,
+        board_id: tag.board_id || undefined,
         tag_text: tag.tag_text,
         tagged_id: tag.tagged_id,
         tagged_type: tag.tagged_type,
@@ -54,7 +54,7 @@ export async function findTagById(tagId: string): Promise<ITag | undefined> {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -73,7 +73,7 @@ export async function findTagById(tagId: string): Promise<ITag | undefined> {
       return {
         tag_id: tag.tag_id,
         tenant: tag.tenant,
-        channel_id: tag.channel_id || undefined,
+        board_id: tag.board_id || undefined,
         tag_text: tag.tag_text,
         tagged_id: tag.tagged_id,
         tagged_type: tag.tagged_type,
@@ -157,7 +157,7 @@ export async function createTag(tag: Omit<ITag, 'tag_id' | 'tenant'>): Promise<I
         tagText,
         tagWithTenant.tagged_type,
         {
-          channel_id: tagWithTenant.channel_id,
+          board_id: tagWithTenant.board_id,
           background_color: tagWithTenant.background_color,
           text_color: tagWithTenant.text_color
         }
@@ -213,7 +213,7 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -246,7 +246,7 @@ export async function updateTag(id: string, tag: Partial<ITag>): Promise<void> {
         tag_text: tag.tag_text,
         background_color: tag.background_color,
         text_color: tag.text_color,
-        channel_id: tag.channel_id
+        board_id: tag.board_id
       });
     } catch (error) {
       console.error(`Error updating tag with id ${id}:`, error);
@@ -284,7 +284,7 @@ export async function deleteTag(id: string): Promise<void> {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -337,7 +337,7 @@ export async function findTagsByEntityIds(entityIds: string[], entityType: Tagge
       return tagsWithDefinitions.map(tag => ({
         tag_id: tag.mapping_id,
         tenant,
-        channel_id: tag.channel_id || undefined,
+        board_id: tag.board_id || undefined,
         tag_text: tag.tag_text,
         tagged_id: tag.tagged_id,
         tagged_type: tag.tagged_type,
@@ -371,7 +371,7 @@ export async function getAllTags(): Promise<ITag[]> {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id', // Use mapping_id as tag_id for backward compatibility
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -404,7 +404,7 @@ export async function findAllTagsByType(entityType: TaggedEntityType): Promise<I
       return definitions.map(def => ({
         tag_id: def.tag_id,
         tenant,
-        channel_id: def.channel_id || undefined,
+        board_id: def.board_id || undefined,
         tag_text: def.tag_text,
         tagged_id: '', // No specific entity for unique tags
         tagged_type: def.tagged_type,
@@ -453,7 +453,7 @@ export async function updateTagColor(tagId: string, backgroundColor: string | nu
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -535,7 +535,7 @@ export async function updateTagText(tagId: string, newTagText: string): Promise<
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',

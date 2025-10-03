@@ -1061,11 +1061,11 @@
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/categories/ticket/tree/{channelId}",
+    "route_path": "/api/v1/categories/ticket/tree/{boardId}",
     "methods": [
       "GET"
     ],
-    "route_file": "server/src/app/api/v1/categories/ticket/tree/[channelId]/route.ts",
+    "route_file": "server/src/app/api/v1/categories/ticket/tree/[boardId]/route.ts",
     "controller": "ApiCategoryController",
     "controller_import": "server/src/lib/api/controllers/ApiCategoryController",
     "controller_file": "server/src/lib/api/controllers/ApiCategoryController.ts"

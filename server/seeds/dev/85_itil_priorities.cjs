@@ -1,33 +1,33 @@
 /**
- * Development seed to create test ITIL channel with priorities
+ * Development seed to create test ITIL board with priorities
  * This is for development/testing only - actual ITIL standards come from migrations
  */
 
 exports.seed = async function(knex) {
   const tenant = await knex('tenants').first();
   if (!tenant) {
-    console.log('No tenant found, skipping ITIL channel creation');
+    console.log('No tenant found, skipping ITIL board creation');
     return;
   }
 
-  // Check if ITIL test channel already exists
-  const itilChannel = await knex('channels')
+  // Check if ITIL test board already exists
+  const itilBoard = await knex('boards')
     .where('tenant', tenant.tenant)
-    .where('channel_name', 'ITIL Support')
+    .where('board_name', 'ITIL Support')
     .first();
 
-  if (itilChannel) {
-    console.log('ITIL Support channel already exists, skipping...');
+  if (itilBoard) {
+    console.log('ITIL Support board already exists, skipping...');
     return;
   }
 
-  // Create ITIL-enabled channel for testing
-  const channelId = knex.raw('gen_random_uuid()');
-  await knex('channels').insert({
-    channel_id: channelId,
+  // Create ITIL-enabled board for testing
+  const boardId = knex.raw('gen_random_uuid()');
+  await knex('boards').insert({
+    board_id: boardId,
     tenant: tenant.tenant,
-    channel_name: 'ITIL Support',
-    description: 'ITIL-compliant support channel for testing',
+    board_name: 'ITIL Support',
+    description: 'ITIL-compliant support board for testing',
     category_type: 'itil',
     priority_type: 'itil',
     display_itil_impact: true,
@@ -40,7 +40,7 @@ exports.seed = async function(knex) {
     is_inactive: false
   });
 
-  console.log('Created ITIL Support channel for testing');
+  console.log('Created ITIL Support board for testing');
 
   const createdByUser = await knex('users')
     .where('tenant', tenant.tenant)
@@ -53,7 +53,7 @@ exports.seed = async function(knex) {
   }
 
   // Copy ITIL priorities from standard_priorities to tenant's priorities table
-  // This simulates what should happen automatically when an ITIL channel is created
+  // This simulates what should happen automatically when an ITIL board is created
   const itilStandardPriorities = await knex('standard_priorities')
     .where('is_itil_standard', true)
     .select('*');

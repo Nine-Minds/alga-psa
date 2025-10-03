@@ -35,7 +35,7 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
-import { findChannelById, getAllChannels } from "server/src/lib/actions/channel-actions/channelActions";
+import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
 import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
@@ -75,13 +75,13 @@ interface TicketDetailsProps {
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
-    initialChannel?: any;
+    initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string }[];
     agentOptions?: { value: string; label: string }[];
-    channelOptions?: { value: string; label: string }[];
+    boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
     initialCategories?: ITicketCategory[];
     initialCompanies?: ICompany[];
@@ -110,13 +110,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
-    initialChannel = null,
+    initialBoard = null,
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
     initialUserMap = {},
     statusOptions = [],
     agentOptions = [],
-    channelOptions = [],
+    boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
     initialCompanies = [],
@@ -144,7 +144,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [company, setCompany] = useState<ICompany | null>(initialCompany);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
-    const [channel, setChannel] = useState<any>(initialChannel);
+    const [board, setBoard] = useState<any>(initialBoard);
     const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<ICompanyLocation[]>(initialLocations);
@@ -1270,7 +1270,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
-                                    channelOptions={channelOptions}
+                                    boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
                                     onUpdateDescription={handleUpdateDescription}
@@ -1333,7 +1333,7 @@ const handleClose = () => {
                                 company={company}
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
-                                channel={channel}
+                                board={board}
                                 elapsedTime={elapsedTime}
                                 isRunning={isRunning}
                                 timeDescription={timeDescription}

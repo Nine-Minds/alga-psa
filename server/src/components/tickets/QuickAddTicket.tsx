@@ -10,10 +10,10 @@ import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions'
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
-import { getTicketCategoriesByChannel, ChannelCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
@@ -90,7 +90,7 @@ export function QuickAddTicket({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState(prefilledDescription || '');
   const [assignedTo, setAssignedTo] = useState('');
-  const [channelId, setChannelId] = useState('');
+  const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [companyId, setCompanyId] = useState(prefilledCompany?.id || '');
@@ -99,7 +99,7 @@ export function QuickAddTicket({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [selectedCompanyType, setSelectedCompanyType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
-  const [channelConfig, setChannelConfig] = useState<ChannelCategoryData['channelConfig']>({
+  const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
     category_type: 'custom',
     priority_type: 'custom',
     display_itil_impact: false,
@@ -107,7 +107,7 @@ export function QuickAddTicket({
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  const [channels, setChannels] = useState<IChannel[]>([]);
+  const [boards, setBoards] = useState<IBoard[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
@@ -115,7 +115,7 @@ export function QuickAddTicket({
   const [locations, setLocations] = useState<ICompanyLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
-  const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
 
   // ITIL-specific state
   const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
@@ -180,7 +180,7 @@ export function QuickAddTicket({
         const formData = await getTicketFormData(prefilledCompany?.id);
 
         setUsers(formData.users);
-        setChannels(formData.channels);
+        setBoards(formData.boards);
         setPriorities(formData.priorities);
         setCompanies(formData.companies);
 
@@ -265,17 +265,17 @@ export function QuickAddTicket({
 
   useEffect(() => {
     const fetchCategories = async () => {
-      if (channelId) {
+      if (boardId) {
         try {
-          const data = await getTicketCategoriesByChannel(channelId);
+          const data = await getTicketCategoriesByBoard(boardId);
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories && Array.isArray(data.categories)) {
             setCategories(data.categories);
-            setChannelConfig(data.channelConfig);
+            setBoardConfig(data.boardConfig);
           } else {
             console.error('Invalid categories data received:', data);
             setCategories([]);
-            setChannelConfig({
+            setBoardConfig({
               category_type: 'custom',
               priority_type: 'custom',
               display_itil_impact: false,
@@ -285,7 +285,7 @@ export function QuickAddTicket({
         } catch (error) {
           console.error('Error fetching categories:', error);
           setCategories([]);
-          setChannelConfig({
+          setBoardConfig({
             category_type: 'custom',
             priority_type: 'custom',
             display_itil_impact: false,
@@ -298,10 +298,10 @@ export function QuickAddTicket({
       }
     };
 
-    if (channelId) {
+    if (boardId) {
       fetchCategories();
     }
-  }, [channelId]);
+  }, [boardId]);
 
   useEffect(() => {
     if (!updateMetadata) return;
@@ -340,8 +340,8 @@ export function QuickAddTicket({
     }
   };
 
-  const handleChannelChange = (newChannelId: string) => {
-    setChannelId(newChannelId);
+  const handleBoardChange = (newBoardId: string) => {
+    setBoardId(newBoardId);
     setSelectedCategories([]);
     setShowPriorityMatrix(false);
     clearErrorIfSubmitted();
@@ -352,7 +352,7 @@ export function QuickAddTicket({
     setTitle('');
     setDescription(prefilledDescription || '');
     setAssignedTo('');
-    setChannelId('');
+    setBoardId('');
     setStatusId('');
     setPriorityId('');
     setCompanyId(prefilledCompany?.id || '');
@@ -388,16 +388,16 @@ export function QuickAddTicket({
     if (!title.trim()) validationErrors.push('Title');
     if (!description.trim()) validationErrors.push('Description');
     if (!assignedTo) validationErrors.push('Assigned To');
-    if (!channelId) validationErrors.push('Channel');
+    if (!boardId) validationErrors.push('Board');
     if (!statusId) validationErrors.push('Status');
 
-    // Validate priority based on channel type
-    if (channelConfig.priority_type === 'custom') {
+    // Validate priority based on board type
+    if (boardConfig.priority_type === 'custom') {
       // Custom priority boards require priority_id
       if (!priorityId) {
         validationErrors.push('Priority');
       }
-    } else if (channelConfig.priority_type === 'itil') {
+    } else if (boardConfig.priority_type === 'itil') {
       // ITIL priority boards require impact and urgency
       if (!itilImpact) validationErrors.push('Impact');
       if (!itilUrgency) validationErrors.push('Urgency');
@@ -434,10 +434,10 @@ export function QuickAddTicket({
       formData.append('title', title);
       formData.append('description', description);
       formData.append('assigned_to', assignedTo);
-      formData.append('channel_id', channelId);
+      formData.append('board_id', boardId);
       formData.append('status_id', statusId);
 
-      // Always append priority_id - for ITIL channels, the backend will map
+      // Always append priority_id - for ITIL boards, the backend will map
       // the calculated priority to the correct ITIL standard priority record
       formData.append('priority_id', priorityId);
 
@@ -644,19 +644,19 @@ export function QuickAddTicket({
                     />
                   </div>
 
-                  <div className={hasAttemptedSubmit && !channelId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <ChannelPicker
-                      id={`${id}-channel-picker`}
-                      channels={channels}
-                      onSelect={handleChannelChange}
-                      selectedChannelId={channelId}
-                      onFilterStateChange={setQuickAddChannelFilterState}
-                      filterState={quickAddChannelFilterState}
+                  <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <BoardPicker
+                      id={`${id}-board-picker`}
+                      boards={boards}
+                      onSelect={handleBoardChange}
+                      selectedBoardId={boardId}
+                      onFilterStateChange={setQuickAddBoardFilterState}
+                      filterState={quickAddBoardFilterState}
                       placeholder="Select Board *"
                     />
                   </div>
 
-                  {channelId && channelConfig.category_type && (
+                  {boardId && boardConfig.category_type && (
                     <CategoryPicker
                       id={`${id}-category-picker`}
                       categories={categories}
@@ -665,7 +665,7 @@ export function QuickAddTicket({
                         setSelectedCategories(categoryIds);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder={channelConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
+                      placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
                       multiSelect={false}
                       className="w-full"
                     />
@@ -683,11 +683,11 @@ export function QuickAddTicket({
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
                   />
 
-                  {/* Priority Section - Show different UI based on channel priority type */}
-                  {channelId && (
+                  {/* Priority Section - Show different UI based on board priority type */}
+                  {boardId && (
                     <>
                       {/* Custom Priority - Editable dropdown (only show if explicitly custom, not by default) */}
-                      {channelConfig.priority_type && channelConfig.priority_type === 'custom' && (
+                      {boardConfig.priority_type && boardConfig.priority_type === 'custom' && (
                         <CustomSelect
                           id={`${id}-priority`}
                           value={priorityId}
@@ -702,7 +702,7 @@ export function QuickAddTicket({
                       )}
 
                       {/* ITIL Priority - Show Impact and Urgency fields */}
-                      {channelConfig.priority_type === 'itil' && (
+                      {boardConfig.priority_type === 'itil' && (
                         <>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
@@ -862,10 +862,10 @@ export function QuickAddTicket({
                       type="submit"
                       variant="default"
                       disabled={isSubmitting}
-                      className={!title.trim() || !description.trim() || !assignedTo || !channelId || !statusId ||
-                        (channelConfig.priority_type === 'custom' && !priorityId) ||
-                        (channelConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
-                        (channelConfig.priority_type === undefined && !priorityId) ||
+                      className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
+                        (boardConfig.priority_type === 'custom' && !priorityId) ||
+                        (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+                        (boardConfig.priority_type === undefined && !priorityId) ||
                         !companyId ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}

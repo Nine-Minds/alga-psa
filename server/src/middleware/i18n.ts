@@ -59,9 +59,8 @@ function detectLocale(request: NextRequest): SupportedLocale {
  * i18n middleware for locale resolution
  * Sets locale cookie and adds locale header for server components
  */
-export function i18nMiddleware(request: NextRequest) {
+export function i18nMiddleware(request: NextRequest, response: NextResponse = NextResponse.next()) {
   const locale = detectLocale(request);
-  const response = NextResponse.next();
 
   // Set locale cookie if not already set or different
   const currentLocaleCookie = request.cookies.get(LOCALE_CONFIG.cookie.name);

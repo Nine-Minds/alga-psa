@@ -19,15 +19,15 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
   }
   
   // Get default IDs for required fields
-  const [channel, status, priority] = await Promise.all([
-    db('channels').where({ tenant: tenantId }).first(),
+  const [board, status, priority] = await Promise.all([
+    db('boards').where({ tenant: tenantId }).first(),
     db('statuses').where({ tenant: tenantId }).first(),
     db('priorities').where({ tenant: tenantId }).first()
   ]);
   
-  if (!channel || !status || !priority) {
+  if (!board || !status || !priority) {
     console.error('     ❌ Could not find required fields for ticket defaults');
-    console.log('       Available channels:', await db('channels').where({ tenant: tenantId }).select('channel_id', 'name'));
+    console.log('       Available boards:', await db('boards').where({ tenant: tenantId }).select('board_id', 'name'));
     console.log('       Available statuses:', await db('statuses').where({ tenant: tenantId }).select('status_id', 'name'));
     console.log('       Available priorities:', await db('priorities').where({ tenant: tenantId }).select('priority_id', 'name'));
     throw new Error('Missing required fields for ticket defaults');
@@ -40,7 +40,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
     short_name: 'email-general',
     display_name: 'Test Email Defaults',
     description: 'Default configuration for test email processing',
-    channel_id: channel.channel_id,
+    board_id: board.board_id,
     status_id: status.status_id,
     priority_id: priority.priority_id,
     company_id: null,
@@ -57,7 +57,7 @@ export async function seedTestDefaults(db: Knex, tenantId: string): Promise<void
   await db('inbound_ticket_defaults').insert(testDefaults);
   
   console.log('     ✅ Created test inbound ticket defaults');
-  console.log(`       - Channel: ${channel.name} (${channel.channel_id})`);
+  console.log(`       - Board: ${board.name} (${board.board_id})`);
   console.log(`       - Status: ${status.name} (${status.status_id})`);
   console.log(`       - Priority: ${priority.name} (${priority.priority_id})`);
 }

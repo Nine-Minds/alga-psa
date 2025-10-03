@@ -516,7 +516,7 @@ export function validateWebhookSignature(
 export const defaultWebhookTemplates = {
   slack: {
     name: 'Slack Webhook',
-    description: 'Send notifications to Slack channel',
+    description: 'Send notifications to Slack board',
     default_config: {
       method: 'POST' as const,
       headers: { 'Content-Type': 'application/json' },
@@ -525,7 +525,7 @@ export const defaultWebhookTemplates = {
   },
   discord: {
     name: 'Discord Webhook',
-    description: 'Send notifications to Discord channel',
+    description: 'Send notifications to Discord board',
     default_config: {
       method: 'POST' as const,
       headers: { 'Content-Type': 'application/json' },
@@ -534,7 +534,7 @@ export const defaultWebhookTemplates = {
   },
   teams: {
     name: 'Microsoft Teams Webhook',
-    description: 'Send notifications to Microsoft Teams channel',
+    description: 'Send notifications to Microsoft Teams board',
     default_config: {
       method: 'POST' as const,
       headers: { 'Content-Type': 'application/json' },

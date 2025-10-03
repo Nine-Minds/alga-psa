@@ -25,7 +25,7 @@ export const tagFormSchema = z.object({
   tag_text: z.string().min(1, 'Tag text is required').max(50, 'Tag text too long (max 50 characters)'),
   tagged_id: z.string().uuid('Tagged ID must be a valid UUID'),
   tagged_type: z.enum(['company', 'contact', 'project_task', 'document', 'knowledge_base_article']),
-  channel_id: z.string().uuid().optional().nullable(),
+  board_id: z.string().uuid().optional().nullable(),
   background_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable(),
   text_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable()
 });
@@ -36,7 +36,7 @@ export const tagDefinitionSchema = z.object({
   tenant: z.string().uuid(),
   tag_text: z.string(),
   tagged_type: z.enum(['company', 'contact', 'project_task', 'document', 'knowledge_base_article']),
-  channel_id: z.string().uuid().nullable(),
+  board_id: z.string().uuid().nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
   created_at: z.string()
@@ -195,7 +195,7 @@ export class TagModel {
     tenant: string,
     trx: Knex.Transaction,
     options?: {
-      channel_id?: string;
+      board_id?: string;
       background_color?: string | null;
       text_color?: string | null;
     }
@@ -232,7 +232,7 @@ export class TagModel {
       tenant,
       tag_text: tagText,
       tagged_type: taggedType,
-      channel_id: options?.channel_id || null,
+      board_id: options?.board_id || null,
       background_color: backgroundColor,
       text_color: textColor,
       created_at: now
@@ -295,7 +295,7 @@ export class TagModel {
       tenant,
       trx,
       {
-        channel_id: tagData.channel_id,
+        board_id: tagData.board_id,
         background_color: tagData.background_color,
         text_color: tagData.text_color
       }
@@ -385,7 +385,7 @@ export class TagModel {
         'td.tag_text',
         'td.background_color',
         'td.text_color',
-        'td.channel_id',
+        'td.board_id',
         'tm.tagged_id',
         'tm.tagged_type',
         'tm.created_by',
@@ -418,7 +418,7 @@ export class TagModel {
       tag_text?: string;
       background_color?: string | null;
       text_color?: string | null;
-      channel_id?: string | null;
+      board_id?: string | null;
     },
     tenant: string,
     trx: Knex.Transaction

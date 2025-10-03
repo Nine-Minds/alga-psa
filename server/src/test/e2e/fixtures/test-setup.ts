@@ -112,11 +112,11 @@ export async function withTestSetup(): Promise<TestSetup> {
       });
     }
 
-    // Create a default channel for tickets
-    await db('channels').insert({
-      channel_id: faker.string.uuid(),
+    // Create a default board for tickets
+    await db('boards').insert({
+      board_id: faker.string.uuid(),
       tenant: tenantId,
-      channel_name: 'Default',
+      board_name: 'Default',
       is_default: true,
       display_order: 1
     });

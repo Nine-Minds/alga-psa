@@ -61,7 +61,17 @@ export class Permission implements IPermission {
   }
 }
 
+const RESOURCE_CANONICAL_MAP: Record<string, string> = {
+  company: 'client',
+  client: 'client'
+};
+
+function canonicalizeResource(resource: string): string {
+  return RESOURCE_CANONICAL_MAP[resource] ?? resource;
+}
+
 export async function hasPermission(user: IUser, resource: string, action: string, knexConnection?: Knex | Knex.Transaction): Promise<boolean> {
+  const normalizedResource = canonicalizeResource(resource);
   let rolesWithPermissions: IRoleWithPermissions[];
   
   if (knexConnection) {
@@ -86,7 +96,7 @@ export async function hasPermission(user: IUser, resource: string, action: strin
       if (isClientPortal && !permission.client) continue;
       if (!isClientPortal && !permission.msp) continue;
       
-      if (permission.resource === resource && permission.action === action) {
+      if (canonicalizeResource(permission.resource) === normalizedResource && permission.action === action) {
         return true;
       }
     }

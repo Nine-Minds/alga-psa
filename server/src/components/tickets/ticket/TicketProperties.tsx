@@ -34,7 +34,7 @@ interface TicketPropertiesProps {
   company: any;
   contactInfo: any;
   createdByUser: any;
-  channel: any;
+  board: any;
   elapsedTime: number;
   isRunning: boolean;
   isTimerLocked?: boolean;
@@ -105,7 +105,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   company,
   contactInfo,
   createdByUser,
-  channel,
+  board,
   elapsedTime,
   isRunning,
   isTimerLocked = false,

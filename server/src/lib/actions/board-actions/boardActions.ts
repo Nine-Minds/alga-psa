@@ -1,14 +1,14 @@
 'use server'
 
-import { IChannel } from '../../../interfaces';
-import Channel from '../../models/channel';
+import { IBoard } from '../../../interfaces';
+import Board from '../../models/board';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { ItilStandardsService } from '../../services/itilStandardsService';
 import { getCurrentUser } from '../user-actions/userActions';
 
-export interface FindChannelByNameOutput {
+export interface FindBoardByNameOutput {
   id: string;
   name: string;
   description: string;
@@ -16,12 +16,12 @@ export interface FindChannelByNameOutput {
   is_active: boolean;
 }
 
-export async function findChannelById(id: string): Promise<IChannel | undefined> {
+export async function findBoardById(id: string): Promise<IBoard | undefined> {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const channel = await Channel.get(trx, id);
-      return channel;
+      const board = await Board.get(trx, id);
+      return board;
     });
   } catch (error) {
     console.error(error);
@@ -29,24 +29,24 @@ export async function findChannelById(id: string): Promise<IChannel | undefined>
   }
 }
 
-export async function getAllChannels(includeAll: boolean = true): Promise<IChannel[]> {
+export async function getAllBoards(includeAll: boolean = true): Promise<IBoard[]> {
   const { knex: db, tenant } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      const channels = await trx('channels')
+      const boards = await trx('boards')
         .where({ tenant })
         .where(includeAll ? {} : { is_inactive: false })
         .orderBy('display_order', 'asc')
-        .orderBy('channel_name', 'asc');
-      return channels;
+        .orderBy('board_name', 'asc');
+      return boards;
     });
   } catch (error) {
-    console.error('Failed to fetch channels:', error);
+    console.error('Failed to fetch boards:', error);
     return [];
   }
 }
 
-export async function createChannel(channelData: Omit<IChannel, 'channel_id' | 'tenant'>): Promise<IChannel> {
+export async function createBoard(boardData: Omit<IBoard, 'board_id' | 'tenant'>): Promise<IBoard> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -60,9 +60,9 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
       // If no display_order provided, get the next available order
-      let displayOrder = channelData.display_order;
+      let displayOrder = boardData.display_order;
       if (displayOrder === undefined || displayOrder === 0) {
-        const maxOrder = await trx('channels')
+        const maxOrder = await trx('boards')
           .where({ tenant })
           .max('display_order as max')
           .first();
@@ -70,32 +70,32 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
       }
 
       // Check if we should set as default
-      let isDefault = channelData.is_default || false;
+      let isDefault = boardData.is_default || false;
       if (isDefault) {
-        // Check if there's already a default channel
-        const existingDefault = await trx('channels')
+        // Check if there's already a default board
+        const existingDefault = await trx('boards')
           .where({ tenant, is_default: true })
           .first();
-        
+
         if (existingDefault) {
           // Unset the existing default
-          await trx('channels')
+          await trx('boards')
             .where({ tenant, is_default: true })
             .update({ is_default: false });
         }
       }
-      
-      const [newChannel] = await trx('channels')
+
+      const [newBoard] = await trx('boards')
         .insert({
-          channel_name: channelData.channel_name,
-          description: channelData.description || null,
+          board_name: boardData.board_name,
+          description: boardData.description || null,
           display_order: displayOrder,
-          is_inactive: channelData.is_inactive || false,
+          is_inactive: boardData.is_inactive || false,
           is_default: isDefault,
-          category_type: channelData.category_type || 'custom',
-          priority_type: channelData.priority_type || 'custom',
-          display_itil_impact: channelData.display_itil_impact || false,
-          display_itil_urgency: channelData.display_itil_urgency || false,
+          category_type: boardData.category_type || 'custom',
+          priority_type: boardData.priority_type || 'custom',
+          display_itil_impact: boardData.display_itil_impact || false,
+          display_itil_urgency: boardData.display_itil_urgency || false,
           tenant
         })
         .returning('*');
@@ -105,28 +105,28 @@ export async function createChannel(channelData: Omit<IChannel, 'channel_id' | '
         trx,
         tenant,
         user.user_id,
-        newChannel.channel_id,
-        channelData.category_type,
-        channelData.priority_type
+        newBoard.board_id,
+        boardData.category_type,
+        boardData.priority_type
       );
 
-      return newChannel;
+      return newBoard;
     });
   } catch (error) {
-    console.error('Error creating new channel:', error);
+    console.error('Error creating new board:', error);
     throw new Error('Failed to create new board');
   }
 }
 
-export async function deleteChannel(channelId: string): Promise<boolean> {
+export async function deleteBoard(boardId: string): Promise<boolean> {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      await Channel.delete(trx, channelId);
+      await Board.delete(trx, boardId);
       return true;
     });
   } catch (error) {
-    console.error('Error deleting channel:', error);
+    console.error('Error deleting board:', error);
     if (error instanceof Error) {
       if (error.message.includes('violates foreign key constraint') && error.message.includes('on table "tickets"')) {
         throw new Error('Cannot delete board: It currently has one or more tickets.');
@@ -137,7 +137,7 @@ export async function deleteChannel(channelId: string): Promise<boolean> {
   }
 }
 
-export async function updateChannel(channelId: string, channelData: Partial<Omit<IChannel, 'tenant'>>): Promise<IChannel> {
+export async function updateBoard(boardId: string, boardData: Partial<Omit<IBoard, 'tenant'>>): Promise<IBoard> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
@@ -150,31 +150,31 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
 
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get the current channel to check for ITIL type changes
-      const currentChannel = await trx('channels')
-        .where({ channel_id: channelId, tenant })
+      // Get the current board to check for ITIL type changes
+      const currentBoard = await trx('boards')
+        .where({ board_id: boardId, tenant })
         .first();
 
-      if (!currentChannel) {
+      if (!currentBoard) {
         throw new Error('Board not found');
       }
 
       // If setting as default, unset all other defaults first
-      if (channelData.is_default === true) {
-        await trx('channels')
+      if (boardData.is_default === true) {
+        await trx('boards')
           .where({ tenant, is_default: true })
-          .whereNot('channel_id', channelId)
+          .whereNot('board_id', boardId)
           .update({ is_default: false });
       }
 
-      const [updatedChannel] = await trx('channels')
-        .where({ channel_id: channelId, tenant })
-        .update(channelData)
+      const [updatedBoard] = await trx('boards')
+        .where({ board_id: boardId, tenant })
+        .update(boardData)
         .returning('*');
 
       // Handle ITIL type changes
-      const categoryTypeChanged = channelData.category_type && channelData.category_type !== currentChannel.category_type;
-      const priorityTypeChanged = channelData.priority_type && channelData.priority_type !== currentChannel.priority_type;
+      const categoryTypeChanged = boardData.category_type && boardData.category_type !== currentBoard.category_type;
+      const priorityTypeChanged = boardData.priority_type && boardData.priority_type !== currentBoard.priority_type;
 
       if (categoryTypeChanged || priorityTypeChanged) {
         // If switching to ITIL, copy the standards
@@ -182,22 +182,22 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
           trx,
           tenant,
           user.user_id,
-          channelId,
-          channelData.category_type || currentChannel.category_type,
-          channelData.priority_type || currentChannel.priority_type
+          boardId,
+          boardData.category_type || currentBoard.category_type,
+          boardData.priority_type || currentBoard.priority_type
         );
 
         // If switching away from ITIL, clean up unused standards
-        if ((categoryTypeChanged && currentChannel.category_type === 'itil') ||
-            (priorityTypeChanged && currentChannel.priority_type === 'itil')) {
+        if ((categoryTypeChanged && currentBoard.category_type === 'itil') ||
+            (priorityTypeChanged && currentBoard.priority_type === 'itil')) {
           await ItilStandardsService.cleanupUnusedItilStandards(trx, tenant);
         }
       }
 
-      return updatedChannel;
+      return updatedBoard;
     });
   } catch (error) {
-    console.error('Error updating channel:', error);
+    console.error('Error updating board:', error);
     // Re-throw the original error to provide specific feedback to the frontend
     if (error instanceof Error) {
       throw error;
@@ -208,22 +208,22 @@ export async function updateChannel(channelId: string, channelData: Partial<Omit
 }
 
 /**
- * Find channel by name
- * This action searches for existing channels by name
+ * Find board by name
+ * This action searches for existing boards by name
  */
-export async function findChannelByName(name: string): Promise<FindChannelByNameOutput | null> {
+export async function findBoardByName(name: string): Promise<FindBoardByNameOutput | null> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const channel = await trx('channels')
-      .select('channel_id as id', 'channel_name as name', 'description', 'is_default', 'is_active')
+    const board = await trx('boards')
+      .select('board_id as id', 'board_name as name', 'description', 'is_default', 'is_active')
       .where('tenant', tenant)
-      .whereRaw('LOWER(channel_name) = LOWER(?)', [name])
+      .whereRaw('LOWER(board_name) = LOWER(?)', [name])
       .first();
 
-    return channel || null;
+    return board || null;
   });
 }

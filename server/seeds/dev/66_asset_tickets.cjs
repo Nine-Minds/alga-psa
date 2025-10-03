@@ -21,8 +21,8 @@ exports.seed = async function(knex) {
         .where({ category_name: 'Magical Infrastructure' })
         .first();
 
-    const channel = await knex('channels')
-        .where({ channel_name: 'Urgent Matters' })
+    const board = await knex('boards')
+        .where({ board_name: 'Urgent Matters' })
         .first();
 
     const priority = await knex('priorities')
@@ -56,7 +56,7 @@ exports.seed = async function(knex) {
                 ticket_number: 'TIC1006',
                 company_id: emeraldCity.company_id,
                 status_id: statuses.find(s => s.name === 'Curious Beginning').status_id,
-                channel_id: channel.channel_id,
+                board_id: board.board_id,
                 category_id: mainCategory.category_id,
                 subcategory_id: subCategory.category_id,
                 priority_id: priority.priority_id,
@@ -73,7 +73,7 @@ exports.seed = async function(knex) {
                 ticket_number: 'TIC1007',
                 company_id: wonderland.company_id,
                 status_id: statuses.find(s => s.name === 'Unfolding Adventure').status_id,
-                channel_id: channel.channel_id,
+                board_id: board.board_id,
                 category_id: mainCategory.category_id,
                 subcategory_id: subCategory.category_id,
                 priority_id: priority.priority_id,
