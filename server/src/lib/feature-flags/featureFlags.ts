@@ -7,7 +7,7 @@ export interface FeatureFlagContext {
   userId?: string;
   tenantId?: string;
   userRole?: string;
-  clientSize?: 'small' | 'medium' | 'large' | 'enterprise';
+  companySize?: 'small' | 'medium' | 'large' | 'enterprise';
   subscriptionPlan?: string;
   customProperties?: Record<string, any>;
 }
@@ -231,8 +231,8 @@ export class FeatureFlags {
       properties.user_role = context.userRole;
     }
 
-    if (context.clientSize) {
-      properties.client_size = context.clientSize;
+    if (context.companySize) {
+      properties.company_size = context.companySize;
     }
 
     if (context.subscriptionPlan) {

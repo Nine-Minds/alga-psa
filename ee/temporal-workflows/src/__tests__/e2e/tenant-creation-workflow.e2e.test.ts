@@ -151,8 +151,8 @@ async function setupTestDatabase(): Promise<TestDatabase> {
     
     async getUserRoles(userId: string, tenantId: string) {
       return await db('user_roles as ur')
-        .join('roles as r', function() {
-          this.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
+        .join('roles as r', (join) => {
+          join.on('ur.role_id', 'r.role_id').andOn('ur.tenant', 'r.tenant');
         })
         .where({ 'ur.user_id': userId, 'ur.tenant': tenantId })
         .select('r.*', 'ur.*');
@@ -176,6 +176,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
   let connection: Connection;
   let client: Client;
   let worker: Worker;
+  let workerRunPromise: Promise<void> | undefined;
   let testDb: TestDatabase;
 
   beforeAll(async () => {
@@ -183,8 +184,10 @@ describe('Tenant Creation Workflow E2E Tests', () => {
     testDb = await setupTestDatabase();
 
     try {
+      connection = await Connection.connect();
       // Create worker using real Temporal dev server (not time skipping)
       worker = await Worker.create({
+        connection,
         taskQueue: 'tenant-e2e-test-queue',
         workflowsPath: path.resolve(__dirname, '../../workflows'),
         activities,
@@ -192,9 +195,6 @@ describe('Tenant Creation Workflow E2E Tests', () => {
         maxConcurrentWorkflowTaskExecutions: 1,
         maxCachedWorkflows: 0,
       });
-
-      // Get the connection from the worker
-      connection = worker.connection;
       
       client = new Client({
         connection,
@@ -202,7 +202,8 @@ describe('Tenant Creation Workflow E2E Tests', () => {
       });
       
       // Start the worker
-      worker.run().catch(error => {
+      workerRunPromise = worker.run();
+      workerRunPromise.catch((error) => {
         console.error('Worker error:', error);
       });
       
@@ -217,7 +218,17 @@ describe('Tenant Creation Workflow E2E Tests', () => {
 
   afterAll(async () => {
     if (worker) {
-      // No need to shutdown worker in individual tests
+      await worker.shutdown();
+    }
+    if (workerRunPromise) {
+      try {
+        await workerRunPromise;
+      } catch (error) {
+        console.error('Worker run terminated with error during shutdown:', error);
+      }
+    }
+    if (connection) {
+      await connection.close();
     }
     if (testDb) {
       await testDb.cleanup();
@@ -242,6 +253,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
           lastName: 'Admin',
           email: `admin-${timestamp}@e2etest.com`,
         },
+        companyName: `E2E Test Company ${timestamp}`,
         clientName: `E2E Test Client ${timestamp}`,
         billingPlan: 'Enterprise',
       };
@@ -268,7 +280,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
       try {
         const tenant = await testDb.getTenant(result.tenantId);
         expect(tenant).toBeDefined();
-        expect(tenant.client_name).toBe(input.tenantName);
+        expect(tenant.client_name).toBe(input.clientName ?? input.tenantName);
         
         const user = await testDb.getUserById(result.adminUserId, result.tenantId);
         expect(user).toBeDefined();

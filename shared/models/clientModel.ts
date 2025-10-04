@@ -122,7 +122,7 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
 }
 
 // =============================================================================
-// CORE COMPANY MODEL
+// CORE CLIENT MODEL
 // =============================================================================
 
 export class ClientModel {

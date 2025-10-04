@@ -31,6 +31,7 @@ export interface TenantCreationInput {
     lastName: string;
     email: string;
   };
+  companyName?: string;
   clientName?: string;
   billingPlan?: string;
 }
@@ -64,9 +65,10 @@ export async function createTenant(
 ): Promise<CreateTenantResult> {
   return await db.transaction(async (trx) => {
     // Create tenant first
+    const tenantCompanyName = input.clientName ?? input.tenantName;
     const tenantResult = await trx('tenants')
       .insert({
-        client_name: input.tenantName,
+        client_name: tenantCompanyName,
         email: input.email,
         created_at: new Date(),
         updated_at: new Date()
@@ -75,14 +77,13 @@ export async function createTenant(
     
     const tenantId = tenantResult[0].tenant || tenantResult[0];
     
-    // Create client if clientName is provided
+    // Create client using provided name or fallback to tenant company name
     let clientId: string | undefined;
-    
-    if (input.clientName) {
+    if (input.clientName ?? tenantCompanyName) {
       const clientResult = await trx('clients')
         .insert({
           client_id: uuidv4(),
-          client_name: input.clientName,
+          client_name: input.clientName ?? tenantCompanyName,
           tenant: tenantId,
           created_at: new Date(),
           updated_at: new Date()

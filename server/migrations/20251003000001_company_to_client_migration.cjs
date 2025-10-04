@@ -18,6 +18,23 @@ exports.up = async function(knex) {
   const addedColumns = [];
 
   try {
+    // Step 0: Rename tenants.company_name → tenants.client_name (if not already renamed)
+    const tenantHasCompanyName = await knex.schema.hasColumn('tenants', 'company_name');
+    const tenantHasClientName = await knex.schema.hasColumn('tenants', 'client_name');
+
+    if (tenantHasCompanyName && !tenantHasClientName) {
+      console.log('Renaming tenants.company_name → tenants.client_name...');
+      await knex.raw('ALTER TABLE tenants RENAME COLUMN company_name TO client_name');
+      console.log('✓ tenants table column renamed to client_name');
+    } else if (!tenantHasCompanyName && tenantHasClientName) {
+      console.log('tenants table already uses client_name column, skipping rename...');
+    } else if (!tenantHasCompanyName && !tenantHasClientName) {
+      throw new Error('❌ tenants table missing both company_name and client_name columns. Cannot proceed.');
+    } else {
+      console.log('Both company_name and client_name columns exist on tenants table. Please resolve manually.');
+      throw new Error('❌ Unexpected tenants table state - both company_name and client_name present');
+    }
+
     // Step 1: Create clients table
     const clientsExists = await knex.schema.hasTable('clients');
 
@@ -517,6 +534,16 @@ async function verifyRowCounts(knex) {
 
 exports.down = async function(knex) {
   console.log('Rolling back company to client migration...');
+
+  // Restore tenants.client_name → tenants.company_name if needed
+  const tenantHasClientName = await knex.schema.hasColumn('tenants', 'client_name');
+  const tenantHasCompanyName = await knex.schema.hasColumn('tenants', 'company_name');
+
+  if (tenantHasClientName && !tenantHasCompanyName) {
+    console.log('Renaming tenants.client_name back to tenants.company_name...');
+    await knex.raw('ALTER TABLE tenants RENAME COLUMN client_name TO company_name');
+    console.log('✓ tenants table column restored to company_name');
+  }
 
   // Drop new tables
   await knex.schema.dropTableIfExists('client_tax_rates');

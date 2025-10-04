@@ -293,6 +293,7 @@ async function exampleUsage(): Promise<void> {
         lastName: 'User',
         email: 'admin@example.com',
       },
+      companyName: 'Example Client',
       clientName: 'Example Client',
       billingPlan: 'Standard',
     };

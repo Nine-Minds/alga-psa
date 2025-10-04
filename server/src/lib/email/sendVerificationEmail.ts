@@ -26,12 +26,12 @@ export async function sendVerificationEmail({
       const verificationUrl = `${baseUrl}/auth/verify?token=${token}&registrationId=${registrationId}`;
 
       // Get both client names from their respective tables
-      const [registrationClient, tenantClient] = await Promise.all([
+      const [registrationCompany, tenantRecord] = await Promise.all([
         knex('clients').where({ tenant }).select('client_name').first(),
         knex('tenants').where({ tenant }).select('client_name').first()
       ]);
 
-      if (!registrationClient || !tenantClient) {
+      if (!registrationCompany || !tenantRecord) {
         throw new Error('Client information not found');
       }
 
@@ -39,8 +39,8 @@ export async function sendVerificationEmail({
       const templateData = {
         email,
         verificationUrl,
-        registrationClientName: registrationClient.client_name,
-        tenantClientName: tenantClient.client_name,
+        registrationClientName: registrationCompany.client_name,
+        tenantClientName: tenantRecord.client_name,
         currentYear: new Date().getFullYear()
       };
 

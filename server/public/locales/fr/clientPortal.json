@@ -460,7 +460,7 @@
       "warehouse": "Entrepôt",
       "website": "Site web",
       "industry": "Secteur d'activité",
-      "clientSize": "Taille de l'entreprise",
+      "companySize": "Taille de l'entreprise",
       "annualRevenue": "Revenu annuel",
       "size": "Taille de l'entreprise",
       "taxId": "Numéro fiscal",

@@ -1,11 +1,11 @@
 'use server'
 
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { IClientSummary } from 'server/src/interfaces/client.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
-export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
+export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -34,7 +34,7 @@ export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
         });
     });
     
-    return clients.map((client): Omit<IClient, "tenant"> => ({
+    return clients.map((client): Omit<IClientSummary, "tenant"> => ({
       id: client.client_id,
       name: client.client_name,
       billingPlan: client.plan_id ? {

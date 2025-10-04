@@ -8,6 +8,7 @@ export interface TenantCreationInput {
     lastName: string;
     email: string;
   };
+  companyName?: string;
   clientName?: string;
   billingPlan?: string;
   licenseCount?: number; // Number of licenses for the tenant
@@ -30,6 +31,7 @@ export interface TenantCreationResult {
 export interface CreateTenantActivityInput {
   tenantName: string;
   email: string;
+  companyName?: string;
   clientName?: string;
   licenseCount?: number; // Number of licenses for the tenant
 }
@@ -75,6 +77,7 @@ export interface SendWelcomeEmailActivityInput {
   };
   temporaryPassword: string;
   clientName?: string;
+  companyName?: string;
 }
 
 export interface SendWelcomeEmailActivityResult {

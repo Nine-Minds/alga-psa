@@ -195,10 +195,10 @@ export async function setupTestDatabase(): Promise<TestDatabase> {
     },
 
     async getTenantsMatching(name: string) {
-      return await withAdminTransaction(async (trx: Knex.Transaction) => {
-        return await trx('tenants')
-          .where('client_name', 'like', `%${name}%`)
-          .select('*');
+        return await withAdminTransaction(async (trx: Knex.Transaction) => {
+          return await trx('tenants')
+            .where('client_name', 'like', `%${name}%`)
+            .select('*');
       });
     },
 

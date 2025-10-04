@@ -194,7 +194,7 @@ describe('My Workflow E2E', () => {
    ```typescript
    // Verify in database, not just workflow result
    const tenant = await testDb.getTenant(result.tenantId);
-   expect(tenant.company_name).toBe(input.tenantName);
+   expect(tenant.client_name).toBe(input.companyName ?? input.tenantName);
    ```
 
 4. **Error Testing**: Test failure scenarios
