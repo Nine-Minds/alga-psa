@@ -9,7 +9,9 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   setupCompanyTaxConfiguration,
   assignServiceTaxRate,
-  createTestService
+  createTestService,
+  createBucketPlanAssignment,
+  createBucketUsageRecord
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
@@ -99,10 +101,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'plan_services',
         'plan_service_configuration',
         'plan_service_fixed_config',
+        'plan_service_bucket_config',
         'service_catalog',
         'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'company_tax_settings',
@@ -269,20 +271,14 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         tax_region: 'US-NY'
       });
 
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Bucket Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Bucket'
-      }, 'plan_id');
-
-      const bucketPlanId = await context.createEntity('bucket_plans', {
-        plan_id: planId,
-        total_hours: 40,
-        billing_period: 'Monthly',
-        overage_rate: 7500,
-        tenant: context.tenantId
-      }, 'bucket_plan_id');
+      const { planId } = await createBucketPlanAssignment(context, serviceId, {
+        planName: 'Bucket Plan',
+        billingFrequency: 'monthly',
+        totalHours: 40,
+        overageRateCents: 7500,
+        billingPeriod: 'monthly',
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      });
 
       // Create billing cycle and assign plan
       const billingCycleId = await context.createEntity('company_billing_cycles', {
@@ -293,26 +289,15 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
-
       // Create bucket usage with overage
-      await context.db('bucket_usage').insert({
-        usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
-        company_id: context.companyId,
-        period_start: '2023-01-01',
-        period_end: '2023-01-31',
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: serviceId,
-        tenant: context.tenantId
+      await createBucketUsageRecord(context, {
+        planId,
+        serviceId,
+        companyId: context.companyId,
+        periodStart: '2023-01-01',
+        periodEnd: '2023-01-31',
+        minutesUsed: 45 * 60,
+        overageMinutes: 5 * 60
       });
 
       // Act

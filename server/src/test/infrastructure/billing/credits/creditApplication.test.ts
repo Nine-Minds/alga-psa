@@ -1,120 +1,173 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Credit Application Tests', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function setupDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 10.0
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
         'invoices',
         'transactions',
+        'credit_tracking',
+        'credit_allocations',
         'company_billing_cycles',
         'company_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
-        'bucket_usage',
         'tax_rates',
-        'company_tax_settings'
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates',
+        'company_billing_settings',
+        'default_billing_settings'
       ],
       companyName: 'Credit Test Company',
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await setupDefaultTax();
+  }, 60000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+    await setupDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   describe('Credit Application Scenarios', () => {
     it('should correctly apply credit when available credit is less than the invoice total', async () => {
-      // Create test company
-      const company_id = await context.createEntity<ICompany>('companies', {
-        company_name: 'Partial Credit Test Company',
-        billing_cycle: 'monthly',
-        company_id: uuidv4(),
-        region_code: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
-        credit_balance: 0,
-        email: '',
-        url: '',
-        address: '',
-        is_inactive: false
-      }, 'company_id');
+      // Use the context's company instead of creating a new one
+      const company_id = context.companyId;
 
-      // Create NY tax rate
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0, // 10% for easy calculation
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
+      // Set up company billing settings
+      await context.db('company_billing_settings').insert({
         company_id: company_id,
         tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+        zero_dollar_invoice_handling: 'normal',
+        suppress_zero_dollar_invoices: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       });
 
-      // Create a service
-      const service = await context.createEntity('service_catalog', {
+      // Create a service using modern helper
+      const serviceId = await createTestService(context, {
         service_name: 'Premium Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: 10000, // $100.00
         unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Test Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
-
-      // Link service to plan
-      await context.db('plan_services').insert({
-        plan_id: planId,
-        service_id: service,
-        tenant: context.tenantId,
-        quantity: 1
+      // Create billing plan and assign service using modern helper
+      const { planId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Test Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 10000, // $100.00
+        quantity: 1,
+        startDate: '2025-01-01'
       });
 
       // Create a billing cycle
       const now = createTestDate();
       const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
       const endDate = Temporal.PlainDate.from(now).toString();
-      
+
       const billingCycleId = await context.createEntity('company_billing_cycles', {
         company_id: company_id,
         billing_cycle: 'monthly',
@@ -123,37 +176,27 @@ describe('Credit Application Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // Link plan to company
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: company_id,
-        plan_id: planId,
-        tenant: context.tenantId,
-        start_date: startDate,
-        is_active: true
-      });
-
       // Step 1: Create prepayment invoice with credit amount less than what will be needed
       const prepaymentAmount = 5000; // $50.00 credit
       const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
-      
+
       // Step 2: Finalize the prepayment invoice - prepayment invoices don't need a billing cycle
       await finalizeInvoice(prepaymentInvoice.invoice_id);
-      
+
       // Step 3: Verify initial credit balance
       const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
       expect(initialCredit).toBe(prepaymentAmount);
 
       // Log credit balance before generating invoice
       console.log('Credit balance before generating invoice:', initialCredit);
-      
+
       // Step 5: Generate an automatic invoice using the billing cycle
       const invoice = await generateInvoice(billingCycleId);
-      
+
       if (!invoice) {
         throw new Error('Failed to generate invoice');
       }
-      
+
       // Log invoice details
       console.log('Generated invoice:', {
         invoice_id: invoice.invoice_id,
@@ -162,7 +205,7 @@ describe('Credit Application Tests', () => {
         total_amount: invoice.total_amount,
         credit_applied: invoice.credit_applied
       });
-      
+
       // Log credit balance after generating invoice
       const creditAfterGeneration = await CompanyBillingPlan.getCompanyCredit(company_id);
       console.log('Credit balance after generating invoice:', creditAfterGeneration);
@@ -177,7 +220,7 @@ describe('Credit Application Tests', () => {
 
       // Step 8: Verify credit application
       expect(updatedInvoice.credit_applied).toBe(prepaymentAmount); // All $50 credit was applied
-      
+
       // Calculate expected values
       const subtotal = 10000; // $100.00
       const tax = 1000;      // $10.00 (10% of $100)
@@ -293,20 +336,20 @@ describe('Credit Application Tests', () => {
 
     // Step 1: Create prepayment invoice with credit amount GREATER than what will be needed
     const prepaymentAmount = 15000; // $150.00 credit (more than the $110 invoice total)
-    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(company_id, prepaymentAmount));
     
     // Step 2: Finalize the prepayment invoice - prepayment invoices don't need a billing cycle
-    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
     console.log('Credit balance before generating invoice:', initialCredit);
     
     // Step 4: Generate an automatic invoice using the billing cycle
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -322,11 +365,11 @@ describe('Credit Application Tests', () => {
     });
     
     // Log credit balance after generating invoice
-    const creditAfterGeneration = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterGeneration = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     console.log('Credit balance after generating invoice:', creditAfterGeneration);
 
     // Step 5: Finalize the invoice to apply credit
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
 
     // Step 6: Get the updated invoice to verify credit application
     const updatedInvoice = await context.db('invoices')
@@ -348,7 +391,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify remaining credit balance
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(finalCredit).toBe(expectedRemainingBalance);
 
     // Verify credit application transaction
@@ -467,13 +510,13 @@ describe('Credit Application Tests', () => {
 
     // Step 1: Create prepayment invoice with credit amount LESS than what will be needed for full payment
     const prepaymentAmount = 10000; // $100.00 credit
-    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(company_id, prepaymentAmount));
     
     // Step 2: Finalize the prepayment invoice
-    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
@@ -481,7 +524,7 @@ describe('Credit Application Tests', () => {
     
     // Step 4: Generate an automatic invoice using the billing cycle
     // This will include both services ($100 + $150 = $250 + 10% tax = $275)
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -497,7 +540,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Step 5: Finalize the invoice to apply credit
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
 
     // Step 6: Get the updated invoice to verify credit application
     const updatedInvoice = await context.db('invoices')
@@ -519,7 +562,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal); // Invoice should have remaining balance
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -621,17 +664,17 @@ describe('Credit Application Tests', () => {
 
     // Step 1: Create prepayment invoice for credit
     const prepaymentAmount = 5000; // $50.00 credit
-    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(company_id, prepaymentAmount));
     
     // Step 2: Finalize the prepayment invoice
-    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Step 4: Generate an automatic invoice using the billing cycle
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -689,7 +732,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Step 6: Finalize the invoice to apply credit
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
 
     // Step 7: Get the updated invoice to verify credit application
     const updatedInvoice = await context.db('invoices')
@@ -708,7 +751,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal); // $40
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -826,11 +869,11 @@ describe('Credit Application Tests', () => {
     });
 
     // Step 1: Check initial credit balance (should be 0)
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(0);
 
     // Step 2: Generate invoice with negative total
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -862,10 +905,10 @@ describe('Credit Application Tests', () => {
     expect(invoice.total_amount).toBe(-12500);
     
     // Step 3: Finalize the invoice to trigger credit creation
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
     
     // Step 4: Verify credit balance has been increased by the absolute value of the negative total
-    const updatedCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const updatedCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(updatedCredit).toBe(12500); // $125.00
     
     // Step 5: Verify transaction record
@@ -1004,7 +1047,7 @@ describe('Credit Application Tests', () => {
     });
 
     // Step 1: Generate invoice with negative total
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
@@ -1016,7 +1059,7 @@ describe('Credit Application Tests', () => {
     const creditAmount = Math.abs(negativeAmount);
     
     // Step 2: Finalize the invoice to trigger credit creation
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
     
     // Step 3: Verify credit transaction has expiration date
     const creditTransaction = await context.db('transactions')
@@ -1151,14 +1194,14 @@ describe('Credit Application Tests', () => {
     });
 
     // Step 1: Generate invoice with negative total
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
     }
     
     // Step 2: Finalize the invoice to trigger credit creation
-    await finalizeInvoice(invoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
     
     // Step 3: Verify credit transaction has expiration date from default settings
     const creditTransaction = await context.db('transactions')
@@ -1381,14 +1424,14 @@ describe('Credit Application Tests', () => {
       .update({ credit_balance: 20000 });
     
     // Step 2: Generate an invoice
-    const invoice = await generateInvoice(billingCycleId);
+    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
     
     if (!invoice) {
       throw new Error('Failed to generate invoice');
     }
     
     // Step 3: Apply credit to the invoice (should use credits in order of expiration date)
-    await applyCreditToInvoice(company_id, invoice.invoice_id, 15000); // Apply $150 of credit
+    await runInTenant(() => applyCreditToInvoice(company_id, invoice.invoice_id, 15000)); // Apply $150 of credit
     
     // Step 4: Verify credit application
     // Get updated credit tracking entries
@@ -1567,20 +1610,20 @@ describe('Credit Application Tests', () => {
 
     // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
     const prepaymentAmount = 20000; // $200.00 credit
-    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(company_id, prepaymentAmount));
     
     // Step 2: Finalize the prepayment invoice to add credit to the company
-    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
     // Step 4: Generate invoices for each billing cycle
-    const invoice1 = await generateInvoice(billingCycleId1); // Basic service ($50 + $5 tax = $55)
-    const invoice2 = await generateInvoice(billingCycleId2); // Standard service ($100 + $10 tax = $110)
-    const invoice3 = await generateInvoice(billingCycleId3); // Premium service ($150 + $15 tax = $165)
+    const invoice1 = await runInTenant(() => generateInvoice(billingCycleId1)); // Basic service ($50 + $5 tax = $55)
+    const invoice2 = await runInTenant(() => generateInvoice(billingCycleId2)); // Standard service ($100 + $10 tax = $110)
+    const invoice3 = await runInTenant(() => generateInvoice(billingCycleId3)); // Premium service ($150 + $15 tax = $165)
     
     if (!invoice1 || !invoice2 || !invoice3) {
       throw new Error('Failed to generate one or more invoices');
@@ -1593,7 +1636,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Step 5: Finalize the first invoice and verify credit application
-    await finalizeInvoice(invoice1.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice1.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice1 = await context.db('invoices')
@@ -1614,7 +1657,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after first invoice
-    const creditAfterInvoice1 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterInvoice1 = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
     console.log('Credit balance after first invoice:', creditAfterInvoice1);
     
@@ -1632,7 +1675,7 @@ describe('Credit Application Tests', () => {
     expect(creditTransaction1.description).toContain('Applied credit to invoice');
     
     // Step 6: Finalize the second invoice and verify credit application
-    await finalizeInvoice(invoice2.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice2.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice2 = await context.db('invoices')
@@ -1654,7 +1697,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2); // Invoice should be partially paid
     
     // Verify credit balance after second invoice
-    const creditAfterInvoice2 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterInvoice2 = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
     console.log('Credit balance after second invoice:', creditAfterInvoice2);
     
@@ -1679,7 +1722,7 @@ describe('Credit Application Tests', () => {
     const expectedRemainingTotal3 = totalBeforeCredit3 - expectedAppliedCredit3; // $110 - $0 = $110
     
     // Step 7: Finalize the third invoice - credit should be automatically applied
-    await finalizeInvoice(invoice3.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice3.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice3 = await context.db('invoices')
@@ -1693,7 +1736,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
     
     // Verify credit balance is now zero
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(finalCredit).toBe(0);
     console.log('Final credit balance:', finalCredit);
     
@@ -1841,20 +1884,20 @@ describe('Credit Application Tests', () => {
     // Step 1: Create prepayment invoice with credit amount that will cover multiple invoices
     // and partially cover the third invoice
     const prepaymentAmount = 25000; // $250.00 credit (enough for 2 full invoices + partial third)
-    const prepaymentInvoice = await createPrepaymentInvoice(company_id, prepaymentAmount);
+    const prepaymentInvoice = await runInTenant(() => createPrepaymentInvoice(company_id, prepaymentAmount));
     
     // Step 2: Finalize the prepayment invoice to add credit to the company
-    await finalizeInvoice(prepaymentInvoice.invoice_id);
+    await runInTenant(() => finalizeInvoice(prepaymentInvoice.invoice_id));
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const initialCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
     // Step 4: Generate invoices for each billing cycle
-    const invoice1 = await generateInvoice(billingCycleId1);
-    const invoice2 = await generateInvoice(billingCycleId2);
-    const invoice3 = await generateInvoice(billingCycleId3);
+    const invoice1 = await runInTenant(() => generateInvoice(billingCycleId1));
+    const invoice2 = await runInTenant(() => generateInvoice(billingCycleId2));
+    const invoice3 = await runInTenant(() => generateInvoice(billingCycleId3));
     
     if (!invoice1 || !invoice2 || !invoice3) {
       throw new Error('Failed to generate one or more invoices');
@@ -1867,7 +1910,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Step 5: Finalize the first invoice and verify credit application
-    await finalizeInvoice(invoice1.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice1.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice1 = await context.db('invoices')
@@ -1888,7 +1931,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after first invoice
-    const creditAfterInvoice1 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterInvoice1 = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
     console.log('Credit balance after first invoice:', creditAfterInvoice1);
     
@@ -1906,7 +1949,7 @@ describe('Credit Application Tests', () => {
     expect(creditTransaction1.description).toContain('Applied credit to invoice');
     
     // Step 6: Finalize the second invoice and verify credit application
-    await finalizeInvoice(invoice2.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice2.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice2 = await context.db('invoices')
@@ -1927,7 +1970,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice2.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after second invoice
-    const creditAfterInvoice2 = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditAfterInvoice2 = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
     console.log('Credit balance after second invoice:', creditAfterInvoice2);
     
@@ -1952,7 +1995,7 @@ describe('Credit Application Tests', () => {
     const expectedRemainingTotal3 = totalBeforeCredit3 - expectedAppliedCredit3; // $110 - $30 = $80
     
     // Step 7: Finalize the third invoice - credit should be automatically applied
-    await finalizeInvoice(invoice3.invoice_id);
+    await runInTenant(() => finalizeInvoice(invoice3.invoice_id));
     
     // Get the updated invoice
     const updatedInvoice3 = await context.db('invoices')
@@ -1966,7 +2009,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
     
     // Verify credit balance is now zero
-    const finalCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const finalCredit = await runInTenant(() => CompanyBillingPlan.getCompanyCredit(company_id));
     expect(finalCredit).toBe(0);
     console.log('Final credit balance:', finalCredit);
     

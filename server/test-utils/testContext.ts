@@ -207,20 +207,31 @@ export class TestContext {
   }
 
   private async truncateCleanupTables(db: Knex, tables: string[]): Promise<void> {
-    const uniqueTables = Array.from(new Set(tables));
+    const uniqueTables = Array.from(new Set(tables)).filter(Boolean);
 
     if (!uniqueTables.length) {
       return;
     }
 
-    const quotedTables = uniqueTables
+    // Look up tables that actually exist to avoid errors when migrations drop old tables.
+    const existingTableRows = await db
+      .withSchema('pg_catalog')
+      .select('tablename')
+      .from('pg_tables')
+      .where('schemaname', 'public')
+      .whereIn('tablename', uniqueTables);
+
+    const existingTables = new Set(existingTableRows.map(row => row.tablename));
+    const tablesToTruncate = uniqueTables.filter(table => existingTables.has(table));
+
+    if (!tablesToTruncate.length) {
+      return;
+    }
+
+    const quotedTables = tablesToTruncate
       .map(table => table.replace(/"/g, '""'))
       .map(table => `"${table}"`)
       .join(', ');
-
-    if (!quotedTables.length) {
-      return;
-    }
 
     await db.raw(`TRUNCATE TABLE ${quotedTables} RESTART IDENTITY CASCADE`);
   }

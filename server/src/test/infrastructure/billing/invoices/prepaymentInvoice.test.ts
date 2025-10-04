@@ -12,7 +12,9 @@ import {
   createTestService,
   createFixedPlanAssignment,
   setupCompanyTaxConfiguration,
-  assignServiceTaxRate
+  assignServiceTaxRate,
+  createBucketPlanAssignment,
+  createBucketUsageRecord
 } from '../../../../../test-utils/billingTestHelpers';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
 import { runWithTenant } from 'server/src/lib/db';
@@ -98,10 +100,10 @@ describe('Prepayment Invoice System', () => {
         'plan_services',
         'plan_service_configuration',
         'plan_service_fixed_config',
+        'plan_service_bucket_config',
         'service_catalog',
         'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'company_tax_settings',
@@ -366,28 +368,26 @@ describe('Prepayment Invoice System', () => {
         tax_region: 'US-NY'
       });
 
-      // Create bucket plan
-      const bucketPlanId = uuidv4();
-      await context.db('bucket_plans').insert({
-        bucket_plan_id: bucketPlanId,
-        plan_id: planId,
-        total_hours: 40,
-        billing_period: 'monthly',
-        overage_rate: 150,
-        tenant: context.tenantId
+      // Create bucket configuration tied to the plan
+      await createBucketPlanAssignment(context, bucketServiceId, {
+        planId,
+        planName: 'Test Plan',
+        billingFrequency: 'monthly',
+        totalHours: 40,
+        overageRateCents: 150,
+        billingPeriod: 'monthly',
+        startDate: startDate.toString()
       });
 
       // Create bucket usage
-      await context.db('bucket_usage').insert({
-        usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
-        company_id: context.companyId,
-        period_start: startDate,
-        period_end: dateHelpers.startOf(now, 'month'),
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
+      await createBucketUsageRecord(context, {
+        planId,
+        serviceId: bucketServiceId,
+        companyId: context.companyId,
+        periodStart: startDate.toString(),
+        periodEnd: dateHelpers.startOf(now, 'month').toString(),
+        minutesUsed: 45 * 60,
+        overageMinutes: 5 * 60
       });
     });
 
@@ -473,10 +473,10 @@ describe('Multiple Credit Applications', () => {
         'plan_services',
         'plan_service_configuration',
         'plan_service_fixed_config',
+        'plan_service_bucket_config',
         'service_catalog',
         'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
         'tax_regions',
         'company_tax_settings',
@@ -564,41 +564,37 @@ describe('Multiple Credit Applications', () => {
       tax_region: 'US-NY'
     });
 
-    // Create bucket plan
-    const bucketPlanId = uuidv4();
-    await context.db('bucket_plans').insert({
-      bucket_plan_id: bucketPlanId,
-      plan_id: planId,
-      total_hours: 40,
-      billing_period: 'monthly',
-      overage_rate: 150,
-      tenant: context.tenantId
+    // Create bucket configuration tied to the plan
+    await createBucketPlanAssignment(context, bucketServiceId, {
+      planId,
+      planName: 'Test Plan',
+      billingFrequency: 'monthly',
+      totalHours: 40,
+      overageRateCents: 150,
+      billingPeriod: 'monthly',
+      startDate: startDate.toString()
     });
 
     // Create bucket usage for both billing cycles
-    await context.db('bucket_usage').insert([
-      {
-        usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
-        company_id: context.companyId,
-        period_start: dateHelpers.startOf(now, 'month'),
-        period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        minutes_used: 45,
-        overage_minutes: 5,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
-      },
-      {
-        usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
-        company_id: context.companyId,
-        period_start: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
-        minutes_used: 50,
-        overage_minutes: 10,
-        service_catalog_id: bucketServiceId,
-        tenant: context.tenantId
-      }
+    await Promise.all([
+      createBucketUsageRecord(context, {
+        planId,
+        serviceId: bucketServiceId,
+        companyId: context.companyId,
+        periodStart: dateHelpers.startOf(now, 'month').toString(),
+        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toString(),
+        minutesUsed: 45 * 60,
+        overageMinutes: 5 * 60
+      }),
+      createBucketUsageRecord(context, {
+        planId,
+        serviceId: bucketServiceId,
+        companyId: context.companyId,
+        periodStart: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toString(),
+        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toString(),
+        minutesUsed: 50 * 60,
+        overageMinutes: 10 * 60
+      })
     ]);
   }, 30000);
 

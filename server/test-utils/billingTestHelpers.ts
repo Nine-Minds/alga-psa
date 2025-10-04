@@ -221,6 +221,33 @@ interface AddServiceToPlanOptions {
   detailBaseRateCents?: number;
 }
 
+interface CreateBucketPlanOptions {
+  planId?: string;
+  companyBillingPlanId?: string;
+  configId?: string;
+  planName?: string;
+  billingFrequency?: 'monthly' | 'quarterly' | 'annually';
+  totalMinutes?: number;
+  totalHours?: number;
+  overageRateCents?: number;
+  allowRollover?: boolean;
+  billingPeriod?: string;
+  startDate?: string;
+  endDate?: string | null;
+}
+
+interface CreateBucketUsageOptions {
+  usageId?: string;
+  planId: string;
+  serviceId: string;
+  companyId: string;
+  periodStart: string;
+  periodEnd: string;
+  minutesUsed: number;
+  overageMinutes?: number;
+  rolledOverMinutes?: number;
+}
+
 async function ensureServiceType(
   context: TestContext,
   billingMethod: 'fixed' | 'per_unit' = 'fixed'
@@ -412,4 +439,169 @@ export async function addServiceToFixedPlan(
     });
 
   return configId;
+}
+
+let bucketConfigColumnsCache: Record<string, unknown> | null | undefined;
+let bucketUsageColumnsCache: Record<string, unknown> | null | undefined;
+
+async function ensureBucketConfigColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (bucketConfigColumnsCache === undefined) {
+    try {
+      bucketConfigColumnsCache = await context.db('plan_service_bucket_config').columnInfo();
+    } catch (error) {
+      bucketConfigColumnsCache = null;
+    }
+  }
+
+  return bucketConfigColumnsCache ?? null;
+}
+
+async function ensureBucketUsageColumns(context: TestContext): Promise<Record<string, unknown> | null> {
+  if (bucketUsageColumnsCache === undefined) {
+    try {
+      bucketUsageColumnsCache = await context.db('bucket_usage').columnInfo();
+    } catch (error) {
+      bucketUsageColumnsCache = null;
+    }
+  }
+
+  return bucketUsageColumnsCache ?? null;
+}
+
+export async function createBucketPlanAssignment(
+  context: TestContext,
+  serviceId: string,
+  options: CreateBucketPlanOptions = {}
+): Promise<{ planId: string; configId: string; companyBillingPlanId: string }> {
+  const planId = options.planId ?? uuidv4();
+  const companyBillingPlanId = options.companyBillingPlanId ?? uuidv4();
+  const configId = options.configId ?? uuidv4();
+  const planName = options.planName ?? 'Bucket Plan';
+  const billingFrequency = options.billingFrequency ?? 'monthly';
+  const startDate = options.startDate ?? '2025-01-01';
+  const endDate = options.endDate ?? null;
+  const overageRateCents = options.overageRateCents ?? 0;
+  const allowRollover = options.allowRollover ?? false;
+  const billingPeriod = options.billingPeriod ?? 'monthly';
+
+  const totalMinutes = options.totalMinutes ?? Math.round((options.totalHours ?? 40) * 60);
+
+  const existingPlan = await context.db('billing_plans')
+    .where({ tenant: context.tenantId, plan_id: planId })
+    .first();
+
+  if (!existingPlan) {
+    await context.db('billing_plans').insert({
+      tenant: context.tenantId,
+      plan_id: planId,
+      plan_name: planName,
+      billing_frequency: billingFrequency,
+      is_custom: false,
+      plan_type: 'Bucket'
+    });
+  }
+
+  await context.db('plan_services')
+    .insert({
+      tenant: context.tenantId,
+      plan_id: planId,
+      service_id: serviceId,
+      quantity: null,
+      custom_rate: null
+    })
+    .onConflict(['tenant', 'plan_id', 'service_id'])
+    .ignore();
+
+  await context.db('plan_service_configuration')
+    .insert({
+      config_id: configId,
+      plan_id: planId,
+      service_id: serviceId,
+      configuration_type: 'Bucket',
+      custom_rate: null,
+      quantity: null,
+      tenant: context.tenantId
+    });
+
+  const bucketColumns = await ensureBucketConfigColumns(context);
+
+  if (!bucketColumns) {
+    throw new Error('plan_service_bucket_config table is unavailable');
+  }
+
+  const totalMinutesColumn = bucketColumns.total_minutes ? 'total_minutes' : bucketColumns.total_hours ? 'total_hours' : null;
+
+  if (!totalMinutesColumn) {
+    throw new Error('Unable to determine total minutes column for bucket config');
+  }
+
+  const bucketConfigData: Record<string, unknown> = {
+    config_id: configId,
+    tenant: context.tenantId,
+    billing_period: billingPeriod,
+    overage_rate: overageRateCents,
+    allow_rollover: allowRollover
+  };
+
+  if (totalMinutesColumn === 'total_minutes') {
+    bucketConfigData.total_minutes = totalMinutes;
+  } else {
+    bucketConfigData.total_hours = Math.round(totalMinutes / 60);
+  }
+
+  await context.db('plan_service_bucket_config').insert(bucketConfigData);
+
+  const existingAssignment = await context.db('company_billing_plans')
+    .where({ tenant: context.tenantId, company_id: context.companyId, plan_id: planId })
+    .first();
+
+  if (!existingAssignment) {
+    await context.db('company_billing_plans').insert({
+      tenant: context.tenantId,
+      company_billing_plan_id: companyBillingPlanId,
+      company_id: context.companyId,
+      plan_id: planId,
+      service_category: null,
+      is_active: true,
+      start_date: startDate,
+      end_date: endDate,
+      company_bundle_id: null
+    });
+  }
+
+  return { planId, configId, companyBillingPlanId };
+}
+
+export async function createBucketUsageRecord(
+  context: TestContext,
+  options: CreateBucketUsageOptions
+): Promise<string> {
+  const usageColumns = await ensureBucketUsageColumns(context);
+
+  if (!usageColumns) {
+    throw new Error('bucket_usage table is unavailable');
+  }
+
+  const usageId = options.usageId ?? uuidv4();
+  const record: Record<string, unknown> = {
+    usage_id: usageId,
+    tenant: context.tenantId,
+    company_id: options.companyId,
+    plan_id: options.planId,
+    service_catalog_id: options.serviceId,
+    period_start: options.periodStart,
+    period_end: options.periodEnd,
+    minutes_used: options.minutesUsed,
+    overage_minutes: options.overageMinutes ?? 0
+  };
+
+  const rolledOverColumn = usageColumns.rolled_over_minutes ? 'rolled_over_minutes' : usageColumns.rolled_over_hours ? 'rolled_over_hours' : null;
+
+  if (rolledOverColumn) {
+    record[rolledOverColumn] = options.rolledOverMinutes ?? 0;
+  }
+
+  await context.db('bucket_usage').insert(record);
+
+  return usageId;
 }
