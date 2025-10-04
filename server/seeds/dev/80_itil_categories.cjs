@@ -22,6 +22,34 @@ exports.seed = async function(knex) {
     return;
   }
 
+  // Determine which channel/id we should associate the ITIL categories with.
+  // Prefer an ITIL specific channel if it already exists, otherwise fall back
+  // to the tenant's default channel so we can satisfy the non-null constraint.
+  const itilChannel = await knex('channels')
+    .where('tenant', tenant.tenant)
+    .where('channel_name', 'ITIL Support')
+    .first();
+
+  const defaultChannel = itilChannel || await knex('channels')
+    .where('tenant', tenant.tenant)
+    .orderBy('display_order')
+    .first();
+
+  if (!defaultChannel) {
+    console.log('No channel found for tenant, skipping ITIL categories seed');
+    return;
+  }
+
+  const createdByUser = await knex('users')
+    .where('tenant', tenant.tenant)
+    .orderBy('created_at')
+    .first();
+
+  if (!createdByUser) {
+    console.log('No user found for tenant, skipping ITIL categories seed');
+    return;
+  }
+
   // Copy ITIL categories from standard_categories to tenant's categories table
   // This simulates what should happen automatically when an ITIL board is created
   const itilStandardCategories = await knex('standard_categories')
@@ -41,7 +69,8 @@ exports.seed = async function(knex) {
     const existing = await knex('categories')
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
-      .whereNull('parent_category_uuid')
+      .whereNull('parent_category')
+      .where('channel_id', defaultChannel.channel_id)
       .first();
 
     if (!existing) {
@@ -49,24 +78,33 @@ exports.seed = async function(knex) {
         category_id: newId,
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
-        parent_category_uuid: null,
-        description: stdCategory.description,
+        parent_category: null,
+        channel_id: defaultChannel.channel_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
+        created_by: createdByUser.user_id,
         created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
       });
 
       // Get the inserted ID for mapping
       const inserted = await knex('categories')
         .where('tenant', tenant.tenant)
         .where('category_name', stdCategory.category_name)
-        .whereNull('parent_category_uuid')
+        .whereNull('parent_category')
+        .where('channel_id', defaultChannel.channel_id)
         .first();
 
       parentIdMap[stdCategory.id] = inserted.category_id;
     } else {
       parentIdMap[stdCategory.id] = existing.category_id;
+
+      if (!existing.is_from_itil_standard) {
+        await knex('categories')
+          .where('category_id', existing.category_id)
+          .update({
+            is_from_itil_standard: true
+          });
+      }
     }
   }
 
@@ -85,7 +123,8 @@ exports.seed = async function(knex) {
     const existing = await knex('categories')
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
-      .where('parent_category_uuid', parentId)
+      .where('parent_category', parentId)
+      .where('channel_id', defaultChannel.channel_id)
       .first();
 
     if (!existing) {
@@ -93,13 +132,19 @@ exports.seed = async function(knex) {
         category_id: knex.raw('gen_random_uuid()'),
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
-        parent_category_uuid: parentId,
-        description: stdCategory.description,
+        parent_category: parentId,
+        channel_id: defaultChannel.channel_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
+        created_by: createdByUser.user_id,
         created_at: knex.fn.now(),
-        updated_at: knex.fn.now()
       });
+    } else if (!existing.is_from_itil_standard) {
+      await knex('categories')
+        .where('category_id', existing.category_id)
+        .update({
+          is_from_itil_standard: true
+        });
     }
   }
 

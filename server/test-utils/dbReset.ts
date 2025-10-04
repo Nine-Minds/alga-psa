@@ -47,68 +47,87 @@ export async function resetDatabase(
   } = options;
 
   try {
-    // Get current database name and verify it's safe to reset
-    const { rows: [{ current_database }] } = await db.raw('SELECT current_database()');
-    
-    // Import verification function from dbConfig
-    verifyTestDatabase(current_database);
-    
-    // Close existing connections more aggressively
-    await db.raw(`
-      SELECT pg_terminate_backend(pid)
-      FROM pg_stat_activity 
-      WHERE datname = ?
-      AND pid <> pg_backend_pid()
-      AND state <> 'terminated'
-    `, [current_database]);
+    const clientConfig = db.client.config;
+    const originalConnection = clientConfig.connection;
 
-    // Add a small delay to ensure connections are fully terminated
-    await new Promise(resolve => setTimeout(resolve, 100));
+    if (!originalConnection || typeof originalConnection === 'string') {
+      throw new Error('Expected object connection configuration for test database');
+    }
 
-    // First destroy the main connection
-    await db.destroy();
+    const connectionConfig = { ...originalConnection } as Record<string, any>;
+    const targetDatabase = connectionConfig.database as string | undefined;
 
-    const config = {
-      client: db.client.config.client,
+    if (!targetDatabase) {
+      throw new Error('Test database connection must specify a database name');
+    }
+
+    if (!connectionConfig.password) {
+      const candidatePassword = (clientConfig.connection as Record<string, any> | undefined)?.password;
+      connectionConfig.password = candidatePassword ?? adminPassword;
+    }
+
+    verifyTestDatabase(targetDatabase);
+
+    const adminPassword = await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password');
+
+    const adminDb = knex({
+      client: clientConfig.client,
       asyncStackTraces: true,
       connection: {
-        ...db.client.config.connection,
+        ...connectionConfig,
         database: 'postgres',
-        password: await getSecret('postgres_password', 'DB_PASSWORD_ADMIN', 'test_password'),
-      }
-    };
+        password: adminPassword,
+      },
+      pool: {
+        min: 1,
+        max: 2,
+      },
+    });
 
-    // Create admin connection
-    const adminDb = knex(config);
+    const safeDatabaseName = targetDatabase.replace(/"/g, '""');
 
     try {
-      // Drop and recreate database from postgres connection
-      await adminDb.raw(`DROP DATABASE IF EXISTS ${current_database}`);
-      await adminDb.raw(`CREATE DATABASE ${current_database}`);
+      // Tear down any existing connections from the main pool before recycling the database
+      await db.destroy().catch(() => undefined);
+
+      // Terminate lingering sessions that might block DROP DATABASE
+      await adminDb.raw(
+        `SELECT pg_terminate_backend(pid)
+         FROM pg_stat_activity
+         WHERE datname = ?
+           AND pid <> pg_backend_pid()
+           AND state <> 'terminated'`,
+        [targetDatabase]
+      );
+
+      await adminDb.raw(`DROP DATABASE IF EXISTS "${safeDatabaseName}"`);
+      await adminDb.raw(`CREATE DATABASE "${safeDatabaseName}"`);
     } finally {
-      // Clean up admin connection
       await adminDb.destroy();
     }
 
-    // Reinitialize the main connection
-    await db.initialize();
+    const refreshedDb = knex({
+      ...clientConfig,
+      asyncStackTraces: true,
+      connection: connectionConfig
+    });
 
-    // Run any pre-setup commands
-    for (const command of preSetupCommands) {
-      await db.raw(command);
-    }
+    try {
+      for (const command of preSetupCommands) {
+        await refreshedDb.raw(command);
+      }
 
-    // Run migrations
-    await db.migrate.latest();
+      await refreshedDb.migrate.latest();
 
-    // Run seeds if enabled
-    if (runSeeds) {
-      await db.seed.run();
-    }
+      if (runSeeds) {
+        await refreshedDb.seed.run();
+      }
 
-    // Run any post-setup commands
-    for (const command of postSetupCommands) {
-      await db.raw(command);
+      for (const command of postSetupCommands) {
+        await refreshedDb.raw(command);
+      }
+    } finally {
+      await refreshedDb.destroy().catch(() => undefined);
     }
 
     // Clean up specified tables
