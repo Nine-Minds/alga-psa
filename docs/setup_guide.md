@@ -2,6 +2,8 @@
 
 This guide provides step-by-step instructions for setting up the PSA system using Docker Compose, supporting both Community Edition (CE) and Enterprise Edition (EE).
 
+> Note: The instructions below focus on the CE prebuilt images. Full EE setup guidance, including any edition-specific overrides, is being prepared and will be added soon.
+
 ## Prerequisites
 
 - Docker Engine 24.0.0 or later
@@ -26,15 +28,10 @@ mkdir -p secrets
 
 1. Create secret files in the `secrets/` directory:
 
-Database Secrets:
+Database secrets (replace placeholders with strong values):
 ```bash
-# Admin user (postgres) - for database administration
 echo "your-secure-admin-password" > secrets/postgres_password
-
-# Application user (app_user) - for RLS-controlled access
 echo "your-secure-app-password" > secrets/db_password_server
-
-# Hocuspocus service
 echo "your-secure-hocuspocus-password" > secrets/db_password_hocuspocus
 ```
 
@@ -43,9 +40,8 @@ Redis Secret:
 echo "your-secure-password" > secrets/redis_password
 ```
 
-Authentication Secret:
+Authentication secret:
 ```bash
-# Authentication key for password hashing
 echo "your-32-char-min-key" > secrets/alga_auth_key
 ```
 
@@ -76,36 +72,22 @@ chmod 600 secrets/*
 cp .env.example server/.env
 ```
 
-2. Edit the environment file and configure required values:
+2. Open `server/.env` in your editor and confirm these core settings (adjust as needed):
+   - `DB_TYPE=postgres` (required)
+   - `DB_USER_ADMIN=postgres`
+   - `HOST=http://localhost:3000` (use your public domain in production)
+   - `LOG_LEVEL=INFO`
+   - `LOG_IS_FORMAT_JSON=false`
+   - `LOG_IS_FULL_DETAILS=false`
+   - `EMAIL_ENABLE=false` (set to `true` when you are ready to send mail)
+   - `EMAIL_FROM=noreply@example.com`
+   - `EMAIL_HOST=smtp.gmail.com`
+   - `EMAIL_PORT=587`
+   - `EMAIL_USERNAME=noreply@example.com`
+   - `NEXTAUTH_URL=http://localhost:3000`
+   - `NEXTAUTH_SESSION_EXPIRES=86400`
 
-Required Variables:
-```bash
-# Database Configuration
-DB_TYPE=postgres  # Must be "postgres"
-DB_USER_ADMIN=postgres  # Admin user for database operations
-
-# Logging Configuration
-LOG_LEVEL=INFO  # One of: SYSTEM, TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOG_IS_FORMAT_JSON=false
-LOG_IS_FULL_DETAILS=false
-
-# Email Configuration
-EMAIL_ENABLE=false  # Set to "true" to enable email notifications
-EMAIL_FROM=noreply@example.com  # Must be valid email
-EMAIL_HOST=smtp.gmail.com  # SMTP server hostname
-EMAIL_PORT=587  # SMTP port (587 for TLS, 465 for SSL)
-EMAIL_USERNAME=noreply@example.com  # SMTP username
-
-# Authentication Configuration
-NEXTAUTH_URL=http://localhost:3000  # Must be valid URL - for production, use your public domain (e.g., https://your-domain.com)
-NEXTAUTH_SESSION_EXPIRES=86400  # Must be > 0
-```
-
-Optional Variables:
-```bash
-# Hocuspocus Configuration
-REQUIRE_HOCUSPOCUS=false  # Set to "true" to require hocuspocus service
-```
+   Optional: enable collaborative editing by setting `REQUIRE_HOCUSPOCUS=true`.
 
 Note: The system performs validation of these environment variables at startup. Missing or invalid values will prevent the system from starting.
 
@@ -119,6 +101,8 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
+The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides.
+
 ## Production Setup (Persistent Storage)
 
 For production-like deployments, persist both your database and uploaded documents to named Docker volumes. This keeps data safe across container restarts and image updates.
@@ -128,9 +112,8 @@ For production-like deployments, persist both your database and uploaded documen
 
 The CE prebuilt compose now includes these volumes by default. When you run the compose command above, Docker will automatically create and attach them.
 
-Recommended environment config for storage (explicit):
+Recommended environment config for storage (add to `server/.env`):
 ```bash
-# server/.env
 STORAGE_DEFAULT_PROVIDER=local
 STORAGE_LOCAL_BASE_PATH=/data/files
 ```
@@ -140,16 +123,17 @@ Verify volumes:
 docker volume ls | grep -E "postgres_data|files_data"
 ```
 
+### Network Exposure
+
+The shared base compose file exposes Postgres, PgBouncer, Redis, and the application ports to the host for local convenience. For hardened environments, either remove or override the `ports:` entries with a compose override file, bind them to `127.0.0.1` behind a reverse proxy/firewall, or enforce host-level firewall rules that only allow trusted networks. Restart the stack after applying your chosen approach.
+
 ### Backups
 
-- Postgres (logical backup using pg_dump — recommended):
+- Postgres (logical backup using pg_dump — recommended). Replace the container name if you customized it.
   ```bash
-  # Replace container name if customized
   PGPASSWORD=$(cat secrets/postgres_password) \
   docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
     pg_dump -U postgres -d server -Fc -f /tmp/pg_backup.dump
-
-  # Copy backup out of the container
   docker cp $(docker compose ps -q postgres):/tmp/pg_backup.dump ./pg_backup_$(date +%F).dump
   ```
 
@@ -171,9 +155,8 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 
 ### Restores (brief)
 
-- Postgres (pg_restore):
+- Postgres (pg_restore). Create an empty database first if needed.
   ```bash
-  # Create empty DB if needed, then restore
   PGPASSWORD=$(cat secrets/postgres_password) \
   docker cp ./pg_backup.dump $(docker compose ps -q postgres):/tmp/pg_backup.dump
   docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
@@ -292,19 +275,20 @@ The system includes a distributed workflow engine that can process business proc
 
 1. Configure workflow environment variables:
    ```bash
-   # Workflow Configuration
-   WORKFLOW_DISTRIBUTED_MODE=true  # Enable distributed mode
-   WORKFLOW_REDIS_STREAM_PREFIX=workflow:events:  # Redis stream prefix
-   WORKFLOW_REDIS_CONSUMER_GROUP=workflow-workers # Consumer group name
-   WORKFLOW_REDIS_BATCH_SIZE=10    # Number of events to process in a batch
-   WORKFLOW_REDIS_IDLE_TIMEOUT_MS=60000  # Idle timeout in milliseconds
-   WORKFLOW_WORKER_REPLICAS=2      # Number of worker containers to run
+   WORKFLOW_DISTRIBUTED_MODE=true
+   WORKFLOW_REDIS_STREAM_PREFIX=workflow:events:
+   WORKFLOW_REDIS_CONSUMER_GROUP=workflow-workers
+   WORKFLOW_REDIS_BATCH_SIZE=10
+   WORKFLOW_REDIS_IDLE_TIMEOUT_MS=60000
+   WORKFLOW_WORKER_REPLICAS=2
    ```
+   These defaults enable distributed mode, set the Redis stream naming pattern, and configure batch size, idle timeout, and replica count.
 
 2. Start the services with the workflow worker:
    ```bash
    docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env up -d
    ```
+   The prebuilt CE compose files already include the worker service, so this command will bring it online alongside the rest of the stack.
 
 3. Verify the workflow worker is running:
    ```bash
@@ -338,12 +322,15 @@ When deploying for public access (not localhost), additional configuration is re
 ### Authentication URL Configuration
 The `NEXTAUTH_URL` environment variable must match your public domain:
 
+For local development:
 ```bash
-# For local development
 NEXTAUTH_URL=http://localhost:3000
+```
 
-# For production deployment
+For production deployment:
+```bash
 NEXTAUTH_URL=https://your-domain.com
+HOST=https://your-domain.com
 ```
 
 ### SSL/TLS Configuration
@@ -357,7 +344,7 @@ For production deployments:
 Update email settings for production notifications:
 ```bash
 EMAIL_ENABLE=true
-EMAIL_FROM=noreply@your-domain.com  # Use your domain
+EMAIL_FROM=noreply@your-domain.com
 EMAIL_HOST=your-smtp-server.com
 EMAIL_USERNAME=noreply@your-domain.com
 ```
@@ -376,11 +363,12 @@ EMAIL_USERNAME=noreply@your-domain.com
      ```bash
      EMAIL_ENABLE=true
      EMAIL_HOST=smtp.example.com
-     EMAIL_PORT=587  # or 465 for SSL
+     EMAIL_PORT=587
      EMAIL_USERNAME=noreply@example.com
      EMAIL_PASSWORD=your-secure-password
      EMAIL_FROM=noreply@example.com
      ```
+     Use port `465` if your provider requires implicit SSL.
    - Features available after setup:
      * System-wide default templates
      * Tenant-specific template customization
