@@ -4,7 +4,7 @@ import { ITaggable } from './tag.interfaces';
 import { IClient as SharedIClient } from '@alga-psa/shared/interfaces/client.interfaces';
 import { IBillingPlan } from './billing.interfaces';
 
-export interface IClient extends TenantEntity {
+export interface IClientSummary extends TenantEntity {
     id: string;
     name: string;
     billingPlan?: IBillingPlan;
@@ -23,7 +23,7 @@ export interface IClient extends SharedIClient, TenantEntity, ITaggable {
   notes_document_id?: string | null;
   properties?: {
     industry?: string;
-    client_size?: string;
+    company_size?: string;
     annual_revenue?: string;
     primary_contact_id?: string;
     primary_contact_name?: string;

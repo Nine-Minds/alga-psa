@@ -185,7 +185,7 @@ describe('Time Entries API E2E Tests', () => {
         // Create the other tenant
         await env.db('tenants').insert({
           tenant: otherTenant,
-          company_name: `Other Tenant ${otherTenant}`,
+          client_name: `Other Tenant ${otherTenant}`,
           phone_number: '555-0200',
           email: `other-${otherTenant.substring(0, 8)}@example.com`,
           created_at: new Date(),
@@ -1130,7 +1130,7 @@ describe('Time Entries API E2E Tests', () => {
       // Create the other tenant
       await env.db('tenants').insert({
         tenant: otherTenant,
-        company_name: `Other Tenant ${otherTenant}`,
+        client_name: `Other Tenant ${otherTenant}`,
         phone_number: '555-0200',
         email: `other-${otherTenant.substring(0, 8)}@example.com`,
         created_at: new Date(),

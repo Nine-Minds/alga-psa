@@ -459,7 +459,7 @@
       "warehouse": "Almacén",
       "website": "Sitio web",
       "industry": "Industria",
-      "clientSize": "Tamaño de la empresa",
+      "companySize": "Tamaño de la empresa",
       "annualRevenue": "Ingresos anuales",
       "size": "Tamaño de la empresa",
       "taxId": "ID fiscal",

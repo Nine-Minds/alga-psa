@@ -1,6 +1,6 @@
 export interface Tenant {
   tenant: string;
-  company_name: string;
+  client_name: string;
   created_at: Date;
   updated_at: Date;
 }

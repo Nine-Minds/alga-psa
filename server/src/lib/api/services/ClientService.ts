@@ -645,8 +645,8 @@ export class ClientService extends BaseService<IClient> {
         case 'industry':
           query.whereRaw("c.properties->>'industry' = ?", [value]);
           break;
-        case 'client_size':
-          query.whereRaw("c.properties->>'client_size' = ?", [value]);
+        case 'company_size':
+          query.whereRaw("c.properties->>'company_size' = ?", [value]);
           break;
         case 'search':
           if (this.searchableFields.length > 0) {

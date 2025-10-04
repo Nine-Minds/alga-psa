@@ -22,7 +22,7 @@ import {
 // Client properties schema
 const clientPropertiesSchema = z.object({
   industry: z.string().optional(),
-  client_size: z.string().optional(),
+  company_size: z.string().optional(),
   annual_revenue: z.string().optional(),
   primary_contact_id: uuidSchema.optional(),
   primary_contact_name: z.string().optional(),
@@ -85,7 +85,7 @@ export const clientFilterSchema = baseFilterSchema.extend({
   credit_balance_max: z.string().transform(val => parseFloat(val)).optional(),
   has_credit_limit: booleanTransform.optional(),
   industry: z.string().optional(),
-  client_size: z.string().optional()
+  company_size: z.string().optional()
 });
 
 // Client list query schema

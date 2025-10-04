@@ -155,7 +155,7 @@ export function ClientDetailsSettings() {
         properties: {
           ...clientDetails.properties,
           industry: clientDetails.properties?.industry,
-          client_size: clientDetails.properties?.client_size,
+          company_size: clientDetails.properties?.company_size,
           annual_revenue: clientDetails.properties?.annual_revenue
         }
       });
@@ -246,10 +246,10 @@ export function ClientDetailsSettings() {
           />
 
           <TextDetailItem
-            label={t('clientSettings.fields.clientSize')}
-            value={clientDetails.properties?.client_size || ''}
-            onEdit={(value) => handleFieldChange('properties.client_size', value)}
-            automationId="client-size-field"
+            label={t('clientSettings.fields.company_size')}
+            value={clientDetails.properties?.company_size || ''}
+            onEdit={(value) => handleFieldChange('properties.company_size', value)}
+            automationId="company-size-field"
           />
           
           <TextDetailItem

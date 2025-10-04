@@ -27,7 +27,7 @@ const GeneralSettings = () => {
   const loadTenantData = async () => {
     try {
       const tenant = await getTenantDetails();
-      setTenantName(tenant.company_name);
+      setTenantName(tenant.client_name);
       setClients(tenant.clients.map(c => ({
         id: c.client_id,
         name: c.client_name,

@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 export const ClientPropertiesSchema = z.object({
   industry: z.string().optional(),
-  client_size: z.string().optional(),
+  company_size: z.string().optional(),
   annual_revenue: z.string().optional(),
   primary_contact_id: z.string().optional(),
   primary_contact_name: z.string().optional(),

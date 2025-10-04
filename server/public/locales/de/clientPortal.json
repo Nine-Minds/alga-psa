@@ -460,7 +460,7 @@
       "warehouse": "Lager",
       "website": "Website",
       "industry": "Branche",
-      "clientSize": "Unternehmensgröße",
+      "companySize": "Unternehmensgröße",
       "annualRevenue": "Jahresumsatz",
       "size": "Unternehmensgröße",
       "taxId": "Steuer-ID",

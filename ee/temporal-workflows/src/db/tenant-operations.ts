@@ -27,8 +27,10 @@ export async function createTenantInDB(
     
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
+      const tenantCompanyName = input.companyName ?? input.tenantName;
+
       const tenantData: any = {
-        client_name: input.tenantName,
+        client_name: tenantCompanyName,
         email: input.email.toLowerCase(),
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -46,18 +48,20 @@ export async function createTenantInDB(
         .returning('tenant');
       
       const tenantId = tenantResult[0].tenant;
-      log.info('Tenant created successfully', { 
-        tenantId, 
-        licenseCount: input.licenseCount 
+      log.info('Tenant created successfully', {
+        tenantId,
+        licenseCount: input.licenseCount
       });
 
-      // Create client if clientName is provided (now with tenant ID)
+      // Create client if name is provided (now with tenant ID)
       let clientId: string | undefined;
-      
-      if (input.clientName) {
+
+      const clientName = input.clientName ?? input.companyName;
+
+      if (clientName) {
         const clientResult = await trx('clients')
           .insert({
-            client_name: input.clientName,
+            client_name: clientName,
             tenant: tenantId,
             client_type: 'client',
             is_inactive: false,
@@ -71,7 +75,7 @@ export async function createTenantInDB(
           })
           .returning('client_id');
         clientId = clientResult[0].client_id;
-        log.info('Client created', { clientId, clientName: input.clientName, tenantId });
+        log.info('Client created', { clientId, clientName, tenantId });
         
         // Create default location for the MSP client with email from the tenant setup
         // Insert minimal required fields to satisfy NOT NULL constraints
@@ -159,7 +163,7 @@ export async function setupTenantDataInDB(
         log.info('Tenant settings already exist, skipping', { tenantId: input.tenantId });
       }
 
-      // Create tenant-client association if we have a client
+      // Create tenant-client association if we have a client/company id
       if (input.clientId) {
         try {
           await trx('tenant_companies')

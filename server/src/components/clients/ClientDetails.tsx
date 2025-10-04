@@ -565,10 +565,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
               />
 
               <TextDetailItem
-                label="Client Size"
-                value={editedClient.properties?.client_size || ''}
-                onEdit={(value) => handleFieldChange('properties.client_size', value)}
-                automationId="client-size-field"
+                label="Company Size"
+                value={editedClient.properties?.company_size || ''}
+                onEdit={(value) => handleFieldChange('properties.company_size', value)}
+                automationId="company-size-field"
               />
               
               <TextDetailItem

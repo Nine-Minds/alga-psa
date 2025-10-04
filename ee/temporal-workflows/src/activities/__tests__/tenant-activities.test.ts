@@ -34,7 +34,8 @@ describe('Tenant Activities', () => {
   describe('createTenant', () => {
     it('should create a tenant with basic information', async () => {
       const input: CreateTenantActivityInput = {
-        tenantName: 'Test Client Inc',
+        tenantName: 'Test Tenant Inc',
+        companyName: 'Test Company',
         clientName: 'Test Client'
       };
 
@@ -46,7 +47,7 @@ describe('Tenant Activities', () => {
       // Verify tenant was created in database
       const tenant = await testDb.getTenant(result.tenantId);
       expect(tenant).toBeDefined();
-      expect(tenant.client_name).toBe('Test Client Inc');
+      expect(tenant.client_name).toBe('Test Company');
 
       // Verify client was created
       if (result.clientId) {
@@ -56,7 +57,7 @@ describe('Tenant Activities', () => {
       }
     });
 
-    it('should create a tenant without a client', async () => {
+    it('should create a tenant and default client when no client name provided', async () => {
       const input: CreateTenantActivityInput = {
         tenantName: 'Solo Tenant'
       };
@@ -71,9 +72,30 @@ describe('Tenant Activities', () => {
       expect(tenant).toBeDefined();
       expect(tenant.client_name).toBe('Solo Tenant');
 
-      // Verify no clients were created
       const clients = await testDb.getClientsForTenant(result.tenantId);
       expect(clients).toHaveLength(0);
+    });
+
+    it('should use company name as fallback client name when provided', async () => {
+      const input: CreateTenantActivityInput = {
+        tenantName: 'Fallback Tenant',
+        companyName: 'Fallback Company'
+      };
+
+      const result = await createTenant(input);
+
+      expect(result.tenantId).toBeDefined();
+      expect(result.clientId).toBeDefined();
+
+      const tenant = await testDb.getTenant(result.tenantId);
+      expect(tenant).toBeDefined();
+      expect(tenant.client_name).toBe('Fallback Company');
+
+      if (result.clientId) {
+        const clients = await testDb.getClientsForTenant(result.tenantId);
+        expect(clients).toHaveLength(1);
+        expect(clients[0].client_name).toBe('Fallback Company');
+      }
     });
 
     it('should handle duplicate tenant names gracefully', async () => {

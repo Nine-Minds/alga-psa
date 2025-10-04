@@ -383,7 +383,7 @@ describe('Roles API E2E Tests', () => {
       const otherTenant = uuidv4();
       await env.db('tenants').insert({
         tenant: otherTenant,
-        company_name: 'Other Company',
+        client_name: 'Other Company',
         email: 'other@client.com',
         created_at: new Date(),
         updated_at: new Date()

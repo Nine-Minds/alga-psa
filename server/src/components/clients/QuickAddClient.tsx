@@ -71,7 +71,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
     billing_cycle: 'monthly' as const,
     properties: {
       industry: '',
-      client_size: '',
+      company_size: '',
       annual_revenue: '',
       website: '',
     },

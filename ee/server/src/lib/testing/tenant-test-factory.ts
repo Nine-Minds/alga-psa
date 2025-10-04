@@ -48,7 +48,8 @@ export async function createTestTenant(
       lastName: options.adminUser?.lastName || 'Admin',
       email: options.adminUser?.email || `test-admin-${testId}@example.com`,
     },
-    clientName: options.clientName || `Test Client ${testId}`,
+    companyName: options.companyName || options.clientName || options.tenantName || `Test Client ${testId}`,
+    clientName: options.clientName || options.tenantName || `Test Client ${testId}`,
     billingPlan: options.billingPlan || 'basic',
   };
 
@@ -78,7 +79,7 @@ export async function createTestTenant(
     },
     client: result.clientId ? {
       clientId: result.clientId,
-      clientName: tenantInput.clientName!,
+      clientName: tenantInput.clientName || tenantInput.tenantName,
     } : undefined,
     adminUser: {
       userId: result.adminUserId,

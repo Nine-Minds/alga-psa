@@ -123,7 +123,7 @@ export class OnboardingWizard {
     }
 
     if (data.size) {
-      await this.page.locator('select[name="size"], select[name="client_size"]').selectOption(data.size);
+      await this.page.locator('select[name="size"], select[name="company_size"]').selectOption(data.size);
     }
 
     if (data.address) {

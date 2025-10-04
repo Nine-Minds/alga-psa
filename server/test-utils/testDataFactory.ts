@@ -19,7 +19,7 @@ export async function createTenant(
 
   await db('tenants').insert({
     tenant: tenantId,
-    company_name: name,
+    client_name: name,
     phone_number: '555-0100',
     email: `test-${tenantId.substring(0, 8)}@example.com`,
     created_at: now,
