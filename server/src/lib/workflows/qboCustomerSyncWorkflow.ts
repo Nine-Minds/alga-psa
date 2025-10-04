@@ -114,7 +114,7 @@ type TriggerEvent = {
 
 /**
  * Workflow to synchronize Alga PSA Client data to QuickBooks Online Customer.
- * Triggered by COMPANY_CREATED or COMPANY_UPDATED events.
+ * Triggered by CLIENT_CREATED or CLIENT_UPDATED events.
  */
 export async function qboCustomerSyncWorkflow(context: WorkflowContext): Promise<void> {
   const { actions, data, events, logger, setState, getCurrentState, tenant, executionId, userId } = context;

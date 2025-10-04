@@ -162,8 +162,8 @@ export const EventPayloadSchemas = {
   CUSTOM_EVENT: CustomEventPayloadSchema,
   INVOICE_CREATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
   INVOICE_UPDATED: InvoiceEventPayloadSchema, // Use Invoice schema for QBO invoice events
-  COMPANY_CREATED: ClientEventPayloadSchema, // Use new Client schema
-  COMPANY_UPDATED: ClientEventPayloadSchema, // Use new Client schema
+  CLIENT_CREATED: ClientEventPayloadSchema, // Client creation event
+  CLIENT_UPDATED: ClientEventPayloadSchema, // Client update event
   INBOUND_EMAIL_RECEIVED: InboundEmailEventPayloadSchema, // Inbound email processing
 } as const;
 

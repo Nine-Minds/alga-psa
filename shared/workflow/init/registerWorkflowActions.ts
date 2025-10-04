@@ -557,7 +557,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`[ACTION] get_client: Successfully fetched client id: ${params.id}`);
         logger.info(`[ACTION] get_client: Client details from DB: ${JSON.stringify(client)}`);
 
-        return client;
+        // Map client_id to alga_client_id for backward compatibility with workflows
+        return {
+          ...client,
+          alga_client_id: client.client_id
+        };
       } catch (error: any) {
         logger.error(`[ACTION] get_client: Error fetching client id: ${params.id}, tenant: ${context.tenant}`, error);
         throw error; // Re-throw error

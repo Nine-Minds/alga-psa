@@ -981,7 +981,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
         <Dialog 
           isOpen={isLocationsDialogOpen} 
           onClose={() => setIsLocationsDialogOpen(false)} 
-          title={t('clients.locations.dialogTitle', 'Manage Locations - {{client}}', { client: editedClient.client_name })}
+          title={t('clients.locations.dialogTitle', 'Manage Locations', { client: editedClient.client_name })}
         >
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <ClientLocations 
