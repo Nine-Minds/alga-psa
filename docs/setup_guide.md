@@ -172,6 +172,9 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 ### Notes
 
 - The application’s local storage provider writes to `/data/files` inside the server container. Using the named volume `files_data` ensures persistence without managing host permissions.
+- Use `docker compose stop` / `docker compose start` (with the same `-f` files and `--env-file` arguments) to pause and resume services without touching named volumes. This is the safest option when you need downtime for maintenance.
+- `docker compose down` keeps named volumes by default, but adding `-v` will delete them. Avoid `-v` unless you explicitly intend to wipe your Postgres/files data.
+- To inspect the volume contents from the host, use `docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data busybox ls /var/lib/postgresql/data` (replace the volume name if you changed `APP_NAME` or pass `-p`).
 
 ## Service Initialization
 
