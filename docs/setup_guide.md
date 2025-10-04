@@ -11,6 +11,20 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 - Git
 - Text editor for configuration files
 
+## Choose a Release
+
+1. Visit the [GitHub releases](https://github.com/nine-minds/alga-psa/releases) page and note the exact release you want to run (example below uses `release/0.11.0`).
+2. Clone and check out that release:
+   ```bash
+   git clone https://github.com/nine-minds/alga-psa.git
+   cd alga-psa
+   git checkout release/0.11.0
+   ```
+3. Pin the container image to the same release by running the helper script:
+   ```bash
+   ./scripts/set-image-tag.sh
+   ```
+
 ## Initial Setup
 
 1. Clone the repository:
@@ -95,13 +109,16 @@ Note: The system performs validation of these environment variables at startup. 
 
 ## Docker Compose Configuration
 
+> All commands in this section assume you have run `./scripts/set-image-tag.sh` and that `.env.image` sits alongside `server/.env`. Always pass both env files so Compose pulls the correct prebuilt image.
+
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env up -d
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image up -d
 ```
 
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
-The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides.
+The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.
 
 ## Production Setup (Persistent Storage)
 
@@ -132,17 +149,17 @@ The shared base compose file exposes Postgres, PgBouncer, Redis, and the applica
 - Postgres (logical backup using pg_dump — recommended). Replace the container name if you customized it.
   ```bash
   PGPASSWORD=$(cat secrets/postgres_password) \
-  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
+  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image ps -q postgres) \
     pg_dump -U postgres -d server -Fc -f /tmp/pg_backup.dump
-  docker cp $(docker compose ps -q postgres):/tmp/pg_backup.dump ./pg_backup_$(date +%F).dump
+  docker cp $(docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image ps -q postgres):/tmp/pg_backup.dump ./pg_backup_$(date +%F).dump
   ```
 
 - Postgres (quick snapshot of the data volume — use when DB is stopped):
   ```bash
-  docker compose stop server pgbouncer postgres
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image stop server pgbouncer postgres
   docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data -v "$PWD":/backup alpine \
     tar czf /backup/postgres_volume_$(date +%F).tar.gz -C /var/lib/postgresql/data .
-  docker compose start postgres pgbouncer server
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image start postgres pgbouncer server
   ```
 
 - Files/documents volume:
@@ -158,8 +175,8 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 - Postgres (pg_restore). Create an empty database first if needed.
   ```bash
   PGPASSWORD=$(cat secrets/postgres_password) \
-  docker cp ./pg_backup.dump $(docker compose ps -q postgres):/tmp/pg_backup.dump
-  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose ps -q postgres) \
+  docker cp ./pg_backup.dump $(docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image ps -q postgres):/tmp/pg_backup.dump
+  docker exec -e PGPASSWORD=${PGPASSWORD} $(docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image ps -q postgres) \
     pg_restore -U postgres -d server --clean --if-exists /tmp/pg_backup.dump
   ```
 
@@ -171,25 +188,16 @@ Note: Volume names are prefixed by your Compose project (e.g., `<project>_postgr
 
 ### Notes
 
-- The application’s local storage provider writes to `/data/files` inside the server container. Using the named volume `files_data` ensures persistence without managing host permissions.
-- Use `docker compose stop` / `docker compose start` (with the same `-f` files and `--env-file` arguments) to pause and resume services without touching named volumes. This is the safest option when you need downtime for maintenance.
-- `docker compose down` keeps named volumes by default, but adding `-v` will delete them. Avoid `-v` unless you explicitly intend to wipe your Postgres/files data.
+- The application’s local storage provider writes to `/data/files` inside the server container. Using the named volume `files_data` keeps those assets across restarts without host-permission tweaks.
+- `docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env --env-file .env.image down` followed by `... up -d` is safe for restarts. Avoid adding `-v` unless you explicitly intend to wipe Postgres/files volumes.
 - To inspect the volume contents from the host, use `docker run --rm -v <project>_postgres_data:/var/lib/postgresql/data busybox ls /var/lib/postgresql/data` (replace the volume name if you changed `APP_NAME` or pass `-p`).
 
-## Service Initialization
-
-The entrypoint scripts will automatically:
-1. Validate environment variables
-2. Check dependencies
-3. Initialize database with both users
-4. Set up RLS policies
-5. Run database migrations
-6. Seed initial data (in development)
-7. Start services
+## Monitoring
 
 You can monitor the initialization process through Docker logs:
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs -f
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs -f
 ```
 
 ## Initial Login Credentials
@@ -197,14 +205,16 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 After successful initialization, the server logs will display a sample username and password that can be used for initial access:
 
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs -f
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs -f
 ```
 
 ## Verification
 
 1. Check service health:
 ```bash
-docker compose ps
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image ps
 ```
 
 2. Access the application:
@@ -213,7 +223,8 @@ docker compose ps
 
 3. Verify logs for any errors:
 ```bash
-docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env logs [service-name]
+docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+  --env-file server/.env --env-file .env.image logs [service-name]
 ```
 
 ## Common Issues & Solutions
@@ -270,54 +281,6 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
 ✓ Database users have appropriate permissions
 ✓ Environment variables properly validated
 
-## Workflow System Configuration
-
-The system includes a distributed workflow engine that can process business processes asynchronously across multiple servers.
-
-### Enabling Distributed Workflow Processing
-
-1. Configure workflow environment variables:
-   ```bash
-   WORKFLOW_DISTRIBUTED_MODE=true
-   WORKFLOW_REDIS_STREAM_PREFIX=workflow:events:
-   WORKFLOW_REDIS_CONSUMER_GROUP=workflow-workers
-   WORKFLOW_REDIS_BATCH_SIZE=10
-   WORKFLOW_REDIS_IDLE_TIMEOUT_MS=60000
-   WORKFLOW_WORKER_REPLICAS=2
-   ```
-   These defaults enable distributed mode, set the Redis stream naming pattern, and configure batch size, idle timeout, and replica count.
-
-2. Start the services with the workflow worker:
-   ```bash
-   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml --env-file server/.env up -d
-   ```
-   The prebuilt CE compose files already include the worker service, so this command will bring it online alongside the rest of the stack.
-
-3. Verify the workflow worker is running:
-   ```bash
-   docker compose logs workflow-worker
-   ```
-
-4. Scale the number of worker instances if needed:
-   ```bash
-   docker compose up -d --scale workflow-worker=3
-   ```
-
-### Workflow System Architecture
-
-The workflow system consists of:
-- **Server**: Handles API requests and enqueues workflow events
-- **Workflow Worker**: Processes workflow events asynchronously
-- **Redis Streams**: Used as a message queue for distributing events
-- **Database**: Stores workflow executions, events, and action results
-
-In distributed mode, workflow events are:
-1. Validated and persisted to the database
-2. Published to Redis Streams
-3. Processed asynchronously by worker processes
-
-This architecture provides higher throughput, better fault tolerance, and improved scalability.
-
 ## Production/Public Deployment Configuration
 
 When deploying for public access (not localhost), additional configuration is required:
@@ -358,64 +321,41 @@ EMAIL_USERNAME=noreply@your-domain.com
 - Configure firewall rules appropriately
 - Regular backup procedures
 - Monitor access logs
-
-## Next Steps
-
-1. Configure email notifications:
-   - Set environment variables:
-     ```bash
-     EMAIL_ENABLE=true
-     EMAIL_HOST=smtp.example.com
-     EMAIL_PORT=587
-     EMAIL_USERNAME=noreply@example.com
-     EMAIL_PASSWORD=your-secure-password
-     EMAIL_FROM=noreply@example.com
-     ```
-     Use port `465` if your provider requires implicit SSL.
-   - Features available after setup:
-     * System-wide default templates
-     * Tenant-specific template customization
-     * User notification preferences
-     * Rate limiting and audit logging
-     * Categories: Tickets, Invoices, Projects, Time Entries
-2. Set up OAuth if using Google authentication
-3. Configure SSL/TLS for production
-4. Set up backup procedures
-5. Configure monitoring and logging
-6. Review security settings
-7. Review and test RLS policies
+cies
 
 ## Upgrading
 
 When upgrading from a previous version:
 
 1. Backup all data:
-```bash
-docker compose exec postgres pg_dump -U postgres server > backup.sql
-```
+   ```bash
+   docker compose --env-file server/.env --env-file .env.image exec postgres \
+     pg_dump -U postgres server > backup.sql
+   ```
 
-2. Update prebuilt images and restart services:
-```bash
-docker compose pull
-docker compose down
-docker compose up -d
-```
+2. Update your checkout to the target release (e.g., `git fetch && git checkout release/0.11.0`).
 
-3. Review changes in:
-- Docker Compose files
-- Environment variables
-- Secret requirements
-- Database schema
-- RLS policies
-- Protocol Buffer definitions (EE only)
+3. Run `./scripts/set-image-tag.sh` again so `.env.image` updates to the new release tag or short commit.
 
-4. Update configurations as needed
+4. Pull the new images and restart the stack:
+   ```bash
+   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+     --env-file server/.env --env-file .env.image pull
+   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+     --env-file server/.env --env-file .env.image down
+   docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+     --env-file server/.env --env-file .env.image up -d
+   ```
 
-5. Restart services:
-```bash
-docker compose down
-docker compose up -d
-```
+5. Review changes in:
+   - Docker Compose files
+   - Environment variables
+   - Secret requirements
+   - Database schema
+   - RLS policies
+   - Protocol Buffer definitions (EE only)
+
+6. Update configurations as needed and verify the application starts cleanly before removing the old backups.
 
 ## Additional Resources
 

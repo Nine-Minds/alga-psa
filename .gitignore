@@ -36,6 +36,7 @@ dist/
 .env.test.local
 .env.production.local
 .env.development
+.env.image
 ee/server/.env
 ee/server/.playwright-client-portal-credentials.json
 server/.env
