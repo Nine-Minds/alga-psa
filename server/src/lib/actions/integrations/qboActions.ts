@@ -312,7 +312,7 @@ export async function disconnectQbo(): Promise<{ success: boolean; error?: strin
         // Define the specific workflows and events to target for deletion
         const qboWorkflowEventMap: Record<string, string[]> = {
             'Invoice Sync': ['INVOICE_CREATED', 'INVOICE_UPDATED'],
-            'Customer Sync': ['COMPANY_CREATED', 'COMPANY_UPDATED'],
+            'Customer Sync': ['CLIENT_CREATED', 'CLIENT_UPDATED'],
         };
 
         // Call the static method on the model wrapped in withTransaction
