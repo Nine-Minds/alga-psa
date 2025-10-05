@@ -256,7 +256,15 @@ async function createDatabase(retryCount = 0) {
     }
 
     if (!skipDbSetup) {
-      await dbClient.query("ALTER USER app_user WITH PASSWORD 'placeholder'");
+      try {
+        await dbClient.query(`ALTER USER ${process.env.DB_USER_SERVER} WITH PASSWORD 'placeholder'`);
+      } catch (error) {
+        if (error?.code === '42704') {
+          console.log(`User ${process.env.DB_USER_SERVER} does not exist yet, skipping placeholder password reset.`);
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Set Citus mode to sequential for DDL operations if Citus is available
