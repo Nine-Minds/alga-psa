@@ -72,7 +72,7 @@ function validateConfig() {
 async function setupHocuspocusDatabase(client, postgresPassword) {
   // Default to 'hocuspocus' if environment variables are not set
   process.env.DB_NAME_HOCUSPOCUS = process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus';
-  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus';
+  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus_user';
 
   // Get hocuspocus password from secrets or env var
   const hocuspocusPassword = await getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
