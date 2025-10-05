@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 // Use a direct path to the shared secret provider implementation to avoid relying on package exports
 // during CI/setup where the shared package may not be built yet.
 // Do NOT statically import shared code here. This script runs before the monorepo is built in CI.
@@ -107,7 +108,7 @@ function validateConfig() {
 async function setupHocuspocusDatabase(client, postgresPassword) {
   // Default to 'hocuspocus' if environment variables are not set
   process.env.DB_NAME_HOCUSPOCUS = process.env.DB_NAME_HOCUSPOCUS || 'hocuspocus';
-  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus';
+  process.env.DB_USER_HOCUSPOCUS = process.env.DB_USER_HOCUSPOCUS || 'hocuspocus_user';
 
   // Get hocuspocus password from secrets or env var
   const hocuspocusPassword = await getSecret('db_password_hocuspocus', 'DB_PASSWORD_HOCUSPOCUS', postgresPassword);
@@ -136,6 +137,9 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
     });
 
     await hocuspocusClient.connect();
+    await hocuspocusClient.query("SET password_encryption = 'md5';");
+    // Ensure PgBouncer (md5 auth) can connect to hocuspocus database by storing md5 hashes
+    await hocuspocusClient.query("SET password_encryption = 'md5';");
 
     // Check if hocuspocus user exists
     const userCheckResult = await hocuspocusClient.query(
@@ -145,7 +149,7 @@ async function setupHocuspocusDatabase(client, postgresPassword) {
 
     if (userCheckResult.rows.length > 0) {
       console.log(`User ${process.env.DB_USER_HOCUSPOCUS} already exists`);
-      // Update password for existing user
+      // Update password for existing user to keep Postgres in sync with secret store
       await hocuspocusClient.query(`ALTER USER ${process.env.DB_USER_HOCUSPOCUS} WITH PASSWORD '${hocuspocusPassword}'`);
       console.log(`Updated password for user ${process.env.DB_USER_HOCUSPOCUS}`);
     } else {
@@ -205,6 +209,8 @@ async function createDatabase(retryCount = 0) {
     await client.connect();
     console.log('Connected to PostgreSQL server');
 
+    // Ensure connection succeeds but leave password_encryption untouched.
+
     // Try to set up hocuspocus database (non-fatal if it fails)
     await setupHocuspocusDatabase(client, postgresPassword);
 
@@ -234,17 +240,23 @@ async function createDatabase(retryCount = 0) {
     });
 
     await dbClient.connect();
+    await dbClient.query("SET password_encryption = 'md5';");
+    // Ensure PgBouncer (md5 auth) can connect by storing md5 hashes for app users
+    await dbClient.query("SET password_encryption = 'md5';");
 
-    // Check if database is already fully configured by checking for tenants table
+    let skipDbSetup = false;
     try {
       const tenantsCheck = await dbClient.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants'");
       if (tenantsCheck.rows.length > 0) {
         console.log('Database appears to be already configured (tenants table exists). Skipping setup.');
-        await dbClient.end();
-        return;
+        skipDbSetup = true;
       }
     } catch (error) {
       console.log('Tenants table not found, proceeding with database setup...');
+    }
+
+    if (!skipDbSetup) {
+      await dbClient.query("ALTER USER app_user WITH PASSWORD 'placeholder'");
     }
 
     // Set Citus mode to sequential for DDL operations if Citus is available
@@ -271,7 +283,6 @@ async function createDatabase(retryCount = 0) {
 
     if (userCheckResult.rows.length > 0) {
       console.log(`User ${process.env.DB_USER_SERVER} already exists`);
-      // Update password for existing user
       await dbClient.query(`ALTER USER ${process.env.DB_USER_SERVER} WITH PASSWORD '${serverPassword}'`);
       console.log(`Updated password for user ${process.env.DB_USER_SERVER}`);
     } else {

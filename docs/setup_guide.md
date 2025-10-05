@@ -200,6 +200,29 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
   --env-file server/.env --env-file .env.image logs -f
 ```
 
+## Troubleshooting
+
+### Postgres authentication loop
+- Continuous `password authentication failed for user "postgres"` or `role "hocuspocus_user" does not exist` messages mean the secrets on disk no longer match the credentials stored inside the `postgres_data` volume.
+- If you need to keep existing data, sync the passwords and recreate the missing role:
+  ```bash
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+    --env-file server/.env --env-file .env.image exec postgres \
+    psql -U postgres -c "ALTER ROLE postgres WITH PASSWORD '$(cat secrets/postgres_password)';"
+
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+    --env-file server/.env --env-file .env.image exec postgres \
+    psql -U postgres -c "DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'hocuspocus_user') THEN CREATE ROLE hocuspocus_user LOGIN PASSWORD '$(cat secrets/db_password_hocuspocus)'; ELSE ALTER ROLE hocuspocus_user WITH PASSWORD '$(cat secrets/db_password_hocuspocus)'; END IF; END $$;" 
+  ```
+- To start fresh (wipes the database), stop the stack and remove the named volumes before bringing it back up:
+  ```bash
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+    --env-file server/.env --env-file .env.image down -v
+  docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.ce.yaml \
+    --env-file server/.env --env-file .env.image up -d
+  ```
+- After credentials are in sync, the `setup` container will finish running and migrations plus seed data will be applied automatically.
+
 ## Initial Login Credentials
 
 After successful initialization, the server logs will display a sample username and password that can be used for initial access:
