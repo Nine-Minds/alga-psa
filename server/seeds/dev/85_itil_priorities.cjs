@@ -52,6 +52,16 @@ exports.seed = async function(knex) {
     return;
   }
 
+  const createdByUser = await knex('users')
+    .where('tenant', tenant.tenant)
+    .orderBy('created_at')
+    .first();
+
+  if (!createdByUser) {
+    console.log('No user found for tenant, skipping ITIL priorities seed');
+    return;
+  }
+
   // Copy ITIL priorities from standard_priorities to tenant's priorities table
   // This simulates what should happen automatically when an ITIL board is created
   const itilStandardPriorities = await knex('standard_priorities')
