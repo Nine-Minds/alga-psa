@@ -9,14 +9,22 @@ const EMAIL_PROCESSING_REGISTRATION_ID = '550e8400-e29b-41d4-a716-446655440001';
  * Reads the TypeScript workflow file and converts it to database-compatible code
  */
 function loadWorkflowCodeFromSource() {
-  const workflowPath = path.join(__dirname, '../../../shared/workflow/workflows/system-email-processing-workflow.ts');
-  
-  if (!fs.existsSync(workflowPath)) {
-    throw new Error(`Workflow file not found: ${workflowPath}`);
+  const workflowTsPath = path.join(__dirname, '../../../shared/workflow/workflows/system-email-processing-workflow.ts');
+  const workflowGeneratedPath = path.join(__dirname, '../../../shared/workflow/workflows/system-email-processing-workflow.generated.js');
+
+  if (!fs.existsSync(workflowTsPath)) {
+    if (fs.existsSync(workflowGeneratedPath)) {
+      console.log(`TypeScript workflow missing; falling back to generated JS at ${workflowGeneratedPath}`);
+      const generatedContent = fs.readFileSync(workflowGeneratedPath, 'utf8').trim();
+      console.log(`✅ Loaded workflow code from generated artifact (${generatedContent.length} characters)`);
+      return generatedContent;
+    }
+
+    throw new Error(`Workflow source not found. Checked: ${workflowTsPath} and ${workflowGeneratedPath}`);
   }
-  
-  console.log(`Reading workflow from source file: ${workflowPath}`);
-  const workflowContent = fs.readFileSync(workflowPath, 'utf8');
+
+  console.log(`Reading workflow from source file: ${workflowTsPath}`);
+  const workflowContent = fs.readFileSync(workflowTsPath, 'utf8');
   
   // Find the function declaration and extract everything after the opening brace
   const functionStart = workflowContent.indexOf('export async function systemEmailProcessingWorkflow(context) {');

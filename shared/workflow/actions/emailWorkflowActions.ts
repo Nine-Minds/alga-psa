@@ -488,7 +488,7 @@ export async function resolveInboundTicketDefaults(
       defaults = await trx('inbound_ticket_defaults')
         .where({ tenant, id: provider.inbound_ticket_defaults_id, is_active: true })
         .select(
-          'channel_id',
+          'board_id',
           'status_id',
           'priority_id',
           'company_id',
@@ -504,7 +504,7 @@ export async function resolveInboundTicketDefaults(
         const fallback = await trx('inbound_ticket_defaults')
           .where({ tenant, is_active: true })
           .orderBy('updated_at', 'desc')
-          .select('channel_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
+          .select('board_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
           .first();
         if (!fallback) {
           console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
@@ -541,7 +541,7 @@ export async function createTicketFromEmail(
     company_id?: string;
     contact_id?: string;
     source?: string;
-    channel_id?: string;
+    board_id?: string;
     status_id?: string;
     priority_id?: string;
     category_id?: string;
@@ -570,7 +570,7 @@ export async function createTicketFromEmail(
         company_id: ticketData.company_id,
         contact_id: ticketData.contact_id,
         source: ticketData.source || 'email',
-        channel_id: ticketData.channel_id,
+        board_id: ticketData.board_id,
         status_id: ticketData.status_id,
         priority_id: ticketData.priority_id,
         category_id: ticketData.category_id,
@@ -724,36 +724,36 @@ export async function getCompanyByIdForEmail(
 }
 
 /**
- * Create channel from email data
+ * Create board from email data
  */
-export async function createChannelFromEmail(
-  channelData: {
-    channel_name: string;
+export async function createBoardFromEmail(
+  boardData: {
+    board_name: string;
     description?: string;
     is_default?: boolean;
   },
   tenant: string
-): Promise<{ channel_id: string; channel_name: string }> {
+): Promise<{ board_id: string; board_name: string }> {
   const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
 
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const channelId = uuidv4();
+      const boardId = uuidv4();
 
-      await trx('channels')
+      await trx('boards')
         .insert({
-          channel_id: channelId,
+          board_id: boardId,
           tenant,
-          channel_name: channelData.channel_name,
-          description: channelData.description || '',
-          is_default: channelData.is_default || false,
+          board_name: boardData.board_name,
+          description: boardData.description || '',
+          is_default: boardData.is_default || false,
           is_inactive: false,
           created_at: new Date(),
           updated_at: new Date()
         });
 
       return {
-        channel_id: channelId,
-        channel_name: channelData.channel_name
+        board_id: boardId,
+        board_name: boardData.board_name
       };
     });
 }

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import NumberingSettings from './NumberingSettings';
-import ChannelsSettings from './ChannelsSettings';
+import BoardsSettings from './BoardsSettings';
 import CategoriesSettings from './CategoriesSettings';
 import DisplaySettings from './DisplaySettings';
 import StatusSettings from './StatusSettings';
@@ -51,7 +51,7 @@ const TicketingSettingsRefactored = (): JSX.Element => {
     },
     {
       label: "Boards",
-      content: <ChannelsSettings />
+      content: <BoardsSettings />
     },
     {
       label: "Statuses",

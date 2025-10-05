@@ -25,7 +25,7 @@ import {
   TeamPerformanceMetrics,
   TeamProjectAssignment,
   TeamTaskAssignment,
-  TeamCommunicationChannel,
+  TeamCommunicationBoard,
   TeamCollaborationWorkspace,
   TeamMeeting,
   TeamWithExtendedInfo,

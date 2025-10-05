@@ -15,7 +15,7 @@ import { z } from 'zod';
 // Core ticket form validation schema extracted from server actions
 export const ticketFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  channel_id: z.string().uuid('Channel ID must be a valid UUID'),
+  board_id: z.string().uuid('Board ID must be a valid UUID'),
   company_id: z.string().uuid('Company ID must be a valid UUID'),
   location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
   contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
@@ -46,7 +46,7 @@ export const ticketSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
-  channel_id: z.string().uuid(),
+  board_id: z.string().uuid(),
   company_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
   contact_name_id: z.string().uuid().nullable(),
@@ -105,7 +105,7 @@ export interface CreateTicketInput {
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
-  channel_id?: string;
+  board_id?: string;
   source?: string;
   entered_by?: string;
   email_metadata?: any;
@@ -185,7 +185,7 @@ export interface CreateTicketOutput {
   contact_id?: string; // Note: Mapped from contact_name_id
   status_id?: string;
   priority_id?: string;
-  channel_id?: string;
+  board_id?: string;
   entered_at: string;
   tenant: string;
 }
@@ -260,7 +260,7 @@ export interface IAnalyticsTracker {
     has_category: boolean;
     has_subcategory: boolean;
     is_assigned: boolean;
-    channel_id?: string;
+    board_id?: string;
     created_via: string;
     has_asset?: boolean;
     metadata?: Record<string, any>;
@@ -641,7 +641,7 @@ export class TicketModel {
       priority_id: cleanedInput.priority_id || null,
       category_id: cleanedInput.category_id || null,
       subcategory_id: cleanedInput.subcategory_id || null,
-      channel_id: cleanedInput.channel_id || null,
+      board_id: cleanedInput.board_id || null,
       source: cleanedInput.source || null,
       entered_by: cleanedInput.entered_by || null,
       entered_at: now.toISOString(),
@@ -692,7 +692,7 @@ export class TicketModel {
           userId: userId,
           metadata: {
             source: cleanedInput.source,
-            channel_id: cleanedInput.channel_id,
+            board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             company_id: cleanedInput.company_id
           }
@@ -713,7 +713,7 @@ export class TicketModel {
           has_category: !!cleanedInput.category_id,
           has_subcategory: !!cleanedInput.subcategory_id,
           is_assigned: !!cleanedInput.assigned_to,
-          channel_id: cleanedInput.channel_id,
+          board_id: cleanedInput.board_id,
           created_via: cleanedInput.source || 'unknown',
           has_asset: false
         }, userId);
@@ -737,7 +737,7 @@ export class TicketModel {
       contact_id: cleanedInput.contact_id,
       status_id: cleanedInput.status_id,
       priority_id: cleanedInput.priority_id,
-      channel_id: cleanedInput.channel_id,
+      board_id: cleanedInput.board_id,
       entered_at: now.toISOString(),
       tenant
     };
@@ -1160,34 +1160,34 @@ export class TicketModel {
   }
 
   /**
-   * Find or create a channel by name
+   * Find or create a board by name
    */
-  static async findOrCreateChannel(
-    channelName: string,
+  static async findOrCreateBoard(
+    boardName: string,
     tenant: string,
     trx: Knex.Transaction,
     description?: string
   ): Promise<string> {
-    // Try to find existing channel
-    const existingChannel = await trx('channels')
+    // Try to find existing board
+    const existingBoard = await trx('boards')
       .where({
-        channel_name: channelName,
+        board_name: boardName,
         tenant: tenant
       })
       .first();
 
-    if (existingChannel) {
-      return existingChannel.channel_id;
+    if (existingBoard) {
+      return existingBoard.board_id;
     }
 
-    // Create new channel
-    const channelId = uuidv4();
+    // Create new board
+    const boardId = uuidv4();
     const now = new Date();
 
-    await trx('channels').insert({
-      channel_id: channelId,
+    await trx('boards').insert({
+      board_id: boardId,
       tenant,
-      channel_name: channelName,
+      board_name: boardName,
       description: description || '',
       is_default: false,
       is_active: true,
@@ -1195,7 +1195,7 @@ export class TicketModel {
       updated_at: now
     });
 
-    return channelId;
+    return boardId;
   }
 
   /**

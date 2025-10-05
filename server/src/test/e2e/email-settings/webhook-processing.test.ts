@@ -101,8 +101,8 @@ describe('Email Settings Webhook Processing Tests', () => {
         expect(ticket.title).toBe('Test Support Request');
         console.log(`     ✓ Ticket title: "${ticket.title}"`);
         
-        expect(ticket.channel_id).toBe('email');
-        console.log(`     ✓ Ticket channel: ${ticket.channel_id}`);
+        expect(ticket.board_id).toBe('email');
+        console.log(`     ✓ Ticket board: ${ticket.board_id}`);
         
         console.log('\n  ✅ Microsoft webhook processing and ticket creation completed successfully!\n');
       } catch (error) {

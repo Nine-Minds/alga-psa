@@ -8,11 +8,11 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { Button } from 'server/src/components/ui/Button';
 import { MoreVertical, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IBoard } from 'server/src/interfaces/board.interface';
 
 interface CreateTicketColumnsOptions {
   categories: ITicketCategory[];
-  channels: IChannel[];
+  boards: IBoard[];
   displaySettings?: TicketingDisplaySettings;
   onTicketClick: (ticketId: string) => void;
   onDeleteClick?: (ticketId: string, ticketName: string) => void;
@@ -27,7 +27,7 @@ interface CreateTicketColumnsOptions {
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
   const {
     categories,
-    channels,
+    boards,
     displaySettings,
     onTicketClick,
     onDeleteClick,
@@ -56,9 +56,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
   const tagsInlineUnderTitle = displaySettings?.list?.tagsInlineUnderTitle || false;
   const dateTimeFormat = displaySettings?.dateTimeFormat || 'MMM d, yyyy h:mm a';
 
-  // Helper function to get channel for a ticket
-  const getChannelForTicket = (ticket: ITicketListItem): IChannel | undefined => {
-    return channels.find(channel => channel.channel_id === ticket.channel_id);
+  // Helper function to get board for a ticket
+  const getBoardForTicket = (ticket: ITicketListItem): IBoard | undefined => {
+    return boards.find(board => board.board_id === ticket.board_id);
   };
 
   const columns: Array<{ key: string; col: ColumnDefinition<ITicketListItem> }> = [];
@@ -145,13 +145,13 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     });
   }
 
-  // Board/Channel
+  // Board
   if (columnVisibility.board) {
     columns.push({
       key: 'board',
       col: {
         title: 'Board',
-        dataIndex: 'channel_name',
+        dataIndex: 'board_name',
         width: '10%',
       }
     });
@@ -166,9 +166,9 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'category_id',
         width: '10%',
         render: (value: string, record: ITicketListItem) => {
-          const channel = getChannelForTicket(record);
+          const board = getBoardForTicket(record);
 
-          // Use unified category display for all channels (ITIL and custom)
+          // Use unified category display for all boards (ITIL and custom)
           if (!value && !record.subcategory_id) return 'No Category';
 
           // If there's a subcategory, use that for display

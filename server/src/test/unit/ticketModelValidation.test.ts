@@ -19,7 +19,7 @@ describe('TicketModel Validation Logic', () => {
     test('should validate valid data correctly', () => {
       const validData = {
         title: 'Test Ticket',
-        channel_id: '123e4567-e89b-12d3-a456-426614174000',
+        board_id: '123e4567-e89b-12d3-a456-426614174000',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
@@ -37,7 +37,7 @@ describe('TicketModel Validation Logic', () => {
     test('should throw error for invalid UUID', () => {
       const invalidData = {
         title: 'Test Ticket',
-        channel_id: 'invalid-uuid',
+        board_id: 'invalid-uuid',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
@@ -48,12 +48,12 @@ describe('TicketModel Validation Logic', () => {
         subcategory_id: null,
       };
 
-      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('Channel ID must be a valid UUID');
+      expect(() => validateData(ticketFormSchema, invalidData)).toThrow('Board ID must be a valid UUID');
     });
 
     test('should throw error for missing required fields', () => {
       const invalidData = {
-        channel_id: '123e4567-e89b-12d3-a456-426614174000',
+        board_id: '123e4567-e89b-12d3-a456-426614174000',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
@@ -144,7 +144,7 @@ describe('TicketModel Validation Logic', () => {
     test('should validate complete form data', () => {
       const formData = {
         title: 'Test Ticket',
-        channel_id: '123e4567-e89b-12d3-a456-426614174000',
+        board_id: '123e4567-e89b-12d3-a456-426614174000',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
         contact_name_id: null,
         status_id: '123e4567-e89b-12d3-a456-426614174002',
@@ -164,14 +164,14 @@ describe('TicketModel Validation Logic', () => {
     test('should reject invalid form data', () => {
       const formData = {
         title: 'Test Ticket',
-        channel_id: 'invalid-uuid',
+        board_id: 'invalid-uuid',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
       };
 
       const result = TicketModel.validateTicketFormData(formData);
       
       expect(result.valid).toBe(false);
-      expect(result.errors?.[0]).toContain('Channel ID must be a valid UUID');
+      expect(result.errors?.[0]).toContain('Board ID must be a valid UUID');
     });
   });
 
@@ -300,7 +300,7 @@ describe('TicketModel Validation Logic', () => {
       // This test ensures our extracted schema matches what server actions expect
       const validFormData = {
         title: 'Test Ticket',
-        channel_id: '123e4567-e89b-12d3-a456-426614174000',
+        board_id: '123e4567-e89b-12d3-a456-426614174000',
         company_id: '123e4567-e89b-12d3-a456-426614174001',
         location_id: null,
         contact_name_id: null,

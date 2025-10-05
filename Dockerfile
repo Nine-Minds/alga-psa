@@ -48,6 +48,8 @@ COPY ./server/index.ts ./server/
 COPY ./server/migrations/ ./server/migrations/
 COPY ./server/seeds/ ./server/seeds/
 COPY ./server/src/ ./server/src/
+COPY ./scripts ./scripts
+COPY ./shared/workflow/ ./shared/workflow/
 
 # Copy entrypoint
 COPY server/entrypoint.sh /app/entrypoint.sh
