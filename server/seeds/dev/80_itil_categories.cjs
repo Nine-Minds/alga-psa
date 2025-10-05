@@ -67,16 +67,6 @@ exports.seed = async function(knex) {
     return;
   }
 
-  const createdByUser = await knex('users')
-    .where('tenant', tenant.tenant)
-    .orderBy('created_at')
-    .first();
-
-  if (!createdByUser) {
-    console.log('No user found for tenant, skipping ITIL categories seed');
-    return;
-  }
-
   // Copy ITIL categories from standard_categories to tenant's categories table
   // This simulates what should happen automatically when an ITIL board is created
   const itilStandardCategories = await knex('standard_categories')
