@@ -48,6 +48,12 @@ exports.up = async function(knex) {
   // Distribute client_tax_rates table
   await distributeClientTaxRatesTable(knex);
 
+  // Distribute client_billing_plans table
+  await distributeClientBillingPlansTable(knex);
+
+  // Distribute client_plan_bundles table
+  await distributeClientPlanBundlesTable(knex);
+
   console.log('\n✓ Client tables distribution completed');
 };
 
@@ -450,6 +456,126 @@ async function distributeClientTaxRatesTable(knex) {
   }
 }
 
+async function distributeClientBillingPlansTable(knex) {
+  console.log('\n--- Distributing client_billing_plans table ---');
+
+  const tableExists = await knex.schema.hasTable('client_billing_plans');
+  if (!tableExists) {
+    console.log('  client_billing_plans table does not exist, skipping');
+    return;
+  }
+
+  const isDistributed = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition
+      WHERE logicalrelid = 'client_billing_plans'::regclass
+    ) as distributed
+  `);
+
+  if (isDistributed.rows[0].distributed) {
+    console.log('  client_billing_plans already distributed');
+    return;
+  }
+
+  try {
+    // Drop FKs
+    await knex.raw(`ALTER TABLE client_billing_plans DROP CONSTRAINT IF EXISTS client_billing_plans_tenant_foreign`);
+    await knex.raw(`ALTER TABLE client_billing_plans DROP CONSTRAINT IF EXISTS client_billing_plans_tenant_client_id_foreign`);
+    await knex.raw(`ALTER TABLE client_billing_plans DROP CONSTRAINT IF EXISTS client_billing_plans_tenant_plan_id_foreign`);
+
+    // Distribute
+    await knex.raw(`SELECT create_distributed_table('client_billing_plans', 'tenant')`);
+    console.log('  ✓ Distributed client_billing_plans');
+
+    // Recreate FKs with correct composite keys
+    await knex.raw(`
+      ALTER TABLE client_billing_plans
+      ADD CONSTRAINT client_billing_plans_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant)
+    `);
+
+    await knex.raw(`
+      ALTER TABLE client_billing_plans
+      ADD CONSTRAINT client_billing_plans_tenant_client_id_foreign
+      FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id)
+    `);
+    console.log('  ✓ Recreated FKs for client_billing_plans')
+
+  } catch (error) {
+    console.error(`  ✗ Failed to distribute client_billing_plans: ${error.message}`);
+    throw error;
+  }
+}
+
+async function distributeClientPlanBundlesTable(knex) {
+  console.log('\n--- Distributing client_plan_bundles table ---');
+
+  const tableExists = await knex.schema.hasTable('client_plan_bundles');
+  if (!tableExists) {
+    console.log('  client_plan_bundles table does not exist, skipping');
+    return;
+  }
+
+  const isDistributed = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_dist_partition
+      WHERE logicalrelid = 'client_plan_bundles'::regclass
+    ) as distributed
+  `);
+
+  if (isDistributed.rows[0].distributed) {
+    console.log('  client_plan_bundles already distributed');
+    return;
+  }
+
+  try {
+    // Drop FKs
+    await knex.raw(`ALTER TABLE client_plan_bundles DROP CONSTRAINT IF EXISTS client_plan_bundles_tenant_foreign`);
+    await knex.raw(`ALTER TABLE client_plan_bundles DROP CONSTRAINT IF EXISTS client_plan_bundles_tenant_client_id_foreign`);
+    await knex.raw(`ALTER TABLE client_plan_bundles DROP CONSTRAINT IF EXISTS client_plan_bundles_tenant_bundle_id_foreign`);
+
+    // Drop unique constraints
+    const uniqueConstraints = await knex.raw(`
+      SELECT conname
+      FROM pg_constraint
+      WHERE conrelid = 'client_plan_bundles'::regclass AND contype = 'u'
+    `);
+
+    for (const constraint of uniqueConstraints.rows) {
+      await knex.raw(`ALTER TABLE client_plan_bundles DROP CONSTRAINT ${constraint.conname} CASCADE`);
+    }
+
+    // Distribute
+    await knex.raw(`SELECT create_distributed_table('client_plan_bundles', 'tenant')`);
+    console.log('  ✓ Distributed client_plan_bundles');
+
+    // Recreate unique constraint
+    await knex.raw(`
+      ALTER TABLE client_plan_bundles
+      ADD CONSTRAINT client_plan_bundles_tenant_client_bundle_id_unique
+      UNIQUE (tenant, client_bundle_id)
+    `);
+
+    // Recreate FKs with correct composite keys
+    await knex.raw(`
+      ALTER TABLE client_plan_bundles
+      ADD CONSTRAINT client_plan_bundles_tenant_foreign
+      FOREIGN KEY (tenant) REFERENCES tenants(tenant)
+    `);
+
+    await knex.raw(`
+      ALTER TABLE client_plan_bundles
+      ADD CONSTRAINT client_plan_bundles_tenant_client_id_foreign
+      FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id) ON DELETE CASCADE
+    `);
+    console.log('  ✓ Recreated FKs for client_plan_bundles')
+
+  } catch (error) {
+    console.error(`  ✗ Failed to distribute client_plan_bundles: ${error.message}`);
+    throw error;
+  }
+}
+
 exports.down = async function(knex) {
   const citusEnabled = await knex.raw(`
     SELECT EXISTS (
@@ -464,6 +590,8 @@ exports.down = async function(knex) {
   console.log('Undistributing client tables...');
 
   const tables = [
+    'client_plan_bundles',
+    'client_billing_plans',
     'client_tax_rates',
     'client_tax_settings',
     'client_billing_settings',
