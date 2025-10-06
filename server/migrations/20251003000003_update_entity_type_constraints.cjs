@@ -41,12 +41,23 @@ exports.up = async function(knex) {
       `);
       console.log(`    ✓ Updated ${result.rowCount || 0} rows`);
 
+      // Check what entity_type values exist in the table
+      console.log('  Checking existing entity_type values...');
+      const existingTypes = await knex.raw(`
+        SELECT DISTINCT entity_type
+        FROM document_associations
+        WHERE entity_type IS NOT NULL
+        ORDER BY entity_type
+      `);
+      console.log(`    Found entity_type values: ${existingTypes.rows.map(r => r.entity_type).join(', ')}`);
+
       // Add new constraint with 'client' instead of 'company'
+      // Include all existing values plus future-proofing with 'project'
       console.log('  Adding new check constraint with client...');
       await knex.raw(`
         ALTER TABLE document_associations
         ADD CONSTRAINT document_associations_entity_type_check
-        CHECK (entity_type IN ('user', 'ticket', 'client', 'contact', 'asset', 'project_task', 'tenant'))
+        CHECK (entity_type IN ('asset', 'client', 'contact', 'project', 'project_task', 'tenant', 'ticket', 'user'))
       `);
       console.log('    ✓ Updated constraint to use client instead of company');
     } catch (error) {
