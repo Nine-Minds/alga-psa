@@ -5,7 +5,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: ${APP_NAME:-sebastian}_pgbouncer
     environment:
       - POSTGRES_USER=postgres
     secrets:
