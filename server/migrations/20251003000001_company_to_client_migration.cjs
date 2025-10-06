@@ -156,6 +156,8 @@ exports.up = async function(knex) {
     await createClientBillingSettings(knex, createdTables);
     await createClientTaxSettings(knex, createdTables);
     await createClientTaxRates(knex, createdTables);
+    await createClientBillingPlans(knex, createdTables);
+    await createClientPlanBundles(knex, createdTables);
 
     // Step 4: Add client_id columns to dependent tables
     await addClientIdColumns(knex, addedColumns);
@@ -421,6 +423,90 @@ async function createClientTaxRates(knex, createdTables) {
   console.log(`✓ client_tax_rates has ${count[0].count} rows`);
 }
 
+async function createClientBillingPlans(knex, createdTables) {
+  const exists = await knex.schema.hasTable('client_billing_plans');
+  if (!exists) {
+    console.log('Creating client_billing_plans...');
+    createdTables.push('client_billing_plans');
+    await knex.schema.createTable('client_billing_plans', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('client_id').notNullable();
+      table.uuid('plan_id').notNullable();
+      table.date('start_date').notNullable();
+      table.date('end_date');
+      table.boolean('is_active').defaultTo(true);
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
+
+      table.primary(['tenant', 'client_id', 'plan_id']);
+    });
+
+    // Add indexes
+    await knex.raw('CREATE INDEX idx_client_billing_plans_tenant ON client_billing_plans(tenant)');
+    await knex.raw('CREATE INDEX idx_client_billing_plans_tenant_client_id ON client_billing_plans(tenant, client_id)');
+    await knex.raw('CREATE INDEX idx_client_billing_plans_plan_id ON client_billing_plans(tenant, plan_id)');
+  } else {
+    console.log('client_billing_plans already exists, skipping creation...');
+  }
+
+  // Backfill (always run, idempotent)
+  console.log('Backfilling client_billing_plans from company_billing_plans...');
+  await knex.raw(`
+    INSERT INTO client_billing_plans (
+      tenant, client_id, plan_id, start_date, end_date, is_active, created_at, updated_at
+    )
+    SELECT
+      tenant, company_id, plan_id, start_date, end_date, is_active, created_at, updated_at
+    FROM company_billing_plans
+    ON CONFLICT (tenant, client_id, plan_id) DO NOTHING
+  `);
+
+  const count = await knex('client_billing_plans').count('* as count');
+  console.log(`✓ client_billing_plans has ${count[0].count} rows`);
+}
+
+async function createClientPlanBundles(knex, createdTables) {
+  const exists = await knex.schema.hasTable('client_plan_bundles');
+  if (!exists) {
+    console.log('Creating client_plan_bundles...');
+    createdTables.push('client_plan_bundles');
+    await knex.schema.createTable('client_plan_bundles', (table) => {
+      table.uuid('tenant').notNullable();
+      table.uuid('client_id').notNullable();
+      table.uuid('bundle_id').notNullable();
+      table.date('start_date').notNullable();
+      table.date('end_date');
+      table.boolean('is_active').defaultTo(true);
+      table.timestamp('created_at').defaultTo(knex.fn.now());
+      table.timestamp('updated_at').defaultTo(knex.fn.now());
+
+      table.primary(['tenant', 'client_id', 'bundle_id']);
+    });
+
+    // Add indexes
+    await knex.raw('CREATE INDEX idx_client_plan_bundles_tenant ON client_plan_bundles(tenant)');
+    await knex.raw('CREATE INDEX idx_client_plan_bundles_tenant_client_id ON client_plan_bundles(tenant, client_id)');
+    await knex.raw('CREATE INDEX idx_client_plan_bundles_bundle_id ON client_plan_bundles(tenant, bundle_id)');
+  } else {
+    console.log('client_plan_bundles already exists, skipping creation...');
+  }
+
+  // Backfill (always run, idempotent)
+  console.log('Backfilling client_plan_bundles from company_plan_bundles...');
+  await knex.raw(`
+    INSERT INTO client_plan_bundles (
+      tenant, client_id, bundle_id, start_date, end_date, is_active, created_at, updated_at
+    )
+    SELECT
+      tenant, company_id, bundle_id, start_date, end_date, is_active, created_at, updated_at
+    FROM company_plan_bundles
+    ON CONFLICT (tenant, client_id, bundle_id) DO NOTHING
+  `);
+
+  const count = await knex('client_plan_bundles').count('* as count');
+  console.log(`✓ client_plan_bundles has ${count[0].count} rows`);
+}
+
 async function addClientIdColumns(knex, addedColumns) {
   console.log('Adding client_id columns to dependent tables...');
 
@@ -508,7 +594,9 @@ async function verifyRowCounts(knex) {
     { old: 'company_billing_cycles', new: 'client_billing_cycles' },
     { old: 'company_billing_settings', new: 'client_billing_settings' },
     { old: 'company_tax_settings', new: 'client_tax_settings' },
-    { old: 'company_tax_rates', new: 'client_tax_rates' }
+    { old: 'company_tax_rates', new: 'client_tax_rates' },
+    { old: 'company_billing_plans', new: 'client_billing_plans' },
+    { old: 'company_plan_bundles', new: 'client_plan_bundles' }
   ];
 
   for (const { old: oldTable, new: newTable } of relatedTables) {
@@ -546,6 +634,8 @@ exports.down = async function(knex) {
   }
 
   // Drop new tables
+  await knex.schema.dropTableIfExists('client_plan_bundles');
+  await knex.schema.dropTableIfExists('client_billing_plans');
   await knex.schema.dropTableIfExists('client_tax_rates');
   await knex.schema.dropTableIfExists('client_tax_settings');
   await knex.schema.dropTableIfExists('client_billing_settings');
