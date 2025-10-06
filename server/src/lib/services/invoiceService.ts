@@ -300,7 +300,7 @@ async function persistFixedInvoiceItems(
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
-  const fixedPlanDetailsMap = new Map<string, { consolidatedItem: any; details: IFixedPriceCharge[] }>();
+  const fixedPlanDetailsMap = new Map<string, { details: IFixedPriceCharge[] }>();
 
   for (const charge of fixedCharges) {
     // --- Handle Detailed Fixed Price Charges (V1 Scope) ---
@@ -318,77 +318,14 @@ async function persistFixedInvoiceItems(
         throw new Error("Internal error: Detailed fixed price charge must have a company_billing_plan_id.");
       }
 
-      // Group by companyBillingPlanId instead of planId
       if (!fixedPlanDetailsMap.has(companyBillingPlanId)) {
-          if (charge.base_rate === undefined || charge.base_rate === null) {
-              console.error("Detailed fixed price charge is missing base_rate:", charge);
-              throw new Error("Internal error: Detailed fixed price charge must have a base_rate.");
-          }
-
-          // --- Determine Consolidated Item Tax Region & Taxability (Derived from Charges) ---
-          // Get all charges associated with this companyBillingPlanId to determine consolidated properties
-          const chargesForThisPlan = fixedCharges.filter(c => c.company_billing_plan_id === companyBillingPlanId);
-
-          // Determine if *any* charge in this group is taxable
-          const isAnyChargeTaxable = chargesForThisPlan.some(c => c.is_taxable);
-
-          // Determine the consolidated region
-          const distinctChargeRegions = [...new Set(chargesForThisPlan.map(c => c.tax_region).filter((r): r is string => r !== null && r !== undefined))];
-          let consolidatedRegion: string | null = null;
-          if (distinctChargeRegions.length === 1) {
-            consolidatedRegion = distinctChargeRegions[0];
-            console.log(`[persistFixedInvoiceItems] Using consistent charge region '${consolidatedRegion}' for consolidated item of plan assignment ${companyBillingPlanId}`);
-          } else {
-            // Fallback to company default if regions are inconsistent or all null/undefined
-            consolidatedRegion = await getCompanyDefaultTaxRegionCode(company.company_id);
-            if (distinctChargeRegions.length > 1) {
-              console.warn(`[persistFixedInvoiceItems] Multiple distinct tax regions found among charges for plan assignment ${companyBillingPlanId}. Using company default region '${consolidatedRegion}'.`);
-            } else {
-              console.log(`[persistFixedInvoiceItems] No single charge region found for plan assignment ${companyBillingPlanId}. Using company default region '${consolidatedRegion}'.`);
-            }
-          }
-          // --- End Determine Consolidated Item Tax Region & Taxability ---
-
-          fixedPlanDetailsMap.set(companyBillingPlanId, {
-              consolidatedItem: {
-                  invoice_id: invoiceId,
-                  service_id: null,
-                  description: `Fixed Plan: ${charge.serviceName}`,
-                  quantity: 1,
-                  unit_price: Math.round(charge.base_rate * 100),
-                  net_amount: 0,
-                  tax_amount: 0,
-                  tax_region: consolidatedRegion, // Use the determined region
-                  tax_rate: 0,
-                  total_price: 0,
-                  is_manual: false,
-                  is_discount: false,
-                  is_taxable: isAnyChargeTaxable, // Set based on whether *any* detail charge is taxable
-                  discount_type: undefined,
-                  discount_percentage: undefined,
-                  applies_to_item_id: null,
-                  applies_to_service_id: null,
-                  created_by: session.user.id,
-                  created_at: now,
-                  tenant
-              },
-              details: []
-          });
+        fixedPlanDetailsMap.set(companyBillingPlanId, {
+          details: []
+        });
       }
 
       const planEntry = fixedPlanDetailsMap.get(companyBillingPlanId)!;
       planEntry.details.push(charge);
-      // Update taxability based on *all* details encountered so far for this plan
-      planEntry.consolidatedItem.is_taxable = planEntry.details.some(d => d.is_taxable);
-      // Ensure allocated_amount and tax_amount are numbers before adding
-      planEntry.consolidatedItem.net_amount += Number(charge.allocated_amount || 0);
-      planEntry.consolidatedItem.tax_amount += Number(charge.tax_amount || 0); // Sum tax from details
-      // Update taxability if any detail is taxable?
-      if (charge.is_taxable) {
-        planEntry.consolidatedItem.is_taxable = true;
-      }
-      // Update tax region if details have different ones? Needs clarification from tax logic.
-      // For now, assume company default or first item's region.
 
     } else {
       // --- Handle Bundled Fixed Price Charges (V1 - Old Behavior) ---
@@ -476,62 +413,94 @@ async function persistFixedInvoiceItems(
   for (const [companyBillingPlanId, planEntry] of fixedPlanDetailsMap.entries()) {
     const planInfo = planInfoMap.get(companyBillingPlanId);
     if (!planInfo) {
-        console.error(`Could not find plan info for companyBillingPlanId: ${companyBillingPlanId}`);
-        // Decide how to handle missing plan info (skip? throw error?)
-        continue;
+      console.error(`Could not find plan info for companyBillingPlanId: ${companyBillingPlanId}`);
+      // Decide how to handle missing plan info (skip? throw error?)
+      continue;
     }
 
-    // Update the consolidated item's description and unit_price before insertion
-    planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.plan_name}`;
-    // Use the plan-level base_rate fetched from billing_plan_fixed_config if available.
-    // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
-    planEntry.consolidatedItem.unit_price = planInfo.plan_base_rate !== null
-        ? Math.round(planInfo.plan_base_rate * 100) // Use plan base rate in cents
-        : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
+    if (planEntry.details.length === 0) {
+      continue;
+    }
 
-    const consolidatedItemId = uuidv4();
-    planEntry.consolidatedItem.item_id = consolidatedItemId;
-    // Ensure amounts are numbers before calculating total_price
-    const consolidatedNet = Number(planEntry.consolidatedItem.net_amount || 0);
-    const consolidatedTax = Number(planEntry.consolidatedItem.tax_amount || 0);
-    planEntry.consolidatedItem.total_price = consolidatedNet + consolidatedTax; // Final total for consolidated item
+    let planNetTotal = 0;
+    let planTaxTotal = 0;
+    let planTaxRegion: string | null = null;
+    let planIsTaxable = false;
 
-    // Insert the consolidated invoice item (now with corrected description and unit_price)
-    await tx('invoice_items').insert(planEntry.consolidatedItem);
-    fixedSubtotal += consolidatedNet; // Add net amount to overall subtotal
-
-    // Insert details for each allocation (unchanged)
     for (const detail of planEntry.details) {
-      const detailId = uuidv4();
-      const allocatedAmountCents = Number(detail.allocated_amount || 0);
+      const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
       const taxAmountCents = Number(detail.tax_amount || 0);
 
-      // Insert into invoice_item_details (parent)
+      planNetTotal += allocatedAmountCents;
+      planTaxTotal += taxAmountCents;
+      if (!planTaxRegion && detail.tax_region) {
+        planTaxRegion = detail.tax_region;
+      }
+      if (detail.is_taxable) {
+        planIsTaxable = true;
+      }
+    }
+
+    const parentItemId = uuidv4();
+    const aggregatedTaxRate = planNetTotal
+      ? Number(((planTaxTotal / planNetTotal) * 100).toFixed(6))
+      : 0;
+    await tx('invoice_items').insert({
+      item_id: parentItemId,
+      invoice_id: invoiceId,
+      service_id: null,
+      description: planInfo.plan_name || 'Fixed Plan Charge',
+      quantity: 1,
+      unit_price: planNetTotal,
+      net_amount: planNetTotal,
+      tax_amount: planTaxTotal,
+      total_price: planNetTotal + planTaxTotal,
+      tax_region: planTaxRegion ?? company.tax_region ?? null,
+      tax_rate: aggregatedTaxRate,
+      is_manual: false,
+      is_discount: false,
+      is_taxable: planIsTaxable,
+      created_by: session.user.id,
+      created_at: now,
+      updated_at: now,
+      tenant
+    });
+
+    for (const detail of planEntry.details) {
+      const detailId = uuidv4();
+      const allocatedAmountCents = Number(detail.allocated_amount ?? detail.total ?? 0);
+      const taxAmountCents = Number(detail.tax_amount || 0);
+      const detailQuantity = Number(detail.quantity ?? 1) || 1;
+      const unitPriceCents = detailQuantity !== 0
+        ? Math.round(allocatedAmountCents / detailQuantity)
+        : allocatedAmountCents;
+
       await tx('invoice_item_details').insert({
         item_detail_id: detailId,
-        item_id: consolidatedItemId, // Link to the consolidated invoice item
+        item_id: parentItemId,
         service_id: detail.serviceId,
         config_id: detail.config_id,
-        quantity: detail.quantity,
-        rate: allocatedAmountCents, // The allocated rate for this specific detail
+        quantity: detailQuantity,
+        rate: unitPriceCents,
         created_at: now,
         updated_at: now,
-        tenant: tenant
+        tenant
       });
 
-      // Insert into invoice_item_fixed_details (specific)
       await tx('invoice_item_fixed_details').insert({
-        item_detail_id: detailId, // PK, FK
-        base_rate: detail.base_rate, // Service's base rate from config (NUMERIC)
-        enable_proration: detail.enable_proration, // Use flag from charge object
-        fmv: Number(detail.fmv || 0), // INTEGER cents
-        proportion: detail.proportion, // NUMERIC
-        allocated_amount: allocatedAmountCents, // INTEGER cents
-        tax_amount: taxAmountCents, // INTEGER cents (per-allocation tax) - Will be recalculated later
-        tax_rate: detail.tax_rate, // NUMERIC (per-allocation rate) - Will be recalculated later
-        tenant: tenant // Explicitly add tenant ID
+        item_detail_id: detailId,
+        base_rate: detail.base_rate,
+        enable_proration: detail.enable_proration,
+        fmv: Number(detail.fmv || 0),
+        proportion: detail.proportion,
+        allocated_amount: allocatedAmountCents,
+        tax_amount: taxAmountCents,
+        tax_rate: detail.tax_rate ?? 0,
+        tenant
       });
     }
+
+    fixedSubtotal += planNetTotal;
   }
 
   return fixedSubtotal;
@@ -590,11 +559,9 @@ export async function persistInvoiceItems(
       // Check if planId exists on the specific charge type if needed
       // For non-fixed types, planId might not be relevant or available
       // plan_id: ('planId' in charge ? (charge as any).planId : null), // Removed - planId not part of IFixedPriceCharge
-      // Use company_billing_plan_id if the schema requires it
-      company_billing_plan_id: charge.company_billing_plan_id ?? null,
       description: charge.serviceName,
-      quantity: charge.quantity,
-      unit_price: charge.rate,
+      quantity: charge.quantity ?? 1,
+      unit_price: charge.rate ?? 0,
       net_amount: netAmount,
       tax_amount: charge.tax_amount || 0,
       tax_region: charge.tax_region || company.tax_region, // Use charge region or default
@@ -602,7 +569,7 @@ export async function persistInvoiceItems(
       total_price: netAmount + (charge.tax_amount || 0), // Will be updated by tax calculation
       is_manual: false,
       is_discount: false,
-      is_taxable: charge.is_taxable,
+      is_taxable: charge.is_taxable ?? false,
       discount_type: undefined,
       discount_percentage: undefined,
       applies_to_item_id: null,
@@ -697,6 +664,10 @@ export async function calculateAndDistributeTax(
   // Process other invoice items (non-consolidated fixed, usage, manual, etc.)
   for (const item of invoiceItems) {
     // Skip consolidated items (handled via details), credits, and discounts
+    if (item.parent_item_id) {
+      continue;
+    }
+
     if (consolidatedItemIds.includes(item.item_id) || Number(item.net_amount) <= 0 || item.is_discount) {
       continue;
     }

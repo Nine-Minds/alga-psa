@@ -149,11 +149,8 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
@@ -178,48 +175,7 @@ describe('Negative Invoice Credit Tests', () => {
         tax_region: 'US-NY'
       });
 
-      // 4. Create a billing plan with negative services (manual creation for multiple services)
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false
-      }, 'plan_id');
-
-      await context.createEntity('billing_plan_fixed_config', {
-        plan_id: planId,
-        base_rate_cents: 0
-      });
-
-      // 5. Assign services to plan
-      await context.db('plan_service_configuration').insert([
-        {
-          plan_id: planId,
-          service_id: serviceA,
-          tenant: context.tenantId
-        },
-        {
-          plan_id: planId,
-          service_id: serviceB,
-          tenant: context.tenantId
-        }
-      ]);
-
-      await context.db('plan_service_fixed_config').insert([
-        {
-          plan_id: planId,
-          service_id: serviceA,
-          quantity: 1,
-          tenant: context.tenantId
-        },
-        {
-          plan_id: planId,
-          service_id: serviceB,
-          quantity: 1,
-          tenant: context.tenantId
-        }
-      ]);
-
-      // 7. Create a billing cycle
+      // 4. Create a billing cycle first (needed before plan assignment)
       const now = createTestDate();
       const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
       const endDate = Temporal.PlainDate.from(now).toString();
@@ -232,7 +188,52 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 8. Assign plan to company
+      // 5. Create a billing plan with negative services
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Credit Plan',
+        billing_frequency: 'monthly',
+        is_custom: false
+      }, 'plan_id');
+
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId,
+        tenant: context.tenantId
+      });
+
+      // 6. Assign services to plan
+      const configIdA = uuidv4();
+      const configIdB = uuidv4();
+      await context.db('plan_service_configuration').insert([
+        {
+          config_id: configIdA,
+          plan_id: planId,
+          service_id: serviceA,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdB,
+          plan_id: planId,
+          service_id: serviceB,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        }
+      ]);
+
+      await context.db('plan_service_fixed_config').insert([
+        {
+          config_id: configIdA,
+          base_rate: -50.00, // -$50.00
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdB,
+          base_rate: -75.00, // -$75.00
+          tenant: context.tenantId
+        }
+      ]);
+
+      // 7. Assign plan to company
       await context.db('company_billing_plans').insert({
         company_billing_plan_id: uuidv4(),
         company_id: company_id,
@@ -301,11 +302,8 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
@@ -344,47 +342,53 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 5. Assign services to plan
+      const configIdA = uuidv4();
+      const configIdB = uuidv4();
+      const configIdC = uuidv4();
       await context.db('plan_service_configuration').insert([
         {
+          config_id: configIdA,
           plan_id: planId,
           service_id: serviceA,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdB,
           plan_id: planId,
           service_id: serviceB,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdC,
           plan_id: planId,
           service_id: serviceC,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         }
       ]);
 
       await context.db('plan_service_fixed_config').insert([
         {
-          plan_id: planId,
-          service_id: serviceA,
-          quantity: 1,
+          config_id: configIdA,
+          base_rate: 100.00, // $100.00
           tenant: context.tenantId
         },
         {
-          plan_id: planId,
-          service_id: serviceB,
-          quantity: 1,
+          config_id: configIdB,
+          base_rate: -150.00, // -$150.00
           tenant: context.tenantId
         },
         {
-          plan_id: planId,
-          service_id: serviceC,
-          quantity: 1,
+          config_id: configIdC,
+          base_rate: -75.00, // -$75.00
           tenant: context.tenantId
         }
       ]);
@@ -439,17 +443,11 @@ describe('Negative Invoice Credit Tests', () => {
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
-      // Verify positive item has tax
-      const positiveItem = invoiceItems.find(item => parseInt(item.net_amount) > 0);
-      expect(positiveItem).toBeTruthy();
-      expect(parseInt(positiveItem.tax_amount)).toBe(1000); // $10.00 tax
-
-      // Verify negative items have no tax
-      const negativeItems = invoiceItems.filter(item => parseInt(item.net_amount) < 0);
-      expect(negativeItems.length).toBe(2);
-      for (const item of negativeItems) {
-        expect(parseInt(item.tax_amount)).toBe(0); // No tax on negative items
-      }
+      expect(invoiceItems.length).toBe(1);
+      const [aggregatedItem] = invoiceItems;
+      expect(parseInt(aggregatedItem.net_amount)).toBe(-12500); // Combined net amount
+      expect(parseInt(aggregatedItem.tax_amount)).toBe(1000); // $10.00 tax from positive portion
+      expect(aggregatedItem.description).toContain('Mixed Credit Plan');
 
       // 12. Finalize the invoice
       await finalizeInvoice(invoice.invoice_id);
@@ -485,11 +483,8 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
@@ -521,36 +516,40 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId1,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 5. Assign negative services to plan
+      const configIdNegA = uuidv4();
+      const configIdNegB = uuidv4();
       await context.db('plan_service_configuration').insert([
         {
+          config_id: configIdNegA,
           plan_id: planId1,
           service_id: negativeServiceA,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdNegB,
           plan_id: planId1,
           service_id: negativeServiceB,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         }
       ]);
 
       await context.db('plan_service_fixed_config').insert([
         {
-          plan_id: planId1,
-          service_id: negativeServiceA,
-          quantity: 1,
+          config_id: configIdNegA,
+          base_rate: -50.00, // -$50.00
           tenant: context.tenantId
         },
         {
-          plan_id: planId1,
-          service_id: negativeServiceB,
-          quantity: 1,
+          config_id: configIdNegB,
+          base_rate: -75.00, // -$75.00
           tenant: context.tenantId
         }
       ]);
@@ -635,22 +634,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId2,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 16. Assign positive service to second plan
+      const configIdPos = uuidv4();
       await context.db('plan_service_configuration').insert({
+        config_id: configIdPos,
         plan_id: planId2,
         service_id: positiveService,
+        configuration_type: 'fixed',
         tenant: context.tenantId
       });
 
       await context.db('plan_service_fixed_config').insert({
-        plan_id: planId2,
-        service_id: positiveService,
-        quantity: 1,
+        config_id: configIdPos,
+        base_rate: 100.00, // $100.00
         tenant: context.tenantId
       });
 
@@ -733,11 +734,8 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
@@ -762,22 +760,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId1,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 5. Assign negative service to plan
+      const configIdNeg = uuidv4();
       await context.db('plan_service_configuration').insert({
+        config_id: configIdNeg,
         plan_id: planId1,
         service_id: negativeService,
+        configuration_type: 'fixed',
         tenant: context.tenantId
       });
 
       await context.db('plan_service_fixed_config').insert({
-        plan_id: planId1,
-        service_id: negativeService,
-        quantity: 1,
+        config_id: configIdNeg,
+        base_rate: -50.00, // -$50.00
         tenant: context.tenantId
       });
 
@@ -840,22 +840,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId2,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 15. Assign positive service to second plan
+      const configIdExp = uuidv4();
       await context.db('plan_service_configuration').insert({
+        config_id: configIdExp,
         plan_id: planId2,
         service_id: expensiveService,
+        configuration_type: 'fixed',
         tenant: context.tenantId
       });
 
       await context.db('plan_service_fixed_config').insert({
-        plan_id: planId2,
-        service_id: expensiveService,
-        quantity: 1,
+        config_id: configIdExp,
+        base_rate: 175.00, // $175.00
         tenant: context.tenantId
       });
 
@@ -942,11 +944,8 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
@@ -971,22 +970,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId1,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 5. Assign negative service to plan
+      const configIdLarge = uuidv4();
       await context.db('plan_service_configuration').insert({
+        config_id: configIdLarge,
         plan_id: planId1,
         service_id: largeNegativeService,
+        configuration_type: 'fixed',
         tenant: context.tenantId
       });
 
       await context.db('plan_service_fixed_config').insert({
-        plan_id: planId1,
-        service_id: largeNegativeService,
-        quantity: 1,
+        config_id: configIdLarge,
+        base_rate: -200.00, // -$200.00
         tenant: context.tenantId
       });
 
@@ -1049,22 +1050,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_custom: false
       }, 'plan_id');
 
-      await context.createEntity('billing_plan_fixed_config', {
+      await context.db('billing_plan_fixed_config').insert({
         plan_id: planId2,
-        base_rate_cents: 0
+        tenant: context.tenantId
       });
 
       // 15. Assign positive service to second plan
+      const configIdSmall = uuidv4();
       await context.db('plan_service_configuration').insert({
+        config_id: configIdSmall,
         plan_id: planId2,
         service_id: smallService,
+        configuration_type: 'fixed',
         tenant: context.tenantId
       });
 
       await context.db('plan_service_fixed_config').insert({
-        plan_id: planId2,
-        service_id: smallService,
-        quantity: 1,
+        config_id: configIdSmall,
+        base_rate: 50.00, // $50.00
         tenant: context.tenantId
       });
 

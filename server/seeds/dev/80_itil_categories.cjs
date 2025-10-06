@@ -49,24 +49,6 @@ exports.seed = async function(knex) {
     return;
   }
 
-  // Determine which channel/id we should associate the ITIL categories with.
-  // Prefer an ITIL specific channel if it already exists, otherwise fall back
-  // to the tenant's default channel so we can satisfy the non-null constraint.
-  const itilChannel = await knex('channels')
-    .where('tenant', tenant.tenant)
-    .where('channel_name', 'ITIL Support')
-    .first();
-
-  const defaultChannel = itilChannel || await knex('channels')
-    .where('tenant', tenant.tenant)
-    .orderBy('display_order')
-    .first();
-
-  if (!defaultChannel) {
-    console.log('No channel found for tenant, skipping ITIL categories seed');
-    return;
-  }
-
   // Copy ITIL categories from standard_categories to tenant's categories table
   // This simulates what should happen automatically when an ITIL board is created
   const itilStandardCategories = await knex('standard_categories')
@@ -125,14 +107,6 @@ exports.seed = async function(knex) {
       parentIdMap[stdCategory.id] = newId;
     } else {
       parentIdMap[stdCategory.id] = existing.category_id;
-
-      if (!existing.is_from_itil_standard) {
-        await knex('categories')
-          .where('category_id', existing.category_id)
-          .update({
-            is_from_itil_standard: true
-          });
-      }
     }
   }
 

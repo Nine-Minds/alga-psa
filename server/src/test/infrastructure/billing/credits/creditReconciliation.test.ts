@@ -331,7 +331,7 @@ describe('Credit Reconciliation Tests', () => {
         tenant: context.tenantId
       })
       .orderBy('created_at', 'asc');
-    
+
     // 25. Verify that each credit issuance transaction has a corresponding credit tracking entry
     const issuanceTransactions = transactions.filter(tx =>
       tx.type === 'credit_issuance' || tx.type === 'credit_issuance_from_negative_invoice'
@@ -423,8 +423,9 @@ describe('Credit Reconciliation Tests', () => {
       .first();
 
     expect(consolidatedInvoice).toBeDefined();
-    expect(consolidatedInvoice!.subtotal).toBe(invoice.subtotal);
-    expect(consolidatedInvoice!.tax).toBe(invoice.tax);
-    expect(consolidatedInvoice!.total).toBe(invoice.total);
+    expect(Number(consolidatedInvoice!.subtotal)).toBe(Number(invoice.subtotal));
+    expect(Number(consolidatedInvoice!.tax)).toBe(Number(invoice.tax));
+    const expectedRemainingTotal = Number(consolidatedInvoice!.subtotal) + Number(consolidatedInvoice!.tax) - Number(consolidatedInvoice!.credit_applied ?? 0);
+    expect(Number(consolidatedInvoice!.total_amount)).toBe(expectedRemainingTotal);
   });
 });

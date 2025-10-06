@@ -10,6 +10,7 @@ import {
   setupCompanyTaxConfiguration,
   assignServiceTaxRate,
   createTestService,
+  createFixedPlanAssignment,
   createBucketPlanAssignment,
   createBucketUsageRecord
 } from '../../../../../test-utils/billingTestHelpers';
@@ -245,13 +246,13 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         expect.arrayContaining([
           expect.objectContaining({
             description: expect.stringContaining('Data Transfer'),
-            quantity: '50',
+            quantity: expect.stringMatching(/^50(?:\.0+)?$/),
             unit_price: '1000',
             net_amount: '50000'
           }),
           expect.objectContaining({
             description: expect.stringContaining('Data Transfer'),
-            quantity: '30',
+            quantity: expect.stringMatching(/^30(?:\.0+)?$/),
             unit_price: '1000',
             net_amount: '30000'
           })
@@ -324,7 +325,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       expect(invoiceItems).toHaveLength(1);
       expect(invoiceItems[0]).toMatchObject({
         description: expect.stringContaining('Consulting Hours'),
-        quantity: '5',
+        quantity: expect.stringMatching(/^5(?:\.0+)?$/),
         unit_price: '7500',
         net_amount: '37500'
       });
@@ -342,21 +343,16 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         tax_region: 'US-NY'
       });
 
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Simple Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
-
-      await context.db('plan_services').insert({
-        plan_id: planId,
-        service_id: serviceId,
+      const { planId } = await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Simple Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 20000,
+        detailBaseRateCents: 20000,
         quantity: 1,
-        tenant: context.tenantId
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
       });
 
-      // Create billing cycle and assign plan
+      // Create billing cycle
       const billingCycleId = await context.createEntity('company_billing_cycles', {
         company_id: context.companyId,
         billing_cycle: 'monthly',
@@ -364,15 +360,6 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
-
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
 
       // Generate draft invoice
       let invoice = await generateInvoice(billingCycleId);
@@ -397,7 +384,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
       expect(invoiceItemsBeforeFinalization).toHaveLength(1);
       expect(invoiceItemsBeforeFinalization[0]).toMatchObject({
-        description: expect.stringContaining('Basic Service'),
+        description: expect.stringContaining('Simple Plan'),
         net_amount: '20000'
       });
 
@@ -410,14 +397,13 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         .first();
 
       // Assert - Verify finalization
-      expect(invoice).toMatchObject({
-        invoice_id: invoice!.invoice_id,
-        status: 'sent',
-        finalized_at: expect.any(Date),
-        subtotal: expectedSubtotal,
-        tax: expectedTax,
-        total_amount: expectedTotal
-      });
+      expect(invoice).not.toBeNull();
+      expect(invoice!.invoice_id).toBe(invoice!.invoice_id);
+      expect(invoice!.status).toBe('sent');
+      expect(invoice!.finalized_at).toBeInstanceOf(Date);
+      expect(Number(invoice!.subtotal)).toBe(expectedSubtotal);
+      expect(Number(invoice!.tax)).toBe(expectedTax);
+      expect(Number(invoice!.total_amount)).toBe(expectedTotal);
 
       // Verify invoice items remain consistent after finalization
       const invoiceItemsAfterFinalization = await context.db('invoice_items')
@@ -426,7 +412,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
 
       expect(invoiceItemsAfterFinalization).toHaveLength(1);
       expect(invoiceItemsAfterFinalization[0]).toMatchObject({
-        description: expect.stringContaining('Basic Service'),
+        description: expect.stringContaining('Simple Plan'),
         net_amount: '20000'
       });
     });

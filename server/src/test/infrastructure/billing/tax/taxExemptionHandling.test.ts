@@ -75,6 +75,26 @@ describe('Tax Exemption Handling', () => {
     await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
   }
 
+  async function createCompanyRecord(overrides: Partial<ICompany> = {}): Promise<string> {
+    const company_id = overrides.company_id ?? uuidv4();
+    const now = new Date().toISOString();
+
+    await context.db('companies').insert({
+      company_id,
+      tenant: context.tenantId,
+      company_name: overrides.company_name ?? 'Test Company',
+      is_tax_exempt: overrides.is_tax_exempt ?? false,
+      region_code: overrides.region_code ?? 'US-NY',
+      credit_balance: overrides.credit_balance ?? 0,
+      billing_cycle: overrides.billing_cycle ?? 'monthly',
+      is_inactive: overrides.is_inactive ?? false,
+      created_at: overrides.created_at ?? now,
+      updated_at: overrides.updated_at ?? now
+    });
+
+    return company_id;
+  }
+
   beforeAll(async () => {
     context = await setupContext({
       runSeeds: true,
@@ -126,20 +146,9 @@ describe('Tax Exemption Handling', () => {
 
   it('should not apply tax to exempt companies', async () => {
     // Create a tax-exempt company
-    const company_id = uuidv4();
-    await context.db('companies').insert({
-      company_id,
-      tenant: context.tenantId,
+    const company_id = await createCompanyRecord({
       company_name: 'Exempt Company',
       is_tax_exempt: true,
-      tax_region: 'US-NY',
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
       billing_cycle: 'weekly'
     });
 
@@ -160,22 +169,10 @@ describe('Tax Exemption Handling', () => {
 
   it('should apply tax to non-exempt companies', async () => {
     // Create a non-exempt company
-    const company_id = uuidv4();
-    await context.db('companies').insert({
-      company_id,
-      tenant: context.tenantId,
+    const company_id = await createCompanyRecord({
       company_name: 'Non-Exempt Company',
       is_tax_exempt: false,
-      tax_region: 'US-NY',
-      phone_no: '123-456-7890',
-      credit_balance: 0,
-      email: 'test@example.com',
-      url: 'https://example.com',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
-      billing_cycle: 'weekly',
-      properties: {}
+      billing_cycle: 'weekly'
     });
 
     // Configure tax for non-exempt company
@@ -195,20 +192,9 @@ describe('Tax Exemption Handling', () => {
 
   it('should handle tax exemption status changes', async () => {
     // Create a company
-    const company_id = uuidv4();
-    await context.db('companies').insert({
-      company_id,
-      tenant: context.tenantId,
+    const company_id = await createCompanyRecord({
       company_name: 'Status Change Company',
       is_tax_exempt: false,
-      tax_region: 'US-NY',
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
       billing_cycle: 'weekly'
     });
 

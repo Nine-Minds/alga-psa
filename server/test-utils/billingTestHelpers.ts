@@ -25,14 +25,28 @@ export async function setupCompanyTaxConfiguration(
   const {
     regionCode = 'US-NY',
     regionName = 'Default Region',
-    taxPercentage = 8.875,
+    taxPercentage,
     startDate = '2025-01-01T00:00:00.000Z',
     description = `${regionCode} Tax`
   } = options;
 
   const targetCompanyId = options.companyId ?? context.companyId;
 
-  const taxRateId = uuidv4();
+  const existingActiveRate = await context.db('tax_rates')
+    .where({ tenant: context.tenantId, region_code: regionCode, is_active: true })
+    .orderBy('start_date', 'desc')
+    .first();
+
+  const shouldCreateNewRate = typeof taxPercentage === 'number';
+
+  const taxRateId = shouldCreateNewRate ? uuidv4() : existingActiveRate?.tax_rate_id ?? uuidv4();
+
+  if (shouldCreateNewRate) {
+    // Deactivate any existing tax rates for this region within the tenant so the new rate becomes authoritative
+    await context.db('tax_rates')
+      .where({ tenant: context.tenantId, region_code: regionCode })
+      .update({ is_active: false });
+  }
 
   await context.db('tax_regions')
     .insert({
@@ -44,20 +58,25 @@ export async function setupCompanyTaxConfiguration(
     .onConflict(['tenant', 'region_code'])
     .ignore();
 
-  try {
-    await context.db('tax_rates')
-      .insert({
-        tax_rate_id: taxRateId,
-        tenant: context.tenantId,
-        region_code: regionCode,
-        tax_percentage: taxPercentage,
-        description,
-        start_date: startDate
-      });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!message.includes('duplicate') && !(error as { code?: string }).code?.includes('23505')) {
-      throw error;
+  if (shouldCreateNewRate || !existingActiveRate) {
+    try {
+      await context.db('tax_rates')
+        .insert({
+          tax_rate_id: taxRateId,
+          tenant: context.tenantId,
+          region_code: regionCode,
+          tax_percentage: shouldCreateNewRate
+            ? taxPercentage
+            : existingActiveRate?.tax_percentage ?? 8.875,
+          description,
+          start_date: startDate,
+          is_active: true
+        });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('duplicate') && !(error as { code?: string }).code?.includes('23505')) {
+        throw error;
+      }
     }
   }
 

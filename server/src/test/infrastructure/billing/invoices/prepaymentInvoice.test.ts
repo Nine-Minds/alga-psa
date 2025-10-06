@@ -62,6 +62,20 @@ vi.mock('server/src/lib/auth/rbac', () => ({
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
 globalForVitest.TextEncoder = NodeTextEncoder;
 
+function parseInvoiceTotals(invoice: Record<string, unknown>) {
+  const subtotal = Number(invoice.subtotal ?? 0);
+  const tax = Number(invoice.tax ?? 0);
+  const creditApplied = Number(invoice.credit_applied ?? 0);
+  const totalAmount = Number(invoice.total_amount ?? 0);
+  return {
+    subtotal,
+    tax,
+    creditApplied,
+    totalAmount,
+    totalBeforeCredit: subtotal + tax
+  };
+}
+
 // Create test context helpers
 const {
   beforeAll: setupContext,
@@ -421,32 +435,43 @@ describe('Prepayment Invoice System', () => {
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
       // Generate billing invoice
-      const invoice = await runWithTenant(context.tenantId, async () => {
+      const generatedInvoice = await runWithTenant(context.tenantId, async () => {
         return await generateInvoice(billingCycleId);
       });
 
-      // Verify credit application
-      expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
-      const creditApplied = invoice!.subtotal + invoice!.tax - invoice!.total;
-      expect(creditApplied).toBeGreaterThan(0);
+      await runWithTenant(context.tenantId, async () => {
+        return await finalizeInvoice(generatedInvoice!.invoice_id);
+      });
+
+      const updatedInvoice = await context.db('invoices')
+        .where({ invoice_id: generatedInvoice!.invoice_id })
+        .first();
+
+      expect(updatedInvoice).toBeTruthy();
+
+      const totals = parseInvoiceTotals(updatedInvoice ?? {});
+
+      // Verify credit application after finalization
+      expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+      expect(totals.creditApplied).toBeGreaterThan(0);
 
       // Verify credit balance update
       const finalCredit = await runWithTenant(context.tenantId, async () => {
         return await CompanyBillingPlan.getCompanyCredit(context.companyId);
       });
-      expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - creditApplied);
+      expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - totals.creditApplied);
 
       // Verify credit transaction
       const creditTransaction = await context.db('transactions')
         .where({
           company_id: context.companyId,
-          invoice_id: invoice!.invoice_id,
+          invoice_id: generatedInvoice!.invoice_id,
           type: 'credit_application'
         })
         .first();
 
       expect(creditTransaction).toBeTruthy();
-      expect(parseFloat(creditTransaction.amount)).toBe(-creditApplied);
+      expect(parseFloat(creditTransaction.amount)).toBe(-totals.creditApplied);
     });
   });
 });
@@ -650,16 +675,27 @@ describe('Multiple Credit Applications', () => {
       return await generateInvoice(billingCycleId1);
     });
 
+    await runWithTenant(context.tenantId, async () => {
+      return await finalizeInvoice(invoice!.invoice_id);
+    });
+
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoice!.invoice_id })
+      .first();
+
+    expect(updatedInvoice).toBeTruthy();
+
+    const totals = parseInvoiceTotals(updatedInvoice ?? {});
+
     // Verify credit application
-    expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
-    const creditApplied = invoice!.subtotal + invoice!.tax - invoice!.total;
-    expect(creditApplied).toBeGreaterThan(0);
+    expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+    expect(totals.creditApplied).toBeGreaterThan(0);
 
     // Verify credit balance update
     const finalCredit = await runWithTenant(context.tenantId, async () => {
       return await CompanyBillingPlan.getCompanyCredit(context.companyId);
     });
-    expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
+    expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totals.creditApplied);
 
     // Verify credit transaction
     const creditTransaction = await context.db('transactions')
@@ -671,7 +707,7 @@ describe('Multiple Credit Applications', () => {
       .first();
 
     expect(creditTransaction).toBeTruthy();
-    expect(parseFloat(creditTransaction.amount)).toBe(-creditApplied);
+    expect(parseFloat(creditTransaction.amount)).toBe(-totals.creditApplied);
   });
 
   it('distributes credit across multiple invoices', async () => {
@@ -704,23 +740,39 @@ describe('Multiple Credit Applications', () => {
     const invoice1 = await runWithTenant(context.tenantId, async () => {
       return await generateInvoice(billingCycleId1);
     });
-    
+
+    await runWithTenant(context.tenantId, async () => {
+      return await finalizeInvoice(invoice1!.invoice_id);
+    });
+
+    const updatedInvoice1 = await context.db('invoices')
+      .where({ invoice_id: invoice1!.invoice_id })
+      .first();
+    expect(updatedInvoice1).toBeTruthy();
+    const totals1 = parseInvoiceTotals(updatedInvoice1 ?? {});
+
     const invoice2 = await runWithTenant(context.tenantId, async () => {
       return await generateInvoice(billingCycleId2);
     });
 
-    // Verify credit application on invoice1
-    expect(invoice1!.total).toBeLessThan(invoice1!.subtotal + invoice1!.tax);
-    const creditApplied1 = invoice1!.subtotal + invoice1!.tax - invoice1!.total;
-    expect(creditApplied1).toBeGreaterThan(0);
+    await runWithTenant(context.tenantId, async () => {
+      return await finalizeInvoice(invoice2!.invoice_id);
+    });
 
-    // Verify credit application on invoice2
-    expect(invoice2!.total).toBeLessThan(invoice2!.subtotal + invoice2!.tax);
-    const creditApplied2 = invoice2!.subtotal + invoice2!.tax - invoice2!.total;
-    expect(creditApplied2).toBeGreaterThan(0);
+    const updatedInvoice2 = await context.db('invoices')
+      .where({ invoice_id: invoice2!.invoice_id })
+      .first();
+    expect(updatedInvoice2).toBeTruthy();
+    const totals2 = parseInvoiceTotals(updatedInvoice2 ?? {});
+
+    // Verify credit application on both invoices
+    expect(totals1.totalAmount).toBeLessThan(totals1.totalBeforeCredit);
+    expect(totals1.creditApplied).toBeGreaterThan(0);
+    expect(totals2.totalAmount).toBeLessThan(totals2.totalBeforeCredit);
+    expect(totals2.creditApplied).toBeGreaterThan(0);
 
     // Verify total credit applied
-    const totalCreditApplied = creditApplied1 + creditApplied2;
+    const totalCreditApplied = totals1.creditApplied + totals2.creditApplied;
     expect(totalCreditApplied).toBeLessThanOrEqual(totalPrepayment);
 
     // Verify final credit balance
@@ -761,9 +813,21 @@ describe('Multiple Credit Applications', () => {
       return await generateInvoice(billingCycleId1);
     });
 
+    await runWithTenant(context.tenantId, async () => {
+      return await finalizeInvoice(invoice!.invoice_id);
+    });
+
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoice!.invoice_id })
+      .first();
+
+    expect(updatedInvoice).toBeTruthy();
+
+    const totals = parseInvoiceTotals(updatedInvoice ?? {});
+
     // Verify credit application
-    expect(invoice!.total).toBe(0);
-    const creditApplied = invoice!.subtotal + invoice!.tax;
+    expect(totals.totalAmount).toBe(0);
+    const creditApplied = totals.creditApplied;
     expect(creditApplied).toBeLessThanOrEqual(totalPrepayment);
 
     // Verify final credit balance
@@ -808,10 +872,23 @@ describe('Multiple Credit Applications', () => {
       return await generateInvoice(billingCycleId1);
     });
 
+    await runWithTenant(context.tenantId, async () => {
+      return await finalizeInvoice(invoice!.invoice_id);
+    });
+
+    const updatedInvoice = await context.db('invoices')
+      .where({ invoice_id: invoice!.invoice_id })
+      .first();
+
+    expect(updatedInvoice).toBeTruthy();
+
+    const totals = parseInvoiceTotals(updatedInvoice ?? {});
+
     // Verify credit application
-    expect(invoice!.total).toBeLessThan(invoice!.subtotal + invoice!.tax);
-    const creditApplied = prepaymentAmount;
-    expect(invoice!.total).toBe(invoice!.subtotal + invoice!.tax - creditApplied);
+    expect(totals.totalAmount).toBeLessThan(totals.totalBeforeCredit);
+    const creditApplied = Math.min(prepaymentAmount, totals.totalBeforeCredit);
+    expect(totals.creditApplied).toBe(creditApplied);
+    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - creditApplied);
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
