@@ -24,20 +24,6 @@ exports.seed = async function(knex) {
     return;
   }
 
-  const hasDescription = await knex.schema.hasColumn('categories', 'description');
-  const hasUpdatedAt = await knex.schema.hasColumn('categories', 'updated_at');
-  const hasUpdatedBy = await knex.schema.hasColumn('categories', 'updated_by');
-
-  const createdByUser = await knex('users')
-    .where('tenant', tenant.tenant)
-    .orderBy('created_at', 'asc')
-    .first();
-
-  if (!createdByUser) {
-    console.log('No users found for tenant, skipping ITIL categories seed');
-    return;
-  }
-
   // Check if we already have ITIL categories for this tenant
   const existingItilCategories = await knex('categories')
     .where('tenant', tenant.tenant)
@@ -111,15 +97,9 @@ exports.seed = async function(knex) {
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
         created_at: knex.fn.now(),
-      });
+      };
 
-      // Get the inserted ID for mapping
-      const inserted = await knex('categories')
-        .where('tenant', tenant.tenant)
-        .where('category_name', stdCategory.category_name)
-        .whereNull('parent_category')
-        .where('boardannel_id', defaultBoard.board_id)
-        .first();
+      await knex('categories').insert(insertData);
 
       parentIdMap[stdCategory.id] = newId;
     } else {
@@ -165,7 +145,9 @@ exports.seed = async function(knex) {
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
         created_at: knex.fn.now(),
-      });
+      };
+
+      await knex('categories').insert(insertData);
     } else if (!existing.is_from_itil_standard) {
       await knex('categories')
         .where('category_id', existing.category_id)
