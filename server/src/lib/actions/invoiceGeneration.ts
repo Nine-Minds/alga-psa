@@ -773,7 +773,8 @@ export async function createInvoiceFromBillingResult(
       trx,
       newInvoice!.invoice_id,
       company,
-      taxService
+      taxService,
+      tenant
     );
 
     const finalSubtotal = Math.ceil(subtotal);
@@ -784,7 +785,10 @@ export async function createInvoiceFromBillingResult(
 
     // Update the invoice with subtotal, tax, and total amount
     await trx('invoices')
-      .where({ invoice_id: newInvoice!.invoice_id })
+      .where({
+        invoice_id: newInvoice!.invoice_id,
+        tenant
+      })
       .update({
         subtotal: finalSubtotal,
         tax: finalTax,

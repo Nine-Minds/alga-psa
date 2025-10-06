@@ -2113,7 +2113,7 @@ export class BillingEngine {
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(`[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`);
       const taxService = new TaxService(); // Instantiate TaxService here
-      await calculateAndDistributeTax(trx, invoiceId, company, taxService); // Pass company object and taxService instance
+      await calculateAndDistributeTax(trx, invoiceId, company, taxService, tenant); // Pass company object and taxService instance
       console.log(`[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`);
 
       // Step 2: Update invoice totals and record the transaction using the service function

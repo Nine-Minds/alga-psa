@@ -590,20 +590,26 @@ export async function calculateAndDistributeTax(
   tx: Knex.Transaction,
   invoiceId: string,
   company: any,
-  taxService: TaxService
+  taxService: TaxService,
+  tenant: string
 ): Promise<number> {
   // 1. Fetch all relevant data
   console.log(`[calculateAndDistributeTax] Starting for invoice: ${invoiceId}`);
   const invoiceItems: ManualInvoiceItem[] = await tx('invoice_items') // Use ManualInvoiceItem type for base structure
-    .where({ invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId, tenant })
     .select('*');
   console.log(`[calculateAndDistributeTax] Fetched ${invoiceItems.length} invoice items:`, JSON.stringify(invoiceItems.map(i => ({id: i.item_id, desc: i.description, net: i.net_amount, tax: i.tax_amount, taxable: i.is_taxable, region: i.tax_region, is_discount: i.is_discount})), null, 2));
 
   // Correctly identify consolidated items by checking for existence in invoice_item_details
   // Fetch item_id and invoice_id from invoice_item_details to link back correctly
   const detailParentIdsResult = await tx('invoice_item_details')
-    .join('invoice_items', 'invoice_items.item_id', 'invoice_item_details.item_id')
+    .where('invoice_item_details.tenant', tenant)
+    .join('invoice_items', function() {
+      this.on('invoice_items.item_id', '=', 'invoice_item_details.item_id')
+        .andOn('invoice_items.tenant', '=', 'invoice_item_details.tenant');
+    })
     .where('invoice_items.invoice_id', invoiceId) // Filter by the main invoice ID
+    .andWhere('invoice_items.tenant', tenant)
     .distinct('invoice_item_details.item_id');
   const detailParentIds = new Set(detailParentIdsResult.map((row: { item_id: string }) => row.item_id));
 
@@ -623,7 +629,8 @@ export async function calculateAndDistributeTax(
                 .andOn('iifd.tenant', '=', 'iid.tenant'); // Ensure tenant match
         })
         .whereIn('iid.item_id', consolidatedItemIds) // Filter by the correctly identified parent IDs
-        .andWhere('iifd.tenant', '=', company.tenant) // Add tenant filter for safety
+        .andWhere('iifd.tenant', tenant)
+        .andWhere('iid.tenant', tenant)
         .select(
             'iifd.item_detail_id',
             'iifd.allocated_amount',
@@ -804,7 +811,7 @@ export async function calculateAndDistributeTax(
     for (const update of detailUpdates) {
       updatePromises.push(
         tx('invoice_item_fixed_details')
-          .where({ item_detail_id: update.item_detail_id })
+          .where({ item_detail_id: update.item_detail_id, tenant })
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
     }
@@ -815,7 +822,7 @@ export async function calculateAndDistributeTax(
     for (const update of itemTaxUpdates) {
       updatePromises.push(
         tx('invoice_items')
-          .where({ item_id: update.item_id })
+          .where({ item_id: update.item_id, tenant })
           .update({ tax_amount: update.tax_amount, tax_rate: update.tax_rate })
       );
       // This log was misplaced inside the loop, moving it after the loop in step 7
@@ -830,8 +837,13 @@ export async function calculateAndDistributeTax(
   if (consolidatedItemIds.length > 0) {
       // Fetch the *updated* tax amounts from details
       const updatedDetailsTaxSum = await tx('invoice_item_fixed_details as iifd')
-          .join('invoice_item_details as iid', 'iid.item_detail_id', 'iifd.item_detail_id')
+          .join('invoice_item_details as iid', function() {
+              this.on('iid.item_detail_id', '=', 'iifd.item_detail_id')
+                  .andOn('iid.tenant', '=', 'iifd.tenant');
+          })
           .whereIn('iid.item_id', consolidatedItemIds)
+          .andWhere('iid.tenant', tenant)
+          .andWhere('iifd.tenant', tenant)
           .groupBy('iid.item_id')
           .select(
               'iid.item_id',
@@ -842,7 +854,7 @@ export async function calculateAndDistributeTax(
       for (const consolidated of updatedDetailsTaxSum) {
           consolidatedUpdatePromises.push(
               tx('invoice_items')
-                  .where({ item_id: consolidated.item_id })
+                  .where({ item_id: consolidated.item_id, tenant })
                   .update({ tax_amount: Number(consolidated.total_detail_tax || 0) }) // Update parent with sum
           );
       }
@@ -854,7 +866,9 @@ export async function calculateAndDistributeTax(
   // 8 & 9. Final Pass: Update total_price and apply final tax zeroing if needed
   const finalItemUpdatePromises: Array<Promise<any>> = [];
   // Fetch all items again to get potentially updated tax amounts (especially the consolidated ones from step 7)
-  const allFinalItems = await tx('invoice_items').where({ invoice_id: invoiceId }).select('*');
+  const allFinalItems = await tx('invoice_items')
+    .where({ invoice_id: invoiceId, tenant })
+    .select('*');
 
   for (const item of allFinalItems) {
       const netAmount = Number(item.net_amount || 0); // Net amount already reflects discounts
@@ -874,7 +888,7 @@ export async function calculateAndDistributeTax(
       // Prepare final update for this item
       finalItemUpdatePromises.push(
           tx('invoice_items')
-              .where({ item_id: item.item_id })
+              .where({ item_id: item.item_id, tenant })
               .update({
                   tax_amount: finalTax, // Persist the final tax amount (pre-discount, or 0 if non-taxable)
                   tax_rate: finalRate,   // Persist the final tax rate
@@ -889,7 +903,7 @@ export async function calculateAndDistributeTax(
   // 10. Return total calculated tax for the invoice
   // Recalculate from the final state of invoice_items for definitive total
   const finalTaxSumResult = await tx('invoice_items')
-    .where({ invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId, tenant })
     .sum('tax_amount as totalTax')
     .first();
 
@@ -918,7 +932,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   } = options;
 
   // Recalculate totals directly from the updated invoice items
-  const finalItems = await tx('invoice_items').where({ invoice_id: invoiceId });
+  const finalItems = await tx('invoice_items').where({ invoice_id: invoiceId, tenant });
   const finalSubtotal = finalItems.reduce((sum, item) => sum + Number(item.net_amount), 0);
   const finalTotalTax = finalItems.reduce((sum, item) => sum + Number(item.tax_amount), 0);
   const finalTotalAmount = finalSubtotal + finalTotalTax;
@@ -926,7 +940,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
 
   // Update invoice with final totals
   await tx('invoices')
-    .where({ invoice_id: invoiceId })
+    .where({ invoice_id: invoiceId, tenant })
     .update({
       subtotal: Math.round(finalSubtotal), // Use Math.round for final cents
       tax: Math.round(finalTotalTax),
