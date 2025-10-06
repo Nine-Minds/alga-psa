@@ -69,17 +69,18 @@ jobs:
 
           # Create sample secrets (placeholders, real values not needed for this test if services are self-contained)
           # Using similar placeholders as pr-checks.yaml for consistency
-          echo "placeholder-password" > secrets/postgres_password
-          echo "placeholder-password" > secrets/db_password_server
-          echo "placeholder-password" > secrets/db_password_hocuspocus
-          echo "placeholder-password" > secrets/redis_password
-          echo "placeholder-key-32-chars-long-01" > secrets/alga_auth_key
-          echo "placeholder-key-32-chars-long-02" > secrets/crypto_key
-          echo "placeholder-key-32-chars-long-03" > secrets/token_secret_key
-          echo "placeholder-key-32-chars-long-04" > secrets/nextauth_secret
-          echo "placeholder-password" > secrets/email_password
-          echo "placeholder-id" > secrets/google_oauth_client_id
-          echo "placeholder-secret" > secrets/google_oauth_client_secret
+          # Use printf instead of echo to avoid trailing newlines
+          printf "placeholder-password" > secrets/postgres_password
+          printf "placeholder-password" > secrets/db_password_server
+          printf "placeholder-password" > secrets/db_password_hocuspocus
+          printf "placeholder-password" > secrets/redis_password
+          printf "placeholder-key-32-chars-long-01" > secrets/alga_auth_key
+          printf "placeholder-key-32-chars-long-02" > secrets/crypto_key
+          printf "placeholder-key-32-chars-long-03" > secrets/token_secret_key
+          printf "placeholder-key-32-chars-long-04" > secrets/nextauth_secret
+          printf "placeholder-password" > secrets/email_password
+          printf "placeholder-id" > secrets/google_oauth_client_id
+          printf "placeholder-secret" > secrets/google_oauth_client_secret
 
           # Set permissions
           chmod 600 secrets/*
