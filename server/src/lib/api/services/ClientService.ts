@@ -93,64 +93,66 @@ export class ClientService extends BaseService<IClient> {
       order
     } = options;
 
-    // Build base query with account manager and location joins
-    let dataQuery = knex('clients as c')
-      .leftJoin('users as u', function() {
-        this.on('c.account_manager_id', '=', 'u.user_id')
-            .andOn('c.tenant', '=', 'u.tenant');
-      })
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn('cl.is_default', '=', knex.raw('true'));
-      })
-      .where('c.tenant', context.tenant);
+    return withTransaction(knex, async (trx) => {
+      // Build base query with account manager and location joins
+      let dataQuery = trx('clients as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .where('c.tenant', context.tenant);
 
-    let countQuery = knex('clients as c')
-      .leftJoin('client_locations as cl', function() {
-        this.on('c.client_id', '=', 'cl.client_id')
-            .andOn('c.tenant', '=', 'cl.tenant')
-            .andOn('cl.is_default', '=', knex.raw('true'));
-      })
-      .where('c.tenant', context.tenant);
+      let countQuery = trx('clients as c')
+        .leftJoin('client_locations as cl', function() {
+          this.on('c.client_id', '=', 'cl.client_id')
+              .andOn('c.tenant', '=', 'cl.tenant')
+              .andOn('cl.is_default', '=', trx.raw('true'));
+        })
+        .where('c.tenant', context.tenant);
 
-    // Apply filters
-    dataQuery = this.applyClientFilters(dataQuery, filters);
-    countQuery = this.applyClientFilters(countQuery, filters);
+      // Apply filters
+      dataQuery = this.applyClientFilters(dataQuery, filters);
+      countQuery = this.applyClientFilters(countQuery, filters);
 
-    // Apply sorting
-    const sortField = sort || this.defaultSort;
-    const sortOrder = order || this.defaultOrder;
-    dataQuery = dataQuery.orderBy(`c.${sortField}`, sortOrder);
+      // Apply sorting
+      const sortField = sort || this.defaultSort;
+      const sortOrder = order || this.defaultOrder;
+      dataQuery = dataQuery.orderBy(`c.${sortField}`, sortOrder);
 
-    // Apply pagination
-    const offset = (page - 1) * limit;
-    dataQuery = dataQuery.limit(limit).offset(offset);
+      // Apply pagination
+      const offset = (page - 1) * limit;
+      dataQuery = dataQuery.limit(limit).offset(offset);
 
-    // Select fields
-    dataQuery = dataQuery.select(
-      'c.*',
-      knex.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
-    );
+      // Select fields
+      dataQuery = dataQuery.select(
+        'c.*',
+        trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+      );
 
-    // Execute queries
-    const [clients, [{ count }]] = await Promise.all([
-      dataQuery,
-      countQuery.count('* as count')
-    ]);
+      // Execute queries
+      const [clients, [{ count }]] = await Promise.all([
+        dataQuery,
+        countQuery.count('* as count')
+      ]);
 
-    // Add logo URLs
-    const clientsWithLogos = await Promise.all(
-      clients.map(async (client: IClient) => {
-        const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
-        return { ...client, logoUrl };
-      })
-    );
+      // Add logo URLs
+      const clientsWithLogos = await Promise.all(
+        clients.map(async (client: IClient) => {
+          const logoUrl = await getClientLogoUrl(client.client_id, context.tenant);
+          return { ...client, logoUrl };
+        })
+      );
 
-    return {
-      data: clientsWithLogos,
-      total: parseInt(count as string)
-    };
+      return {
+        data: clientsWithLogos,
+        total: parseInt(count as string)
+      };
+    });
   }
 
   /**
@@ -159,29 +161,31 @@ export class ClientService extends BaseService<IClient> {
   async getById(id: string, context: ServiceContext): Promise<IClient | null> {
     const { knex } = await this.getKnex();
 
-    const client = await knex('clients as c')
-      .leftJoin('users as u', function() {
-        this.on('c.account_manager_id', '=', 'u.user_id')
-            .andOn('c.tenant', '=', 'u.tenant');
-      })
-      .select(
-        'c.*',
-        knex.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
-      )
-      .where({ 'c.client_id': id, 'c.tenant': context.tenant })
-      .first();
+    return withTransaction(knex, async (trx) => {
+      const client = await trx('clients as c')
+        .leftJoin('users as u', function() {
+          this.on('c.account_manager_id', '=', 'u.user_id')
+              .andOn('c.tenant', '=', 'u.tenant');
+        })
+        .select(
+          'c.*',
+          trx.raw(`CASE WHEN u.first_name IS NOT NULL AND u.last_name IS NOT NULL THEN CONCAT(u.first_name, ' ', u.last_name) ELSE NULL END as account_manager_full_name`)
+        )
+        .where({ 'c.client_id': id, 'c.tenant': context.tenant })
+        .first();
 
-    if (!client) {
-      return null;
-    }
+      if (!client) {
+        return null;
+      }
 
-    // Get logo URL
-    const logoUrl = await getClientLogoUrl(id, context.tenant);
+      // Get logo URL
+      const logoUrl = await getClientLogoUrl(id, context.tenant);
 
-    return {
-      ...client,
-      logoUrl
-    } as IClient;
+      return {
+        ...client,
+        logoUrl
+      } as IClient;
+    });
   }
 
   /**
@@ -369,15 +373,17 @@ export class ClientService extends BaseService<IClient> {
   async getClientLocations(clientId: string, context: ServiceContext): Promise<IClientLocation[]> {
     const { knex } = await this.getKnex();
 
-    const locations = await knex('client_locations')
-      .where({
-        client_id: clientId,
-        tenant: context.tenant
-      })
-      .orderBy('is_default', 'desc')
-      .orderBy('location_name', 'asc');
+    return withTransaction(knex, async (trx) => {
+      const locations = await trx('client_locations')
+        .where({
+          client_id: clientId,
+          tenant: context.tenant
+        })
+        .orderBy('is_default', 'desc')
+        .orderBy('location_name', 'asc');
 
-    return locations;
+      return locations;
+    });
   }
 
   /**
@@ -541,60 +547,62 @@ export class ClientService extends BaseService<IClient> {
   async getClientStats(context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
 
-    const [
-      totalStats,
-      billingCycleStats,
-      clientTypeStats,
-      creditStats
-    ] = await Promise.all([
-      // Total and active/inactive counts
-      knex('clients')
-        .where('tenant', context.tenant)
-        .select(
-          knex.raw('COUNT(*) as total_clients'),
-          knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_clients'),
-          knex.raw('COUNT(CASE WHEN is_inactive = true THEN 1 END) as inactive_clients')
-        )
-        .first(),
+    return withTransaction(knex, async (trx) => {
+      const [
+        totalStats,
+        billingCycleStats,
+        clientTypeStats,
+        creditStats
+      ] = await Promise.all([
+        // Total and active/inactive counts
+        trx('clients')
+          .where('tenant', context.tenant)
+          .select(
+            trx.raw('COUNT(*) as total_clients'),
+            trx.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_clients'),
+            trx.raw('COUNT(CASE WHEN is_inactive = true THEN 1 END) as inactive_clients')
+          )
+          .first(),
 
-      // Clients by billing cycle
-      knex('clients')
-        .where('tenant', context.tenant)
-        .groupBy('billing_cycle')
-        .select('billing_cycle', knex.raw('COUNT(*) as count')),
+        // Clients by billing cycle
+        trx('clients')
+          .where('tenant', context.tenant)
+          .groupBy('billing_cycle')
+          .select('billing_cycle', trx.raw('COUNT(*) as count')),
 
-      // Clients by client type
-      knex('clients')
-        .where('tenant', context.tenant)
-        .whereNotNull('client_type')
-        .groupBy('client_type')
-        .select('client_type', knex.raw('COUNT(*) as count')),
+        // Clients by client type
+        trx('clients')
+          .where('tenant', context.tenant)
+          .whereNotNull('client_type')
+          .groupBy('client_type')
+          .select('client_type', trx.raw('COUNT(*) as count')),
 
-      // Credit balance statistics
-      knex('clients')
-        .where('tenant', context.tenant)
-        .select(
-          knex.raw('SUM(credit_balance) as total_credit_balance'),
-          knex.raw('AVG(credit_balance) as average_credit_balance')
-        )
-        .first()
-    ]);
+        // Credit balance statistics
+        trx('clients')
+          .where('tenant', context.tenant)
+          .select(
+            trx.raw('SUM(credit_balance) as total_credit_balance'),
+            trx.raw('AVG(credit_balance) as average_credit_balance')
+          )
+          .first()
+      ]);
 
-    return {
-      total_clients: parseInt(totalStats.total_clients),
-      active_clients: parseInt(totalStats.active_clients),
-      inactive_clients: parseInt(totalStats.inactive_clients),
-      clients_by_billing_cycle: billingCycleStats.reduce((acc: any, row: any) => {
-        acc[row.billing_cycle] = parseInt(row.count);
-        return acc;
-      }, {}),
-      clients_by_client_type: clientTypeStats.reduce((acc: any, row: any) => {
-        acc[row.client_type] = parseInt(row.count);
-        return acc;
-      }, {}),
-      total_credit_balance: parseFloat(creditStats.total_credit_balance || '0'),
-      average_credit_balance: parseFloat(creditStats.average_credit_balance || '0')
-    };
+      return {
+        total_clients: parseInt(totalStats.total_clients),
+        active_clients: parseInt(totalStats.active_clients),
+        inactive_clients: parseInt(totalStats.inactive_clients),
+        clients_by_billing_cycle: billingCycleStats.reduce((acc: any, row: any) => {
+          acc[row.billing_cycle] = parseInt(row.count);
+          return acc;
+        }, {}),
+        clients_by_client_type: clientTypeStats.reduce((acc: any, row: any) => {
+          acc[row.client_type] = parseInt(row.count);
+          return acc;
+        }, {}),
+        total_credit_balance: parseFloat(creditStats.total_credit_balance || '0'),
+        average_credit_balance: parseFloat(creditStats.average_credit_balance || '0')
+      };
+    });
   }
 
   /**
