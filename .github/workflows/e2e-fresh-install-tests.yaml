@@ -227,6 +227,10 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting setup service"
+          # Set DB_HOST_ADMIN and DB_PORT_ADMIN to connect directly to postgres for admin operations
+          # while keeping DB_HOST and DB_PORT pointing to pgbouncer for migrations/seeds
+          DB_HOST_ADMIN=postgres \
+          DB_PORT_ADMIN=5432 \
           docker-compose -p alga-e2e-test \
             -f docker-compose.base.yaml \
             -f docker-compose.ce.yaml \

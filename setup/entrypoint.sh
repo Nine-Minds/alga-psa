@@ -23,8 +23,12 @@ trap 'handle_error' ERR
 # Function to check if postgres is ready
 wait_for_postgres() {
     log "Waiting for PostgreSQL to be ready..."
+    # Use DB_HOST_ADMIN for direct postgres connections (admin operations)
+    # Fall back to DB_HOST if not set, then to 'postgres'
+    local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
+    local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
     set +e  # Temporarily disable exit on error for the until loop
-    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -c '\q' 2>/dev/null; do
+    until PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -c '\q' 2>/dev/null; do
         log "PostgreSQL is unavailable - sleeping"
         sleep 1
     done
@@ -35,7 +39,10 @@ wait_for_postgres() {
 # Function to check if seeds have been run
 check_seeds_status() {
     local has_seeds
-    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
+    # Use DB_HOST_ADMIN for direct postgres connections (admin operations)
+    local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
+    local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
+    has_seeds=$(PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -tAc "SELECT EXISTS (SELECT 1 FROM users LIMIT 1);")
     if [ "$has_seeds" = "t" ]; then
         return 0  # Seeds have been run
     else
@@ -50,11 +57,16 @@ main() {
     log "Creating database..."
     node /app/server/setup/create_database.js
 
+    # Use DB_HOST_ADMIN for direct postgres connections (admin operations)
+    # pgbouncer doesn't support certain admin commands
+    local PG_ADMIN_HOST=${DB_HOST_ADMIN:-${DB_HOST:-postgres}}
+    local PG_ADMIN_PORT=${DB_PORT_ADMIN:-${DB_PORT:-5432}}
+
     log "Creating pgboss schema..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
 
     log "Granting necessary permissions..."
-    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${DB_HOST:-postgres} -p ${DB_PORT:-5432} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
+    PGPASSWORD=$(cat /run/secrets/postgres_password) psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
 
     log "Running migrations..."
     
