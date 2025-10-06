@@ -13,17 +13,17 @@ FROM base AS development
 # First, copy root package files to install shared dependencies
 COPY package*.json ./
 COPY tsconfig.base.json ./
-RUN npm ci --omit=dev
+RUN npm ci
 
 # Build shared packages
 COPY shared ./shared
 WORKDIR /app/shared
-RUN npm install --omit=dev
+RUN npm install
 
 # Now build temporal-workflows
 WORKDIR /app/ee/temporal-workflows
 COPY ee/temporal-workflows/package*.json ./
-RUN npm install --omit=dev
+RUN npm install
 COPY ee/temporal-workflows/ ./
 RUN npm run build
 
