@@ -19,7 +19,7 @@ import { IStandardPriority, ITicketCategory } from 'server/src/interfaces/ticket
 import { IStandardStatus } from 'server/src/interfaces/status.interface';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
-import { createChannel, updateChannel } from 'server/src/lib/actions/channel-actions/channelActions';
+import { createBoard, updateBoard } from 'server/src/lib/actions/board-actions/boardActions';
 import { createCategory } from 'server/src/lib/actions/ticketCategoryActions';
 import { createStatus } from 'server/src/lib/actions/status-actions/statusActions';
 import { createPriority } from 'server/src/lib/actions/priorityActions';
@@ -28,27 +28,27 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 
 interface SectionState {
   numbering: boolean;
-  channels: boolean;
+  boards: boolean;
   categories: boolean;
   statuses: boolean;
   priorities: boolean;
 }
 
 interface ImportSectionState {
-  channels: boolean;
+  boards: boolean;
   categories: boolean;
   statuses: boolean;
   priorities: boolean;
 }
 
 interface AddFormState {
-  channel: boolean;
+  board: boolean;
   category: boolean;
   status: boolean;
   priority: boolean;
 }
 
-interface ChannelFormData {
+interface BoardFormData {
   name: string;
   description: string;
   displayOrder: number;
@@ -61,7 +61,7 @@ interface CategoryFormData {
   name: string;
   parentCategory: string;
   displayOrder: number;
-  channelId: string;
+  boardId: string;
 }
 
 interface StatusFormData {
@@ -82,28 +82,28 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [expandedSections, setExpandedSections] = useState<SectionState>({
     numbering: false,
-    channels: false,
+    boards: false,
     categories: false,
     statuses: false,
     priorities: false
   });
 
   const [showImportDialogs, setShowImportDialogs] = useState<ImportSectionState>({
-    channels: false,
+    boards: false,
     categories: false,
     statuses: false,
     priorities: false
   });
 
   const [showAddForms, setShowAddForms] = useState<AddFormState>({
-    channel: false,
+    board: false,
     category: false,
     status: false,
     priority: false
   });
 
   // Form data for adding new items
-  const [channelForm, setChannelForm] = useState<ChannelFormData>({
+  const [boardForm, setBoardForm] = useState<BoardFormData>({
     name: '',
     description: '',
     displayOrder: 0,
@@ -115,7 +115,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     name: '', 
     parentCategory: '', 
     displayOrder: 0,
-    channelId: '' 
+    boardId: '' 
   });
   const [statusForm, setStatusForm] = useState<StatusFormData>({ 
     name: '', 
@@ -130,40 +130,40 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   });
 
   // Available standard data
-  const [availableChannels, setAvailableChannels] = useState<any[]>([]);
+  const [availableBoards, setAvailableBoards] = useState<any[]>([]);
   const [availableCategories, setAvailableCategories] = useState<any[]>([]);
   const [availableStatuses, setAvailableStatuses] = useState<IStandardStatus[]>([]);
   const [availablePriorities, setAvailablePriorities] = useState<IStandardPriority[]>([]);
 
   // Selected items for import
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [selectedBoards, setSelectedBoards] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedPriorities, setSelectedPriorities] = useState<string[]>([]);
   
-  // Channel selection for categories import
-  const [importTargetChannel, setImportTargetChannel] = useState<string>('');
+  // Board selection for categories import
+  const [importTargetBoard, setImportTargetBoard] = useState<string>('');
 
   // Import results
   const [importResults, setImportResults] = useState<Record<string, { imported: number; skipped: number }>>({});
 
   // Loading states
   const [isImporting, setIsImporting] = useState<Record<string, boolean>>({
-    channels: false,
+    boards: false,
     categories: false,
     statuses: false,
     priorities: false
   });
 
   // Imported items tracking
-  const [importedChannels, setImportedChannels] = useState<any[]>([]);
+  const [importedBoards, setImportedBoards] = useState<any[]>([]);
   const [importedStatuses, setImportedStatuses] = useState<any[]>([]);
   const [importedCategories, setImportedCategories] = useState<string[]>([]);
   const [importedPriorities, setImportedPriorities] = useState<any[]>([]);
 
   // ITIL configuration
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
-  const [importChannelItilSettings, setImportChannelItilSettings] = useState<Record<string, boolean>>({});
+  const [importBoardItilSettings, setImportBoardItilSettings] = useState<Record<string, boolean>>({});
 
   // Function to load existing ticketing data
   const loadExistingData = async () => {
@@ -172,7 +172,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         
         if (result.success && result.data) {
           // Set imported items from existing data
-          setImportedChannels(result.data.channels);
+          setImportedBoards(result.data.boards);
           setImportedStatuses(result.data.statuses);
           setImportedPriorities(result.data.priorities);
           
@@ -196,13 +196,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             updateData({ statuses: result.data.statuses });
           }
           
-          // If there's a default channel and no channel is set, use it
-          if (!data.channelId && result.data.channels.length > 0) {
-            const defaultChannel = result.data.channels.find(ch => ch.is_default);
-            if (defaultChannel) {
+          // If there's a default board and no board is set, use it
+          if (!data.boardId && result.data.boards.length > 0) {
+            const defaultBoard = result.data.boards.find(ch => ch.is_default);
+            if (defaultBoard) {
               updateData({ 
-                channelId: defaultChannel.channel_id,
-                channelName: defaultChannel.channel_name 
+                boardId: defaultBoard.board_id,
+                boardName: defaultBoard.board_name 
               });
             }
           }
@@ -221,10 +221,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   // Load available standard data when import dialogs are opened
   useEffect(() => {
-    if (showImportDialogs.channels && availableChannels.length === 0) {
-      loadAvailableChannels();
+    if (showImportDialogs.boards && availableBoards.length === 0) {
+      loadAvailableBoards();
     }
-  }, [showImportDialogs.channels]);
+  }, [showImportDialogs.boards]);
 
   useEffect(() => {
     if (showImportDialogs.categories && availableCategories.length === 0) {
@@ -244,10 +244,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   }, [showImportDialogs.priorities]);
 
-  const loadAvailableChannels = async () => {
+  const loadAvailableBoards = async () => {
     try {
-      const channels = await getAvailableReferenceData('channels');
-      setAvailableChannels(channels);
+      const boards = await getAvailableReferenceData('boards');
+      setAvailableBoards(boards);
     } catch (error) {
       console.error('Error loading available boards:', error);
     }
@@ -255,10 +255,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
   const loadAvailableCategories = async () => {
     try {
-      // For categories, we need a channel first
-      if (data.channelId || importedChannels.length > 0) {
-        const channelId = data.channelId || importedChannels[0]?.channel_id;
-        const categories = await getAvailableReferenceData('categories', { channel_id: channelId });
+      // For categories, we need a board first
+      if (data.boardId || importedBoards.length > 0) {
+        const boardId = data.boardId || importedBoards[0]?.board_id;
+        const categories = await getAvailableReferenceData('categories', { board_id: boardId });
         
         // Sort categories to ensure parents come before children
         const sortedCategories = (categories as any[]).sort((a: any, b: any) => {
@@ -295,113 +295,113 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const handleImportChannels = async () => {
-    if (selectedChannels.length === 0) return;
+  const handleImportBoards = async () => {
+    if (selectedBoards.length === 0) return;
 
-    setIsImporting(prev => ({ ...prev, channels: true }));
+    setIsImporting(prev => ({ ...prev, boards: true }));
     try {
-      // Get the reference channels data first
-      const referenceChannels = availableChannels.filter(channel =>
-        selectedChannels.includes(channel.id)
+      // Get the reference boards data first
+      const referenceBoards = availableBoards.filter(board =>
+        selectedBoards.includes(board.id)
       );
 
-      // Separate ITIL and non-ITIL channels
-      const itilChannels = referenceChannels.filter(channel =>
-        importChannelItilSettings[channel.id]
+      // Separate ITIL and non-ITIL boards
+      const itilBoards = referenceBoards.filter(board =>
+        importBoardItilSettings[board.id]
       );
-      const regularChannels = referenceChannels.filter(channel =>
-        !importChannelItilSettings[channel.id]
+      const regularBoards = referenceBoards.filter(board =>
+        !importBoardItilSettings[board.id]
       );
 
       const allResults: any = { imported: [], skipped: [] };
 
-      // Import regular channels using the existing process
-      if (regularChannels.length > 0) {
-        const regularChannelIds = regularChannels.map(c => c.id);
-        const regularResult = await importReferenceData('channels', regularChannelIds);
+      // Import regular boards using the existing process
+      if (regularBoards.length > 0) {
+        const regularBoardIds = regularBoards.map(c => c.id);
+        const regularResult = await importReferenceData('boards', regularBoardIds);
 
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
 
-      // Create ITIL channels manually using the createChannel API
-      for (const channel of itilChannels) {
+      // Create ITIL boards manually using the createBoard API
+      for (const board of itilBoards) {
         try {
-          const createdChannel = await createChannel({
-            channel_name: channel.channel_name,
-            description: channel.description || '',
-            display_order: channel.display_order,
-            is_inactive: channel.is_inactive || false,
+          const createdBoard = await createBoard({
+            board_name: board.board_name,
+            description: board.description || '',
+            display_order: board.display_order,
+            is_inactive: board.is_inactive || false,
             category_type: 'itil',
             priority_type: 'itil'
           });
 
-          allResults.imported.push(createdChannel);
+          allResults.imported.push(createdBoard);
         } catch (createError) {
-          console.error(`Failed to create ITIL channel ${channel.channel_name}:`, createError);
+          console.error(`Failed to create ITIL board ${board.board_name}:`, createError);
           allResults.skipped.push({
-            name: channel.channel_name,
-            reason: 'Failed to create as ITIL channel'
+            name: board.board_name,
+            reason: 'Failed to create as ITIL board'
           });
         }
       }
 
-      setImportResults(prev => ({ ...prev, channels: {
+      setImportResults(prev => ({ ...prev, boards: {
         imported: allResults.imported?.length || 0,
         skipped: allResults.skipped?.length || 0
       }}));
 
-      // Track imported channels
+      // Track imported boards
       if (allResults.imported?.length > 0) {
-        // Check if any imported channel is marked as default
-        const hasDefaultChannel = allResults.imported.some((ch: any) => ch.is_default);
+        // Check if any imported board is marked as default
+        const hasDefaultBoard = allResults.imported.some((ch: any) => ch.is_default);
 
-        // Check if there's already a default channel in existing channels
-        const existingHasDefault = importedChannels.some(ch => ch.is_default);
+        // Check if there's already a default board in existing boards
+        const existingHasDefault = importedBoards.some(ch => ch.is_default);
 
-        // If no default channel exists, mark the first one as default
-        if (!hasDefaultChannel && !existingHasDefault) {
-          const firstChannel: any = allResults.imported[0];
-          // Update the channel to be default
-          await updateChannel(firstChannel.channel_id, { is_default: true });
-          firstChannel.is_default = true;
+        // If no default board exists, mark the first one as default
+        if (!hasDefaultBoard && !existingHasDefault) {
+          const firstBoard: any = allResults.imported[0];
+          // Update the board to be default
+          await updateBoard(firstBoard.board_id, { is_default: true });
+          firstBoard.is_default = true;
           toast.success('First board automatically set as default', {
             duration: 3000
           });
         }
 
-        // Sort channels by display_order to maintain proper order
-        const allChannels = [...importedChannels, ...allResults.imported].sort((a, b) =>
+        // Sort boards by display_order to maintain proper order
+        const allBoards = [...importedBoards, ...allResults.imported].sort((a, b) =>
           (a.display_order || 0) - (b.display_order || 0)
         );
-        setImportedChannels(allChannels);
+        setImportedBoards(allBoards);
 
-        // If we don't have a channel set yet, use the first imported
-        if (!data.channelId) {
-          const firstChannel = allResults.imported[0];
-          const isItilCompliant = firstChannel.category_type === 'itil' && firstChannel.priority_type === 'itil';
+        // If we don't have a board set yet, use the first imported
+        if (!data.boardId) {
+          const firstBoard = allResults.imported[0];
+          const isItilCompliant = firstBoard.category_type === 'itil' && firstBoard.priority_type === 'itil';
           updateData({
-            channelId: firstChannel.channel_id,
-            channelName: firstChannel.channel_name,
+            boardId: firstBoard.board_id,
+            boardName: firstBoard.board_name,
             is_itil_compliant: isItilCompliant
           });
         }
       }
 
-      setSelectedChannels([]);
-      setImportChannelItilSettings({});
-      setShowImportDialogs(prev => ({ ...prev, channels: false }));
-      await loadAvailableChannels();
+      setSelectedBoards([]);
+      setImportBoardItilSettings({});
+      setShowImportDialogs(prev => ({ ...prev, boards: false }));
+      await loadAvailableBoards();
     } catch (error) {
       console.error('Error importing boards:', error);
       toast.error('Failed to import boards');
     } finally {
-      setIsImporting(prev => ({ ...prev, channels: false }));
+      setIsImporting(prev => ({ ...prev, boards: false }));
     }
   };
 
   const handleImportCategories = async () => {
-    if (selectedCategories.length === 0 || !importTargetChannel) return;
+    if (selectedCategories.length === 0 || !importTargetBoard) return;
     
     // Check if any selected subcategories don't have their parent selected
     const selectedSubcategories = availableCategories.filter(cat => 
@@ -424,7 +424,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     
     setIsImporting(prev => ({ ...prev, categories: true }));
     try {
-      const result = await importReferenceData('categories', selectedCategories, { channel_id: importTargetChannel });
+      const result = await importReferenceData('categories', selectedCategories, { board_id: importTargetBoard });
       setImportResults(prev => ({ ...prev, categories: { 
         imported: result.imported?.length || 0, 
         skipped: result.skipped?.length || 0 
@@ -563,10 +563,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
   };
 
   const addCategory = async () => {
-    if (!categoryForm.name.trim() || !categoryForm.channelId) return;
+    if (!categoryForm.name.trim() || !categoryForm.boardId) return;
     
     // Check if category already exists
-    if (data.categories.some(cat => cat.category_name === categoryForm.name && cat.channel_id === categoryForm.channelId)) {
+    if (data.categories.some(cat => cat.category_name === categoryForm.name && cat.board_id === categoryForm.boardId)) {
       toast.error('Category already exists in this board');
       return;
     }
@@ -574,15 +574,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     try {
       // Calculate display order if not provided or if already in use
       let displayOrder = categoryForm.displayOrder;
-      const channelCategories = data.categories.filter(c => c.channel_id === categoryForm.channelId);
+      const boardCategories = data.categories.filter(c => c.board_id === categoryForm.boardId);
       
       let relevantCategories;
       if (categoryForm.parentCategory) {
         // For subcategories, consider siblings under the same parent
-        relevantCategories = channelCategories.filter(c => c.parent_category === categoryForm.parentCategory);
+        relevantCategories = boardCategories.filter(c => c.parent_category === categoryForm.parentCategory);
       } else {
-        // For parent categories in this channel
-        relevantCategories = channelCategories.filter(c => !c.parent_category);
+        // For parent categories in this board
+        relevantCategories = boardCategories.filter(c => !c.parent_category);
       }
       
       const maxOrder = relevantCategories.length > 0 
@@ -602,7 +602,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       // Create actual category in database
       const createdCategory = await createCategory({
         category_name: categoryForm.name,
-        channel_id: categoryForm.channelId,
+        board_id: categoryForm.boardId,
         parent_category: categoryForm.parentCategory || undefined,
         display_order: displayOrder
       });
@@ -621,7 +621,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setImportedCategories(prev => [...prev, createdCategory.category_name]);
       
       // Reset form and close dialog
-      setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, channelId: '' });
+      setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, boardId: '' });
       setShowAddForms(prev => ({ ...prev, category: false }));
     } catch (error) {
       console.error('Error creating category:', error);
@@ -706,21 +706,21 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     setShowImportDialogs(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const hasChannel = () => {
-    return !!(data.channelId || data.channelName || importedChannels.length > 0);
+  const hasBoard = () => {
+    return !!(data.boardId || data.boardName || importedBoards.length > 0);
   };
 
   // Remove functions for each type
-  const removeChannel = async (channelId: string) => {
+  const removeBoard = async (boardId: string) => {
     try {
-      const result = await deleteReferenceDataItem('channels', channelId);
+      const result = await deleteReferenceDataItem('boards', boardId);
       if (result.success) {
-        // Remove from imported channels
-        setImportedChannels(prev => prev.filter(ch => ch.channel_id !== channelId));
+        // Remove from imported boards
+        setImportedBoards(prev => prev.filter(ch => ch.board_id !== boardId));
         
-        // If this was the selected channel, clear it
-        if (data.channelId === channelId) {
-          updateData({ channelId: undefined, channelName: '' });
+        // If this was the selected board, clear it
+        if (data.boardId === boardId) {
+          updateData({ boardId: undefined, boardName: '' });
         }
         
         // Refresh data from server
@@ -735,30 +735,30 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     }
   };
 
-  const setDefaultChannel = async (channelId: string) => {
+  const setDefaultBoard = async (boardId: string) => {
     try {
-      const channel = importedChannels.find(ch => ch.channel_id === channelId);
-      if (!channel) return;
+      const board = importedBoards.find(ch => ch.board_id === boardId);
+      if (!board) return;
       
       // Don't allow removing default status - at least one board must be default
-      if (channel.is_default) {
+      if (board.is_default) {
         toast.error('At least one board must be set as default', {
           duration: 3000
         });
         return;
       }
       
-      // Set this channel as default (this will automatically unset others)
-      await updateChannel(channel.channel_id, { is_default: true });
+      // Set this board as default (this will automatically unset others)
+      await updateBoard(board.board_id, { is_default: true });
       
       // Refresh data from server to get updated default states
       await loadExistingData();
       
-      // Update the selected channel in wizard data if no channel is selected
-      if (!data.channelId) {
+      // Update the selected board in wizard data if no board is selected
+      if (!data.boardId) {
         updateData({ 
-          channelId: channel.channel_id,
-          channelName: channel.channel_name 
+          boardId: board.board_id,
+          boardName: board.board_name 
         });
       }
       
@@ -978,34 +978,34 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         )}
       </div>
 
-      {/* Channels Section */}
+      {/* Boards Section */}
       <div className="border rounded-lg">
         <button
           type="button"
-          onClick={() => toggleSection('channels')}
+          onClick={() => toggleSection('boards')}
           className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Boards</span>
-            {!hasChannel() && (
+            {!hasBoard() && (
               <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Required</span>
             )}
           </div>
-          {expandedSections.channels ? (
+          {expandedSections.boards ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
           ) : (
             <ChevronDown className="w-4 h-4 text-gray-500" />
           )}
         </button>
 
-        {expandedSections.channels && (
+        {expandedSections.boards && (
           <div className="p-4 border-t space-y-4">
             <div className="rounded-md bg-blue-50 p-4 mb-4">
               <p className="text-sm text-blue-800">
                 <span className="font-semibold">Note:</span> Boards help organize tickets by department, team, or workflow type. When clients create tickets through the client portal, they will automatically be assigned to the board marked as default.
               </p>
-              {importedChannels.length > 1 && (
+              {importedBoards.length > 1 && (
                 <p className="text-sm text-blue-800 mt-2">
                   <span className="font-semibold">Tip:</span> Click the star in the Default column to change which board is the default.
                 </p>
@@ -1015,20 +1015,20 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             {/* Action Buttons - Moved to top */}
             <div className="flex gap-2">
               <Button
-                id="import-channels-button"
+                id="import-boards-button"
                 type="button"
                 variant="outline"
-                onClick={() => toggleImportDialog('channels')}
+                onClick={() => toggleImportDialog('boards')}
                 className="flex-1"
               >
                 <Package className="w-4 h-4 mr-2" />
                 Import from Standard
               </Button>
               <Button
-                id="add-channel-button"
+                id="add-board-button"
                 type="button"
                 variant="outline"
-                onClick={() => setShowAddForms(prev => ({ ...prev, channel: !prev.channel }))}
+                onClick={() => setShowAddForms(prev => ({ ...prev, board: !prev.board }))}
                 className="flex-1"
               >
                 <Plus className="w-4 h-4 mr-2" />
@@ -1036,37 +1036,37 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
               </Button>
             </div>
 
-            {/* Add New Channel Form - Right under buttons */}
-            {showAddForms.channel && (
+            {/* Add New Board Form - Right under buttons */}
+            {showAddForms.board && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">Add New Board</h4>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="new-channel-name">Board Name *</Label>
+                    <Label htmlFor="new-board-name">Board Name *</Label>
                     <Input
-                      id="new-channel-name"
-                      value={channelForm.name}
-                      onChange={(e) => setChannelForm(prev => ({ ...prev, name: e.target.value }))}
+                      id="new-board-name"
+                      value={boardForm.name}
+                      onChange={(e) => setBoardForm(prev => ({ ...prev, name: e.target.value }))}
                       placeholder="Enter board name"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-channel-description">Description</Label>
+                    <Label htmlFor="new-board-description">Description</Label>
                     <Input
-                      id="new-channel-description"
-                      value={channelForm.description}
-                      onChange={(e) => setChannelForm(prev => ({ ...prev, description: e.target.value }))}
+                      id="new-board-description"
+                      value={boardForm.description}
+                      onChange={(e) => setBoardForm(prev => ({ ...prev, description: e.target.value }))}
                       placeholder="Enter description"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-channel-order">Display Order</Label>
+                    <Label htmlFor="new-board-order">Display Order</Label>
                     <Input
-                      id="new-channel-order"
+                      id="new-board-order"
                       type="number"
-                      value={channelForm.displayOrder}
-                      onChange={(e) => setChannelForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
+                      value={boardForm.displayOrder}
+                      onChange={(e) => setBoardForm(prev => ({ ...prev, displayOrder: parseInt(e.target.value) || 0 }))}
                       placeholder="Leave empty for auto-generate"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
@@ -1081,7 +1081,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="channel-itil-compliant">Make this board ITIL compliant</Label>
+                      <Label htmlFor="board-itil-compliant">Make this board ITIL compliant</Label>
                       <button
                         type="button"
                         onClick={() => setShowItilInfoModal(true)}
@@ -1092,40 +1092,40 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </button>
                     </div>
                     <Switch
-                      id="channel-itil-compliant"
-                      checked={channelForm.isItilCompliant}
-                      onCheckedChange={(checked) => setChannelForm(prev => ({ ...prev, isItilCompliant: checked }))}
+                      id="board-itil-compliant"
+                      checked={boardForm.isItilCompliant}
+                      onCheckedChange={(checked) => setBoardForm(prev => ({ ...prev, isItilCompliant: checked }))}
                     />
                   </div>
                 </div>
 
                 <div className="flex gap-2">
                   <Button
-                    id="cancel-add-channel-form"
+                    id="cancel-add-board-form"
                     variant="outline"
                     onClick={() => {
-                      setShowAddForms(prev => ({ ...prev, channel: false }));
-                      setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
+                      setShowAddForms(prev => ({ ...prev, board: false }));
+                      setBoardForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
                     }}
                     className="flex-1"
                   >
                     Cancel
                   </Button>
                   <Button
-                    id="save-add-channel-form"
+                    id="save-add-board-form"
                     onClick={async () => {
-                      if (!channelForm.name.trim()) return;
+                      if (!boardForm.name.trim()) return;
                       
-                      // Check if channel already exists
-                      if (importedChannels.some(ch => ch.channel_name === channelForm.name)) {
+                      // Check if board already exists
+                      if (importedBoards.some(ch => ch.board_name === boardForm.name)) {
                         toast.error('Board already exists');
                         return;
                       }
                       
                       try {
                         // Calculate the next display order if not provided or if already in use
-                        let displayOrder = channelForm.displayOrder;
-                        const maxOrder = importedChannels.reduce((max, ch) => 
+                        let displayOrder = boardForm.displayOrder;
+                        const maxOrder = importedBoards.reduce((max, ch) => 
                           Math.max(max, ch.display_order || 0), 0
                         );
                         
@@ -1133,55 +1133,55 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           displayOrder = maxOrder + 1;
                         } else {
                           // Check if the provided order is already in use
-                          const isOrderInUse = importedChannels.some(ch => ch.display_order === displayOrder);
+                          const isOrderInUse = importedBoards.some(ch => ch.display_order === displayOrder);
                           if (isOrderInUse) {
                             displayOrder = maxOrder + 1;
                           }
                         }
                         
                         // Set as default if this is the first board
-                        const isDefault = importedChannels.length === 0;
+                        const isDefault = importedBoards.length === 0;
                         
-                        // Create actual channel in database
-                        const createdChannel = await createChannel({
-                          channel_name: channelForm.name,
-                          description: channelForm.description || '',
+                        // Create actual board in database
+                        const createdBoard = await createBoard({
+                          board_name: boardForm.name,
+                          description: boardForm.description || '',
                           display_order: displayOrder,
                           is_inactive: false,
                           is_default: isDefault,
-                          category_type: channelForm.isItilCompliant ? 'itil' : 'custom',
-                          priority_type: channelForm.isItilCompliant ? 'itil' : 'custom'
+                          category_type: boardForm.isItilCompliant ? 'itil' : 'custom',
+                          priority_type: boardForm.isItilCompliant ? 'itil' : 'custom'
                         });
                         
-                        // Add to imported channels list and sort by display_order
-                        setImportedChannels(prev => {
-                          const allChannels = [...prev, createdChannel].sort((a, b) => 
+                        // Add to imported boards list and sort by display_order
+                        setImportedBoards(prev => {
+                          const allBoards = [...prev, createdBoard].sort((a, b) => 
                             (a.display_order || 0) - (b.display_order || 0)
                           );
-                          return allChannels;
+                          return allBoards;
                         });
                         
-                        // Update wizard data if this is the first channel
-                        if (!data.channelId) {
+                        // Update wizard data if this is the first board
+                        if (!data.boardId) {
                           updateData({
-                            channelId: createdChannel.channel_id,
-                            channelName: createdChannel.channel_name,
-                            is_itil_compliant: channelForm.isItilCompliant
+                            boardId: createdBoard.board_id,
+                            boardName: createdBoard.board_name,
+                            is_itil_compliant: boardForm.isItilCompliant
                           });
                         }
                         
                         // Reset and close
-                        setChannelForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
-                        setShowAddForms(prev => ({ ...prev, channel: false }));
+                        setBoardForm({ name: '', description: '', displayOrder: 0, isActive: true, isDefault: false, isItilCompliant: false });
+                        setShowAddForms(prev => ({ ...prev, board: false }));
                         
-                        // Reload available channels for category creation
-                        await loadAvailableChannels();
+                        // Reload available boards for category creation
+                        await loadAvailableBoards();
                       } catch (error) {
-                        console.error('Error creating channel:', error);
+                        console.error('Error creating board:', error);
                         toast.error('Failed to create board. Please try again.');
                       }
                     }}
-                    disabled={!channelForm.name.trim()}
+                    disabled={!boardForm.name.trim()}
                     className="flex-1"
                   >
                     Add Board
@@ -1191,15 +1191,15 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             )}
 
             {/* Import Dialog - Right under buttons */}
-            {showImportDialogs.channels && (
+            {showImportDialogs.boards && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">Import Standard Boards</h4>
                 
-                {importResults.channels && (
+                {importResults.boards && (
                   <div className="rounded-md bg-green-50 border border-green-200 p-3 flex items-center gap-2">
                     <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                     <p className="text-sm text-green-800">
-                      Successfully imported {importResults.channels.imported} board{importResults.channels.imported !== 1 ? 's' : ''}.
+                      Successfully imported {importResults.boards.imported} board{importResults.boards.imported !== 1 ? 's' : ''}.
                     </p>
                   </div>
                 )}
@@ -1211,17 +1211,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
-                              id="select-all-channels-checkbox"
-                              checked={availableChannels.length > 0 && 
-                                availableChannels.every(c => selectedChannels.includes(c.id))}
+                              id="select-all-boards-checkbox"
+                              checked={availableBoards.length > 0 && 
+                                availableBoards.every(c => selectedBoards.includes(c.id))}
                               onChange={() => {
-                                if (availableChannels.every(c => selectedChannels.includes(c.id))) {
-                                  setSelectedChannels([]);
+                                if (availableBoards.every(c => selectedBoards.includes(c.id))) {
+                                  setSelectedBoards([]);
                                 } else {
-                                  setSelectedChannels(availableChannels.map(c => c.id));
+                                  setSelectedBoards(availableBoards.map(c => c.id));
                                 }
                               }}
-                              disabled={availableChannels.length === 0}
+                              disabled={availableBoards.length === 0}
                             />
                           </th>
                           <th className="px-3 py-2 text-left text-sm font-medium text-gray-700">Name</th>
@@ -1243,33 +1243,33 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {availableChannels.map((channel, idx) => (
-                          <tr key={channel.id} className="hover:bg-gray-50">
+                        {availableBoards.map((board, idx) => (
+                          <tr key={board.id} className="hover:bg-gray-50">
                             <td className="px-3 py-2">
                               <Checkbox
-                                id={`select-channel-${channel.id}-checkbox`}
-                                checked={selectedChannels.includes(channel.id)}
+                                id={`select-board-${board.id}-checkbox`}
+                                checked={selectedBoards.includes(board.id)}
                                 onChange={() => {
-                                  if (selectedChannels.includes(channel.id)) {
-                                    setSelectedChannels(selectedChannels.filter(id => id !== channel.id));
+                                  if (selectedBoards.includes(board.id)) {
+                                    setSelectedBoards(selectedBoards.filter(id => id !== board.id));
                                   } else {
-                                    setSelectedChannels([...selectedChannels, channel.id]);
+                                    setSelectedBoards([...selectedBoards, board.id]);
                                   }
                                 }}
                               />
                             </td>
-                            <td className="px-3 py-2 text-sm">{channel.channel_name}</td>
+                            <td className="px-3 py-2 text-sm">{board.board_name}</td>
                             <td className="px-3 py-2 text-center">
-                              {channel.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
+                              {board.is_default && <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 inline" />}
                             </td>
-                            <td className="px-3 py-2 text-sm text-gray-600">{channel.display_order || 0}</td>
+                            <td className="px-3 py-2 text-sm text-gray-600">{board.display_order || 0}</td>
                             <td className="px-3 py-2 text-center">
                               <Switch
-                                checked={importChannelItilSettings[channel.id] || false}
+                                checked={importBoardItilSettings[board.id] || false}
                                 onCheckedChange={(checked) => {
-                                  setImportChannelItilSettings(prev => ({
+                                  setImportBoardItilSettings(prev => ({
                                     ...prev,
-                                    [channel.id]: checked
+                                    [board.id]: checked
                                   }));
                                 }}
                                 className="data-[state=checked]:bg-blue-500"
@@ -1284,33 +1284,33 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
 
                 <div className="flex gap-2">
                   <Button
-                    id="cancel-import-channels"
+                    id="cancel-import-boards"
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      setShowImportDialogs(prev => ({ ...prev, channels: false }));
-                      setSelectedChannels([]);
-                      setImportChannelItilSettings({});
+                      setShowImportDialogs(prev => ({ ...prev, boards: false }));
+                      setSelectedBoards([]);
+                      setImportBoardItilSettings({});
                     }}
                     className="flex-1"
                   >
                     Cancel
                   </Button>
                   <Button
-                    id="confirm-import-channels"
+                    id="confirm-import-boards"
                     type="button"
-                    onClick={handleImportChannels}
-                    disabled={selectedChannels.length === 0 || isImporting.channels}
+                    onClick={handleImportBoards}
+                    disabled={selectedBoards.length === 0 || isImporting.boards}
                     className="flex-1"
                   >
-                    {isImporting.channels ? 'Importing...' : `Import (${selectedChannels.length})`}
+                    {isImporting.boards ? 'Importing...' : `Import (${selectedBoards.length})`}
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Existing Channels */}
-            {(importedChannels.length > 0 || data.channelName) && (
+            {/* Existing Boards */}
+            {(importedBoards.length > 0 || data.boardName) && (
               <div>
                 <Label className="mb-2 block">Current Boards</Label>
                 <div className="border rounded-lg overflow-hidden">
@@ -1325,26 +1325,26 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       </tr>
                     </thead>
                     <tbody className="bg-white">
-                      {importedChannels.map((channel, idx) => (
-                        <tr key={channel.channel_id}>
-                          <td className="px-2 py-1 text-xs">{channel.channel_name}</td>
+                      {importedBoards.map((board, idx) => (
+                        <tr key={board.board_id}>
+                          <td className="px-2 py-1 text-xs">{board.board_name}</td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`channel-default-toggle-${idx}`}
-                              data-channel-id={channel.channel_id}
+                              id={`board-default-toggle-${idx}`}
+                              data-board-id={board.board_id}
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => setDefaultChannel(channel.channel_id)}
+                              onClick={() => setDefaultBoard(board.board_id)}
                               className="p-0.5 h-5 w-5"
-                              title={channel.is_default ? "Default board" : "Set as default board"}
+                              title={board.is_default ? "Default board" : "Set as default board"}
                             >
-                              <Star className={`h-3.5 w-3.5 ${channel.is_default ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
+                              <Star className={`h-3.5 w-3.5 ${board.is_default ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
                             </Button>
                           </td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">{channel.display_order || 0}</td>
+                          <td className="px-2 py-1 text-center text-xs text-gray-600">{board.display_order || 0}</td>
                           <td className="px-2 py-1 text-center">
-                            {channel.category_type === 'itil' && channel.priority_type === 'itil' ? (
+                            {board.category_type === 'itil' && board.priority_type === 'itil' ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                 ITIL
                               </span>
@@ -1354,24 +1354,24 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           </td>
                           <td className="px-2 py-1 text-center">
                             <Button
-                              id={`remove-channel-${channel.channel_id}-button`}
-                              data-channel-id={channel.channel_id}
+                              id={`remove-board-${board.board_id}-button`}
+                              data-board-id={board.board_id}
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeChannel(channel.channel_id)}
+                              onClick={() => removeBoard(board.board_id)}
                               className="p-1 h-6 w-6"
                               title="Remove board"
-                              disabled={channel.is_default}
+                              disabled={board.is_default}
                             >
-                              <Trash2 className={`h-3 w-3 ${channel.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
+                              <Trash2 className={`h-3 w-3 ${board.is_default ? 'text-gray-300' : 'text-gray-500 hover:text-red-600'}`} />
                             </Button>
                           </td>
                         </tr>
                       ))}
-                      {data.channelName && !importedChannels.some(c => c.channel_name === data.channelName) && (
+                      {data.boardName && !importedBoards.some(c => c.board_name === data.boardName) && (
                         <tr>
-                          <td className="px-2 py-1 text-xs">{data.channelName}</td>
+                          <td className="px-2 py-1 text-xs">{data.boardName}</td>
                           <td className="px-2 py-1 text-center text-xs">-</td>
                           <td className="px-2 py-1 text-center text-xs text-gray-600">1</td>
                           <td className="px-2 py-1 text-center">
@@ -1402,12 +1402,12 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           type="button"
           onClick={() => toggleSection('categories')}
           className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
-          disabled={!hasChannel()}
+          disabled={!hasBoard()}
         >
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-gray-500" />
             <span className="font-medium">Categories</span>
-            {!hasChannel() && (
+            {!hasBoard() && (
               <span className="text-xs text-gray-500">(requires board)</span>
             )}
           </div>
@@ -1418,7 +1418,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           )}
         </button>
 
-        {expandedSections.categories && hasChannel() && (
+        {expandedSections.categories && hasBoard() && (
           <div className="p-4 border-t space-y-4">
             <div className="rounded-md bg-blue-50 p-4 mb-4">
               <p className="text-sm text-blue-800">
@@ -1466,14 +1466,14 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="new-category-channel">Target Board *</Label>
+                    <Label htmlFor="new-category-board">Target Board *</Label>
                     <CustomSelect
-                      id="new-category-channel-select"
-                      value={categoryForm.channelId}
-                      onValueChange={(value) => setCategoryForm(prev => ({ ...prev, channelId: value }))}
-                      options={importedChannels.map(ch => ({
-                        value: ch.channel_id,
-                        label: ch.channel_name
+                      id="new-category-board-select"
+                      value={categoryForm.boardId}
+                      onValueChange={(value) => setCategoryForm(prev => ({ ...prev, boardId: value }))}
+                      options={importedBoards.map(ch => ({
+                        value: ch.board_id,
+                        label: ch.board_name
                       }))}
                       placeholder="Select a board"
                       className="w-full"
@@ -1491,7 +1491,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       options={[
                         { value: 'none', label: 'None (Top-level category)' },
                         ...data.categories
-                          .filter(cat => !cat.parent_category && cat.channel_id === categoryForm.channelId)
+                          .filter(cat => !cat.parent_category && cat.board_id === categoryForm.boardId)
                           .map(cat => ({
                             value: cat.category_id,
                             label: cat.category_name
@@ -1499,7 +1499,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       ]}
                       placeholder="Select parent category"
                       className="w-full"
-                      disabled={!categoryForm.channelId}
+                      disabled={!categoryForm.boardId}
                     />
                   </div>
                   <div>
@@ -1523,7 +1523,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     variant="outline"
                     onClick={() => {
                       setShowAddForms(prev => ({ ...prev, category: false }));
-                      setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, channelId: '' });
+                      setCategoryForm({ name: '', parentCategory: '', displayOrder: 0, boardId: '' });
                     }}
                     className="flex-1"
                   >
@@ -1532,7 +1532,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <Button
                     id="save-add-category-form"
                     onClick={addCategory}
-                    disabled={!categoryForm.name.trim() || !categoryForm.channelId}
+                    disabled={!categoryForm.name.trim() || !categoryForm.boardId}
                     className="flex-1"
                   >
                     Add Category
@@ -1555,17 +1555,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   </div>
                 )}
 
-                {/* Channel Selection */}
+                {/* Board Selection */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Target Board *</Label>
                   <CustomSelect
                     id="import-category-target-select"
-                    value={importTargetChannel}
-                    onValueChange={setImportTargetChannel}
+                    value={importTargetBoard}
+                    onValueChange={setImportTargetBoard}
                     options={[
-                      ...importedChannels.map(ch => ({
-                        value: ch.channel_id,
-                        label: ch.channel_name
+                      ...importedBoards.map(ch => ({
+                        value: ch.board_id,
+                        label: ch.board_name
                       }))
                     ]}
                     placeholder="Select a board for imported categories"
@@ -1695,7 +1695,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     onClick={() => {
                       setShowImportDialogs(prev => ({ ...prev, categories: false }));
                       setSelectedCategories([]);
-                      setImportTargetChannel('');
+                      setImportTargetBoard('');
                     }}
                     className="flex-1"
                   >
@@ -1705,7 +1705,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     id="confirm-import-categories"
                     type="button"
                     onClick={handleImportCategories}
-                    disabled={selectedCategories.length === 0 || !importTargetChannel || isImporting.categories}
+                    disabled={selectedCategories.length === 0 || !importTargetBoard || isImporting.categories}
                     className="flex-1"
                   >
                     {isImporting.categories ? 'Importing...' : `Import (${selectedCategories.length})`}

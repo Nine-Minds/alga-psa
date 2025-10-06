@@ -101,7 +101,7 @@ describe('Email reply ingestion integration', () => {
 
     const statusId = await ensureStatus(db, tenantId);
     const priorityId = await ensurePriority(db, tenantId);
-    const channelId = await ensureChannel(db, tenantId);
+    const boardId = await ensureBoard(db, tenantId);
 
     const ticketId = uuidv4();
     const originalMessageId = `message-${uuidv4()}@mail`; 
@@ -112,7 +112,7 @@ describe('Email reply ingestion integration', () => {
       companyId,
       statusId,
       priorityId,
-      channelId,
+      boardId,
       originalMessageId,
     });
 
@@ -195,7 +195,7 @@ describe('Email reply ingestion integration', () => {
 
     const statusId = await ensureStatus(db, tenantId);
     const priorityId = await ensurePriority(db, tenantId);
-    const channelId = await ensureChannel(db, tenantId);
+    const boardId = await ensureBoard(db, tenantId);
 
     const ticketId = uuidv4();
     const originalMessageId = `message-${uuidv4()}@mail`;
@@ -206,7 +206,7 @@ describe('Email reply ingestion integration', () => {
       companyId,
       statusId,
       priorityId,
-      channelId,
+      boardId,
       originalMessageId,
     });
 
@@ -370,14 +370,14 @@ async function ensurePriority(connection: Knex, tenant: string): Promise<string>
   return existing.priority_id;
 }
 
-async function ensureChannel(connection: Knex, tenant: string): Promise<string> {
-  const existing = await connection('channels')
+async function ensureBoard(connection: Knex, tenant: string): Promise<string> {
+  const existing = await connection('boards')
     .where({ tenant })
-    .first<{ channel_id: string }>('channel_id');
-  if (!existing?.channel_id) {
-    throw new Error('No channels available for integration test');
+    .first<{ board_id: string }>('board_id');
+  if (!existing?.board_id) {
+    throw new Error('No boards available for integration test');
   }
-  return existing.channel_id;
+  return existing.board_id;
 }
 
 async function insertTicket(connection: Knex, params: {
@@ -387,7 +387,7 @@ async function insertTicket(connection: Knex, params: {
   companyId: string;
   statusId: string;
   priorityId: string;
-  channelId: string;
+  boardId: string;
   originalMessageId: string;
 }): Promise<void> {
   const ticketNumber = `INT-${Math.floor(Math.random() * 1_000_000)}`;
@@ -401,7 +401,7 @@ async function insertTicket(connection: Knex, params: {
     contact_name_id: params.contactId,
     status_id: params.statusId,
     priority_id: params.priorityId,
-    channel_id: params.channelId,
+    board_id: params.boardId,
     email_metadata: JSON.stringify({
       messageId: params.originalMessageId,
       threadId: 'thread-xyz',

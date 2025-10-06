@@ -6,7 +6,7 @@ services:
       file: ./server/docker-compose.prebuilt.yaml
       service: server
     container_name: ${APP_NAME:-sebastian}_server_ee
-    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     environment:
       EDITION: enterprise
@@ -78,7 +78,7 @@ services:
         required: false
 
   setup:
-    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     container_name: ${APP_NAME:-sebastian}_setup_ee
     restart: "no"
@@ -148,7 +148,7 @@ services:
     entrypoint: ["/app/setup/entrypoint.sh"]
 
   workflow-worker:
-    image: ghcr.io/nine-minds/alga-psa-ee:latest
+    image: "ghcr.io/nine-minds/alga-psa-ee:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     environment:
       EDITION: enterprise

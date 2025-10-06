@@ -12,12 +12,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Magical Artifacts',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             created_by: knex('users')
                                 .where({
                                     tenant: tenant.tenant,
@@ -30,12 +30,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Creature Encounters',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             created_by: knex('users')
                                 .where({
                                     tenant: tenant.tenant,
@@ -48,12 +48,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Landscape Anomalies',
                             display_order: 3,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Technical Issues'
+                                    board_name: 'Technical Issues'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             created_by: knex('users')
                                 .where({
                                     tenant: tenant.tenant,
@@ -66,12 +66,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Character Assistance',
                             display_order: 4,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'General Support'
+                                    board_name: 'General Support'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             created_by: knex('users')
                                 .where({
                                     tenant: tenant.tenant,
@@ -84,12 +84,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Realm Maintenance',
                             display_order: 5,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Projects'
+                                    board_name: 'Projects'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             created_by: knex('users')
                                 .where({
                                     tenant: tenant.tenant,
@@ -108,12 +108,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Enchanted Accessories',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -133,12 +133,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Potions and Elixirs',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -160,12 +160,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Talking Animals',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -185,12 +185,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Mythical Beings',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Urgent Matters'
+                                    board_name: 'Urgent Matters'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -212,12 +212,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Impossible Geography',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Technical Issues'
+                                    board_name: 'Technical Issues'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -237,12 +237,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Weather Oddities',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Technical Issues'
+                                    board_name: 'Technical Issues'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -264,12 +264,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Quest Guidance',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'General Support'
+                                    board_name: 'General Support'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -289,12 +289,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Magical Transformations',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'General Support'
+                                    board_name: 'General Support'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -316,12 +316,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Portal Management',
                             display_order: 1,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Projects'
+                                    board_name: 'Projects'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,
@@ -341,12 +341,12 @@ exports.seed = function (knex) {
                             tenant: tenant.tenant,
                             category_name: 'Magical Infrastructure',
                             display_order: 2,
-                            channel_id: knex('channels')
+                            board_id: knex('boards')
                                 .where({
                                     tenant: tenant.tenant,
-                                    channel_name: 'Projects'
+                                    board_name: 'Projects'
                                 })
-                                .select('channel_id'),
+                                .select('board_id'),
                             parent_category: knex('categories')
                                 .where({
                                     tenant: tenant.tenant,

@@ -386,7 +386,7 @@ export async function systemEmailProcessingWorkflow(context) {
       company_id: finalCompanyId,
       contact_id: finalContactId,
       source: 'email',
-      channel_id: ticketDefaults.channel_id,
+      board_id: ticketDefaults.board_id,
       status_id: ticketDefaults.status_id,
       priority_id: ticketDefaults.priority_id,
       category_id: ticketDefaults.category_id,

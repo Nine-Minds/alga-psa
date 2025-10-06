@@ -99,7 +99,7 @@ export class TagService extends BaseService {
       .where('tm.tenant', tenant)
       .select(
         'tm.mapping_id as tag_id',
-        'td.channel_id',
+        'td.board_id',
         'td.tag_text',
         'tm.tagged_id',
         'tm.tagged_type',
@@ -127,7 +127,7 @@ export class TagService extends BaseService {
             tag_text: data.tag_text,
             tagged_id: data.tagged_id,
             tagged_type: data.tagged_type,
-            channel_id: data.channel_id || undefined,
+            board_id: data.board_id || undefined,
             background_color: data.background_color || undefined,
             text_color: data.text_color || undefined
           };
@@ -138,7 +138,7 @@ export class TagService extends BaseService {
             tagData.tag_text,
             tagData.tagged_type,
             {
-              channel_id: tagData.channel_id,
+              board_id: tagData.board_id,
               background_color: tagData.background_color,
               text_color: tagData.text_color
             }
@@ -162,7 +162,7 @@ export class TagService extends BaseService {
             .where('tm.tenant', tenant)
             .select(
               'tm.mapping_id as tag_id',
-              'td.channel_id',
+              'td.board_id',
               'td.tag_text',
               'tm.tagged_id',
               'tm.tagged_type',
@@ -209,7 +209,7 @@ export class TagService extends BaseService {
         tag_text: updateData.tag_text,
         background_color: updateData.background_color,
         text_color: updateData.text_color,
-        channel_id: updateData.channel_id
+        board_id: updateData.board_id
       });
       
       // Get updated tag
@@ -222,7 +222,7 @@ export class TagService extends BaseService {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -264,7 +264,7 @@ export class TagService extends BaseService {
     return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
-      channel_id: tag.channel_id,
+      board_id: tag.board_id,
       tag_text: tag.tag_text,
       tagged_id: tag.tagged_id,
       tagged_type: tag.tagged_type,
@@ -288,7 +288,7 @@ export class TagService extends BaseService {
     return tagsWithDefinitions.map(tag => ({
       tag_id: tag.mapping_id,
       tenant,
-      channel_id: tag.channel_id,
+      board_id: tag.board_id,
       tag_text: tag.tag_text,
       tagged_id: tag.tagged_id,
       tagged_type: tag.tagged_type,
@@ -311,7 +311,7 @@ export class TagService extends BaseService {
     return definitions.map(def => ({
       tag_id: def.tag_id,
       tenant,
-      channel_id: def.channel_id || undefined,
+      board_id: def.board_id || undefined,
       tag_text: def.tag_text,
       tagged_id: '', // No specific entity for unique tags
       tagged_type: def.tagged_type,
@@ -332,7 +332,7 @@ export class TagService extends BaseService {
     entityType: TaggedEntityType,
     tagTexts: string[],
     options: {
-      channel_id?: string;
+      board_id?: string;
       default_colors?: {
         background_color?: string;
         text_color?: string;
@@ -353,7 +353,7 @@ export class TagService extends BaseService {
           tag_text: normalizedTag,
           tagged_id: entityId,
           tagged_type: entityType,
-          channel_id: options.channel_id || undefined,
+          board_id: options.board_id || undefined,
           background_color: options.default_colors?.background_color || undefined,
           text_color: options.default_colors?.text_color || undefined
         };
@@ -364,7 +364,7 @@ export class TagService extends BaseService {
           tagData.tag_text,
           tagData.tagged_type,
           {
-            channel_id: tagData.channel_id,
+            board_id: tagData.board_id,
             background_color: tagData.background_color,
             text_color: tagData.text_color
           }
@@ -388,7 +388,7 @@ export class TagService extends BaseService {
           .where('tm.tenant', tenant)
           .select(
             'tm.mapping_id as tag_id',
-            'td.channel_id',
+            'td.board_id',
             'td.tag_text',
             'tm.tagged_id',
             'tm.tagged_type',
@@ -434,7 +434,7 @@ export class TagService extends BaseService {
     entityType: TaggedEntityType,
     tagTexts: string[],
     options: {
-      channel_id?: string;
+      board_id?: string;
       default_colors?: {
         background_color?: string;
         text_color?: string;
@@ -507,7 +507,7 @@ export class TagService extends BaseService {
           .where('tm.tenant', tenant)
           .select(
             'tm.mapping_id as tag_id',
-            'td.channel_id',
+            'td.board_id',
             'td.tag_text',
             'tm.tagged_id',
             'tm.tagged_type',
@@ -535,7 +535,7 @@ export class TagService extends BaseService {
           acc[key] = {
             tagged_type: tag.tagged_type,
             tagged_id: tag.tagged_id,
-            channel_id: tag.channel_id
+            board_id: tag.board_id
           };
         }
         return acc;
@@ -546,7 +546,7 @@ export class TagService extends BaseService {
           tag_text: targetTagText.trim(),
           tagged_id: entity.tagged_id,
           tagged_type: entity.tagged_type,
-          channel_id: entity.channel_id,
+          board_id: entity.board_id,
           background_color: targetColors.background_color || undefined,
           text_color: targetColors.text_color || undefined
         };
@@ -556,7 +556,7 @@ export class TagService extends BaseService {
           tagData.tag_text,
           tagData.tagged_type,
           {
-            channel_id: tagData.channel_id,
+            board_id: tagData.board_id,
             background_color: tagData.background_color,
             text_color: tagData.text_color
           }
@@ -675,7 +675,7 @@ export class TagService extends BaseService {
         .where('tm.tenant', tenant)
         .select(
           'tm.mapping_id as tag_id',
-          'td.channel_id',
+          'td.board_id',
           'td.tag_text',
           'tm.tagged_id',
           'tm.tagged_type',
@@ -808,8 +808,8 @@ export class TagService extends BaseService {
         query = query.where('tm.tagged_id', filters.entity_id);
       }
 
-      if (filters.channel_id) {
-        query = query.where('td.channel_id', filters.channel_id);
+      if (filters.board_id) {
+        query = query.where('td.board_id', filters.board_id);
       }
 
       if (filters.created_after) {
@@ -835,7 +835,7 @@ export class TagService extends BaseService {
       // Get results with relevance scoring
       const tags = await query.select(
         'tm.mapping_id as tag_id',
-        'td.channel_id',
+        'td.board_id',
         'td.tag_text',
         'tm.tagged_id',
         'tm.tagged_type',

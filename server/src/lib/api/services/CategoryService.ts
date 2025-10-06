@@ -267,9 +267,9 @@ export class CategoryService extends BaseService {
       let query = trx('ticket_categories')
         .where('tenant', context.tenant);
 
-      // Apply channel filter if provided
-      if (filters.channel_id) {
-        query = query.where('channel_id', filters.channel_id);
+      // Apply board filter if provided
+      if (filters.board_id) {
+        query = query.where('board_id', filters.board_id);
       }
 
       // Apply search filter
@@ -380,7 +380,7 @@ export class CategoryService extends BaseService {
         category_name: data.category_name.trim(),
         description: data.description?.trim(),
         parent_category: data.parent_category,
-        channel_id: data.channel_id,
+        board_id: data.board_id,
         created_by: context.userId,
         updated_by: context.userId,
         created_at: new Date(),
@@ -452,8 +452,8 @@ export class CategoryService extends BaseService {
       if (data.parent_category !== undefined) {
         updateData.parent_category = data.parent_category;
       }
-      if (data.channel_id !== undefined) {
-        updateData.channel_id = data.channel_id;
+      if (data.board_id !== undefined) {
+        updateData.board_id = data.board_id;
       }
 
       const [updated] = await trx('ticket_categories')
@@ -513,22 +513,22 @@ export class CategoryService extends BaseService {
   }
 
   /**
-   * Get category tree for a channel
+   * Get category tree for a board
    */
   async getCategoryTree(
-    channelId: string | null,
+    boardId: string | null,
     context: ServiceContext
   ): Promise<CategoryTreeNode[]> {
     const { knex } = await this.getKnex();
-    
+
     return withTransaction(knex, async (trx) => {
       let query = trx('ticket_categories')
         .where('tenant', context.tenant);
 
-      if (channelId) {
-        query = query.where('channel_id', channelId);
+      if (boardId) {
+        query = query.where('board_id', boardId);
       } else {
-        query = query.whereNull('channel_id');
+        query = query.whereNull('board_id');
       }
 
       const categories = await query
@@ -624,8 +624,8 @@ export class CategoryService extends BaseService {
       }
 
       // Apply filters
-      if (filters.channel_id && categoryType === 'ticket') {
-        query = query.where('channel_id', filters.channel_id);
+      if (filters.board_id && categoryType === 'ticket') {
+        query = query.where('board_id', filters.board_id);
       }
 
       // Get total count
