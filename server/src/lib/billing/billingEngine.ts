@@ -691,7 +691,10 @@ export class BillingEngine {
       })
       .first();
 
-    const isFixedFeePlan = billingPlanDetails?.plan_type === 'Fixed';
+    const planType = billingPlanDetails?.plan_type;
+    const isFixedFeePlan = planType
+      ? planType.toLowerCase() === 'fixed'
+      : true; // Default legacy plans without plan_type to Fixed
 
     // --- Fetch Plan-Level Fixed Config (Base Rate, Proration, Alignment) ---
     let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
@@ -708,22 +711,29 @@ export class BillingEngine {
         .first();
 
       if (planConfig) {
-        // Assuming base_rate is added to billing_plan_fixed_config as per feedback
-        planLevelBaseRate = planConfig.base_rate ? parseFloat(planConfig.base_rate) : null;
-        planLevelEnableProration = planConfig.enable_proration;
-        planLevelBillingCycleAlignment = planConfig.billing_cycle_alignment;
+        const rawBaseRate = planConfig.base_rate;
+        if (rawBaseRate !== null && rawBaseRate !== undefined) {
+          const parsedBaseRate = typeof rawBaseRate === 'string' ? parseFloat(rawBaseRate) : Number(rawBaseRate);
+          if (!Number.isNaN(parsedBaseRate)) {
+            planLevelBaseRate = parsedBaseRate;
+          } else {
+            console.warn(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Unexpected plan base_rate value '${rawBaseRate}'.`);
+          }
+        } else {
+          console.warn(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Plan Level Config missing base_rate; will derive from service configs if available.`);
+        }
+
+        if (typeof planConfig.enable_proration === 'boolean') {
+          planLevelEnableProration = planConfig.enable_proration;
+        }
+
+        if (planConfig.billing_cycle_alignment) {
+          planLevelBillingCycleAlignment = planConfig.billing_cycle_alignment;
+        }
+
         console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Fetched Plan Level Config: BaseRate=${planLevelBaseRate}, Proration=${planLevelEnableProration}, Alignment=${planLevelBillingCycleAlignment}`);
       } else {
-        console.warn(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Plan Level Fixed Config not found in billing_plan_fixed_config. Cannot determine plan base rate or settings.`);
-        // If the config is missing, we cannot proceed with fixed plan calculation accurately.
-        // Return empty or throw error? Returning empty for now.
-        return [];
-      }
-
-      // Validate planLevelBaseRate
-      if (planLevelBaseRate === null || isNaN(planLevelBaseRate)) {
-          console.error(`[DEBUG] Invalid or missing base_rate in billing_plan_fixed_config for plan ${companyBillingPlan.plan_id}. Value: ${planConfig?.base_rate}`);
-          return []; // Cannot proceed without a valid plan base rate
+        console.warn(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Plan Level Fixed Config not found in billing_plan_fixed_config. Will derive settings from service-level configuration.`);
       }
     }
     // --- End Fetch Plan-Level Fixed Config ---
@@ -741,11 +751,10 @@ export class BillingEngine {
       .where({
         'plan_service_configuration.plan_id': companyBillingPlan.plan_id, // Use plan_id directly
         'plan_service_configuration.tenant': this.tenant, // Ensure tenant match on plan_service_configuration
-        'plan_service_configuration.configuration_type': 'Fixed'
       })
+      .whereRaw("LOWER(plan_service_configuration.configuration_type) = 'fixed'")
       .select(
         // Explicitly select needed columns to avoid name collisions
-        'service_catalog.service_id',
         'service_catalog.service_id',
         'service_catalog.service_name',
         'service_catalog.default_rate',
@@ -753,10 +762,50 @@ export class BillingEngine {
         'plan_service_configuration.quantity',
         'plan_service_configuration.custom_rate', // This is plan-level custom rate
         'plan_service_configuration.config_id',
-        'plan_service_fixed_config.base_rate' // This is the fixed plan rate
+        'plan_service_fixed_config.base_rate as service_base_rate' // This is the fixed plan rate
       );
 
     if (planServices.length === 0) {
+      return [];
+    }
+
+    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+      let derivedBaseRate = 0;
+      let hasServiceBaseRate = false;
+
+      for (const service of planServices) {
+        const rawServiceBaseRate = service.service_base_rate;
+        if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
+          const parsedServiceBaseRate = typeof rawServiceBaseRate === 'string' ? parseFloat(rawServiceBaseRate) : Number(rawServiceBaseRate);
+          if (!Number.isNaN(parsedServiceBaseRate)) {
+            const quantity = Number(service.quantity ?? 1) || 1;
+            derivedBaseRate += parsedServiceBaseRate * quantity;
+            hasServiceBaseRate = true;
+          }
+        }
+      }
+
+      if (hasServiceBaseRate) {
+        planLevelBaseRate = derivedBaseRate;
+        console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
+      }
+    }
+
+    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+      const totalDefaultRateCents = planServices.reduce((sum: number, service: any) => {
+        const rate = Number(service.default_rate ?? 0);
+        const quantity = Number(service.quantity ?? 1) || 1;
+        return sum + rate * quantity;
+      }, 0);
+
+      if (totalDefaultRateCents !== 0) {
+        planLevelBaseRate = totalDefaultRateCents / 100;
+        console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
+      }
+    }
+
+    if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
+      console.error(`[DEBUG] Unable to determine base_rate for plan ${companyBillingPlan.plan_id}.`);
       return [];
     }
 
@@ -779,8 +828,8 @@ export class BillingEngine {
       console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Calculated totalFMVCents: ${totalFMVCents}`); // DEBUG LOG
 
       // If totalFMVCents is zero, we can't allocate properly
-      if (totalFMVCents <= 0) {
-        console.log(`Total FMV (cents) for services in plan ${companyBillingPlan.plan_id} is zero or negative`);
+      if (totalFMVCents === 0) {
+        console.log(`Total FMV (cents) for services in plan ${companyBillingPlan.plan_id} is zero.`);
         return [];
       }
 
@@ -806,7 +855,7 @@ export class BillingEngine {
         console.log(`[DEBUG] Service ${service.service_id} - Calculated serviceFMVCents: ${serviceFMVCents} (Rate: ${rateForFMV}, Qty: ${service.quantity || 1})`); // DEBUG LOG
 
         // Calculate the proportion of the total fixed fee that should be allocated to this service
-        const proportion = totalFMVCents > 0 ? serviceFMVCents / totalFMVCents : 0; // Use totalFMVCents and handle division by zero
+        const proportion = totalFMVCents !== 0 ? serviceFMVCents / totalFMVCents : 0; // Use totalFMVCents and handle division by zero
         console.log(`[DEBUG] Service ${service.service_id} - Calculated proportion: ${proportion} (${serviceFMVCents} / ${totalFMVCents})`); // DEBUG LOG
 
         // --- Proration Calculation ---
@@ -906,12 +955,14 @@ export class BillingEngine {
           continue; // Skip this allocation if data is missing
         }
 
+        const quantity = Number(planService.quantity ?? 1) || 1;
+
         const detailedCharge: IFixedPriceCharge = {
           // Common IBillingCharge fields
           type: 'fixed',
           serviceId: allocation.serviceId,
           serviceName: allocation.serviceName,
-          quantity: planService.quantity, // Use quantity directly from the fetched planService object for this service
+          quantity, // Default to 1 if quantity is null
           rate: allocation.allocatedAmount, // Rate is the PRORATED allocated amount in cents
           total: allocation.allocatedAmount, // Total is the PRORATED allocated amount in cents
           tax_amount: allocation.taxAmount, // Per-allocation tax in cents
@@ -956,11 +1007,16 @@ export class BillingEngine {
       console.warn(`[BillingEngine] Processing fixed service config for a non-fixed plan type (${billingPlanDetails?.plan_type}) for plan ${companyBillingPlan.plan_id}. Review this logic.`);
 
       const fixedCharges: IFixedPriceCharge[] = await Promise.all(planServices.map(async (service: any): Promise<IFixedPriceCharge> => {
-        // Use base_rate from the fixed config, fallback to default_rate? Or throw error?
-        // Current logic uses default_rate if base_rate is missing, which might be wrong for fixed configs.
-        const rate = service.base_rate ?? service.default_rate; // Prefer base_rate from fixed config
-        const quantity = service.quantity || 1;
-        const total = Math.round(rate * quantity); // Ensure cents
+        const quantity = Number(service.quantity || 1) || 1;
+
+        const rawServiceBaseRate = service.service_base_rate;
+        const parsedBaseRate = rawServiceBaseRate !== null && rawServiceBaseRate !== undefined
+          ? Number(rawServiceBaseRate)
+          : null;
+        const baseRateInCents = parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
+          ? Math.round(parsedBaseRate * 100)
+          : Number(service.default_rate ?? 0);
+        const total = baseRateInCents * quantity;
 
         // Determine tax info for this edge-case service
         const { taxRegion: serviceTaxRegion, isTaxable } = await this.getTaxInfoFromService(service);
@@ -969,7 +1025,7 @@ export class BillingEngine {
           serviceId: service.service_id,
           serviceName: service.service_name,
           quantity,
-          rate, // Rate in cents
+          rate: baseRateInCents, // Rate in cents
           total, // Total in cents
           type: 'fixed',
           tax_amount: 0,
@@ -982,7 +1038,10 @@ export class BillingEngine {
           billing_cycle_alignment: planLevelBillingCycleAlignment, // Use plan-level setting
           // Add other relevant fields from IFixedPriceCharge if needed
           config_id: service.config_id,
-          base_rate: service.base_rate, // Store the original base_rate
+          base_rate: baseRateInCents,
+          company_billing_plan_id: companyBillingPlan.company_billing_plan_id,
+          company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
+          bundle_name: companyBillingPlan.bundle_name || undefined,
           // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
         };
         // Recalculate tax based on derived info for this edge case
@@ -1047,9 +1106,9 @@ export class BillingEngine {
       })
       .where({
         'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
-        'plan_service_configuration.configuration_type': 'Hourly',
         'plan_service_configuration.tenant': tenant
       })
+      .whereRaw("LOWER(plan_service_configuration.configuration_type) = 'hourly'")
       .select('plan_service_configuration.*', 'plan_service_hourly_config.*');
 
     // Create a map of service IDs to their hourly configurations
@@ -1223,6 +1282,7 @@ export class BillingEngine {
         serviceName: entry.service_name,
         userId: entry.user_id,
         duration,
+        quantity: duration,
         rate,
         total,
         type: 'time',
@@ -1231,6 +1291,8 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to company default lookup
         entryId: entry.entry_id,
         is_taxable: isTaxable, // Use derived value
+        company_billing_plan_id: companyBillingPlan.company_billing_plan_id,
+        tenant: company.tenant,
         // Add bundle information when the plan is part of a bundle
         company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
         bundle_name: companyBillingPlan.bundle_name || undefined
@@ -1268,9 +1330,9 @@ export class BillingEngine {
       })
       .where({
         'plan_service_configuration.plan_id': companyBillingPlan.plan_id,
-        'plan_service_configuration.configuration_type': 'Usage',
         'plan_service_configuration.tenant': tenant
       })
+      .whereRaw("LOWER(plan_service_configuration.configuration_type) = 'usage'")
       .select('plan_service_configuration.*', 'plan_service_usage_config.*');
 
     // Create a map of service IDs to their usage configurations and rate tiers
@@ -1582,9 +1644,9 @@ export class BillingEngine {
       })
       .where({
         'plan_service_configuration.plan_id': billingPlan.plan_id,
-        'plan_service_configuration.configuration_type': 'Bucket',
         'plan_service_configuration.tenant': company.tenant
       })
+      .whereRaw("LOWER(plan_service_configuration.configuration_type) = 'bucket'")
       .select(
         'plan_service_configuration.*',
         'plan_service_bucket_config.*',
@@ -1598,29 +1660,47 @@ export class BillingEngine {
 
     // Process each bucket configuration
     const bucketChargesPromises = bucketConfigs.map(async (bucketConfig): Promise<IBucketCharge | null> => {
-      // Get usage data for this service
-      const timeEntries = await this.knex('time_entries')
+      // Pull usage records captured for bucket plans within this billing period
+      const usageRecords = await this.knex('bucket_usage')
         .where({
-          service_id: bucketConfig.service_id,
           tenant: company.tenant,
-          invoiced: false
+          company_id: companyId,
+          plan_id: billingPlan.plan_id,
+          service_catalog_id: bucketConfig.service_id
         })
-        .where('start_time', '>=', period.startDate)
-        .where('end_time', '<', period.endDate)
+        .where('period_start', '>=', period.startDate)
+        .where('period_end', '<=', period.endDate)
         .select('*');
 
-      // Calculate total hours used
-      let hoursUsed = 0;
-      for (const entry of timeEntries) {
-        const startDateTime = Temporal.PlainDateTime.from(entry.start_time.toISOString().replace('Z', ''));
-        const endDateTime = Temporal.PlainDateTime.from(entry.end_time.toISOString().replace('Z', ''));
-        const duration = Math.floor(startDateTime.until(endDateTime, { largestUnit: 'hours' }).hours);
-        hoursUsed += duration;
+      if (usageRecords.length === 0) {
+        return null;
       }
 
-      // Calculate overage
-      const totalHours = bucketConfig.total_hours;
-      const overageHours = Math.max(0, hoursUsed - totalHours);
+      // Normalize usage aggregates, accommodating legacy hour columns
+      let minutesUsed = 0;
+      let overageMinutes = 0;
+
+      for (const record of usageRecords) {
+        const recordMinutesUsed =
+          Number(record.minutes_used ?? 0) ||
+          (record.hours_used !== undefined ? Number(record.hours_used) * 60 : 0);
+        const recordOverageMinutes =
+          Number(record.overage_minutes ?? 0) ||
+          (record.overage_hours !== undefined ? Number(record.overage_hours) * 60 : 0);
+
+        minutesUsed += recordMinutesUsed;
+        overageMinutes += recordOverageMinutes;
+      }
+
+      // Some datasets rely on inferred overage when explicit values are absent
+      const configuredMinutes = bucketConfig.total_minutes ??
+        (bucketConfig.total_hours !== undefined ? Number(bucketConfig.total_hours) * 60 : 0);
+      if (!overageMinutes && configuredMinutes) {
+        overageMinutes = Math.max(0, minutesUsed - configuredMinutes);
+      }
+
+      const hoursUsed = minutesUsed / 60;
+      const overageHours = overageMinutes / 60;
 
       if (overageHours > 0) {
         // Determine tax info using the helper function
@@ -1662,6 +1742,9 @@ export class BillingEngine {
           serviceId: bucketConfig.service_id, // Common field
           tax_amount: taxAmount,
           is_taxable: isTaxable,
+          quantity: overageHours,
+          company_billing_plan_id: billingPlan.company_billing_plan_id,
+          tenant: company.tenant,
           // Add bundle information when the plan is part of a bundle
           company_bundle_id: billingPlan.company_bundle_id || undefined,
           bundle_name: billingPlan.bundle_name || undefined
@@ -2030,7 +2113,7 @@ export class BillingEngine {
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(`[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`);
       const taxService = new TaxService(); // Instantiate TaxService here
-      await calculateAndDistributeTax(trx, invoiceId, company, taxService); // Pass company object and taxService instance
+      await calculateAndDistributeTax(trx, invoiceId, company, taxService, tenant); // Pass company object and taxService instance
       console.log(`[recalculateInvoice] Finished calculateAndDistributeTax for invoice ${invoiceId}`);
 
       // Step 2: Update invoice totals and record the transaction using the service function

@@ -1,18 +1,16 @@
 import { Knex } from 'knex';
+import { Temporal } from '@js-temporal/polyfill';
 import { ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
-import { 
-  addWeeks, 
-  addMonths, 
-  parseISO, 
+import {
+  parseISO,
   startOfDay,
   startOfMonth,
   startOfYear,
   getMonth,
   getDate,
   setMonth,
-  subWeeks,
-  formatISO
+  subWeeks
 } from 'date-fns';
 import { ISO8601String } from 'server/src/types/types.d';
 /**
@@ -57,42 +55,36 @@ function getNextCycleDate(currentDate: ISO8601String, billingCycle: string): {
   });
   const parsedDate = parseISO(currentDate);
   const effectiveDate = parsedDate.toISOString().split('T')[0] + 'T00:00:00Z';
-  
+
   console.log('effectiveDate after UTC reset:', effectiveDate);
-  
-  let periodEnd: ISO8601String;
-  
-  const formatUTCDate = (date: Date): string => {
-    return new Date(Date.UTC(
-      date.getUTCFullYear(),
-      date.getUTCMonth(),
-      date.getUTCDate(),
-      0, 0, 0
-    )).toISOString();
-  };
+
+  const effectivePlain = Temporal.PlainDate.from(effectiveDate.slice(0, 10));
+  let periodEndPlain: Temporal.PlainDate;
 
   switch (billingCycle) {
     case 'weekly':
-      periodEnd = formatUTCDate(addWeeks(parseISO(effectiveDate), 1));
+      periodEndPlain = effectivePlain.add({ days: 7 });
       break;
     case 'bi-weekly':
-      periodEnd = formatUTCDate(addWeeks(parseISO(effectiveDate), 2));
+      periodEndPlain = effectivePlain.add({ days: 14 });
       break;
     case 'monthly':
-      periodEnd = formatUTCDate(addMonths(parseISO(effectiveDate), 1));
+      periodEndPlain = effectivePlain.add({ months: 1 });
       break;
     case 'quarterly':
-      periodEnd = formatUTCDate(addMonths(parseISO(effectiveDate), 3));
+      periodEndPlain = effectivePlain.add({ months: 3 });
       break;
     case 'semi-annually':
-      periodEnd = formatUTCDate(addMonths(parseISO(effectiveDate), 6));
+      periodEndPlain = effectivePlain.add({ months: 6 });
       break;
     case 'annually':
-      periodEnd = formatUTCDate(addMonths(parseISO(effectiveDate), 12));
+      periodEndPlain = effectivePlain.add({ years: 1 });
       break;
     default:
-      periodEnd = formatUTCDate(addMonths(parseISO(effectiveDate), 1));
+      periodEndPlain = effectivePlain.add({ months: 1 });
   }
+
+  const periodEnd = `${periodEndPlain.toString()}T00:00:00Z`;
 
   console.log('Period calculation:', {
     effectiveDate,

@@ -1,66 +1,145 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { TaxService } from '../../lib/services/taxService';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { TaxService } from '../../../../lib/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { ICompany } from '../../interfaces/company.interfaces';
 import { v4 as uuidv4 } from 'uuid';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import {
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+// This is critical for tests that use advisory locks or other features not supported by pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Tax Rate Changes Mid-Billing Period', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
   let taxService: TaxService;
   let company_id: string;
 
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'companies',
-        'tax_rates', 
-        'company_tax_settings'
+        'tax_rates',
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates'
       ],
       companyName: 'Test Company',
       userType: 'internal'
     });
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     taxService = new TaxService();
-  });
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-    
-    // Create test company with US-NY tax region
-    company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 1',
-      is_tax_exempt: false,
-      tax_region: 'US-NY',
-      company_id: uuidv4(),
-      phone_no: '123-456-7890',
-      credit_balance: 0,
-      email: 'test@example.com',
-      url: 'https://example.com',
-      address: '123 Test St',
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      is_inactive: false,
-      billing_cycle: 'weekly',
-      properties: {}
-    }, 'company_id');
+    context = await resetContext();
 
-    // Create default tax settings
-    await createDefaultTaxSettings(company_id);
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    // Use the default company from context
+    company_id = context.companyId;
+
+    // Configure default tax settings for the company (this creates the tax region)
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      companyId: company_id
+    });
+
+    // Update the company to have the correct region_code and billing settings
+    await context.db('companies')
+      .where({ company_id: company_id, tenant: context.tenantId })
+      .update({
+        is_tax_exempt: false,
+        region_code: 'US-NY',
+        billing_cycle: 'weekly'
+      });
 
     // Create initial tax rate (10%) for US-NY ending just before new rate starts
     await context.createEntity('tax_rates', {
       tax_type: 'VAT',
       country_code: 'US',
       tax_percentage: 10,
-      region: 'US-NY', // Changed to match company tax_region
+      region_code: 'US-NY',
       is_reverse_charge_applicable: false,
       is_composite: false,
       start_date: '2024-10-01',
-      end_date: '2024-10-14', // End date set to day before new rate starts
+      end_date: '2024-10-14',
       is_active: true,
       description: 'Initial Tax Rate'
     }, 'tax_rate_id');
@@ -70,18 +149,22 @@ describe('Tax Rate Changes Mid-Billing Period', () => {
       tax_type: 'VAT',
       country_code: 'US',
       tax_percentage: 12,
-      region: 'US-NY', // Changed to match company tax_region
+      region_code: 'US-NY',
       is_reverse_charge_applicable: false,
       is_composite: false,
       start_date: '2024-10-15',
       is_active: true,
       description: 'Increased Tax Rate'
     }, 'tax_rate_id');
-  });
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should apply correct tax rates based on charge dates', async () => {
     // Charge before rate change
