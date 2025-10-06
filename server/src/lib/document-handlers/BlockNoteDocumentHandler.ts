@@ -1,6 +1,8 @@
 import { IDocument, PreviewResponse } from 'server/src/interfaces/document.interface';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { convertBlockNoteToHTML } from 'server/src/lib/utils/blocknoteUtils';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 
 /**
  * Handler for BlockNote documents
@@ -55,29 +57,31 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
       }
 
       // Get document block content from database
-      const blockContent = await knex('document_block_content')
-        .where({ document_id: document.document_id, tenant })
-        .first();
-      
+      const blockContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('document_block_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+      });
+
       if (!blockContent || !blockContent.block_data) {
-        return { 
-          success: false, 
-          error: 'No content found for this BlockNote document' 
+        return {
+          success: false,
+          error: 'No content found for this BlockNote document'
         };
       }
 
       // Convert BlockNote data to HTML
       const htmlContent = convertBlockNoteToHTML(blockContent.block_data);
-      
+
       // Generate preview image
       const imageBuffer = await this.renderHtmlToPng(htmlContent);
-      
+
       // Save to cache
       await this.saveToCache(document.document_id, imageBuffer, tenant);
-      
+
       // Convert to base64 for response
       const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      
+
       return {
         success: true,
         previewImage: base64Image,
@@ -102,10 +106,12 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
   async generateHTML(document: IDocument, tenant: string, knex: any): Promise<string> {
     try {
       // Get document block content from database
-      const blockContent = await knex('document_block_content')
-        .where({ document_id: document.document_id, tenant })
-        .first();
-      
+      const blockContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('document_block_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+      });
+
       if (!blockContent || !blockContent.block_data) {
         return '<p>No content found for this BlockNote document</p>';
       }

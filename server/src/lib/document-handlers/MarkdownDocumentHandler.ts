@@ -1,6 +1,8 @@
 import { IDocument, PreviewResponse } from 'server/src/interfaces/document.interface';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { marked } from 'marked';
+import { withTransaction } from '@shared/db';
+import { Knex } from 'knex';
 
 /**
  * Handler for Markdown documents
@@ -43,30 +45,32 @@ export class MarkdownDocumentHandler extends BaseDocumentHandler {
       }
 
       // Get document content from database
-      const docContent = await knex('document_content')
-        .where({ document_id: document.document_id, tenant })
-        .first();
-      
+      const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('document_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+      });
+
       if (!docContent || !docContent.content) {
-        return { 
-          success: false, 
-          error: 'No content found for this markdown document' 
+        return {
+          success: false,
+          error: 'No content found for this markdown document'
         };
       }
 
       // Get a snippet of the markdown content and convert to HTML
       const markdownSnippet = docContent.content.substring(0, 1000);
       const htmlContent = await marked(markdownSnippet, { async: true });
-      
+
       // Generate preview image
       const imageBuffer = await this.renderHtmlToPng(htmlContent);
-      
+
       // Save to cache
       await this.saveToCache(document.document_id, imageBuffer, tenant);
-      
+
       // Convert to base64 for response
       const base64Image = `data:image/png;base64,${imageBuffer.toString('base64')}`;
-      
+
       return {
         success: true,
         previewImage: base64Image,
@@ -91,10 +95,12 @@ export class MarkdownDocumentHandler extends BaseDocumentHandler {
   async generateHTML(document: IDocument, tenant: string, knex: any): Promise<string> {
     try {
       // Get document content from database
-      const docContent = await knex('document_content')
-        .where({ document_id: document.document_id, tenant })
-        .first();
-      
+      const docContent = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        return await trx('document_content')
+          .where({ document_id: document.document_id, tenant })
+          .first();
+      });
+
       if (!docContent || !docContent.content) {
         return '<p>No content found for this markdown document</p>';
       }
