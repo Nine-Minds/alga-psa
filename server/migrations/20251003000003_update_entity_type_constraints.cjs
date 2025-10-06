@@ -53,11 +53,19 @@ exports.up = async function(knex) {
 
       // Add new constraint with 'client' instead of 'company'
       // Include all existing values plus future-proofing with 'project'
-      console.log('  Adding new check constraint with client...');
+      // Add as NOT VALID first to avoid checking existing rows, then validate
+      console.log('  Adding new check constraint with client (NOT VALID)...');
       await knex.raw(`
         ALTER TABLE document_associations
         ADD CONSTRAINT document_associations_entity_type_check
         CHECK (entity_type IN ('asset', 'client', 'contact', 'project', 'project_task', 'tenant', 'ticket', 'user'))
+        NOT VALID
+      `);
+
+      console.log('  Validating constraint...');
+      await knex.raw(`
+        ALTER TABLE document_associations
+        VALIDATE CONSTRAINT document_associations_entity_type_check
       `);
       console.log('    ✓ Updated constraint to use client instead of company');
     } catch (error) {
