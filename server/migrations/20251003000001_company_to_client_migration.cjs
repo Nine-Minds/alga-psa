@@ -435,8 +435,8 @@ async function createClientBillingPlans(knex, createdTables) {
       table.uuid('plan_id').notNullable();
       table.uuid('service_category');
       table.boolean('is_active').defaultTo(true);
-      table.timestamptz('start_date').notNullable();
-      table.timestamptz('end_date');
+      table.timestamp('start_date', { useTz: true }).notNullable();
+      table.timestamp('end_date', { useTz: true });
       table.uuid('client_bundle_id');
 
       table.primary(['tenant', 'client_billing_plan_id']);
@@ -479,11 +479,11 @@ async function createClientPlanBundles(knex, createdTables) {
       table.uuid('client_bundle_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
       table.uuid('client_id').notNullable();
       table.uuid('bundle_id').notNullable();
-      table.timestamptz('start_date').notNullable();
-      table.timestamptz('end_date');
+      table.timestamp('start_date', { useTz: true }).notNullable();
+      table.timestamp('end_date', { useTz: true });
       table.boolean('is_active').defaultTo(true);
-      table.timestamptz('created_at').defaultTo(knex.raw('CURRENT_TIMESTAMP'));
-      table.timestamptz('updated_at').defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('created_at', { useTz: true }).defaultTo(knex.raw('CURRENT_TIMESTAMP'));
+      table.timestamp('updated_at', { useTz: true }).defaultTo(knex.raw('CURRENT_TIMESTAMP'));
 
       table.primary(['tenant', 'client_bundle_id']);
     });
