@@ -116,6 +116,8 @@ docker compose -f docker-compose.prebuilt.base.yaml -f docker-compose.prebuilt.c
   --env-file server/.env --env-file .env.image up -d
 ```
 
+> Compose now creates a project-scoped network automatically, so multiple checkouts can run in parallel without fighting over `sebastian_app-network`. If you previously ran the stack from another directory, bring that one down first to clean up the old shared network.
+
 > Note: The `-d` flag runs containers in detached/background mode. Remove the `-d` flag if you want to monitor the server output directly in the terminal.
 
 The CE stack now includes the `workflow-worker` service by default, giving you a production-like asynchronous processing setup without additional compose overrides. The `ALGA_IMAGE_TAG` value determines which prebuilt image is retrieved; compose does not fall back to `latest` unless you leave the variable unset.

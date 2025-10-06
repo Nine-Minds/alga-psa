@@ -80,6 +80,9 @@ services:
     build:
       context: .
       dockerfile: ee/setup/Dockerfile
+      args:
+        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ee}
+        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
     container_name: ${APP_NAME:-sebastian}_setup_ee
     environment:
       EDITION: enterprise
@@ -111,11 +114,11 @@ services:
     volumes:
       - type: bind
         source: ./setup/config.ini
-        target: /app/setup/config.ini
+        target: /opt/setup/config.ini
         read_only: true
       - type: bind
         source: ./ee/setup/entrypoint.sh
-        target: /app/setup/entrypoint.sh
+        target: /opt/setup/ee-entrypoint.sh
         read_only: true
       - type: bind
         source: ./secrets/postgres_password
@@ -135,7 +138,7 @@ services:
         condition: service_started
       pgbouncer:
         condition: service_started
-    entrypoint: ["/app/setup/entrypoint.sh"]
+    entrypoint: ["/opt/setup/ee-entrypoint.sh"]
 
   workflow-worker:
     build:
@@ -262,5 +265,4 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge

@@ -1,10 +1,12 @@
 [databases]
-* = host=${POSTGRES_HOST} port=5432
+server = host=${POSTGRES_HOST} port=5432 dbname=server
+postgres = host=${POSTGRES_HOST} port=5432 dbname=postgres
 
 [pgbouncer]
 listen_addr = 0.0.0.0
 listen_port = 6432
 auth_type = trust
+auth_file = /etc/pgbouncer/userlist.txt
 pool_mode = transaction
 max_client_conn = 1000
 default_pool_size = 20

@@ -1,5 +1,4 @@
 x-common-config: &common-config
-  container_name: server
   ports:
     - "${EXPOSE_SERVER_PORT:-3000}:3000"
   environment:
@@ -89,5 +88,4 @@ services:
 
 networks:
   app-network:
-    name: ${PROJECT_NAME}_app-network
-    external: true
+    driver: bridge

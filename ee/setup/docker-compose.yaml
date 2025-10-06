@@ -41,7 +41,9 @@ services:
     build:
       context: ../..
       dockerfile: ee/setup/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_setup_ee
+      args:
+        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ee}
+        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
     networks:
       - app-network
     environment:
@@ -59,7 +61,7 @@ services:
       DB_NAME: server
       PGBOSS_DATABASE: server
     volumes:
-      - ./ee/setup/config.ini:/app/config.ini
+      - ./ee/setup/config.ini:/opt/setup/config.ini
       - type: bind
         source: ./secrets/postgres_password
         target: /run/secrets/postgres_password
@@ -70,7 +72,7 @@ services:
     depends_on:
       postgres:
         condition: service_started
-    entrypoint: ["/app/entrypoint.sh"]
+    entrypoint: ["/opt/setup/ee-entrypoint.sh"]
 
   postgres:
     extends:
