@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import { Label } from 'server/src/components/ui/Label';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { Plus, AlertTriangle, Info, MoreVertical } from 'lucide-react';
+import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
 import { useToast } from 'server/src/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from 'server/src/interfaces/usage.interfaces';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -28,6 +28,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
+import { getRemainingBucketUnits, RemainingBucketUnitsResult } from 'server/src/lib/actions/report-actions';
+import BucketUsageChart from './BucketUsageChart';
+import { Skeleton } from 'server/src/components/ui/Skeleton';
 
 interface UsageTrackingProps {
   initialServices: IService[];
@@ -59,6 +62,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     plan_type: string;
   }>>([]);
   const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
+  const [bucketData, setBucketData] = useState<RemainingBucketUnitsResult[]>([]);
+  const [loadingBuckets, setLoadingBuckets] = useState(true);
 
   const { automationIdProps: containerProps } = useAutomationIdAndRegister<ContainerComponent>({
     type: 'container',
@@ -68,11 +73,20 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   useEffect(() => {
     loadCompanies();
+    loadAllBucketUsage();
   }, []);
 
   useEffect(() => {
     loadUsageRecords();
   }, [selectedCompany, selectedService]);
+
+  useEffect(() => {
+    if (selectedCompany && selectedCompany !== 'all_companies') {
+      loadBucketUsageForCompany(selectedCompany);
+    } else {
+      loadAllBucketUsage();
+    }
+  }, [selectedCompany]);
   
   // Load eligible billing plans when company and service change in the form
   useEffect(() => {
@@ -125,6 +139,30 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
         description: "Failed to load companies",
         variant: "destructive",
       });
+    }
+  };
+
+  const loadAllBucketUsage = async () => {
+    try {
+      setLoadingBuckets(true);
+      const buckets = await getRemainingBucketUnits({});
+      setBucketData(buckets);
+    } catch (error) {
+      console.error('Error loading bucket usage:', error);
+    } finally {
+      setLoadingBuckets(false);
+    }
+  };
+
+  const loadBucketUsageForCompany = async (companyId: string) => {
+    try {
+      setLoadingBuckets(true);
+      const buckets = await getRemainingBucketUnits({ companyId });
+      setBucketData(buckets);
+    } catch (error) {
+      console.error('Error loading bucket usage:', error);
+    } finally {
+      setLoadingBuckets(false);
     }
   };
 
@@ -314,10 +352,43 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   return (
     <ReflectionContainer {...containerProps}>
+      {/* Bucket Usage Overview */}
+      {(loadingBuckets || bucketData.length > 0) && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center">
+              <Package className="h-5 w-5 text-blue-600 mr-2" />
+              <h3 className="text-lg font-semibold">Bucket Hours Overview</h3>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingBuckets ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => (
+                  <Skeleton key={i} className="h-40 w-full" />
+                ))}
+              </div>
+            ) : bucketData.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {bucketData.map((bucket) => (
+                  <BucketUsageChart
+                    key={`${bucket.plan_id}-${bucket.service_id}`}
+                    bucketData={bucket}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">No active bucket plans found.</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Usage Records Table */}
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <h3 className="text-lg font-semibold">Usage Tracking</h3>
+            <h3 className="text-lg font-semibold">Usage Records</h3>
             <Button
               id="add-usage-button"
               onClick={() => {

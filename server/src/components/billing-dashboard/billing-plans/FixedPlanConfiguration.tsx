@@ -77,19 +77,19 @@ export function FixedPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Fixed)</CardTitle>
+          <CardTitle>Edit Contract Line: {plan?.plan_name || '...'} (Fixed)</CardTitle>
           {plan && (
             <BillingPlanDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              triggerButton={<Button id="edit-line-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Base rate and proration settings are configured in the plan basics above. Use the "Edit Plan Basics" button to modify these settings.
+            Base rate and proration settings are configured in the contract line basics above. Use the "Edit Contract Line Basics" button to modify these settings.
           </p>
         </CardContent>
       </Card>

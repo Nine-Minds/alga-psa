@@ -38,8 +38,8 @@ const BillingPlansOverview: React.FC = () => {
       setBillingPlans(plans);
       setError(null);
     } catch (error) {
-      console.error('Error fetching billing plans:', error);
-      setError('Failed to fetch billing plans');
+      console.error('Error fetching contract lines:', error);
+      setError('Failed to fetch contract lines');
     }
   };
 
@@ -59,11 +59,11 @@ const BillingPlansOverview: React.FC = () => {
       await deleteBillingPlan(planId);
       fetchBillingPlans();
     } catch (error) {
-      console.error('Error deleting billing plan:', error); // Keep console log for debugging
+      console.error('Error deleting contract line:', error); // Keep console log for debugging
       if (error instanceof Error) {
         // Check for the specific error message for plans assigned to companies
         if (error.message === "Cannot delete billing plan: It is currently assigned to one or more companies.") {
-            toast.error(error.message);
+            toast.error("Cannot delete contract line: It is currently assigned to one or more companies.");
         // Check for the specific error message for plans with associated services (from pre-check)
         } else if (error.message.includes('associated services')) {
           toast.error(error.message); // Use the exact message from the action
@@ -73,14 +73,14 @@ const BillingPlansOverview: React.FC = () => {
         }
       } else {
         // Fallback for non-Error objects
-        toast.error('An unexpected error occurred while deleting the plan.');
+        toast.error('An unexpected error occurred while deleting the contract line.');
       }
     }
   };
 
   const billingPlanColumns: ColumnDefinition<IBillingPlan>[] = [
     {
-      title: 'Plan Name',
+      title: 'Contract Line Name',
       dataIndex: 'plan_name',
     },
     {
@@ -89,7 +89,7 @@ const BillingPlansOverview: React.FC = () => {
       render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
     },
     {
-      title: 'Plan Type',
+      title: 'Contract Line Type',
       dataIndex: 'plan_type',
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
@@ -105,7 +105,7 @@ const BillingPlansOverview: React.FC = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id="billing-plan-actions-menu"
+              id="contract-line-actions-menu"
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -116,18 +116,18 @@ const BillingPlansOverview: React.FC = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="edit-billing-plan-menu-item"
+              id="edit-contract-line-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
                 if (record.plan_id) {
-                  router.push(`/msp/billing?tab=plans&planId=${record.plan_id}`);
+                  router.push(`/msp/billing?tab=contract-lines&planId=${record.plan_id}`);
                 }
               }}
             >
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              id="delete-billing-plan-menu-item"
+              id="delete-contract-line-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={async (e) => {
                 e.stopPropagation();
@@ -146,7 +146,7 @@ const BillingPlansOverview: React.FC = () => {
 
   const handleBillingPlanClick = (plan: IBillingPlan) => {
     if (plan.plan_id) {
-      router.push(`/msp/billing?tab=plans&planId=${plan.plan_id}`);
+      router.push(`/msp/billing?tab=contract-lines&planId=${plan.plan_id}`);
     }
   };
 
@@ -154,20 +154,20 @@ const BillingPlansOverview: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <Heading as="h3" size="4">Billing Plans</Heading>
-          <BillingPlanDialog 
+          <Heading as="h3" size="4">Contract Lines</Heading>
+          <BillingPlanDialog
             onPlanAdded={(newPlanId) => {
               if (newPlanId) {
                 // Navigate directly. PlanTypeRouter will fetch the plan details.
-                router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
+                router.push(`/msp/billing?tab=contract-lines&planId=${newPlanId}`);
               }
             }}
             editingPlan={editingPlan}
             onClose={() => setEditingPlan(null)}
             triggerButton={
-              <Button id='add-billing-plan-button'>
+              <Button id='add-contract-line-button'>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Plan
+                Add Contract Line
               </Button>
             }
             allServiceTypes={allServiceTypes} // Pass the fetched service types

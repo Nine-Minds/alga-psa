@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { toPlainDate } from '../../lib/utils/dateTimeUtils';
 import { Button } from '../ui/Button';
+import { Badge } from '../ui/Badge';
 import { DataTable } from '../ui/DataTable';
 import { Checkbox } from '../ui/Checkbox';
 import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
@@ -10,7 +11,10 @@ import { Tooltip } from '../ui/Tooltip'; // Use the refactored custom Tooltip
 // TooltipContent,
 // TooltipProvider,
 // TooltipTrigger,
-import { Info, AlertTriangle, X, MoreVertical } from 'lucide-react'; // Changed to MoreVertical
+import { Info, AlertTriangle, X, MoreVertical, Eye } from 'lucide-react'; // Added Eye for preview
+import { useDrawer } from 'server/src/context/DrawerContext';
+import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
 import { ICompanyBillingCycle } from '../../interfaces/billing.interfaces';
 // Import PreviewInvoiceResponse (which uses the correct VM internally)
 import { PreviewInvoiceResponse } from '../../interfaces/invoice.interfaces';
@@ -50,9 +54,11 @@ interface Period extends ICompanyBillingCycle {
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;
   is_early?: boolean;
+  contract_name?: string; // Added for Phase 4
 }
 
 const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenerateSuccess }) => {
+  const drawer = useDrawer();
   const [selectedPeriods, setSelectedPeriods] = useState<Set<string>>(new Set());
   const [isGenerating, setIsGenerating] = useState(false);
   const [isReversing, setIsReversing] = useState(false);
@@ -274,13 +280,34 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
     }
   };
 
+  const handleOpenCompanyDrawer = async (companyId: string) => {
+    try {
+      const company = await getCompanyById(companyId);
+      if (company) {
+        drawer.openDrawer(
+          <CompanyDetails
+            company={company}
+            documents={[]}
+            contacts={[]}
+            isInDrawer={true}
+            quickView={true}
+          />
+        );
+      } else {
+        console.error('Company not found');
+      }
+    } catch (error) {
+      console.error('Error fetching company details:', error);
+    }
+  };
+
   return (
     // Removed TooltipProvider wrapper
       <>
       <div className="space-y-8">
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold">Ready to Invoice Billing Periods</h2>
+            <h2 className="text-lg font-semibold">Ready to Invoice</h2>
             <div className="flex gap-4">
               <input
                 type="text"
@@ -289,6 +316,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 value={companyFilter}
                 onChange={(e) => setCompanyFilter(e.target.value)}
               />
+              <Button
+                id='preview-selected-button'
+                variant="outline"
+                onClick={() => {
+                  if (selectedPeriods.size === 1) {
+                    handlePreviewInvoice(Array.from(selectedPeriods)[0]);
+                  }
+                }}
+                disabled={selectedPeriods.size !== 1 || isPreviewLoading}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                {isPreviewLoading ? 'Loading...' : 'Preview Selected'}
+              </Button>
               <Button
                 id='generate-invoices-button'
                 onClick={handleGenerateInvoices}
@@ -355,8 +395,37 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 ) : null
               },
               {
-                title: 'Company',
-                dataIndex: 'company_name'
+                title: 'Client',
+                dataIndex: 'company_name',
+                render: (value: string, record: Period) => (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOpenCompanyDrawer(record.company_id);
+                    }}
+                    className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                  >
+                    {value}
+                  </button>
+                )
+              },
+              {
+                title: 'Contract',
+                dataIndex: 'contract_name',
+                render: (value: string | undefined) => value || <span className="text-gray-400 text-sm">No contract</span>
+              },
+              {
+                title: 'Status',
+                dataIndex: 'is_early',
+                render: (_: unknown, record: Period) => {
+                  if (!record.can_generate) {
+                    return <Badge variant="default" className="bg-gray-100 text-gray-800 border-gray-200">Not Ready</Badge>;
+                  }
+                  if (record.is_early) {
+                    return <Badge variant="default" className="bg-yellow-100 text-yellow-800 border-yellow-200">Early</Badge>;
+                  }
+                  return <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">Ready</Badge>;
+                }
               },
               {
                 title: 'Billing Cycle',
@@ -448,7 +517,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Previously Invoiced Periods</h2>
+          <h2 className="text-lg font-semibold mb-4">Already Invoiced</h2>
           {isLoading ? (
             <div className="text-center py-4">Loading...</div>
           ) : (
@@ -457,8 +526,29 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ periods, onGenera
                 data={filteredInvoicedPeriods}
                 columns={[
                   {
-                    title: 'Company',
-                    dataIndex: 'company_name'
+                    title: 'Client',
+                    dataIndex: 'company_name',
+                    render: (value: string, record: Period) => (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenCompanyDrawer(record.company_id);
+                        }}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer text-left"
+                      >
+                        {value}
+                      </button>
+                    )
+                  },
+                  {
+                    title: 'Contract',
+                    dataIndex: 'contract_name',
+                    render: (value: string | undefined) => value || <span className="text-gray-400 text-sm">No contract</span>
+                  },
+                  {
+                    title: 'Status',
+                    dataIndex: 'billing_cycle_id',
+                    render: () => <Badge variant="default" className="bg-blue-100 text-blue-800 border-blue-200">Invoiced</Badge>
                   },
                   {
                     title: 'Billing Cycle',

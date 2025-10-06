@@ -4,11 +4,11 @@ import React from 'react';
 import { Badge } from 'server/src/components/ui/Badge';
 import { IPlanBundle } from 'server/src/interfaces/planBundle.interfaces';
 
-interface PlanBundleHeaderProps {
+interface ContractHeaderProps {
   bundle: IPlanBundle;
 }
 
-const PlanBundleHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
+const ContractHeader: React.FC<ContractHeaderProps> = ({ bundle }) => {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2">
@@ -24,4 +24,4 @@ const PlanBundleHeader: React.FC<PlanBundleHeaderProps> = ({ bundle }) => {
   );
 };
 
-export default PlanBundleHeader;
+export default ContractHeader;

@@ -9,7 +9,7 @@ import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 
-interface BundlePlanRateDialogProps {
+interface ContractPlanRateDialogProps {
   plan: {
     plan_id: string;
     plan_name: string;
@@ -20,12 +20,11 @@ interface BundlePlanRateDialogProps {
   onSave: (customRate: number | undefined) => void; // Allow undefined
 }
 
-export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDialogProps) {
+export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRateDialogProps) {
   const [customRate, setCustomRate] = useState<number>(
-    plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0) // Use default if null or undefined
+    plan.custom_rate !== undefined && plan.custom_rate !== null ? plan.custom_rate : (plan.default_rate || 0)
   );
-  // Check for both null and undefined to determine if default rate is being used
-  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(plan.custom_rate === undefined || plan.custom_rate === null);
+  const [useDefaultRate, setUseDefaultRate] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -72,18 +71,28 @@ export function BundlePlanRateDialog({ plan, onClose, onSave }: BundlePlanRateDi
             </div>
             
             <div>
-              <Label htmlFor="custom-rate">Custom Rate</Label>
+              <Label htmlFor="custom-rate" className={useDefaultRate ? 'text-gray-400' : ''}>Custom Rate</Label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 transform -translate-y-1/2">$</span>
+                <span className={`absolute left-3 top-1/2 transform -translate-y-1/2 ${useDefaultRate ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
                 <Input
                   id="custom-rate"
                   type="number"
                   min="0"
                   step="0.01"
                   value={customRate}
-                  onChange={(e) => setCustomRate(parseFloat(e.target.value))}
+                  onChange={(e) => {
+                    setCustomRate(parseFloat(e.target.value));
+                    if (useDefaultRate) {
+                      setUseDefaultRate(false);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (useDefaultRate) {
+                      setUseDefaultRate(false);
+                    }
+                  }}
                   disabled={useDefaultRate}
-                  className="pl-7"
+                  className={`pl-7 ${useDefaultRate ? 'bg-gray-100 text-gray-400 cursor-not-allowed opacity-60' : ''} [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none`}
                 />
               </div>
             </div>
