@@ -13,30 +13,26 @@ This guide provides step-by-step instructions for setting up the PSA system usin
 
 ## Choose a Release
 
-1. Visit the [GitHub releases](https://github.com/nine-minds/alga-psa/releases) page and note the exact release you want to run (example below uses `release/0.11.0`).
-2. Clone and check out that release:
+1. Visit the [GitHub releases](https://github.com/nine-minds/alga-psa/releases) page.
+2. Decide which release tag you want to deploy (the rest of this guide uses `release/0.11.0` as the example).
+
+## Initial Setup
+
+1. Clone the repository (or pull the latest changes) and check out the release you selected above:
    ```bash
    git clone https://github.com/nine-minds/alga-psa.git
    cd alga-psa
    git checkout release/0.11.0
    ```
-3. Pin the container image to the same release by running the helper script:
+2. Pin the prebuilt container image to the same release:
    ```bash
    ./scripts/set-image-tag.sh
    ```
-
-## Initial Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/nine-minds/alga-psa.git
-cd alga-psa
-```
-
-2. Create required directories:
-```bash
-mkdir -p secrets
-```
+   This writes `.env.image` alongside `server/.env` with `ALGA_IMAGE_TAG=<your-tag>`, ensuring Docker Compose pulls the matching prebuilt image. Re-run the script whenever you upgrade or switch commits.
+3. Create required directories:
+   ```bash
+   mkdir -p secrets
+   ```
 
 ## Secrets Configuration
 
