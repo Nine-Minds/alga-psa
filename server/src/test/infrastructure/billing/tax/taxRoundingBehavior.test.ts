@@ -64,17 +64,6 @@ describe('Tax Allocation Strategy', () => {
   let context: TestContext;
   let default_service_id: string;
 
-  async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
-      regionCode: 'US-NY',
-      regionName: 'New York',
-      description: 'NY State Tax',
-      startDate: '2020-01-01T00:00:00.000Z',
-      taxPercentage: 8.875
-    });
-    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
-  }
-
   beforeAll(async () => {
     context = await setupContext({
       runSeeds: true,
@@ -88,7 +77,7 @@ describe('Tax Allocation Strategy', () => {
         'company_tax_rates',
         'companies'
       ],
-      companyName: 'Tax Allocation Test Company',
+      companyName: 'Tax Test Company',
       userType: 'internal'
     });
 
@@ -100,8 +89,6 @@ describe('Tax Allocation Strategy', () => {
 
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
-
-    await configureDefaultTax();
   }, 120000);
 
   beforeEach(async () => {
@@ -116,16 +103,15 @@ describe('Tax Allocation Strategy', () => {
     mockedUserId = mockContext.userId;
 
     // Create a default service for testing
+    // NOTE: Do NOT set tax_region here - each test configures its own tax
     default_service_id = await createTestService(context, {
       service_name: 'Test Service',
       billing_method: 'fixed',
       default_rate: 1000,
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY'
+      unit_of_measure: 'unit'
     });
 
-    // Configure default tax for the test company
-    await configureDefaultTax();
+    // NOTE: Do NOT configure default tax here - each test sets its own tax rate
   }, 30000);
 
   afterEach(async () => {
@@ -146,6 +132,7 @@ describe('Tax Allocation Strategy', () => {
         startDate: '2025-01-01T00:00:00.000Z',
         taxPercentage: 10
       });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with mixed positive and negative amounts
       const invoice = await generateManualInvoice({
@@ -173,22 +160,22 @@ describe('Tax Allocation Strategy', () => {
       });
 
       // Net subtotal: $40.00 ($50.00 positive - $10.00 negative)
-      // Total tax at 10%: $4.00
+      // Tax calculated on positive items only: $50.00 * 10% = $5.00
       // Distribution:
-      // - $30.00 item (60% of positive) gets $2.40 tax
-      // - $20.00 item (40% of positive) gets $1.60 tax
+      // - $30.00 item (60% of positive $50) gets $3.00 tax
+      // - $20.00 item (40% of positive $50) gets $2.00 tax
       // - Negative item gets no tax
       const invoiceItems = await context.db('invoice_items')
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
       expect(invoice.subtotal).toBe(4000); // $40.00
-      expect(invoice.tax).toBe(400); // $4.00
-      expect(invoice.total_amount).toBe(4400); // $44.00
+      expect(invoice.tax).toBe(500); // $5.00 (10% of $50 positive items)
+      expect(invoice.total_amount).toBe(4500); // $45.00
 
       // Verify tax distribution
-      expect(invoiceItems[0].tax_amount).toBe('240'); // $2.40 on $30.00 item
-      expect(invoiceItems[1].tax_amount).toBe('160'); // $1.60 on $20.00 item
+      expect(invoiceItems[0].tax_amount).toBe('300'); // $3.00 on $30.00 item (60% of $5 tax)
+      expect(invoiceItems[1].tax_amount).toBe('200'); // $2.00 on $20.00 item (40% of $5 tax)
       expect(invoiceItems[2].tax_amount).toBe('0'); // $0.00 on negative item
     });
 
@@ -201,6 +188,7 @@ describe('Tax Allocation Strategy', () => {
         startDate: '2025-01-01T00:00:00.000Z',
         taxPercentage: 8.875
       });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with amounts that will produce fractional tax cents
       const invoice = await generateManualInvoice({
@@ -255,6 +243,7 @@ describe('Tax Allocation Strategy', () => {
         startDate: '2025-01-01T00:00:00.000Z',
         taxPercentage: 1
       });
+      await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
       // Create invoice with small amounts
       const invoice = await generateManualInvoice({

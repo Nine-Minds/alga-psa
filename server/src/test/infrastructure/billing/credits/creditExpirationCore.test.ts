@@ -46,6 +46,36 @@ vi.mock('@alga-psa/shared/db', async (importOriginal) => {
   };
 });
 
+vi.mock('@shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@shared/workflow/streams/eventBusSchema', () => ({
+  BaseEvent: class {},
+  Event: class {
+    id = 'mock-event-id';
+    payload = { tenantId: 'mock-tenant-id' };
+  },
+  EventType: {} as Record<string, string>,
+  EventSchemas: {} as Record<string, unknown>,
+  BaseEventSchema: {},
+  convertToWorkflowEvent: vi.fn((event) => event)
+}));
+
+vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
+  WorkflowEventBaseSchema: {}
+}));
+
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
 }));

@@ -35,6 +35,7 @@ import { AnalyticsEvents } from '../analytics/events';
 // TODO: Import these from billingAndTax.ts once created
 import { getNextBillingDate, getDueDate } from './billingAndTax'; // Updated import
 import { getCompanyDefaultTaxRegionCode } from './company-actions/companyTaxRateActions';
+import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 function isFixedPriceCharge(charge: IBillingCharge): charge is IFixedPriceCharge {
   return charge.type === 'fixed';
@@ -557,7 +558,21 @@ console.log(`[generateInvoice] Zero-dollar invoice created (${createdInvoice.inv
   await billingEngine.rolloverUnapprovedTime(company_id, cycleEnd, nextBillingTimestamp);
 
 console.log(`[generateInvoice] Regular invoice created (${createdInvoice.invoice_id}). Fetching full ViewModel before returning.`);
-  return await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
+  let invoiceView = await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
+
+  const amountDue = Math.max(Number(invoiceView.total_amount ?? invoiceView.total ?? 0), 0);
+
+  if (amountDue > 0) {
+    const availableCredit = await CompanyBillingPlan.getCompanyCredit(company_id);
+    const creditToApply = Math.min(availableCredit, amountDue);
+
+    if (creditToApply > 0) {
+      await applyCreditToInvoice(company_id, createdInvoice.invoice_id, creditToApply);
+      invoiceView = await Invoice.getFullInvoiceById(knex, createdInvoice.invoice_id);
+    }
+  }
+
+  return invoiceView;
 }
 
 export async function generateInvoiceNumber(_trx?: Knex.Transaction): Promise<string> {

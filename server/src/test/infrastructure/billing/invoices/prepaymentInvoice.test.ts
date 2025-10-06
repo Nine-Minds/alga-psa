@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
+import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -171,6 +172,7 @@ describe('Prepayment Invoice System', () => {
           tenant: context.tenantId,
           zero_dollar_invoice_handling: 'normal',
           suppress_zero_dollar_invoices: false,
+          enable_credit_expiration: true,
           credit_expiration_days: 30,
           credit_expiration_notification_days: [7, 1],
           created_at: new Date().toISOString(),
@@ -184,14 +186,14 @@ describe('Prepayment Invoice System', () => {
   
         // Finalize the invoice to create the credit
         await runWithTenant(context.tenantId, async () => {
-          return await generateInvoice(result.invoice_id);
+          return await finalizeInvoice(result.invoice_id);
         });
   
         // Check that the transaction has an expiration date
         const transaction = await context.db('transactions')
           .where({
+            company_id: context.companyId,
             invoice_id: result.invoice_id,
-            tenant: context.tenantId,
             type: 'credit_issuance'
           })
           .first();
@@ -214,7 +216,8 @@ describe('Prepayment Invoice System', () => {
           .first();
   
         expect(creditTracking).toBeTruthy();
-        expect(creditTracking.expiration_date).toBe(transaction.expiration_date);
+        // Compare dates by converting to ISO strings (Date objects are different instances)
+        expect(new Date(creditTracking.expiration_date).toISOString()).toBe(new Date(transaction.expiration_date).toISOString());
         expect(creditTracking.is_expired).toBe(false);
       });
   
@@ -230,20 +233,22 @@ describe('Prepayment Invoice System', () => {
   
         // Finalize the invoice to create the credit
         await runWithTenant(context.tenantId, async () => {
-          return await generateInvoice(result.invoice_id);
+          return await finalizeInvoice(result.invoice_id);
         });
   
         // Check that the transaction has the manual expiration date
         const transaction = await context.db('transactions')
           .where({
+            company_id: context.companyId,
             invoice_id: result.invoice_id,
-            tenant: context.tenantId,
             type: 'credit_issuance'
           })
           .first();
   
         expect(transaction).toBeTruthy();
-        expect(transaction.expiration_date).toBe(expirationDateString);
+        // Convert both to ISO strings for comparison (database may return Date object)
+        const actualExpiration = new Date(transaction.expiration_date).toISOString();
+        expect(actualExpiration).toBe(expirationDateString);
   
         // Check that the credit tracking entry has the same expiration date
         const creditTracking = await context.db('credit_tracking')
@@ -254,7 +259,8 @@ describe('Prepayment Invoice System', () => {
           .first();
   
         expect(creditTracking).toBeTruthy();
-        expect(creditTracking.expiration_date).toBe(expirationDateString);
+        // Compare dates by converting to ISO string (database may return Date object)
+        expect(new Date(creditTracking.expiration_date).toISOString()).toBe(expirationDateString);
       });
 
     it('rejects invalid company IDs', async () => {
@@ -290,11 +296,18 @@ describe('Prepayment Invoice System', () => {
         return await createPrepaymentInvoice(context.companyId, prepaymentAmount);
       });
       
-      const finalizedInvoice = await runWithTenant(context.tenantId, async () => {
-        return await generateInvoice(invoice.invoice_id);
+      await runWithTenant(context.tenantId, async () => {
+        return await finalizeInvoice(invoice.invoice_id);
       });
 
-      expect(finalizedInvoice).toMatchObject({
+      const finalizedInvoiceRecord = await context.db('invoices')
+        .where({
+          invoice_id: invoice.invoice_id,
+          tenant: context.tenantId
+        })
+        .first();
+
+      expect(finalizedInvoiceRecord).toMatchObject({
         invoice_id: invoice.invoice_id,
         status: 'sent'
       });
@@ -304,8 +317,8 @@ describe('Prepayment Invoice System', () => {
 
       const creditTransaction = await context.db('transactions')
         .where({
+          company_id: context.companyId,
           invoice_id: invoice.invoice_id,
-          tenant: context.tenantId,
           type: 'credit_issuance'
         })
         .first();
@@ -345,7 +358,7 @@ describe('Prepayment Invoice System', () => {
         planName: 'Test Plan',
         billingFrequency: 'monthly',
         baseRateCents: 1000,
-        startDate: dateHelpers.toISOString(startDate)
+        startDate: startDate.toInstant().toString()
       });
       planId = createdPlanId;
 
@@ -356,9 +369,9 @@ describe('Prepayment Invoice System', () => {
         company_id: context.companyId,
         tenant: context.tenantId,
         billing_cycle: 'monthly',
-        period_start_date: startDate,
-        period_end_date: dateHelpers.startOf(now, 'month'),
-        effective_date: startDate
+        period_start_date: startDate.toInstant().toString(),
+        period_end_date: dateHelpers.startOf(now, 'month').toInstant().toString(),
+        effective_date: startDate.toInstant().toString()
       });
 
       // Create a service for bucket usage
@@ -376,7 +389,7 @@ describe('Prepayment Invoice System', () => {
         totalHours: 40,
         overageRateCents: 150,
         billingPeriod: 'monthly',
-        startDate: startDate.toString()
+        startDate: startDate.toInstant().toString()
       });
 
       // Create bucket usage
@@ -384,8 +397,8 @@ describe('Prepayment Invoice System', () => {
         planId,
         serviceId: bucketServiceId,
         companyId: context.companyId,
-        periodStart: startDate.toString(),
-        periodEnd: dateHelpers.startOf(now, 'month').toString(),
+        periodStart: startDate.toInstant().toString(),
+        periodEnd: dateHelpers.startOf(now, 'month').toInstant().toString(),
         minutesUsed: 45 * 60,
         overageMinutes: 5 * 60
       });
@@ -399,7 +412,7 @@ describe('Prepayment Invoice System', () => {
       });
       
       await runWithTenant(context.tenantId, async () => {
-        return await generateInvoice(prepaymentInvoice.invoice_id);
+        return await finalizeInvoice(prepaymentInvoice.invoice_id);
       });
 
       const initialCredit = await runWithTenant(context.tenantId, async () => {
@@ -528,7 +541,7 @@ describe('Multiple Credit Applications', () => {
       planName: 'Test Plan',
       billingFrequency: 'monthly',
       baseRateCents: 1000,
-      startDate: dateHelpers.toISOString(startDate)
+      startDate: startDate.toInstant().toString()
     });
     planId = createdPlanId;
 
@@ -542,18 +555,18 @@ describe('Multiple Credit Applications', () => {
         company_id: context.companyId,
         tenant: context.tenantId,
         billing_cycle: 'monthly',
-        period_start_date: dateHelpers.startOf(now, 'month'),
-        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        effective_date: startDate
+        period_start_date: dateHelpers.startOf(now, 'month').toInstant().toString(),
+        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
+        effective_date: startDate.toInstant().toString()
       },
       {
         billing_cycle_id: billingCycleId2,
         company_id: context.companyId,
         tenant: context.tenantId,
         billing_cycle: 'monthly',
-        period_start_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
-        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
-        effective_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month')
+        period_start_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
+        period_end_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toInstant().toString(),
+        effective_date: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString()
       }
     ]);
 
@@ -572,7 +585,7 @@ describe('Multiple Credit Applications', () => {
       totalHours: 40,
       overageRateCents: 150,
       billingPeriod: 'monthly',
-      startDate: startDate.toString()
+      startDate: startDate.toInstant().toString()
     });
 
     // Create bucket usage for both billing cycles
@@ -581,8 +594,8 @@ describe('Multiple Credit Applications', () => {
         planId,
         serviceId: bucketServiceId,
         companyId: context.companyId,
-        periodStart: dateHelpers.startOf(now, 'month').toString(),
-        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toString(),
+        periodStart: dateHelpers.startOf(now, 'month').toInstant().toString(),
+        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
         minutesUsed: 45 * 60,
         overageMinutes: 5 * 60
       }),
@@ -590,8 +603,8 @@ describe('Multiple Credit Applications', () => {
         planId,
         serviceId: bucketServiceId,
         companyId: context.companyId,
-        periodStart: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toString(),
-        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toString(),
+        periodStart: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month').toInstant().toString(),
+        periodEnd: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month').toInstant().toString(),
         minutesUsed: 50 * 60,
         overageMinutes: 10 * 60
       })
@@ -614,7 +627,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice1.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice1.invoice_id);
     });
 
     const prepaymentAmount2 = 30000;
@@ -623,7 +636,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice2.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice2.invoice_id);
     });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
@@ -669,7 +682,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice1.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice1.invoice_id);
     });
 
     const prepaymentAmount2 = 30000;
@@ -678,7 +691,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice2.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice2.invoice_id);
     });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
@@ -725,7 +738,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice1.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice1.invoice_id);
     });
 
     const prepaymentAmount2 = 30000;
@@ -734,7 +747,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice2.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice2.invoice_id);
     });
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
@@ -768,7 +781,7 @@ describe('Multiple Credit Applications', () => {
     });
     
     const finalizedInvoice = await runWithTenant(context.tenantId, async () => {
-      return await generateInvoice(prepaymentInvoice.invoice_id);
+      return await finalizeInvoice(prepaymentInvoice.invoice_id);
     });
 
     // Create credit issuance transaction after invoice is finalized

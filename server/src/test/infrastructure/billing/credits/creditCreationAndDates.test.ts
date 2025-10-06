@@ -14,6 +14,10 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'credit_creation_tests';
+
 vi.mock('server/src/lib/auth/getSession', () => ({
   getSession: vi.fn(async () => ({
     user: {
@@ -32,14 +36,42 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/shared/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+async function mockSharedDb() {
+  const actual = await import('@alga-psa/shared/db');
   return {
     ...actual,
     withTransaction: vi.fn(async (knex, callback) => callback(knex)),
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
-});
+}
+
+vi.mock('@alga-psa/shared/db', mockSharedDb);
+vi.mock('@shared/db', mockSharedDb);
+
+vi.mock('@shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@shared/workflow/streams/eventBusSchema', () => ({
+  BaseEvent: class {},
+  Event: class {
+    id = 'mock-event-id';
+    payload = { tenantId: 'mock-tenant-id' };
+  },
+  EventType: {} as Record<string, string>,
+  EventSchemas: {} as Record<string, unknown>,
+  BaseEventSchema: {},
+  convertToWorkflowEvent: vi.fn((event) => event)
+}));
+
+vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
+  WorkflowEventBaseSchema: {}
+}));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
   hasPermission: vi.fn(() => Promise.resolve(true))
@@ -123,6 +155,14 @@ describe('Credit Creation and Dates Tests', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
+    const sessionModule = await import('server/src/lib/auth/getSession');
+    vi.mocked(sessionModule.getSession).mockResolvedValue({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    });
+
     await ensureDefaultTax();
   }, 60000);
 
@@ -135,6 +175,14 @@ describe('Credit Creation and Dates Tests', () => {
     });
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
+
+    const sessionModule = await import('server/src/lib/auth/getSession');
+    vi.mocked(sessionModule.getSession).mockResolvedValue({
+      user: {
+        id: mockedUserId,
+        tenant: mockedTenantId
+      }
+    });
     await ensureDefaultTax();
   }, 30000);
 

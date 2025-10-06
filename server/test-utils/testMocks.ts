@@ -1,6 +1,60 @@
 import { vi } from 'vitest';
 import { IUserWithRoles } from '../src/interfaces/auth.interfaces';
 
+const currentUserRef = vi.hoisted(() => ({
+  user: {
+    user_id: 'mock-user-id',
+    tenant: '11111111-1111-1111-1111-111111111111',
+    username: 'mock-user',
+    first_name: 'Mock',
+    last_name: 'User',
+    email: 'mock.user@example.com',
+    hashed_password: 'hashed_password_here',
+    is_inactive: false,
+    user_type: 'internal',
+    roles: []
+  } as IUserWithRoles
+}));
+
+const sessionUserRef = vi.hoisted(() => ({
+  user: {
+    id: 'mock-user-id',
+    tenant: '11111111-1111-1111-1111-111111111111'
+  }
+}));
+
+const permissionCheckRef = vi.hoisted(() => ({
+  fn: (user: IUserWithRoles) => user.user_type === 'admin'
+}));
+
+vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
+  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
+}));
+
+vi.mock('@/lib/actions/user-actions/userActions', () => ({
+  getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
+}));
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(() => Promise.resolve({ user: sessionUserRef.user }))
+}));
+
+vi.mock('@/lib/auth/getSession', () => ({
+  getSession: vi.fn(() => Promise.resolve({ user: sessionUserRef.user }))
+}));
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  )
+}));
+
+vi.mock('@/lib/auth/rbac', () => ({
+  hasPermission: vi.fn((user: IUserWithRoles, resource: string, action: string) =>
+    Promise.resolve(permissionCheckRef.fn(user, resource, action))
+  )
+}));
+
 /**
  * Creates a mock Headers object with tenant context
  * @param tenantId Optional tenant ID (defaults to a test UUID)
@@ -72,11 +126,7 @@ export function mockRBAC(
   permissionCheck: (user: IUserWithRoles, resource: string, action: string) => boolean = 
     (user) => user.user_type === 'admin'
 ) {
-  vi.mock('@/lib/auth/rbac', () => ({
-    hasPermission: vi.fn((user, resource, action) => 
-      Promise.resolve(permissionCheck(user, resource, action))
-    ),
-  }));
+  permissionCheckRef.fn = permissionCheck;
 }
 
 /**
@@ -84,9 +134,7 @@ export function mockRBAC(
  * @param mockUser The user object to return
  */
 export function mockGetCurrentUser(mockUser: IUserWithRoles) {
-  vi.mock('@/lib/actions/user-actions/userActions', () => ({
-    getCurrentUser: vi.fn(() => Promise.resolve(mockUser)),
-  }));
+  currentUserRef.user = mockUser;
 }
 
 /**
@@ -133,14 +181,10 @@ export function setupCommonMocks(options: {
   mockNextCache();
   mockRBAC(options.permissionCheck);
   mockGetCurrentUser(user);
-  vi.mock('server/src/lib/auth/getSession', () => ({
-    getSession: vi.fn(() => Promise.resolve({
-      user: {
-        id: user.user_id,
-        tenant: tenantId
-      }
-    }))
-  }));
+  sessionUserRef.user = {
+    id: user.user_id,
+    tenant: tenantId
+  };
 
   return { tenantId, userId, user };
 }

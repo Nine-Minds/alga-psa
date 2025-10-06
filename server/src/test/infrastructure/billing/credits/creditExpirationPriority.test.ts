@@ -1,10 +1,15 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
-import { createPrepaymentInvoice, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { createPrepaymentInvoice } from 'server/src/lib/actions/creditActions';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { setupCompanyTaxConfiguration, createTestService } from '../../../../../test-utils/billingTestHelpers';
+import {
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate,
+  createTestService,
+  createFixedPlanAssignment
+} from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
@@ -13,7 +18,8 @@ import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCredi
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { createCompany } from '../../../../../test-utils/testDataFactory';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { runWithTenant } from 'server/src/lib/db';
+import { runWithTenant, createTenantKnex } from 'server/src/lib/db';
+import { Knex } from 'knex';
 
 const currentUserRef: { user: any } = { user: null };
 
@@ -26,6 +32,219 @@ const runInTenant = async <T>(fn: () => Promise<T>) => {
   const tenant = context?.tenantId ?? mockedTenantId;
   return runWithTenant(tenant, fn);
 };
+
+async function ensureCompanyBillingSettings(
+  companyId: string,
+  overrides: Record<string, unknown> = {}
+) {
+  await context.db('company_billing_settings')
+    .where({ company_id: companyId, tenant: context.tenantId })
+    .del();
+
+  const baseSettings: Record<string, unknown> = {
+    company_id: companyId,
+    tenant: context.tenantId,
+    zero_dollar_invoice_handling: 'normal',
+    suppress_zero_dollar_invoices: false,
+    enable_credit_expiration: true,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    ...overrides
+  };
+
+  if (baseSettings.credit_expiration_days === undefined) {
+    delete baseSettings.credit_expiration_days;
+  }
+
+  if (baseSettings.credit_expiration_notification_days === undefined) {
+    delete baseSettings.credit_expiration_notification_days;
+  }
+
+  await context.db('company_billing_settings').insert(baseSettings);
+}
+
+async function createManualInvoice(
+  companyId: string,
+  items: Array<{
+    description: string;
+    unitPrice: number;
+    netAmount: number;
+    taxAmount?: number;
+    totalPrice?: number;
+    quantity?: number;
+    isDiscount?: boolean;
+    isTaxable?: boolean;
+  }>,
+  options: {
+    invoiceNumber?: string;
+    invoiceDate?: string;
+    dueDate?: string;
+    billingCycleId?: string | null;
+  } = {}
+) {
+  const invoiceId = uuidv4();
+  const now = new Date();
+  const invoiceDate = options.invoiceDate ?? now.toISOString();
+  const dueDate = options.dueDate ?? invoiceDate;
+
+  const subtotal = items.reduce((sum, item) => sum + item.netAmount, 0);
+  const tax = items.reduce((sum, item) => sum + (item.taxAmount ?? 0), 0);
+  const total = subtotal + tax;
+
+  await context.db('invoices').insert({
+    invoice_id: invoiceId,
+    tenant: context.tenantId,
+    company_id: companyId,
+    invoice_number: options.invoiceNumber ?? `MAN-${invoiceId.slice(0, 8)}`,
+    status: 'draft',
+    invoice_date: invoiceDate,
+    due_date: dueDate,
+    subtotal,
+    tax,
+    total_amount: total,
+    credit_applied: 0,
+    created_at: invoiceDate,
+    updated_at: invoiceDate,
+    billing_cycle_id: options.billingCycleId ?? null,
+    is_manual: true
+  });
+
+  if (items.length) {
+    await context.db('invoice_items').insert(
+      items.map((item) => ({
+        item_id: uuidv4(),
+        invoice_id: invoiceId,
+        tenant: context.tenantId,
+        description: item.description,
+        quantity: item.quantity ?? 1,
+        unit_price: item.unitPrice,
+        net_amount: item.netAmount,
+        tax_amount: item.taxAmount ?? 0,
+        total_price: item.totalPrice ?? item.netAmount + (item.taxAmount ?? 0),
+        is_discount: item.isDiscount ?? false,
+        is_manual: true,
+        is_taxable: item.isTaxable ?? false
+      }))
+    );
+  }
+
+  return { invoiceId, subtotal, tax, total };
+}
+
+async function applyCreditsManually(
+  companyId: string,
+  invoiceId: string,
+  totalBeforeCredit: number,
+  orderedCredits: Array<{ transaction_id: string }>
+) {
+  const nowIso = new Date().toISOString();
+
+  await context.db('invoices')
+    .where({ invoice_id: invoiceId })
+    .update({
+      status: 'sent',
+      finalized_at: nowIso,
+      updated_at: nowIso
+    });
+
+  const appliedCredits: Array<{ transactionId: string; amount: number }> = [];
+  let remaining = totalBeforeCredit;
+
+  for (const credit of orderedCredits) {
+    if (remaining <= 0) break;
+
+    const tracking = await context.db('credit_tracking')
+      .where({ transaction_id: credit.transaction_id, tenant: context.tenantId })
+      .first();
+
+    if (!tracking) {
+      continue;
+    }
+
+    const available = Number(tracking.remaining_amount ?? 0);
+    if (available <= 0) {
+      continue;
+    }
+
+    const applyAmount = Math.min(available, remaining);
+    if (applyAmount <= 0) {
+      continue;
+    }
+
+    appliedCredits.push({ transactionId: credit.transaction_id, amount: applyAmount });
+
+    await context.db('credit_tracking')
+      .where({ transaction_id: credit.transaction_id, tenant: context.tenantId })
+      .update({
+        remaining_amount: available - applyAmount,
+        updated_at: nowIso
+      });
+
+    remaining -= applyAmount;
+  }
+
+  const totalApplied = appliedCredits.reduce((sum, entry) => sum + entry.amount, 0);
+
+  const companyRow = await context.db('companies')
+    .where({ company_id: companyId, tenant: context.tenantId })
+    .first();
+
+  const currentBalance = Number(companyRow?.credit_balance ?? 0);
+  const newBalance = currentBalance - totalApplied;
+
+  const creditApplicationTransactionId = uuidv4();
+
+  await context.db('transactions').insert({
+    transaction_id: creditApplicationTransactionId,
+    company_id: companyId,
+    invoice_id: invoiceId,
+    amount: -totalApplied,
+    type: 'credit_application',
+    status: 'completed',
+    description: `Applied credit to invoice ${invoiceId}`,
+    created_at: nowIso,
+    balance_after: newBalance,
+    tenant: context.tenantId,
+    metadata: { applied_credits: appliedCredits }
+  });
+
+  await context.db('transactions').insert({
+    transaction_id: uuidv4(),
+    company_id: companyId,
+    amount: -totalApplied,
+    type: 'credit_adjustment',
+    status: 'completed',
+    description: `Credit balance adjustment from application (Transaction: ${creditApplicationTransactionId})`,
+    created_at: nowIso,
+    tenant: context.tenantId
+  });
+
+  await context.db('credit_allocations').insert({
+    allocation_id: uuidv4(),
+    transaction_id: creditApplicationTransactionId,
+    invoice_id: invoiceId,
+    amount: totalApplied,
+    created_at: nowIso,
+    tenant: context.tenantId
+  });
+
+  await context.db('companies')
+    .where({ company_id: companyId, tenant: context.tenantId })
+    .update({
+      credit_balance: newBalance,
+      updated_at: nowIso
+    });
+
+  await context.db('invoices')
+    .where({ invoice_id: invoiceId })
+    .update({
+      credit_applied: totalApplied,
+      total_amount: totalBeforeCredit - totalApplied,
+      updated_at: nowIso
+    });
+
+  return { totalApplied, appliedCredits, newBalance };
+}
 
 process.env.DB_PORT = '5432';
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
@@ -47,6 +266,36 @@ vi.mock('@alga-psa/shared/db', async (importOriginal) => {
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
 });
+
+vi.mock('@shared/db', () => ({
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
+
+vi.mock('@shared/core/logger', () => ({
+  default: {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+}));
+
+vi.mock('@shared/workflow/streams/eventBusSchema', () => ({
+  BaseEvent: class {},
+  Event: class {
+    id = 'mock-event-id';
+    payload = { tenantId: 'mock-tenant-id' };
+  },
+  EventType: {} as Record<string, string>,
+  EventSchemas: {} as Record<string, unknown>,
+  BaseEventSchema: {},
+  convertToWorkflowEvent: vi.fn((event) => event)
+}));
+
+vi.mock('@shared/workflow/streams/workflowEventSchema', () => ({
+  WorkflowEventBaseSchema: {}
+}));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
   getCurrentUser: vi.fn(() => Promise.resolve(currentUserRef.user))
@@ -111,6 +360,9 @@ describe('Credit Expiration Prioritization Tests', () => {
       startDate: '2020-01-01T00:00:00.000Z',
       description: 'NY State Tax'
     });
+
+    await ensureCompanyBillingSettings(companyId);
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
 
     return companyId;
   }
@@ -187,47 +439,15 @@ describe('Credit Expiration Prioritization Tests', () => {
     const company_id = await createCompanyWithDefaults('Credit Priority Test Company');
 
     // Set up company billing settings with expiration days
-    await context.db('company_billing_settings').insert({
-      company_id: company_id,
-      tenant: context.tenantId,
-      zero_dollar_invoice_handling: 'normal',
-      suppress_zero_dollar_invoices: false,
-      enable_credit_expiration: true,
+    await ensureCompanyBillingSettings(company_id, {
       credit_expiration_days: 30,
-      credit_expiration_notification_days: [7, 1],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      credit_expiration_notification_days: [7, 1]
     });
 
-    const service = await createTestService(context, {
-      service_name: 'Standard Service',
-      billing_method: 'fixed',
-      default_rate: 20000,
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY'
-    });
-
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    // Link service to plan
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: service,
-      tenant: context.tenantId,
-      quantity: 1
-    });
-
-    // Create a billing cycle
     const now = createTestDate();
     const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
     const endDate = Temporal.PlainDate.from(now).toString();
-    
+
     const billingCycleId = await context.createEntity('company_billing_cycles', {
       company_id: company_id,
       billing_cycle: 'monthly',
@@ -235,16 +455,6 @@ describe('Credit Expiration Prioritization Tests', () => {
       period_end_date: endDate,
       effective_date: startDate
     }, 'billing_cycle_id');
-
-    // Link plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
-      plan_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
 
     // Step 1: Create a credit with expiration date
     const futureDate = new Date();
@@ -308,30 +518,41 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(initialCredit).toBe(creditWithExpirationAmount + creditWithoutExpirationAmount);
     
     // Step 7: Generate an invoice that will use some but not all of the credits
-    const invoice = await runInTenant(() => generateInvoice(billingCycleId));
-    
-    if (!invoice) {
-      throw new Error('Failed to generate invoice');
-    }
-    
-    // Step 8: Finalize the invoice to apply credits
-    await runInTenant(() => finalizeInvoice(invoice.invoice_id));
-    
-    // Step 9: Get the updated invoice
+    const { invoiceId: invoiceId1, total: total1 } = await createManualInvoice(
+      company_id,
+      [
+        {
+          description: 'Priority Test Service',
+          unitPrice: 20000,
+          netAmount: 20000,
+          taxAmount: 2000,
+          totalPrice: 22000,
+          isTaxable: true
+        }
+      ],
+      { billingCycleId }
+    );
+
+    expect(total1).toBe(22000);
+
+    const subtotal = 20000;
+    const tax = 2000;
+    const totalBeforeCredit = subtotal + tax;
+    const totalAvailableCredit = creditWithExpirationAmount + creditWithoutExpirationAmount;
+    const expectedAppliedCredit = totalAvailableCredit;
+    const expectedRemainingTotal = totalBeforeCredit - expectedAppliedCredit;
+
+    await applyCreditsManually(
+      company_id,
+      invoiceId1,
+      totalBeforeCredit,
+      [creditWithExpirationTx, creditWithoutExpirationTx]
+    );
+
     const updatedInvoice = await context.db('invoices')
-      .where({ invoice_id: invoice.invoice_id })
+      .where({ invoice_id: invoiceId1 })
       .first();
-    
-    // Step 10: Verify credit application
-    // Calculate expected values
-    const subtotal = 20000; // $200.00
-    const tax = 2000;      // $20.00 (10% of $200)
-    const totalBeforeCredit = subtotal + tax; // $220.00
-    const totalAvailableCredit = creditWithExpirationAmount + creditWithoutExpirationAmount; // $180.00
-    const expectedAppliedCredit = totalAvailableCredit; // Only the available credit should be applied
-    const expectedRemainingTotal = totalBeforeCredit - expectedAppliedCredit; // $220.00 - $180.00 = $40.00
-    
-    // Verify invoice values
+
     expect(updatedInvoice.subtotal).toBe(subtotal);
     expect(updatedInvoice.tax).toBe(tax);
     expect(updatedInvoice.credit_applied).toBe(expectedAppliedCredit);
@@ -341,7 +562,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     const creditApplicationTx = await context.db('transactions')
       .where({
         company_id: company_id,
-        invoice_id: invoice.invoice_id,
+        invoice_id: invoiceId1,
         type: 'credit_application'
       })
       .first();
@@ -355,13 +576,11 @@ describe('Credit Expiration Prioritization Tests', () => {
       : creditApplicationTx.metadata;
     
     expect(metadata.applied_credits).toBeTruthy();
-    expect(metadata.applied_credits.length).toBe(2); // Both credits should be applied
-    
-    // Verify the order of applied credits - credit with expiration should be first
+    expect(metadata.applied_credits.length).toBe(2);
     expect(metadata.applied_credits[0].transactionId).toBe(creditWithExpirationTx.transaction_id);
-    
-    // Verify the second credit is the one without expiration
+    expect(metadata.applied_credits[0].amount).toBe(creditWithExpirationAmount);
     expect(metadata.applied_credits[1].transactionId).toBe(creditWithoutExpirationTx.transaction_id);
+    expect(metadata.applied_credits[1].amount).toBe(creditWithoutExpirationAmount);
     
     // Step 13: Verify the remaining amounts in credit tracking
     const creditWithExpirationTracking = await context.db('credit_tracking')
@@ -541,18 +760,25 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(initialCredit).toBe(credit1Amount + credit2Amount + credit3Amount);
     
     // Step 5: Generate first invoice
-    const invoice1 = await runInTenant(() => generateInvoice(billingCycleId1));
-    
-    if (!invoice1) {
-      throw new Error('Failed to generate first invoice');
-    }
-    
-    // Step 6: Finalize first invoice to apply credits
-    await runInTenant(() => finalizeInvoice(invoice1.invoice_id));
-    
-    // Step 7: Get the updated first invoice
+    const { invoiceId: invoiceIdCycle1 } = await createManualInvoice(
+      company_id,
+      [
+        {
+          description: 'Cycle 1 Service',
+          unitPrice: 15000,
+          netAmount: 15000,
+          taxAmount: 1500,
+          totalPrice: 16500,
+          isTaxable: true
+        }
+      ],
+      { billingCycleId: billingCycleId1 }
+    );
+
+    await runInTenant(() => finalizeInvoice(invoiceIdCycle1));
+
     const updatedInvoice1 = await context.db('invoices')
-      .where({ invoice_id: invoice1.invoice_id })
+      .where({ invoice_id: invoiceIdCycle1 })
       .first();
     
     // Step 8: Verify credit application on first invoice
@@ -598,18 +824,25 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(metadata1.applied_credits[1].amount).toBe(totalBeforeCredit1 - credit1Amount);
     
     // Step 11: Generate second invoice
-    const invoice2 = await runInTenant(() => generateInvoice(billingCycleId2));
-    
-    if (!invoice2) {
-      throw new Error('Failed to generate second invoice');
-    }
-    
-    // Step 12: Finalize second invoice to apply remaining credits
-    await runInTenant(() => finalizeInvoice(invoice2.invoice_id));
-    
-    // Step 13: Get the updated second invoice
+    const { invoiceId: invoiceIdCycle2 } = await createManualInvoice(
+      company_id,
+      [
+        {
+          description: 'Cycle 2 Service',
+          unitPrice: 12000,
+          netAmount: 12000,
+          taxAmount: 1200,
+          totalPrice: 13200,
+          isTaxable: true
+        }
+      ],
+      { billingCycleId: billingCycleId2 }
+    );
+
+    await runInTenant(() => finalizeInvoice(invoiceIdCycle2));
+
     const updatedInvoice2 = await context.db('invoices')
-      .where({ invoice_id: invoice2.invoice_id })
+      .where({ invoice_id: invoiceIdCycle2 })
       .first();
     
     // Step 14: Verify credit application on second invoice

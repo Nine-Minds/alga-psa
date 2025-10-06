@@ -34,6 +34,10 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
   
   try {
     await knex.transaction(async (trx: Knex.Transaction) => {
+      // Ensure tenant/user context is available for database triggers and audit logging
+      await trx.raw('select set_config(?, ?, true)', ['app.current_tenant', tenant]);
+      await trx.raw('select set_config(?, ?, true)', ['app.current_user', 'system']);
+
       // Get current date for expiration check
       const now = new Date().toISOString();
       

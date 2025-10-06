@@ -192,7 +192,7 @@ async function upsertCompanyDefaultTaxRate(
 interface CreateServiceOptions {
   service_id?: string;
   service_name?: string;
-  billing_method?: 'fixed' | 'per_unit';
+  billing_method?: 'fixed' | 'per_unit' | 'time';
   default_rate?: number;
   unit_of_measure?: string;
   description?: string | null;
@@ -298,13 +298,14 @@ export async function createTestService(
 ): Promise<string> {
   const serviceId = overrides.service_id ?? uuidv4();
   const billingMethod = overrides.billing_method ?? 'fixed';
-  const serviceTypeId = overrides.custom_service_type_id ?? await ensureServiceType(context, billingMethod);
+  const normalizedBillingMethod = billingMethod === 'time' ? 'per_unit' : billingMethod;
+  const serviceTypeId = overrides.custom_service_type_id ?? await ensureServiceType(context, normalizedBillingMethod);
 
   const serviceData: Record<string, unknown> = {
     service_id: serviceId,
     tenant: context.tenantId,
     service_name: overrides.service_name ?? 'Test Service',
-    billing_method: billingMethod,
+    billing_method: normalizedBillingMethod,
     default_rate: overrides.default_rate ?? 1000,
     unit_of_measure: overrides.unit_of_measure ?? 'each',
     custom_service_type_id: serviceTypeId,
