@@ -66,8 +66,16 @@ main() {
     # Read and trim the postgres password
     local PG_PASSWORD=$(cat /run/secrets/postgres_password | tr -d '[:space:]')
 
+    log "DEBUG: Connecting to ${PG_ADMIN_HOST}:${PG_ADMIN_PORT} with user postgres"
+    log "DEBUG: Password length: ${#PG_PASSWORD}"
+
     log "Creating pgboss schema..."
-    PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;'
+    if ! PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'CREATE SCHEMA IF NOT EXISTS pgboss;' 2>&1; then
+        log "ERROR: Failed to create pgboss schema. Trying to get more details..."
+        log "Testing connection with psql..."
+        PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'SELECT version();' || log "Connection test failed"
+        exit 1
+    fi
 
     log "Granting necessary permissions..."
     PGPASSWORD="${PG_PASSWORD}" psql -h ${PG_ADMIN_HOST} -p ${PG_ADMIN_PORT} -U postgres -d ${DB_NAME_SERVER:-server} -c 'GRANT ALL ON SCHEMA public TO postgres;'
