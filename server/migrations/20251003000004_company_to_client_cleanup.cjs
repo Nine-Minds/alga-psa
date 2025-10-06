@@ -74,17 +74,50 @@ async function verifyDataIntegrityBeforeCleanup(knex) {
     const companiesCount = await knex('companies').count('* as count');
     const clientsCount = await knex('clients').count('* as count');
 
-    if (companiesCount[0].count !== clientsCount[0].count) {
+    const companyTotal = parseInt(companiesCount[0].count);
+    const clientTotal = parseInt(clientsCount[0].count);
+
+    if (clientTotal < companyTotal) {
       throw new Error(
-        `❌ Row count mismatch: companies=${companiesCount[0].count}, clients=${clientsCount[0].count}`
+        `❌ Data loss detected: companies=${companyTotal}, clients=${clientTotal}. ` +
+        `Clients table has fewer rows than companies table!`
       );
     }
-    console.log(`  ✓ Verified: ${clientsCount[0].count} rows in both companies and clients`);
+
+    if (clientTotal > companyTotal) {
+      console.log(`  ℹ️  Note: clients table has more rows (${clientTotal}) than companies (${companyTotal})`);
+      console.log(`      This is normal if new clients were added after the initial migration.`);
+    } else {
+      console.log(`  ✓ Verified: ${clientTotal} rows in both companies and clients`);
+    }
+
+    // Verify per-tenant that all companies have been migrated to clients
+    console.log('  Checking per-tenant migration completeness...');
+    const missingClients = await knex.raw(`
+      SELECT c.tenant, COUNT(*) as missing_count
+      FROM companies c
+      LEFT JOIN clients cl ON c.tenant = cl.tenant AND c.company_id = cl.client_id
+      WHERE cl.client_id IS NULL
+      GROUP BY c.tenant
+    `);
+
+    if (missingClients.rows.length > 0) {
+      console.error('  ❌ Found companies not migrated to clients:');
+      for (const row of missingClients.rows) {
+        console.error(`     Tenant ${row.tenant}: ${row.missing_count} missing clients`);
+      }
+      throw new Error(
+        `❌ Found ${missingClients.rows.length} tenant(s) with companies not migrated to clients`
+      );
+    }
+    console.log('  ✓ All companies have been migrated to clients');
   }
 
   // Verify all dependent tables have client_id populated
+  // NOTE: company_billing_plans and company_plan_bundles are excluded because they will be
+  // migrated to contracts/client_contract_lines in later migrations (20251003000006 and 20251003000009)
   const dependentTables = [
-    'assets', 'bucket_usage', 'company_billing_plans', 'company_plan_bundles',
+    'assets', 'bucket_usage',
     'contacts', 'credit_reconciliation_reports', 'credit_tracking',
     'inbound_ticket_defaults', 'interactions', 'invoices', 'payment_methods',
     'plan_discounts', 'projects', 'tenant_companies', 'tickets',
@@ -351,6 +384,8 @@ async function addForeignKeyConstraints(knex) {
   }
 
   // Add FK from dependent tables to clients
+  // NOTE: company_billing_plans and company_plan_bundles are excluded because they will be
+  // migrated to contracts/client_contract_lines in later migrations
   const dependentTables = [
     'assets', 'bucket_usage', 'contacts', 'credit_reconciliation_reports',
     'credit_tracking', 'inbound_ticket_defaults', 'interactions', 'invoices',
@@ -359,58 +394,6 @@ async function addForeignKeyConstraints(knex) {
   ];
 
   for (const table of dependentTables) {
-    const tableExists = await knex.schema.hasTable(table);
-    if (!tableExists) {
-      console.log(`  ⚠ Table ${table} does not exist, skipping FK`);
-      continue;
-    }
-
-    const hasClientId = await knex.schema.hasColumn(table, 'client_id');
-    if (!hasClientId) {
-      console.log(`  ⚠ Table ${table} does not have client_id column, skipping FK`);
-      continue;
-    }
-
-    try {
-      console.log(`  Checking FK: ${table} → clients...`);
-      const fkExists = await knex.raw(`
-        SELECT EXISTS (
-          SELECT 1 FROM pg_constraint
-          WHERE conrelid = '${table}'::regclass
-          AND (conname LIKE '%client_id%' OR conname LIKE '%_tenant_client_id_%')
-        ) as exists
-      `);
-
-      if (!fkExists.rows[0].exists) {
-        console.log(`  Adding FK: ${table} → clients...`);
-        const constraintName = `${table}_tenant_client_id_foreign`;
-        if (isCitus) {
-          await knex.raw(`
-            ALTER TABLE ${table}
-            ADD CONSTRAINT ${constraintName}
-            FOREIGN KEY (tenant, client_id) REFERENCES clients(tenant, client_id)
-          `);
-        } else {
-          await knex.raw(`
-            ALTER TABLE ${table}
-            ADD CONSTRAINT ${table}_client_id_foreign
-            FOREIGN KEY (client_id) REFERENCES clients(client_id) ON DELETE CASCADE
-          `);
-        }
-        console.log(`    ✓ Added FK: ${table} → clients`);
-      } else {
-        console.log(`    ✓ FK already exists: ${table} → clients`);
-      }
-    } catch (error) {
-      console.log(`    - Could not add FK for ${table}: ${error.message}`);
-    }
-  }
-
-  // Special cases: company_billing_plans and company_plan_bundles
-  // These will be renamed in later migrations, but need FK for now
-  const specialCases = ['company_billing_plans', 'company_plan_bundles'];
-
-  for (const table of specialCases) {
     const tableExists = await knex.schema.hasTable(table);
     if (!tableExists) {
       console.log(`  ⚠ Table ${table} does not exist, skipping FK`);
@@ -564,8 +547,10 @@ async function updateTenantCompaniesConstraints(knex) {
 async function dropOldCompanyIdColumns(knex) {
   console.log('Dropping company_id columns from dependent tables...');
 
+  // NOTE: company_billing_plans and company_plan_bundles are excluded because they will be
+  // migrated to contracts/client_contract_lines in later migrations
   const dependentTables = [
-    'assets', 'bucket_usage', 'company_billing_plans', 'company_plan_bundles',
+    'assets', 'bucket_usage',
     'contacts', 'credit_reconciliation_reports', 'credit_tracking',
     'inbound_ticket_defaults', 'interactions', 'invoices', 'payment_methods',
     'plan_discounts', 'projects', 'tenant_companies', 'tickets',
@@ -635,7 +620,11 @@ async function dropOldCompanyTables(knex) {
   const isCitus = citusEnabled.rows[0].enabled;
 
   // Drop in order of dependencies (child tables first, parent tables last)
+  // NOTE: company_billing_plans and company_plan_bundles are included here now
+  // since migration 1 creates client_billing_plans and client_plan_bundles
   const tablesToDrop = [
+    'company_plan_bundles',
+    'company_billing_plans',
     'company_tax_rates',
     'company_tax_settings',
     'company_billing_settings',
@@ -670,10 +659,10 @@ async function dropOldCompanyTables(knex) {
       }
     }
 
-    // Drop the table
+    // Drop the table with CASCADE to handle any remaining dependencies
     try {
       console.log(`  Dropping ${tableName}...`);
-      await knex.schema.dropTableIfExists(tableName);
+      await knex.raw(`DROP TABLE IF EXISTS ${tableName} CASCADE`);
       console.log(`  ✓ Dropped ${tableName}`);
     } catch (error) {
       console.log(`  ⚠ Could not drop ${tableName}: ${error.message}`);
@@ -698,6 +687,8 @@ async function finalVerification(knex) {
   const clientBillingSettingsExists = await knex.schema.hasTable('client_billing_settings');
   const clientTaxSettingsExists = await knex.schema.hasTable('client_tax_settings');
   const clientTaxRatesExists = await knex.schema.hasTable('client_tax_rates');
+  const clientBillingPlansExists = await knex.schema.hasTable('client_billing_plans');
+  const clientPlanBundlesExists = await knex.schema.hasTable('client_plan_bundles');
 
   console.log(`clients table exists: ${clientsExists ? '✓' : '✗'}`);
   console.log(`client_locations table exists: ${clientLocationsExists ? '✓' : '✗'}`);
@@ -705,6 +696,8 @@ async function finalVerification(knex) {
   console.log(`client_billing_settings table exists: ${clientBillingSettingsExists ? '✓' : '✗'}`);
   console.log(`client_tax_settings table exists: ${clientTaxSettingsExists ? '✓' : '✗'}`);
   console.log(`client_tax_rates table exists: ${clientTaxRatesExists ? '✓' : '✗'}`);
+  console.log(`client_billing_plans table exists: ${clientBillingPlansExists ? '✓' : '✗'}`);
+  console.log(`client_plan_bundles table exists: ${clientPlanBundlesExists ? '✓' : '✗'}`);
 
   if (!clientsExists) {
     throw new Error('❌ clients table does not exist - cleanup verification failed');
@@ -717,6 +710,8 @@ async function finalVerification(knex) {
   const companyBillingSettingsExists = await knex.schema.hasTable('company_billing_settings');
   const companyTaxSettingsExists = await knex.schema.hasTable('company_tax_settings');
   const companyTaxRatesExists = await knex.schema.hasTable('company_tax_rates');
+  const companyBillingPlansExists = await knex.schema.hasTable('company_billing_plans');
+  const companyPlanBundlesExists = await knex.schema.hasTable('company_plan_bundles');
 
   console.log(`companies table dropped: ${!companiesExists ? '✓' : '✗'}`);
   console.log(`company_locations table dropped: ${!companyLocationsExists ? '✓' : '✗'}`);
@@ -724,6 +719,27 @@ async function finalVerification(knex) {
   console.log(`company_billing_settings table dropped: ${!companyBillingSettingsExists ? '✓' : '✗'}`);
   console.log(`company_tax_settings table dropped: ${!companyTaxSettingsExists ? '✓' : '✗'}`);
   console.log(`company_tax_rates table dropped: ${!companyTaxRatesExists ? '✓' : '✗'}`);
+  console.log(`company_billing_plans table dropped: ${!companyBillingPlansExists ? '✓' : '✗'}`);
+  console.log(`company_plan_bundles table dropped: ${!companyPlanBundlesExists ? '✓' : '✗'}`);
+
+  // Verify critical tables were dropped
+  const failedDrops = [];
+  if (companiesExists) failedDrops.push('companies');
+  if (companyLocationsExists) failedDrops.push('company_locations');
+  if (companyBillingCyclesExists) failedDrops.push('company_billing_cycles');
+  if (companyBillingSettingsExists) failedDrops.push('company_billing_settings');
+  if (companyTaxSettingsExists) failedDrops.push('company_tax_settings');
+  if (companyTaxRatesExists) failedDrops.push('company_tax_rates');
+  if (companyBillingPlansExists) failedDrops.push('company_billing_plans');
+  if (companyPlanBundlesExists) failedDrops.push('company_plan_bundles');
+
+  if (failedDrops.length > 0) {
+    throw new Error(
+      `❌ Failed to drop the following company_* tables: ${failedDrops.join(', ')}. ` +
+      `These tables must be dropped for the cleanup migration to succeed. ` +
+      `Check for remaining foreign key constraints or other dependencies.`
+    );
+  }
 
   // Count records in new tables
   if (clientsExists) {
