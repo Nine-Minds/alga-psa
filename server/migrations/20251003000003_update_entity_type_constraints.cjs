@@ -25,6 +25,13 @@ exports.up = async function(knex) {
     console.log('\nUpdating document_associations...');
 
     try {
+      // Drop old constraint FIRST (allows us to update to 'client')
+      console.log('  Dropping old check constraint...');
+      await knex.raw(`
+        ALTER TABLE document_associations
+        DROP CONSTRAINT IF EXISTS document_associations_entity_type_check
+      `);
+
       // Update existing 'company' values to 'client'
       console.log('  Updating entity_type data from company to client...');
       const result = await knex.raw(`
@@ -33,13 +40,6 @@ exports.up = async function(knex) {
         WHERE entity_type = 'company'
       `);
       console.log(`    ✓ Updated ${result.rowCount || 0} rows`);
-
-      // Drop old constraint
-      console.log('  Dropping old check constraint...');
-      await knex.raw(`
-        ALTER TABLE document_associations
-        DROP CONSTRAINT IF EXISTS document_associations_entity_type_check
-      `);
 
       // Add new constraint with 'client' instead of 'company'
       console.log('  Adding new check constraint with client...');
@@ -73,6 +73,12 @@ exports.up = async function(knex) {
       `);
 
       if (hasConstraint.rows[0].exists) {
+        console.log('  Dropping old check constraint...');
+        await knex.raw(`
+          ALTER TABLE asset_associations
+          DROP CONSTRAINT IF EXISTS asset_associations_entity_type_check
+        `);
+
         console.log('  Updating entity_type data from company to client...');
         const result = await knex.raw(`
           UPDATE asset_associations
@@ -80,12 +86,6 @@ exports.up = async function(knex) {
           WHERE entity_type = 'company'
         `);
         console.log(`    ✓ Updated ${result.rowCount || 0} rows`);
-
-        console.log('  Dropping old check constraint...');
-        await knex.raw(`
-          ALTER TABLE asset_associations
-          DROP CONSTRAINT IF EXISTS asset_associations_entity_type_check
-        `);
 
         console.log('  Adding new check constraint with client...');
         await knex.raw(`
