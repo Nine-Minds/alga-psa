@@ -96,12 +96,12 @@ function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionEle
   // Check if tenantClient and logoUrl exist
   if (viewModel.tenantClient != null && viewModel.tenantClient!.logoUrl != null && viewModel.tenantClient!.logoUrl!.length > 0) {
     const logoElement = new ImageElement(viewModel.tenantClient!.logoUrl!, "Tenant Client Logo");
-    
+
     // Apply proper sizing to logo
     const logoStyle = new PartialStyle();
     logoStyle.width = "150px";
     logoElement.style = instantiateStyle(logoStyle);
-    
+
     logoCol = new ColumnElement([logoElement]);
   } else {
     // Placeholder if no logo URL is provided
@@ -110,11 +110,11 @@ function createHeaderSection_StdDefault(viewModel: InvoiceViewModel): SectionEle
   logoCol.span = 3;
 
   // --- Client Info Column ---
-  const tenantName = viewModel.tenantClient != null && viewModel.tenantClient!.name != null ? 
-                    viewModel.tenantClient!.name! : 
+  const tenantName = viewModel.tenantClient != null && viewModel.tenantClient!.name != null ?
+                    viewModel.tenantClient!.name! :
                     "[Tenant Name]";
-  const tenantAddress = viewModel.tenantClient != null && viewModel.tenantClient!.address != null ? 
-                        viewModel.tenantClient!.address! : 
+  const tenantAddress = viewModel.tenantClient != null && viewModel.tenantClient!.address != null ?
+                        viewModel.tenantClient!.address! :
                         "[Tenant Address]";
   
   const clientInfoCol = new ColumnElement([

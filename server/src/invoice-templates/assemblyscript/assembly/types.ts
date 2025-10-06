@@ -21,7 +21,7 @@ export class Customer {
 }
 
 @json
-export class TenantCompany {
+export class TenantClient {
   name: string | null = null;
   address: string | null = null;
   logoUrl: string | null = null;
@@ -32,7 +32,7 @@ export class InvoiceViewModel {
   invoiceNumber: string = "";
   issueDate: string = "";
   customer: Customer | null = null;
-  tenantCompany: TenantCompany | null = null;
+  tenantClient: TenantClient | null = null;
   items: Array<InvoiceItem> = [];
   notes: string | null = null;
 }
