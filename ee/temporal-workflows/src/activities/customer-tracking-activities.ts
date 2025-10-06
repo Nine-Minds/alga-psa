@@ -6,7 +6,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
-import { ClientModel } from '@alga-psa/shared/models/clientModel';
+import { ClientModel } from '@alga-psa/shared/models/clientModel.js';
 import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
