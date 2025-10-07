@@ -54,6 +54,8 @@ interface PhoneInputProps {
   disabled?: boolean;
   className?: string;
   required?: boolean;
+  allowExtensions?: boolean; // Allow phone extensions (ext. 1234)
+  extensionPlaceholder?: string; // Placeholder for extension field
   'data-automation-id'?: string;
 }
 
@@ -71,23 +73,60 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
   disabled = false,
   className = '',
   required = false,
+  allowExtensions = false,
+  extensionPlaceholder = "ext. 1234",
   'data-automation-id': dataAutomationId
 }) => {
-  const [displayValue, setDisplayValue] = useState(value);
+  const [displayValue, setDisplayValue] = useState('');
+  const [extensionValue, setExtensionValue] = useState('');
   const [previousPhoneCode, setPreviousPhoneCode] = useState<string | undefined>();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Clean phone number display - remove country code from input
-  useEffect(() => {
-    // Remove phone code from display value if it exists
-    let cleanedValue = value;
-    if (phoneCode && value.startsWith(phoneCode)) {
-      cleanedValue = value.substring(phoneCode.length).trim();
+  // Parse phone number and extension from value
+  const parsePhoneAndExtension = (fullValue: string): { phone: string; extension: string } => {
+    if (!fullValue) return { phone: '', extension: '' };
+
+    // Look for extension patterns: "ext 123", "ext. 123", "x123", "extension 123"
+    const extPatterns = [
+      /\s+ext\.?\s*(\d+)$/i,
+      /\s+x\s*(\d+)$/i,
+      /\s+extension\s*(\d+)$/i,
+      /\s+e\s*(\d+)$/i
+    ];
+
+    for (const pattern of extPatterns) {
+      const match = fullValue.match(pattern);
+      if (match) {
+        const phone = fullValue.replace(pattern, '').trim();
+        const extension = match[1];
+        return { phone, extension };
+      }
     }
-    setDisplayValue(cleanedValue);
+
+    return { phone: fullValue, extension: '' };
+  };
+
+  // Combine phone and extension into full value
+  const combinePhoneAndExtension = (phone: string, extension: string): string => {
+    if (!extension.trim()) return phone;
+    return `${phone} ext. ${extension.trim()}`;
+  };
+
+  // Clean phone number display - remove country code from input and parse extensions
+  useEffect(() => {
+    const { phone, extension } = parsePhoneAndExtension(value);
+
+    // Remove phone code from display value if it exists
+    let cleanedPhone = phone;
+    if (phoneCode && phone.startsWith(phoneCode)) {
+      cleanedPhone = phone.substring(phoneCode.length).trim();
+    }
+
+    setDisplayValue(cleanedPhone);
+    setExtensionValue(extension);
     setPreviousPhoneCode(phoneCode);
   }, [phoneCode, value]);
 
@@ -96,7 +135,18 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
     setDisplayValue(phoneNumber);
 
     // Combine phone code with the number for the full value
-    const fullValue = phoneCode ? `${phoneCode} ${phoneNumber}`.trim() : phoneNumber;
+    const basePhone = phoneCode ? `${phoneCode} ${phoneNumber}`.trim() : phoneNumber;
+    const fullValue = combinePhoneAndExtension(basePhone, extensionValue);
+    onChange(fullValue);
+  };
+
+  const handleExtensionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const extension = e.target.value;
+    setExtensionValue(extension);
+
+    // Combine phone code with the number and extension for the full value
+    const basePhone = phoneCode ? `${phoneCode} ${displayValue}`.trim() : displayValue;
+    const fullValue = combinePhoneAndExtension(basePhone, extension);
     onChange(fullValue);
   };
 
@@ -272,9 +322,36 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            className={`flex-1 border-0 focus:ring-0 focus:border-0 ${countries && countries.length > 0 ? 'rounded-l-none' : 'rounded-md'} h-[42px]`}
+            className={`flex-1 border-0 focus:ring-0 focus:border-0 ${
+              allowExtensions
+                ? 'rounded-none'
+                : countries && countries.length > 0
+                  ? 'rounded-l-none'
+                  : 'rounded-md'
+            } h-[42px]`}
           />
+
+          {/* Extension Input */}
+          {allowExtensions && (
+            <Input
+              id={`${id || dataAutomationId}-ext`}
+              data-automation-id={`${dataAutomationId}-ext`}
+              type="text"
+              value={extensionValue}
+              onChange={handleExtensionChange}
+              placeholder={extensionPlaceholder}
+              disabled={disabled}
+              className="w-24 border-0 border-l border-gray-300 focus:ring-0 focus:border-0 rounded-r-md h-[42px] text-center"
+            />
+          )}
         </div>
+
+        {/* Extension Label (optional visual indicator) */}
+        {allowExtensions && (
+          <div className="text-xs text-gray-500 mt-1">
+            Phone number with optional extension
+          </div>
+        )}
       </div>
     </div>
   );
