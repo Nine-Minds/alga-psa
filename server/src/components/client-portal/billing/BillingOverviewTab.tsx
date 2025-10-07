@@ -15,7 +15,7 @@ import PlanDetailsDialog from './PlanDetailsDialog';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 // Flag to control visibility of bucket usage metrics
-const SHOW_USAGE_FEATURES = false;
+const SHOW_USAGE_FEATURES = true;
 
 interface BillingOverviewTabProps {
   billingPlan: ICompanyBillingPlan | null;

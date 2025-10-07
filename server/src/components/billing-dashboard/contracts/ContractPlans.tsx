@@ -25,9 +25,9 @@ import {
 import { getBundlePlans } from 'server/src/lib/actions/planBundleActions';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { BundlePlanRateDialog } from './BundlePlanRateDialog';
+import { ContractPlanRateDialog } from './ContractPlanRateDialog';
 
-interface PlanBundlePlansProps {
+interface ContractPlansProps {
   bundle: IPlanBundle;
 }
 
@@ -38,8 +38,8 @@ interface DetailedBundlePlan extends IBundleBillingPlan {
   default_rate?: number;
 }
 
-const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
-  const [bundlePlans, setBundlePlans] = useState<DetailedBundlePlan[]>([]);
+const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
+  const [contractPlans, setContractPlans] = useState<DetailedBundlePlan[]>([]);
   const [availablePlans, setAvailablePlans] = useState<IBillingPlan[]>([]);
   const [selectedPlanToAdd, setSelectedPlanToAdd] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -65,7 +65,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
         getDetailedBundlePlans(bundle.bundle_id)
       ]);
       
-      setBundlePlans(detailedBundlePlans);
+      setContractPlans(detailedBundlePlans);
       setAvailablePlans(plans);
       
       // Set default selected plan if available
@@ -142,7 +142,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
     }
   };
 
-  const bundlePlanColumns: ColumnDefinition<DetailedBundlePlan>[] = [
+  const serviceLineColumns: ColumnDefinition<DetailedBundlePlan>[] = [
     {
       title: 'Plan Name',
       dataIndex: 'plan_name',
@@ -173,7 +173,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id="bundle-plan-actions-menu"
+              id="service-line-actions-menu"
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -184,18 +184,18 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="edit-bundle-plan-rate-menu-item"
+              id="edit-service-line-rate-menu-item"
               onClick={() => handleEditPlan(record)}
             >
               <Settings className="h-4 w-4 mr-2" />
               Set Custom Rate
             </DropdownMenuItem>
             <DropdownMenuItem
-              id="remove-bundle-plan-menu-item"
+              id="remove-service-line-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={(e) => { e.stopPropagation(); handleRemovePlan(value); }}
             >
-              Remove from Bundle
+              Remove from Contract
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -203,15 +203,15 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
     },
   ];
 
-  // Filter available plans to only show those not already in the bundle
+  // Filter available plans to only show those not already in the contract
   const filteredAvailablePlans = availablePlans.filter(
-    plan => !bundlePlans.some(bp => bp.plan_id === plan.plan_id)
+    plan => !contractPlans.some(bp => bp.plan_id === plan.plan_id)
   );
 
   return (
     <Card size="2">
       <Box p="4">
-        <h3 className="text-lg font-medium mb-4">Bundle Plans</h3>
+        <h3 className="text-lg font-medium mb-4">Service Lines</h3>
         
         {error && (
           <Alert variant="destructive" className="mb-4">
@@ -225,14 +225,14 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
         ) : (
           <>
             <div className="mb-4">
-              {bundlePlans.length === 0 ? (
+              {contractPlans.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">
-                  No plans have been added to this bundle yet.
+                  No service lines have been added to this contract yet.
                 </div>
               ) : (
                 <DataTable
-                  data={bundlePlans}
-                  columns={bundlePlanColumns}
+                  data={contractPlans}
+                  columns={serviceLineColumns}
                   pagination={false}
                   onRowClick={handleEditPlan}
                   rowClassName={() => 'cursor-pointer'}
@@ -257,7 +257,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
                 disabled={!selectedPlanToAdd || filteredAvailablePlans.length === 0}
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Add Plan to Bundle
+                Add Service Line
               </Button>
             </div>
           </>
@@ -265,7 +265,7 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
       </Box>
       
       {editingPlan && (
-        <BundlePlanRateDialog
+        <ContractPlanRateDialog
           plan={editingPlan}
           onClose={() => setEditingPlan(null)}
           // Type assertion needed here as onSave now accepts number | undefined
@@ -276,4 +276,4 @@ const PlanBundlePlans: React.FC<PlanBundlePlansProps> = ({ bundle }) => {
   );
 };
 
-export default PlanBundlePlans;
+export default ContractPlans;

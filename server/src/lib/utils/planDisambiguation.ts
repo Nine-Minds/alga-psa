@@ -214,25 +214,44 @@ export async function getEligibleBillingPlansForUI(
   company_billing_plan_id: string;
   plan_name: string;
   plan_type: string;
+  contract_name?: string;
 }>> {
   const { knex, tenant } = await createTenantKnex();
-  
+
   if (!tenant) {
     throw new Error("Tenant context not found");
   }
 
   try {
     const plans = await getEligibleBillingPlans(knex, tenant, companyId, serviceId);
-    
-    // Transform to a simpler structure for UI
-    // Transform to the structure expected by the UI, including dates
-    return plans.map(plan => ({
-      company_billing_plan_id: plan.company_billing_plan_id,
-      plan_name: plan.plan_name || 'Unnamed Plan',
-      plan_type: plan.plan_type,
-      start_date: plan.start_date, // Include start_date
-      end_date: plan.end_date // Include end_date
-    }));
+
+    // For each plan, try to get the associated contract/bundle name
+    const plansWithContracts = await Promise.all(
+      plans.map(async (plan) => {
+        // Try to find bundle association through bundle_billing_plans
+        const bundleInfo = await knex('bundle_billing_plans')
+          .join('plan_bundles', function() {
+            this.on('bundle_billing_plans.bundle_id', '=', 'plan_bundles.bundle_id')
+                .andOn('bundle_billing_plans.tenant', '=', 'plan_bundles.tenant');
+          })
+          .where({
+            'bundle_billing_plans.plan_id': plan.plan_id,
+            'bundle_billing_plans.tenant': tenant
+          })
+          .first('plan_bundles.bundle_name');
+
+        return {
+          company_billing_plan_id: plan.company_billing_plan_id,
+          plan_name: plan.plan_name || 'Unnamed Plan',
+          plan_type: plan.plan_type,
+          start_date: plan.start_date, // Include start_date
+          end_date: plan.end_date, // Include end_date
+          contract_name: bundleInfo?.bundle_name
+        };
+      })
+    );
+
+    return plansWithContracts;
   } catch (error) {
     console.error('Error getting eligible billing plans for UI:', error);
     return [];

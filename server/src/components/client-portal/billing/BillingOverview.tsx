@@ -10,6 +10,7 @@ import {
 import {
   getClientHoursByService,
   getClientBucketUsage,
+  getClientBucketUsageHistory,
   getClientUsageMetrics,
   ClientHoursByServiceResult,
   ClientBucketUsageResult,
@@ -75,8 +76,14 @@ const UsageMetricsTab = dynamic(() => import('./UsageMetricsTab'), {
   </div>
 });
 
+const BucketUsageHistoryChart = dynamic(() => import('./BucketUsageHistoryChart'), {
+  loading: () => <div id="bucket-history-skeleton" className="animate-pulse p-4">
+    <div className="h-48 bg-gray-200 rounded w-full"></div>
+  </div>
+});
+
 // Flag to control visibility of advanced usage tabs and metrics
-const SHOW_USAGE_FEATURES = false;
+const SHOW_USAGE_FEATURES = true;
 export default function BillingOverview() {
   const { t } = useTranslation('clientPortal');
   const [currentTab, setCurrentTab] = useState<string | null>(null);
@@ -91,8 +98,20 @@ export default function BillingOverview() {
   const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
   const [hoursByService, setHoursByService] = useState<ClientHoursByServiceResult[]>([]);
   const [bucketUsage, setBucketUsage] = useState<ClientBucketUsageResult[]>([]);
+  const [bucketUsageHistory, setBucketUsageHistory] = useState<Array<{
+    service_id: string;
+    service_name: string;
+    history: Array<{
+      period_start: string;
+      period_end: string;
+      percentage_used: number;
+      hours_used: number;
+      hours_total: number;
+    }>;
+  }>>([]);
   const [usageMetrics, setUsageMetrics] = useState<ClientUsageMetricResult[]>([]);
   const [isBucketUsageLoading, setIsBucketUsageLoading] = useState(false);
+  const [isBucketHistoryLoading, setIsBucketHistoryLoading] = useState(false);
   const [isHoursLoading, setIsHoursLoading] = useState(false);
   const [isUsageMetricsLoading, setIsUsageMetricsLoading] = useState(false);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true); // Default to true to avoid hydration mismatch
@@ -153,6 +172,21 @@ export default function BillingOverview() {
         } finally {
           if (isMounted) {
             setIsBucketUsageLoading(false);
+          }
+        }
+
+        // Load bucket usage history
+        setIsBucketHistoryLoading(true);
+        try {
+          const bucketHistoryData = await getClientBucketUsageHistory();
+          if (!isMounted) return;
+          setBucketUsageHistory(bucketHistoryData);
+        } catch (error) {
+          if (!isMounted) return;
+          console.error('Error loading bucket usage history:', error);
+        } finally {
+          if (isMounted) {
+            setIsBucketHistoryLoading(false);
           }
         }
         
@@ -356,6 +390,8 @@ export default function BillingOverview() {
             <UsageMetricsTab
               usageMetrics={usageMetrics}
               isUsageMetricsLoading={isUsageMetricsLoading}
+              bucketUsageHistory={bucketUsageHistory}
+              isBucketHistoryLoading={isBucketHistoryLoading}
               dateRange={dateRange}
               handleDateRangeChange={handleDateRangeChange}
             />
@@ -370,6 +406,8 @@ export default function BillingOverview() {
     invoices,
     bucketUsage,
     isBucketUsageLoading,
+    bucketUsageHistory,
+    isBucketHistoryLoading,
     isLoading,
     hasInvoiceAccess,
     currentPage,
@@ -382,7 +420,8 @@ export default function BillingOverview() {
     formatDate,
     handleInvoiceClick,
     handleDateRangeChange,
-    handleViewAllInvoices
+    handleViewAllInvoices,
+    t
   ]);
 
   // Memoize the tab change handler

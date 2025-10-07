@@ -2,24 +2,29 @@
 
 import React, { useMemo } from 'react';
 import { Info } from 'lucide-react';
-import type { ClientBucketUsageResult } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
+
+interface BucketUsageData {
+  plan_id: string;
+  plan_name: string;
+  service_id: string;
+  service_name: string;
+  display_label: string;
+  total_minutes: number;
+  minutes_used: number;
+  rolled_over_minutes: number;
+  remaining_minutes: number;
+}
 
 interface BucketUsageChartProps {
-  bucketData: ClientBucketUsageResult;
+  bucketData: BucketUsageData;
 }
 
 const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketData }) => {
-  const percentage = Math.round(bucketData.percentage_used);
-  
-  // Format dates consistently - memoized to prevent recalculation
-  const formatPeriodDate = useMemo(() => {
-    return (dateStr: string | undefined) => {
-      if (!dateStr) return '';
-      const date = new Date(dateStr);
-      return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-    };
-  }, []);
-  
+  const totalAvailableMinutes = bucketData.total_minutes + bucketData.rolled_over_minutes;
+  const percentage = totalAvailableMinutes > 0
+    ? Math.round((bucketData.minutes_used / totalAvailableMinutes) * 100)
+    : 0;
+
   // Determine color based on usage percentage - memoized to prevent recalculation
   const getColorClasses = useMemo(() => {
     return (percent: number) => {
@@ -51,10 +56,8 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
     <div className={`border rounded-lg p-4 shadow-sm ${colorClasses.bgLight} ${colorClasses.border}`}>
       <div className="flex justify-between items-start mb-2">
         <div>
-          <h4 className="font-medium text-gray-900">{bucketData.service_name}</h4>
-          <p className="text-sm text-gray-500">
-            {formatPeriodDate(bucketData.period_start)} - {formatPeriodDate(bucketData.period_end)}
-          </p>
+          <h4 className="font-medium text-gray-900">{bucketData.display_label}</h4>
+          <p className="text-sm text-gray-500">{bucketData.plan_name}</p>
         </div>
         <div className="flex items-center">
           <span className="text-sm text-gray-500 mr-1">Bucket Plan</span>
@@ -72,12 +75,12 @@ const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketDa
         <div className="w-full bg-gray-200 rounded-full h-2.5">
           <div
             className={`h-2.5 rounded-full ${colorClasses.bg}`}
-            style={{ width: `${percentage}%` }}
+            style={{ width: `${Math.min(percentage, 100)}%` }}
           ></div>
         </div>
         <div className="flex justify-between mt-1 text-xs text-gray-500">
-          <span>{bucketData.hours_used.toFixed(1)} hours used</span>
-          <span>{bucketData.hours_total.toFixed(1)} hours total</span>
+          <span>{(bucketData.minutes_used / 60).toFixed(1)} hours used</span>
+          <span>{(totalAvailableMinutes / 60).toFixed(1)} hours total</span>
         </div>
       </div>
 

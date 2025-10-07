@@ -37,6 +37,28 @@ export interface ICompanyPlanBundle extends TenantEntity {
   start_date: ISO8601String;
   end_date: ISO8601String | null;
   is_active: boolean;
+  po_number?: string | null; // Purchase Order number
+  po_amount?: number | null; // Purchase Order amount in cents
+  po_required?: boolean; // Whether PO is required for invoicing
   created_at?: ISO8601String;
   updated_at?: ISO8601String;
+}
+
+/**
+ * Interface for contract pricing schedules
+ * Represents time-based pricing changes for a contract
+ */
+export interface IContractPricingSchedule extends TenantEntity {
+  schedule_id: string;
+  bundle_id: string;
+  effective_date: ISO8601String;
+  end_date?: ISO8601String | null;
+  duration_value?: number; // e.g., 6 for "6 months"
+  duration_unit?: 'days' | 'weeks' | 'months' | 'years'; // Unit for duration
+  custom_rate?: number; // Rate in cents, nullable means use default
+  notes?: string;
+  created_at?: ISO8601String;
+  updated_at?: ISO8601String;
+  created_by?: string;
+  updated_by?: string;
 }
