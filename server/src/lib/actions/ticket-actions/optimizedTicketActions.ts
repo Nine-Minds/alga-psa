@@ -166,6 +166,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       
       // Users
       trx('users as u')
+        .distinct('u.user_id')
         .select(
           'u.*',
           'd.file_id as avatar_file_id'
