@@ -14,10 +14,12 @@ import {
   Droplet,
   Activity,
   CheckCircle2,
-  FileCheck
+  FileCheck,
+  Repeat
 } from 'lucide-react';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
 
 interface ReviewContractStepProps {
   data: ContractWizardData;
@@ -95,6 +97,13 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
             <div>
               <p className="text-gray-600">Contract Name</p>
               <p className="font-medium">{data.contract_name || 'Not specified'}</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <Repeat className="h-4 w-4 mt-0.5 text-gray-400" />
+            <div>
+              <p className="text-gray-600">Billing Frequency</p>
+              <p className="font-medium">{BILLING_FREQUENCY_OPTIONS.find(opt => opt.value === data.billing_frequency)?.label || data.billing_frequency || 'Not specified'}</p>
             </div>
           </div>
           <div className="flex items-start gap-2">

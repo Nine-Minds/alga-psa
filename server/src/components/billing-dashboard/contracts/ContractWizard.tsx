@@ -26,6 +26,7 @@ export interface ContractWizardData {
   // Step 1: Contract Basics
   company_id: string;
   contract_name: string;
+  billing_frequency: string;
   start_date: string;
   end_date?: string;
   description?: string;
@@ -95,6 +96,7 @@ export function ContractWizard({
   const [wizardData, setWizardData] = useState<ContractWizardData>({
     company_id: '',
     contract_name: '',
+    billing_frequency: 'monthly',
     start_date: '',
     end_date: undefined,
     description: '',
@@ -133,6 +135,10 @@ export function ContractWizard({
         }
         if (!wizardData.contract_name?.trim()) {
           setErrors(prev => ({ ...prev, [stepIndex]: 'Contract name is required' }));
+          return false;
+        }
+        if (!wizardData.billing_frequency) {
+          setErrors(prev => ({ ...prev, [stepIndex]: 'Billing frequency is required' }));
           return false;
         }
         if (!wizardData.start_date) {

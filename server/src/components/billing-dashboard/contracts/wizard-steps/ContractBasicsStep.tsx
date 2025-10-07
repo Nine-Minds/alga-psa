@@ -11,7 +11,8 @@ import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { ICompany } from 'server/src/interfaces';
 import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { Calendar, Building2, FileText, FileCheck, HelpCircle } from 'lucide-react';
+import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
+import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat } from 'lucide-react';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -112,6 +113,25 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
         />
         <p className="text-xs text-gray-500">
           Give this contract a descriptive name
+        </p>
+      </div>
+
+      {/* Billing Frequency */}
+      <div className="space-y-2">
+        <Label htmlFor="billing-frequency" className="flex items-center gap-2">
+          <Repeat className="h-4 w-4" />
+          Billing Frequency *
+        </Label>
+        <CustomSelect
+          id="billing-frequency"
+          options={BILLING_FREQUENCY_OPTIONS}
+          onValueChange={(value: string) => updateData({ billing_frequency: value })}
+          value={data.billing_frequency}
+          placeholder="Select billing frequency"
+          className="w-full"
+        />
+        <p className="text-xs text-gray-500">
+          How often should this contract be billed?
         </p>
       </div>
 
@@ -277,6 +297,7 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
           <div className="text-sm text-blue-800 space-y-1">
             <p><strong>Client:</strong> {companyOptions.find(c => c.value === data.company_id)?.label}</p>
             <p><strong>Contract:</strong> {data.contract_name}</p>
+            <p><strong>Billing Frequency:</strong> {BILLING_FREQUENCY_OPTIONS.find(opt => opt.value === data.billing_frequency)?.label || data.billing_frequency}</p>
             <p><strong>Period:</strong> {new Date(data.start_date).toLocaleDateString()}
               {data.end_date ? ` - ${new Date(data.end_date).toLocaleDateString()}` : ' (Ongoing)'}</p>
             {data.po_required && (
