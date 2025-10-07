@@ -19,6 +19,7 @@ import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav';
 import UsageTracking from './UsageTracking';
 import ContractReports from './reports/ContractReports';
+import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -31,7 +32,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const searchParams = useSearchParams();
   const [error] = useState<string | null>(null);
 
-  const handleTabChange = (value: string) => {
+  const handleTabChange = (value: BillingTabValue) => {
     // Only keep the tab parameter, clearing any other state
     const params = new URLSearchParams();
     params.set('tab', value);
@@ -45,19 +46,10 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   };
 
   // Get current tab from URL or default to overview
-  const currentTab = searchParams?.get('tab') || 'overview';
-
-  const tabs = [
-    'contracts',
-    'generate-invoices',
-    'invoices',
-    'invoice-templates',
-    'tax-rates',
-    'contract-lines',
-    'billing-cycles',
-    'usage-tracking',
-    'reports'
-  ];
+  const requestedTab = searchParams?.get('tab') as BillingTabValue | null;
+  const currentTab = billingTabDefinitions.some((tab) => tab.value === requestedTab)
+    ? (requestedTab as BillingTabValue)
+    : 'contracts';
 
   return (
     <div className="p-4">
@@ -74,13 +66,13 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         className="w-full"
       >
         <Tabs.List className="flex border-b mb-4">
-          {tabs.map((tab): JSX.Element => (
+          {billingTabDefinitions.map((tab): JSX.Element => (
             <Tabs.Trigger
-              key={tab}
-              value={tab}
+              key={tab.value}
+              value={tab.value}
               className="px-4 py-2 focus:outline-none transition-colors data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 text-gray-500 hover:text-gray-700"
             >
-              {tab.split('-').map((word): string => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+              {tab.label}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
