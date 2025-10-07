@@ -38,8 +38,8 @@ async function resetPlaywrightDatabase(config?: Partial<DbTestConfig>): Promise<
     host: PLAYWRIGHT_DB_CONFIG.host,
     port: PLAYWRIGHT_DB_CONFIG.port,
     database: PLAYWRIGHT_DB_CONFIG.database,
-    user: PLAYWRIGHT_DB_CONFIG.user,
-    password: PLAYWRIGHT_DB_CONFIG.password,
+    user: PLAYWRIGHT_DB_CONFIG.adminUser,
+    password: PLAYWRIGHT_DB_CONFIG.adminPassword,
     ssl: PLAYWRIGHT_DB_CONFIG.ssl,
   };
 
