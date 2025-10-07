@@ -26,7 +26,7 @@ exports.up = async function(knex) {
     table.text('refresh_token').nullable();
     table.timestamp('token_expires_at').nullable();
     
-     Timestamps
+    //Timestamps
     table.timestamp('created_at').notNullable().defaultTo(knex.fn.now());
     table.timestamp('updated_at').notNullable().defaultTo(knex.fn.now());
     
