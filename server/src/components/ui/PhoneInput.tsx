@@ -56,6 +56,7 @@ interface PhoneInputProps {
   required?: boolean;
   allowExtensions?: boolean; // Allow phone extensions (ext. 1234)
   extensionPlaceholder?: string; // Placeholder for extension field
+  error?: boolean; // Whether to show error styling
   'data-automation-id'?: string;
 }
 
@@ -322,7 +323,8 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
             placeholder={getPlaceholderText()}
             disabled={disabled}
             required={required}
-            className={`flex-1 border-0 focus:ring-0 focus:border-0 ${
+            style={{ border: 'none', boxShadow: 'none', outline: 'none' }}
+            className={`flex-1 ${
               allowExtensions
                 ? 'rounded-none'
                 : countries && countries.length > 0
@@ -341,7 +343,8 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               onChange={handleExtensionChange}
               placeholder={extensionPlaceholder}
               disabled={disabled}
-              className="w-24 border-0 border-l border-gray-300 focus:ring-0 focus:border-0 rounded-r-md h-[42px] text-center"
+              style={{ border: 'none', borderLeft: '1px solid rgb(209 213 219)', boxShadow: 'none', outline: 'none' }}
+              className="w-24 rounded-r-md h-[42px] text-center"
             />
           )}
         </div>

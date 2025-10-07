@@ -195,10 +195,6 @@ export default function RegisterForm() {
               if (fieldErrors.email) {
                 setFieldErrors(prev => ({ ...prev, email: '' }));
               }
-              // Immediately validate if user enters only spaces
-              if (/^\s+$/.test(e.target.value)) {
-                setFieldErrors(prev => ({ ...prev, email: 'Email address cannot contain only spaces' }));
-              }
             }}
             onBlur={() => {
               const error = validateEmailAddress(email);

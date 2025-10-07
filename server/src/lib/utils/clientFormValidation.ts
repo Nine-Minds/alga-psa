@@ -160,7 +160,7 @@ export function validateWebsiteUrl(url: string): string | null {
 // Email validation - professional SaaS/CRM grade with disposable domain blocking
 export function validateEmailAddress(email: string): string | null {
   if (!email || !email.trim()) {
-    return null; // Email is optional in some contexts
+    return 'Email address is required';
   }
   
   // Check for spaces-only input
@@ -566,9 +566,10 @@ export function validateIndustry(industry: string): string | null {
     return 'Industry must be 100 characters or less';
   }
   
-  // No emojis
-  if (EMOJI_REGEX.test(trimmedIndustry)) {
-    return 'Industry cannot contain emojis';
+  // Allow emojis if accompanied by text (like company names)
+  const textWithoutEmojis = trimmedIndustry.replace(EMOJI_REGEX, '').trim();
+  if (EMOJI_REGEX.test(trimmedIndustry) && textWithoutEmojis.length < 2) {
+    return 'Industry must contain at least 2 text characters';
   }
   
   if (trimmedIndustry.length < 2) {
