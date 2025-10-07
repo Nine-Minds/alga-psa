@@ -9,7 +9,8 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Button } from '../ui/Button';
-import { ExternalLink, Pencil } from 'lucide-react';
+import { ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Input } from 'server/src/components/ui/Input';
 import { DatePicker } from 'server/src/components/ui/DatePicker';import CustomTabs from 'server/src/components/ui/CustomTabs';
@@ -21,7 +22,8 @@ import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { Card } from 'server/src/components/ui/Card';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
-import { updateContact, getContactByContactNameId } from 'server/src/lib/actions/contact-actions/contactActions';
+import { updateContact, getContactByContactNameId, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { validateEmailAddress, validatePhoneNumber, validateContactName } from 'server/src/lib/utils/clientFormValidation';
 import Documents from 'server/src/components/documents/Documents';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import { useToast } from 'server/src/hooks/use-toast';
@@ -68,25 +70,48 @@ const TextDetailItem: React.FC<{
   label: string;
   value: string;
   onEdit: (value: string) => void;
-}> = ({ label, value, onEdit }) => {
+  automationId?: string;
+  validate?: (value: string) => string | null;
+}> = ({ label, value, onEdit, automationId, validate }) => {
   const [localValue, setLocalValue] = useState(value);
+  const [error, setError] = useState<string | null>(null);
 
   const handleBlur = () => {
+    // Professional SaaS validation pattern: validate on blur, not while typing
+    if (validate) {
+      const validationError = validate(localValue);
+      setError(validationError);
+    }
+
     if (localValue !== value) {
       onEdit(localValue);
     }
   };
-  
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setLocalValue(e.target.value);
+    // Clear error while typing
+    if (error) {
+      setError(null);
+    }
+  };
+
   return (
     <div className="space-y-2">
       <Text as="label" size="2" className="text-gray-700 font-medium">{label}</Text>
       <Input
         type="text"
         value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
+        onChange={handleChange}
         onBlur={handleBlur}
-        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${
+          error ? 'border-red-500' : 'border-gray-200'
+        }`}
+        data-automation-id={automationId}
       />
+      {error && (
+        <div className="text-red-500 text-xs mt-1">{error}</div>
+      )}
     </div>
   );
 };
@@ -166,6 +191,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
   const [currentUser, setCurrentUser] = useState<IUserWithRoles | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [tags, setTags] = useState<ITag[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { tags: allTags } = useTags();
   const [isEditingCompany, setIsEditingCompany] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
@@ -277,6 +304,34 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
     setHasUnsavedChanges(true);
   };
 
+  const handleDeleteContact = () => {
+    setDeleteError(null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteContact(editedContact.contact_name_id);
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Contact Deleted",
+        description: "Contact has been deleted successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/contacts');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete contact:', error);
+      setDeleteError(error.message || 'Failed to delete contact. Please try again.');
+    }
+  };
+
   const handleSave = async () => {
     try {
       // Make sure contact_name_id is included in the data being sent
@@ -284,12 +339,12 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
         ...editedContact,
         contact_name_id: editedContact.contact_name_id
       };
-      
+
       const updatedContact = await updateContact(dataToUpdate);
       setEditedContact(updatedContact);
       setOriginalContact(updatedContact);
       setHasUnsavedChanges(false);
-      
+
       toast({
         title: "Contact Updated",
         description: "Contact details have been saved successfully.",
@@ -394,6 +449,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Full Name"
               value={editedContact.full_name}
               onEdit={(value) => handleFieldChange('full_name', value)}
+              automationId="full-name-field"
+              validate={validateContactName}
             />
             <div className="space-y-2">
               <Text as="label" size="2" className="text-gray-700 font-medium">Company</Text>
@@ -449,6 +506,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Email"
               value={editedContact.email || ''}
               onEdit={(value) => handleFieldChange('email', value)}
+              automationId="email-field"
+              validate={validateEmailAddress}
             />
             <TextDetailItem
               label="Role"
@@ -459,6 +518,8 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
               label="Phone Number"
               value={editedContact.phone_number || ''}
               onEdit={(value) => handleFieldChange('phone_number', value)}
+              automationId="phone-number-field"
+              validate={validatePhoneNumber}
             />
             <SwitchDetailItem
               value={!editedContact.is_inactive || false}
@@ -614,12 +675,23 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
             onClick={() => window.open(`/msp/contacts/${editedContact.contact_name_id}`, '_blank')}
             variant="soft"
             size="sm"
-            className="flex items-center ml-4 mr-8"
+            className="flex items-center ml-4 mr-2"
           >
             <ExternalLink className="h-4 w-4 mr-2" />
             Go to contact
           </Button>
         )}
+
+        <Button
+          id={`${id}-delete-contact-button`}
+          onClick={handleDeleteContact}
+          variant="destructive"
+          size="sm"
+          className="flex items-center mr-8"
+        >
+          <Trash2 className="h-4 w-4 mr-2" />
+          Delete
+        </Button>
       </div>
 
       {/* Content Area */}
@@ -630,6 +702,26 @@ const ContactDetails: React.FC<ContactDetailsProps> = ({
           onTabChange={handleTabChange}
         />
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmationDialog
+        id="delete-contact-dialog"
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false);
+          setDeleteError(null);
+        }}
+        onConfirm={confirmDelete}
+        title="Delete Contact"
+        message={
+          deleteError
+            ? deleteError
+            : "Are you sure you want to delete this contact? This action cannot be undone."
+        }
+        confirmLabel={deleteError ? undefined : "Delete"}
+        cancelLabel={deleteError ? "Close" : "Cancel"}
+        isConfirming={false}
+      />
     </ReflectionContainer>
   );
 };
