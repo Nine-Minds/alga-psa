@@ -307,20 +307,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   }, [getCurrentFiltersQuery]);
 
 
-  // Create columns using shared utility
-  const columns = useMemo(() =>
-    createTicketColumns({
-      categories,
-      boards,
-      displaySettings: displaySettings || undefined,
-      onTicketClick: handleTicketClick,
-      onDeleteClick: handleDeleteTicket,
-      ticketTagsRef,
-      onTagsChange: handleTagsChange,
-      showClient: true,
-      onClientClick: onQuickViewCompany,
-    }), [categories, boards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
-
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
     try {
@@ -510,7 +496,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const columns = useMemo(() => {
     const baseColumns = createTicketColumns({
       categories,
-      channels,
+      boards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
       onDeleteClick: handleDeleteTicket,
@@ -579,7 +565,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     return [selectionColumn, ...baseColumns];
   }, [
     categories,
-    channels,
+    boards,
     displaySettings,
     handleTicketClick,
     handleDeleteTicket,
