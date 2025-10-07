@@ -426,7 +426,7 @@ export class TypeScriptWorkflowRuntime {
       
       // Store execution state in memory
       this.executionStates.set(executionId, executionState);
-      
+
       // Persist workflow execution record
       await WorkflowExecutionModel.create(knex, tenant, {
         execution_id: executionId,
@@ -462,9 +462,15 @@ export class TypeScriptWorkflowRuntime {
       
       // Create workflow context with userId
       const context = this.createWorkflowContext(executionId, tenant, userId); // Pass userId to context
+
+      const activeTransaction = this.getActiveTransaction(knex);
+      this.attachTransactionToExecution(executionState, activeTransaction);
       
       // Start workflow execution in background
-      this.executeWorkflow(workflowDefinition.execute, context, executionState);
+      const workflowExecutionPromise = this.executeWorkflow(workflowDefinition.execute, context, executionState);
+      workflowExecutionPromise.finally(() => {
+        this.clearExecutionTransaction(executionState, activeTransaction);
+      });
       
       return {
         executionId,
@@ -678,55 +684,62 @@ export class TypeScriptWorkflowRuntime {
         
         // Store the previous state (from the loaded/updated live state)
         const previousState = liveExecutionState.currentState;
-        
-        // Create a workflow event object for in-memory processing (e.g., for listeners)
-        const workflowEvent: WorkflowEvent = {
-          name: event.event_name, // 'event' is the raw event from DB
-          payload: event.payload || {},
-          user_id: event.user_id,
-          timestamp: event.created_at
-        };
-        
-        // The 'event' (from DB) is already part of the history replayed by loadExecutionState
-        // if it was persisted before this processQueuedEvent call.
-        // If this 'event' is the one causing the current processing, its data effects
-        // should be applied to the liveExecutionState.data.
-        // The liveExecutionState.events array (historical events) is already up-to-date from loadExecutionState.
 
-        // Apply the current event's data changes to the liveExecutionState's data.
-        // Note: WorkflowEventSourcing.applyEvent should be idempotent if the event was already replayed.
-        // Or, ensure applyEvent is only for the *current* event's effect on data.
-        // For now, let's assume applyEvent updates the data based on the workflowEvent.
-        liveExecutionState.data = WorkflowEventSourcing.applyEvent(liveExecutionState.data, workflowEvent);
-        
-        // Notify event listeners. This will use the liveExecutionState (fetched via this.executionStates.get)
-        // which should now correctly have its eventListeners property if the workflow was waiting.
-        this.notifyEventListeners(executionId, workflowEvent);
-        
-        // After listeners are notified, the workflow might have resumed and changed its state.
-        // So, we use liveExecutionState.currentState (which could have been updated by the resumed workflow)
-        // as the to_state for the persisted event.
-        await executeDistributedTransaction(knex, `workflow:${executionId}`, async (trx: Knex.Transaction) => {
-          await trx('workflow_events')
-            .where({
-              event_id: eventId,
-              tenant
-            })
-            .update({
-              to_state: liveExecutionState.currentState
-            });
+        const activeTransaction = this.getActiveTransaction(knex);
+        this.attachTransactionToExecution(liveExecutionState, activeTransaction);
+
+        try {
+          // Create a workflow event object for in-memory processing (e.g., for listeners)
+          const workflowEvent: WorkflowEvent = {
+            name: event.event_name, // 'event' is the raw event from DB
+            payload: event.payload || {},
+            user_id: event.user_id,
+            timestamp: event.created_at
+          };
           
-          // Mark event processing as completed
-          await WorkflowEventProcessingModel.markAsCompleted(trx, tenant, processingId);
-        });
-        
-        // Return success result
-        return {
-          success: true,
-          previousState,
-          currentState: liveExecutionState.currentState,
-          actionsExecuted: [] // In a real implementation, we would track action executions
-        };
+          // The 'event' (from DB) is already part of the history replayed by loadExecutionState
+          // if it was persisted before this processQueuedEvent call.
+          // If this 'event' is the one causing the current processing, its data effects
+          // should be applied to the liveExecutionState.data.
+          // The liveExecutionState.events array (historical events) is already up-to-date from loadExecutionState.
+
+          // Apply the current event's data changes to the liveExecutionState's data.
+          // Note: WorkflowEventSourcing.applyEvent should be idempotent if the event was already replayed.
+          // Or, ensure applyEvent is only for the *current* event's effect on data.
+          // For now, let's assume applyEvent updates the data based on the workflowEvent.
+          liveExecutionState.data = WorkflowEventSourcing.applyEvent(liveExecutionState.data, workflowEvent);
+          
+          // Notify event listeners. This will use the liveExecutionState (fetched via this.executionStates.get)
+          // which should now correctly have its eventListeners property if the workflow was waiting.
+          this.notifyEventListeners(executionId, workflowEvent);
+          
+          // After listeners are notified, the workflow might have resumed and changed its state.
+          // So, we use liveExecutionState.currentState (which could have been updated by the resumed workflow)
+          // as the to_state for the persisted event.
+          await executeDistributedTransaction(knex, `workflow:${executionId}`, async (trx: Knex.Transaction) => {
+            await trx('workflow_events')
+              .where({
+                event_id: eventId,
+                tenant
+              })
+              .update({
+                to_state: liveExecutionState.currentState
+              });
+            
+            // Mark event processing as completed
+            await WorkflowEventProcessingModel.markAsCompleted(trx, tenant, processingId);
+          });
+          
+          // Return success result
+          return {
+            success: true,
+            previousState,
+            currentState: liveExecutionState.currentState,
+            actionsExecuted: [] // In a real implementation, we would track action executions
+          };
+        } finally {
+          this.clearExecutionTransaction(liveExecutionState, activeTransaction);
+        }
       } catch (error) {
         // Mark event as failed
         await WorkflowEventProcessingModel.markAsFailed(
@@ -992,6 +1005,9 @@ export class TypeScriptWorkflowRuntime {
     const actionProxyInstance = this.createActionProxy(executionId, tenant, context);
     context.actions = actionProxyInstance; // Now assign the fully built actions object
     
+    // Retain a reference so we can update transaction/context metadata during event processing
+    executionState.context = context;
+    
     return context;
   }
   
@@ -1031,7 +1047,8 @@ export class TypeScriptWorkflowRuntime {
           secrets: currentExecutionState?.data?.secrets, // Pass secrets from execution state data
           parameters: params,
           idempotencyKey: `${executionId}-${registeredName}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          userId: userIdFromEvents // Include user ID from events if available
+          userId: userIdFromEvents, // Include user ID from events if available
+          transaction: currentExecutionState?.currentTransaction ?? currentContext.transaction
         });
       };
 
@@ -1178,6 +1195,36 @@ export class TypeScriptWorkflowRuntime {
       } catch (error) {
         logger.error(`Error notifying event listener for ${event.name} on ${executionId}:`, error);
       }
+    }
+  }
+
+  private getActiveTransaction(knex: Knex): Knex.Transaction | undefined {
+    const candidate = knex as unknown as { isTransaction?: boolean };
+    if (candidate && candidate.isTransaction) {
+      return knex as unknown as Knex.Transaction;
+    }
+    return undefined;
+  }
+
+  private attachTransactionToExecution(executionState: any, transaction?: Knex.Transaction): void {
+    if (!executionState || !transaction) {
+      return;
+    }
+    executionState.currentTransaction = transaction;
+    if (executionState.context) {
+      executionState.context.transaction = transaction;
+    }
+  }
+
+  private clearExecutionTransaction(executionState: any, transaction?: Knex.Transaction): void {
+    if (!executionState || !transaction) {
+      return;
+    }
+    if (executionState.currentTransaction === transaction) {
+      delete executionState.currentTransaction;
+    }
+    if (executionState.context && executionState.context.transaction === transaction) {
+      executionState.context.transaction = undefined;
     }
   }
 }

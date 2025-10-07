@@ -1,4 +1,6 @@
 
+import type { Knex } from 'knex';
+
 /**
  * Standard workflow states enum
  */
@@ -106,6 +108,11 @@ export interface WorkflowContext {
    * Logger for workflow execution
    */
   logger: WorkflowLogger;
+  
+  /**
+   * Active database transaction for the current workflow operation, when available
+   */
+  transaction?: Knex.Transaction;
   
   /**
    * Input data for the workflow, often containing the trigger event

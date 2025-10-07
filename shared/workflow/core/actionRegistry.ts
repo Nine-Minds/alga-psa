@@ -1,3 +1,5 @@
+import type { Knex } from 'knex';
+
 /**
  * Action parameter definition
  */
@@ -22,6 +24,7 @@ export interface ActionExecutionContext {
   secrets?: Record<string, any>; // Optional field for injected secrets
   workflowName?: string; // Added for logging context
   correlationId?: string; // Added for logging context and potential future use
+  transaction?: Knex.Transaction; // Optional active transaction for database actions
 }
 
 /**
@@ -82,7 +85,7 @@ export class ActionRegistry {
     name: string,
     description: string,
     parameters: ActionParameterDefinition[],
-    isolationLevel: TransactionIsolationLevel,
+    _isolationLevel: TransactionIsolationLevel,
     executeFn: (params: Record<string, any>, context: any) => Promise<any>
   ): void {
     this.actions.set(name, {
@@ -90,18 +93,15 @@ export class ActionRegistry {
       description,
       parameters,
       execute: async (params, context) => {
-        // In a real implementation, this would create a database transaction
-        // with the specified isolation level
-        const txContext = {
+        const transaction = context.transaction;
+        if (!transaction) {
+          throw new Error('Transaction required for database action');
+        }
+
+        return executeFn(params, {
           ...context,
-          transaction: (table: string) => ({
-            where: (column: string, value: any) => ({
-              update: (data: any) => Promise.resolve(1)
-            })
-          })
-        };
-        
-        return executeFn(params, txContext);
+          transaction
+        });
       }
     });
   }
@@ -127,82 +127,74 @@ export class ActionRegistry {
       eventId: context.eventId,
       parameterKeys: Object.keys(context.parameters)
     });
-    
-    let knex: any;
-    try {
-      // Import models here to avoid circular dependencies
-      const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel');
-      
-      // Create Knex instance - assuming we can get it from a connection pool or similar
-      // This would typically be passed in the context or obtained from a service locator
-      const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
-      knex = await getAdminConnection();
-      
-      // Create action result record (pre-execution)
-      let resultId;
+  
+    // Import heavy dependencies lazily to avoid circular references
+    const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel');
+    const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+    const { v4: uuidv4 } = await import('uuid');
+
+    return await withAdminTransaction(async (trx) => {
+      // Make sure downstream consumers see the active transaction
+      const executionContext: ActionExecutionContext = {
+        ...context,
+        transaction: trx
+      };
+
+      let resultId: string | null = null;
+
       try {
-        // Import uuid for generating missing event_id
-        const { v4: uuidv4 } = await import('uuid');
-        
-        // Ensure event_id is a valid UUID - generate one if missing
-        const eventId = context.eventId && context.eventId.trim() ? context.eventId : uuidv4();
-        
-        const createResult = await WorkflowActionResultModel.create(knex, context.tenant, {
-          execution_id: context.executionId,
+        const eventId = executionContext.eventId && executionContext.eventId.trim()
+          ? executionContext.eventId
+          : uuidv4();
+
+        const createResult = await WorkflowActionResultModel.create(trx, executionContext.tenant, {
+          execution_id: executionContext.executionId,
           event_id: eventId,
           action_name: actionName,
-          idempotency_key: context.idempotencyKey,
+          idempotency_key: executionContext.idempotencyKey,
           ready_to_execute: true,
           success: false,
-          parameters: context.parameters,
-          tenant: context.tenant
+          parameters: executionContext.parameters,
+          tenant: executionContext.tenant
         });
-        
+
         resultId = createResult.result_id;
-        // console.log(`[ActionRegistry] Created action result record with ID ${resultId}`);
-        
-        // Mark as started
-        await WorkflowActionResultModel.markAsStarted(knex, context.tenant, resultId);
+
+        await WorkflowActionResultModel.markAsStarted(trx, executionContext.tenant, resultId);
       } catch (dbError) {
         console.error(`[ActionRegistry] Error creating action result record:`, dbError);
-        // Continue execution even if recording fails
       }
-      
-      // Execute action
+
       try {
-        const result = await action.execute(context.parameters, context);
-        // console.log(`[ActionRegistry] Action "${actionName}" executed successfully`);
-        
-        // Mark as completed successfully if we have a resultId
+        const result = await action.execute(executionContext.parameters, executionContext);
+
         if (resultId) {
           try {
             await WorkflowActionResultModel.markAsCompleted(
-              knex, 
-              context.tenant, 
-              resultId, 
-              true, 
+              trx,
+              executionContext.tenant,
+              resultId,
+              true,
               result
             );
-            // console.log(`[ActionRegistry] Updated action result record ${resultId} as completed successfully`);
           } catch (dbError) {
-            // console.error(`[ActionRegistry] Error updating action result record:`, dbError);
-            throw dbError;  
+            console.error(`[ActionRegistry] Error updating action result record:`, dbError);
+            throw dbError;
           }
         }
-        
+
         return result;
       } catch (error) {
         console.error(`[ActionRegistry] Error executing action "${actionName}":`, error);
-        
-        // Mark as failed if we have a resultId
+
         if (resultId) {
           try {
             await WorkflowActionResultModel.markAsCompleted(
-              knex, 
-              context.tenant, 
-              resultId, 
-              false, 
-              undefined, 
+              trx,
+              executionContext.tenant,
+              resultId,
+              false,
+              undefined,
               error instanceof Error ? error.message : String(error)
             );
             console.log(`[ActionRegistry] Updated action result record ${resultId} as failed`);
@@ -210,18 +202,10 @@ export class ActionRegistry {
             console.error(`[ActionRegistry] Error updating action result record:`, dbError);
           }
         }
-        
+
         throw error;
       }
-    } catch (error) {
-      console.error(`[ActionRegistry] Error in action execution process:`, error);
-      throw error;
-    } finally {
-      // CRITICAL: Close the database connection to prevent pool exhaustion
-      if (knex) {
-        await knex.destroy();
-      }
-    }
+    }, context.transaction);
   }
   
   /**
