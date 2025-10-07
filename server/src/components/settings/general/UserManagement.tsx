@@ -500,15 +500,9 @@ const fetchContacts = async (): Promise<void> => {
             )}
           </div>
           {!showNewUserForm && (
-            <Button 
-              id={`create-new-${portalType}-user-btn`} 
+            <Button
+              id={`create-new-${portalType}-user-btn`}
               onClick={() => setShowNewUserForm(true)}
-              disabled={portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0}
-              title={
-                portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
-                  ? 'Licence limit reached. Remove or deactivate a user to free a licence.'
-                  : undefined
-              }
             >
               Create New {portalType === 'msp' ? 'User' : 'Client User'}
             </Button>
@@ -694,12 +688,30 @@ const fetchContacts = async (): Promise<void> => {
                 </div>
               </div>
 <div className="flex gap-2 justify-end">
-                <Button 
-                  id={`submit-new-${portalType}-user-btn`} 
-                  onClick={handleCreateUser}
+                <Button
+                  id={`submit-new-${portalType}-user-btn`}
+                  variant={
+                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                      ? 'secondary'
+                      : 'default'
+                  }
+                  onClick={
+                    portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                      ? () => {
+                          // Placeholder for adding licenses
+                          toast('Add license functionality coming soon', { icon: 'ℹ️', duration: 3000 });
+                        }
+                      : handleCreateUser
+                  }
                   disabled={portalType === 'client' && !newUser.password && !!contactValidationError}
                 >
-                  {portalType === 'msp' ? 'Create User' : newUser.password ? 'Create User' : 'Send Portal Invitation'}
+                  {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
+                    ? 'Add License'
+                    : portalType === 'msp'
+                      ? 'Create User'
+                      : newUser.password
+                        ? 'Create User'
+                        : 'Send Portal Invitation'}
                 </Button>
                 <Button 
                   id={`cancel-new-${portalType}-user-btn`} 
