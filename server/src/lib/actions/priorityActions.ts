@@ -96,6 +96,52 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
   });
 }
 
+/**
+ * Get priorities filtered by board's priority type
+ * Returns ITIL priorities if board uses ITIL, custom priorities otherwise
+ */
+export async function getPrioritiesByBoardType(boardId: string, itemType?: 'ticket' | 'project_task'): Promise<IPriority[]> {
+  const { knex: db, tenant } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      // Get the board's priority type
+      const board = await trx('boards')
+        .select('priority_type')
+        .where({ tenant, board_id: boardId })
+        .first();
+
+      if (!board) {
+        throw new Error(`Board ${boardId} not found`);
+      }
+
+      // Get priorities based on board's priority type
+      let query = trx('priorities')
+        .select('*')
+        .where({ tenant });
+
+      if (itemType) {
+        query = query.where({ item_type: itemType });
+      }
+
+      if (board.priority_type === 'itil') {
+        // For ITIL boards, return only ITIL priorities
+        query = query.where({ is_from_itil_standard: true });
+      } else {
+        // For custom boards, return only custom priorities
+        query = query.where(function() {
+          this.where({ is_from_itil_standard: false })
+            .orWhereNull('is_from_itil_standard');
+        });
+      }
+
+      return query.orderBy('order_number', 'asc');
+    } catch (error) {
+      console.error(`Error fetching priorities for board ${boardId}:`, error);
+      throw new Error(`Failed to fetch priorities for board ${boardId}`);
+    }
+  });
+}
+
 export interface FindPriorityByNameOutput {
   id: string;
   name: string;
