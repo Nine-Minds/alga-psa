@@ -1,24 +1,9 @@
-const ensureSequentialMode = async (knex) => {
-  await knex.raw(`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM pg_extension WHERE extname = 'citus'
-      ) THEN
-        EXECUTE 'SET citus.multi_shard_modify_mode TO ''sequential''';
-      END IF;
-    END $$;
-  `);
-};
-
 const tableExists = async (knex, tableName) => {
   const result = await knex.schema.hasTable(tableName);
   return result;
 };
 
 exports.up = async function up(knex) {
-  await ensureSequentialMode(knex);
-
   const exists = await tableExists(knex, 'contract_pricing_schedules');
 
   if (!exists) {
@@ -102,8 +87,6 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
-  await ensureSequentialMode(knex);
-
   const exists = await tableExists(knex, 'contract_pricing_schedules');
 
   if (exists) {
