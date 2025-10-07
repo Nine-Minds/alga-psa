@@ -13,8 +13,10 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
     required,
     displayLabel,
     schema, // Added schema
-    formContext // Added formContext
   } = props;
+
+  // Access formContext safely
+  const formContext = (props as any).formContext;
 
   // Log all props for debugging
   if (id === 'root_algaCompanyDisplay') {
