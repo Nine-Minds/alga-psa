@@ -1,23 +1,81 @@
-import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
-import { v4 as uuidv4 } from 'uuid';
-import { TextEncoder } from 'util';
-import { TestContext } from '../../../test-utils/testContext';
-import { dateHelpers, createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
-import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { createTestDateISO } from '../../../../../test-utils/dateUtils';
+import {
+  createTestService,
+  createFixedPlanAssignment,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
-// Required for tests
-global.TextEncoder = TextEncoder;
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -28,24 +86,44 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         'tickets',
         'company_billing_cycles',
         'company_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
+        'tax_regions',
         'company_tax_settings',
+        'company_tax_rates',
         'next_number'
       ],
-      companyName: 'Test Company',
+      companyName: 'Invoice Number Test Company',
       userType: 'internal'
     });
 
-    console.log('Created tenant:', context.tenantId);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-    
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
     // Set up invoice numbering settings
     const nextNumberRecord = {
       tenant: context.tenantId,
@@ -55,42 +133,18 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       initial_value: 1,
       padding_length: 6
     };
-    console.log('Adding next_number record:', nextNumberRecord);
     await context.db('next_number').insert(nextNumberRecord);
 
-    // Create default tax rate
-    await context.createEntity('tax_rates', {
-      tax_type: 'VAT',
-      country_code: 'US',
-      tax_percentage: 10,
-      region: null,
-      is_reverse_charge_applicable: false,
-      is_composite: false,
-      start_date: dateHelpers.createDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      description: 'Test Tax Rate'
-    }, 'tax_rate_id');
+    await configureDefaultTax();
+  }, 30000);
 
-    // Create default tax settings for the test company
-    await createDefaultTaxSettings(context.company.company_id);
-
-    // Re-create tax rate
-    await context.createEntity('tax_rates', {
-      tax_type: 'VAT',
-      country_code: 'US',
-      tax_percentage: 10,
-      region: null,
-      is_reverse_charge_applicable: false,
-      is_composite: false,
-      start_date: dateHelpers.createDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      description: 'Test Tax Rate'
-    }, 'tax_rate_id');
-  });
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('should handle numbers approaching maximum value for padding length', async () => {
     // Set up invoice numbering settings with a number close to maximum
@@ -108,27 +162,12 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create a service and plan using modern helpers
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
     // Create billing cycles for two consecutive months
@@ -148,25 +187,21 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    // Assign plan to company for both periods
-    await context.db('company_billing_plans').insert([
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
+    // Assign plan for first period
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Assign plan for second period (reuse same service/plan)
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan 2',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
+    });
 
     // Generate invoices that will exceed padding length
     const invoice1 = await generateInvoice(billingCycle1);
@@ -197,30 +232,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 10
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -228,15 +255,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -305,27 +323,19 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 3
     });
 
-    // Create a billing plan for generating invoices
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
+      tax_region: 'US-NY'
+    });
 
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Create billing cycles for three consecutive months
@@ -352,34 +362,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
-
-    // Assign plan to company for all periods
-    await context.db('company_billing_plans').insert([
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
 
     // 1. Query for the minimum invoice number.
     const minInvoiceNumber = await getMinimumInvoiceNumber();
@@ -453,27 +435,19 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoices
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
+      tax_region: 'US-NY'
+    });
 
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
     });
 
     // Create multiple billing cycles to generate multiple invoices
@@ -500,34 +474,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
-
-    // Assign plan to company for all periods
-    await context.db('company_billing_plans').insert([
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      },
-      {
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      }
-    ]);
 
     // Generate invoices in sequence
     const invoice1 = await generateInvoice(billingCycle1);
@@ -573,30 +519,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -604,15 +542,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -638,30 +567,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -669,15 +590,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -705,30 +617,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -736,15 +640,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice
     const invoice = await generateInvoice(billingCycle);
@@ -770,30 +665,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle1 = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -801,15 +688,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
@@ -823,7 +701,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       .where({ tenant: context.tenantId, entity_type: 'INVOICE' })
       .update({ prefix: 'BILL-' });
 
-    // Create a second billing cycle
+    // Create a second billing cycle (plan already assigned from earlier)
     const billingCycle2 = await context.createEntity('company_billing_cycles', {
         company_id: context.companyId,
         billing_cycle: 'monthly',
@@ -831,15 +709,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
-  
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });
 
     // Generate invoice with new prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -865,30 +734,22 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoice
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
-      billing_frequency: 'monthly',
-      is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
-
-    const serviceId = await context.createEntity('service_catalog', {
+    // Create service and assign fixed plan
+    const serviceId = await createTestService(context, {
       service_name: 'Basic Service',
-      description: 'Test service',
-      service_type: 'Fixed',
+      billing_method: 'fixed',
       default_rate: 10000,
-      unit_of_measure: 'unit'
-    }, 'service_id');
-
-    await context.db('plan_services').insert({
-      plan_id: planId,
-      service_id: serviceId,
-      quantity: 1,
-      tenant: context.tenantId
+      tax_region: 'US-NY'
     });
 
-    // Create billing cycle and assign plan
+    await createFixedPlanAssignment(context, serviceId, {
+      planName: 'Basic Plan',
+      billingFrequency: 'monthly',
+      baseRateCents: 10000,
+      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+    });
+
+    // Create billing cycle
     const billingCycle1 = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -896,15 +757,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice with initial prefix
     const invoice1 = await generateInvoice(billingCycle1);
@@ -918,7 +770,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       .where({ tenant: context.tenantId, entity_type: 'INVOICE' })
       .update({ prefix: 'IN-' });
 
-      // Create a second billing cycle
+      // Create a second billing cycle (plan already assigned from earlier)
       const billingCycle2 = await context.createEntity('company_billing_cycles', {
         company_id: context.companyId,
         billing_cycle: 'monthly',
@@ -926,15 +778,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
-  
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
-        plan_id: planId,
-        start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
-        is_active: true,
-        tenant: context.tenantId
-      });      
 
     // Generate invoice with shorter prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -948,7 +791,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     .where({ tenant: context.tenantId, entity_type: 'INVOICE' })
     .update({ prefix: 'INVOICE-' });
 
-    // Create a third billing cycle
+    // Create a third billing cycle (plan already assigned from earlier)
     const billingCycle3 = await context.createEntity('company_billing_cycles', {
       company_id: context.companyId,
       billing_cycle: 'monthly',
@@ -956,15 +799,6 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
-
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: context.companyId,
-      plan_id: planId,
-      start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
-      is_active: true,
-      tenant: context.tenantId
-    });
 
     // Generate invoice with longer prefix
     const invoice3 = await generateInvoice(billingCycle3);

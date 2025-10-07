@@ -12,12 +12,12 @@ import { Button } from 'server/src/components/ui/Button';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagFilter } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { IChannel, ICompany, IUser } from 'server/src/interfaces';
+import { IBoard, ICompany, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
@@ -37,7 +37,7 @@ import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 interface TicketingDashboardProps {
   id?: string;
   initialTickets: ITicketListItem[];
-  initialChannels: IChannel[];
+  initialBoards: IBoard[];
   initialStatuses: SelectOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
@@ -68,7 +68,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   id = 'ticketing-dashboard',
   initialTickets,
-  initialChannels,
+  initialBoards,
   initialStatuses,
   initialPriorities,
   initialCategories,
@@ -97,20 +97,20 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [bulkDeleteErrors, setBulkDeleteErrors] = useState<Array<{ ticketId: string; message: string }>>([]);
 
-  const [channels] = useState<IChannel[]>(initialChannels);
+  const [boards] = useState<IBoard[]>(initialBoards);
   const [companies] = useState<ICompany[]>(initialCompanies);
   const [categories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
-  const [selectedChannel, setSelectedChannel] = useState<string | null>(initialFilterValues.channelId || null);
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId || null);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(initialFilterValues.companyId === undefined ? null : initialFilterValues.companyId); // Keep previous fix for company
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId || 'open');
   const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId || 'all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery || '');
-  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.channelFilterState || 'active');
+  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState || 'active');
   
   const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -180,30 +180,30 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const params = new URLSearchParams();
     
     // Only add non-default/non-empty values to URL
-    if (selectedChannel) params.set('channelId', selectedChannel);
+    if (selectedBoard) params.set('boardId', selectedBoard);
     if (selectedCompany) params.set('companyId', selectedCompany);
     if (selectedStatus && selectedStatus !== 'open') params.set('statusId', selectedStatus);
     if (selectedPriority && selectedPriority !== 'all') params.set('priorityId', selectedPriority);
     if (selectedCategories.length > 0) params.set('categoryId', selectedCategories[0]);
     if (debouncedSearchQuery) params.set('searchQuery', debouncedSearchQuery);
-    if (channelFilterState && channelFilterState !== 'active') {
-      params.set('channelFilterState', channelFilterState);
+    if (boardFilterState && boardFilterState !== 'active') {
+      params.set('boardFilterState', boardFilterState);
     }
 
     return params.toString();
-  }, [selectedChannel, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState]);
+  }, [selectedBoard, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
 
   const hasSyncedInitialFilters = useRef(false);
 
   useEffect(() => {
     const currentFilters: Partial<ITicketListFilters> = {
-      channelId: selectedChannel === null ? undefined : selectedChannel,
+      boardId: selectedBoard === null ? undefined : selectedBoard,
       statusId: selectedStatus,
       priorityId: selectedPriority,
       categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
       companyId: selectedCompany || undefined,
       searchQuery: debouncedSearchQuery,
-      channelFilterState: channelFilterState,
+      boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
       tags: selectedTags.length > 0 ? selectedTags : undefined,
     };
@@ -213,13 +213,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       hasSyncedInitialFilters.current = true;
     }
   }, [
-    selectedChannel, 
+    selectedBoard, 
     selectedStatus, 
     selectedPriority, 
     selectedCategories, 
     selectedCompany, 
     debouncedSearchQuery, 
-    channelFilterState,
+    boardFilterState,
     selectedTags
     // Removed onFiltersChanged from dependencies to prevent infinite loop
   ]);
@@ -305,6 +305,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       : `/msp/tickets/${ticketId}`;
     window.location.href = href;
   }, [getCurrentFiltersQuery]);
+
+
+  // Create columns using shared utility
+  const columns = useMemo(() =>
+    createTicketColumns({
+      categories,
+      boards,
+      displaySettings: displaySettings || undefined,
+      onTicketClick: handleTicketClick,
+      onDeleteClick: handleDeleteTicket,
+      ticketTagsRef,
+      onTagsChange: handleTagsChange,
+      showClient: true,
+      onClientClick: onQuickViewCompany,
+    }), [categories, boards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
+
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
     try {
@@ -641,7 +657,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setTickets(prevTickets => {
       const status = statusOptions.find(s => s.value === newTicket.status_id);
       const priority = priorityOptions.find(p => p.value === newTicket.priority_id);
-      const channel = channels.find(c => c.channel_id === newTicket.channel_id);
+      const board = boards.find(c => c.board_id === newTicket.board_id);
       
       let categoryName = '';
       if (newTicket.category_id) {
@@ -665,8 +681,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         status_name: typeof status?.label === 'string' ? status.label : '',
         priority_id: newTicket.priority_id ?? null,
         priority_name: typeof priority?.label === 'string' ? priority.label : '',
-        channel_id: newTicket.channel_id,
-        channel_name: channel?.channel_name || '',
+        board_id: newTicket.board_id,
+        board_name: board?.board_name || '',
         category_id: newTicket.category_id,
         subcategory_id: newTicket.subcategory_id,
         category_name: categoryName,
@@ -691,10 +707,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     
     // Close the quick add dialog
     setIsQuickAddOpen(false);
-  }, [statusOptions, priorityOptions, channels, categories, currentUser]);
+  }, [statusOptions, priorityOptions, boards, categories, currentUser]);
 
-  const handleChannelSelect = useCallback((channelId: string) => {
-    setSelectedChannel(channelId);
+  const handleBoardSelect = useCallback((boardId: string) => {
+    setSelectedBoard(boardId);
   }, []);
 
   const handleCategorySelect = useCallback((newSelectedCategories: string[], newExcludedCategories: string[]) => {
@@ -716,22 +732,22 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
 
   const handleResetFilters = useCallback(() => {
     // Define the true default/reset states
-    const defaultChannel: string | null = null;
+    const defaultBoard: string | null = null;
     const defaultCompany: string | null = null;
     const defaultStatus: string = 'open';
     const defaultPriority: string = 'all';
     const defaultCategories: string[] = [];
     const defaultSearchQuery: string = '';
-    const defaultChannelFilterState: 'active' | 'inactive' | 'all' = 'active';
+    const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
 
-    setSelectedChannel(defaultChannel);
+    setSelectedBoard(defaultBoard);
     setSelectedCompany(defaultCompany);
     setSelectedStatus(defaultStatus);
     setSelectedPriority(defaultPriority);
     setSelectedCategories(defaultCategories);
     setExcludedCategories([]);
     setSearchQuery(defaultSearchQuery);
-    setChannelFilterState(defaultChannelFilterState);
+    setBoardFilterState(defaultBoardFilterState);
     setSelectedTags([]);
     
     setCompanyFilterState('active'); 
@@ -740,13 +756,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     clearSelection();
 
     onFiltersChanged({
-      channelId: defaultChannel === null ? undefined : defaultChannel,
+      boardId: defaultBoard === null ? undefined : defaultBoard,
       companyId: defaultCompany === null ? undefined : defaultCompany,
       statusId: defaultStatus,
       priorityId: defaultPriority,
       categoryId: defaultCategories.length > 0 ? defaultCategories[0] : undefined,
       searchQuery: defaultSearchQuery,
-      channelFilterState: defaultChannelFilterState,
+      boardFilterState: defaultBoardFilterState,
       showOpenOnly: defaultStatus === 'open',
     });
   }, [onFiltersChanged, clearSelection]);
@@ -789,13 +805,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       <div className="bg-white shadow rounded-lg p-4">
         <ReflectionContainer id={`${id}-filters`} label="Ticket DashboardFilters">
           <div className="flex items-center gap-3 flex-nowrap">
-            <ChannelPicker
-              id={`${id}-channel-picker`}
-              channels={channels}
-              onSelect={handleChannelSelect}
-              selectedChannelId={selectedChannel}
-              filterState={channelFilterState}
-              onFilterStateChange={setChannelFilterState}
+            <BoardPicker
+              id={`${id}-board-picker`}
+              boards={boards}
+              onSelect={handleBoardSelect}
+              selectedBoardId={selectedBoard}
+              filterState={boardFilterState}
+              onFilterStateChange={setBoardFilterState}
             />
             <CompanyPicker
               id='company-picker'

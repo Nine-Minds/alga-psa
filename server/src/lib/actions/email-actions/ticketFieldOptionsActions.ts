@@ -21,7 +21,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
   try {
     // Get all ticket field options in parallel
     const [
-      channels,
+      boards,
       statuses,
       priorities,
       categories,
@@ -29,11 +29,11 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
       users,
       locations
     ] = await Promise.all([
-      // Channels
-      knex('channels')
+      // Boards
+      knex('boards')
         .where({ tenant })
         .orderBy('display_order', 'asc')
-        .select('channel_id as id', 'channel_name as name', 'is_default')
+        .select('board_id as id', 'board_name as name', 'is_default')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
           name: row.name, 
@@ -68,12 +68,12 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
         .where({ tenant })
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc')
-        .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
+        .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'board_id')
         .then(rows => rows.map(row => ({ 
           id: row.id, 
           name: row.name,
           parent_id: row.parent_id,
-          channel_id: row.channel_id
+          board_id: row.board_id
         }))),
 
       // Companies
@@ -115,7 +115,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
 
     return {
       options: {
-        channels: channels || [],
+        boards: boards || [],
         statuses: statuses || [],
         priorities: priorities || [],
         categories: categories || [],
@@ -128,7 +128,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
     console.error('Failed to load ticket field options:', error);
     return {
       options: {
-        channels: [],
+        boards: [],
         statuses: [],
         priorities: [],
         categories: [],
@@ -140,7 +140,7 @@ export async function getTicketFieldOptions(): Promise<{ options: TicketFieldOpt
   }
 }
 
-export async function getAvailableChannels(): Promise<{ channels: TicketFieldOptions['channels'] }> {
+export async function getAvailableBoards(): Promise<{ boards: TicketFieldOptions['boards'] }> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
@@ -153,20 +153,20 @@ export async function getAvailableChannels(): Promise<{ channels: TicketFieldOpt
   }
   
   try {
-    const channels = await knex('channels')
+    const boards = await knex('boards')
       .where({ tenant })
       .orderBy('display_order', 'asc')
-      .select('channel_id as id', 'channel_name as name', 'is_default')
+      .select('board_id as id', 'board_name as name', 'is_default')
       .then(rows => rows.map(row => ({ 
         id: row.id, 
         name: row.name, 
         is_default: Boolean(row.is_default) 
       })));
 
-    return { channels };
+    return { boards };
   } catch (error) {
-    console.error('Failed to load channels:', error);
-    return { channels: [] };
+    console.error('Failed to load boards:', error);
+    return { boards: [] };
   }
 }
 
@@ -248,12 +248,12 @@ export async function getAvailableCategories(): Promise<{ categories: TicketFiel
       .where({ tenant })
       .orderBy('display_order', 'asc')
       .orderBy('category_name', 'asc')
-      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
+      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'board_id')
       .then(rows => rows.map(row => ({ 
         id: row.id,
         name: row.name,
         parent_id: row.parent_id,
-        channel_id: row.channel_id
+        board_id: row.board_id
       })));
 
     return { categories };
@@ -263,8 +263,8 @@ export async function getAvailableCategories(): Promise<{ categories: TicketFiel
   }
 }
 
-// Server-side filtered categories by channel
-export async function getCategoriesByChannel(channelId: string | null): Promise<{ categories: TicketFieldOptions['categories'] }> {
+// Server-side filtered categories by board
+export async function getCategoriesByBoard(boardId: string | null): Promise<{ categories: TicketFieldOptions['categories'] }> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
@@ -277,29 +277,29 @@ export async function getCategoriesByChannel(channelId: string | null): Promise<
   }
 
   try {
-    console.log('[TicketFieldOptions] getCategoriesByChannel: start', {
+    console.log('[TicketFieldOptions] getCategoriesByBoard: start', {
       tenant,
-      channelId
+      boardId
     });
 
-    if (!channelId) {
-      console.log('[TicketFieldOptions] getCategoriesByChannel: no channelId provided, returning empty list');
+    if (!boardId) {
+      console.log('[TicketFieldOptions] getCategoriesByBoard: no boardId provided, returning empty list');
       return { categories: [] };
     }
 
-    console.time('[TicketFieldOptions] getCategoriesByChannel:query');
+    console.time('[TicketFieldOptions] getCategoriesByBoard:query');
     const rows = await knex('categories')
-      .where({ tenant, channel_id: channelId })
+      .where({ tenant, board_id: boardId })
       .orderBy('display_order', 'asc')
       .orderBy('category_name', 'asc')
-      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'channel_id')
-    console.timeEnd('[TicketFieldOptions] getCategoriesByChannel:query');
+      .select('category_id as id', 'category_name as name', 'parent_category as parent_id', 'board_id')
+    console.timeEnd('[TicketFieldOptions] getCategoriesByBoard:query');
 
     const categories = rows.map(row => ({
       id: row.id,
       name: row.name,
       parent_id: row.parent_id,
-      channel_id: row.channel_id
+      board_id: row.board_id
     }));
 
     const total = categories.length;
@@ -307,9 +307,9 @@ export async function getCategoriesByChannel(channelId: string | null): Promise<
     const withParents = total - topLevel;
     const sample = categories.slice(0, Math.min(5, total));
 
-    console.log('[TicketFieldOptions] getCategoriesByChannel: results', {
+    console.log('[TicketFieldOptions] getCategoriesByBoard: results', {
       tenant,
-      channelId,
+      boardId,
       total,
       topLevel,
       withParents,
@@ -318,9 +318,9 @@ export async function getCategoriesByChannel(channelId: string | null): Promise<
 
     return { categories };
   } catch (error) {
-    console.error('[TicketFieldOptions] getCategoriesByChannel: error', {
+    console.error('[TicketFieldOptions] getCategoriesByBoard: error', {
       tenant,
-      channelId,
+      boardId,
       error
     });
     return { categories: [] };

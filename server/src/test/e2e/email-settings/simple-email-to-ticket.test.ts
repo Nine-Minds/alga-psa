@@ -31,12 +31,12 @@ describe('Simple Email to Ticket Test', () => {
     });
     
     // Create basic required data
-    const channelId = uuidv4();
+    const boardId = uuidv4();
     const statusId = uuidv4();
     const priorityId = uuidv4();
     
-    await db('channels').insert({
-      channel_id: channelId,
+    await db('boards').insert({
+      board_id: boardId,
       tenant: tenantId,
       name: 'Email',
       is_default: true
@@ -65,7 +65,7 @@ describe('Simple Email to Ticket Test', () => {
       short_name: 'test-defaults',
       display_name: 'Test Defaults',
       defaults: JSON.stringify({
-        channel_id: channelId,
+        board_id: boardId,
         status_id: statusId,
         priority_id: priorityId,
         entered_by: null
@@ -100,7 +100,7 @@ describe('Simple Email to Ticket Test', () => {
     await db('inbound_ticket_defaults').where('id', defaultsId).delete();
     await db('priorities').where('tenant', tenantId).delete();
     await db('statuses').where('tenant', tenantId).delete();
-    await db('channels').where('tenant', tenantId).delete();
+    await db('boards').where('tenant', tenantId).delete();
     await db('tenants').where('tenant', tenantId).delete();
     
     await db.destroy();
@@ -151,7 +151,7 @@ describe('Simple Email to Ticket Test', () => {
       console.log('✅ Ticket created successfully!');
       console.log(`   ID: ${ticket.ticket_id}`);
       console.log(`   Title: ${ticket.title}`);
-      console.log(`   Channel: ${ticket.channel_id}`);
+      console.log(`   Board: ${ticket.board_id}`);
       console.log(`   Status: ${ticket.status_id}`);
       console.log(`   Priority: ${ticket.priority_id}`);
       console.log(`   Entered By: ${ticket.entered_by || 'System (null)'}`);

@@ -446,7 +446,49 @@ This indicates a problem with the OAuth token saving process.`;
 
       return Array.from(new Set(messageIds));
     } catch (error) {
+      const gmailNotFound = this.isHistoryIdNotFoundError(error);
+      if (gmailNotFound) {
+        const axiosError = error as any;
+        await this.attemptWatchRecovery(startHistoryId);
+        const historyError = new Error('Gmail history_id is no longer valid. Request a resync and establish a new watch.');
+        (historyError as any).code = 'gmail.historyIdNotFound';
+        (historyError as any).status = 404;
+        (historyError as any).responseBody = axiosError?.response?.data;
+        (historyError as any).requestId = axiosError?.response?.headers?.['request-id'] || axiosError?.response?.headers?.['client-request-id'];
+        this.log('warn', 'Gmail history_id rejected by API; downstream should reset cursor and re-register watch.', {
+          providerId: this.config.id,
+          attemptedHistoryId: startHistoryId
+        });
+        throw historyError;
+      }
       throw this.handleError(error, 'listMessagesSince');
+    }
+  }
+
+  private isHistoryIdNotFoundError(error: any): boolean {
+    if (!error) return false;
+    const status = error?.response?.status || error?.status;
+    if (status !== 404) return false;
+
+    const errorBody = error?.response?.data?.error || {};
+    const reason = Array.isArray(errorBody?.errors) ? errorBody.errors.find((e: any) => e?.reason)?.reason : undefined;
+    const message: string = errorBody?.message || error?.message || '';
+    const matchedReason = reason === 'notFound';
+    const matchedStatus = (errorBody?.status || '').toUpperCase() === 'NOT_FOUND';
+    const matchedMessage = typeof message === 'string' && message.toLowerCase().includes('requested entity was not found');
+    return Boolean(matchedReason || matchedStatus || matchedMessage);
+  }
+
+  private async attemptWatchRecovery(startHistoryId: string): Promise<void> {
+    try {
+      this.log('info', 'Attempting to recreate Gmail watch after history_id invalidation', {
+        providerId: this.config.id,
+        rejectedHistoryId: startHistoryId
+      });
+      await this.registerWebhookSubscription();
+      this.log('info', 'Gmail watch recreated successfully after history_id invalidation');
+    } catch (recoveryError: any) {
+      this.log('error', 'Failed to recreate Gmail watch after history_id invalidation', recoveryError);
     }
   }
 

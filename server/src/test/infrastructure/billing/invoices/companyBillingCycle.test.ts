@@ -1,73 +1,157 @@
-import { describe, it, expect } from 'vitest';
-import { createCompanyBillingCycles } from '../../lib/billing/createBillingCycles';
-import { TestContext } from '../../../test-utils/testContext';
-import { dateHelpers } from '../../../test-utils/dateUtils';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
+import { createCompanyBillingCycles } from 'server/src/lib/billing/createBillingCycles';
+import { TestContext } from '../../../../../test-utils/testContext';
 import { Temporal } from '@js-temporal/polyfill';
-import { TextEncoder } from 'util';
+import { TextEncoder as NodeTextEncoder } from 'util';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import {
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
 
-// Required for tests
-global.TextEncoder = TextEncoder;
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Company Billing Cycle Creation', () => {
-  const testHelpers = TestContext.createHelpers();
   let context: TestContext;
 
-  // Fix: Use beforeAll properly with async/await
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 8.875
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
-      cleanupTables: ['company_billing_cycles'],
-      companyName: 'Test Company',
+      cleanupTables: [
+        'company_billing_cycles',
+        'tax_rates',
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates'
+      ],
+      companyName: 'Billing Cycle Test Company',
       userType: 'internal'
     });
-  });
 
-  // Reset test context before each test
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
+
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
 
-  // Clean up test context after all tests
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
+
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   it('creates a monthly billing cycle if none exists', async () => {
-    const { db, company } = context;
-
     // Verify no cycles exist initially
-    const initialCycles = await db('company_billing_cycles')
-      .where({ 
-        company_id: company.company_id,
-        tenant: company.tenant 
+    const initialCycles = await context.db('company_billing_cycles')
+      .where({
+        company_id: context.companyId,
+        tenant: context.tenantId
       })
       .orderBy('effective_date', 'asc');
     expect(initialCycles).toHaveLength(0);
 
     // Create billing cycles
-    await createCompanyBillingCycles(db, company);
+    await createCompanyBillingCycles(context.db, context.company);
 
     // Verify cycles were created
-    const cycles = await db('company_billing_cycles')
-      .where({ 
-        company_id: company.company_id,
-        tenant: company.tenant 
+    const cycles = await context.db('company_billing_cycles')
+      .where({
+        company_id: context.companyId,
+        tenant: context.tenantId
       })
       .orderBy('effective_date', 'asc');
 
     expect(cycles).toHaveLength(1);
     expect(cycles[0]).toMatchObject({
-      company_id: company.company_id,
+      company_id: context.companyId,
       billing_cycle: 'monthly',
-      tenant: company.tenant
+      tenant: context.tenantId
     });
 
     // Verify period dates
     const cycle = cycles[0];
     expect(cycle.period_start_date).toBeDefined();
     expect(cycle.period_end_date).toBeDefined();
-    
-    console.log('period start date', cycle.period_start_date);
 
     // Convert ISO strings to Temporal instances for comparison
     const startDate = Temporal.Instant.from(new Date(cycle.period_start_date).toISOString())
@@ -76,7 +160,7 @@ describe('Company Billing Cycle Creation', () => {
         .toZonedDateTimeISO('UTC');
 
     // Verify period length is one month using Temporal API
-    const monthDiff = (endDate.year - startDate.year) * 12 + 
+    const monthDiff = (endDate.year - startDate.year) * 12 +
                     (endDate.month - startDate.month);
     expect(monthDiff).toBe(1);
 

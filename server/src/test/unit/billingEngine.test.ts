@@ -1,15 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { getConnection } from 'server/src/lib/db/db';
-import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, ICompanyBillingPlan, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IBucketPlan, IBucketUsage, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
+import { IAdjustment, IBillingCharge, IBillingPeriod, IBillingResult, ICompanyBillingPlan, IDiscount, IFixedPriceCharge, IPlanService, ITimeBasedCharge, IUsageBasedCharge } from 'server/src/interfaces/billing.interfaces';
 import { ISO8601String } from '../../types/types.d';
-import { getCompanyTaxRate } from 'server/src/lib/actions/billingAndTax';
+import { TaxService } from 'server/src/lib/services/taxService';
 
-
-vi.mock('@/lib/actions/invoiceActions', () => ({
-  getCompanyTaxRate: vi.fn().mockResolvedValue(8.25),
-  // Add other functions from invoiceActions if needed
-}));
 
 vi.mock('@/lib/db/db');
 vi.mock('server/src/lib/auth/getSession', () => ({
@@ -30,10 +25,6 @@ vi.mock('openid-client', () => ({
 
 vi.mock('jose', () => ({
   // Add any jose methods you're using
-}));
-
-vi.mock('@/lib/billing/taxRates', () => ({
-  getCompanyTaxRate: vi.fn(),
 }));
 
 
@@ -360,24 +351,11 @@ describe('BillingEngine', () => {
             select: vi.fn().mockResolvedValue(mockPlanServices),
           };
         }
-        if (tableName === 'bucket_plans') {
-          return {
-            where: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock a bucket plan if needed
-          };
-        }
-        if (tableName === 'bucket_usage') {
-          return {
-            where: vi.fn().mockReturnThis(),
-            whereBetween: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock bucket usage if needed
-          };
-        }
         return {
           join: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
           select: vi.fn().mockResolvedValue([]),
-          first: vi.fn().mockResolvedValue(null), // Add this line for other queries
+          first: vi.fn().mockResolvedValue(null),
         };
       });
 
@@ -574,24 +552,11 @@ describe('BillingEngine', () => {
             select: vi.fn().mockResolvedValue(mockPlanServices),
           };
         }
-        if (tableName === 'bucket_plans') {
-          return {
-            where: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock a bucket plan if needed
-          };
-        }
-        if (tableName === 'bucket_usage') {
-          return {
-            where: vi.fn().mockReturnThis(),
-            whereBetween: vi.fn().mockReturnThis(),
-            first: vi.fn().mockResolvedValue(null), // or mock bucket usage if needed
-          };
-        }
         return {
           join: vi.fn().mockReturnThis(),
           where: vi.fn().mockReturnThis(),
           select: vi.fn().mockResolvedValue([]),
-          first: vi.fn().mockResolvedValue(null), // Add this line for other queries
+          first: vi.fn().mockResolvedValue(null),
         };
       });
 
@@ -661,87 +626,114 @@ describe('BillingEngine', () => {
       const mockCompany = {
         company_id: mockCompanyId,
         company_name: 'Test Company',
-        tax_region: 'US-CA', // Add a tax region to the mock company
-        // Add other necessary company fields here
+        tenant: mockTenant,
+        is_tax_exempt: false,
       };
 
-      const mockBucketPlan: IBucketPlan = {
-        bucket_plan_id: 'bucket1',
+      const bucketConfigRow = {
+        config_id: 'config-1',
         plan_id: 'test_plan_id',
+        service_id: 'service1',
+        configuration_type: 'Bucket',
+        tenant: mockTenant,
         total_hours: 40,
+        total_minutes: 2400,
         billing_period: 'Monthly',
         overage_rate: 50,
-      };
-
-      const mockBucketUsage: IBucketUsage = {
-        usage_id: 'usage1',
-        company_id: mockCompanyId,
-        period_start: '2023-01-01T00:00:00Z',
-        period_end: '2023-02-01T00:00:00Z',
-        minutes_used: 45,
-        overage_minutes: 5,
-        rolled_over_minutes: 0,
-        service_catalog_id: ''
-      };
-
-      const mockServiceCatalog = {
-        service_id: 'service1',
+        allow_rollover: false,
         service_name: 'Emerald City Consulting Hours',
-        description: 'Consulting hours for Emerald City projects',
-        service_type: 'Bucket',
-        default_rate: 0,
-        unit_of_measure: 'hour',
+        tax_rate_id: 'tax-rate-1'
       };
 
-      // Create a mock knex function that returns an object with the necessary methods
-      const mockKnex = vi.fn().mockImplementation((tableName: string) => {
-        const mockQueryBuilder = {
-          where: vi.fn().mockReturnThis(),
-          whereBetween: vi.fn().mockReturnThis(),
-          first: vi.fn().mockImplementation(() => {
-            if (tableName === 'companies') return Promise.resolve(mockCompany);
-            if (tableName === 'bucket_plans') return Promise.resolve(mockBucketPlan);
-            if (tableName === 'bucket_usage') return Promise.resolve(mockBucketUsage);
-            if (tableName === 'service_catalog') return Promise.resolve(mockServiceCatalog);
-            return Promise.resolve(null);
-          }),
-        };
-        return mockQueryBuilder;
+      const timeEntries = [
+        {
+          start_time: new Date('2023-01-01T00:00:00Z'),
+          end_time: new Date('2023-01-02T16:00:00Z'),
+          invoiced: false,
+        },
+        {
+          start_time: new Date('2023-01-03T00:00:00Z'),
+          end_time: new Date('2023-01-03T05:00:00Z'),
+          invoiced: false,
+        }
+      ];
+
+      const planServiceBuilder = {
+        join: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue([bucketConfigRow])
+      };
+
+      const companiesBuilder = {
+        where: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(mockCompany)
+      };
+
+      const timeEntriesBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockResolvedValue(timeEntries)
+      };
+
+      const taxRatesBuilder = {
+        where: vi.fn().mockReturnThis(),
+        select: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue({ region_code: 'US-CA' })
+      };
+
+      const mockKnex = vi.fn((tableName: string) => {
+        switch (tableName) {
+          case 'plan_service_configuration':
+            return planServiceBuilder;
+          case 'companies':
+            return companiesBuilder;
+          case 'time_entries':
+            return timeEntriesBuilder;
+          case 'tax_rates':
+            return taxRatesBuilder;
+          default:
+            return {
+              where: vi.fn().mockReturnThis(),
+              select: vi.fn().mockResolvedValue([]),
+              first: vi.fn().mockResolvedValue(null)
+            };
+        }
       });
 
-      // Assign the mock knex function to the billingEngine
+      const calculateTaxSpy = vi
+        .spyOn(TaxService.prototype, 'calculateTax')
+        .mockResolvedValue({ taxRate: 8.25, taxAmount: 2000 });
+
       (billingEngine as any).knex = mockKnex;
+      (billingEngine as any).tenant = mockTenant;
 
       const result = await (billingEngine as any).calculateBucketPlanCharges(
         mockCompanyId,
         { startDate: mockStartDate, endDate: mockEndDate },
         { plan_id: 'test_plan_id' }
       );
-      const mockTaxRate = 8.25;
-      const expectedTaxAmount = 250 * (mockTaxRate / 100);
 
       expect(result).toMatchObject([
         {
           type: 'bucket',
           serviceName: 'Emerald City Consulting Hours',
-          rate: 50,
           total: 250,
           hoursUsed: 45,
           overageHours: 5,
           overageRate: 50,
-          tax_rate: mockTaxRate,
-          tax_amount: Math.ceil(expectedTaxAmount * 100),
-        },
+          tax_rate: 8.25,
+          tax_amount: 2000,
+          tax_region: 'US-CA'
+        }
       ]);
 
-      // Verify that knex was called with the correct table names
+      expect(mockKnex).toHaveBeenCalledWith('plan_service_configuration');
       expect(mockKnex).toHaveBeenCalledWith('companies');
-      expect(mockKnex).toHaveBeenCalledWith('bucket_plans');
-      expect(mockKnex).toHaveBeenCalledWith('bucket_usage');
-      expect(mockKnex).toHaveBeenCalledWith('service_catalog');
+      expect(mockKnex).toHaveBeenCalledWith('time_entries');
+      expect(mockKnex).toHaveBeenCalledWith('tax_rates');
 
-      // Verify that getCompanyTaxRate was called with the correct arguments
-      expect(getCompanyTaxRate).toHaveBeenCalledWith(mockCompany.tax_region, mockBucketUsage.period_end);
+      expect(calculateTaxSpy).toHaveBeenCalledWith(mockCompanyId, 250, mockEndDate, 'US-CA');
+      calculateTaxSpy.mockRestore();
     });
 
     describe('calculateTimeBasedCharges with billing plan disambiguation', () => {

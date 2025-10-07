@@ -82,7 +82,8 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
       trx,
       invoiceId,
       company,
-      taxService // Removed subtotal argument
+      taxService,
+      tenant // Removed subtotal argument
     );
 
     // Update invoice totals and record transaction (subtotal/tax recalculated internally)
@@ -97,7 +98,7 @@ export async function generateManualInvoice(request: ManualInvoiceRequest): Prom
 
     // Get updated invoice items with tax
     const updatedItems = await trx('invoice_items')
-      .where({ invoice_id: invoiceId })
+      .where({ invoice_id: invoiceId, tenant })
       .orderBy('created_at', 'asc');
 
     // Track analytics

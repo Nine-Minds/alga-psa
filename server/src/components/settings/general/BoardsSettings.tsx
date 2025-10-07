@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical, HelpCircle } from "lucide-react";
-import { IChannel, CategoryType, PriorityType } from 'server/src/interfaces/channel.interface';
+import { IBoard, CategoryType, PriorityType } from 'server/src/interfaces/board.interface';
 import {
-  getAllChannels,
-  createChannel,
-  updateChannel,
-  deleteChannel
-} from 'server/src/lib/actions/channel-actions/channelActions';
+  getAllBoards,
+  createBoard,
+  updateBoard,
+  deleteBoard
+} from 'server/src/lib/actions/board-actions/boardActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from 'server/src/lib/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
@@ -28,24 +28,24 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 
-const ChannelsSettings: React.FC = () => {
-  const [channels, setChannels] = useState<IChannel[]>([]);
+const BoardsSettings: React.FC = () => {
+  const [boards, setBoards] = useState<IBoard[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [deleteDialog, setDeleteDialog] = useState<{
     isOpen: boolean;
-    channelId: string;
-    channelName: string;
+    boardId: string;
+    boardName: string;
   }>({
     isOpen: false,
-    channelId: '',
-    channelName: ''
+    boardId: '',
+    boardName: ''
   });
   
   // State for Add/Edit Dialog
   const [showAddEditDialog, setShowAddEditDialog] = useState(false);
-  const [editingChannel, setEditingChannel] = useState<IChannel | null>(null);
+  const [editingBoard, setEditingBoard] = useState<IBoard | null>(null);
   const [formData, setFormData] = useState({
-    channel_name: '',
+    board_name: '',
     description: '',
     display_order: 0,
     is_inactive: false,
@@ -56,71 +56,71 @@ const ChannelsSettings: React.FC = () => {
   
   // State for Import Dialog
   const [showImportDialog, setShowImportDialog] = useState(false);
-  const [availableReferenceChannels, setAvailableReferenceChannels] = useState<any[]>([]);
+  const [availableReferenceBoards, setAvailableReferenceBoards] = useState<any[]>([]);
 
   // State for ITIL Info Modal
   const [showItilInfoModal, setShowItilInfoModal] = useState(false);
-  const [selectedImportChannels, setSelectedImportChannels] = useState<string[]>([]);
-  const [importChannelItilSettings, setImportChannelItilSettings] = useState<Record<string, boolean>>({});
+  const [selectedImportBoards, setSelectedImportBoards] = useState<string[]>([]);
+  const [importBoardItilSettings, setImportBoardItilSettings] = useState<Record<string, boolean>>({});
   const [importConflicts, setImportConflicts] = useState<ImportConflict[]>([]);
   const [conflictResolutions, setConflictResolutions] = useState<Record<string, { action: 'skip' | 'rename' | 'reorder', newName?: string, newOrder?: number }>>({});
 
   useEffect(() => {
-    fetchChannels();
+    fetchBoards();
   }, []);
 
-  const fetchChannels = async () => {
+  const fetchBoards = async () => {
     try {
-      const allChannels = await getAllChannels(true);
-      setChannels(allChannels);
+      const allBoards = await getAllBoards(true);
+      setBoards(allBoards);
     } catch (error) {
-      console.error('Error fetching channels:', error);
+      console.error('Error fetching boards:', error);
       setError('Failed to fetch boards');
     }
   };
 
-  const startEditing = (channel: IChannel) => {
-    setEditingChannel(channel);
+  const startEditing = (board: IBoard) => {
+    setEditingBoard(board);
     setFormData({
-      channel_name: channel.channel_name || '',
-      description: channel.description || '',
-      display_order: channel.display_order || 0,
-      is_inactive: channel.is_inactive,
-      category_type: channel.category_type || 'custom',
-      priority_type: channel.priority_type || 'custom',
-      is_itil_compliant: channel.category_type === 'itil' && channel.priority_type === 'itil'
+      board_name: board.board_name || '',
+      description: board.description || '',
+      display_order: board.display_order || 0,
+      is_inactive: board.is_inactive,
+      category_type: board.category_type || 'custom',
+      priority_type: board.priority_type || 'custom',
+      is_itil_compliant: board.category_type === 'itil' && board.priority_type === 'itil'
     });
     setShowAddEditDialog(true);
     setError(null);
   };
 
-  const handleDeleteChannel = async () => {
+  const handleDeleteBoard = async () => {
     try {
-      await deleteChannel(deleteDialog.channelId);
+      await deleteBoard(deleteDialog.boardId);
       toast.success('Board deleted successfully');
-      await fetchChannels();
+      await fetchBoards();
     } catch (error) {
-      console.error('Error deleting channel:', error);
+      console.error('Error deleting board:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to delete board');
     } finally {
-      setDeleteDialog({ isOpen: false, channelId: '', channelName: '' });
+      setDeleteDialog({ isOpen: false, boardId: '', boardName: '' });
     }
   };
 
-  const handleSaveChannel = async () => {
+  const handleSaveBoard = async () => {
     try {
-      if (!formData.channel_name.trim()) {
+      if (!formData.board_name.trim()) {
         setError('Board name is required');
         return;
       }
 
-      // For new channels, set category_type and priority_type based on ITIL compliance
-      const categoryType = editingChannel ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
-      const priorityType = editingChannel ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+      // For new boards, set category_type and priority_type based on ITIL compliance
+      const categoryType = editingBoard ? formData.category_type : (formData.is_itil_compliant ? 'itil' : 'custom');
+      const priorityType = editingBoard ? formData.priority_type : (formData.is_itil_compliant ? 'itil' : 'custom');
 
-      if (editingChannel) {
-        await updateChannel(editingChannel.channel_id!, {
-          channel_name: formData.channel_name,
+      if (editingBoard) {
+        await updateBoard(editingBoard.board_id!, {
+          board_name: formData.board_name,
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
@@ -129,8 +129,8 @@ const ChannelsSettings: React.FC = () => {
         });
         toast.success('Board updated successfully');
       } else {
-        await createChannel({
-          channel_name: formData.channel_name,
+        await createBoard({
+          board_name: formData.board_name,
           description: formData.description,
           display_order: formData.display_order,
           is_inactive: formData.is_inactive,
@@ -141,101 +141,101 @@ const ChannelsSettings: React.FC = () => {
       }
 
       setShowAddEditDialog(false);
-      setEditingChannel(null);
-      setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
-      await fetchChannels();
+      setEditingBoard(null);
+      setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+      await fetchBoards();
     } catch (error) {
-      console.error('Error saving channel:', error);
+      console.error('Error saving board:', error);
       setError(error instanceof Error ? error.message : 'Failed to save board');
     }
   };
 
   const handleImport = async () => {
     try {
-      // Get the reference channels data first
-      const referenceChannels = availableReferenceChannels.filter(channel =>
-        selectedImportChannels.includes(channel.id)
+      // Get the reference boards data first
+      const referenceBoards = availableReferenceBoards.filter(board =>
+        selectedImportBoards.includes(board.id)
       );
 
-      // Separate ITIL and non-ITIL channels
-      const itilChannels = referenceChannels.filter(channel =>
-        importChannelItilSettings[channel.id]
+      // Separate ITIL and non-ITIL boards
+      const itilBoards = referenceBoards.filter(board =>
+        importBoardItilSettings[board.id]
       );
-      const regularChannels = referenceChannels.filter(channel =>
-        !importChannelItilSettings[channel.id]
+      const regularBoards = referenceBoards.filter(board =>
+        !importBoardItilSettings[board.id]
       );
 
       const allResults: any = { imported: [], skipped: [] };
 
-      // Import regular channels using the existing process
-      if (regularChannels.length > 0) {
-        const regularChannelIds = regularChannels.map(c => c.id);
+      // Import regular boards using the existing process
+      if (regularBoards.length > 0) {
+        const regularBoardIds = regularBoards.map(c => c.id);
         let regularResult;
 
         if (importConflicts.length > 0) {
           const regularConflicts = Object.fromEntries(
-            Object.entries(conflictResolutions).filter(([id]) => regularChannelIds.includes(id))
+            Object.entries(conflictResolutions).filter(([id]) => regularBoardIds.includes(id))
           );
-          regularResult = await importReferenceData('channels', regularChannelIds, undefined, regularConflicts);
+          regularResult = await importReferenceData('boards', regularBoardIds, undefined, regularConflicts);
         } else {
-          const conflicts = await checkImportConflicts('channels', regularChannelIds);
+          const conflicts = await checkImportConflicts('boards', regularBoardIds);
           if (conflicts.length > 0) {
             setImportConflicts(conflicts);
             return;
           }
-          regularResult = await importReferenceData('channels', regularChannelIds);
+          regularResult = await importReferenceData('boards', regularBoardIds);
         }
 
         if (regularResult?.imported) allResults.imported.push(...regularResult.imported);
         if (regularResult?.skipped) allResults.skipped.push(...regularResult.skipped);
       }
 
-      // Create ITIL channels manually using the createChannel API
-      for (const channel of itilChannels) {
+      // Create ITIL boards manually using the createBoard API
+      for (const board of itilBoards) {
         try {
-          const resolution = conflictResolutions[channel.id];
-          const channelName = resolution?.newName || channel.channel_name;
-          const displayOrder = resolution?.newOrder || channel.display_order;
+          const resolution = conflictResolutions[board.id];
+          const boardName = resolution?.newName || board.board_name;
+          const displayOrder = resolution?.newOrder || board.display_order;
 
-          await createChannel({
-            channel_name: channelName,
-            description: channel.description || '',
+          await createBoard({
+            board_name: boardName,
+            description: board.description || '',
             display_order: displayOrder,
-            is_inactive: channel.is_inactive || false,
+            is_inactive: board.is_inactive || false,
             category_type: 'itil',
             priority_type: 'itil'
           });
 
           allResults.imported.push({
-            channel_name: channelName,
-            reference_id: channel.id
+            board_name: boardName,
+            reference_id: board.id
           });
         } catch (createError) {
-          console.error(`Failed to create ITIL channel ${channel.channel_name}:`, createError);
+          console.error(`Failed to create ITIL board ${board.board_name}:`, createError);
           allResults.skipped.push({
-            name: channel.channel_name,
-            reason: 'Failed to create as ITIL channel'
+            name: board.board_name,
+            reason: 'Failed to create as ITIL board'
           });
         }
       }
 
       toast.success('Boards imported successfully');
       setShowImportDialog(false);
-      setSelectedImportChannels([]);
-      setImportChannelItilSettings({});
+      setSelectedImportBoards([]);
+      setImportBoardItilSettings({});
       setImportConflicts([]);
       setConflictResolutions({});
-      await fetchChannels();
+      await fetchBoards();
     } catch (error) {
-      console.error('Error importing channels:', error);
+      console.error('Error importing boards:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to import boards');
     }
   };
 
-  const columns: ColumnDefinition<IChannel>[] = [
+  const columns: ColumnDefinition<IBoard>[] = [
     {
       title: 'Name',
-      dataIndex: 'channel_name',
+      dataIndex: 'board_name',
       render: (value: string) => (
         <span className="text-gray-700 font-medium">{value}</span>
       ),
@@ -250,7 +250,7 @@ const ChannelsSettings: React.FC = () => {
     {
       title: 'Status',
       dataIndex: 'is_inactive',
-      render: (value: boolean, record: IChannel) => (
+      render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <span className="text-sm text-gray-600">
             {value ? 'Inactive' : 'Active'}
@@ -259,12 +259,12 @@ const ChannelsSettings: React.FC = () => {
             checked={!value}
             onCheckedChange={async (checked) => {
               try {
-                await updateChannel(record.channel_id!, {
+                await updateBoard(record.board_id!, {
                   is_inactive: !checked
                 });
-                await fetchChannels();
+                await fetchBoards();
               } catch (error) {
-                console.error('Error updating channel status:', error);
+                console.error('Error updating board status:', error);
                 toast.error('Failed to update board status');
               }
             }}
@@ -276,25 +276,25 @@ const ChannelsSettings: React.FC = () => {
     {
       title: 'Default',
       dataIndex: 'is_default',
-      render: (value: boolean, record: IChannel) => (
+      render: (value: boolean, record: IBoard) => (
         <div className="flex items-center space-x-2">
           <Switch
             checked={value || false}
             onCheckedChange={async (checked) => {
               try {
                 if (checked) {
-                  // First unset any existing default channels
-                  const currentDefault = channels.find(c => c.is_default && c.channel_id !== record.channel_id);
+                  // First unset any existing default boards
+                  const currentDefault = boards.find(b => b.is_default && b.board_id !== record.board_id);
                   if (currentDefault) {
-                    await updateChannel(currentDefault.channel_id!, { is_default: false });
+                    await updateBoard(currentDefault.board_id!, { is_default: false });
                   }
                 }
-                await updateChannel(record.channel_id!, {
+                await updateBoard(record.board_id!, {
                   is_default: checked
                 });
-                await fetchChannels();
+                await fetchBoards();
               } catch (error) {
-                console.error('Error updating default channel:', error);
+                console.error('Error updating default board:', error);
                 toast.error('Failed to update default board');
               }
             }}
@@ -318,7 +318,7 @@ const ChannelsSettings: React.FC = () => {
     {
       title: 'ITIL Board',
       dataIndex: 'category_type',
-      render: (_, record: IChannel) => (
+      render: (_, record: IBoard) => (
         record.category_type === 'itil' && record.priority_type === 'itil' ? (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
             ITIL
@@ -330,12 +330,12 @@ const ChannelsSettings: React.FC = () => {
     },
     {
       title: 'Actions',
-      dataIndex: 'channel_id',
+      dataIndex: 'board_id',
       width: '10%',
-      render: (value: string, record: IChannel) => (
+      render: (value: string, record: IBoard) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button id="channel-actions-menu" variant="ghost" className="h-8 w-8 p-0">
+            <Button id="board-actions-menu" variant="ghost" className="h-8 w-8 p-0">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -347,8 +347,8 @@ const ChannelsSettings: React.FC = () => {
               <DropdownMenuItem 
                 onClick={() => setDeleteDialog({
                   isOpen: true,
-                  channelId: value,
-                  channelName: record.channel_name || ''
+                  boardId: value,
+                  boardName: record.board_name || ''
                 })}
                 className="text-red-600"
               >
@@ -378,15 +378,15 @@ const ChannelsSettings: React.FC = () => {
           </Alert>
         )}
         <DataTable
-          data={channels}
+          data={boards}
           columns={columns}
         />
         <div className="mt-4 flex gap-2">
           <Button 
-            id="add-channel-button"
+            id="add-board-button"
             onClick={() => {
-              setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+              setEditingBoard(null);
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
               setShowAddEditDialog(true);
             }} 
             className="bg-primary-500 text-white hover:bg-primary-600"
@@ -394,16 +394,16 @@ const ChannelsSettings: React.FC = () => {
             <Plus className="h-4 w-4 mr-2" /> Add Board
           </Button>
           <Button 
-            id="import-channels-button"
+            id="import-boards-button"
             variant="outline"
             onClick={async () => {
               try {
-                const available = await getAvailableReferenceData('channels');
-                setAvailableReferenceChannels(available || []);
-                setSelectedImportChannels([]);
+                const available = await getAvailableReferenceData('boards');
+                setAvailableReferenceBoards(available || []);
+                setSelectedImportBoards([]);
                 setShowImportDialog(true);
               } catch (error) {
-                console.error('Error fetching available channels:', error);
+                console.error('Error fetching available boards:', error);
                 toast.error('Failed to fetch available boards for import');
               }
             }}
@@ -415,10 +415,10 @@ const ChannelsSettings: React.FC = () => {
 
       <ConfirmationDialog
         isOpen={deleteDialog.isOpen}
-        onClose={() => setDeleteDialog({ isOpen: false, channelId: '', channelName: '' })}
-        onConfirm={handleDeleteChannel}
+        onClose={() => setDeleteDialog({ isOpen: false, boardId: '', boardName: '' })}
+        onConfirm={handleDeleteBoard}
         title="Delete Board"
-        message={`Are you sure you want to delete "${deleteDialog.channelName}"? This action cannot be undone.`}
+        message={`Are you sure you want to delete "${deleteDialog.boardName}"? This action cannot be undone.`}
         confirmLabel="Delete"
       />
 
@@ -427,11 +427,11 @@ const ChannelsSettings: React.FC = () => {
         isOpen={showAddEditDialog} 
         onClose={() => {
           setShowAddEditDialog(false);
-          setEditingChannel(null);
-          setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+          setEditingBoard(null);
+          setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
           setError(null);
         }} 
-        title={editingChannel ? "Edit Board" : "Add Board"}
+        title={editingBoard ? "Edit Board" : "Add Board"}
       >
         <DialogContent>
           <div className="space-y-4">
@@ -441,12 +441,12 @@ const ChannelsSettings: React.FC = () => {
               </Alert>
             )}
             <div>
-              <Label htmlFor="channel_name">Board Name *</Label>
+              <Label htmlFor="board_name">Board Name *</Label>
               <Input
-                id="channel_name"
-                value={formData.channel_name}
-                onChange={(e) => setFormData({ ...formData, channel_name: e.target.value })}
-                placeholder="Enter channel name"
+                id="board_name"
+                value={formData.board_name}
+                onChange={(e) => setFormData({ ...formData, board_name: e.target.value })}
+                placeholder="Enter board name"
               />
             </div>
             <div>
@@ -480,8 +480,8 @@ const ChannelsSettings: React.FC = () => {
               />
             </div>
 
-            {/* ITIL Configuration - Only show for new channels */}
-            {!editingChannel && (
+            {/* ITIL Configuration - Only show for new boards */}
+            {!editingBoard && (
               <div className="border-t pt-4 space-y-4">
                 <h4 className="font-medium text-gray-800">Board Configuration</h4>
 
@@ -510,19 +510,19 @@ const ChannelsSettings: React.FC = () => {
         </DialogContent>
         <DialogFooter>
           <Button 
-            id="cancel-channel-dialog"
+            id="cancel-board-dialog"
             variant="outline" 
             onClick={() => {
               setShowAddEditDialog(false);
-              setEditingChannel(null);
-              setFormData({ channel_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
+              setEditingBoard(null);
+              setFormData({ board_name: '', description: '', display_order: 0, is_inactive: false, category_type: 'custom', priority_type: 'custom', is_itil_compliant: false });
               setError(null);
             }}
           >
             Cancel
           </Button>
-          <Button id="save-channel-button" onClick={handleSaveChannel}>
-            {editingChannel ? 'Update' : 'Create'}
+          <Button id="save-board-button" onClick={handleSaveBoard}>
+            {editingBoard ? 'Update' : 'Create'}
           </Button>
         </DialogFooter>
       </Dialog>
@@ -532,13 +532,13 @@ const ChannelsSettings: React.FC = () => {
         isOpen={showImportDialog && importConflicts.length === 0} 
         onClose={() => {
           setShowImportDialog(false);
-          setSelectedImportChannels([]);
+          setSelectedImportBoards([]);
         }} 
         title="Import Standard Boards"
       >
         <DialogContent>
           <div className="space-y-4">
-            {!availableReferenceChannels || availableReferenceChannels.length === 0 ? (
+            {!availableReferenceBoards || availableReferenceBoards.length === 0 ? (
               <p className="text-muted-foreground">No standard boards available to import.</p>
             ) : (
               <>
@@ -549,13 +549,13 @@ const ChannelsSettings: React.FC = () => {
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
                     <div className="w-8 [&>div]:mb-0">
                       <Checkbox
-                        id="select-all-channels"
-                        checked={availableReferenceChannels.length > 0 && selectedImportChannels.length === availableReferenceChannels.length}
+                        id="select-all-boards"
+                        checked={availableReferenceBoards.length > 0 && selectedImportBoards.length === availableReferenceBoards.length}
                         onChange={(e) => {
                           if ((e.target as HTMLInputElement).checked) {
-                            setSelectedImportChannels(availableReferenceChannels.map(ch => ch.id));
+                            setSelectedImportBoards(availableReferenceBoards.map(ch => ch.id));
                           } else {
-                            setSelectedImportChannels([]);
+                            setSelectedImportBoards([]);
                           }
                         }}
                       />
@@ -580,56 +580,56 @@ const ChannelsSettings: React.FC = () => {
                     <div className="w-16 text-center">Order</div>
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
-                    {availableReferenceChannels.map((channel) => (
+                    {availableReferenceBoards.map((board) => (
                       <div 
-                        key={channel.id} 
+                        key={board.id} 
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
                         <div className="w-8 [&>div]:mb-0">
                           <Checkbox
-                            id={`import-channel-${channel.id}`}
-                            checked={selectedImportChannels.includes(channel.id)}
+                            id={`import-board-${board.id}`}
+                            checked={selectedImportBoards.includes(board.id)}
                             onChange={(e) => {
                               if ((e.target as HTMLInputElement).checked) {
-                                setSelectedImportChannels([...selectedImportChannels, channel.id]);
+                                setSelectedImportBoards([...selectedImportBoards, board.id]);
                               } else {
-                                setSelectedImportChannels(selectedImportChannels.filter(id => id !== channel.id));
+                                setSelectedImportBoards(selectedImportBoards.filter(id => id !== board.id));
                               }
                             }}
                           />
                         </div>
-                        <div className="flex-1">{channel.channel_name}</div>
+                        <div className="flex-1">{board.board_name}</div>
                         <div className="flex-1 text-sm text-muted-foreground">
-                          {channel.description || '-'}
+                          {board.description || '-'}
                         </div>
                         <div className="w-20 text-center">
                           <Switch
-                            checked={!channel.is_inactive}
+                            checked={!board.is_inactive}
                             disabled
                             className="data-[state=checked]:bg-primary-500"
                           />
                         </div>
                         <div className="w-20 text-center">
                           <Switch
-                            checked={channel.is_default || false}
+                            checked={board.is_default || false}
                             disabled
                             className="data-[state=checked]:bg-primary-500"
                           />
                         </div>
                         <div className="w-24 text-center">
                           <Switch
-                            checked={importChannelItilSettings[channel.id] || false}
+                            checked={importBoardItilSettings[board.id] || false}
                             onCheckedChange={(checked) => {
-                              setImportChannelItilSettings(prev => ({
+                              setImportBoardItilSettings(prev => ({
                                 ...prev,
-                                [channel.id]: checked
+                                [board.id]: checked
                               }));
                             }}
                             className="data-[state=checked]:bg-blue-500"
                           />
                         </div>
                         <div className="w-16 text-center text-sm text-muted-foreground">
-                          {channel.display_order}
+                          {board.display_order}
                         </div>
                       </div>
                     ))}
@@ -645,16 +645,16 @@ const ChannelsSettings: React.FC = () => {
             variant="outline" 
             onClick={() => {
               setShowImportDialog(false);
-              setSelectedImportChannels([]);
-              setImportChannelItilSettings({});
+              setSelectedImportBoards([]);
+              setImportBoardItilSettings({});
             }}
           >
             Cancel
           </Button>
           <Button 
-            id="import-selected-channels"
+            id="import-selected-boards"
             onClick={handleImport} 
-            disabled={selectedImportChannels.length === 0}
+            disabled={selectedImportBoards.length === 0}
           >
             Import Selected
           </Button>
@@ -682,7 +682,7 @@ const ChannelsSettings: React.FC = () => {
                 
                 return (
                   <div key={itemId} className="border rounded-lg p-4 space-y-3">
-                    <div className="font-medium">{conflict.referenceItem.channel_name}</div>
+                    <div className="font-medium">{conflict.referenceItem.board_name}</div>
                     
                     {conflict.conflictType === 'name' && (
                       <div className="space-y-2">
@@ -709,7 +709,7 @@ const ChannelsSettings: React.FC = () => {
                               checked={resolution?.action === 'rename'}
                               onChange={() => setConflictResolutions({
                                 ...conflictResolutions,
-                                [itemId]: { action: 'rename', newName: conflict.referenceItem.channel_name + ' (2)' }
+                                [itemId]: { action: 'rename', newName: conflict.referenceItem.board_name + ' (2)' }
                               })}
                             />
                             <span>Import with new name:</span>
@@ -931,4 +931,4 @@ const ChannelsSettings: React.FC = () => {
   );
 };
 
-export default ChannelsSettings;
+export default BoardsSettings;

@@ -147,7 +147,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       const itil_impact = data.get('itil_impact');
       const itil_urgency = data.get('itil_urgency');
 
-      // For ITIL channels, calculate priority and map to standard_priorities record
+      // For ITIL boards, calculate priority and map to standard_priorities record
       let finalPriorityId = data.get('priority_id') as string;
 
       if (itil_impact && itil_urgency) {
@@ -174,7 +174,7 @@ export async function addTicket(data: FormData, user: IUser): Promise<ITicket|un
       // Convert FormData to CreateTicketInput format
       const createTicketInput: CreateTicketInput = {
         title: data.get('title') as string,
-        channel_id: data.get('channel_id') as string,
+        board_id: data.get('board_id') as string,
         company_id: data.get('company_id') as string,
         location_id: location_id === '' ? undefined : (location_id as string),
         contact_id: contact_name_id === '' ? undefined : (contact_name_id as string), // Note: maps to contact_name_id
@@ -593,7 +593,7 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         't.*',
         's.name as status_name',
         'p.priority_name',
-        'c.channel_name',
+        'c.board_name',
         'cat.category_name',
         'co.company_name as company_name',
         db.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -607,8 +607,8 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         this.on('t.priority_id', 'p.priority_id')
            .andOn('t.tenant', 'p.tenant')
       })
-      .leftJoin('channels as c', function() {
-        this.on('t.channel_id', 'c.channel_id')
+      .leftJoin('boards as c', function() {
+        this.on('t.board_id', 'c.board_id')
            .andOn('t.tenant', 'c.tenant')
       })
       .leftJoin('categories as cat', function() {
@@ -632,15 +632,15 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
       });
 
     // Apply filters
-    if (validatedFilters.channelId) {
-      query = query.where('t.channel_id', validatedFilters.channelId);
-    } else if (validatedFilters.channelFilterState !== 'all') {
-      const channelSubquery = trx('channels')
-        .select('channel_id')
+    if (validatedFilters.boardId) {
+      query = query.where('t.board_id', validatedFilters.boardId);
+    } else if (validatedFilters.boardFilterState !== 'all') {
+      const boardSubquery = trx('boards')
+        .select('board_id')
         .where('tenant', tenant)
-        .where('is_inactive', validatedFilters.channelFilterState === 'inactive');
+        .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
-      query = query.whereIn('t.channel_id', channelSubquery);
+      query = query.whereIn('t.board_id', boardSubquery);
     }
 
     if (validatedFilters.showOpenOnly) {
@@ -682,12 +682,12 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         const {
           status_id,
           priority_id,
-          channel_id,
+          board_id,
           category_id,
           entered_by,
           status_name,
           priority_name,
-          channel_name,
+          board_name,
           category_name,
           company_name,
           entered_by_name,
@@ -698,12 +698,12 @@ export async function getTicketsForList(user: IUser, filters: ITicketListFilters
         return {
           status_id: status_id || null,
           priority_id: priority_id || null,
-          channel_id: channel_id || null,
+          board_id: board_id || null,
           category_id: category_id || null,
           entered_by: entered_by || null,
           status_name: status_name || 'Unknown',
           priority_name: priority_name || 'Unknown',
-          channel_name: channel_name || 'Unknown',
+          board_name: board_name || 'Unknown',
           category_name: category_name || 'Unknown',
           company_name: company_name || 'Unknown',
           entered_by_name: entered_by_name || 'Unknown',
@@ -1035,7 +1035,7 @@ export type DetailedTicket = ITicket & {
   tenant: string; 
   status_name: string; 
   is_closed: boolean;
-  channel_name?: string;
+  board_name?: string;
   assigned_to_first_name?: string;
   assigned_to_last_name?: string;
   assigned_to_name?: string;
@@ -1061,7 +1061,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
     type TicketQueryResult = ITicket & {
       status_name: string;
       is_closed: boolean;
-      channel_name?: string;
+      board_name?: string;
       assigned_to_first_name?: string;
       assigned_to_last_name?: string;
       contact_name?: string;
@@ -1073,7 +1073,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
         't.*',
         's.name as status_name',
         's.is_closed',
-        'ch.channel_name as channel_name',
+        'ch.board_name as board_name',
         'u_assignee.first_name as assigned_to_first_name',
         'u_assignee.last_name as assigned_to_last_name',
         'ct.full_name as contact_name',
@@ -1083,8 +1083,8 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant');
       })
-      .leftJoin('channels as ch', function() {
-        this.on('t.channel_id', 'ch.channel_id')
+      .leftJoin('boards as ch', function() {
+        this.on('t.board_id', 'ch.board_id')
            .andOn('t.tenant', 'ch.tenant');
       })
       .leftJoin('users as u_assignee', function() {
@@ -1131,7 +1131,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       tenant: tenant,
       status_name: ticket.status_name || 'Unknown',
       is_closed: ticket.is_closed || false,
-      channel_name: ticket.channel_name || undefined,
+      board_name: ticket.board_name || undefined,
       assigned_to_name: assigned_to_name,
       contact_name: ticket.contact_name || undefined,
       company_name: ticket.company_name || undefined,
@@ -1150,7 +1150,7 @@ export async function getTicketById(id: string, user: IUser): Promise<DetailedTi
       is_closed: ticket.is_closed,
       priority_id: ticket.priority_id,
       category_id: ticket.category_id,
-      channel_id: ticket.channel_id,
+      board_id: ticket.board_id,
       assigned_to: ticket.assigned_to,
       company_id: ticket.company_id,
       has_additional_agents: additionalAgents.length > 0,

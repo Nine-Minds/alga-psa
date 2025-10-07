@@ -136,7 +136,7 @@
       "contactNotAssociatedWithCompany": "Contact not associated with a company. Please contact support.",
       "ticketNotFound": "Ticket not found",
       "commentNotFound": "Comment not found or not authorized",
-      "noDefaultChannel": "No default channel configured for tickets",
+      "noDefaultBoard": "No default board configured for tickets",
       "failedToCreateTicket": "Failed to create ticket",
       "failedToFetchTicketDetails": "Failed to fetch ticket details",
       "failedToAddComment": "Failed to add comment",

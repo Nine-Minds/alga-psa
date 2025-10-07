@@ -411,34 +411,34 @@ export async function getCompanyByIdForEmail(companyId: string): Promise<{ compa
 }
 
 /**
- * Create channel from email data - wrapper for email workflows
+ * Create board from email data - wrapper for email workflows
  */
-export async function createChannelFromEmail(channelData: {
-  channel_name: string;
+export async function createBoardFromEmail(boardData: {
+  board_name: string;
   description?: string;
   is_default?: boolean;
-}): Promise<{ channel_id: string; channel_name: string }> {
+}): Promise<{ board_id: string; board_name: string }> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [channel] = await trx('channels')
+    const [board] = await trx('boards')
       .insert({
         tenant,
-        channel_name: channelData.channel_name,
-        description: channelData.description || '',
-        is_default: channelData.is_default || false,
+        board_name: boardData.board_name,
+        description: boardData.description || '',
+        is_default: boardData.is_default || false,
         is_active: true,
         created_at: new Date(),
         updated_at: new Date()
       })
-      .returning(['channel_id', 'channel_name']);
+      .returning(['board_id', 'board_name']);
 
     return {
-      channel_id: channel.channel_id,
-      channel_name: channel.channel_name
+      board_id: board.board_id,
+      board_name: board.board_name
     };
   });
 }

@@ -1,22 +1,85 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { finalizeInvoice } from 'server/src/lib/actions/invoiceModification';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import { TextEncoder as NodeTextEncoder } from 'util';
 import { Temporal } from '@js-temporal/polyfill';
 import CompanyBillingPlan from 'server/src/lib/models/clientBilling';
-import { createTestDate } from '../../../test-utils/dateUtils';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { createTestDate } from '../../../../../test-utils/dateUtils';
+import {
+  createTestService,
+  setupCompanyTaxConfiguration,
+  assignServiceTaxRate
+} from '../../../../../test-utils/billingTestHelpers';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
-// Setup TestContext
-const testHelpers = TestContext.createHelpers();
-let context: TestContext;
+// Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
+// This is critical for tests that use advisory locks or other features not supported by pgbouncer
+process.env.DB_PORT = '5432';
+process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
 
 describe('Negative Invoice Credit Tests', () => {
+  let context: TestContext;
+
+  async function configureDefaultTax() {
+    await setupCompanyTaxConfiguration(context, {
+      regionCode: 'US-NY',
+      regionName: 'New York',
+      description: 'NY State Tax',
+      startDate: '2020-01-01T00:00:00.000Z',
+      taxPercentage: 10.0
+    });
+    await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+  }
+
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -24,34 +87,61 @@ describe('Negative Invoice Credit Tests', () => {
         'transactions',
         'company_billing_cycles',
         'company_billing_plans',
-        'plan_services',
+        'plan_service_configuration',
+        'plan_service_fixed_config',
+        'plan_service_bucket_config',
         'service_catalog',
+        'billing_plan_fixed_config',
         'billing_plans',
-        'bucket_plans',
         'bucket_usage',
         'tax_rates',
-        'company_tax_settings'
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates'
       ],
       companyName: 'Negative Credit Test Company',
       userType: 'internal'
     });
 
-    // Create default tax settings
-    await createDefaultTaxSettings(context.company.company_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    await configureDefaultTax();
+  }, 120000);
 
   beforeEach(async () => {
-    await testHelpers.beforeEach();
-  });
+    context = await resetContext();
+
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    // Configure default tax for the test company
+    await configureDefaultTax();
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   describe('Basic Negative Invoice Credit Creation', () => {
     it('should create a credit when finalizing an invoice with negative total', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Basic Negative Invoice Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -59,74 +149,33 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
-      // 2. Create NY tax rate (10%)
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0,
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // 3. Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+      // 2. Set up company tax settings
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        companyId: company_id
       });
 
-      // 4. Create two services with negative rates
-      const serviceA = await context.createEntity('service_catalog', {
+      // 3. Create two services with negative rates
+      const serviceA = await createTestService(context, {
         service_name: 'Credit Service A',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -5000, // -$50.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      const serviceB = await context.createEntity('service_catalog', {
+      const serviceB = await createTestService(context, {
         service_name: 'Credit Service B',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -7500, // -$75.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // 5. Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
-        billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
-
-      // 6. Assign services to plan
-      await context.db('plan_services').insert([
-        {
-          plan_id: planId,
-          service_id: serviceA,
-          quantity: 1,
-          tenant: context.tenantId
-        },
-        {
-          plan_id: planId,
-          service_id: serviceB,
-          quantity: 1,
-          tenant: context.tenantId
-        }
-      ]);
-
-      // 7. Create a billing cycle
+      // 4. Create a billing cycle first (needed before plan assignment)
       const now = createTestDate();
       const startDate = Temporal.PlainDate.from(now).subtract({ months: 1 }).toString();
       const endDate = Temporal.PlainDate.from(now).toString();
@@ -139,7 +188,52 @@ describe('Negative Invoice Credit Tests', () => {
         effective_date: startDate
       }, 'billing_cycle_id');
 
-      // 8. Assign plan to company
+      // 5. Create a billing plan with negative services
+      const planId = await context.createEntity('billing_plans', {
+        plan_name: 'Credit Plan',
+        billing_frequency: 'monthly',
+        is_custom: false
+      }, 'plan_id');
+
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId,
+        tenant: context.tenantId
+      });
+
+      // 6. Assign services to plan
+      const configIdA = uuidv4();
+      const configIdB = uuidv4();
+      await context.db('plan_service_configuration').insert([
+        {
+          config_id: configIdA,
+          plan_id: planId,
+          service_id: serviceA,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdB,
+          plan_id: planId,
+          service_id: serviceB,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        }
+      ]);
+
+      await context.db('plan_service_fixed_config').insert([
+        {
+          config_id: configIdA,
+          base_rate: -50.00, // -$50.00
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdB,
+          base_rate: -75.00, // -$75.00
+          tenant: context.tenantId
+        }
+      ]);
+
+      // 7. Assign plan to company
       await context.db('company_billing_plans').insert({
         company_billing_plan_id: uuidv4(),
         company_id: company_id,
@@ -200,7 +294,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Mixed Invoice with Net Negative Amount', () => {
     it('should create a credit when finalizing a mixed invoice with negative total', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Mixed Invoice Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -208,84 +302,93 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
-      // 2. Create NY tax rate (10%)
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0,
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // 3. Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+      // 2. Set up company tax settings
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        companyId: company_id
       });
 
-      // 4. Create three services with both positive and negative rates
-      const serviceA = await context.createEntity('service_catalog', {
+      // 3. Create three services with both positive and negative rates
+      const serviceA = await createTestService(context, {
         service_name: 'Regular Service A',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: 10000, // $100.00 (positive)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      const serviceB = await context.createEntity('service_catalog', {
+      const serviceB = await createTestService(context, {
         service_name: 'Credit Service B',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -15000, // -$150.00 (negative)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      const serviceC = await context.createEntity('service_catalog', {
+      const serviceC = await createTestService(context, {
         service_name: 'Credit Service C',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -7500, // -$75.00 (negative)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // 5. Create a billing plan
+      // 4. Create a billing plan with mixed services
       const planId = await context.createEntity('billing_plans', {
         plan_name: 'Mixed Credit Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
-      // 6. Assign services to plan
-      await context.db('plan_services').insert([
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId,
+        tenant: context.tenantId
+      });
+
+      // 5. Assign services to plan
+      const configIdA = uuidv4();
+      const configIdB = uuidv4();
+      const configIdC = uuidv4();
+      await context.db('plan_service_configuration').insert([
         {
+          config_id: configIdA,
           plan_id: planId,
           service_id: serviceA,
-          quantity: 1,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdB,
           plan_id: planId,
           service_id: serviceB,
-          quantity: 1,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdC,
           plan_id: planId,
           service_id: serviceC,
-          quantity: 1,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        }
+      ]);
+
+      await context.db('plan_service_fixed_config').insert([
+        {
+          config_id: configIdA,
+          base_rate: 100.00, // $100.00
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdB,
+          base_rate: -150.00, // -$150.00
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdC,
+          base_rate: -75.00, // -$75.00
           tenant: context.tenantId
         }
       ]);
@@ -340,17 +443,11 @@ describe('Negative Invoice Credit Tests', () => {
         .where({ invoice_id: invoice.invoice_id })
         .orderBy('net_amount', 'desc');
 
-      // Verify positive item has tax
-      const positiveItem = invoiceItems.find(item => parseInt(item.net_amount) > 0);
-      expect(positiveItem).toBeTruthy();
-      expect(parseInt(positiveItem.tax_amount)).toBe(1000); // $10.00 tax
-
-      // Verify negative items have no tax
-      const negativeItems = invoiceItems.filter(item => parseInt(item.net_amount) < 0);
-      expect(negativeItems.length).toBe(2);
-      for (const item of negativeItems) {
-        expect(parseInt(item.tax_amount)).toBe(0); // No tax on negative items
-      }
+      expect(invoiceItems.length).toBe(1);
+      const [aggregatedItem] = invoiceItems;
+      expect(parseInt(aggregatedItem.net_amount)).toBe(-12500); // Combined net amount
+      expect(parseInt(aggregatedItem.tax_amount)).toBe(1000); // $10.00 tax from positive portion
+      expect(aggregatedItem.description).toContain('Mixed Credit Plan');
 
       // 12. Finalize the invoice
       await finalizeInvoice(invoice.invoice_id);
@@ -378,7 +475,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Applying Credit from Negative Invoice to Future Invoice', () => {
     it('should automatically apply credit from a negative invoice to a future invoice', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Credit Application Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -386,69 +483,73 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
-      // 2. Create NY tax rate (10%)
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0,
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // 3. Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+      // 2. Set up company tax settings
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        companyId: company_id
       });
 
-      // 4. Create negative services for first invoice
-      const negativeServiceA = await context.createEntity('service_catalog', {
+      // 3. Create negative services for first invoice
+      const negativeServiceA = await createTestService(context, {
         service_name: 'Credit Service A',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -5000, // -$50.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      const negativeServiceB = await context.createEntity('service_catalog', {
+      const negativeServiceB = await createTestService(context, {
         service_name: 'Credit Service B',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -7500, // -$75.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // 5. Create a billing plan for negative services
+      // 4. Create a billing plan for negative services
       const planId1 = await context.createEntity('billing_plans', {
         plan_name: 'Credit Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
-      // 6. Assign negative services to plan
-      await context.db('plan_services').insert([
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId1,
+        tenant: context.tenantId
+      });
+
+      // 5. Assign negative services to plan
+      const configIdNegA = uuidv4();
+      const configIdNegB = uuidv4();
+      await context.db('plan_service_configuration').insert([
         {
+          config_id: configIdNegA,
           plan_id: planId1,
           service_id: negativeServiceA,
-          quantity: 1,
+          configuration_type: 'Fixed',
           tenant: context.tenantId
         },
         {
+          config_id: configIdNegB,
           plan_id: planId1,
           service_id: negativeServiceB,
-          quantity: 1,
+          configuration_type: 'Fixed',
+          tenant: context.tenantId
+        }
+      ]);
+
+      await context.db('plan_service_fixed_config').insert([
+        {
+          config_id: configIdNegA,
+          base_rate: -50.00, // -$50.00
+          tenant: context.tenantId
+        },
+        {
+          config_id: configIdNegB,
+          base_rate: -75.00, // -$75.00
           tenant: context.tenantId
         }
       ]);
@@ -519,28 +620,38 @@ describe('Negative Invoice Credit Tests', () => {
       // Now create a positive invoice that will use the credit
 
       // 14. Create positive service for second invoice
-      const positiveService = await context.createEntity('service_catalog', {
+      const positiveService = await createTestService(context, {
         service_name: 'Regular Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: 10000, // $100.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
       // 15. Create a billing plan for positive service
       const planId2 = await context.createEntity('billing_plans', {
         plan_name: 'Regular Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId2,
+        tenant: context.tenantId
+      });
+
       // 16. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      const configIdPos = uuidv4();
+      await context.db('plan_service_configuration').insert({
+        config_id: configIdPos,
         plan_id: planId2,
         service_id: positiveService,
-        quantity: 1,
+        configuration_type: 'fixed',
+        tenant: context.tenantId
+      });
+
+      await context.db('plan_service_fixed_config').insert({
+        config_id: configIdPos,
+        base_rate: 100.00, // $100.00
         tenant: context.tenantId
       });
 
@@ -615,7 +726,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Partial Application of Negative Invoice Credit', () => {
     it('should apply partial credit when the invoice amount exceeds the available credit', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Partial Credit Application Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -623,53 +734,50 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
-      // 2. Create NY tax rate (10%)
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0,
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // 3. Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+      // 2. Set up company tax settings
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        companyId: company_id
       });
 
-      // 4. Create single negative service for first invoice (small amount)
-      const negativeService = await context.createEntity('service_catalog', {
+      // 3. Create single negative service for first invoice (small amount)
+      const negativeService = await createTestService(context, {
         service_name: 'Small Credit Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -5000, // -$50.00 (small credit)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // 5. Create a billing plan for negative services
+      // 4. Create a billing plan for negative services
       const planId1 = await context.createEntity('billing_plans', {
         plan_name: 'Small Credit Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
-      // 6. Assign negative service to plan
-      await context.db('plan_services').insert({
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId1,
+        tenant: context.tenantId
+      });
+
+      // 5. Assign negative service to plan
+      const configIdNeg = uuidv4();
+      await context.db('plan_service_configuration').insert({
+        config_id: configIdNeg,
         plan_id: planId1,
         service_id: negativeService,
-        quantity: 1,
+        configuration_type: 'fixed',
+        tenant: context.tenantId
+      });
+
+      await context.db('plan_service_fixed_config').insert({
+        config_id: configIdNeg,
+        base_rate: -50.00, // -$50.00
         tenant: context.tenantId
       });
 
@@ -718,28 +826,38 @@ describe('Negative Invoice Credit Tests', () => {
       // Now create a positive invoice with a larger amount
 
       // 13. Create expensive positive service for second invoice
-      const expensiveService = await context.createEntity('service_catalog', {
+      const expensiveService = await createTestService(context, {
         service_name: 'Expensive Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: 17500, // $175.00 (larger than the credit)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
       // 14. Create a billing plan for expensive service
       const planId2 = await context.createEntity('billing_plans', {
         plan_name: 'Expensive Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId2,
+        tenant: context.tenantId
+      });
+
       // 15. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      const configIdExp = uuidv4();
+      await context.db('plan_service_configuration').insert({
+        config_id: configIdExp,
         plan_id: planId2,
         service_id: expensiveService,
-        quantity: 1,
+        configuration_type: 'fixed',
+        tenant: context.tenantId
+      });
+
+      await context.db('plan_service_fixed_config').insert({
+        config_id: configIdExp,
+        base_rate: 175.00, // $175.00
         tenant: context.tenantId
       });
 
@@ -818,7 +936,7 @@ describe('Negative Invoice Credit Tests', () => {
   describe('Full Credit Coverage from Negative Invoice', () => {
     it('should fully cover a smaller invoice with excess credit from a negative invoice', async () => {
       // 1. Create a test company with zero initial credit balance
-      const company_id = await context.createEntity<ICompany>('companies', {
+      const company_id = await context.createEntity('companies', {
         company_name: 'Full Credit Coverage Company',
         billing_cycle: 'monthly',
         company_id: uuidv4(),
@@ -826,53 +944,50 @@ describe('Negative Invoice Credit Tests', () => {
         is_tax_exempt: false,
         created_at: Temporal.Now.plainDateISO().toString(),
         updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
         credit_balance: 0,
-        email: '',
         url: '',
-        address: '',
         is_inactive: false
       }, 'company_id');
 
-      // 2. Create NY tax rate (10%)
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0,
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // 3. Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+      // 2. Set up company tax settings
+      await setupCompanyTaxConfiguration(context, {
+        regionCode: 'US-NY',
+        companyId: company_id
       });
 
-      // 4. Create large negative service for first invoice
-      const largeNegativeService = await context.createEntity('service_catalog', {
+      // 3. Create large negative service for first invoice
+      const largeNegativeService = await createTestService(context, {
         service_name: 'Large Credit Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: -20000, // -$200.00 (large credit)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
-      // 5. Create a billing plan for negative service
+      // 4. Create a billing plan for negative service
       const planId1 = await context.createEntity('billing_plans', {
         plan_name: 'Large Credit Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
-      // 6. Assign negative service to plan
-      await context.db('plan_services').insert({
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId1,
+        tenant: context.tenantId
+      });
+
+      // 5. Assign negative service to plan
+      const configIdLarge = uuidv4();
+      await context.db('plan_service_configuration').insert({
+        config_id: configIdLarge,
         plan_id: planId1,
         service_id: largeNegativeService,
-        quantity: 1,
+        configuration_type: 'fixed',
+        tenant: context.tenantId
+      });
+
+      await context.db('plan_service_fixed_config').insert({
+        config_id: configIdLarge,
+        base_rate: -200.00, // -$200.00
         tenant: context.tenantId
       });
 
@@ -921,28 +1036,38 @@ describe('Negative Invoice Credit Tests', () => {
       // Now create a positive invoice with a smaller amount
 
       // 13. Create small positive service for second invoice
-      const smallService = await context.createEntity('service_catalog', {
+      const smallService = await createTestService(context, {
         service_name: 'Small Service',
-        service_type: 'Fixed',
+        billing_method: 'fixed',
         default_rate: 5000, // $50.00 (smaller than the credit)
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+        tax_region: 'US-NY'
+      });
 
       // 14. Create a billing plan for small service
       const planId2 = await context.createEntity('billing_plans', {
         plan_name: 'Small Service Plan',
         billing_frequency: 'monthly',
-        is_custom: false,
-        plan_type: 'Fixed'
+        is_custom: false
       }, 'plan_id');
 
+      await context.db('billing_plan_fixed_config').insert({
+        plan_id: planId2,
+        tenant: context.tenantId
+      });
+
       // 15. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      const configIdSmall = uuidv4();
+      await context.db('plan_service_configuration').insert({
+        config_id: configIdSmall,
         plan_id: planId2,
         service_id: smallService,
-        quantity: 1,
+        configuration_type: 'fixed',
+        tenant: context.tenantId
+      });
+
+      await context.db('plan_service_fixed_config').insert({
+        config_id: configIdSmall,
+        base_rate: 50.00, // $50.00
         tenant: context.tenantId
       });
 

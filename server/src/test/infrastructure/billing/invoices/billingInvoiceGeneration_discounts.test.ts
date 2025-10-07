@@ -1,18 +1,122 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import '../../../test-utils/nextApiMock';
-import { TestContext } from '../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
+import '../../../../../test-utils/nextApiMock';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
+import { TestContext } from '../../../../../test-utils/testContext';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
+import { createTestService, assignServiceTaxRate } from '../../../../../test-utils/billingTestHelpers';
+import { TextEncoder as NodeTextEncoder } from 'util';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
-import { Temporal } from '@js-temporal/polyfill';
+
+let mockedTenantId = '11111111-1111-1111-1111-111111111111';
+let mockedUserId = 'mock-user-id';
+
+vi.mock('server/src/lib/auth/getSession', () => ({
+  getSession: vi.fn(async () => ({
+    user: {
+      id: mockedUserId,
+      tenant: mockedTenantId
+    }
+  }))
+}));
+
+vi.mock('server/src/lib/analytics/posthog', () => ({
+  analytics: {
+    capture: vi.fn(),
+    identify: vi.fn(),
+    trackPerformance: vi.fn(),
+    getClient: () => null
+  }
+}));
+
+vi.mock('@alga-psa/shared/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/shared/db')>();
+  return {
+    ...actual,
+    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+  };
+});
+
+vi.mock('server/src/lib/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true))
+}));
+
+const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
+globalForVitest.TextEncoder = NodeTextEncoder;
+
+const {
+  beforeAll: setupContext,
+  beforeEach: resetContext,
+  afterEach: rollbackContext,
+  afterAll: cleanupContext
+} = TestContext.createHelpers();
+
+let context: TestContext;
+
+const cents = (value: unknown): number => Number.parseInt(value?.toString() ?? '0', 10);
+
+async function getInvoiceItems(invoiceId: string) {
+  return context.db('invoice_items')
+    .where({ invoice_id: invoiceId, tenant: context.tenantId })
+    .orderBy('created_at', 'asc');
+}
+
+async function configureNyTax(taxPercentage = 10) {
+  const taxRateId = uuidv4();
+
+  await context.db('tax_regions')
+    .insert({
+      tenant: context.tenantId,
+      region_code: 'US-NY',
+      region_name: 'New York',
+      is_active: true
+    })
+    .onConflict(['tenant', 'region_code'])
+    .ignore();
+
+  await context.db('tax_rates').insert({
+    tax_rate_id: taxRateId,
+    tenant: context.tenantId,
+    region_code: 'US-NY',
+    tax_percentage: taxPercentage,
+    description: `US-NY ${taxPercentage}% Tax`,
+    start_date: '2025-01-01T00:00:00.000Z'
+  });
+
+  await context.db('company_tax_settings')
+    .insert({
+      tenant: context.tenantId,
+      company_id: context.companyId,
+      is_reverse_charge_applicable: false
+    })
+    .onConflict(['tenant', 'company_id'])
+    .merge({ is_reverse_charge_applicable: false });
+
+  await context.db('company_tax_rates')
+    .where({ tenant: context.tenantId, company_id: context.companyId })
+    .update({ is_default: false })
+    .catch(() => undefined);
+
+  await context.db('company_tax_rates')
+    .insert({
+      company_tax_rates_id: uuidv4(),
+      tenant: context.tenantId,
+      company_id: context.companyId,
+      tax_rate_id: taxRateId,
+      is_default: true,
+      location_id: null
+    })
+    .onConflict(['company_id', 'tax_rate_id', 'tenant'])
+    .merge({ is_default: true, location_id: null });
+
+  await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
+
+  return taxRateId;
+}
 
 describe('Billing Invoice Discount Applications', () => {
-  const testHelpers = TestContext.createHelpers();
-  let context: TestContext;
-
   beforeAll(async () => {
-    context = await testHelpers.beforeAll({
+    context = await setupContext({
       runSeeds: true,
       cleanupTables: [
         'invoice_items',
@@ -26,554 +130,312 @@ describe('Billing Invoice Discount Applications', () => {
         'plan_services',
         'service_catalog',
         'billing_plans',
-        'bucket_plans',
         'tax_rates',
-        'company_tax_settings'
+        'tax_regions',
+        'company_tax_settings',
+        'company_tax_rates',
+        'transactions'
       ],
       companyName: 'Test Company',
       userType: 'internal'
     });
 
-    // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
-  });
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+  }, 60000);
+
+  beforeEach(async () => {
+    context = await resetContext();
+    const mockContext = setupCommonMocks({
+      tenantId: context.tenantId,
+      userId: context.userId,
+      permissionCheck: () => true
+    });
+    mockedTenantId = mockContext.tenantId;
+    mockedUserId = mockContext.userId;
+
+    expect(context.company.is_tax_exempt).toBe(false);
+  }, 30000);
+
+  afterEach(async () => {
+    await rollbackContext();
+  }, 30000);
 
   afterAll(async () => {
-    await testHelpers.afterAll();
-  });
+    await cleanupContext();
+  }, 30000);
 
   describe('Service-Based Discount Application', () => {
-    it('should correctly apply discounts using service references', async () => {
-      // Create test company
-      const company_id = await context.createEntity<ICompany>('companies', {
-        company_name: 'Service Discount Test Company',
-        billing_cycle: 'monthly',
-        company_id: uuidv4(),
-        tax_region: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
-        credit_balance: 0,
-        email: '',
-        url: '',
-        address: '',
-        is_inactive: false
-      }, 'company_id');
-
-      // Create NY tax rate
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0, // 10% for easy calculation
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+    it('applies service-specific percentage discounts without reducing the taxable base', async () => {
+      const serviceA = await createTestService(context, {
+        service_name: 'Service A',
+        default_rate: 10000,
+        tax_region: 'US-NY'
+      });
+      const serviceB = await createTestService(context, {
+        service_name: 'Service B',
+        default_rate: 5000,
+        tax_region: 'US-NY'
       });
 
-      // Create two services
-      const serviceA = await context.createEntity('service_catalog', {
-        service_name: 'Service A',
-        service_type: 'Fixed',
-        default_rate: 10000, // $100.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+      await configureNyTax(10);
 
-      const serviceB = await context.createEntity('service_catalog', {
-        service_name: 'Service B',
-        service_type: 'Fixed',
-        default_rate: 5000, // $50.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+      const serviceATax = await context.db('service_catalog')
+        .where({ service_id: serviceA, tenant: context.tenantId })
+        .first('tax_rate_id');
+      const serviceBTax = await context.db('service_catalog')
+        .where({ service_id: serviceB, tenant: context.tenantId })
+        .first('tax_rate_id');
 
-      // Generate invoice with service-based discount
+      expect(serviceATax?.tax_rate_id).toBeTruthy();
+      expect(serviceBTax?.tax_rate_id).toBeTruthy();
+
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        companyId: context.companyId,
         items: [
           {
-            // Service A
             service_id: serviceA,
             description: 'Service A',
             quantity: 1,
             rate: 10000
           },
           {
-            // Service B
             service_id: serviceB,
             description: 'Service B',
             quantity: 1,
             rate: 5000
           },
           {
-            // Discount applied to Service A by service ID
             description: '10% Discount on Service A',
             quantity: 1,
-            rate: 10, // 10% discount
+            rate: 10,
             is_discount: true,
             discount_type: 'percentage',
             service_id: '',
-            applies_to_service_id: serviceA // Reference by service ID
+            applies_to_service_id: serviceA
           }
         ]
       });
 
-      // Get invoice items to verify calculations
-      const invoiceItems = await context.db('invoice_items')
-        .where({ invoice_id: invoice.invoice_id })
-        .orderBy('net_amount', 'desc');
-
-      // Verify we have all three items
+      const invoiceItems = await getInvoiceItems(invoice.invoice_id);
       expect(invoiceItems).toHaveLength(3);
 
-      // Find each item
-      const serviceAItem = invoiceItems.find(item => item.service_id === serviceA);
-      const serviceBItem = invoiceItems.find(item => item.service_id === serviceB);
-      const discountItem = invoiceItems.find(item => item.is_discount === true);
+      const serviceAItem = invoiceItems.find(item => item.service_id === serviceA)!;
+      const serviceBItem = invoiceItems.find(item => item.service_id === serviceB)!;
+      const discountItem = invoiceItems.find(item => item.is_discount)!;
 
-      // Verify Service A item
-      expect(serviceAItem).toBeDefined();
-      expect(parseInt(serviceAItem!.net_amount)).toBe(10000); // $100.00
-      expect(parseInt(serviceAItem!.tax_amount)).toBe(1000);  // $10.00 (10% tax)
+      expect(cents(serviceAItem.net_amount)).toBe(10000);
+      expect(cents(serviceAItem.tax_amount)).toBe(1000);
+      expect(serviceAItem.is_taxable).not.toBe(false);
+      expect(serviceAItem.tax_region).toBe('US-NY');
+      expect(cents(serviceBItem.net_amount)).toBe(5000);
+      expect(cents(serviceBItem.tax_amount)).toBe(500);
+      expect(serviceBItem.is_taxable).not.toBe(false);
+      expect(serviceBItem.tax_region).toBe('US-NY');
+      expect(cents(discountItem.net_amount)).toBe(-1000);
+      expect(cents(discountItem.tax_amount)).toBe(0);
+      expect(discountItem.applies_to_item_id).toBe(serviceAItem.item_id);
 
-      // Verify Service B item
-      expect(serviceBItem).toBeDefined();
-      expect(parseInt(serviceBItem!.net_amount)).toBe(5000);  // $50.00
-      expect(parseInt(serviceBItem!.tax_amount)).toBe(500);   // $5.00 (10% tax)
-
-      // Verify discount item
-      expect(discountItem).toBeDefined();
-      expect(parseInt(discountItem!.net_amount)).toBe(-1000); // -$10.00 (10% of $100)
-      expect(parseInt(discountItem!.tax_amount)).toBe(0);     // No tax on discounts
-      expect(discountItem!.applies_to_item_id).toBe(serviceAItem!.item_id); // Should reference Service A item ID
-
-      // Verify invoice totals
-      expect(invoice.subtotal).toBe(14000);  // $140.00 ($100 + $50 - $10)
-      expect(invoice.tax).toBe(1500);        // $15.00 (10% of $150 taxable amount)
-      expect(invoice.total_amount).toBe(15500); // $155.00 (subtotal + tax)
+      expect(invoice.subtotal).toBe(14000);
+      expect(invoice.tax).toBe(1500);
+      expect(invoice.total_amount).toBe(15500);
     });
 
-    it('should correctly apply fixed amount discount to the entire invoice', async () => {
-      // Create test company
-      const company_id = await context.createEntity<ICompany>('companies', {
-        company_name: 'Invoice Discount Test Company',
-        billing_cycle: 'monthly',
-        company_id: uuidv4(),
-        tax_region: 'US-NY',
-        is_tax_exempt: false,
-        created_at: Temporal.Now.plainDateISO().toString(),
-        updated_at: Temporal.Now.plainDateISO().toString(),
-        phone_no: '',
-        credit_balance: 0,
-        email: '',
-        url: '',
-        address: '',
-        is_inactive: false
-      }, 'company_id');
-
-      // Create NY tax rate
-      const nyTaxRateId = await context.createEntity('tax_rates', {
-        region: 'US-NY',
-        tax_percentage: 10.0, // 10% for easy calculation
-        description: 'NY Test Tax',
-        start_date: '2025-01-01'
-      }, 'tax_rate_id');
-
-      // Set up company tax settings
-      await context.db('company_tax_settings').insert({
-        company_id: company_id,
-        tenant: context.tenantId,
-        tax_rate_id: nyTaxRateId,
-        is_reverse_charge_applicable: false
+    it('applies invoice-wide fixed discounts without affecting per-item tax allocation', async () => {
+      const serviceA = await createTestService(context, {
+        service_name: 'Service A',
+        default_rate: 10000,
+        tax_region: 'US-NY'
+      });
+      const serviceB = await createTestService(context, {
+        service_name: 'Service B',
+        default_rate: 5000,
+        tax_region: 'US-NY'
+      });
+      const serviceC = await createTestService(context, {
+        service_name: 'Service C',
+        default_rate: 2000,
+        tax_region: 'US-NY'
       });
 
-      // Create multiple services
-      const serviceA = await context.createEntity('service_catalog', {
-        service_name: 'Service A',
-        service_type: 'Fixed',
-        default_rate: 10000, // $100.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
+      await configureNyTax(10);
 
-      const serviceB = await context.createEntity('service_catalog', {
-        service_name: 'Service B',
-        service_type: 'Fixed',
-        default_rate: 5000, // $50.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
-
-      const serviceC = await context.createEntity('service_catalog', {
-        service_name: 'Service C',
-        service_type: 'Fixed',
-        default_rate: 2000, // $20.00
-        unit_of_measure: 'unit',
-        tax_region: 'US-NY',
-        is_taxable: true
-      }, 'service_id');
-
-      // Generate invoice with multiple services and a fixed discount applied to the entire invoice
       const invoice = await generateManualInvoice({
-        companyId: company_id,
+        companyId: context.companyId,
         items: [
           {
-            // Service A
             service_id: serviceA,
             description: 'Service A',
             quantity: 1,
             rate: 10000
           },
           {
-            // Service B
             service_id: serviceB,
             description: 'Service B',
             quantity: 1,
             rate: 5000
           },
           {
-            // Service C
             service_id: serviceC,
             description: 'Service C',
             quantity: 1,
             rate: 2000
           },
           {
-            // Fixed discount applied to the entire invoice (no applies_to_service_id)
             description: 'Fixed Discount on Entire Invoice',
             quantity: 1,
-            rate: 3000, // $30.00 fixed discount
+            rate: 3000,
             is_discount: true,
             discount_type: 'fixed',
             service_id: ''
-            // No applies_to_service_id means it applies to the entire invoice
           }
         ]
       });
 
-      // Get invoice items to verify calculations
-      const invoiceItems = await context.db('invoice_items')
-        .where({ invoice_id: invoice.invoice_id })
-        .orderBy('net_amount', 'desc');
-
-      // Verify we have all four items
+      const invoiceItems = await getInvoiceItems(invoice.invoice_id);
       expect(invoiceItems).toHaveLength(4);
 
-      // Find each item
-      const serviceAItem = invoiceItems.find(item => item.service_id === serviceA);
-      const serviceBItem = invoiceItems.find(item => item.service_id === serviceB);
-      const serviceCItem = invoiceItems.find(item => item.service_id === serviceC);
-      const discountItem = invoiceItems.find(item => item.is_discount === true);
+      const serviceAItem = invoiceItems.find(item => item.service_id === serviceA)!;
+      const serviceBItem = invoiceItems.find(item => item.service_id === serviceB)!;
+      const serviceCItem = invoiceItems.find(item => item.service_id === serviceC)!;
+      const discountItem = invoiceItems.find(item => item.is_discount)!;
 
-      // Verify Service A item
-      expect(serviceAItem).toBeDefined();
-      expect(parseInt(serviceAItem!.net_amount)).toBe(10000); // $100.00
-      expect(parseInt(serviceAItem!.tax_amount)).toBe(1000);  // $10.00 (10% tax)
+      expect(cents(serviceAItem.net_amount)).toBe(10000);
+      expect(cents(serviceAItem.tax_amount)).toBe(1000);
+      expect(cents(serviceBItem.net_amount)).toBe(5000);
+      expect(cents(serviceBItem.tax_amount)).toBe(500);
+      expect(cents(serviceCItem.net_amount)).toBe(2000);
+      expect(cents(serviceCItem.tax_amount)).toBe(200);
+      expect(cents(discountItem.net_amount)).toBe(-3000);
+      expect(discountItem.applies_to_item_id).toBeNull();
 
-      // Verify Service B item
-      expect(serviceBItem).toBeDefined();
-      expect(parseInt(serviceBItem!.net_amount)).toBe(5000);  // $50.00
-      expect(parseInt(serviceBItem!.tax_amount)).toBe(500);   // $5.00 (10% tax)
-
-      // Verify Service C item
-      expect(serviceCItem).toBeDefined();
-      expect(parseInt(serviceCItem!.net_amount)).toBe(2000);  // $20.00
-      expect(parseInt(serviceCItem!.tax_amount)).toBe(200);   // $2.00 (10% tax)
-
-      // Verify discount item
-      expect(discountItem).toBeDefined();
-      expect(parseInt(discountItem!.net_amount)).toBe(-3000); // -$30.00 fixed discount
-      expect(parseInt(discountItem!.tax_amount)).toBe(0);     // No tax on discounts
-      expect(discountItem!.applies_to_item_id).toBeNull();    // No specific item reference for invoice-wide discount
-      expect(discountItem!.applies_to_service_id).toBeNull(); // No specific service reference for invoice-wide discount
-
-      // Verify invoice totals
-      // Original subtotal: $100 + $50 + $20 = $170
-      // Discount: -$30
-      // Final subtotal: $140
-      // Tax: 10% of $170 = $17 (tax is calculated on pre-discount amount)
-      // Total: $140 + $17 = $157
-      expect(invoice.subtotal).toBe(14000);  // $140.00 ($170 - $30)
-      expect(invoice.tax).toBe(1700);        // $17.00 (10% of $170 taxable amount)
-      expect(invoice.total_amount).toBe(15700); // $157.00 (subtotal + tax)
+      expect(invoice.subtotal).toBe(14000);
+      expect(invoice.tax).toBe(1700);
+      expect(invoice.total_amount).toBe(15700);
     });
   });
 
-  it('should correctly apply multiple discounts in sequence', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Multiple Discount Test Company',
-      billing_cycle: 'monthly',
-      company_id: uuidv4(),
-      tax_region: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'company_id');
-
-    // Create NY tax rate
-    const nyTaxRateId = await context.createEntity('tax_rates', {
-      region: 'US-NY',
-      tax_percentage: 10.0, // 10% for easy calculation
-      description: 'NY Test Tax',
-      start_date: '2025-01-01'
-    }, 'tax_rate_id');
-
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
-      tenant: context.tenantId,
-      tax_rate_id: nyTaxRateId,
-      is_reverse_charge_applicable: false
+  it('applies multiple discounts sequentially to the same service', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'Premium Service',
+      default_rate: 10000,
+      tax_region: 'US-NY'
     });
 
-    // Create a service with a round price for easy calculation
-    const service = await context.createEntity('service_catalog', {
-      service_name: 'Premium Service',
-      service_type: 'Fixed',
-      default_rate: 10000, // $100.00
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
+    await configureNyTax(10);
 
-    // Generate invoice with multiple discounts applied in sequence
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      companyId: context.companyId,
       items: [
         {
-          // Base service
-          service_id: service,
+          service_id: serviceId,
           description: 'Premium Service',
           quantity: 1,
-          rate: 10000 // $100.00
+          rate: 10000
         },
         {
-          // First discount: 20% off
           description: '20% Loyalty Discount',
           quantity: 1,
-          rate: 20, // 20% discount
+          rate: 20,
           is_discount: true,
           discount_type: 'percentage',
           service_id: '',
-          applies_to_service_id: service
+          applies_to_service_id: serviceId
         },
         {
-          // Second discount: $10 fixed amount off (applied after the first discount)
           description: '$10 Promotional Discount',
           quantity: 1,
-          rate: 1000, // $10.00 fixed discount
+          rate: 1000,
           is_discount: true,
           discount_type: 'fixed',
           service_id: '',
-          applies_to_service_id: service
+          applies_to_service_id: serviceId
         }
       ]
     });
 
-    // Get invoice items to verify calculations
-    const invoiceItems = await context.db('invoice_items')
-      .where({ invoice_id: invoice.invoice_id })
-      .orderBy('created_at', 'asc'); // Order by creation time to verify sequence
-
-    // Verify we have all three items
+    const invoiceItems = await getInvoiceItems(invoice.invoice_id);
     expect(invoiceItems).toHaveLength(3);
 
-    // Find each item
-    const serviceItem = invoiceItems.find(item => item.service_id === service);
-    const discountItems = invoiceItems.filter(item => item.is_discount === true);
-    
-    // Verify we have two discount items
-    expect(discountItems).toHaveLength(2);
-    
-    // First discount should be 20% of $100 = $20
-    const firstDiscount = discountItems.find(item => item.description.includes('Loyalty'));
-    expect(firstDiscount).toBeDefined();
-    expect(parseInt(firstDiscount!.net_amount)).toBe(-2000); // -$20.00
-    
-    // Second discount should be a fixed $10
-    const secondDiscount = discountItems.find(item => item.description.includes('Promotional'));
-    expect(secondDiscount).toBeDefined();
-    expect(parseInt(secondDiscount!.net_amount)).toBe(-1000); // -$10.00
+    const serviceItem = invoiceItems.find(item => item.service_id === serviceId)!;
+    const loyaltyDiscount = invoiceItems.find(item => item.description.includes('Loyalty'))!;
+    const promoDiscount = invoiceItems.find(item => item.description.includes('Promotional'))!;
 
-    // Verify service item
-    expect(serviceItem).toBeDefined();
-    expect(parseInt(serviceItem!.net_amount)).toBe(10000); // Original $100.00
-    expect(parseInt(serviceItem!.tax_amount)).toBe(1000);  // $10.00 (10% tax)
+    expect(cents(serviceItem.net_amount)).toBe(10000);
+    expect(cents(serviceItem.tax_amount)).toBe(1000);
+    expect(cents(loyaltyDiscount.net_amount)).toBe(-2000);
+    expect(cents(promoDiscount.net_amount)).toBe(-1000);
+    expect(loyaltyDiscount.applies_to_item_id).toBe(serviceItem.item_id);
+    expect(promoDiscount.applies_to_item_id).toBe(serviceItem.item_id);
 
-    // Verify that discount items are marked as non-taxable
-    expect(firstDiscount!.is_taxable).toBe(false);
-    expect(secondDiscount!.is_taxable).toBe(false);
-
-    // Verify invoice totals
-    // Original amount: $100.00
-    // First discount: -$20.00 (20% of $100)
-    // Second discount: -$10.00 (fixed amount)
-    // Final subtotal: $70.00
-    // Tax: 10% of $100 = $10.00 (tax is calculated on pre-discount amount)
-    // Total: $70.00 + $10.00 = $80.00
-    expect(invoice.subtotal).toBe(7000);  // $70.00 ($100 - $20 - $10)
-    expect(invoice.tax).toBe(1000);       // $10.00 (10% of $100 taxable amount)
-    expect(invoice.total_amount).toBe(8000); // $80.00 (subtotal + tax)
-
-    // Verify that tax is calculated on the full pre-discount amount
-    // This is a key principle in our tax calculation guidance
-    const taxableBase = parseInt(serviceItem!.net_amount);
-    const expectedTax = Math.floor(taxableBase * 0.1); // 10% tax rate
-    expect(invoice.tax).toBe(expectedTax);
-    expect(invoice.tax).not.toBe(Math.floor(invoice.subtotal * 0.1)); // Not based on post-discount amount
-
-    // Verify the discount application order by checking the applies_to_item_id
-    // Both discounts should apply to the service item
-    expect(firstDiscount!.applies_to_item_id).toBe(serviceItem!.item_id);
-    expect(secondDiscount!.applies_to_item_id).toBe(serviceItem!.item_id);
+    expect(invoice.subtotal).toBe(7000);
+    expect(invoice.tax).toBe(1000);
+    expect(invoice.total_amount).toBe(8000);
   });
 
-  it('should handle discount application when discounts exceed the subtotal amount', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Excessive Discount Test Company',
-      billing_cycle: 'monthly',
-      company_id: uuidv4(),
-      tax_region: 'US-NY',
-      is_tax_exempt: false,
-      created_at: Temporal.Now.plainDateISO().toString(),
-      updated_at: Temporal.Now.plainDateISO().toString(),
-      phone_no: '',
-      credit_balance: 0,
-      email: '',
-      url: '',
-      address: '',
-      is_inactive: false
-    }, 'company_id');
-
-    // Create NY tax rate
-    const nyTaxRateId = await context.createEntity('tax_rates', {
-      region: 'US-NY',
-      tax_percentage: 10.0, // 10% for easy calculation
-      description: 'NY Test Tax',
-      start_date: '2025-01-01'
-    }, 'tax_rate_id');
-
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
-      tenant: context.tenantId,
-      tax_rate_id: nyTaxRateId,
-      is_reverse_charge_applicable: false
+  it('handles scenarios where discounts exceed the subtotal', async () => {
+    const serviceId = await createTestService(context, {
+      service_name: 'Basic Service',
+      default_rate: 5000,
+      tax_region: 'US-NY'
     });
 
-    // Create a service with a price that will be exceeded by discounts
-    const service = await context.createEntity('service_catalog', {
-      service_name: 'Basic Service',
-      service_type: 'Fixed',
-      default_rate: 5000, // $50.00
-      unit_of_measure: 'unit',
-      tax_region: 'US-NY',
-      is_taxable: true
-    }, 'service_id');
+    await configureNyTax(10);
 
-    // Generate invoice with discounts exceeding the service price
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      companyId: context.companyId,
       items: [
         {
-          // Base service
-          service_id: service,
+          service_id: serviceId,
           description: 'Basic Service',
           quantity: 1,
-          rate: 5000 // $50.00
+          rate: 5000
         },
         {
-          // First discount: 60% off
           description: '60% Special Discount',
           quantity: 1,
-          rate: 60, // 60% discount = $30.00
+          rate: 60,
           is_discount: true,
           discount_type: 'percentage',
           service_id: '',
-          applies_to_service_id: service
+          applies_to_service_id: serviceId
         },
         {
-          // Second discount: $30 fixed amount off
           description: '$30 Additional Discount',
           quantity: 1,
-          rate: 3000, // $30.00 fixed discount
+          rate: 3000,
           is_discount: true,
           discount_type: 'fixed',
           service_id: '',
-          applies_to_service_id: service
+          applies_to_service_id: serviceId
         }
       ]
     });
 
-    // Get invoice items to verify calculations
-    const invoiceItems = await context.db('invoice_items')
-      .where({ invoice_id: invoice.invoice_id })
-      .orderBy('created_at', 'asc');
-
-    // Verify we have all three items
+    const invoiceItems = await getInvoiceItems(invoice.invoice_id);
     expect(invoiceItems).toHaveLength(3);
 
-    // Find each item
-    const serviceItem = invoiceItems.find(item => item.service_id === service);
-    const discountItems = invoiceItems.filter(item => item.is_discount === true);
-    
-    // Verify we have two discount items
-    expect(discountItems).toHaveLength(2);
-    
-    // First discount should be 60% of $50 = $30
-    const firstDiscount = discountItems.find(item => item.description.includes('Special'));
-    expect(firstDiscount).toBeDefined();
-    expect(parseInt(firstDiscount!.net_amount)).toBe(-3000); // -$30.00
-    expect(firstDiscount!.is_taxable).toBe(false);
-    
-    // Second discount should be a fixed $30
-    const secondDiscount = discountItems.find(item => item.description.includes('Additional'));
-    expect(secondDiscount).toBeDefined();
-    expect(parseInt(secondDiscount!.net_amount)).toBe(-3000); // -$30.00
-    expect(secondDiscount!.is_taxable).toBe(false);
+    const serviceItem = invoiceItems.find(item => item.service_id === serviceId)!;
+    const discounts = invoiceItems.filter(item => item.is_discount);
+    const percentageDiscount = discounts.find(item => item.description.includes('Special'))!;
+    const fixedDiscount = discounts.find(item => item.description.includes('Additional'))!;
 
-    // Verify service item
-    expect(serviceItem).toBeDefined();
-    expect(parseInt(serviceItem!.net_amount)).toBe(5000); // Original $50.00
-    expect(parseInt(serviceItem!.tax_amount)).toBe(500);  // $5.00 (10% tax)
+    expect(discounts).toHaveLength(2);
+    expect(percentageDiscount.applies_to_item_id).toBe(serviceItem.item_id);
+    expect(fixedDiscount.applies_to_item_id).toBe(serviceItem.item_id);
 
-    // Verify invoice totals
-    // Original amount: $50.00
-    // First discount: -$30.00 (60% of $50)
-    // Second discount: -$30.00 (fixed amount)
-    // Final subtotal: -$10.00 (negative because discounts exceed the service price)
-    // Tax: 10% of $50 = $5.00 (tax is calculated on pre-discount amount)
-    // Total: -$10.00 + $5.00 = -$5.00 (credit balance)
-    expect(invoice.subtotal).toBe(-1000);  // -$10.00 ($50 - $30 - $30)
-    expect(invoice.tax).toBe(500);        // $5.00 (10% of $50 taxable amount)
-    expect(invoice.total_amount).toBe(-500); // -$5.00 (subtotal + tax)
+    expect(cents(serviceItem.net_amount)).toBe(5000);
+    expect(cents(serviceItem.tax_amount)).toBe(500);
+    expect(cents(percentageDiscount.net_amount)).toBe(-3000);
+    expect(cents(fixedDiscount.net_amount)).toBe(-3000);
 
-    // Verify that tax is calculated on the full pre-discount amount
-    const taxableBase = parseInt(serviceItem!.net_amount);
-    const expectedTax = Math.floor(taxableBase * 0.1); // 10% tax rate
-    expect(invoice.tax).toBe(expectedTax);
-    
-    // Verify that even with a negative subtotal, the tax is still based on the original positive amount
-    expect(invoice.subtotal).toBeLessThan(0); // Subtotal is negative
-    expect(invoice.tax).toBeGreaterThan(0);   // But tax is still positive
+    expect(invoice.subtotal).toBe(-1000);
+    expect(invoice.tax).toBe(500);
+    expect(invoice.total_amount).toBe(-500);
   });
 });

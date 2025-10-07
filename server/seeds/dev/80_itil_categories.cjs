@@ -4,10 +4,37 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
+const { randomUUID } = require('crypto');
+
 exports.seed = async function(knex) {
   const tenant = await knex('tenants').first();
   if (!tenant) {
     console.log('No tenant found, skipping ITIL categories seed');
+    return;
+  }
+
+  const parentColumn = (await knex.schema.hasColumn('categories', 'parent_category_uuid'))
+    ? 'parent_category_uuid'
+    : (await knex.schema.hasColumn('categories', 'parent_category'))
+      ? 'parent_category'
+      : null;
+
+  if (!parentColumn) {
+    console.warn('No parent category column found on categories table, skipping ITIL categories seed');
+    return;
+  }
+
+  const hasDescription = await knex.schema.hasColumn('categories', 'description');
+  const hasUpdatedAt = await knex.schema.hasColumn('categories', 'updated_at');
+  const hasUpdatedBy = await knex.schema.hasColumn('categories', 'updated_by');
+
+  const createdByUser = await knex('users')
+    .where('tenant', tenant.tenant)
+    .orderBy('created_at', 'asc')
+    .first();
+
+  if (!createdByUser) {
+    console.log('No users found for tenant, skipping ITIL categories seed');
     return;
   }
 
@@ -22,36 +49,8 @@ exports.seed = async function(knex) {
     return;
   }
 
-  // Determine which channel/id we should associate the ITIL categories with.
-  // Prefer an ITIL specific channel if it already exists, otherwise fall back
-  // to the tenant's default channel so we can satisfy the non-null constraint.
-  const itilChannel = await knex('channels')
-    .where('tenant', tenant.tenant)
-    .where('channel_name', 'ITIL Support')
-    .first();
-
-  const defaultChannel = itilChannel || await knex('channels')
-    .where('tenant', tenant.tenant)
-    .orderBy('display_order')
-    .first();
-
-  if (!defaultChannel) {
-    console.log('No channel found for tenant, skipping ITIL categories seed');
-    return;
-  }
-
-  const createdByUser = await knex('users')
-    .where('tenant', tenant.tenant)
-    .orderBy('created_at')
-    .first();
-
-  if (!createdByUser) {
-    console.log('No user found for tenant, skipping ITIL categories seed');
-    return;
-  }
-
   // Copy ITIL categories from standard_categories to tenant's categories table
-  // This simulates what should happen automatically when an ITIL channel is created
+  // This simulates what should happen automatically when an ITIL board is created
   const itilStandardCategories = await knex('standard_categories')
     .where('is_itil_standard', true)
     .select('*');
@@ -63,48 +62,51 @@ exports.seed = async function(knex) {
   const parentCategories = itilStandardCategories.filter(cat => !cat.parent_category_uuid);
 
   for (const stdCategory of parentCategories) {
-    const newId = knex.raw('gen_random_uuid()');
+    const newId = randomUUID();
 
     // Check if already exists in tenant categories
     const existing = await knex('categories')
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
-      .whereNull('parent_category')
-      .where('channel_id', defaultChannel.channel_id)
+      .modify(qb => {
+        if (parentColumn === 'parent_category_uuid') {
+          qb.whereNull('parent_category_uuid');
+        } else {
+          qb.whereNull('parent_category');
+        }
+      })
       .first();
 
     if (!existing) {
-      await knex('categories').insert({
+      const insertData = {
         category_id: newId,
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
-        parent_category: null,
-        channel_id: defaultChannel.channel_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
-        created_at: knex.fn.now(),
-      });
+        created_at: knex.fn.now()
+      };
 
-      // Get the inserted ID for mapping
-      const inserted = await knex('categories')
-        .where('tenant', tenant.tenant)
-        .where('category_name', stdCategory.category_name)
-        .whereNull('parent_category')
-        .where('channel_id', defaultChannel.channel_id)
-        .first();
+      insertData[parentColumn] = null;
 
-      parentIdMap[stdCategory.id] = inserted.category_id;
+      if (hasDescription) {
+        insertData.description = stdCategory.description || null;
+      }
+
+      if (hasUpdatedAt) {
+        insertData.updated_at = knex.fn.now();
+      }
+
+      if (hasUpdatedBy) {
+        insertData.updated_by = createdByUser.user_id;
+      }
+
+      await knex('categories').insert(insertData);
+
+      parentIdMap[stdCategory.id] = newId;
     } else {
       parentIdMap[stdCategory.id] = existing.category_id;
-
-      if (!existing.is_from_itil_standard) {
-        await knex('categories')
-          .where('category_id', existing.category_id)
-          .update({
-            is_from_itil_standard: true
-          });
-      }
     }
   }
 
@@ -123,28 +125,41 @@ exports.seed = async function(knex) {
     const existing = await knex('categories')
       .where('tenant', tenant.tenant)
       .where('category_name', stdCategory.category_name)
-      .where('parent_category', parentId)
-      .where('channel_id', defaultChannel.channel_id)
+      .modify(qb => {
+        if (parentColumn === 'parent_category_uuid') {
+          qb.where('parent_category_uuid', parentId);
+        } else {
+          qb.where('parent_category', parentId);
+        }
+      })
       .first();
 
     if (!existing) {
-      await knex('categories').insert({
-        category_id: knex.raw('gen_random_uuid()'),
+      const insertData = {
+        category_id: randomUUID(),
         tenant: tenant.tenant,
         category_name: stdCategory.category_name,
-        parent_category: parentId,
-        channel_id: defaultChannel.channel_id,
         display_order: stdCategory.display_order,
         is_from_itil_standard: true,
         created_by: createdByUser.user_id,
-        created_at: knex.fn.now(),
-      });
-    } else if (!existing.is_from_itil_standard) {
-      await knex('categories')
-        .where('category_id', existing.category_id)
-        .update({
-          is_from_itil_standard: true
-        });
+        created_at: knex.fn.now()
+      };
+
+      insertData[parentColumn] = parentId;
+
+      if (hasDescription) {
+        insertData.description = stdCategory.description || null;
+      }
+
+      if (hasUpdatedAt) {
+        insertData.updated_at = knex.fn.now();
+      }
+
+      if (hasUpdatedBy) {
+        insertData.updated_by = createdByUser.user_id;
+      }
+
+      await knex('categories').insert(insertData);
     }
   }
 

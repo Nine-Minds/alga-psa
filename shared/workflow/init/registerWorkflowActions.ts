@@ -1882,7 +1882,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'company_id', type: 'string', required: false },
       { name: 'contact_id', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
-      { name: 'channel_id', type: 'string', required: false },
+      { name: 'board_id', type: 'string', required: false },
       { name: 'status_id', type: 'string', required: false },
       { name: 'priority_id', type: 'string', required: false },
       { name: 'category_id', type: 'string', required: false },
@@ -1900,7 +1900,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           company_id: params.company_id,
           contact_id: params.contact_id,
           source: params.source,
-          channel_id: params.channel_id,
+          board_id: params.board_id,
           status_id: params.status_id,
           priority_id: params.priority_id,
           category_id: params.category_id,
@@ -2143,10 +2143,10 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Email Channel Actions
+  // Email Board Actions
   actionRegistry.registerSimpleAction(
-    'find_channel_by_name',
-    'Find a channel by name',
+    'find_board_by_name',
+    'Find a board by name',
     [{ name: 'name', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
@@ -2154,41 +2154,41 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
-        let channel = await knex('channels')
-          .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
-          .where({ tenant: context.tenant, channel_name: params.name })
+        let board = await knex('boards')
+          .select('board_id as id', 'board_name as name', 'description', 'is_default')
+          .where({ tenant: context.tenant, board_name: params.name })
           .andWhere('is_inactive', false)
           .first();
-        if (!channel) {
-          // Fallback: default active channel, else first active by display_order
-          channel = await knex('channels')
-            .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+        if (!board) {
+          // Fallback: default active board, else first active by display_order
+          board = await knex('boards')
+            .select('board_id as id', 'board_name as name', 'description', 'is_default')
             .where({ tenant: context.tenant })
             .andWhere('is_inactive', false)
             .andWhere('is_default', true)
             .first();
-          if (!channel) {
-            channel = await knex('channels')
-              .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+          if (!board) {
+            board = await knex('boards')
+              .select('board_id as id', 'board_name as name', 'description', 'is_default')
               .where({ tenant: context.tenant })
               .andWhere('is_inactive', false)
               .orderBy('display_order', 'asc')
               .first();
           }
-          if (!channel) {
-            logger.warn(`[ACTION] find_channel_by_name: No active channel found for tenant=${context.tenant}, name='${params.name}'`);
+          if (!board) {
+            logger.warn(`[ACTION] find_board_by_name: No active board found for tenant=${context.tenant}, name='${params.name}'`);
           }
         }
 
         return {
-          success: !!channel,
-          channel: channel
+          success: !!board,
+          board: board
         };
       } catch (error: any) {
-        logger.error(`[ACTION] find_channel_by_name: Error finding channel ${params.name}`, error);
+        logger.error(`[ACTION] find_board_by_name: Error finding board ${params.name}`, error);
         return {
           success: false,
-          channel: null,
+          board: null,
           message: error.message
         };
       }
@@ -2196,31 +2196,31 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
   );
 
   actionRegistry.registerSimpleAction(
-    'create_channel_from_email',
-    'Create a channel from email data',
+    'create_board_from_email',
+    'Create a board from email data',
     [
-      { name: 'channel_name', type: 'string', required: true },
+      { name: 'board_name', type: 'string', required: true },
       { name: 'description', type: 'string', required: false },
       { name: 'is_default', type: 'boolean', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createChannelFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
-        const result = await createChannelFromEmail({
-          channel_name: params.channel_name,
+        const { createBoardFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+        const result = await createBoardFromEmail({
+          board_name: params.board_name,
           description: params.description,
           is_default: params.is_default
         }, context.tenant);
 
         return {
           success: true,
-          channel: result
+          board: result
         };
       } catch (error: any) {
-        logger.error(`[ACTION] create_channel_from_email: Error creating channel ${params.channel_name}`, error);
+        logger.error(`[ACTION] create_board_from_email: Error creating board ${params.board_name}`, error);
         return {
           success: false,
-          channel: null,
+          board: null,
           message: error.message
         };
       }

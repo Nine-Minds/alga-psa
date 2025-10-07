@@ -1179,7 +1179,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/categories/ticket/tree/{channelId}",
+    "route_path": "/api/v1/categories/ticket/tree/{boardId}",
     "edition": "CE",
     "methods": [
       "GET"

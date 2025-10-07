@@ -89,7 +89,7 @@ describe.todo('Ticket Permissions Unit Tests', () => {
       ticket_number: 'TICK-001',
       title: 'Test Ticket',
       url: null,
-      channel_id: 'channel-1',
+      board_id: 'board-1',
       company_id: 'company-1',
       contact_name_id: null,
       status_id: 'status-1',
@@ -168,7 +168,7 @@ describe.todo('Ticket Permissions Unit Tests', () => {
   it('should allow admin user to create a ticket', async () => {
     const mockFormData = new FormData();
     mockFormData.append('title', 'New Test Ticket');
-    mockFormData.append('channel_id', 'CH-2');
+    mockFormData.append('board_id', 'CH-2');
     mockFormData.append('company_id', 'COMP-2');
     mockFormData.append('contact_name_id', 'CNT-2');
     mockFormData.append('status_id', 'ST-1');

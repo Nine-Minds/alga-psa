@@ -189,16 +189,14 @@ export async function POST(request: NextRequest) {
       // Guard: ensure OAuth tokens exist before attempting Gmail API calls
       if (!googleConfig.access_token || !googleConfig.refresh_token) {
         console.warn(`⚠️  Gmail OAuth tokens missing for provider ${provider.id}. Skipping fetch and marking provider as error.`);
-        try {
-          await trx('email_providers')
-            .where('id', provider.id)
-            .update({
-              connection_status: 'error',
-              connection_error_message: 'Gmail OAuth tokens missing. Reconnect the Gmail provider to continue.'
-            });
-        } catch (updateErr) {
-          console.warn('Failed to update provider connection_status when tokens missing:', updateErr);
-        }
+        const missingTokensMessage = 'Gmail OAuth tokens missing. Reconnect the Gmail provider to continue.';
+        await trx('email_providers')
+          .where('id', provider.id)
+          .update({
+            status: 'error',
+            error_message: missingTokensMessage
+          });
+        console.log('🚨 Flagged Gmail provider status as error because OAuth tokens are missing.');
         return; // Exit transaction early; webhook will be acked below without events
       }
 
@@ -279,7 +277,27 @@ export async function POST(request: NextRequest) {
         const msg = oauthErr?.message || String(oauthErr);
         const raw = typeof oauthErr === 'object' ? JSON.stringify(oauthErr) : String(oauthErr);
         console.error('[GOOGLE] OAuth error while fetching Gmail messages:', { message: msg, raw });
-        if (msg.includes('invalid_grant') || msg.includes('invalid_rapt')) {
+
+        if (oauthErr?.code === 'gmail.historyIdNotFound') {
+          console.warn('⚠️ Gmail history_id is invalid or expired; clearing stored cursor and flagging provider for resync.');
+          try {
+            await trx('google_email_provider_config')
+              .where('email_provider_id', provider.id)
+              .update({ history_id: null, updated_at: trx.fn.now() });
+            console.log('🧹 Cleared stored Gmail history_id due to cursor invalidation.');
+          } catch (clearErr: any) {
+            console.warn('⚠️ Failed to clear invalid Gmail history_id:', clearErr?.message || clearErr);
+          }
+
+          const cursorExpiredMessage = 'Gmail history cursor expired. Resync Gmail provider to continue processing.';
+          await trx('email_providers')
+            .where('id', provider.id)
+            .update({
+              status: 'error',
+              error_message: cursorExpiredMessage
+            });
+          console.log('🚨 Flagged Gmail provider status as error to prompt resync.');
+        } else if (msg.includes('invalid_grant') || msg.includes('invalid_rapt')) {
           console.error('⚠️ Gmail OAuth requires re-authorization (invalid_grant/invalid_rapt). Marking provider as error.');
           try {
             await trx('email_providers')
