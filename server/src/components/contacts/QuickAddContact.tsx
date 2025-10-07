@@ -462,6 +462,7 @@ const QuickAddContactContent: React.FC<QuickAddContactProps> = ({
                 phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
                 countries={countries}
                 onCountryChange={handleCountryChange}
+                allowExtensions={true}
                 data-automation-id="quick-add-contact-phone"
                 className={fieldErrors.contact_phone ? 'error' : ''}
               />

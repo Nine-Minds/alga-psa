@@ -892,6 +892,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     phoneCode={countries.find(c => c.code === locationData.country_code)?.phone_code}
                     countries={countries}
                     onCountryChange={(countryCode) => handleCountryChange(countryCode, countries.find(c => c.code === countryCode)?.name || '')}
+                    allowExtensions={true}
                     disabled={isSubmitting}
                     data-automation-id="company-location-phone"
                   />
@@ -1006,6 +1007,7 @@ const QuickAddCompany: React.FC<QuickAddCompanyProps> = ({
                     phoneCode={countries.find(c => c.code === contactCountryCode)?.phone_code}
                     countries={countries}
                     onCountryChange={handleContactCountryChange}
+                    allowExtensions={true}
                     disabled={isSubmitting}
                     data-automation-id="company-contact-phone"
                   />

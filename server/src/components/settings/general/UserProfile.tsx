@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
 import { Button } from 'server/src/components/ui/Button';
+import { PhoneInput } from 'server/src/components/ui/PhoneInput';
+import { getAllCountries, ICountry } from 'server/src/lib/actions/company-actions/countryActions';
 import { Switch } from 'server/src/components/ui/Switch';
 import TimezonePicker from 'server/src/components/ui/TimezonePicker';
 import CustomTabs, { TabContent } from 'server/src/components/ui/CustomTabs';
@@ -36,6 +38,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [countries, setCountries] = useState<ICountry[]>([]);
+  const [countryCode, setCountryCode] = useState('US');
 
   // Form fields
   const [firstName, setFirstName] = useState('');
@@ -63,6 +67,10 @@ export default function UserProfile({ userId }: UserProfileProps) {
         // Get user avatar URL
         const userAvatarUrl = await getUserAvatarUrlAction(currentUser.user_id, currentUser.tenant);
         setAvatarUrl(userAvatarUrl);
+
+        // Load countries for phone input
+        const countriesData = await getAllCountries();
+        setCountries(countriesData);
 
         // Get notification categories and subtypes
         const notificationCategories = await getCategoriesAction();
@@ -256,39 +264,107 @@ export default function UserProfile({ userId }: UserProfileProps) {
             
             <div className="grid grid-cols-2 gap-x-4 gap-y-4">
               <div>
-                <Label htmlFor="firstName">First Name</Label>
+                <Label htmlFor="firstName">
+                  First Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="firstName"
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  onChange={(e) => {
+                    setFirstName(e.target.value);
+                    // Clear error when user starts typing
+                    if (fieldErrors.first_name) {
+                      setFieldErrors(prev => ({ ...prev, first_name: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateContactName(firstName);
+                    setFieldErrors(prev => ({ ...prev, first_name: error || '' }));
+                  }}
+                  className={fieldErrors.first_name ? 'border-red-500' : ''}
                 />
+                {fieldErrors.first_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.first_name}</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">
+                  Last Name <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="lastName"
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  onChange={(e) => {
+                    setLastName(e.target.value);
+                    // Clear error when user starts typing
+                    if (fieldErrors.last_name) {
+                      setFieldErrors(prev => ({ ...prev, last_name: '' }));
+                    }
+                  }}
+                  onBlur={() => {
+                    const error = validateContactName(lastName);
+                    setFieldErrors(prev => ({ ...prev, last_name: error || '' }));
+                  }}
+                  className={fieldErrors.last_name ? 'border-red-500' : ''}
                 />
+                {fieldErrors.last_name && (
+                  <p className="text-sm text-red-600 mt-1">{fieldErrors.last_name}</p>
+                )}
               </div>
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">
+                Email <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  const error = validateEmailAddress(email);
+                  setFieldErrors(prev => ({ ...prev, email: error || '' }));
+                }}
+                className={fieldErrors.email ? 'border-red-500' : ''}
               />
+              {fieldErrors.email && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.email}</p>
+              )}
             </div>
             <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
+              <PhoneInput
                 id="phone"
-                type="tel"
+                label="Phone Number"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(value) => {
+                  setPhone(value);
+                  // Clear error when user starts typing
+                  if (fieldErrors.phone) {
+                    setFieldErrors(prev => ({ ...prev, phone: '' }));
+                  }
+                }}
+                onBlur={() => {
+                  if (phone.trim()) {
+                    const error = validatePhoneNumber(phone);
+                    setFieldErrors(prev => ({ ...prev, phone: error || '' }));
+                  }
+                }}
+                countryCode={countryCode}
+                phoneCode={countries.find(c => c.code === countryCode)?.phone_code}
+                countries={countries}
+                onCountryChange={setCountryCode}
+                allowExtensions={true}
+                data-automation-id="profile-phone"
               />
+              {fieldErrors.phone && (
+                <p className="text-sm text-red-600 mt-1">{fieldErrors.phone}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="timezone">Time Zone</Label>

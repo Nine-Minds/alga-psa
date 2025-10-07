@@ -344,7 +344,7 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               placeholder={extensionPlaceholder}
               disabled={disabled}
               style={{ border: 'none', borderLeft: '1px solid rgb(209 213 219)', boxShadow: 'none', outline: 'none' }}
-              className="w-24 rounded-r-md h-[42px] text-center"
+              className="w-16 rounded-r-md h-[42px] text-center text-sm"
             />
           )}
         </div>
