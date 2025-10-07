@@ -118,10 +118,16 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'first_name' || field === 'last_name') {
-        const error = validateContactName(value);
-        if (error) {
-          newErrors[field] = error;
+        // Make name fields required for profile saves
+        if (!value || !value.trim()) {
+          newErrors[field] = field === 'first_name' ? 'First name is required' : 'Last name is required';
           hasValidationErrors = true;
+        } else {
+          const error = validateContactName(value);
+          if (error) {
+            newErrors[field] = error;
+            hasValidationErrors = true;
+          }
         }
       } else if (field === 'email') {
         const error = validateEmailAddress(value);

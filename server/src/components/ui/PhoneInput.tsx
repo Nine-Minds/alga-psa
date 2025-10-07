@@ -344,17 +344,12 @@ export const PhoneInput: React.FC<PhoneInputProps> = ({
               placeholder={extensionPlaceholder}
               disabled={disabled}
               style={{ border: 'none', borderLeft: '1px solid rgb(209 213 219)', boxShadow: 'none', outline: 'none' }}
-              className="w-16 rounded-r-md h-[42px] text-center text-sm"
+              className="w-20 rounded-r-md h-[42px] text-center text-xs"
+              placeholder="optional ext."
             />
           )}
         </div>
 
-        {/* Extension Label (optional visual indicator) */}
-        {allowExtensions && (
-          <div className="text-xs text-gray-500 mt-1">
-            Phone number with optional extension
-          </div>
-        )}
       </div>
     </div>
   );

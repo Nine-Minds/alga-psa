@@ -750,6 +750,72 @@ export function validateAnnualRevenue(revenue: string): string | null {
 }
 
 // Comprehensive form validation function
+// Password validation with enterprise security standards
+export function validatePassword(password: string): string | null {
+  if (!password) {
+    return 'Password is required';
+  }
+
+  // Check minimum length (8 characters)
+  if (password.length < 8) {
+    return 'Password must be at least 8 characters long';
+  }
+
+  // Check maximum length (to prevent DoS attacks)
+  if (password.length > 128) {
+    return 'Password must be 128 characters or less';
+  }
+
+  // Check for uppercase letter
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+
+  // Check for lowercase letter
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+
+  // Check for number
+  if (!/\d/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+
+  // Check for special character
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return 'Password must contain at least one special character';
+  }
+
+  // Check for common weak patterns
+  const commonPasswords = [
+    'password', 'Password', 'Password1', 'password1', 'password123',
+    '12345678', 'qwerty', 'abc123', 'admin', 'letmein', 'welcome',
+    'iloveyou', 'monkey', 'dragon', 'sunshine', 'princess'
+  ];
+
+  if (commonPasswords.includes(password)) {
+    return 'Password is too common. Please choose a stronger password';
+  }
+
+  // Check for sequential characters
+  if (/123|abc|qwe|asd|zxc/i.test(password)) {
+    return 'Password cannot contain sequential characters';
+  }
+
+  return null;
+}
+
+// Get password requirements for display
+export function getPasswordRequirements(password: string) {
+  return {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNumber: /\d/.test(password),
+    hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+  };
+}
+
 export function validateClientForm(formData: {
   companyName: string;
   websiteUrl?: string;

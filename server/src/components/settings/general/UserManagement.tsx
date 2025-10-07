@@ -20,7 +20,7 @@ import ViewSwitcher, { ViewSwitcherOption } from 'server/src/components/ui/ViewS
 import { Search, Eye, EyeOff, Info } from 'lucide-react';
 import { getLicenseUsageAction } from 'server/src/lib/actions/license-actions';
 import { LicenseUsage } from 'server/src/lib/license/get-license-usage';
-import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
+import { validateContactName, validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
 
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
@@ -87,13 +87,7 @@ const UserManagement = (): JSX.Element => {
   // Show live password requirements feedback when typing
   useEffect(() => {
     const pw = newUser.password || '';
-    setPwdReq({
-      minLength: pw.length >= 8,
-      hasUpper: /[A-Z]/.test(pw),
-      hasLower: /[a-z]/.test(pw),
-      hasNumber: /\d/.test(pw),
-      hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw)
-    });
+    setPwdReq(getPasswordRequirements(pw));
   }, [newUser.password]);
 
   // Validation functions
@@ -317,9 +311,10 @@ const fetchContacts = async (): Promise<void> => {
           }
           await fetchUsers();
         } else {
-          // pwd validation
-          if (!(pwdReq.minLength && pwdReq.hasUpper && pwdReq.hasLower && pwdReq.hasNumber && pwdReq.hasSpecial)) {
-            toast.error('Password must be at least 8 characters and include upper, lower, number, and special character.');
+          // Use unified password validation
+          const passwordError = validatePassword(newUser.password);
+          if (passwordError) {
+            toast.error(passwordError);
             return;
           }
           const result = await createClientPortalUser(
@@ -661,11 +656,6 @@ const fetchContacts = async (): Promise<void> => {
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
-                      {contactValidationError && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
-                          <p className="text-sm text-red-600">{contactValidationError}</p>
-                        </div>
-                      )}
                     </div>
                   )}
                   <div>

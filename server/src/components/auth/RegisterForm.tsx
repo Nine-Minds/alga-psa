@@ -10,7 +10,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { verifyContactEmail } from 'server/src/lib/actions/user-actions/userActions';
 import { initiateRegistration } from 'server/src/lib/actions/user-actions/registrationActions';
 import { usePostHog } from 'posthog-js/react';
-import { validateEmailAddress } from 'server/src/lib/utils/clientFormValidation';
+import { validateEmailAddress, validatePassword, getPasswordRequirements } from 'server/src/lib/utils/clientFormValidation';
 
 export default function RegisterForm() {
   const [email, setEmail] = useState('');
@@ -108,8 +108,10 @@ export default function RegisterForm() {
     if (!email.trim()) validationErrors.push('Email');
     if (!email.includes('@')) validationErrors.push('Valid email address');
     if (emailStatus !== 'valid') validationErrors.push('Verified contact email');
-    if (!password.trim()) validationErrors.push('Password');
-    if (passwordStrength === 'weak') validationErrors.push('Stronger password');
+
+    const passwordError = validatePassword(password);
+    if (passwordError) validationErrors.push('Valid password');
+
     return validationErrors;
   };
 
@@ -313,7 +315,7 @@ export default function RegisterForm() {
         type="submit"
         disabled={isLoading}
         className={`w-full ${
-          !email.trim() || emailStatus !== 'valid' || !password.trim() || passwordStrength === 'weak'
+          !email.trim() || emailStatus !== 'valid' || validatePassword(password)
             ? 'opacity-50' : ''
         }`}
       >

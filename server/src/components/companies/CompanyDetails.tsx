@@ -15,16 +15,18 @@ import { useTags } from 'server/src/context/TagContext';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
 import Documents from 'server/src/components/documents/Documents';
-import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry } from 'server/src/lib/utils/clientFormValidation';
+import { validateCompanySize, validateAnnualRevenue, validateWebsiteUrl, validateIndustry, validateCompanyName } from 'server/src/lib/utils/clientFormValidation';
 import CompanyContactsList from 'server/src/components/contacts/CompanyContactsList';
 import { Flex, Text, Heading } from '@radix-ui/themes';
 import { Switch } from 'server/src/components/ui/Switch';
 import BillingConfiguration from './BillingConfiguration';
-import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { updateCompany, uploadCompanyLogo, deleteCompanyLogo, getCompanyById, deleteCompany } from 'server/src/lib/actions/company-actions/companyActions';
+import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
+import { useToast } from 'server/src/hooks/use-toast';
 import CustomTabs from 'server/src/components/ui/CustomTabs';
 import { QuickAddTicket } from '../tickets/QuickAddTicket';
 import { Button } from 'server/src/components/ui/Button';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Trash2 } from 'lucide-react';
 import BackNav from 'server/src/components/ui/BackNav';
 import TaxSettingsForm from 'server/src/components/TaxSettingsForm';
 import InteractionsFeed from '../interactions/InteractionsFeed';
@@ -197,6 +199,8 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const [hasUnsavedNoteChanges, setHasUnsavedNoteChanges] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isDeletingLogo, setIsDeletingLogo] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isEditingLogo, setIsEditingLogo] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentContent, setCurrentContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
@@ -218,7 +222,36 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
   const searchParams = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const drawer = useDrawer();
+  const { toast } = useToast();
 
+
+  const handleDeleteCompany = () => {
+    setDeleteError(null);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await deleteCompany(editedCompany.company_id);
+
+      setIsDeleteDialogOpen(false);
+
+      toast({
+        title: "Client Deleted",
+        description: "Client has been deleted successfully.",
+      });
+
+      // Navigate back or close drawer depending on context
+      if (isInDrawer) {
+        drawer.closeDrawer();
+      } else {
+        router.push('/msp/companies');
+      }
+    } catch (error: any) {
+      console.error('Failed to delete company:', error);
+      setDeleteError(error.message || 'Failed to delete client. Please try again.');
+    }
+  };
 
   // 1. Implement refreshCompanyData function
   const refreshCompanyData = useCallback(async () => {
@@ -583,6 +616,7 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
                 value={editedCompany.company_name}
                 onEdit={(value) => handleFieldChange('company_name', value)}
                 automationId="client-name-field"
+                validate={validateCompanyName}
               />
                            
               <FieldContainer
@@ -1015,12 +1049,23 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
               onClick={() => window.open(`/msp/companies/${editedCompany.company_id}`, '_blank')}
               variant="soft"
               size="sm"
-              className="flex items-center ml-4 mr-8"
+              className="flex items-center ml-4 mr-2"
             >
               <ExternalLink className="h-4 w-4 mr-2" />
               Go to client
             </Button>
           )}
+
+          <Button
+            id={`${id}-delete-company-button`}
+            onClick={handleDeleteCompany}
+            variant="destructive"
+            size="sm"
+            className="flex items-center mr-8"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete
+          </Button>
         </div>
       </div>
 
@@ -1057,6 +1102,26 @@ const CompanyDetails: React.FC<CompanyDetailsProps> = ({
             />
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          id="delete-company-dialog"
+          isOpen={isDeleteDialogOpen}
+          onClose={() => {
+            setIsDeleteDialogOpen(false);
+            setDeleteError(null);
+          }}
+          onConfirm={confirmDelete}
+          title="Delete Client"
+          message={
+            deleteError
+              ? deleteError
+              : "Are you sure you want to delete this client? This action cannot be undone."
+          }
+          confirmLabel={deleteError ? undefined : "Delete"}
+          cancelLabel={deleteError ? "Close" : "Cancel"}
+          isConfirming={false}
+        />
       </div>
     </ReflectionContainer>
   );
