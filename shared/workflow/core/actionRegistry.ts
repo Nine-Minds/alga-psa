@@ -130,16 +130,9 @@ export class ActionRegistry {
   
     // Import heavy dependencies lazily to avoid circular references
     const { default: WorkflowActionResultModel } = await import('../persistence/workflowActionResultModel');
-    const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
     const { v4: uuidv4 } = await import('uuid');
 
-    return await withAdminTransaction(async (trx) => {
-      // Make sure downstream consumers see the active transaction
-      const executionContext: ActionExecutionContext = {
-        ...context,
-        transaction: trx
-      };
-
+    const runInTransaction = async (trx: Knex.Transaction, executionContext: ActionExecutionContext): Promise<any> => {
       let resultId: string | null = null;
 
       try {
@@ -205,7 +198,33 @@ export class ActionRegistry {
 
         throw error;
       }
-    }, context.transaction);
+    };
+
+    const existingTransaction = context.transaction;
+    if (existingTransaction) {
+      const trxState = existingTransaction as unknown as { isCompleted?: () => boolean; _completed?: boolean };
+      const completed = typeof trxState.isCompleted === 'function'
+        ? trxState.isCompleted()
+        : !!trxState._completed;
+
+      if (completed) {
+        console.warn('[ActionRegistry] Provided transaction is already completed. Falling back to a new admin transaction.');
+      } else {
+        return runInTransaction(existingTransaction, {
+          ...context,
+          transaction: existingTransaction
+        });
+      }
+    }
+    
+    const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+    return withAdminTransaction(async (trx) => {
+      const executionContext: ActionExecutionContext = {
+        ...context,
+        transaction: trx
+      };
+      return runInTransaction(trx, executionContext);
+    });
   }
   
   /**
