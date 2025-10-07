@@ -1,17 +1,18 @@
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 import path from 'path';
+import {
+  applyPlaywrightDatabaseEnv,
+  PLAYWRIGHT_DB_CONFIG,
+} from './src/__tests__/integration/utils/playwrightDatabaseConfig';
 
 // Load environment variables from the correct path
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 // Ensure critical environment variables are set for tests
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
-process.env.DB_HOST = process.env.DB_HOST || 'pgbouncer';
-process.env.DB_PORT = process.env.DB_PORT || '6432';
-process.env.DB_NAME = process.env.DB_NAME || 'server';
-process.env.DB_USER = process.env.DB_USER || 'postgres';
-process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'postpass123';
+applyPlaywrightDatabaseEnv();
+process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
 
 /**
  * Playwright configuration for EE server integration tests
@@ -19,6 +20,7 @@ process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'postpass123';
  */
 export default defineConfig({
   testDir: './src/__tests__/integration',
+  testMatch: ['**/contract-wizard-*.playwright.test.ts'],
   
   /* Global setup file */
   globalSetup: './playwright.global-setup.ts',
@@ -108,7 +110,27 @@ export default defineConfig({
     env: {
       ...process.env,
       NEXT_PUBLIC_EDITION: 'enterprise',
-      NEXTAUTH_URL: 'http://canonical.localhost:3000'
+      NEXTAUTH_URL: 'http://canonical.localhost:3000',
+      NEXT_PUBLIC_DISABLE_FEATURE_FLAGS: 'true',
+      DISABLE_FEATURE_FLAGS: 'true',
+      DB_HOST: PLAYWRIGHT_DB_CONFIG.host,
+      DB_PORT: String(PLAYWRIGHT_DB_CONFIG.port),
+      DB_NAME: PLAYWRIGHT_DB_CONFIG.database,
+      DB_USER: PLAYWRIGHT_DB_CONFIG.user,
+      DB_PASSWORD: PLAYWRIGHT_DB_CONFIG.password,
+      DB_SSL: PLAYWRIGHT_DB_CONFIG.ssl ? 'true' : 'false',
+      DB_HOST_SERVER: PLAYWRIGHT_DB_CONFIG.host,
+      DB_PORT_SERVER: String(PLAYWRIGHT_DB_CONFIG.port),
+      DB_NAME_SERVER: PLAYWRIGHT_DB_CONFIG.database,
+      DB_USER_SERVER: PLAYWRIGHT_DB_CONFIG.user,
+      DB_PASSWORD_SERVER: PLAYWRIGHT_DB_CONFIG.password,
+      DB_DIRECT_HOST: PLAYWRIGHT_DB_CONFIG.host,
+      DB_DIRECT_PORT: String(PLAYWRIGHT_DB_CONFIG.port),
+      DB_USER_ADMIN: process.env.DB_USER_ADMIN ?? PLAYWRIGHT_DB_CONFIG.user,
+      DB_PASSWORD_ADMIN: process.env.DB_PASSWORD_ADMIN ?? PLAYWRIGHT_DB_CONFIG.password,
+      DB_USER_READONLY: process.env.DB_USER_READONLY ?? PLAYWRIGHT_DB_CONFIG.user,
+      DB_PASSWORD_READONLY: process.env.DB_PASSWORD_READONLY ?? PLAYWRIGHT_DB_CONFIG.password,
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
     }
   },
 

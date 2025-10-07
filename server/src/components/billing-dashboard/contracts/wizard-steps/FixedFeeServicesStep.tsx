@@ -11,6 +11,7 @@ import { IService } from 'server/src/interfaces';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import { Plus, X, DollarSign, Package, HelpCircle } from 'lucide-react';
 import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
+import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';
 
 interface FixedFeeServicesStepProps {
   data: ContractWizardData;
@@ -85,13 +86,14 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
   };
 
   return (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
-        <p className="text-sm text-gray-600">
-          Set up services that are billed at a fixed monthly rate, regardless of usage. This is ideal for managed services agreements.
-        </p>
-      </div>
+    <ReflectionContainer id="fixed-fee-services-step">
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-2">Fixed Fee Services</h3>
+          <p className="text-sm text-gray-600">
+            Set up services that are billed at a fixed monthly rate, regardless of usage. This is ideal for managed services agreements.
+          </p>
+        </div>
 
       {/* Info Box */}
       <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
@@ -178,6 +180,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
                   Service {index + 1}
                 </Label>
                 <CustomSelect
+                  id={`service-select-${index}`}
                   value={service.service_id}
                   onValueChange={(value: string) => handleServiceChange(index, value)}
                   options={serviceOptions}
@@ -215,6 +218,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
         ))}
 
         <Button
+          id="add-fixed-service-button"
           type="button"
           variant="outline"
           onClick={handleAddService}
@@ -245,6 +249,7 @@ export function FixedFeeServicesStep({ data, updateData }: FixedFeeServicesStepP
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ReflectionContainer>
   );
 }

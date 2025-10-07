@@ -27,7 +27,7 @@ exports.up = async function up(knex) {
       table.uuid('schedule_id').primary().defaultTo(knex.raw('gen_random_uuid()'));
 
       // Tenant for multi-tenancy
-      table.string('tenant', 255).notNullable();
+      table.uuid('tenant').notNullable();
 
       // Foreign key to plan_bundles (contract/bundle)
       table.uuid('bundle_id').notNullable();

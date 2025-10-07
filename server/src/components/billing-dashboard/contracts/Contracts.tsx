@@ -270,6 +270,7 @@ const Contracts: React.FC = () => {
             <div className="flex gap-2">
               <Button
                 id='wizard-contract-button'
+                type='button'
                 onClick={() => setShowWizard(true)}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
@@ -281,7 +282,7 @@ const Contracts: React.FC = () => {
                 editingContract={editingContract}
                 onClose={() => setEditingContract(null)}
                 triggerButton={
-                  <Button id='add-contract-button' variant="outline">
+                  <Button id='add-contract-button' variant="outline" type='button'>
                     <Plus className="h-4 w-4 mr-2" />
                     Quick Add
                   </Button>
@@ -376,6 +377,7 @@ const Contracts: React.FC = () => {
               </p>
               <Button
                 onClick={() => setShowWizard(true)}
+                type='button'
                 className="bg-gradient-to-r from-blue-600 to-purple-600"
               >
                 <Wand2 className="h-4 w-4 mr-2" />

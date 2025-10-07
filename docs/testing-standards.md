@@ -108,6 +108,13 @@ ee/temporal-workflows/src/__tests__/
 - Often require seed data and complex fixtures
 - **Split large test suites** by aspect using underscore notation
 
+**Database bring-up pattern (Billing suites):**
+- Override pgbouncer defaults to connect directly to PostgreSQL in test runs (`process.env.DB_PORT = '5432'` and remap `DB_HOST` to `localhost` when necessary).
+- Use the shared context harness: `const { beforeAll, beforeEach, afterEach, afterAll } = TestContext.createHelpers();`
+- In `beforeAll`, call `setupContext({ runSeeds: true, cleanupTables: [...] })` to provision the tenant, preload reference data, and register table cleanups.
+- Refresh the scoped context in `beforeEach` via `resetContext()`, then reseed tenant-scoped data (e.g., tax regions, numbering seeds) needed for each test.
+- Roll back with `rollbackContext()` in `afterEach` and tear everything down with `cleanupContext()` in `afterAll` so temporary schemas/tables are dropped cleanly.
+
 **When to split tests:**
 - Test file exceeds 500 lines
 - Multiple distinct concerns (tax, discounts, edge cases, etc.)

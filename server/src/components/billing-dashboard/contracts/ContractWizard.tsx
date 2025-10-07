@@ -10,6 +10,7 @@ import { HourlyServicesStep } from './wizard-steps/HourlyServicesStep';
 import { BucketHoursStep } from './wizard-steps/BucketHoursStep';
 import { UsageBasedServicesStep } from './wizard-steps/UsageBasedServicesStep';
 import { ReviewContractStep } from './wizard-steps/ReviewContractStep';
+import { createContractFromWizard } from 'server/src/lib/actions/contractWizardActions';
 
 const STEPS = [
   'Contract Basics',
@@ -233,10 +234,31 @@ export function ContractWizard({
 
     setIsLoading(true);
     try {
-      // TODO: Call backend to create contract
-      // For now, just call onComplete with the data
-      console.log('Creating contract with data:', wizardData);
-      onComplete?.(wizardData);
+      const bundleName = wizardData.contract_name.trim();
+      const bundleDescription = wizardData.description?.trim();
+
+      const contractResult = await createContractFromWizard({
+        contract_name: bundleName,
+        description: bundleDescription || undefined,
+        company_id: wizardData.company_id,
+        start_date: wizardData.start_date,
+        end_date: wizardData.end_date,
+        po_required: wizardData.po_required,
+        po_number: wizardData.po_number,
+        po_amount: wizardData.po_amount,
+        fixed_base_rate: wizardData.fixed_base_rate,
+        enable_proration: wizardData.enable_proration,
+        fixed_services: wizardData.fixed_services,
+      });
+
+      const completedData: ContractWizardData = {
+        ...wizardData,
+        bundle_id: contractResult.bundle_id,
+      };
+
+      setWizardData(completedData);
+      console.log('Creating contract with data:', completedData);
+      onComplete?.(completedData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating contract:', error);
