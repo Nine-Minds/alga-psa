@@ -8,7 +8,7 @@ import { faker } from '@faker-js/faker';
 interface ClientInput {
   tenant: string;
   client_name?: string;
-  client_type?: 'client' | 'individual';
+  client_type?: 'company' | 'individual';
   email?: string;
   phone?: string;
   is_inactive?: boolean;
@@ -75,6 +75,3 @@ export async function clientFactory(db: any, input: ClientInput) {
 
   return createdClient;
 }
-
-// Backward compatibility alias
-export const clientFactory = clientFactory;
