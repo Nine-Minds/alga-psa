@@ -64,7 +64,7 @@ describe('Email Activities - Standalone Tests', () => {
           lastName: 'Doe',
         },
         temporaryPassword: 'TestPass123!',
-        companyName: 'Test Company',
+        clientName: 'Test Client',
         loginUrl: 'https://test.example.com/login',
       };
 
@@ -109,7 +109,7 @@ describe('Email Activities - Standalone Tests', () => {
           lastName: 'Smith',
         },
         temporaryPassword: 'MinimalPass123!',
-        // No companyName or loginUrl - should use defaults
+        // No clientName or loginUrl - should use defaults
       };
 
       const result = await sendWelcomeEmail(input);

@@ -192,8 +192,8 @@ export async function GET(request: Request) {
       const eventWorkflowMap: Record<string, string> = {
         'INVOICE_CREATED': invoiceSyncWorkflowName,
         'INVOICE_UPDATED': invoiceSyncWorkflowName,
-        'COMPANY_CREATED': customerSyncWorkflowName,
-        'COMPANY_UPDATED': customerSyncWorkflowName,
+        'CLIENT_CREATED': customerSyncWorkflowName,
+        'CLIENT_UPDATED': customerSyncWorkflowName,
       };
 
       // Fetch system workflow registration IDs based on the correct names

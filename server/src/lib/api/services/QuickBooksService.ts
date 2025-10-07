@@ -136,14 +136,14 @@ export class QuickBooksService {
 
     await this.storeCredentials(credentials, tenantId);
 
-    // Get company info
-    const companyInfo = await this.getCompanyInfo(credentials);
+    // Get client info
+    const clientInfo = await this.getClientInfo(credentials);
 
     // Update connection status
     const connectionStatus: QboConnectionStatusResponse = {
       connected: true,
       status: 'Connected',
-      companyName: companyInfo.Name,
+      clientName: clientInfo.Name,
       realmId: data.realmId,
       connectionDate: new Date().toISOString(),
       lastSyncDate: undefined
@@ -154,7 +154,7 @@ export class QuickBooksService {
       {
         tenant: tenantId,
         realm_id: data.realmId,
-        company_name: companyInfo.Name,
+        client_name: clientInfo.Name,
         status: 'Connected',
         connected_at: new Date().toISOString(),
         last_sync_at: null,
@@ -169,7 +169,7 @@ export class QuickBooksService {
     await this.eventBus.publish('qbo.connection.established', {
       tenantId,
       realmId: data.realmId,
-      companyName: companyInfo.Name
+      clientName: clientInfo.Name
     });
 
     // Audit log
@@ -178,7 +178,7 @@ export class QuickBooksService {
       entityType: 'qbo_connection',
       entityId: data.realmId,
       tenantId,
-      changes: { company_name: companyInfo.Name }
+      changes: { client_name: clientInfo.Name }
     });
 
     return {
@@ -212,7 +212,7 @@ export class QuickBooksService {
       data: {
         connected: !isExpired,
         status: isExpired ? 'Expired' : connection.status,
-        companyName: connection.company_name,
+        clientName: connection.client_name,
         realmId: connection.realm_id,
         connectionDate: connection.connected_at,
         lastSyncDate: connection.last_sync_at
@@ -232,8 +232,8 @@ export class QuickBooksService {
       let testResult;
 
       switch (data.testType) {
-        case 'companyInfo':
-          testResult = await this.getCompanyInfo(credentials);
+        case 'clientInfo':
+          testResult = await this.getClientInfo(credentials);
           break;
         case 'items':
           testResult = await this.testItemsAccess(credentials);
@@ -897,12 +897,12 @@ export class QuickBooksService {
     };
   }
 
-  private async getCompanyInfo(credentials: QboCredentials): Promise<any> {
+  private async getClientInfo(credentials: QboCredentials): Promise<any> {
     // Implementation would make actual QBO API call
     return {
       Id: '1',
-      Name: 'Test Company',
-      CompanyName: 'Test Company'
+      Name: 'Test Client',
+      ClientName: 'Test Client'
     };
   }
 

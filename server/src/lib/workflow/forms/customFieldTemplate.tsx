@@ -17,10 +17,10 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
   } = props;
 
   // Log all props for debugging
-  if (id === 'root_algaCompanyDisplay') {
-    console.log('CFT props for root_algaCompanyDisplay:', props);
+  if (id === 'root_algaClientDisplay') {
+    console.log('CFT props for root_algaClientDisplay:', props);
     // For more targeted logging if the above is too verbose:
-    // console.log('CFT (root_algaCompanyDisplay) - id:', props.id, 'label:', props.label, 'displayLabel:', props.displayLabel, 'schema.type:', props.schema?.type, 'uiSchema:', props.uiSchema);
+    // console.log('CFT (root_algaClientDisplay) - id:', props.id, 'label:', props.label, 'displayLabel:', props.displayLabel, 'schema.type:', props.schema?.type, 'uiSchema:', props.uiSchema);
   }
 
 
@@ -31,9 +31,9 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
     return children;
   }
 
-  // Case 1: The specific 'root_algaCompanyDisplay' field (schema type is 'string' but acts as a header)
-  if (id === 'root_algaCompanyDisplay') {
-    console.log('CFT rendering root_algaCompanyDisplay (string type) as a styled header. Label:', label);
+  // Case 1: The specific 'root_algaClientDisplay' field (schema type is 'string' but acts as a header)
+  if (id === 'root_algaClientDisplay') {
+    console.log('CFT rendering root_algaClientDisplay (string type) as a styled header. Label:', label);
     // Render the label styled, but DO NOT render children (which is the gray duplicate)
     return (
       <div className="mb-4 p-4 border border-gray-200 rounded-md">

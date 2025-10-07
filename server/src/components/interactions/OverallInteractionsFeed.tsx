@@ -5,7 +5,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { IInteraction, IInteractionType } from 'server/src/interfaces/interaction.interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { IContact } from 'server/src/interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { Filter, RefreshCw, ChevronRight, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getRecentInteractions, getInteractionStatuses } from 'server/src/lib/actions/interactionActions';
@@ -16,7 +16,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import InteractionIcon from 'server/src/components/ui/InteractionIcon';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { Input } from 'server/src/components/ui/Input';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { Button } from 'server/src/components/ui/Button';
@@ -28,7 +28,7 @@ import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/
 interface OverallInteractionsFeedProps {
   users: IUserWithRoles[];
   contacts: IContact[];
-  companies: ICompany[];
+  clients: IClient[];
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
 }
@@ -37,7 +37,7 @@ interface OverallInteractionsFeedProps {
 const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ 
   users, 
   contacts, 
-  companies,
+  clients,
   isCollapsed = false,
   onToggleCollapse
 }) => {
@@ -46,14 +46,14 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const [statuses, setStatuses] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>('all');
   const [selectedContact, setSelectedContact] = useState<string>('all');
-  const [selectedCompany, setSelectedCompany] = useState<string>('all');
+  const [selectedClient, setSelectedClient] = useState<string>('all');
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [startTime, setStartTime] = useState<Date | undefined>(undefined);
   const [endTime, setEndTime] = useState<Date | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [interactionTypeId, setInteractionTypeId] = useState<string>('all');
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer } = useDrawer();
 
@@ -80,12 +80,12 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
     helperText: 'Clear all applied filters'
   });
 
-  const { automationIdProps: companyPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: 'overall-interactions-company-picker',
+  const { automationIdProps: clientPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
+    id: 'overall-interactions-client-picker',
     type: 'formField',
     fieldType: 'select',
-    label: 'Filter by Company',
-    helperText: 'Filter interactions by associated company'
+    label: 'Filter by Client',
+    helperText: 'Filter interactions by associated client'
   });
 
   const { automationIdProps: startTimePickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -161,13 +161,13 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       const matchesSearch = !searchTerm || (
         interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        interaction.company_name?.toLowerCase().includes(searchTerm.toLowerCase())
+        interaction.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
       // Filter conditions
       const matchesUser = selectedUser === 'all' || interaction.user_id === selectedUser;
       const matchesContact = selectedContact === 'all' || interaction.contact_name_id === selectedContact;
-      const matchesCompany = selectedCompany === 'all' || interaction.company_id === selectedCompany;
+      const matchesClient = selectedClient === 'all' || interaction.client_id === selectedClient;
       const matchesStatus = selectedStatus === 'all' || interaction.status_id === selectedStatus;
       const matchesType = interactionTypeId === 'all' || interaction.type_id === interactionTypeId;
       
@@ -178,20 +178,20 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
       const matchesStartTime = !startTime || interactionStartTime >= startTime;
       const matchesEndTime = !endTime || interactionEndTime <= endTime;
       
-      return matchesSearch && matchesUser && matchesContact && matchesCompany && 
+      return matchesSearch && matchesUser && matchesContact && matchesClient && 
              matchesStatus && matchesType && matchesStartTime && matchesEndTime;
     });
-  }, [interactions, searchTerm, selectedUser, selectedContact, selectedCompany, selectedStatus, interactionTypeId, startTime, endTime]);
+  }, [interactions, searchTerm, selectedUser, selectedContact, selectedClient, selectedStatus, interactionTypeId, startTime, endTime]);
 
   const isFilterActive = useMemo(() => {
     return selectedUser !== 'all' ||
            selectedContact !== 'all' ||
-           selectedCompany !== 'all' ||
+           selectedClient !== 'all' ||
            selectedStatus !== 'all' ||
            interactionTypeId !== 'all' ||
            startTime !== undefined ||
            endTime !== undefined;
-  }, [selectedUser, selectedContact, selectedCompany, selectedStatus, interactionTypeId, startTime, endTime]);
+  }, [selectedUser, selectedContact, selectedClient, selectedStatus, interactionTypeId, startTime, endTime]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
@@ -226,7 +226,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   const resetFilters = () => {
     setSelectedUser('all');
     setSelectedContact('all');
-    setSelectedCompany('all');
+    setSelectedClient('all');
     setSelectedStatus('all');
     setStartTime(undefined);
     setEndTime(undefined);
@@ -248,24 +248,24 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
   };
   const contactPickerValue = selectedContact === 'all' ? '' : selectedContact;
   
-  const handleCompanyChange = (companyId: string | null) => {
-    const newCompanySelection = companyId === null || companyId === '' ? 'all' : companyId;
-    setSelectedCompany(newCompanySelection);
+  const handleClientChange = (clientId: string | null) => {
+    const newClientSelection = clientId === null || clientId === '' ? 'all' : clientId;
+    setSelectedClient(newClientSelection);
     
-    // Reset contact selection when company changes
-    if (newCompanySelection !== selectedCompany) {
+    // Reset contact selection when client changes
+    if (newClientSelection !== selectedClient) {
       setSelectedContact('all');
     }
   };
-  const selectedCompanyValue = selectedCompany === 'all' ? null : selectedCompany;
+  const selectedClientValue = selectedClient === 'all' ? null : selectedClient;
   
-  // Filter contacts based on selected company
+  // Filter contacts based on selected client
   const filteredContacts = useMemo(() => {
-    if (selectedCompany === 'all') {
-      return contacts; // Show all contacts if no company is selected
+    if (selectedClient === 'all') {
+      return contacts; // Show all contacts if no client is selected
     }
-    return contacts.filter(contact => contact.company_id === selectedCompany);
-  }, [contacts, selectedCompany]);
+    return contacts.filter(contact => contact.client_id === selectedClient);
+  }, [contacts, selectedClient]);
 
   return (
     <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
@@ -363,13 +363,13 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               buttonWidth="full"
             />      
             <div className="space-y-2">
-              <CompanyPicker
-                {...companyPickerProps}
-                companies={companies}
-                onSelect={handleCompanyChange}
-                selectedCompanyId={selectedCompanyValue}
-                filterState={companyFilterState}
-                onFilterStateChange={setCompanyFilterState}
+              <ClientPicker
+                {...clientPickerProps}
+                clients={clients}
+                onSelect={handleClientChange}
+                selectedClientId={selectedClientValue}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
                 clientTypeFilter={clientTypeFilter}
                 onClientTypeFilterChange={setClientTypeFilter}
                 fitContent={false}
@@ -379,9 +379,9 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
               contacts={filteredContacts}
               value={contactPickerValue}
               onValueChange={handleContactChange}
-              placeholder={selectedCompany === 'all' ? "All Contacts" : "Contacts from selected company"}
+              placeholder={selectedClient === 'all' ? "All Contacts" : "Contacts from selected client"}
               buttonWidth="full"
-              disabled={selectedCompany !== 'all' && filteredContacts.length === 0}
+              disabled={selectedClient !== 'all' && filteredContacts.length === 0}
             />
             <CustomSelect
               options={[
@@ -453,7 +453,7 @@ const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({
                     {interaction.contact_name}
                   </Link>
                 )}
-                {interaction.company_name && ` (${interaction.company_name})`}
+                {interaction.client_name && ` (${interaction.client_name})`}
               </p>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <span>By {interaction.user_name}</span>

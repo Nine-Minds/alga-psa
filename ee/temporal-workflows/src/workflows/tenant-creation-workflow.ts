@@ -25,18 +25,18 @@ import type {
 
 // Define activity proxies with appropriate timeouts and retry policies
 const activities = proxyActivities<{
-  createTenant(input: { tenantName: string; email: string; companyName?: string; licenseCount?: number }): Promise<CreateTenantActivityResult>;
+  createTenant(input: { tenantName: string; email: string; companyName?: string; clientName?: string; licenseCount?: number }): Promise<CreateTenantActivityResult>;
   createAdminUser(input: {
     tenantId: string;
     firstName: string;
     lastName: string;
     email: string;
-    companyId?: string;
+    clientId?: string;
   }): Promise<CreateAdminUserActivityResult>;
   setupTenantData(input: {
     tenantId: string;
     adminUserId: string;
-    companyId?: string;
+    clientId?: string;
     billingPlan?: string;
   }): Promise<SetupTenantDataActivityResult>;
   run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
@@ -50,22 +50,22 @@ const activities = proxyActivities<{
     error?: string;
   }): Promise<void>;
   // Customer tracking activities
-  createCustomerCompanyActivity(input: {
+  createCustomerClientActivity(input: {
     tenantName: string;
     adminUserEmail: string;
   }): Promise<{ customerId: string }>;
   createCustomerContactActivity(input: {
-    companyId: string;
+    clientId: string;
     firstName: string;
     lastName: string;
     email: string;
   }): Promise<{ contactId: string }>;
-  tagCustomerCompanyActivity(input: {
-    companyId: string;
+  tagCustomerClientActivity(input: {
+    clientId: string;
     tagText: string;
   }): Promise<{ tagId: string }>;
-  deleteCustomerCompanyActivity(input: {
-    companyId: string;
+  deleteCustomerClientActivity(input: {
+    clientId: string;
   }): Promise<void>;
   deleteCustomerContactActivity(input: {
     contactId: string;
@@ -140,7 +140,7 @@ export async function tenantCreationWorkflow(
   let emailSent = false;
   
   // Customer tracking variables
-  let customerCompanyId: string | undefined;
+  let customerClientId: string | undefined;
   let customerContactId: string | undefined;
   let customerTagId: string | undefined;
   let portalUserId: string | undefined;
@@ -192,21 +192,25 @@ export async function tenantCreationWorkflow(
     }
 
     log.info('Creating tenant', { tenantName: input.tenantName, licenseCount: input.licenseCount });
+    const tenantCompanyName = input.companyName ?? input.tenantName;
+    const tenantDefaultClientName = input.clientName ?? tenantCompanyName;
+
     const tenantResult = await activities.createTenant({
       tenantName: input.tenantName,
       email: input.adminUser.email,
-      companyName: input.companyName,
+      companyName: tenantCompanyName,
+      clientName: tenantDefaultClientName,
       licenseCount: input.licenseCount,
     });
     
     tenantCreated = true;
     workflowState.tenantId = tenantResult.tenantId;
-    workflowState.companyId = tenantResult.companyId;
+    workflowState.clientId = tenantResult.clientId;
     workflowState.progress = 40;
 
     log.info('Tenant created successfully', { 
       tenantId: tenantResult.tenantId, 
-      companyId: tenantResult.companyId 
+      clientId: tenantResult.clientId 
     });
 
     // Step 2: Run onboarding seeds (roles, permissions, etc.)
@@ -237,7 +241,7 @@ export async function tenantCreationWorkflow(
       firstName: input.adminUser.firstName,
       lastName: input.adminUser.lastName,
       email: input.adminUser.email,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
     });
 
     userCreated = true;
@@ -262,7 +266,7 @@ export async function tenantCreationWorkflow(
     const setupResult = await activities.setupTenantData({
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
       billingPlan: input.billingPlan,
     });
 
@@ -282,18 +286,18 @@ export async function tenantCreationWorkflow(
 
       log.info('Creating customer tracking records in nineminds tenant');
       
-      // Create customer company
-      const customerCompanyResult = await activities.createCustomerCompanyActivity({
+      // Create customer client
+      const customerClientResult = await activities.createCustomerClientActivity({
         tenantName: input.tenantName,
         adminUserEmail: input.adminUser.email,
       });
-      customerCompanyId = customerCompanyResult.customerId;
+      customerClientId = customerClientResult.customerId;
       
-      log.info('Customer company created', { customerId: customerCompanyId });
+      log.info('Customer client created', { customerId: customerClientId });
 
       // Create customer contact
       const customerContactResult = await activities.createCustomerContactActivity({
-        companyId: customerCompanyId,
+        clientId: customerClientId,
         firstName: input.adminUser.firstName,
         lastName: input.adminUser.lastName,
         email: input.adminUser.email,
@@ -302,14 +306,14 @@ export async function tenantCreationWorkflow(
       
       log.info('Customer contact created', { contactId: customerContactId });
 
-      // Tag company as PSA Customer
-      const tagResult = await activities.tagCustomerCompanyActivity({
-        companyId: customerCompanyId,
+      // Tag client as PSA Customer
+      const tagResult = await activities.tagCustomerClientActivity({
+        clientId: customerClientId,
         tagText: 'PSA Customer',
       });
       customerTagId = tagResult.tagId;
       
-      log.info('Customer company tagged', { tagId: customerTagId });
+      log.info('Customer client tagged', { tagId: customerTagId });
       
       // Create portal user in Nine Minds tenant for the new customer
       // This allows them to access a client portal in the Nine Minds system
@@ -325,7 +329,7 @@ export async function tenantCreationWorkflow(
             email: input.adminUser.email,
             password: temporaryPassword, // Use the same password as the admin user
             contactId: customerContactId,
-            companyId: customerCompanyId,
+            clientId: customerClientId,
             firstName: input.adminUser.firstName,
             lastName: input.adminUser.lastName,
             isClientAdmin: true // Make them a client admin in the portal
@@ -378,7 +382,8 @@ export async function tenantCreationWorkflow(
         email: input.adminUser.email,
       },
       temporaryPassword,
-      companyName: input.companyName,
+      clientName: tenantDefaultClientName,
+      companyName: tenantCompanyName,
     });
 
     emailSent = emailResult.emailSent;
@@ -434,13 +439,13 @@ export async function tenantCreationWorkflow(
     return {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
       temporaryPassword,
       emailSent,
       success: true,
       createdAt: new Date().toISOString(),
       // Include customer tracking IDs if they were created
-      customerCompanyId,
+      customerClientId,
       customerContactId,
     };
 
@@ -500,12 +505,12 @@ export async function tenantCreationWorkflow(
         }
       }
       
-      if (customerCompanyId) {
+      if (customerClientId) {
         try {
-          log.info('Rolling back customer company', { companyId: customerCompanyId });
-          await activities.deleteCustomerCompanyActivity({ companyId: customerCompanyId });
+          log.info('Rolling back customer client', { clientId: customerClientId });
+          await activities.deleteCustomerClientActivity({ clientId: customerClientId });
         } catch (customerRollbackError) {
-          log.warn('Failed to rollback customer company (non-critical)', { 
+          log.warn('Failed to rollback customer client (non-critical)', { 
             error: customerRollbackError instanceof Error ? customerRollbackError.message : 'Unknown error'
           });
         }

@@ -28,7 +28,7 @@ interface LanguagePreferenceProps {
   /** Current effective locale (what's actually being used) */
   currentEffectiveLocale?: SupportedLocale;
   /** Where the inherited locale comes from */
-  inheritedSource?: 'company' | 'tenant' | 'system';
+  inheritedSource?: 'client' | 'tenant' | 'system';
 }
 
 export function LanguagePreference({
@@ -63,12 +63,12 @@ export function LanguagePreference({
       let inheritedLabel = t('language.preference.notSet', 'Not set');
       if (currentEffectiveLocale) {
         const sourceKey =
-          inheritedSource === 'company'
-            ? 'language.preference.source.company'
+          inheritedSource === 'client'
+            ? 'language.preference.source.client'
             : inheritedSource === 'tenant'
             ? 'language.preference.source.tenant'
             : 'language.preference.source.system';
-        const sourceText = t(sourceKey, inheritedSource === 'company' ? 'company default' : inheritedSource === 'tenant' ? 'tenant default' : 'system default');
+        const sourceText = t(sourceKey, inheritedSource === 'client' ? 'client default' : inheritedSource === 'tenant' ? 'tenant default' : 'system default');
         inheritedLabel = t(
           'language.preference.notSetWithSource',
           'Not set (Uses {{source}}: {{languageName}} - {{locale}})',

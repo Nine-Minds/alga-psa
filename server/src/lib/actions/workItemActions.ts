@@ -16,7 +16,7 @@ export interface BaseSearchOptions {
   includeInactive?: boolean;
   assignedTo?: string;
   assignedToMe?: boolean;
-  companyId?: string;
+  clientId?: string;
   dateRange?: {
     start?: Date;
     end?: Date;
@@ -55,8 +55,8 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
     let ticketsQuery = db('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
       .where('t.tenant', tenant)
-      .innerJoin('companies as c', function() {
-        this.on('t.company_id', '=', 'c.company_id')
+      .innerJoin('clients as c', function() {
+        this.on('t.client_id', '=', 'c.client_id')
             .andOn('t.tenant', '=', 'c.tenant');
       })
       .leftJoin('statuses as s', function() {
@@ -109,8 +109,8 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
            });
          }
 
-         if (options.companyId) {
-           queryBuilder.where('t.company_id', options.companyId);
+         if (options.clientId) {
+           queryBuilder.where('t.client_id', options.clientId);
          }
 
          const startDate = options.dateRange?.start;
@@ -142,8 +142,8 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
          db.raw('NULL::text as project_name'),
          db.raw('NULL::text as phase_name'),
          db.raw('NULL::text as task_name'),
-         't.company_id',
-         'c.company_name as company_name',
+         't.client_id',
+         'c.client_name as client_name',
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
@@ -224,7 +224,7 @@ export async function searchDispatchWorkItems(options: DispatchSearchOptions): P
         project_name: item.project_name,
         phase_name: item.phase_name,
         task_name: item.task_name,
-        company_name: item.company_name,
+        client_name: item.client_name,
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || [],
@@ -283,8 +283,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
     let ticketsQuery = db('tickets as t')
       .whereNotIn('t.ticket_id', options.availableWorkItemIds || [])
       .where('t.tenant', tenant)
-      .innerJoin('companies as c', function() {
-        this.on('t.company_id', '=', 'c.company_id')
+      .innerJoin('clients as c', function() {
+        this.on('t.client_id', '=', 'c.client_id')
             .andOn('t.tenant', '=', 'c.tenant');
       })
       .leftJoin('statuses as s', function() {
@@ -326,8 +326,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
            });
          }
 
-         if (options.companyId) {
-           queryBuilder.where('t.company_id', options.companyId);
+         if (options.clientId) {
+           queryBuilder.where('t.client_id', options.clientId);
          }
 
          const startDate = options.dateRange?.start;
@@ -359,8 +359,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          db.raw('NULL::text as project_name'),
          db.raw('NULL::text as phase_name'),
          db.raw('NULL::text as task_name'),
-         't.company_id',
-         'c.company_name as company_name',
+         't.client_id',
+         'c.client_name as client_name',
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('t.closed_at::timestamp with time zone as due_date'),
@@ -379,8 +379,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         this.on('pp.project_id', '=', 'p.project_id')
             .andOn('pp.tenant', '=', 'p.tenant');
       })
-      .innerJoin('companies as c', function() {
-        this.on('p.company_id', '=', 'c.company_id')
+      .innerJoin('clients as c', function() {
+        this.on('p.client_id', '=', 'c.client_id')
             .andOn('p.tenant', '=', 'c.tenant');
       })
       .leftJoin('project_status_mappings as psm', function() {
@@ -454,8 +454,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
            });
          }
 
-         if (options.companyId) {
-           queryBuilder.where('p.company_id', options.companyId);
+         if (options.clientId) {
+           queryBuilder.where('p.client_id', options.clientId);
          }
 
          const startDate = options.dateRange?.start;
@@ -487,8 +487,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
          'p.project_name',
          'pp.phase_name',
          'pt.task_name',
-         'p.company_id',
-         'c.company_name as company_name',
+         'p.client_id',
+         'c.client_name as client_name',
          db.raw('NULL::timestamp with time zone as scheduled_start'),
          db.raw('NULL::timestamp with time zone as scheduled_end'),
          db.raw('pt.due_date::timestamp with time zone as due_date'),
@@ -548,8 +548,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
           db.raw('NULL::text as task_name'),
-          db.raw('NULL::uuid as company_id'),
-          db.raw('NULL::text as company_name'),
+          db.raw('NULL::uuid as client_id'),
+          db.raw('NULL::text as client_name'),
           'se.scheduled_start',
           'se.scheduled_end',
           db.raw('NULL::timestamp with time zone as due_date'),
@@ -564,8 +564,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
       interactionsQuery = db('interactions as i')
         .whereNotIn('i.interaction_id', options.availableWorkItemIds || [])
         .where('i.tenant', tenant)
-        .leftJoin('companies as c', function() {
-          this.on('i.company_id', '=', 'c.company_id')
+        .leftJoin('clients as c', function() {
+          this.on('i.client_id', '=', 'c.client_id')
               .andOn('i.tenant', '=', 'c.tenant');
         })
         .leftJoin('interaction_types as it', function() {
@@ -583,8 +583,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
           db.raw('NULL::text as task_name'),
-          'i.company_id',
-          'c.company_name',
+          'i.client_id',
+          'c.client_name',
           db.raw('NULL::timestamp with time zone as scheduled_start'),
           db.raw('NULL::timestamp with time zone as scheduled_end'),
           db.raw('NULL::timestamp with time zone as due_date'),
@@ -593,8 +593,8 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         );
 
       // Apply filters
-      if (options.companyId) {
-        interactionsQuery.where('c.company_id', options.companyId);
+      if (options.clientId) {
+        interactionsQuery.where('c.client_id', options.clientId);
       }
       
       if (options.dateRange?.start || options.dateRange?.end) {
@@ -688,7 +688,7 @@ export async function searchPickerWorkItems(options: PickerSearchOptions): Promi
         project_name: item.project_name,
         phase_name: item.phase_name,
         task_name: item.task_name,
-        company_name: item.company_name,
+        client_name: item.client_name,
         due_date: item.due_date,
         additional_user_ids: item.additional_user_ids || [],
         assigned_user_ids: item.assigned_user_ids || [],
@@ -787,8 +787,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           this.on('t.contact_name_id', '=', 'ct.contact_name_id')
               .andOn('t.tenant', '=', 'ct.tenant');
         })
-        .leftJoin('companies as co', function() {
-          this.on('t.company_id', '=', 'co.company_id')
+        .leftJoin('clients as co', function() {
+          this.on('t.client_id', '=', 'co.client_id')
               .andOn('t.tenant', '=', 'co.tenant');
         })
         .leftJoin(
@@ -810,8 +810,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           db.raw("'ticket' as type"),
           't.ticket_number',
           't.title',
-          't.company_id',
-          'co.company_name',
+          't.client_id',
+          'co.client_name',
           's.name as status_name',
           'ch.board_name as board_name',
           db.raw("u_assignee.first_name || ' ' || u_assignee.last_name as assigned_to_name"),
@@ -905,8 +905,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           'i.interaction_id': workItemId,
           'i.tenant': tenant
         })
-        .leftJoin('companies as c', function() {
-          this.on('i.company_id', '=', 'c.company_id')
+        .leftJoin('clients as c', function() {
+          this.on('i.client_id', '=', 'c.client_id')
               .andOn('i.tenant', '=', 'c.tenant');
         })
         .leftJoin('interaction_types as it', function() {
@@ -931,8 +931,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
           db.raw('NULL::text as project_name'),
           db.raw('NULL::text as phase_name'),
           db.raw('NULL::text as task_name'),
-          'i.company_id',
-          'c.company_name',
+          'i.client_id',
+          'c.client_name',
           's.name as status_name',
           'it.type_name as interaction_type',
           'ct.full_name as contact_name',
@@ -954,8 +954,8 @@ export async function getWorkItemById(workItemId: string, workItemType: WorkItem
         project_name: workItem.project_name,
         phase_name: workItem.phase_name,
         task_name: workItem.task_name,
-        company_id: workItem.company_id,
-        company_name: workItem.company_name,
+        client_id: workItem.client_id,
+        client_name: workItem.client_name,
         status_name: workItem.status_name,
         board_name: workItem.board_name,
         assigned_to_name: workItem.assigned_to_name,

@@ -284,7 +284,7 @@ const ClientPortalDomainSettings = () => {
                       variant="outline"
                       size="sm"
                       onClick={handleRetry}
-                      disabled={submitting || retrying || enabling}
+                      disabled={submitting || retrying}
                     >
                       {retrying ? 'Retrying…' : 'Retry'}
                     </Button>

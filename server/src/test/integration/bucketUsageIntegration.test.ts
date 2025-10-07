@@ -9,7 +9,7 @@ import { findOrCreateCurrentBucketUsageRecord, reconcileBucketUsageRecord } from
 import { getRemainingBucketUnits } from 'server/src/lib/actions/report-actions/getRemainingBucketUnits';
 
 // Test utilities (if any, e.g., for creating test data)
-// import { createTestCompany, createTestPlan, createTestService, assignPlanToCompany, etc } from 'server/test-utils/seed';
+// import { createTestClient, createTestPlan, createTestService, assignPlanToClient, etc } from 'server/test-utils/seed';
 
 // Global test variables
 let knex: Knex;
@@ -65,11 +65,11 @@ describe('Bucket Usage Integration Tests', () => {
   describe('Time Entry Integration', () => {
     it.skip('should create a bucket usage record and increment hours when a relevant time entry is saved', async () => {
       // TODO: Implement test
-      // 1. Setup: Create Company, Service, Bucket Plan, Bucket Config, Assign Plan to Company.
-      // 2. Action: Call `saveTimeEntry` for a billable entry linked to the company/service/plan.
+      // 1. Setup: Create Client, Service, Bucket Plan, Bucket Config, Assign Plan to Client.
+      // 2. Action: Call `saveTimeEntry` for a billable entry linked to the client/service/plan.
       // 3. Verification:
       //    - Query `bucket_usage` table directly.
-      //    - Assert that a record exists for the correct period/company/service.
+      //    - Assert that a record exists for the correct period/client/service.
       //    - Assert that `minutes_used` matches the time entry duration (in minutes).
       //    - Assert `overage_minutes` is calculated correctly (likely 0 initially).
       //    - Assert `rolled_over_minutes` is 0 (assuming first entry).
@@ -78,7 +78,7 @@ describe('Bucket Usage Integration Tests', () => {
 
     it.skip('should update hours_used when a relevant time entry is updated', async () => {
       // TODO: Implement test
-      // 1. Setup: Create initial state (Company, Plan, Config, Assignment, initial Time Entry, initial Bucket Usage record).
+      // 1. Setup: Create initial state (Client, Plan, Config, Assignment, initial Time Entry, initial Bucket Usage record).
       // 2. Action: Call `saveTimeEntry` again to *update* the existing time entry (e.g., change duration).
       // 3. Verification:
       //    - Query `bucket_usage` table.
@@ -89,7 +89,7 @@ describe('Bucket Usage Integration Tests', () => {
 
     it.skip('should decrement hours_used when a relevant time entry is deleted', async () => {
       // TODO: Implement test
-      // 1. Setup: Create initial state (Company, Plan, Config, Assignment, Time Entry, Bucket Usage record with initial hours).
+      // 1. Setup: Create initial state (Client, Plan, Config, Assignment, Time Entry, Bucket Usage record with initial hours).
       // 2. Action: Call `deleteTimeEntry` for the created time entry.
       // 3. Verification:
       //    - Query `bucket_usage` table.
@@ -100,7 +100,7 @@ describe('Bucket Usage Integration Tests', () => {
 
     it.skip('should handle non-billable time entries correctly (no change to bucket usage)', async () => {
       // TODO: Implement test
-      // 1. Setup: Create initial state (Company, Plan, Config, Assignment).
+      // 1. Setup: Create initial state (Client, Plan, Config, Assignment).
       // 2. Action: Call `saveTimeEntry` for a *non-billable* entry.
       // 3. Verification:
       //    - Query `bucket_usage` table.
@@ -111,7 +111,7 @@ describe('Bucket Usage Integration Tests', () => {
      it.skip('should correctly calculate rollover when creating the first time entry for a new period', async () => {
       // TODO: Implement test
       // 1. Setup:
-      //    - Create state for a *previous* period (Company, Plan, Config, Assignment).
+      //    - Create state for a *previous* period (Client, Plan, Config, Assignment).
       //    - Add time entries in the previous period resulting in, e.g., 80 hours used out of 100 total, with rollover enabled.
       //    - Ensure the previous `bucket_usage` record reflects this.
       // 2. Action: Call `saveTimeEntry` for a billable entry in the *current* period.
@@ -127,8 +127,8 @@ describe('Bucket Usage Integration Tests', () => {
   describe('Usage Tracking Integration', () => {
     it.skip('should create a bucket usage record and increment hours when a relevant usage record is created', async () => {
       // TODO: Implement test (Similar structure to time entry creation test)
-      // 1. Setup: Company, Service, Bucket Plan, Config, Assignment.
-      // 2. Action: Call `createUsageRecord` (billable, linked to company/service/plan).
+      // 1. Setup: Client, Service, Bucket Plan, Config, Assignment.
+      // 2. Action: Call `createUsageRecord` (billable, linked to client/service/plan).
       // 3. Verification: Query `bucket_usage`, assert record exists, `hours_used` matches quantity, overage/rollover correct.
       expect(true).toBe(false); // Placeholder
     });
@@ -154,9 +154,9 @@ describe('Bucket Usage Integration Tests', () => {
     it.skip('should correctly reconcile hours_used based on existing time entries and usage records', async () => {
       // TODO: Implement test
       // 1. Setup:
-      //    - Create Company, Service, Plan, Config, Assignment.
+      //    - Create Client, Service, Plan, Config, Assignment.
       //    - Create a `bucket_usage` record manually or via an initial entry, but set `hours_used` to an incorrect value (e.g., 0 or 999).
-      //    - Create several billable `time_entries` within the period for the company/service.
+      //    - Create several billable `time_entries` within the period for the client/service.
       //    - Create several billable `usage_tracking` records within the period.
       // 2. Action: Call `reconcileBucketUsageRecord` for the specific `usage_id`.
       // 3. Verification:
@@ -175,9 +175,9 @@ describe('Bucket Usage Integration Tests', () => {
     it.skip('getRemainingBucketUnits should return correct remaining hours including rollover', async () => {
       // TODO: Implement test
       // 1. Setup:
-      //    - Create Company, Service, Plan, Config (e.g., total_hours=100, allow_rollover=true), Assignment.
+      //    - Create Client, Service, Plan, Config (e.g., total_hours=100, allow_rollover=true), Assignment.
       //    - Create a `bucket_usage` record for the current period with `minutes_used` = 30 and `rolled_over_minutes` = 20.
-      // 2. Action: Call `getRemainingBucketUnits` for the company and current date.
+      // 2. Action: Call `getRemainingBucketUnits` for the client and current date.
       // 3. Verification:
       //    - Find the relevant result entry in the returned array.
       //    - Assert `total_minutes` is 100.
@@ -190,7 +190,7 @@ describe('Bucket Usage Integration Tests', () => {
     it.skip('getRemainingBucketUnits should return correct remaining hours when in overage', async () => {
        // TODO: Implement test
       // 1. Setup:
-      //    - Create Company, Service, Plan, Config (e.g., total_hours=50, allow_rollover=false), Assignment.
+      //    - Create Client, Service, Plan, Config (e.g., total_hours=50, allow_rollover=false), Assignment.
       //    - Create a `bucket_usage` record for the current period with `hours_used` = 65 and `rolled_over_hours` = 0.
       // 2. Action: Call `getRemainingBucketUnits`.
       // 3. Verification:

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getScheduledHoursForTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
-import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, ICompany, ICompanyLocation } from 'server/src/interfaces'; // Added ICompany and ICompanyLocation
+import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation } from 'server/src/interfaces'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from 'server/src/interfaces/auth.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
@@ -16,12 +16,12 @@ import { formatMinutesAsHoursAndMinutes } from 'server/src/lib/utils/dateTimeUti
 import styles from './TicketDetails.module.css';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import UserAvatar from 'server/src/components/ui/UserAvatar';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import { toast } from 'react-hot-toast';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { IntervalManagement } from 'server/src/components/time-management/interval-tracking/IntervalManagement';
-import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
+import ClientAvatar from 'server/src/components/ui/ClientAvatar';
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getUserAvatarUrlAction, getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getUserContactId } from 'server/src/lib/actions/user-actions/userActions';
@@ -31,7 +31,7 @@ import { getTicketingDisplaySettings } from 'server/src/lib/actions/ticket-actio
 interface TicketPropertiesProps {
   id?: string;
   ticket: ITicket;
-  company: any;
+  client: any;
   contactInfo: any;
   createdByUser: any;
   board: any;
@@ -47,24 +47,24 @@ interface TicketPropertiesProps {
   userId: string;
   tenant: string;
   contacts: any[];
-  companies: ICompany[];
-  locations?: ICompanyLocation[];
-  companyFilterState: 'all' | 'active' | 'inactive';
+  clients: IClient[];
+  locations?: IClientLocation[];
+  clientFilterState: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
   onStart: () => void;
   onPause: () => void;
   onStop: () => void;
   onTimeDescriptionChange: (value: string) => void;
   onAddTimeEntry: () => void;
-  onCompanyClick: () => void;
+  onClientClick: () => void;
   onContactClick: () => void;
   onAgentClick: (userId: string) => void;
   onAddAgent: (userId: string) => Promise<void>;
   onRemoveAgent: (assignmentId: string) => Promise<void>;
   onChangeContact: (contactId: string | null) => void;
-  onChangeCompany: (companyId: string) => void;
+  onChangeClient: (clientId: string) => void;
   onChangeLocation?: (locationId: string | null) => void;
-  onCompanyFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
+  onClientFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   tags?: ITag[];
   allTagTexts?: string[];
@@ -73,7 +73,7 @@ interface TicketPropertiesProps {
 }
 
 // Helper function to format location display
-const formatLocationDisplay = (location: ICompanyLocation): string => {
+const formatLocationDisplay = (location: IClientLocation): string => {
   const parts: string[] = [];
   
   if (location.location_name) {
@@ -102,7 +102,7 @@ const formatLocationDisplay = (location: ICompanyLocation): string => {
 const TicketProperties: React.FC<TicketPropertiesProps> = ({
   id = 'ticket-properties',
   ticket,
-  company,
+  client,
   contactInfo,
   createdByUser,
   board,
@@ -118,24 +118,24 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   userId,
   tenant,
   contacts,
-  companies,
+  clients,
   locations = [],
-  companyFilterState,
+  clientFilterState,
   clientTypeFilter,
   onStart,
   onPause,
   onStop,
   onTimeDescriptionChange,
   onAddTimeEntry,
-  onCompanyClick,
+  onClientClick,
   onContactClick,
   onAgentClick,
   onAddAgent,
   onRemoveAgent,
   onChangeContact,
-  onChangeCompany,
+  onChangeClient,
   onChangeLocation,
-  onCompanyFilterStateChange,
+  onClientFilterStateChange,
   onClientTypeFilterChange,
   tags = [],
   allTagTexts = [],
@@ -144,11 +144,11 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
-  const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+  const [showClientPicker, setShowClientPicker] = useState(false);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [contactFilterState, setContactFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [agentSchedules, setAgentSchedules] = useState<IAgentSchedule[]>([]);
   const [primaryAgentAvatarUrl, setPrimaryAgentAvatarUrl] = useState<string | null>(null);
@@ -156,21 +156,21 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   const [contactAvatarUrl, setContactAvatarUrl] = useState<string | null>(null);
   const [dateTimeFormat, setDateTimeFormat] = useState<string>('MMM d, yyyy h:mm a');
 
-  const uniqueCompaniesForPicker = React.useMemo(() => {
-    if (!companies) return [];
+  const uniqueClientsForPicker = React.useMemo(() => {
+    if (!clients) return [];
     const seen = new Set<string>();
-    return companies.filter(company => {
-      // Ensure company and company_id are valid before processing
-      if (!company || typeof company.company_id === 'undefined') {
+    return clients.filter(client => {
+      // Ensure client and client_id are valid before processing
+      if (!client || typeof client.client_id === 'undefined') {
         return false;
       }
-      if (seen.has(company.company_id)) {
+      if (seen.has(client.client_id)) {
         return false;
       }
-      seen.add(company.company_id);
+      seen.add(client.client_id);
       return true;
     });
-  }, [companies]);
+  }, [clients]);
 
   // Fetch scheduled hours from schedule entries
   useEffect(() => {
@@ -394,7 +394,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                       contacts={contacts}
                       value={selectedContactId ?? contactInfo?.contact_name_id ?? ''}
                       onValueChange={setSelectedContactId}
-                      companyId={company?.company_id}
+                      clientId={client?.client_id}
                       placeholder="Select or change contact"
                     />
                   </div>
@@ -451,41 +451,41 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             <h5 className="font-bold">Client</h5>
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
-                {company && (
-                  <CompanyAvatar
-                    companyId={company.company_id}
-                    companyName={company.company_name}
-                    logoUrl={company.logoUrl}
+                {client && (
+                  <ClientAvatar
+                    clientId={client.client_id}
+                    clientName={client.client_name}
+                    logoUrl={client.logoUrl}
                     size="sm"
                   />
                 )}
                 <p
                   className="text-sm text-blue-500 cursor-pointer hover:underline"
-                  onClick={onCompanyClick}
+                  onClick={onClientClick}
                 >
-                  {company?.company_name || 'N/A'}
+                  {client?.client_name || 'N/A'}
                 </p>
                 <Button
-                  {...withDataAutomationId({ id: `${id}-show-company-picker-btn` })}
+                  {...withDataAutomationId({ id: `${id}-show-client-picker-btn` })}
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowCompanyPicker(!showCompanyPicker)}
+                  onClick={() => setShowClientPicker(!showClientPicker)}
                   className="p-1 h-auto"
                 >
                   <Edit2 className="h-3 w-3" />
                 </Button>
               </div>
-              {showCompanyPicker && (
+              {showClientPicker && (
                 <div className="space-y-2">
                   <div className="flex items-center group relative">
                     <div className="w-full">
-                      <CompanyPicker
-                        {...withDataAutomationId({ id: `${id}-company-picker` })}
-                        companies={uniqueCompaniesForPicker}
-                        onSelect={setSelectedCompanyId}
-                        selectedCompanyId={selectedCompanyId || company?.company_id || ''}
-                        filterState={companyFilterState}
-                        onFilterStateChange={onCompanyFilterStateChange}
+                      <ClientPicker
+                        {...withDataAutomationId({ id: `${id}-client-picker` })}
+                        clients={uniqueClientsForPicker}
+                        onSelect={setSelectedClientId}
+                        selectedClientId={selectedClientId || client?.client_id || ''}
+                        filterState={clientFilterState}
+                        onFilterStateChange={onClientFilterStateChange}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={onClientTypeFilterChange}
                         fitContent={false}
@@ -494,25 +494,25 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   </div>
                   <div className="flex justify-end space-x-2">
                     <Button
-                      {...withDataAutomationId({ id: `${id}-cancel-company-picker-btn` })}
+                      {...withDataAutomationId({ id: `${id}-cancel-client-picker-btn` })}
                       variant="outline"
                       size="sm"
                       onClick={() => {
-                        setShowCompanyPicker(false);
-                        setSelectedCompanyId(null);
+                        setShowClientPicker(false);
+                        setSelectedClientId(null);
                       }}
                     >
                       Cancel
                     </Button>
                     <Button
-                      {...withDataAutomationId({ id: `${id}-save-company-picker-btn` })}
+                      {...withDataAutomationId({ id: `${id}-save-client-picker-btn` })}
                       variant="default"
                       size="sm"
                       onClick={() => {
-                        if (selectedCompanyId) {
-                          onChangeCompany(selectedCompanyId);
+                        if (selectedClientId) {
+                          onChangeClient(selectedClientId);
                         }
-                        setShowCompanyPicker(false);
+                        setShowClientPicker(false);
                       }}
                     >
                       Save
@@ -522,7 +522,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               )}
             </div>
           </div>
-          {company && locations.length > 0 && (
+          {client && locations.length > 0 && (
             <div>
               <h5 className="font-bold">Location</h5>
               <div className="space-y-2">
@@ -600,15 +600,15 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
             </div>
           )}
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Company Phone'}</h5>
+            <h5 className="font-bold">{contactInfo ? 'Contact Phone' : 'Client Phone'}</h5>
             <p className="text-sm">
-              {contactInfo?.phone_number || company?.phone_no || 'N/A'}
+              {contactInfo?.phone_number || client?.phone_no || 'N/A'}
             </p>
           </div>
           <div>
-            <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Company Email'}</h5>
+            <h5 className="font-bold">{contactInfo ? 'Contact Email' : 'Client Email'}</h5>
             <p className="text-sm">
-              {contactInfo?.email || company?.email || 'N/A'}
+              {contactInfo?.email || client?.email || 'N/A'}
             </p>
           </div>
         </div>

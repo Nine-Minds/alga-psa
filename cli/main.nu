@@ -117,12 +117,12 @@ def --wrapped main [
        print "  nu main.nu create-tenant <name> <email> [options]  # Create a new tenant"
        print "    --first-name: Admin user's first name (default: Admin)"
        print "    --last-name: Admin user's last name (default: User)"
-       print "    --company-name: Company name (defaults to tenant name)"
+       print "    --client-name: Client name (defaults to tenant name)"
        print "    --password: Admin password (generated if not provided)"
        print "    --seed-onboarding: Run onboarding seeds (default: true)"
        print "    --skip-onboarding: Set onboarding_skipped flag in tenant_settings"
-       print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\""
-       print "    Example: nu main.nu create-tenant \"Test Company\" \"admin@test.com\" --skip-onboarding"
+       print "    Example: nu main.nu create-tenant \"Test Client\" \"admin@test.com\""
+       print "    Example: nu main.nu create-tenant \"Test Client\" \"admin@test.com\" --skip-onboarding"
        print "  nu main.nu list-tenants           # List all tenants"
        print ""
        print "  nu main.nu cleanup-tenant <action> [args]  # Clean up test tenant data"
@@ -642,12 +642,12 @@ def --wrapped main [
            # Parse optional flags
            let first_name = (parse-flag $args "--first-name" | default "Admin")
            let last_name = (parse-flag $args "--last-name" | default "User")
-           let company_name = (parse-flag $args "--company-name" | default "")
+           let client_name = (parse-flag $args "--client-name" | default "")
            let password = (parse-flag $args "--password" | default "")
            let seed_onboarding = not (check-flag $args "--no-seed-onboarding")
            let skip_onboarding = (check-flag $args "--skip-onboarding")
            
-           create-tenant $tenant_name $admin_email --first-name $first_name --last-name $last_name --company-name $company_name --password $password --seed-onboarding $seed_onboarding --skip-onboarding $skip_onboarding
+           create-tenant $tenant_name $admin_email --first-name $first_name --last-name $last_name --client-name $client_name --password $password --seed-onboarding $seed_onboarding --skip-onboarding $skip_onboarding
        }
        "list-tenants" => {
            list-tenants

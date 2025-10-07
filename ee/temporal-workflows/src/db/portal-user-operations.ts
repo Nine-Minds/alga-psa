@@ -25,7 +25,7 @@ export async function createPortalUserInDB(
     email: input.email,
     tenantId: input.tenantId,
     contactId: input.contactId,
-    companyId: input.companyId
+    clientId: input.clientId
   });
 
   try {
@@ -39,7 +39,7 @@ export async function createPortalUserInDB(
       email: input.email.toLowerCase(),
       password,
       contactId: input.contactId,
-      companyId: input.companyId,
+      clientId: input.clientId,
       tenantId: input.tenantId,
       firstName: input.firstName,
       lastName: input.lastName,

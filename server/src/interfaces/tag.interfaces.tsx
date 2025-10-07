@@ -1,7 +1,7 @@
 import { TenantEntity } from ".";
 
 // Server-specific TaggedEntityType includes additional types not in shared
-export type TaggedEntityType = 'contact' | 'company' | 'ticket' | 'project' | 'project_task' | 'workflow_form' | 'document' | 'knowledge_base_article';
+export type TaggedEntityType = 'contact' | 'client' | 'ticket' | 'project' | 'project_task' | 'workflow_form' | 'document' | 'knowledge_base_article';
 
 // ITag represents a tag in the server context
 export interface ITag extends TenantEntity {

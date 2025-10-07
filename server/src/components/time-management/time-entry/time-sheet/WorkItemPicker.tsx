@@ -11,13 +11,13 @@ import { ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { searchPickerWorkItems, createWorkItem } from 'server/src/lib/actions/workItemActions';
 import { Button } from 'server/src/components/ui/Button';
 import UserPicker from 'server/src/components/ui/UserPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
 import { DateTimePicker } from 'server/src/components/ui/DateTimePicker';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 
 interface WorkItemPickerProps {
@@ -38,11 +38,11 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   const [includeInactive, setIncludeInactive] = useState(false);
   const [assignedTo, setAssignedTo] = useState<string>('');
   const [assignedToMe, setAssignedToMe] = useState(false);
-  const [companyId, setCompanyId] = useState<string>('');
+  const [clientId, setClientId] = useState<string>('');
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false);
@@ -120,12 +120,12 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [fetchedUsers, fetchedCompanies] = await Promise.all([
+        const [fetchedUsers, fetchedClients] = await Promise.all([
           getAllUsers(),
-          getAllCompanies()
+          getAllClients()
         ]);
         setUsers(fetchedUsers);
-        setCompanies(fetchedCompanies);
+        setClients(fetchedClients);
       } catch (error) {
         console.error('Error loading data:', error);
       }
@@ -165,7 +165,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
         includeInactive,
         assignedTo: assignedTo || undefined,
         assignedToMe,
-        companyId: companyId || undefined,
+        clientId: clientId || undefined,
         type: searchType,
         dateRange: startDate || endDate ? {
           start: startDate,
@@ -194,7 +194,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
     } finally {
       setIsSearching(false);
     }
-  }, [availableWorkItems, includeInactive, assignedTo, assignedToMe, companyId, startDate, endDate, searchType]);
+  }, [availableWorkItems, includeInactive, assignedTo, assignedToMe, clientId, startDate, endDate, searchType]);
 
   // Set initial date range based on time period, but only for timesheet context
   useEffect(() => {
@@ -437,7 +437,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   onClick={() => {
                     setAssignedTo('');
                     setAssignedToMe(false);
-                    setCompanyId('');
+                    setClientId('');
                     setStartDate(undefined);
                     setEndDate(undefined);
                     setFilterState('active');
@@ -457,11 +457,11 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
               </div>
             <div className="grid grid-cols-4 gap-4">
               <div className="flex items-center">
-                <CompanyPicker
-                  id="work-item-company-picker"
-                  selectedCompanyId={companyId}
+                <ClientPicker
+                  id="work-item-client-picker"
+                  selectedClientId={clientId}
                   onSelect={(value: string | null) => {
-                    setCompanyId(value || '');
+                    setClientId(value || '');
                     setCurrentPage(1);
                     loadWorkItems(searchTerm, 1);
                   }}
@@ -469,7 +469,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, timePeriod }: Wor
                   onFilterStateChange={setFilterState}
                   clientTypeFilter={clientTypeFilter}
                   onClientTypeFilterChange={setClientTypeFilter}
-                  companies={companies}
+                  clients={clients}
                   fitContent
                 />
               </div>

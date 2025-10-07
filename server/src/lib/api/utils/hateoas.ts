@@ -54,7 +54,7 @@ export function getHateoasLinks(
  * Generate links for specific resource types
  */
 export const resourceLinks = {
-  company: (id: string) => getCompanyLinks(id),
+  client: (id: string) => getClientLinks(id),
   contact: (id: string) => getContactLinks(id),
   project: (id: string) => getProjectLinks(id),
   ticket: (id: string) => getTicketLinks(id),
@@ -67,18 +67,18 @@ export const resourceLinks = {
 };
 
 /**
- * Company-specific HATEOAS links
+ * Client-specific HATEOAS links
  */
-function getCompanyLinks(id: string): HateoasLinks {
-  const base = getHateoasLinks('company', id);
+function getClientLinks(id: string): HateoasLinks {
+  const base = getHateoasLinks('client', id);
   return {
     ...base,
     contacts: {
-      href: `/api/v1/companies/${id}/contacts`,
+      href: `/api/v1/clients/${id}/contacts`,
       method: 'GET'
     },
     locations: {
-      href: `/api/v1/companies/${id}/locations`,
+      href: `/api/v1/clients/${id}/locations`,
       method: 'GET'
     }
   };
@@ -91,8 +91,8 @@ function getContactLinks(id: string): HateoasLinks {
   const base = getHateoasLinks('contact', id);
   return {
     ...base,
-    company: {
-      href: `/api/v1/contacts/${id}/company`,
+    client: {
+      href: `/api/v1/contacts/${id}/client`,
       method: 'GET'
     }
   };

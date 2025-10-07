@@ -214,7 +214,7 @@ async function ensureTenant(connection: Knex): Promise<string> {
   const newTenantId = uuidv4();
   await connection('tenants').insert({
     tenant: newTenantId,
-    company_name: 'Portal Domain Test Co',
+    client_name: 'Portal Domain Test Co',
     email: 'portal@test.co',
     created_at: connection.fn.now(),
     updated_at: connection.fn.now(),

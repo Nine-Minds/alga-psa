@@ -15,52 +15,52 @@ describe('Billing Plan Selection Logic', () => {
     // Mock the getEligibleBillingPlansForUI function to return a single plan
     vi.mocked(getEligibleBillingPlansForUI).mockResolvedValue([
       {
-        company_billing_plan_id: 'test-plan-id',
+        client_billing_plan_id: 'test-plan-id',
         plan_name: 'Test Plan',
         plan_type: 'Fixed'
       }
     ]);
 
-    const plans = await getEligibleBillingPlansForUI('company-1', 'service-1');
+    const plans = await getEligibleBillingPlansForUI('client-1', 'service-1');
     
     expect(plans).toHaveLength(1);
-    expect(plans[0].company_billing_plan_id).toBe('test-plan-id');
-    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('company-1', 'service-1');
+    expect(plans[0].client_billing_plan_id).toBe('test-plan-id');
+    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('client-1', 'service-1');
   });
 
   it('should return multiple plans when multiple plans are available', async () => {
     // Mock the getEligibleBillingPlansForUI function to return multiple plans
     vi.mocked(getEligibleBillingPlansForUI).mockResolvedValue([
       {
-        company_billing_plan_id: 'plan-id-1',
+        client_billing_plan_id: 'plan-id-1',
         plan_name: 'Fixed Plan',
         plan_type: 'Fixed'
       },
       {
-        company_billing_plan_id: 'plan-id-2',
+        client_billing_plan_id: 'plan-id-2',
         plan_name: 'Bucket Plan',
         plan_type: 'Bucket'
       }
     ]);
 
-    const plans = await getEligibleBillingPlansForUI('company-1', 'service-1');
+    const plans = await getEligibleBillingPlansForUI('client-1', 'service-1');
     
     expect(plans).toHaveLength(2);
-    expect(plans[0].company_billing_plan_id).toBe('plan-id-1');
-    expect(plans[1].company_billing_plan_id).toBe('plan-id-2');
-    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('company-1', 'service-1');
+    expect(plans[0].client_billing_plan_id).toBe('plan-id-1');
+    expect(plans[1].client_billing_plan_id).toBe('plan-id-2');
+    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('client-1', 'service-1');
   });
 
   it('should return an empty array when no plans are available', async () => {
     // Mock the getEligibleBillingPlansForUI function to return an empty array
     vi.mocked(getEligibleBillingPlansForUI).mockResolvedValue([]);
 
-    const plans = await getEligibleBillingPlansForUI('company-1', 'service-1');
+    const plans = await getEligibleBillingPlansForUI('client-1', 'service-1');
     
     expect(plans).toHaveLength(0);
-    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('company-1', 'service-1');
-    it('should handle the case when no company ID is available', async () => {
-      // This test verifies that the UI provides clear information when no company ID is available
+    expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('client-1', 'service-1');
+    it('should handle the case when no client ID is available', async () => {
+      // This test verifies that the UI provides clear information when no client ID is available
       
       // In this case, the UI should:
       // 1. Show the billing plan selector
@@ -72,7 +72,7 @@ describe('Billing Plan Selection Logic', () => {
       
       // In the UI, this would result in:
       // - A disabled dropdown with text "Using default billing plan"
-      // - Explanatory text: "Company information not available. The system will use the default billing plan."
+      // - Explanatory text: "Client information not available. The system will use the default billing plan."
     });
     
     it('should provide clear information when only one plan is available', async () => {
@@ -82,18 +82,18 @@ describe('Billing Plan Selection Logic', () => {
       // Mock the getEligibleBillingPlansForUI function to return a single plan
       vi.mocked(getEligibleBillingPlansForUI).mockResolvedValue([
         {
-          company_billing_plan_id: 'single-plan-id',
+          client_billing_plan_id: 'single-plan-id',
           plan_name: 'Only Available Plan',
           plan_type: 'Fixed'
         }
       ]);
   
-      const plans = await getEligibleBillingPlansForUI('company-1', 'service-1');
+      const plans = await getEligibleBillingPlansForUI('client-1', 'service-1');
       
       expect(plans).toHaveLength(1);
-      expect(plans[0].company_billing_plan_id).toBe('single-plan-id');
+      expect(plans[0].client_billing_plan_id).toBe('single-plan-id');
       expect(plans[0].plan_name).toBe('Only Available Plan');
-      expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('company-1', 'service-1');
+      expect(getEligibleBillingPlansForUI).toHaveBeenCalledWith('client-1', 'service-1');
       
       // In the UI, this would result in:
       // 1. The billing plan selector being visible

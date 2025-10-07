@@ -4,7 +4,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 
 describe('Billing Invoice Edge Cases', () => {
@@ -21,22 +21,22 @@ describe('Billing Invoice Edge Cases', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings',
+        'client_tax_settings',
         'transactions'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   afterAll(async () => {
@@ -44,11 +44,11 @@ describe('Billing Invoice Edge Cases', () => {
   });
 
   it('should validate total calculation for negative subtotal (credit note)', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Credit Note Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Credit Note Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -59,7 +59,7 @@ describe('Billing Invoice Edge Cases', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create NY tax rate (10% but won't apply to negative amounts)
     const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -69,9 +69,9 @@ describe('Billing Invoice Edge Cases', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -121,18 +121,18 @@ describe('Billing Invoice Edge Cases', () => {
     ]);
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Assign plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       start_date: '2025-02-01',
       is_active: true,
@@ -170,11 +170,11 @@ describe('Billing Invoice Edge Cases', () => {
   });
 
   it('should properly handle true zero-value invoices through the entire workflow', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Zero Value Invoice Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Zero Value Invoice Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -185,7 +185,7 @@ describe('Billing Invoice Edge Cases', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create tax rate settings
     const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -195,9 +195,9 @@ describe('Billing Invoice Edge Cases', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -230,18 +230,18 @@ describe('Billing Invoice Edge Cases', () => {
     });
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',
       period_end_date: '2025-03-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Assign plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       start_date: '2025-02-01',
       is_active: true,
@@ -300,16 +300,16 @@ describe('Billing Invoice Edge Cases', () => {
       const transaction = transactions[0];
       // We expect the transaction amount to be zero
       expect(parseInt(transaction.amount)).toBe(0);
-      // Verify the transaction is properly linked to the company and invoice
-      expect(transaction.company_id).toBe(company_id);
+      // Verify the transaction is properly linked to the client and invoice
+      expect(transaction.client_id).toBe(client_id);
       expect(transaction.invoice_id).toBe(draftInvoice!.invoice_id);
     }
 
-    // Step 4: Verify the company credit balance remains unchanged
-    const companyAfter = await context.db('companies')
-      .where({ company_id: company_id })
+    // Step 4: Verify the client credit balance remains unchanged
+    const clientAfter = await context.db('clients')
+      .where({ client_id: client_id })
       .first();
 
-    expect(companyAfter.credit_balance).toBe(0); // Should still be 0
+    expect(clientAfter.credit_balance).toBe(0); // Should still be 0
   });
 });

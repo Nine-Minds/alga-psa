@@ -1,12 +1,12 @@
 import { TestContext } from '../../../../test-utils/testContext';
-import { createTenant, createCompany } from '../../../../test-utils/testDataFactory';
+import { createTenant, createClient } from '../../../../test-utils/testDataFactory';
 import { v4 as uuidv4 } from 'uuid';
 
 export interface EmailScenario {
   tenant: { tenant: string };
-  company: {
-    company_id: string;
-    company_name: string;
+  client: {
+    client_id: string;
+    client_name: string;
     tenant: string;
   };
   contact: {
@@ -14,7 +14,7 @@ export interface EmailScenario {
     email: string;
     first_name: string;
     last_name: string;
-    company_id: string;
+    client_id: string;
   };
 }
 
@@ -33,7 +33,7 @@ export class EmailTestFactory {
   private context: TestContext;
   private createdResources: {
     tenants: string[];
-    companies: string[];
+    clients: string[];
     contacts: string[];
     emailProviders: string[];
   };
@@ -42,7 +42,7 @@ export class EmailTestFactory {
     this.context = context;
     this.createdResources = {
       tenants: [],
-      companies: [],
+      clients: [],
       contacts: [],
       emailProviders: []
     };
@@ -64,14 +64,14 @@ export class EmailTestFactory {
       console.log(`✅ Created test tenant: ${tenantId}`);
     }
 
-    // Create company for this test
-    const companyId = await createCompany(this.context.db, tenantId, 'E2E Test Company', {
+    // Create client for this test
+    const clientId = await createClient(this.context.db, tenantId, 'E2E Test Client', {
       billing_cycle: 'monthly'
     });
-    this.createdResources.companies.push(companyId);
+    this.createdResources.clients.push(clientId);
 
     // Create contact
-    const contact = await this.createContact(companyId, {
+    const contact = await this.createContact(clientId, {
       email: 'test.customer@example.com',
       first_name: 'Test',
       last_name: 'Customer'
@@ -79,16 +79,16 @@ export class EmailTestFactory {
 
     return {
       tenant: { tenant: tenantId },
-      company: {
-        company_id: companyId,
-        company_name: 'E2E Test Company',
+      client: {
+        client_id: clientId,
+        client_name: 'E2E Test Client',
         tenant: tenantId
       },
       contact
     };
   }
 
-  async createContact(companyId: string, contactData: {
+  async createContact(clientId: string, contactData: {
     email: string;
     first_name: string;
     last_name: string;
@@ -99,7 +99,7 @@ export class EmailTestFactory {
     const contact = {
       tenant: tenantId,
       contact_name_id: contactId,
-      company_id: companyId,
+      client_id: clientId,
       email: contactData.email,
       full_name: `${contactData.first_name} ${contactData.last_name}`,
       is_inactive: false,
@@ -115,7 +115,7 @@ export class EmailTestFactory {
       email: contactData.email,
       first_name: contactData.first_name,
       last_name: contactData.last_name,
-      company_id: companyId
+      client_id: clientId
     };
   }
 
@@ -150,7 +150,7 @@ export class EmailTestFactory {
           ...baseProvider,
           smtp_host: 'smtp.office365.com',
           smtp_port: 587,
-          smtp_username: 'test@company.com',
+          smtp_username: 'test@client.com',
           smtp_password: 'test-password'
         } as EmailProvider;
         break;
@@ -175,9 +175,9 @@ export class EmailTestFactory {
 
   async createMultiClientScenario(): Promise<{
     tenant: { tenant: string };
-    companies: Array<{
-      company_id: string;
-      company_name: string;
+    clients: Array<{
+      client_id: string;
+      client_name: string;
       tenant: string;
       contacts: EmailScenario['contact'][];
     }>;
@@ -189,20 +189,20 @@ export class EmailTestFactory {
     }
     const tenantId = existingTenant.tenant;
 
-    const companies = [];
+    const clients = [];
 
-    // Create multiple companies with contacts
+    // Create multiple clients with contacts
     for (let i = 1; i <= 3; i++) {
-      const companyId = await createCompany(this.context.db, tenantId, `Client Company ${i}`, {
+      const clientId = await createClient(this.context.db, tenantId, `Client Client ${i}`, {
         billing_cycle: 'monthly'
       });
-      this.createdResources.companies.push(companyId);
+      this.createdResources.clients.push(clientId);
 
       const contacts = [];
       
-      // Create 2 contacts per company
+      // Create 2 contacts per client
       for (let j = 1; j <= 2; j++) {
-        const contact = await this.createContact(companyId, {
+        const contact = await this.createContact(clientId, {
           email: `user${j}@client${i}.com`,
           first_name: `User${j}`,
           last_name: `Client${i}`
@@ -210,9 +210,9 @@ export class EmailTestFactory {
         contacts.push(contact);
       }
 
-      companies.push({
-        company_id: companyId,
-        company_name: `Client Company ${i}`,
+      clients.push({
+        client_id: clientId,
+        client_name: `Client Client ${i}`,
         tenant: tenantId,
         contacts
       });
@@ -220,7 +220,7 @@ export class EmailTestFactory {
 
     return {
       tenant: { tenant: tenantId },
-      companies
+      clients
     };
   }
 
@@ -240,7 +240,7 @@ export class EmailTestFactory {
 
     const ticket = {
       ticket_id: ticketId,
-      company_id: scenario.company.company_id,
+      client_id: scenario.client.client_id,
       contact_name_id: scenario.contact.contact_name_id,
       tenant: scenario.tenant.tenant,
       title: 'Initial Support Ticket for Threading',
@@ -372,10 +372,10 @@ export class EmailTestFactory {
           .del();
       }
 
-      // Clean up companies
-      if (this.createdResources.companies.length > 0) {
-        await this.context.db('companies')
-          .whereIn('company_id', this.createdResources.companies)
+      // Clean up clients
+      if (this.createdResources.clients.length > 0) {
+        await this.context.db('clients')
+          .whereIn('client_id', this.createdResources.clients)
           .del();
       }
 
@@ -389,7 +389,7 @@ export class EmailTestFactory {
       // Reset tracking arrays
       this.createdResources = {
         tenants: [],
-        companies: [],
+        clients: [],
         contacts: [],
         emailProviders: []
       };
@@ -412,7 +412,7 @@ export class EmailTestFactory {
 
     const ticket = {
       ticket_id: ticketId,
-      company_id: scenario.company.company_id,
+      client_id: scenario.client.client_id,
       contact_name_id: scenario.contact.contact_name_id,
       tenant: scenario.tenant.tenant,
       title: ticketData.title,

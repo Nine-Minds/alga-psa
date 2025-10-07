@@ -18,7 +18,7 @@ export interface IProjectStatusMapping extends TenantEntity {
 
 export interface IProject extends TenantEntity, ITaggable {
   project_id: string;
-  company_id: string;
+  client_id: string;
   project_name: string;
   description: string | null;
   start_date: Date | null;

@@ -31,21 +31,21 @@ const FAKE_DOMAINS = [
   'test.test', 'example.org', 'sample.org', 'localhost', 'test.local'
 ];
 
-// Company name validation - enterprise-level rules
-export function validateCompanyName(name: string): string | null {
+// Client name validation - enterprise-level rules
+export function validateClientName(name: string): string | null {
   if (!name || !name.trim()) {
-    return 'Company name is required';
+    return 'Client name is required';
   }
   
   const trimmedName = name.trim();
   
   // Enterprise rule: 2-256 characters
   if (trimmedName.length < 2) {
-    return 'Company name must be at least 2 characters long';
+    return 'Client name must be at least 2 characters long';
   }
   
   if (trimmedName.length > 256) {
-    return 'Company name must be 256 characters or less';
+    return 'Client name must be 256 characters or less';
   }
   
   // Allow emojis if followed by actual meaningful name content
@@ -53,38 +53,38 @@ export function validateCompanyName(name: string): string | null {
   
   // Cannot be made up of only special characters, spaces, or tabs
   if (nameWithoutEmojis.length === 0) {
-    return 'Company name must contain meaningful characters';
+    return 'Client name must contain meaningful characters';
   }
   
   // Single-character names are disallowed
   if (nameWithoutEmojis.length === 1) {
-    return 'Company name must be at least 2 meaningful characters';
+    return 'Client name must be at least 2 meaningful characters';
   }
   
   // Block standalone abbreviations
   const standaloneAbbreviations = ['LLC', 'INC', 'CORP', 'LTD', 'CO', 'COMPANY', 'CORPORATION'];
   if (standaloneAbbreviations.includes(nameWithoutEmojis.toUpperCase())) {
-    return 'Company name cannot be just a business abbreviation';
+    return 'Client name cannot be just a business abbreviation';
   }
   
   // No repeats of the same character 3+ times
   if (/(.)\1{2,}/.test(nameWithoutEmojis)) {
-    return 'Company name cannot contain repeated characters';
+    return 'Client name cannot contain repeated characters';
   }
   
   // Block domain extensions
   if (/\.(com|org|net|edu|gov|biz|info)$/i.test(nameWithoutEmojis)) {
-    return 'Company name cannot end with a domain extension';
+    return 'Client name cannot end with a domain extension';
   }
   
   // Must contain at least one letter or number (Unicode supported)
   if (!/[\p{L}\p{N}]/u.test(nameWithoutEmojis)) {
-    return 'Company name must contain at least one letter or number';
+    return 'Client name must contain at least one letter or number';
   }
   
   // Allow Unicode letters, numbers, spaces, and business-appropriate punctuation
   if (!/^[\p{L}\p{N}\s\-,\.&'()]+$/u.test(nameWithoutEmojis)) {
-    return 'Company name contains invalid characters';
+    return 'Client name contains invalid characters';
   }
   
   return null;
@@ -643,7 +643,7 @@ export function validateNotes(notes: string): string | null {
 
 // Comprehensive form validation function
 export function validateClientForm(formData: {
-  companyName: string;
+  clientName: string;
   websiteUrl?: string;
   industry?: string;
   email?: string;
@@ -661,9 +661,9 @@ export function validateClientForm(formData: {
   const errors: Record<string, string> = {};
   
   // Required field validation
-  const companyNameError = validateCompanyName(formData.companyName);
-  if (companyNameError) {
-    errors.company_name = companyNameError;
+  const clientNameError = validateClientName(formData.clientName);
+  if (clientNameError) {
+    errors.client_name = clientNameError;
   }
   
   // Optional field validation

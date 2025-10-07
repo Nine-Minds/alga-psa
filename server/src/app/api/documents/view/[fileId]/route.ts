@@ -85,8 +85,8 @@ export async function GET(
 
     // --- Permission Check ---
     let hasPermission = false;
-    let associatedCompanyId: string | null = null;
-    let userCompanyId: string | null = null;
+    let associatedClientId: string | null = null;
+    let userClientId: string | null = null;
     let associatedContactId: string | null = null;
     let associatedUserId: string | null = null;
     let associatedTenantId: string | null = null;
@@ -117,8 +117,8 @@ export async function GET(
 
           // Check each association
           for (const assoc of associations) {
-            if (assoc.entity_type === 'company') {
-              associatedCompanyId = assoc.entity_id;
+            if (assoc.entity_type === 'client') {
+              associatedClientId = assoc.entity_id;
             } else if (assoc.entity_type === 'contact') {
               associatedContactId = assoc.entity_id;
             } else if (assoc.entity_type === 'user') {
@@ -143,20 +143,20 @@ export async function GET(
             hasPermission = true;
             console.log(`User ${user.user_id} accessing their linked contact avatar (file ${fileId})`);
           }
-          // Check company association
-          else if (associatedCompanyId && user.contact_id) {
-            // Fetch the user's company_id via their contact record
+          // Check client association
+          else if (associatedClientId && user.contact_id) {
+            // Fetch the user's client_id via their contact record
             const contactRecord = await knex('contacts')
-              .select('company_id')
+              .select('client_id')
               .where({ contact_name_id: user.contact_id, tenant })
               .first();
 
-            userCompanyId = contactRecord?.company_id ?? null;
+            userClientId = contactRecord?.client_id ?? null;
 
-            // Allow access if the user's company matches the document's associated company
-            if (userCompanyId === associatedCompanyId) {
+            // Allow access if the user's client matches the document's associated client
+            if (userClientId === associatedClientId) {
               hasPermission = true;
-              console.log(`User ${user.user_id} granted access to company ${associatedCompanyId} file ${fileId}`);
+              console.log(`User ${user.user_id} granted access to client ${associatedClientId} file ${fileId}`);
             }
           }
 
@@ -178,7 +178,7 @@ export async function GET(
     if (!hasPermission) {
       if (user) {
         console.warn(`User ${user.user_id} (type: ${user.user_type}) does not have permission to view file ${fileId}.`);
-        console.warn(`AssociatedCompany: ${associatedCompanyId}, UserCompany: ${userCompanyId}`);
+        console.warn(`AssociatedClient: ${associatedClientId}, UserClient: ${userClientId}`);
         console.warn(`AssociatedContact: ${associatedContactId}, UserContact: ${user.contact_id}`);
         console.warn(`AssociatedUser: ${associatedUserId}, UserId: ${user.user_id}`);
       } else {

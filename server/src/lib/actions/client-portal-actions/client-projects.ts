@@ -3,12 +3,12 @@
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
-import { getCurrentUser, getUserCompanyId } from 'server/src/lib/actions/user-actions/userActions';
+import { getCurrentUser, getUserClientId } from 'server/src/lib/actions/user-actions/userActions';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import ProjectModel from 'server/src/lib/models/project';
 
 /**
- * Fetch all projects for a client company with basic details
+ * Fetch all projects for a client client with basic details
  */
 export async function getClientProjects(options: {
   page?: number;
@@ -28,15 +28,15 @@ export async function getClientProjects(options: {
     throw new Error('Tenant not found');
   }
   
-  // Get current user and company
+  // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
   }
   
-  const companyId = await getUserCompanyId(user.user_id);
-  if (!companyId) {
-    throw new Error('Company not found');
+  const clientId = await getUserClientId(user.user_id);
+  if (!clientId) {
+    throw new Error('Client not found');
   }
   
   // Set up query with pagination, sorting, filtering
@@ -57,7 +57,7 @@ export async function getClientProjects(options: {
       this.on('projects.status', '=', 'statuses.status_id')
          .andOn('projects.tenant', '=', 'statuses.tenant')
     })
-    .where('projects.company_id', companyId)
+    .where('projects.client_id', clientId)
     .where('projects.tenant', tenant)
     .where('projects.is_inactive', false);
   
@@ -87,7 +87,7 @@ export async function getClientProjects(options: {
       this.on('projects.status', '=', 'statuses.status_id')
          .andOn('projects.tenant', '=', 'statuses.tenant')
     })
-    .where('projects.company_id', companyId)
+    .where('projects.client_id', clientId)
     .where('projects.tenant', tenant)
     .where('projects.is_inactive', false);
   
@@ -149,7 +149,7 @@ export async function getProjectProgress(projectId: string): Promise<{
     throw new Error('Tenant not found');
   }
   
-  // Get current user and company
+  // Get current user and client
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('User not authenticated');
@@ -158,7 +158,7 @@ export async function getProjectProgress(projectId: string): Promise<{
   // Get project to verify access
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('projects')
-      .select('company_id', 'start_date', 'end_date')
+      .select('client_id', 'start_date', 'end_date')
       .where('project_id', projectId)
       .where('tenant', tenant)
       .first();
@@ -168,9 +168,9 @@ export async function getProjectProgress(projectId: string): Promise<{
     throw new Error('Project not found');
   }
   
-  // Verify user has access to this project's company
-  const userCompanyId = await getUserCompanyId(user.user_id);
-  if (userCompanyId !== project.company_id) {
+  // Verify user has access to this project's client
+  const userClientId = await getUserClientId(user.user_id);
+  if (userClientId !== project.client_id) {
     throw new Error('Access denied');
   }
   
@@ -286,7 +286,7 @@ export async function getProjectManager(projectId: string): Promise<{
   // Get project to verify access
   const project = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('projects')
-      .select('company_id', 'assigned_to')
+      .select('client_id', 'assigned_to')
       .where('project_id', projectId)
       .where('tenant', tenant)
       .first();
@@ -296,9 +296,9 @@ export async function getProjectManager(projectId: string): Promise<{
     throw new Error('Project not found');
   }
   
-  // Verify user has access to this project's company
-  const userCompanyId = await getUserCompanyId(user.user_id);
-  if (userCompanyId !== project.company_id) {
+  // Verify user has access to this project's client
+  const userClientId = await getUserClientId(user.user_id);
+  if (userClientId !== project.client_id) {
     throw new Error('Access denied');
   }
   

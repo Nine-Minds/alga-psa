@@ -1,6 +1,6 @@
 import { Knex } from 'knex';
-import { ICompanyBillingCycle } from 'server/src/interfaces/billing.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClientBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { 
   addWeeks, 
   addMonths, 
@@ -178,7 +178,7 @@ function getStartOfCurrentCycle(date: ISO8601String, billingCycle: string): {
 
 async function createBillingCycle(
   knex: Knex,
-  cycle: Partial<ICompanyBillingCycle> & { effective_date: ISO8601String }
+  cycle: Partial<IClientBillingCycle> & { effective_date: ISO8601String }
 ): Promise<BillingCycleCreationResult> {
   // Validate that input date is UTC midnight
   const dateObj = parseISO(cycle.effective_date);
@@ -198,16 +198,16 @@ async function createBillingCycle(
 
   const cycleDates = getNextCycleDate(cycle.effective_date, cycle.billing_cycle!);
 
-  const fullCycle: Partial<ICompanyBillingCycle> = {
+  const fullCycle: Partial<IClientBillingCycle> = {
     ...cycle,
     period_start_date: cycleDates.periodStart,
     period_end_date: cycleDates.periodEnd
   };
 
   // Check for existing cycle
-  const existingCycle = await knex('company_billing_cycles')
+  const existingCycle = await knex('client_billing_cycles')
     .where({
-      company_id: cycle.company_id,
+      client_id: cycle.client_id,
       effective_date: cycle.effective_date,
       tenant: cycle.tenant
     })
@@ -236,9 +236,9 @@ async function createBillingCycle(
         0, 0, 0
       )).toISOString(); // Ensure UTC format ending with Z
       
-      const conflictingCycle = await knex('company_billing_cycles')
+      const conflictingCycle = await knex('client_billing_cycles')
         .where({
-          company_id: cycle.company_id,
+          client_id: cycle.client_id,
           effective_date: nextDateStr,
           tenant: cycle.tenant
         })
@@ -278,11 +278,11 @@ async function createBillingCycle(
   }
 
   try {
-    await knex('company_billing_cycles').insert(fullCycle);
-    console.log(`Created billing cycle for company ${cycle.company_id} from ${fullCycle.period_start_date} to ${fullCycle.period_end_date}`);
+    await knex('client_billing_cycles').insert(fullCycle);
+    console.log(`Created billing cycle for client ${cycle.client_id} from ${fullCycle.period_start_date} to ${fullCycle.period_end_date}`);
     return { success: true };
   } catch (error: unknown) {
-    if (error instanceof Error && 'constraint' in error && error.constraint === 'company_billing_cycles_company_id_effective_date_unique') {
+    if (error instanceof Error && 'constraint' in error && error.constraint === 'client_billing_cycles_client_id_effective_date_unique') {
       // Handle race condition - another cycle was created between our check and insert
       const nextDate = new Date(cycle.effective_date);
       nextDate.setDate(nextDate.getDate() + 1);
@@ -305,39 +305,39 @@ function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
 }
 
-export async function createCompanyBillingCycles(
+export async function createClientBillingCycles(
   knex: Knex,
-  company: ICompany,
+  client: IClient,
   options: { manual?: boolean; effectiveDate?: string } = {}
 ): Promise<BillingCycleCreationResult> {
-  console.log('Starting billing cycle creation for company:', {
-    company_id: company.company_id,
-    billing_cycle: company.billing_cycle
+  console.log('Starting billing cycle creation for client:', {
+    client_id: client.client_id,
+    billing_cycle: client.billing_cycle
   });
 
-  const lastCycle = await knex('company_billing_cycles')
+  const lastCycle = await knex('client_billing_cycles')
     .where({
-      company_id: company.company_id,
-      tenant: company.tenant
+      client_id: client.client_id,
+      tenant: client.tenant
     })
     .orderBy('effective_date', 'desc')
     .first()
-    .select('effective_date') as ICompanyBillingCycle;
+    .select('effective_date') as IClientBillingCycle;
 
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
   
   if (!lastCycle) {
     console.log('No existing cycles found - creating initial cycle');
     const initialCycle = options.effectiveDate ?
-      getStartOfCurrentCycle(options.effectiveDate, company.billing_cycle) :
-      getStartOfCurrentCycle(now, company.billing_cycle);
+      getStartOfCurrentCycle(options.effectiveDate, client.billing_cycle) :
+      getStartOfCurrentCycle(now, client.billing_cycle);
     console.log('Initial cycle details:', initialCycle);
     console.log('Creating initial billing cycle');
     const result = await createBillingCycle(knex, {
-      company_id: company.company_id,
-      billing_cycle: company.billing_cycle,
+      client_id: client.client_id,
+      billing_cycle: client.billing_cycle,
       effective_date: initialCycle.effectiveDate,
-      tenant: company.tenant
+      tenant: client.tenant
     });
 
     if (!result.success) {
@@ -353,14 +353,14 @@ export async function createCompanyBillingCycles(
     console.log('Starting cycle creation loop');
     while (parseISO(currentCycle.periodEnd) < parseISO(now) && iterations < MAX_ITERATIONS) {
       console.log(`Creating cycle ${iterations + 1} of ${MAX_ITERATIONS}`);
-      const nextCycle = getNextCycleDate(currentCycle.periodEnd, company.billing_cycle);
+      const nextCycle = getNextCycleDate(currentCycle.periodEnd, client.billing_cycle);
       const previousEnd = currentCycle.periodEnd;
       
       if (parseISO(nextCycle.periodEnd) <= parseISO(previousEnd)) {
         const error = new Error('Period end date not advancing properly: '+ JSON.stringify({
           previousEnd,
           nextEnd: nextCycle.periodEnd,
-          billingCycle: company.billing_cycle
+          billingCycle: client.billing_cycle
         }));
         console.error(error);
         throw error;
@@ -372,10 +372,10 @@ export async function createCompanyBillingCycles(
         period_end: nextCycle.periodEnd
       });
       const result = await createBillingCycle(knex, {
-        company_id: company.company_id,
-        billing_cycle: company.billing_cycle,
+        client_id: client.client_id,
+        billing_cycle: client.billing_cycle,
         effective_date: nextCycle.effectiveDate,
-        tenant: company.tenant
+        tenant: client.tenant
       });
 
       if (!result.success) {
@@ -401,15 +401,15 @@ export async function createCompanyBillingCycles(
   } else {
     throw new Error('Invalid effectiveDate: value is undefined or null');
   }
-  let currentCycle = getNextCycleDate(normalizedEffectiveDate, company.billing_cycle);
+  let currentCycle = getNextCycleDate(normalizedEffectiveDate, client.billing_cycle);
   
   if (options.manual) {
     // In manual mode, use the same logic as automatic mode
     const result = await createBillingCycle(knex, {
-      company_id: company.company_id,
-      billing_cycle: company.billing_cycle,
+      client_id: client.client_id,
+      billing_cycle: client.billing_cycle,
       effective_date: currentCycle.effectiveDate,
-      tenant: company.tenant
+      tenant: client.tenant
     });
 
     if (!result.success) {
@@ -417,7 +417,7 @@ export async function createCompanyBillingCycles(
     }
 
     // Update current cycle and continue checking
-    currentCycle = getNextCycleDate(currentCycle.periodEnd, company.billing_cycle);
+    currentCycle = getNextCycleDate(currentCycle.periodEnd, client.billing_cycle);
     return { success: true };
   }
 
@@ -426,14 +426,14 @@ export async function createCompanyBillingCycles(
   const MAX_ITERATIONS = 100; // Safety limit
   
   while (parseISO(currentCycle.periodEnd) < parseISO(now) && iterations < MAX_ITERATIONS) {
-    const nextCycle = getNextCycleDate(currentCycle.periodEnd, company.billing_cycle);
+    const nextCycle = getNextCycleDate(currentCycle.periodEnd, client.billing_cycle);
     const previousEnd = currentCycle.periodEnd;
     
     if (parseISO(nextCycle.periodEnd) <= parseISO(previousEnd)) {
       const error = new Error('Period end date not advancing properly: '+ JSON.stringify({
         previousEnd,
         nextEnd: nextCycle.periodEnd,
-        billingCycle: company.billing_cycle
+        billingCycle: client.billing_cycle
       }));
       console.error(error);
       throw error;
@@ -441,10 +441,10 @@ export async function createCompanyBillingCycles(
     
     iterations++;
     const result = await createBillingCycle(knex, {
-      company_id: company.company_id,
-      billing_cycle: company.billing_cycle,
+      client_id: client.client_id,
+      billing_cycle: client.billing_cycle,
       effective_date: nextCycle.effectiveDate,
-      tenant: company.tenant
+      tenant: client.tenant
     });
 
     if (!result.success) {

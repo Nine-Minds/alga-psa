@@ -4,33 +4,33 @@ import { TextArea } from '../../../components/ui/TextArea';
 import { Checkbox } from '../../../components/ui/Checkbox';
 import { DatePicker } from '../../../components/ui/DatePicker';
 import UserPicker from '../../../components/ui/UserPicker';
-import { CompanyPicker } from '../../../components/companies/CompanyPicker';
-import { ICompany } from '../../../interfaces/company.interfaces';
+import { ClientPicker } from '../../../components/clients/ClientPicker';
+import { IClient } from '../../../interfaces/client.interfaces';
 import { IUserWithRoles } from '../../../interfaces/auth.interfaces';
 import AlertWidget from '../../../components/ui/widgets/AlertWidget';
 import HighlightWidget from '../../../components/ui/widgets/HighlightWidget';
 import ButtonLinkWidget from '../../../components/ui/widgets/ButtonLinkWidget';
 import RichTextViewerWidget from '../../../components/ui/widgets/RichTextViewerWidget';
 
-// Company Picker Widget
-export const CompanyPickerWidget = (props: WidgetProps) => {
+// Client Picker Widget
+export const ClientPickerWidget = (props: WidgetProps) => {
   const { id, value, onChange, disabled, readonly, options } = props;
 
   return (
-    <CompanyPicker
+    <ClientPicker
       id={id}
-      selectedCompanyId={value}
-      onSelect={(companyId) => {
+      selectedClientId={value}
+      onSelect={(clientId) => {
         // Store just the ID in the form data
-        onChange(companyId);
+        onChange(clientId);
 
         // If the widget should update other fields based on selection
         if (options?.updateFields && props.formContext?.updateFormData) {
-          // In a real implementation, we would fetch company details here
+          // In a real implementation, we would fetch client details here
           // For now, we'll just update with placeholder data
           props.formContext.updateFormData({
-            // Examples of fields that might be populated from company data
-            [`${options.fieldPrefix || ''}company_name`]: "Company Name",
+            // Examples of fields that might be populated from client data
+            [`${options.fieldPrefix || ''}client_name`]: "Client Name",
             [`${options.fieldPrefix || ''}billing_address`]: "Billing Address",
             // Add other fields as needed
           });
@@ -124,7 +124,7 @@ export const CheckboxWidget = (props: WidgetProps) => {
 
 // Export all widgets in a single object
 export const customWidgets = {
-  CompanyPickerWidget,
+  ClientPickerWidget,
   InputWidget,
   TextAreaWidget,
   DatePickerWidget,

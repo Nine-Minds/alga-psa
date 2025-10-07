@@ -56,7 +56,7 @@ export function createTeamTestData(overrides: Partial<{
   manager_id: string;
 }> = {}) {
   return {
-    team_name: overrides.team_name || faker.commerce.department() + ' Team',
+    team_name: overrides.team_name || `${faker.commerce.department()} Team ${Date.now()}`,
     manager_id: overrides.manager_id || uuidv4()
   };
 }

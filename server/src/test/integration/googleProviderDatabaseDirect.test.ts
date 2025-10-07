@@ -48,8 +48,8 @@ describe('Google Provider Database Direct Integration Tests', () => {
       if (!tenantExists) {
         await testDb('tenants').insert({
           tenant: testTenant,
-          company_name: 'Test Company',
-          email: 'test@company.com',
+          client_name: 'Test Client',
+          email: 'test@client.com',
           created_at: new Date(),
           updated_at: new Date()
         });
@@ -143,13 +143,13 @@ describe('Google Provider Database Direct Integration Tests', () => {
       const workspaceProviderData = {
         tenant: testTenant,
         providerType: 'google' as const,
-        providerName: 'Company Workspace Account',
-        mailbox: 'support@company.com',
+        providerName: 'Client Workspace Account',
+        mailbox: 'support@client.com',
         isActive: true,
         vendorConfig: {
           clientId: 'workspace-client-id.apps.googleusercontent.com',
           clientSecret: 'workspace-secret',
-          projectId: 'company-project',
+          projectId: 'client-project',
           redirectUri: 'http://localhost:3000/api/auth/google/callback',
           pubSubTopic: 'workspace-notifications',
           pubSubSubscription: 'workspace-subscription',
@@ -162,7 +162,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
       const createdProvider = await emailProviderService.createProvider(workspaceProviderData);
 
       // Verify the provider was created with custom domain
-      expect(createdProvider.mailbox).toBe('support@company.com');
+      expect(createdProvider.mailbox).toBe('support@client.com');
       expect(createdProvider.provider_type).toBe('google');
       
       // Verify vendor config
@@ -290,7 +290,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
         tenant: testTenant,
         providerType: 'google',
         providerName: 'Gmail Provider 2',
-        mailbox: 'provider2@company.com',
+        mailbox: 'provider2@client.com',
         isActive: true,
         vendorConfig: { clientId: 'client2.apps.googleusercontent.com', clientSecret: 'secret2', projectId: 'project2', pubSubTopic: 'topic2', pubSubSubscription: 'sub2' }
       });
@@ -314,7 +314,7 @@ describe('Google Provider Database Direct Integration Tests', () => {
       expect(googleProviders).toHaveLength(2);
       expect(googleProviders.map(p => p.mailbox).sort()).toEqual([
         'provider1@gmail.com',
-        'provider2@company.com'
+        'provider2@client.com'
       ]);
 
       // List all providers

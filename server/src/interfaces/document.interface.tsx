@@ -7,7 +7,7 @@ export interface IDocument extends TenantEntity {
     shared_type_id?: string;
     user_id: string;
     contact_name_id?: string;
-    company_id?: string;
+    client_id?: string;
     ticket_id?: string;
     schedule_id?: string;
     asset_id?: string;

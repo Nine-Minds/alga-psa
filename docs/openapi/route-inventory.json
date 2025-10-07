@@ -1085,82 +1085,82 @@
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/companies",
+    "route_path": "/api/v1/clients",
     "methods": [
       "GET",
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/companies/route.ts",
-    "controller": "ApiCompanyController",
-    "controller_import": "@/lib/api/controllers/ApiCompanyController",
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+    "route_file": "server/src/app/api/v1/clients/route.ts",
+    "controller": "ApiClientController",
+    "controller_import": "@/lib/api/controllers/ApiClientController",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/companies/stats",
+    "route_path": "/api/v1/clients/stats",
     "methods": [
       "GET"
     ],
-    "route_file": "server/src/app/api/v1/companies/stats/route.ts",
-    "controller": "ApiCompanyController",
-    "controller_import": "@/lib/api/controllers/ApiCompanyController",
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+    "route_file": "server/src/app/api/v1/clients/stats/route.ts",
+    "controller": "ApiClientController",
+    "controller_import": "@/lib/api/controllers/ApiClientController",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/companies/{id}",
+    "route_path": "/api/v1/clients/{id}",
     "methods": [
       "DELETE",
       "GET",
       "PUT"
     ],
-    "route_file": "server/src/app/api/v1/companies/[id]/route.ts",
-    "controller": "ApiCompanyController",
-    "controller_import": "@/lib/api/controllers/ApiCompanyController",
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+    "route_file": "server/src/app/api/v1/clients/[id]/route.ts",
+    "controller": "ApiClientController",
+    "controller_import": "@/lib/api/controllers/ApiClientController",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/companies/{id}/contacts",
+    "route_path": "/api/v1/clients/{id}/contacts",
     "methods": [
       "GET"
     ],
-    "route_file": "server/src/app/api/v1/companies/[id]/contacts/route.ts",
-    "controller": "ApiCompanyController",
-    "controller_import": "@/lib/api/controllers/ApiCompanyController",
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+    "route_file": "server/src/app/api/v1/clients/[id]/contacts/route.ts",
+    "controller": "ApiClientController",
+    "controller_import": "@/lib/api/controllers/ApiClientController",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/companies/{id}/locations",
+    "route_path": "/api/v1/clients/{id}/locations",
     "methods": [
       "GET",
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/companies/[id]/locations/route.ts",
-    "controller": "ApiCompanyController",
-    "controller_import": "@/lib/api/controllers/ApiCompanyController",
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts"
+    "route_file": "server/src/app/api/v1/clients/[id]/locations/route.ts",
+    "controller": "ApiClientController",
+    "controller_import": "@/lib/api/controllers/ApiClientController",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/company-billing-plans",
+    "route_path": "/api/v1/client-billing-plans",
     "methods": [
       "GET",
       "POST"
     ],
-    "route_file": "server/src/app/api/v1/company-billing-plans/route.ts",
+    "route_file": "server/src/app/api/v1/client-billing-plans/route.ts",
     "controller": "ApiBillingPlanController",
     "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
     "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"
   },
   {
     "edition": "CE",
-    "route_path": "/api/v1/company-billing-plans/{id}",
+    "route_path": "/api/v1/client-billing-plans/{id}",
     "methods": [
       "DELETE"
     ],
-    "route_file": "server/src/app/api/v1/company-billing-plans/[id]/route.ts",
+    "route_file": "server/src/app/api/v1/client-billing-plans/[id]/route.ts",
     "controller": "ApiBillingPlanController",
     "controller_import": "@/lib/api/controllers/ApiBillingPlanController",
     "controller_file": "server/src/lib/api/controllers/ApiBillingPlanController.ts"

@@ -6,12 +6,12 @@ import { Knex } from 'knex';
 /**
  * Entity types that can have associated images
  */
-export type EntityType = 'user' | 'contact' | 'company' | 'tenant';
+export type EntityType = 'user' | 'contact' | 'client' | 'tenant';
 
 /**
- * Retrieves the image URL for an entity (user avatar, contact avatar, company logo).
+ * Retrieves the image URL for an entity (user avatar, contact avatar, client logo).
  *
- * @param entityType The type of entity ('user', 'contact', or 'company')
+ * @param entityType The type of entity ('user', 'contact', or 'client')
  * @param entityId The ID of the entity
  * @param tenant The tenant context
  * @returns A promise resolving to the image URL string, or null if no image is found
@@ -132,20 +132,20 @@ export async function getContactAvatarUrl(
 }
 
 /**
- * Convenience function to get a company's logo URL
+ * Convenience function to get a client's logo URL
  */
-export async function getCompanyLogoUrl(
-  companyId: string,
+export async function getClientLogoUrl(
+  clientId: string,
   tenant: string
 ): Promise<string | null> {
-  return getEntityImageUrl('company', companyId, tenant);
+  return getEntityImageUrl('client', clientId, tenant);
 }
 
 /**
  * Batch function to get image URLs for multiple entities at once.
  * This is more efficient than calling getEntityImageUrl multiple times in a loop.
  *
- * @param entityType The type of entity ('user', 'contact', or 'company')
+ * @param entityType The type of entity ('user', 'contact', or 'client')
  * @param entityIds Array of entity IDs
  * @param tenant The tenant context
  * @returns A promise resolving to a Map of entityId -> imageUrl (or null)
@@ -226,13 +226,13 @@ export async function getEntityImageUrlsBatch(
 }
 
 /**
- * Convenience function to get multiple company logo URLs at once
+ * Convenience function to get multiple client logo URLs at once
  */
-export async function getCompanyLogoUrlsBatch(
-  companyIds: string[],
+export async function getClientLogoUrlsBatch(
+  clientIds: string[],
   tenant: string
 ): Promise<Map<string, string | null>> {
-  return getEntityImageUrlsBatch('company', companyIds, tenant);
+  return getEntityImageUrlsBatch('client', clientIds, tenant);
 }
 
 /**
@@ -244,11 +244,11 @@ export async function getCompanyLogoUrlsBatch(
  * // Or using the convenience functions:
  * const userAvatarUrl = await getUserAvatarUrl(userId, tenant);
  * const contactAvatarUrl = await getContactAvatarUrl(contactId, tenant);
- * const companyLogoUrl = await getCompanyLogoUrl(companyId, tenant);
+ * const clientLogoUrl = await getClientLogoUrl(clientId, tenant);
  *
  * // Batch loading:
- * const companyIds = ['id1', 'id2', 'id3'];
- * const logoUrls = await getCompanyLogoUrlsBatch(companyIds, tenant);
+ * const clientIds = ['id1', 'id2', 'id3'];
+ * const logoUrls = await getClientLogoUrlsBatch(clientIds, tenant);
  * const logoUrl1 = logoUrls.get('id1'); // string | null
  *
  * // Then use the URL in a component:

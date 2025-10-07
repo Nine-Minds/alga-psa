@@ -21,7 +21,7 @@ export const projectStatusSchema = z.union([
 
 // Create project schema
 export const createProjectSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   project_name: z.string().min(1, 'Project name is required').max(255),
   description: z.string().optional(),
   start_date: dateSchema.optional(),
@@ -42,7 +42,7 @@ export const updateProjectSchema = createUpdateSchema(createProjectSchema);
 // Project filter schema
 export const projectFilterSchema = baseFilterSchema.extend({
   project_name: z.string().optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   status: projectStatusSchema.optional(),
   assigned_to: uuidSchema.optional(),
   contact_name_id: uuidSchema.optional(),
@@ -55,7 +55,7 @@ export const projectFilterSchema = baseFilterSchema.extend({
   end_date_to: dateSchema.optional(),
   budgeted_hours_min: z.string().transform(val => parseFloat(val)).optional(),
   budgeted_hours_max: z.string().transform(val => parseFloat(val)).optional(),
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   contact_name: z.string().optional(),
   wbs_code: z.string().optional()
 });
@@ -66,7 +66,7 @@ export const projectListQuerySchema = createListQuerySchema(projectFilterSchema)
 // Project response schema
 export const projectResponseSchema = z.object({
   project_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   project_name: z.string(),
   description: z.string().nullable(),
   start_date: dateSchema.nullable(),
@@ -91,9 +91,9 @@ export const projectResponseSchema = z.object({
 
 // Project with details response schema
 export const projectWithDetailsResponseSchema = projectResponseSchema.extend({
-  company: z.object({
-    company_id: uuidSchema,
-    company_name: z.string(),
+  client: z.object({
+    client_id: uuidSchema,
+    client_name: z.string(),
     email: z.string().nullable(),
     phone_no: z.string().nullable()
   }).optional(),
@@ -263,7 +263,7 @@ export const projectTicketLinkResponseSchema = z.object({
     title: z.string(),
     status_name: z.string(),
     priority_name: z.string(),
-    company_name: z.string()
+    client_name: z.string()
   }).optional()
 });
 
@@ -294,7 +294,7 @@ export const projectStatsResponseSchema = z.object({
   cancelled_projects: z.number(),
   overdue_projects: z.number(),
   projects_by_status: z.record(z.number()),
-  projects_by_company: z.record(z.number()),
+  projects_by_client: z.record(z.number()),
   total_budgeted_hours: z.number(),
   total_actual_hours: z.number(),
   average_project_duration: z.number().nullable(),
@@ -305,9 +305,9 @@ export const projectStatsResponseSchema = z.object({
 // Project search schema
 export const projectSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['project_name', 'description', 'wbs_code', 'company_name'])).optional(),
+  fields: z.array(z.enum(['project_name', 'description', 'wbs_code', 'client_name'])).optional(),
   status: z.array(projectStatusSchema).optional(),
-  company_ids: z.array(uuidSchema).optional(),
+  client_ids: z.array(uuidSchema).optional(),
   assigned_to_ids: z.array(uuidSchema).optional(),
   include_inactive: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
@@ -320,7 +320,7 @@ export const projectExportQuerySchema = z.object({
   include_phases: booleanTransform.optional().default("false"),
   include_tasks: booleanTransform.optional().default("false"),
   status: z.array(projectStatusSchema).optional(),
-  company_ids: z.array(uuidSchema).optional(),
+  client_ids: z.array(uuidSchema).optional(),
   fields: z.array(z.string()).optional()
 });
 

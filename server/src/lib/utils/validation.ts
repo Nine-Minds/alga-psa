@@ -155,7 +155,7 @@ export function validateBusinessEmail(email: string): ValidationResult {
 }
 
 /**
- * Validate company names or other business text fields
+ * Validate client names or other business text fields
  * Allows more flexibility than personal names
  */
 export function validateBusinessText(text: string, fieldName: string = 'Field', options: { required?: boolean; maxLength?: number } = {}): ValidationResult {

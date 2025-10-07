@@ -25,14 +25,14 @@ interface UpdateQboInvoiceParams {
 
 const createQboInvoiceParamsDef: ActionParameterDefinition[] = [
   { name: 'invoiceData', type: 'object', required: true, description: 'QBO Invoice object data (mapped from Alga)' },
-  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Company ID) for the target tenant connection' },
+  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Client ID) for the target tenant connection' },
 ];
 
 const updateQboInvoiceParamsDef: ActionParameterDefinition[] = [
   { name: 'qboInvoiceId', type: 'string', required: true, description: 'The QBO ID of the invoice to update' },
   { name: 'syncToken', type: 'string', required: true, description: 'The QBO SyncToken for optimistic locking' },
   { name: 'invoiceData', type: 'object', required: true, description: 'QBO Invoice object data (mapped from Alga)' },
-  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Company ID) for the target tenant connection' },
+  { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID (Client ID) for the target tenant connection' },
 ];
 
 // --- Action Implementations ---

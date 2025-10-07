@@ -44,6 +44,9 @@ RUN npm run build
 # Copy onboarding seeds after build
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
 
+# Verify seeds were copied (debug step)
+RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found"
+
 # Production stage
 FROM base AS production
 
@@ -53,6 +56,9 @@ COPY --from=development /app/shared /app/shared
 # Copy built temporal-workflows
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
+
+# Verify seeds are present in production stage
+RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal

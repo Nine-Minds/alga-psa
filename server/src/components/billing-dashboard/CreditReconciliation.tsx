@@ -12,11 +12,11 @@ import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
 import { parseISO } from 'date-fns';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
-import { validateCompanyCredit } from 'server/src/lib/actions/creditReconciliationActions';
+import { validateClientCredit } from 'server/src/lib/actions/creditReconciliationActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import {
   fetchReconciliationReports,
-  fetchCompaniesForDropdown,
+  fetchClientsForDropdown,
   fetchReconciliationStats
 } from 'server/src/lib/actions/reconciliationReportActions';
 import { 
@@ -33,16 +33,16 @@ import {
   Legend
 } from 'recharts';
 
-// Define a type that extends ICreditReconciliationReport with company_name
+// Define a type that extends ICreditReconciliationReport with client_name
 type ExtendedReconciliationReport = ICreditReconciliationReport & {
-  company_name?: string
+  client_name?: string
 };
 
 // Define a function to create columns for the reconciliation reports table
 const createColumns = (router: any): ColumnDefinition<ExtendedReconciliationReport>[] => [
   {
-    title: 'Company',
-    dataIndex: 'company_name',
+    title: 'Client',
+    dataIndex: 'client_name',
     render: (value: string | undefined) => value || 'N/A'
   },
   {
@@ -130,10 +130,10 @@ const CreditReconciliation: React.FC = () => {
   const [openReports, setOpenReports] = useState<ExtendedReconciliationReport[]>([]);
   const [inReviewReports, setInReviewReports] = useState<ExtendedReconciliationReport[]>([]);
   const [resolvedReports, setResolvedReports] = useState<ExtendedReconciliationReport[]>([]);
-  const [companies, setCompanies] = useState<{ id: string; name: string }[]>([]);
+  const [clients, setClients] = useState<{ id: string; name: string }[]>([]);
   
   // State for filters and pagination
-  const [selectedCompany, setSelectedCompany] = useState<string>('');
+  const [selectedClient, setSelectedClient] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<ReconciliationStatus | ''>('');
   const [dateRange, setDateRange] = useState<{ startDate: string | null; endDate: string | null }>({
     startDate: null,
@@ -173,14 +173,14 @@ const CreditReconciliation: React.FC = () => {
   ];
 
   useEffect(() => {
-    // Fetch reconciliation reports and companies
+    // Fetch reconciliation reports and clients
     const fetchData = async () => {
       try {
         setLoading(true);
         
         // Fetch reports with pagination and filtering
         const result = await fetchReconciliationReports({
-          companyId: selectedCompany || undefined,
+          clientId: selectedClient || undefined,
           status: selectedStatus || undefined,
           startDate: dateRange.startDate || undefined,
           endDate: dateRange.endDate || undefined,
@@ -188,8 +188,8 @@ const CreditReconciliation: React.FC = () => {
           pageSize
         });
         
-        // Fetch companies for dropdown
-        const companiesData = await fetchCompaniesForDropdown();
+        // Fetch clients for dropdown
+        const clientsData = await fetchClientsForDropdown();
         
         // Fetch statistics
         const statsData = await fetchReconciliationStats();
@@ -199,7 +199,7 @@ const CreditReconciliation: React.FC = () => {
         setOpenReports(result.reports.filter(r => r.status === 'open') as ExtendedReconciliationReport[]);
         setInReviewReports(result.reports.filter(r => r.status === 'in_review') as ExtendedReconciliationReport[]);
         setResolvedReports(result.reports.filter(r => r.status === 'resolved') as ExtendedReconciliationReport[]);
-        setCompanies(companiesData);
+        setClients(clientsData);
         setTotalItems(result.total);
         
         // Set stats
@@ -213,10 +213,10 @@ const CreditReconciliation: React.FC = () => {
     };
     
     fetchData();
-  }, [page, pageSize, selectedCompany, selectedStatus, dateRange.startDate, dateRange.endDate]);
+  }, [page, pageSize, selectedClient, selectedStatus, dateRange.startDate, dateRange.endDate]);
 
   const handleRunValidation = async () => {
-    if (!selectedCompany) return;
+    if (!selectedClient) return;
     
     try {
       setRunningValidation(true);
@@ -227,8 +227,8 @@ const CreditReconciliation: React.FC = () => {
         throw new Error('User not authenticated');
       }
       
-      // Call the server action to run validation for the selected company
-      const result = await validateCompanyCredit(selectedCompany, currentUser.user_id);
+      // Call the server action to run validation for the selected client
+      const result = await validateClientCredit(selectedClient, currentUser.user_id);
       
       console.log('Validation result:', result);
       
@@ -243,8 +243,8 @@ const CreditReconciliation: React.FC = () => {
     }
   };
 
-  const handleCompanyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCompany(e.target.value);
+  const handleClientChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedClient(e.target.value);
   };
 
   if (loading) {
@@ -282,20 +282,20 @@ const CreditReconciliation: React.FC = () => {
           <div className="flex space-x-2">
             <div className="flex items-center space-x-2">
               <select
-                id="company-selector"
-                value={selectedCompany}
-                onChange={handleCompanyChange}
+                id="client-selector"
+                value={selectedClient}
+                onChange={handleClientChange}
                 className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-white"
               >
-                <option value="">Select Company</option>
-                {companies.map(company => (
-                  <option key={company.id} value={company.id}>{company.name}</option>
+                <option value="">Select Client</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>{client.name}</option>
                 ))}
               </select>
               <Button
                 id="run-validation-button"
                 onClick={handleRunValidation}
-                disabled={!selectedCompany || runningValidation}
+                disabled={!selectedClient || runningValidation}
               >
                 {runningValidation ? 'Running...' : 'Run Reconciliation'}
               </Button>
@@ -357,7 +357,7 @@ const CreditReconciliation: React.FC = () => {
                   onClick={() => {
                     setSelectedStatus('');
                     setDateRange({ startDate: null, endDate: null });
-                    setSelectedCompany('');
+                    setSelectedClient('');
                   }}
                   className="mt-6"
                 >

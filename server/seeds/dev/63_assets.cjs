@@ -5,14 +5,14 @@ exports.seed = async function(knex) {
     await knex('network_device_assets').del();
     await knex('assets').del();
 
-    const [tenant, companies] = await Promise.all([
+    const [tenant, clients] = await Promise.all([
         knex('tenants').select('tenant').first(),
-        knex('companies').select('company_id', 'company_name')
+        knex('clients').select('client_id', 'client_name')
     ]);
 
     if (tenant) {
-        const emeraldCity = companies.find(c => c.company_name === 'Emerald City');
-        const wonderland = companies.find(c => c.company_name === 'Wonderland');
+        const emeraldCity = clients.find(c => c.client_name === 'Emerald City');
+        const wonderland = clients.find(c => c.client_name === 'Wonderland');
         const now = new Date().toISOString();
 
         // Create purchase and warranty dates
@@ -34,7 +34,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 asset_id: '11111111-1111-1111-1111-111111111111',
                 asset_type: 'server',
-                company_id: emeraldCity.company_id,
+                client_id: emeraldCity.client_id,
                 asset_tag: 'EC-SRV-001',
                 serial_number: 'RS789012',
                 name: 'Ruby Slippers Server',
@@ -49,7 +49,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 asset_id: '22222222-2222-2222-2222-222222222222',
                 asset_type: 'workstation',
-                company_id: emeraldCity.company_id,
+                client_id: emeraldCity.client_id,
                 asset_tag: 'EC-WS-001',
                 serial_number: 'CB456789',
                 name: 'Crystal Ball Workstation',
@@ -64,7 +64,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 asset_id: '33333333-3333-3333-3333-333333333333',
                 asset_type: 'network_device',
-                company_id: emeraldCity.company_id,
+                client_id: emeraldCity.client_id,
                 asset_tag: 'EC-NSW-001',
                 serial_number: 'YB123456',
                 name: 'Yellow Brick Switch',
@@ -80,7 +80,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 asset_id: '44444444-4444-4444-4444-444444444444',
                 asset_type: 'server',
-                company_id: wonderland.company_id,
+                client_id: wonderland.client_id,
                 asset_tag: 'WL-SRV-001',
                 serial_number: 'TT987654',
                 name: 'Mad Hatter Tea Time Server',
@@ -95,7 +95,7 @@ exports.seed = async function(knex) {
                 tenant: tenant.tenant,
                 asset_id: '55555555-5555-5555-5555-555555555555',
                 asset_type: 'workstation',
-                company_id: wonderland.company_id,
+                client_id: wonderland.client_id,
                 asset_tag: 'WL-WS-001',
                 serial_number: 'LG789123',
                 name: 'Looking Glass Workstation',

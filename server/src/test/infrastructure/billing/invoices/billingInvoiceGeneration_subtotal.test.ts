@@ -4,7 +4,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActions';
 import { v4 as uuidv4 } from 'uuid';
-import type { ICompany } from '../../interfaces/company.interfaces';
+import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
 
@@ -22,21 +22,21 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'bucket_plans',
         'tax_rates',
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
     // Create default tax settings and billing settings
-    await createDefaultTaxSettings(context.company.company_id);
+    await createDefaultTaxSettings(context.client.client_id);
   });
 
   afterAll(async () => {
@@ -63,7 +63,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     // Generate invoice with fractional quantities (using whole numbers for rates since they're in cents)
     const invoice = await generateManualInvoice({
-      companyId: context.companyId,
+      clientId: context.clientId,
       items: [
         {
           service_id: serviceA,
@@ -106,11 +106,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
   });
 
   it('should correctly calculate subtotal with multiple line items having different rates and quantities', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 2',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 2',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -120,7 +120,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       is_tax_exempt: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create a billing plan
     const planId = await context.createEntity('billing_plans', {
@@ -178,18 +178,18 @@ describe('Billing Invoice Subtotal Calculations', () => {
     ]);
 
     // Create billing cycle without proration
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       effective_date: '2023-01-01',
       period_start_date: '2023-01-01',
       period_end_date: '2023-02-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Assign plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       start_date: '2023-01-01',
       is_active: true,
@@ -204,11 +204,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
   });
 
   it('should correctly calculate subtotal with line items having zero quantity', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 3',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 3',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -218,7 +218,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       is_tax_exempt: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create a billing plan
     const planId = await context.createEntity('billing_plans', {
@@ -228,10 +228,10 @@ describe('Billing Invoice Subtotal Calculations', () => {
       plan_type: 'Fixed'
     }, 'plan_id');
 
-    // Assign plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Assign plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       start_date: '2023-01-01',
       is_active: true,
@@ -239,8 +239,8 @@ describe('Billing Invoice Subtotal Calculations', () => {
     });
 
     // Create billing cycle without proration
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       effective_date: '2023-01-01',
       period_start_date: '2023-01-01',
@@ -275,7 +275,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     // First create the invoice
     const invoice = await context.createEntity('invoices', {
-      company_id: company_id,
+      client_id: client_id,
       invoice_number: 'INV-000001',
       invoice_date: new Date(),
       due_date: new Date(),
@@ -319,11 +319,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
   });
 
   it('should correctly calculate subtotal with negative rates (credits)', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 4',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 4',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -333,7 +333,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       updated_at: Temporal.Now.plainDateISO().toString(),
       is_inactive: false,
       is_tax_exempt: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create a billing plan
     const planId = await context.createEntity('billing_plans', {
@@ -377,18 +377,18 @@ describe('Billing Invoice Subtotal Calculations', () => {
     ]);
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: company_id,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: client_id,
       billing_cycle: 'monthly',
       effective_date: '2023-01-01',
       period_start_date: '2023-01-01',
       period_end_date: '2023-02-01'
     }, 'billing_cycle_id');
 
-    // Assign plan to company
-    await context.db('company_billing_plans').insert({
-      company_billing_plan_id: uuidv4(),
-      company_id: company_id,
+    // Assign plan to client
+    await context.db('client_billing_plans').insert({
+      client_billing_plan_id: uuidv4(),
+      client_id: client_id,
       plan_id: planId,
       start_date: '2023-01-01',
       is_active: true,
@@ -403,11 +403,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
   });
   
   it('should validate final total rounding to the nearest currency unit', async () => {
-    // Create a test company with tax region set
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Test Company 5',
+    // Create a test client with tax region set
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Test Client 5',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       phone_no: '',
       credit_balance: 0,
       email: '',
@@ -418,7 +418,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       is_inactive: false,
       is_tax_exempt: false,
       region_code: 'US-NY' // Explicitly set the tax region to match our tax rate
-    }, 'company_id');
+    }, 'client_id');
 
     // Create taxable services with rates that would produce fractional amounts when taxed
     const serviceA = await context.createEntity('service_catalog', {
@@ -427,7 +427,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       default_rate: 9999, // $99.99 (stored in cents)
       unit_of_measure: 'hour',
       is_taxable: true,
-      tax_region: 'US-NY' // Match the company and tax rate region
+      tax_region: 'US-NY' // Match the client and tax rate region
     }, 'service_id');
     
     const serviceB = await context.createEntity('service_catalog', {
@@ -436,21 +436,21 @@ describe('Billing Invoice Subtotal Calculations', () => {
       default_rate: 14995, // $149.95 (stored in cents)
       unit_of_measure: 'hour',
       is_taxable: true,
-      tax_region: 'US-NY' // Match the company and tax rate region
+      tax_region: 'US-NY' // Match the client and tax rate region
     }, 'service_id');
 
     // Create a specific tax rate that would result in fractional amounts
     const taxRateId = await context.createEntity('tax_rates', {
       tax_percentage: 8.875, // 8.875% tax rate (NYC tax rate, which often produces fractional cents)
       description: 'Test Tax',
-      region: 'US-NY', // Match the company and services region
+      region: 'US-NY', // Match the client and services region
       start_date: '2020-01-01', // Use a past date to ensure it's active for current date
       is_active: true
     }, 'tax_rate_id');
 
-    // Associate tax rate with company
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Associate tax rate with client
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tax_rate_id: taxRateId,
       tenant: context.tenantId,
       is_reverse_charge_applicable: false
@@ -463,7 +463,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     // Generate invoice with items that would produce fractional amounts when taxed
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      clientId: client_id,
       items: [
         {
           service_id: serviceA,
@@ -511,11 +511,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
   });
 
   it('should verify discount application with fractional percentages', async () => {
-    // Create test company
-    const company_id = await context.createEntity<ICompany>('companies', {
-      company_name: 'Fractional Discount Test Company',
+    // Create test client
+    const client_id = await context.createEntity<IClient>('clients', {
+      client_name: 'Fractional Discount Test Client',
       billing_cycle: 'monthly',
-      company_id: uuidv4(),
+      client_id: uuidv4(),
       region_code: 'US-NY',
       is_tax_exempt: false,
       created_at: Temporal.Now.plainDateISO().toString(),
@@ -526,7 +526,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
       url: '',
       address: '',
       is_inactive: false
-    }, 'company_id');
+    }, 'client_id');
 
     // Create NY tax rate
     const nyTaxRateId = await context.createEntity('tax_rates', {
@@ -536,9 +536,9 @@ describe('Billing Invoice Subtotal Calculations', () => {
       start_date: '2025-01-01'
     }, 'tax_rate_id');
 
-    // Set up company tax settings
-    await context.db('company_tax_settings').insert({
-      company_id: company_id,
+    // Set up client tax settings
+    await context.db('client_tax_settings').insert({
+      client_id: client_id,
       tenant: context.tenantId,
       tax_rate_id: nyTaxRateId,
       is_reverse_charge_applicable: false
@@ -556,7 +556,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
 
     // Generate invoice with a fractional percentage discount
     const invoice = await generateManualInvoice({
-      companyId: company_id,
+      clientId: client_id,
       items: [
         {
           // Base service

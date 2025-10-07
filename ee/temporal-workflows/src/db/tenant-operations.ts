@@ -27,8 +27,10 @@ export async function createTenantInDB(
     
     const result = await knex.transaction(async (trx: Knex.Transaction) => {
       // Create tenant first (include admin email since it's required)
+      const tenantCompanyName = input.companyName ?? input.tenantName;
+
       const tenantData: any = {
-        company_name: input.tenantName,
+        client_name: tenantCompanyName,
         email: input.email.toLowerCase(),
         created_at: knex.fn.now(),
         updated_at: knex.fn.now()
@@ -46,39 +48,41 @@ export async function createTenantInDB(
         .returning('tenant');
       
       const tenantId = tenantResult[0].tenant;
-      log.info('Tenant created successfully', { 
-        tenantId, 
-        licenseCount: input.licenseCount 
+      log.info('Tenant created successfully', {
+        tenantId,
+        licenseCount: input.licenseCount
       });
 
-      // Create company if companyName is provided (now with tenant ID)
-      let companyId: string | undefined;
-      
-      if (input.companyName) {
-        const companyResult = await trx('companies')
+      // Create client if name is provided (now with tenant ID)
+      let clientId: string | undefined;
+
+      const clientName = input.clientName ?? input.companyName;
+
+      if (clientName) {
+        const clientResult = await trx('clients')
           .insert({
-            company_name: input.companyName,
+            client_name: clientName,
             tenant: tenantId,
-            client_type: 'company',
+            client_type: 'client',
             is_inactive: false,
             properties: {
               type: 'msp',
-              is_system_company: true,
+              is_system_client: true,
               created_by: 'tenant_setup'
             },
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           })
-          .returning('company_id');
-        companyId = companyResult[0].company_id;
-        log.info('Company created', { companyId, companyName: input.companyName, tenantId });
+          .returning('client_id');
+        clientId = clientResult[0].client_id;
+        log.info('Client created', { clientId, clientName, tenantId });
         
-        // Create default location for the MSP company with email from the tenant setup
+        // Create default location for the MSP client with email from the tenant setup
         // Insert minimal required fields to satisfy NOT NULL constraints
-        await trx('company_locations')
+        await trx('client_locations')
           .insert({
             location_id: knex.raw('gen_random_uuid()'),
-            company_id: companyId,
+            client_id: clientId,
             tenant: tenantId,
             location_name: 'Main Office',
             email: input.email.toLowerCase(), // default contact email (lowercased)
@@ -92,17 +96,17 @@ export async function createTenantInDB(
             created_at: knex.fn.now(),
             updated_at: knex.fn.now()
           });
-        log.info('Default location created', { companyId, email: input.email });
+        log.info('Default location created', { clientId, email: input.email });
         
-        // Note: Not updating tenant with company_id as column doesn't exist in schema
+        // Note: Not updating tenant with client_id as column doesn't exist in schema
       }
 
-      return { tenantId, companyId };
+      return { tenantId, clientId };
     });
 
     return {
       tenantId: result.tenantId,
-      companyId: result.companyId,
+      clientId: result.clientId,
     };
 
   } catch (error) {
@@ -159,19 +163,19 @@ export async function setupTenantDataInDB(
         log.info('Tenant settings already exist, skipping', { tenantId: input.tenantId });
       }
 
-      // Create tenant-company association if we have a company
-      if (input.companyId) {
+      // Create tenant-client association if we have a client/company id
+      if (input.clientId) {
         try {
           await trx('tenant_companies')
             .insert({
               tenant: input.tenantId,
-              company_id: input.companyId,
+              client_id: input.clientId,
               is_default: true
             });
-          setupSteps.push('tenant_company_association');
+          setupSteps.push('tenant_client_association');
         } catch (error) {
           // If it already exists, that's fine
-          log.info('Tenant-company association already exists, skipping', { tenantId: input.tenantId, companyId: input.companyId });
+          log.info('Tenant-client association already exists, skipping', { tenantId: input.tenantId, clientId: input.clientId });
         }
       }
 
@@ -213,7 +217,7 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
       // Delete users (references tenant)
       await trx('users').where({ tenant: tenantId }).delete();
       
-      // Delete tenant_companies associations (references tenant and companies)
+      // Delete tenant_companies associations (references tenant and clients)
       await trx('tenant_companies').where({ tenant: tenantId }).delete();
       
       // Delete tenant_email_settings (references tenant indirectly)
@@ -222,8 +226,8 @@ export async function rollbackTenantInDB(tenantId: string): Promise<void> {
       // Delete tenant_settings (references tenant)
       await trx('tenant_settings').where({ tenant: tenantId }).delete();
       
-      // Delete companies (references tenant)
-      await trx('companies').where({ tenant: tenantId }).delete();
+      // Delete clients (references tenant)
+      await trx('clients').where({ tenant: tenantId }).delete();
       
       // Delete the tenant last
       await trx('tenants').where({ tenant: tenantId }).delete();

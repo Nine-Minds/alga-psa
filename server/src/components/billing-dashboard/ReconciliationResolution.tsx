@@ -114,7 +114,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
   // State for data
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<ICreditReconciliationReport | null>(null);
-  const [company, setCompany] = useState<{ id: string; name: string } | null>(null);
+  const [client, setClient] = useState<{ id: string; name: string } | null>(null);
   const [transactionData, setTransactionData] = useState<ITransaction[]>([]);
   const [creditTrackingData, setCreditTrackingData] = useState<ICreditTracking[]>([]);
   
@@ -154,22 +154,22 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         const reportData = await response.json();
         setReport(reportData);
         
-        // Fetch company info
-        const companyResponse = await fetch(`/api/companies/${reportData.company_id}`);
-        if (companyResponse.ok) {
-          const companyData = await companyResponse.json();
-          setCompany(companyData);
+        // Fetch client info
+        const clientResponse = await fetch(`/api/clients/${reportData.client_id}`);
+        if (clientResponse.ok) {
+          const clientData = await clientResponse.json();
+          setClient(clientData);
         }
 
         // Fetch related transactions
-        const transactionsResponse = await fetch(`/api/companies/${reportData.company_id}/transactions`);
+        const transactionsResponse = await fetch(`/api/clients/${reportData.client_id}/transactions`);
         if (transactionsResponse.ok) {
           const transactionsData = await transactionsResponse.json();
           setTransactionData(transactionsData);
         }
 
         // Fetch credit tracking entries
-        const creditTrackingResponse = await fetch(`/api/companies/${reportData.company_id}/credit-tracking`);
+        const creditTrackingResponse = await fetch(`/api/clients/${reportData.client_id}/credit-tracking`);
         if (creditTrackingResponse.ok) {
           const entriesData = await creditTrackingResponse.json();
           setCreditTrackingData(entriesData);
@@ -438,8 +438,8 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                 <div className="space-y-4">
                   <div className="flex justify-between">
                     <div>
-                      <p className="text-sm text-[rgb(var(--color-text-500))]">Company</p>
-                      <p className="font-medium">{company?.name || report.company_id}</p>
+                      <p className="text-sm text-[rgb(var(--color-text-500))]">Client</p>
+                      <p className="font-medium">{client?.name || report.client_id}</p>
                     </div>
                     <div>
                       <p className="text-sm text-[rgb(var(--color-text-500))]">Status</p>
@@ -922,8 +922,8 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
                   <h4 className="font-medium mb-4">Resolution Details</h4>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-[rgb(var(--color-text-500))]">Company</p>
-                      <p className="font-medium">{company?.name || report.company_id}</p>
+                      <p className="text-[rgb(var(--color-text-500))]">Client</p>
+                      <p className="font-medium">{client?.name || report.client_id}</p>
                     </div>
                     <div>
                       <p className="text-[rgb(var(--color-text-500))]">Report ID</p>

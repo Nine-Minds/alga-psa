@@ -22,7 +22,7 @@ import {
 
 export const taggedEntityTypes = [
   'contact', 
-  'company', 
+  'client', 
   'ticket', 
   'project', 
   'project_task', 

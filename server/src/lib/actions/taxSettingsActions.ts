@@ -1,7 +1,7 @@
 'use server'
 
 import { withTransaction } from '@alga-psa/shared/db';
-import { ICompanyTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
+import { IClientTaxSettings, ITaxRate, ITaxComponent, ITaxRateThreshold, ITaxHoliday } from 'server/src/interfaces/tax.interfaces';
 import { v4 as uuid4 } from 'uuid';
 import { TaxService } from 'server/src/lib/services/taxService';
 import { ITaxRegion } from 'server/src/interfaces/tax.interfaces';
@@ -9,12 +9,12 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
-export async function getCompanyTaxSettings(companyId: string): Promise<ICompanyTaxSettings | null> {
+export async function getClientTaxSettings(clientId: string): Promise<IClientTaxSettings | null> {
   try {
     const { knex: db, tenant } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const taxSettings = await trx<ICompanyTaxSettings>('company_tax_settings')
-        .where({ company_id: companyId })
+      const taxSettings = await trx<IClientTaxSettings>('client_tax_settings')
+        .where({ client_id: clientId })
         .first();
 
     // Removed fetching of components, thresholds, holidays based on tax_rate_id (Phase 1.2)
@@ -24,25 +24,25 @@ export async function getCompanyTaxSettings(companyId: string): Promise<ICompany
       return taxSettings || null;
     });
   } catch (error) {
-    console.error('Error fetching company tax settings:', error);
+    console.error('Error fetching client tax settings:', error);
     if (error instanceof Error) {
-      throw new Error(`Failed to fetch company tax settings: ${error.message}`);
+      throw new Error(`Failed to fetch client tax settings: ${error.message}`);
     } else {
-      throw new Error('Failed to fetch company tax settings due to an unexpected error.');
+      throw new Error('Failed to fetch client tax settings due to an unexpected error.');
     }
   }
 }
 
-export async function updateCompanyTaxSettings(
-  companyId: string,
-  taxSettings: Omit<ICompanyTaxSettings, 'tenant'>
-): Promise<ICompanyTaxSettings | null> {
+export async function updateClientTaxSettings(
+  clientId: string,
+  taxSettings: Omit<IClientTaxSettings, 'tenant'>
+): Promise<IClientTaxSettings | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // Update only the fields remaining on company_tax_settings
-    await trx<ICompanyTaxSettings>('company_tax_settings')
-      .where('company_id', companyId) // Separate where clauses
+    // Update only the fields remaining on client_tax_settings
+    await trx<IClientTaxSettings>('client_tax_settings')
+      .where('client_id', clientId) // Separate where clauses
       .andWhere('tenant', tenant!)     // Use non-null assertion for tenant
       .update({
         // tax_rate_id: taxSettings.tax_rate_id, // Removed field
@@ -53,9 +53,9 @@ export async function updateCompanyTaxSettings(
       });
         // Removed transaction logic for components, thresholds, holidays (Phase 1.2)
 
-        return await getCompanyTaxSettings(companyId);
+        return await getClientTaxSettings(clientId);
       } catch (error) {
-        console.error('Error updating company tax settings:', error);
+        console.error('Error updating client tax settings:', error);
       
       // Enhanced error messages with more specific information
       if (error instanceof Error) {
@@ -66,10 +66,10 @@ export async function updateCompanyTaxSettings(
         } else if (error.message.includes('not found')) {
           throw new Error('One or more tax settings components could not be found.');
         } else {
-          throw new Error(`Failed to update company tax settings: ${error.message}`);
+          throw new Error(`Failed to update client tax settings: ${error.message}`);
         }
         } else {
-          throw new Error('Failed to update company tax settings due to an unexpected error.');
+          throw new Error('Failed to update client tax settings due to an unexpected error.');
         }
       }
   });
@@ -404,7 +404,7 @@ export async function deleteTaxHoliday(holidayId: string): Promise<void> {
   }
 }
 
-export async function createDefaultTaxSettings(companyId: string): Promise<ICompanyTaxSettings> {
+export async function createDefaultTaxSettings(clientId: string): Promise<IClientTaxSettings> {
   const taxService = new TaxService();
-  return taxService.createDefaultTaxSettings(companyId);
+  return taxService.createDefaultTaxSettings(clientId);
 }

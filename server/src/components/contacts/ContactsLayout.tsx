@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { IContact, IUserWithRoles } from 'server/src/interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import Contacts from './Contacts';
 import OverallInteractionsFeed from '../interactions/OverallInteractionsFeed';
 import { useCollapsiblePreference } from 'server/src/hooks/useCollapsiblePreference';
@@ -10,13 +10,13 @@ import { useCollapsiblePreference } from 'server/src/hooks/useCollapsiblePrefere
 interface ContactsLayoutProps {
   uniqueContacts: IContact[];
   usersWithRoles: IUserWithRoles[];
-  companies: ICompany[];
+  clients: IClient[];
 }
 
 export default function ContactsLayout({
   uniqueContacts,
   usersWithRoles,
-  companies
+  clients
 }: ContactsLayoutProps) {
   const {
     isCollapsed: isInteractionsCollapsed,
@@ -53,7 +53,7 @@ export default function ContactsLayout({
         <OverallInteractionsFeed
           users={usersWithRoles}
           contacts={uniqueContacts}
-          companies={companies}
+          clients={clients}
           isCollapsed={isInteractionsCollapsed}
           onToggleCollapse={handleToggleCollapse}
         />

@@ -25,7 +25,7 @@ export const mockExtensionData: Extension[] = [
           type: 'tab',
           id: 'customer-insights',
           entryPoint: './components/CustomerInsights.js',
-          mountPoint: 'company-details',
+          mountPoint: 'client-details',
           properties: {
             label: 'Customer Insights',
             icon: 'ChartBarIcon',
@@ -34,7 +34,7 @@ export const mockExtensionData: Extension[] = [
         }
       ],
       permissions: [
-        'company:read',
+        'client:read',
         'invoice:read',
         'ticket:read'
       ],
@@ -129,7 +129,7 @@ export const mockExtensionData: Extension[] = [
       permissions: [
         'report:read',
         'report:write',
-        'company:read',
+        'client:read',
         'invoice:read',
         'ticket:read',
         'storage:read'
@@ -149,9 +149,9 @@ export const mockExtensionData: Extension[] = [
           required: true
         },
         {
-          key: 'companyLogoInReports',
-          label: 'Include Company Logo',
-          description: 'Include your company logo in report headers',
+          key: 'clientLogoInReports',
+          label: 'Include Client Logo',
+          description: 'Include your client logo in report headers',
           type: 'boolean',
           defaultValue: true
         },
@@ -207,8 +207,8 @@ export const mockExtensionData: Extension[] = [
       ],
       permissions: [
         'integration:manage',
-        'company:read',
-        'company:write',
+        'client:read',
+        'client:write',
         'invoice:read',
         'invoice:write',
         'storage:read',
@@ -248,9 +248,9 @@ export const mockExtensionData: Extension[] = [
           category: 'Sync Settings'
         },
         {
-          key: 'companyMappingDefault',
-          label: 'Default Company Mapping',
-          description: 'Default mapping for new companies',
+          key: 'clientMappingDefault',
+          label: 'Default Client Mapping',
+          description: 'Default mapping for new clients',
           type: 'select',
           defaultValue: 'customer',
           options: [

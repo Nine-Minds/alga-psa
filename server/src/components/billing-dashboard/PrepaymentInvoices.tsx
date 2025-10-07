@@ -5,9 +5,9 @@ import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Input } from '../ui/Input';
 import CustomSelect from '../ui/CustomSelect';
-import { CompanyPicker } from '../companies/CompanyPicker';
+import { ClientPicker } from '../clients/ClientPicker';
 import { createPrepaymentInvoice } from '../../lib/actions/creditActions';
-import { ICompany } from '../../interfaces';
+import { IClient } from '../../interfaces';
 
 interface SelectOption {
   value: string;
@@ -15,12 +15,12 @@ interface SelectOption {
 }
 
 interface PrepaymentInvoicesProps {
-  companies: ICompany[];
+  clients: IClient[];
   onGenerateSuccess: () => void;
 }
 
-const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGenerateSuccess }) => {
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
+const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGenerateSuccess }) => {
+  const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [amount, setAmount] = useState<string>('');
   const [description, setDescription] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -31,7 +31,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedCompany === null || !amount || !description) {
+    if (selectedClient === null || !amount || !description) {
       setError('Please fill in all fields');
       return;
     }
@@ -50,10 +50,10 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
         throw new Error('Credit memos are not yet supported');
       }
 
-      await createPrepaymentInvoice(selectedCompany || '', numericAmount);
+      await createPrepaymentInvoice(selectedClient || '', numericAmount);
       
       // Clear form
-      setSelectedCompany(null);
+      setSelectedClient(null);
       setAmount('');
       setDescription('');
       setType('prepayment');
@@ -100,13 +100,13 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company
+              Client
             </label>
-            <CompanyPicker
-              id='company-picker'
-              companies={companies}
-              selectedCompanyId={selectedCompany}
-              onSelect={setSelectedCompany}
+            <ClientPicker
+              id='client-picker'
+              clients={clients}
+              selectedClientId={selectedClient}
+              onSelect={setSelectedClient}
               filterState={filterState}
               onFilterStateChange={setFilterState}
               clientTypeFilter={clientTypeFilter}
@@ -145,7 +145,7 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ companies, onGe
           <Button
             id='generate-button'
             type="submit"
-            disabled={isGenerating || !selectedCompany || !amount || !description}
+            disabled={isGenerating || !selectedClient || !amount || !description}
             className="w-full"
           >
             {isGenerating ? 'Generating...' : `Generate ${type === 'prepayment' ? 'Prepayment Invoice' : 'Credit Memo'}`}

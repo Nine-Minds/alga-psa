@@ -3,19 +3,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from 'server/src/components/ui/Card';
 import { Table } from 'server/src/components/ui/Table';
-import { getClientCompany } from 'server/src/lib/actions/client-portal-actions/client-company';
+import { getClientClient } from 'server/src/lib/actions/client-portal-actions/client-client';
 import { getClientBillingPlan, getClientInvoices } from 'server/src/lib/actions/client-portal-actions/client-billing';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
-import type { ICompany } from 'server/src/interfaces/company.interfaces';
-import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import type { IClient } from 'server/src/interfaces/client.interfaces';
+import type { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import type { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 
 export default function ClientAccount() {
   const { t } = useTranslation('clientPortal');
   const [isLoading, setIsLoading] = useState(true);
-  const [company, setCompany] = useState<ICompany | null>(null);
-  const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
+  const [client, setClient] = useState<IClient | null>(null);
+  const [billingPlan, setBillingPlan] = useState<IClientBillingPlan | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [hasInvoiceAccess, setHasInvoiceAccess] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -43,13 +43,13 @@ export default function ClientAccount() {
     let mounted = true;
     const load = async () => {
       try {
-        const [companyData, plan] = await Promise.all([
-          getClientCompany(),
+        const [clientData, plan] = await Promise.all([
+          getClientClient(),
           getClientBillingPlan(),
         ]);
 
         if (!mounted) return;
-        setCompany(companyData);
+        setClient(clientData);
         setBillingPlan(plan);
 
         try {
@@ -63,7 +63,7 @@ export default function ClientAccount() {
         }
       } catch (e) {
         if (!mounted) return;
-        setError(t('companySettings.messages.failedToLoad'));
+        setError(t('clientSettings.messages.failedToLoad'));
       } finally {
         if (mounted) setIsLoading(false);
       }
@@ -79,7 +79,7 @@ export default function ClientAccount() {
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <Card id="company-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
+        <Card id="client-details-card" className="p-6"><div>{t('common.loading')}</div></Card>
         <Card id="billing-plan-card" className="p-6"><div>{t('common.loading')}</div></Card>
         <Card className="p-6"><div>{t('common.loading')}</div></Card>
       </div>
@@ -96,21 +96,21 @@ export default function ClientAccount() {
 
   return (
     <div className="space-y-8">
-      {/* Company Details */}
-      <Card id="company-details-card" className="bg-white">
+      {/* Client Details */}
+      <Card id="client-details-card" className="bg-white">
         <CardHeader>
-          <CardTitle>{t('companySettings.tabs.companyDetails')}</CardTitle>
+          <CardTitle>{t('clientSettings.tabs.clientDetails')}</CardTitle>
         </CardHeader>
         <CardContent>
-          {company ? (
+          {client ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-sm text-gray-600">{t('companySettings.fields.companyName')}</div>
-                <div className="text-base font-medium">{company.company_name}</div>
+                <div className="text-sm text-gray-600">{t('clientSettings.fields.clientName')}</div>
+                <div className="text-base font-medium">{client.client_name}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">{t('companySettings.fields.website')}</div>
-                <div className="text-base font-medium">{company.properties?.website || company.url || '—'}</div>
+                <div className="text-sm text-gray-600">{t('clientSettings.fields.website')}</div>
+                <div className="text-base font-medium">{client.properties?.website || client.url || '—'}</div>
               </div>
             </div>
           ) : (

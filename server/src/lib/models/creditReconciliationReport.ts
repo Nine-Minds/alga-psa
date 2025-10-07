@@ -4,7 +4,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { ICreditReconciliationReport, ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
 
 interface ListReportsOptions {
-  companyId?: string;
+  clientId?: string;
   status?: ReconciliationStatus | ReconciliationStatus[];
   startDate?: string;
   endDate?: string;
@@ -107,24 +107,24 @@ class CreditReconciliationReport {
   }
 
   /**
-   * Get reconciliation reports for a specific company
-   * @param companyId The company ID
+   * Get reconciliation reports for a specific client
+   * @param clientId The client ID
    * @param status Optional status filter
    * @returns Array of reconciliation reports
    */
-  static async getByCompanyId(
-    companyId: string,
+  static async getByClientId(
+    clientId: string,
     status?: ReconciliationStatus | ReconciliationStatus[]
   ): Promise<ICreditReconciliationReport[]> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
-      throw new Error('Tenant context is required for fetching company reconciliation reports');
+      throw new Error('Tenant context is required for fetching client reconciliation reports');
     }
 
     try {
       const query = knex('credit_reconciliation_reports')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant
         })
         .orderBy('detection_date', 'desc');
@@ -151,7 +151,7 @@ class CreditReconciliationReport {
         return report;
       });
     } catch (error) {
-      console.error(`Error fetching reconciliation reports for company ${companyId}:`, error);
+      console.error(`Error fetching reconciliation reports for client ${clientId}:`, error);
       throw error;
     }
   }
@@ -234,7 +234,7 @@ class CreditReconciliationReport {
     }
 
     const {
-      companyId,
+      clientId,
       status,
       startDate,
       endDate,
@@ -248,8 +248,8 @@ class CreditReconciliationReport {
         .where({ tenant });
 
       // Apply filters
-      if (companyId) {
-        baseQuery.where('company_id', companyId);
+      if (clientId) {
+        baseQuery.where('client_id', clientId);
       }
 
       if (status) {
@@ -365,11 +365,11 @@ class CreditReconciliationReport {
     }
   }
   /**
-   * Count open reconciliation reports for a company
-   * @param companyId The company ID
+   * Count open reconciliation reports for a client
+   * @param clientId The client ID
    * @returns The number of open reports
    */
-  static async countOpenReports(companyId: string): Promise<number> {
+  static async countOpenReports(clientId: string): Promise<number> {
     const { knex, tenant } = await createTenantKnex();
     if (!tenant) {
       throw new Error('Tenant context is required for counting open reconciliation reports');
@@ -378,7 +378,7 @@ class CreditReconciliationReport {
     try {
       const [{ count }] = await knex('credit_reconciliation_reports')
         .where({
-          company_id: companyId,
+          client_id: clientId,
           tenant,
           status: 'open'
         })
@@ -386,7 +386,7 @@ class CreditReconciliationReport {
 
       return parseInt(count as string);
     } catch (error) {
-      console.error(`Error counting open reconciliation reports for company ${companyId}:`, error);
+      console.error(`Error counting open reconciliation reports for client ${clientId}:`, error);
       throw error;
     }
   }
