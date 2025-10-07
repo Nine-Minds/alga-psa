@@ -22,7 +22,7 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 // Core client form validation schema extracted from server actions
 export const clientFormSchema = z.object({
   client_name: z.string().min(1, 'Client name is required'),
-  client_type: z.enum(['client', 'individual']).optional(),
+  client_type: z.enum(['company', 'individual']).optional(),
   url: z.union([z.string().url(), z.literal(''), z.null()]).optional(),
   phone_no: z.string().optional(),
   email: z.union([z.string().email(), z.literal(''), z.null()]).optional(),
@@ -42,7 +42,7 @@ export const clientFormSchema = z.object({
 export const clientSchema = z.object({
   client_id: z.string().uuid(),
   client_name: z.string(),
-  client_type: z.enum(['client', 'individual']).nullable(),
+  client_type: z.enum(['company', 'individual']).nullable(),
   tenant: z.string().uuid(),
   url: z.string().nullable(),
   phone_no: z.string().nullable(),
@@ -267,7 +267,7 @@ export class ClientModel {
     const insertData: any = {
       client_id: clientId,
       client_name: clientData.client_name,
-      client_type: clientData.client_type || 'client',
+      client_type: clientData.client_type || 'company',
       tenant,
       url: clientData.url || null,
       notes: clientData.notes || null,

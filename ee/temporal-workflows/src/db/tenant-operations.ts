@@ -63,7 +63,7 @@ export async function createTenantInDB(
           .insert({
             client_name: clientName,
             tenant: tenantId,
-            client_type: 'client',
+            client_type: 'company',
             is_inactive: false,
             properties: {
               type: 'msp',

@@ -12,14 +12,14 @@ exports.seed = function(knex) {
                         client_name: 'Emerald City',
                         url: 'https://emeraldcity.oz',
                         created_at: knex.fn.now(),
-                        client_type: 'client'
+                        client_type: 'company'
                     },
                     {
                         tenant: tenant.tenant,
                         client_name: 'Wonderland',
                         url: 'https://wonderland.com',
                         created_at: knex.fn.now(),
-                        client_type: 'client'
+                        client_type: 'company'
                     },
                     {
                         tenant: tenant.tenant,

@@ -21,7 +21,7 @@ export async function clientFactory(db: any, input: ClientInput) {
     client_id: faker.string.uuid(),
     tenant: input.tenant,
     client_name: input.client_name || faker.company.name(),
-    client_type: input.client_type || 'client',
+    client_type: input.client_type || 'company',
     url: input.url || faker.internet.url(),
     is_inactive: input.is_inactive !== undefined ? input.is_inactive : false,
     billing_cycle: 'monthly',

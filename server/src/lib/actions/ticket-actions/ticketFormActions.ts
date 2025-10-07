@@ -61,7 +61,7 @@ export async function getTicketFormData(prefilledClientId?: string): Promise<Tic
     if (prefilledClientId) {
       try {
         selectedClient = await getClientById(prefilledClientId);
-        if (selectedClient?.client_type === 'client') {
+        if (selectedClient?.client_type === 'company') {
           contacts = await getContactsByClient(selectedClient.client_id).catch(() => []);
         }
       } catch (error) {

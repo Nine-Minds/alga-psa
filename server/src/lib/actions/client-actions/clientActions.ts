@@ -873,7 +873,7 @@ export async function exportClientsToCSV(clients: IClient[]): Promise<string> {
       return {
         client_name: client.client_name,
         website: client.url || '',
-        client_type: client.client_type || 'client',
+        client_type: client.client_type || 'company',
         is_inactive: client.is_inactive ? 'true' : 'false',
         notes: client.notes || '',
         tags: tagNames,
@@ -918,7 +918,7 @@ export async function generateClientCSVTemplate(): Promise<string> {
     {
       client_name: 'Mad Hatter Tea Client',
       website: 'https://madhatterteaclient.com',
-      client_type: 'client',
+      client_type: 'company',
       is_inactive: 'false',
       notes: 'Specializes in unbirthday party supplies and premium tea blends',
       tags: 'Tea, Party Planning, Whimsical',
@@ -1171,7 +1171,7 @@ export async function importClientsFromCSV(
             url: clientData.website || clientData.url || '',
             is_inactive: clientData.is_inactive === 'Yes' || clientData.is_inactive === true || false,
             is_tax_exempt: clientData.is_tax_exempt || false,
-            client_type: clientData.client_type || 'client',
+            client_type: clientData.client_type || 'company',
             tenant: tenant,
             properties: properties,
             account_manager_id: clientData.account_manager_id === '' ? null : clientData.account_manager_id,

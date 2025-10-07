@@ -63,7 +63,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
 }) => {
   const initialFormData: CreateClientData = {
     client_name: '',
-    client_type: 'client',
+    client_type: 'company',
     url: '',
     notes: '',
     is_inactive: false,
