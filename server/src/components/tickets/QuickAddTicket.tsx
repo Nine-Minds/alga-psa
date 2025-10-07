@@ -3,16 +3,17 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
+import { HelpCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { addTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getCompanyLocations } from 'server/src/lib/actions/company-actions/companyLocationActions';
 import { getTicketFormData } from 'server/src/lib/actions/ticket-actions/ticketFormActions';
-import { getTicketCategoriesByChannel } from 'server/src/lib/actions/categoryActions';
-import { IUser, IChannel, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
+import { getTicketCategoriesByBoard, BoardCategoryData } from 'server/src/lib/actions/ticketCategoryActions';
+import { IUser, IBoard, ITicketStatus, IPriority, IStandardPriority, ICompany, ICompanyLocation, IContact, ITicket, ITicketCategory } from 'server/src/interfaces';
 import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
-import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
 import { CategoryPicker } from './CategoryPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
@@ -26,6 +27,7 @@ import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionCo
 import { DialogComponent, FormFieldComponent, ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflection/types';
 import { withDataAutomationId } from 'server/src/types/ui-reflection/withDataAutomationId';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
+import { calculateItilPriority, ItilLabels } from '../../lib/utils/itilUtils';
 
 // Helper function to format location display
 const formatLocationDisplay = (location: ICompanyLocation): string => {
@@ -88,7 +90,7 @@ export function QuickAddTicket({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState(prefilledDescription || '');
   const [assignedTo, setAssignedTo] = useState('');
-  const [channelId, setChannelId] = useState('');
+  const [boardId, setBoardId] = useState('');
   const [statusId, setStatusId] = useState('');
   const [priorityId, setPriorityId] = useState('');
   const [companyId, setCompanyId] = useState(prefilledCompany?.id || '');
@@ -97,9 +99,15 @@ export function QuickAddTicket({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [selectedCompanyType, setSelectedCompanyType] = useState<'company' | 'individual' | null>(null);
   const [categories, setCategories] = useState<ITicketCategory[]>([]);
+  const [boardConfig, setBoardConfig] = useState<BoardCategoryData['boardConfig']>({
+    category_type: 'custom',
+    priority_type: 'custom',
+    display_itil_impact: false,
+    display_itil_urgency: false,
+  });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [users, setUsers] = useState<IUser[]>([]);
-  const [channels, setChannels] = useState<IChannel[]>([]);
+  const [boards, setBoards] = useState<IBoard[]>([]);
   const [statuses, setStatuses] = useState<ITicketStatus[]>([]);
   const [priorities, setPriorities] = useState<IPriority[]>([]);
   const [companies, setCompanies] = useState<ICompany[]>([]);
@@ -107,7 +115,47 @@ export function QuickAddTicket({
   const [locations, setLocations] = useState<ICompanyLocation[]>([]);
   const [locationId, setLocationId] = useState<string | null>(null);
   const [isPrefilledCompany, setIsPrefilledCompany] = useState(false);
-  const [quickAddChannelFilterState, setQuickAddChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [quickAddBoardFilterState, setQuickAddBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+
+  // ITIL-specific state
+  const [itilImpact, setItilImpact] = useState<number | undefined>(undefined);
+  const [itilUrgency, setItilUrgency] = useState<number | undefined>(undefined);
+  const [showPriorityMatrix, setShowPriorityMatrix] = useState(false);
+
+  // Calculate ITIL priority when impact and urgency are set
+  const calculatedItilPriority = useMemo(() => {
+    if (itilImpact && itilUrgency) {
+      try {
+        return calculateItilPriority(itilImpact, itilUrgency);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }, [itilImpact, itilUrgency]);
+
+  // ITIL options for selects
+  const itilImpactOptions: SelectOption[] = [
+    { value: '1', label: '1 - High (Critical business function affected)' },
+    { value: '2', label: '2 - Medium-High (Important function affected)' },
+    { value: '3', label: '3 - Medium (Minor function affected)' },
+    { value: '4', label: '4 - Medium-Low (Minimal impact)' },
+    { value: '5', label: '5 - Low (No business impact)' }
+  ];
+
+  const itilUrgencyOptions: SelectOption[] = [
+    { value: '1', label: '1 - High (Work cannot continue)' },
+    { value: '2', label: '2 - Medium-High (Work severely impaired)' },
+    { value: '3', label: '3 - Medium (Work continues with limitations)' },
+    { value: '4', label: '4 - Medium-Low (Minor inconvenience)' },
+    { value: '5', label: '5 - Low (Work continues normally)' }
+  ];
+
+  // NOTE: Categories are now unified - no need for separate ITIL category filtering
+
+  // NOTE: ITIL category selection is now handled by the unified CategoryPicker
+  // Categories are managed through the selectedCategories state and regular category handling
+
 
   const { automationIdProps: dialogProps, updateMetadata } = useAutomationIdAndRegister<DialogComponent>({
     id: 'quick-add-ticket-dialog',
@@ -132,7 +180,7 @@ export function QuickAddTicket({
         const formData = await getTicketFormData(prefilledCompany?.id);
 
         setUsers(formData.users);
-        setChannels(formData.channels);
+        setBoards(formData.boards);
         setPriorities(formData.priorities);
         setCompanies(formData.companies);
 
@@ -217,13 +265,32 @@ export function QuickAddTicket({
 
   useEffect(() => {
     const fetchCategories = async () => {
-      if (channelId) {
+      if (boardId) {
         try {
-          const categoriesData = await getTicketCategoriesByChannel(channelId);
-          setCategories(categoriesData || []);
+          const data = await getTicketCategoriesByBoard(boardId);
+          // Ensure data is properly resolved and categories is an array
+          if (data && data.categories && Array.isArray(data.categories)) {
+            setCategories(data.categories);
+            setBoardConfig(data.boardConfig);
+          } else {
+            console.error('Invalid categories data received:', data);
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+          }
         } catch (error) {
           console.error('Error fetching categories:', error);
           setCategories([]);
+          setBoardConfig({
+            category_type: 'custom',
+            priority_type: 'custom',
+            display_itil_impact: false,
+            display_itil_urgency: false,
+          });
         }
       } else {
         setCategories([]);
@@ -231,10 +298,10 @@ export function QuickAddTicket({
       }
     };
 
-    if (channelId) {
+    if (boardId) {
       fetchCategories();
     }
-  }, [channelId]);
+  }, [boardId]);
 
   useEffect(() => {
     if (!updateMetadata) return;
@@ -273,17 +340,19 @@ export function QuickAddTicket({
     }
   };
 
-  const handleChannelChange = (newChannelId: string) => {
-    setChannelId(newChannelId);
+  const handleBoardChange = (newBoardId: string) => {
+    setBoardId(newBoardId);
     setSelectedCategories([]);
+    setShowPriorityMatrix(false);
     clearErrorIfSubmitted();
   };
+
 
   const resetForm = () => {
     setTitle('');
     setDescription(prefilledDescription || '');
     setAssignedTo('');
-    setChannelId('');
+    setBoardId('');
     setStatusId('');
     setPriorityId('');
     setCompanyId(prefilledCompany?.id || '');
@@ -300,6 +369,10 @@ export function QuickAddTicket({
       setSelectedCompanyType(null);
     }
     setSelectedCategories([]);
+    // Reset ITIL fields
+    setItilImpact(undefined);
+    setItilUrgency(undefined);
+    setShowPriorityMatrix(false);
     setError(null);
     setHasAttemptedSubmit(false);
   };
@@ -315,9 +388,26 @@ export function QuickAddTicket({
     if (!title.trim()) validationErrors.push('Title');
     if (!description.trim()) validationErrors.push('Description');
     if (!assignedTo) validationErrors.push('Assigned To');
-    if (!channelId) validationErrors.push('Channel');
+    if (!boardId) validationErrors.push('Board');
     if (!statusId) validationErrors.push('Status');
-    if (!priorityId) validationErrors.push('Priority');
+
+    // Validate priority based on board type
+    if (boardConfig.priority_type === 'custom') {
+      // Custom priority boards require priority_id
+      if (!priorityId) {
+        validationErrors.push('Priority');
+      }
+    } else if (boardConfig.priority_type === 'itil') {
+      // ITIL priority boards require impact and urgency
+      if (!itilImpact) validationErrors.push('Impact');
+      if (!itilUrgency) validationErrors.push('Urgency');
+    } else {
+      // Default to custom behavior if priority_type is undefined
+      if (!priorityId) {
+        validationErrors.push('Priority');
+      }
+    }
+
     if (!companyId) validationErrors.push('Client');
     return validationErrors;
   };
@@ -344,9 +434,13 @@ export function QuickAddTicket({
       formData.append('title', title);
       formData.append('description', description);
       formData.append('assigned_to', assignedTo);
-      formData.append('channel_id', channelId);
+      formData.append('board_id', boardId);
       formData.append('status_id', statusId);
+
+      // Always append priority_id - for ITIL boards, the backend will map
+      // the calculated priority to the correct ITIL standard priority record
       formData.append('priority_id', priorityId);
+
       formData.append('company_id', companyId);
 
       if (selectedCompanyType === 'company' && contactId) {
@@ -370,6 +464,17 @@ export function QuickAddTicket({
           }
         }
       }
+
+      // Add ITIL Impact and Urgency for calculation (if provided)
+      if (itilImpact) {
+        formData.append('itil_impact', itilImpact.toString());
+      }
+      if (itilUrgency) {
+        formData.append('itil_urgency', itilUrgency.toString());
+      }
+
+      // ITIL categories now use the unified category system
+      // The selected ITIL category ID is already in selectedCategories/categoryId
 
       const newTicket = await addTicket(formData, user);
       if (!newTicket) {
@@ -539,19 +644,19 @@ export function QuickAddTicket({
                     />
                   </div>
 
-                  <div className={hasAttemptedSubmit && !channelId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
-                    <ChannelPicker
-                      id={`${id}-channel-picker`}
-                      channels={channels}
-                      onSelect={handleChannelChange}
-                      selectedChannelId={channelId}
-                      onFilterStateChange={setQuickAddChannelFilterState}
-                      filterState={quickAddChannelFilterState}
+                  <div className={hasAttemptedSubmit && !boardId ? 'ring-1 ring-red-500 rounded-lg' : ''}>
+                    <BoardPicker
+                      id={`${id}-board-picker`}
+                      boards={boards}
+                      onSelect={handleBoardChange}
+                      selectedBoardId={boardId}
+                      onFilterStateChange={setQuickAddBoardFilterState}
+                      filterState={quickAddBoardFilterState}
                       placeholder="Select Board *"
                     />
                   </div>
 
-                  {channelId && (
+                  {boardId && boardConfig.category_type && (
                     <CategoryPicker
                       id={`${id}-category-picker`}
                       categories={categories}
@@ -560,7 +665,7 @@ export function QuickAddTicket({
                         setSelectedCategories(categoryIds);
                         clearErrorIfSubmitted();
                       }}
-                      placeholder="Select category"
+                      placeholder={boardConfig.category_type === 'custom' ? "Select category" : "Select ITIL category"}
                       multiSelect={false}
                       className="w-full"
                     />
@@ -578,17 +683,170 @@ export function QuickAddTicket({
                     className={hasAttemptedSubmit && !statusId ? 'border-red-500' : ''}
                   />
 
-                  <CustomSelect
-                    id={`${id}-priority`}
-                    value={priorityId}
-                    onValueChange={(value) => {
-                      setPriorityId(value);
-                      clearErrorIfSubmitted();
-                    }}
-                    options={memoizedPriorityOptions}
-                    placeholder="Select Priority *"
-                    className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
-                  />
+                  {/* Priority Section - Show different UI based on board priority type */}
+                  {boardId && (
+                    <>
+                      {/* Custom Priority - Editable dropdown (only show if explicitly custom, not by default) */}
+                      {boardConfig.priority_type && boardConfig.priority_type === 'custom' && (
+                        <CustomSelect
+                          id={`${id}-priority`}
+                          value={priorityId}
+                          onValueChange={(value) => {
+                            setPriorityId(value);
+                            clearErrorIfSubmitted();
+                          }}
+                          options={memoizedPriorityOptions}
+                          placeholder="Select Priority *"
+                          className={hasAttemptedSubmit && !priorityId ? 'border-red-500' : ''}
+                        />
+                      )}
+
+                      {/* ITIL Priority - Show Impact and Urgency fields */}
+                      {boardConfig.priority_type === 'itil' && (
+                        <>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Impact *</label>
+                            <CustomSelect
+                              options={itilImpactOptions}
+                              value={itilImpact?.toString() || null}
+                              onValueChange={(value) => {
+                                setItilImpact(value ? parseInt(value) : undefined);
+                                clearErrorIfSubmitted();
+                              }}
+                              placeholder="Select Impact"
+                              className={hasAttemptedSubmit && !itilImpact ? 'border-red-500' : ''}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Urgency *</label>
+                            <CustomSelect
+                              options={itilUrgencyOptions}
+                              value={itilUrgency?.toString() || null}
+                              onValueChange={(value) => {
+                                setItilUrgency(value ? parseInt(value) : undefined);
+                                clearErrorIfSubmitted();
+                              }}
+                              placeholder="Select Urgency"
+                              className={hasAttemptedSubmit && !itilUrgency ? 'border-red-500' : ''}
+                            />
+                          </div>
+
+                          {/* Read-only Priority field showing calculated value */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <label className="block text-sm font-medium text-gray-700">Priority (Calculated)</label>
+                              <button
+                                type="button"
+                                onClick={() => setShowPriorityMatrix(!showPriorityMatrix)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors"
+                                title="Show ITIL Priority Matrix"
+                              >
+                                <HelpCircle className="w-4 h-4" />
+                              </button>
+                            </div>
+                            <div className={`w-full px-3 py-2 border rounded-md bg-gray-50 ${
+                              hasAttemptedSubmit && (!itilImpact || !itilUrgency) ? 'border-red-500' : 'border-gray-300'
+                            }`}>
+                              {calculatedItilPriority ? (
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className="w-3 h-3 rounded-full border border-gray-300"
+                                    style={{ backgroundColor:
+                                      calculatedItilPriority === 1 ? '#DC2626' : // Red
+                                      calculatedItilPriority === 2 ? '#EA580C' : // Orange
+                                      calculatedItilPriority === 3 ? '#F59E0B' : // Amber
+                                      calculatedItilPriority === 4 ? '#3B82F6' : // Blue
+                                      '#6B7280' // Gray
+                                    }}
+                                  />
+                                  <span className="text-gray-900">
+                                    {ItilLabels.priority[calculatedItilPriority]}
+                                  </span>
+                                  <span className="text-sm text-gray-500">
+                                    (Impact {itilImpact} × Urgency {itilUrgency})
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500">Select Impact and Urgency to calculate priority</span>
+                              )}
+                            </div>
+
+                            {/* ITIL Priority Matrix - Show when help icon is clicked */}
+                            {showPriorityMatrix && (
+                              <div className="mt-3 p-4 bg-gray-50 border rounded-lg">
+                                <h4 className="text-sm font-medium text-gray-800 mb-3">ITIL Priority Matrix (Impact × Urgency)</h4>
+                                <div className="overflow-x-auto">
+                                  <table className="min-w-full text-xs">
+                                    <thead>
+                                      <tr>
+                                        <th className="px-2 py-1 text-left text-gray-600 border-b"></th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">High<br/>Urgency (1)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-High<br/>Urgency (2)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium<br/>Urgency (3)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Medium-Low<br/>Urgency (4)</th>
+                                        <th className="px-2 py-1 text-center text-gray-600 border-b">Low<br/>Urgency (5)</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">High Impact (1)</td>
+                                        <td className="px-2 py-1 text-center bg-red-100 text-red-800 font-semibold">Critical (1)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-High Impact (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium Impact (3)</td>
+                                        <td className="px-2 py-1 text-center bg-orange-100 text-orange-800 font-semibold">High (2)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Medium-Low Impact (4)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                      </tr>
+                                      <tr>
+                                        <td className="px-2 py-1 text-gray-600 border-r font-medium">Low Impact (5)</td>
+                                        <td className="px-2 py-1 text-center bg-yellow-100 text-yellow-800 font-semibold">Medium (3)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-blue-100 text-blue-800 font-semibold">Low (4)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                        <td className="px-2 py-1 text-center bg-gray-100 text-gray-800 font-semibold">Planning (5)</td>
+                                      </tr>
+                                    </tbody>
+                                  </table>
+                                </div>
+                                <div className="mt-2 text-xs text-gray-600">
+                                  <p><strong>Impact:</strong> How many users/business functions are affected?</p>
+                                  <p><strong>Urgency:</strong> How quickly does this need to be resolved?</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* ITIL Categories are now handled by the unified CategoryPicker above */}
+
+
 
                   <DialogFooter>
                     <Button
@@ -604,7 +862,11 @@ export function QuickAddTicket({
                       type="submit"
                       variant="default"
                       disabled={isSubmitting}
-                      className={!title.trim() || !description.trim() || !assignedTo || !channelId || !statusId || !priorityId || !companyId ? 'opacity-50' : ''}
+                      className={!title.trim() || !description.trim() || !assignedTo || !boardId || !statusId ||
+                        (boardConfig.priority_type === 'custom' && !priorityId) ||
+                        (boardConfig.priority_type === 'itil' && (!itilImpact || !itilUrgency)) ||
+                        (boardConfig.priority_type === undefined && !priorityId) ||
+                        !companyId ? 'opacity-50' : ''}
                     >
                       {isSubmitting ? 'Saving...' : 'Save Ticket'}
                     </Button>

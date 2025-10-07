@@ -2,7 +2,7 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "ES2022",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
@@ -15,20 +15,11 @@
     "declarationMap": true,
     "sourceMap": true,
     "noEmit": false,
-    "baseUrl": "../..",
-    "paths": {
-      "@shared/*": ["shared/*"]
-    }
+    "baseUrl": ".",
+    "paths": {}
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/*.test.ts",
-    "src/test-utils/**/*"
-  ],
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/test-utils/**/*"],
   "ts-node": {
     "esm": true
   }

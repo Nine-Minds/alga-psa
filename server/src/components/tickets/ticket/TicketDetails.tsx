@@ -35,11 +35,12 @@ import { useSession } from 'next-auth/react';
 import { toast } from 'react-hot-toast';
 import { useDrawer } from "server/src/context/DrawerContext";
 import { findUserById, getAllUsers, getCurrentUser } from "server/src/lib/actions/user-actions/userActions";
-import { findChannelById, getAllChannels } from "server/src/lib/actions/channel-actions/channelActions";
+import { findBoardById, getAllBoards } from "server/src/lib/actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "server/src/lib/actions/comment-actions/commentActions";
 import { getDocumentByTicketId } from "server/src/lib/actions/document-actions/documentActions";
 import { getContactByContactNameId, getContactsByCompany } from "server/src/lib/actions/contact-actions/contactActions";
 import { getCompanyById, getAllCompanies } from "server/src/lib/actions/company-actions/companyActions";
+import { updateTicketWithCache } from "server/src/lib/actions/ticket-actions/optimizedTicketActions";
 import { updateTicket } from "server/src/lib/actions/ticket-actions/ticketActions";
 import { getTicketStatuses } from "server/src/lib/actions/status-actions/statusActions";
 import { getAllPriorities } from "server/src/lib/actions/priorityActions";
@@ -74,13 +75,13 @@ interface TicketDetailsProps {
     initialContacts?: IContact[];
     initialContactInfo?: IContact | null;
     initialCreatedByUser?: IUser | null;
-    initialChannel?: any;
+    initialBoard?: any;
     initialAdditionalAgents?: ITicketResource[];
     initialAvailableAgents?: IUserWithRoles[];
     initialUserMap?: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>;
     statusOptions?: { value: string; label: string }[];
     agentOptions?: { value: string; label: string }[];
-    channelOptions?: { value: string; label: string }[];
+    boardOptions?: { value: string; label: string }[];
     priorityOptions?: { value: string; label: string }[];
     initialCategories?: ITicketCategory[];
     initialCompanies?: ICompany[];
@@ -109,13 +110,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     initialContacts = [],
     initialContactInfo = null,
     initialCreatedByUser = null,
-    initialChannel = null,
+    initialBoard = null,
     initialAdditionalAgents = [],
     initialAvailableAgents = [],
     initialUserMap = {},
     statusOptions = [],
     agentOptions = [],
-    channelOptions = [],
+    boardOptions = [],
     priorityOptions = [],
     initialCategories = [],
     initialCompanies = [],
@@ -143,7 +144,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [company, setCompany] = useState<ICompany | null>(initialCompany);
     const [contactInfo, setContactInfo] = useState<IContact | null>(initialContactInfo);
     const [createdByUser, setCreatedByUser] = useState<IUser | null>(initialCreatedByUser);
-    const [channel, setChannel] = useState<any>(initialChannel);
+    const [board, setBoard] = useState<any>(initialBoard);
     const [companies, setCompanies] = useState<ICompany[]>(initialCompanies);
     const [contacts, setContacts] = useState<IContact[]>(initialContacts);
     const [locations, setLocations] = useState<ICompanyLocation[]>(initialLocations);
@@ -189,6 +190,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState<string | null>(null);
     const [isTimeEntryPeriodDialogOpen, setIsTimeEntryPeriodDialogOpen] = useState(false);
+
+    // ITIL-specific state for editing
+    const [itilImpact, setItilImpact] = useState<number | undefined>(ticket.itil_impact || undefined);
+    const [itilUrgency, setItilUrgency] = useState<number | undefined>(ticket.itil_urgency || undefined);
+    // NOTE: ITIL categories are now managed through the unified category system
 
     const { openDrawer, closeDrawer } = useDrawer();
     const router = useRouter();
@@ -1013,6 +1019,55 @@ const handleClose = () => {
         }
     };
 
+    const handleItilFieldChange = async (field: string, value: any) => {
+        try {
+            // First update local state immediately for UI responsiveness
+            switch (field) {
+                case 'itil_impact':
+                    setItilImpact(value);
+                    break;
+                case 'itil_urgency':
+                    setItilUrgency(value);
+                    break;
+                // NOTE: itil_category and itil_subcategory are now handled by unified CategoryPicker
+            }
+
+            const user = await getCurrentUser();
+            if (!user) {
+                toast.error('No user session found');
+                return;
+            }
+
+            // Create update object with the specific ITIL field
+            const updateData: any = {};
+            updateData[field] = value;
+
+            // If we're updating impact or urgency, calculate the new ITIL priority
+            if (field === 'itil_impact' || field === 'itil_urgency') {
+                const currentImpact = field === 'itil_impact' ? value : itilImpact;
+                const currentUrgency = field === 'itil_urgency' ? value : itilUrgency;
+
+                // NOTE: Priority mapping is now handled in the backend
+                // The backend will calculate and map ITIL priority to the correct priority_id
+            }
+
+            // NOTE: Category management is now unified through the CategoryPicker
+
+            await updateTicketWithCache(ticket.ticket_id!, updateData, user);
+
+            // Update local ticket state to reflect the change
+            setTicket(prevTicket => ({
+                ...prevTicket,
+                ...updateData
+            }));
+
+            toast.success(`ITIL ${field.replace('itil_', '').replace('_', ' ')} updated successfully`);
+        } catch (error) {
+            console.error('Error updating ITIL field:', error);
+            toast.error(`Failed to update ITIL ${field.replace('itil_', '').replace('_', ' ')}`);
+        }
+    };
+
     const handleCompanyChange = async (newCompanyId: string) => {
         try {
             const user = await getCurrentUser();
@@ -1215,7 +1270,7 @@ const handleClose = () => {
                                     conversations={conversations}
                                     statusOptions={statusOptions}
                                     agentOptions={agentOptions}
-                                    channelOptions={channelOptions}
+                                    boardOptions={boardOptions}
                                     priorityOptions={priorityOptions}
                                     onSelectChange={handleSelectChange}
                                     onUpdateDescription={handleUpdateDescription}
@@ -1225,6 +1280,9 @@ const handleClose = () => {
                                     allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                     onTagsChange={handleTagsChange}
                                     isInDrawer={isInDrawer}
+                                    onItilFieldChange={handleItilFieldChange}
+                                    itilImpact={itilImpact}
+                                    itilUrgency={itilUrgency}
                                 />
                             </div>
                         </Suspense>
@@ -1275,7 +1333,7 @@ const handleClose = () => {
                                 company={company}
                                 contactInfo={contactInfo}
                                 createdByUser={createdByUser}
-                                channel={channel}
+                                board={board}
                                 elapsedTime={elapsedTime}
                                 isRunning={isRunning}
                                 timeDescription={timeDescription}
@@ -1310,6 +1368,7 @@ const handleClose = () => {
                                 tags={tags}
                                 allTagTexts={allTags.filter(tag => tag.tagged_type === 'ticket').map(tag => tag.tag_text)}
                                 onTagsChange={handleTagsChange}
+                                onItilFieldChange={handleItilFieldChange}
                             />
                         </Suspense>
                         

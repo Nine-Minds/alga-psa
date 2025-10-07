@@ -26,6 +26,10 @@ RUN npm install --workspace=server --workspace=shared
 
 # Builder stage for compiling the application
 FROM deps AS builder
+# Build-only fallback secrets let NextAuth edge guards pass; real secrets are injected at runtime.
+ARG NEXTAUTH_SECRET_BUILD="dev-placeholder-nextauth-secret-32"
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET_BUILD}
+ENV AUTH_SECRET=${NEXTAUTH_SECRET_BUILD}
 # Copy all project files and build the server
 COPY . .
 

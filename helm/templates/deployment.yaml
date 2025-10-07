@@ -105,6 +105,14 @@ spec:
           - name: VERIFY_EMAIL_ENABLED
             value: "{{ .Values.server.verify_email}}"
 
+          # ----------- TEMPORAL ----------------
+          - name: TEMPORAL_ADDRESS
+            value: "{{ .Values.temporal.address }}"
+          - name: TEMPORAL_NAMESPACE
+            value: "{{ .Values.temporal.namespace }}"
+          - name: TEMPORAL_PORTAL_DOMAIN_TASK_QUEUE
+            value: "{{ .Values.temporal.portalDomainTaskQueue }}"
+
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}
           - name: REDIS_HOST

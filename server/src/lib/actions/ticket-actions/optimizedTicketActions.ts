@@ -5,7 +5,7 @@ import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
 import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { IChannel } from 'server/src/interfaces/channel.interface';
+import { IBoard } from 'server/src/interfaces/board.interface';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
 import { ITicketResource } from 'server/src/interfaces/ticketResource.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -120,7 +120,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       resources,
       users,
       statuses,
-      channels,
+      boards,
       priorities,
       categories
     ] = await Promise.all([
@@ -191,10 +191,10 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
       
-      // Channels
-      trx('channels')
+      // Boards
+      trx('boards')
         .where({ tenant })
-        .orderBy('channel_name', 'asc'),
+        .orderBy('board_name', 'asc'),
       
       // Priorities - fetch only tenant-specific ticket priorities
       trx('priorities')
@@ -320,11 +320,11 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         })
         .first() : null;
 
-    // Fetch channel
-    const channel = ticket.channel_id ?
-      await trx('channels')
+    // Fetch board
+    const board = ticket.board_id ?
+      await trx('boards')
         .where({
-          channel_id: ticket.channel_id,
+          board_id: ticket.board_id,
           tenant: tenant
         })
         .first() : null;
@@ -371,11 +371,11 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       label: `${agent.first_name} ${agent.last_name}`
     }));
 
-    const channelOptions = channels
-      .filter(channel => channel.channel_id !== undefined)
-      .map((channel) => ({
-        value: channel.channel_id,
-        label: channel.channel_name || ""
+    const boardOptions = boards
+      .filter(board => board.board_id !== undefined)
+      .map((board) => ({
+        value: board.board_id,
+        label: board.board_name || ""
       }));
 
     const priorityOptions = priorities.map((priority) => ({
@@ -478,7 +478,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       is_closed: ticketData.is_closed,
       priority_id: ticketData.priority_id,
       category_id: ticketData.category_id,
-      channel_id: ticketData.channel_id,
+      board_id: ticketData.board_id,
       assigned_to: ticketData.assigned_to,
       company_id: ticketData.company_id,
       has_comments: comments.length > 0,
@@ -505,14 +505,14 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       contacts,
       contactInfo,
       createdByUser,
-      channel,
+      board,
       additionalAgents: resources,
       availableAgents: users,
       userMap,
       options: {
         status: statusOptions,
         agent: agentOptions,
-        channel: channelOptions,
+        board: boardOptions,
         priority: priorityOptions
       },
       categories,
@@ -552,8 +552,8 @@ export async function getTicketsForListWithCursor(
 
       // Explicitly clear "$undefined" string values for ID filters
       // to prevent them from being used as literal filter values if they bypass Zod.
-      if (validatedFilters.channelId === '$undefined') {
-        validatedFilters.channelId = undefined;
+      if (validatedFilters.boardId === '$undefined') {
+        validatedFilters.boardId = undefined;
       }
       if (validatedFilters.categoryId === '$undefined') {
         validatedFilters.categoryId = undefined;
@@ -571,7 +571,7 @@ export async function getTicketsForListWithCursor(
         's.name as status_name',
         'p.priority_name',
         'p.color as priority_color',
-        'c.channel_name',
+        'c.board_name',
         'cat.category_name',
         'comp.company_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
@@ -586,8 +586,8 @@ export async function getTicketsForListWithCursor(
            .andOn('t.tenant', 'p.tenant')
            .andOnVal('p.item_type', '=', 'ticket')
       })
-      .leftJoin('channels as c', function() {
-        this.on('t.channel_id', 'c.channel_id')
+      .leftJoin('boards as c', function() {
+        this.on('t.board_id', 'c.board_id')
            .andOn('t.tenant', 'c.tenant')
       })
       .leftJoin('categories as cat', function() {
@@ -629,15 +629,15 @@ export async function getTicketsForListWithCursor(
     }
 
     // Apply filters
-    if (validatedFilters.channelId) {
-      query = query.where('t.channel_id', validatedFilters.channelId);
-    } else if (validatedFilters.channelFilterState !== 'all') {
-      const channelSubquery = trx('channels')
-        .select('channel_id')
+    if (validatedFilters.boardId) {
+      query = query.where('t.board_id', validatedFilters.boardId);
+    } else if (validatedFilters.boardFilterState !== 'all') {
+      const boardSubquery = trx('boards')
+        .select('board_id')
         .where('tenant', tenant)
-        .where('is_inactive', validatedFilters.channelFilterState === 'inactive');
+        .where('is_inactive', validatedFilters.boardFilterState === 'inactive');
 
-      query = query.whereIn('t.channel_id', channelSubquery);
+      query = query.whereIn('t.board_id', boardSubquery);
     }
 
     if (validatedFilters.showOpenOnly) {
@@ -717,40 +717,52 @@ export async function getTicketsForListWithCursor(
       const {
         status_id,
         priority_id,
-        channel_id,
+        board_id,
         category_id,
         entered_by,
         status_name,
         priority_name,
         priority_color,
-        channel_name,
+        board_name,
         category_name,
         company_name,
         entered_by_name,
         assigned_to_name,
+        // NOTE: Legacy ITIL fields removed - now using unified system
         ...rest
       } = ticket;
 
+      const convertedRest = convertDates(rest);
+      // Clean up null ITIL fields
+      if (convertedRest.itil_impact === null) {
+        convertedRest.itil_impact = undefined;
+      }
+      if (convertedRest.itil_urgency === null) {
+        convertedRest.itil_urgency = undefined;
+      }
+      if (convertedRest.itil_priority_level === null) {
+        convertedRest.itil_priority_level = undefined;
+      }
       return {
+        ...convertedRest,
         status_id: status_id || null,
         priority_id: priority_id || null,
-        channel_id: channel_id || null,
+        board_id: board_id || null,
         category_id: category_id || null,
         entered_by: entered_by || null,
         status_name: status_name || 'Unknown',
         priority_name: priority_name || 'Unknown',
         priority_color: priority_color || '#6B7280',
-        channel_name: channel_name || 'Unknown',
+        board_name: board_name || 'Unknown',
         category_name: category_name || 'Unknown',
         company_name: company_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
-        assigned_to_name: assigned_to_name || 'Unknown',
-        ...convertDates(rest)
+        assigned_to_name: assigned_to_name || 'Unknown'
       };
     });
 
     return {
-      tickets: validateData(z.array(ticketListItemSchema), ticketListItems),
+      tickets: ticketListItems as ITicketListItem[],
       nextCursor
     };
     } catch (error) {
@@ -781,7 +793,7 @@ export async function getTicketFormOptions(user: IUser) {
     const [
       statuses,
       priorities,
-      channels,
+      boards,
       categories,
       companies,
       users,
@@ -794,18 +806,21 @@ export async function getTicketFormOptions(user: IUser) {
         })
         .orderBy('order_number', 'asc')
         .orderBy('name', 'asc'),
-      
-      // Priorities - fetch only tenant-specific ticket priorities
+
+      // Fetch only tenant-specific ticket priorities (includes ITIL ones copied to tenant)
       trx('priorities')
         .where({ tenant, item_type: 'ticket' })
+        .orderBy('order_number', 'asc')
         .orderBy('priority_name', 'asc'),
       
-      trx('channels')
+      trx('boards')
         .where({ tenant })
-        .orderBy('channel_name', 'asc'),
-      
+        .orderBy('board_name', 'asc'),
+
+      // Fetch only tenant-specific categories (includes ITIL ones copied to tenant)
       trx('categories')
         .where({ tenant })
+        .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
       trx('companies as c')
@@ -844,7 +859,7 @@ export async function getTicketFormOptions(user: IUser) {
       }))
     ];
 
-    const channelOptions: IChannel[] = channels.filter((channel: IChannel) => channel.channel_id !== undefined);
+    const boardOptions: IBoard[] = boards.filter((board: IBoard) => board.board_id !== undefined);
 
     const agentOptions = users.map((user: any) => ({
       value: user.user_id,
@@ -868,10 +883,12 @@ export async function getTicketFormOptions(user: IUser) {
     });
     // --- End Logo URL Processing ---
 
+    // Use tenant categories directly (includes ITIL ones if copied)
+
     return {
       statusOptions,
       priorityOptions,
-      channelOptions,
+      boardOptions,
       agentOptions,
       categories,
       companies: companiesWithLogos, // Return companies with logos
@@ -921,6 +938,34 @@ export async function updateTicketWithCache(id: string, data: Partial<ITicket>, 
     }
     if ('subcategory_id' in updateData && !updateData.subcategory_id) {
       updateData.subcategory_id = null;
+    }
+
+    // Handle ITIL priority calculation if impact or urgency is being updated
+    if (('itil_impact' in updateData || 'itil_urgency' in updateData)) {
+      const newImpact = 'itil_impact' in updateData ? updateData.itil_impact : currentTicket.itil_impact;
+      const newUrgency = 'itil_urgency' in updateData ? updateData.itil_urgency : currentTicket.itil_urgency;
+
+      if (newImpact && newUrgency) {
+        // Calculate ITIL priority level
+        const { calculateItilPriority } = require('../../utils/itilUtils');
+        const priorityLevel = calculateItilPriority(newImpact, newUrgency);
+
+        // Map priority level to ITIL priority name pattern
+        const priorityNamePattern = `P${priorityLevel} -%`;
+
+        // Get the corresponding ITIL priority record from tenant's priorities table
+        const itilPriorityRecord = await trx('priorities')
+          .where('tenant', tenant)
+          .where('is_from_itil_standard', true)
+          .where('priority_name', 'like', priorityNamePattern)
+          .where('item_type', 'ticket')
+          .first();
+
+        if (itilPriorityRecord) {
+          updateData.priority_id = itilPriorityRecord.priority_id;
+          updateData.itil_priority_level = priorityLevel;
+        }
+      }
     }
 
     // Check if we're updating the assigned_to field

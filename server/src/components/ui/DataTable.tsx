@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useRegisterUIComponent } from 'server/src/types/ui-reflection/useRegisterUIComponent';
 import { DataTableComponent, AutomationProps, TextComponent } from 'server/src/types/ui-reflection/types';
 import { useRegisterChild } from 'server/src/types/ui-reflection/useRegisterChild';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import {
   useReactTable,
   getCoreRowModel,

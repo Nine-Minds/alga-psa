@@ -7,6 +7,7 @@ import { ICompany } from "server/src/interfaces/company.interfaces";
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { TagManager } from 'server/src/components/tags';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface CompanyGridCardProps {
     company: ICompany;
@@ -50,10 +51,9 @@ const CompanyGridCard = ({
         >
             <div className="flex items-center space-x-3 w-full">
                 {/* Checkbox */}
-                <div onClick={stopPropagation} className="flex-shrink-0">
-                    <input
-                        type="checkbox"
-                        className="form-checkbox h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                <div onClick={stopPropagation} className="flex-shrink-0 [&>div]:mb-0">
+                    <Checkbox
+                        id={`company-checkbox-${company.company_id}`}
                         checked={selectedCompanies.includes(company.company_id)}
                         onChange={() => handleCheckboxChange(company.company_id)}
                         aria-label={`Select company ${company.company_name}`}

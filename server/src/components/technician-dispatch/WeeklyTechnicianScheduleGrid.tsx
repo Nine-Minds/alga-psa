@@ -549,6 +549,18 @@ const WeeklyTechnicianScheduleGrid: React.FC<WeeklyTechnicianScheduleGridProps> 
             const scheduleEvent = event as IScheduleEntry;
             return scheduleEvent?.scheduled_end || new Date();
           }}
+          allDayAccessor={(event: any) => {
+            const scheduleEvent = event as IScheduleEntry;
+            const start = new Date(scheduleEvent.scheduled_start);
+            const end = new Date(scheduleEvent.scheduled_end);
+
+            // Check if event spans multiple days
+            const isMultiDay = start.toDateString() !== end.toDateString();
+
+            // Place multi-day events in the all-day section
+            // They will maintain their visual height of 30px via CSS
+            return isMultiDay;
+          }}
           titleAccessor={(event: any) => {
             const scheduleEvent = event as IScheduleEntry;
             return scheduleEvent?.title || 'Untitled Event';

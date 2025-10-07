@@ -7,7 +7,7 @@ import HoursProgressBar from 'server/src/components/projects/HoursProgressBar';
 import { calculateProjectCompletion, ProjectCompletionMetrics } from 'server/src/lib/utils/projectUtils';
 import { formatDistanceToNow } from 'date-fns';
 import { getDateFnsLocale } from 'server/src/lib/utils/dateFnsLocale';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ProjectDetailViewProps {
   project: IProject;

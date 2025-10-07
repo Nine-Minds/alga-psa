@@ -1,22 +1,24 @@
-"use client";
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
-import ClientPortalLayout from "server/src/components/layout/ClientPortalLayout";
-import { I18nWrapper } from "server/src/components/i18n/I18nWrapper";
-import { PostHogUserIdentifier } from "server/src/components/PostHogUserIdentifier";
+import { getSession } from "server/src/lib/auth/getSession";
+import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
+import { getTenantBrandingByDomain, getTenantLocaleByDomain } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
+import { headers } from "next/headers";
 
-export default function Layout({
+export default async function Layout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+
+  // Get branding based on current domain (styles are injected in root layout)
+  const headersList = await headers();
+  const host = headersList.get('host') || '';
+  const branding = await getTenantBrandingByDomain(host);
+  const initialLocale = await getTenantLocaleByDomain(host);
+
   return (
-    <AppSessionProvider>
-      <PostHogUserIdentifier />
-      <I18nWrapper portal="client">
-        <ClientPortalLayout>
-          {children}
-        </ClientPortalLayout>
-      </I18nWrapper>
-    </AppSessionProvider>
+    <ClientPortalLayoutClient session={session} branding={branding} initialLocale={initialLocale}>
+      {children}
+    </ClientPortalLayoutClient>
   );
 }

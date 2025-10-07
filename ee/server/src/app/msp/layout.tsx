@@ -1,8 +1,6 @@
-"use client";
-import { AppSessionProvider } from "server/src/components/providers/AppSessionProvider";
-import DefaultLayout from "@/components/layout/DefaultLayout";
-import { TenantProvider } from "@/components/TenantProvider";
-import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUIStateProvider";
+import { cookies } from "next/headers";
+import { getSession } from "server/src/lib/auth/getSession";
+import { MspLayoutClient } from "./MspLayoutClient";
 
 /**
  * MSP Layout for Enterprise Edition
@@ -13,22 +11,18 @@ import { ClientUIStateProvider } from "server/src/types/ui-reflection/ClientUISt
  * It ensures that extensions are rendered within the main application layout
  * rather than taking over the entire screen.
  */
-export default function MspLayout({
+export default async function MspLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await getSession();
+  const cookieStore = await cookies();
+  const sidebarCookie = cookieStore.get('sidebar_collapsed')?.value;
+  const initialSidebarCollapsed = sidebarCookie === 'true';
   return (
-    <AppSessionProvider>
-      <TenantProvider>
-        <ClientUIStateProvider
-          initialPageState={{ id: 'ee-msp', title: 'EE MSP', components: [] }}
-        >
-          <DefaultLayout>
-            {children}
-          </DefaultLayout>
-        </ClientUIStateProvider>
-      </TenantProvider>
-    </AppSessionProvider>
+    <MspLayoutClient session={session} initialSidebarCollapsed={initialSidebarCollapsed}>
+      {children}
+    </MspLayoutClient>
   );
 }

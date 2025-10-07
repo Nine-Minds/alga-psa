@@ -20,6 +20,87 @@ export async function systemEmailProcessingWorkflow(context) {
   const { actions, data, logger, setState, events } = context;
   
   // Helper functions - defined inside the main workflow function
+  const truncateForMetadata = (value, maxLength) => {
+    if (!value) {
+      return undefined;
+    }
+    if (!maxLength || value.length <= maxLength) {
+      return value;
+    }
+    return value.slice(0, maxLength) + '...';
+  };
+
+  const parseEmailBody = async (emailData, actions) => {
+    try {
+      const parseResult = await actions.parse_email_reply({
+        text: emailData.body?.text,
+        html: emailData.body?.html
+      });
+
+      if (!parseResult?.success || !parseResult.parsed) {
+        console.warn('Email reply parser returned no result; falling back to raw body.');
+        return {
+          sanitizedText: emailData.body?.text || '',
+          sanitizedHtml: emailData.body?.html,
+          confidence: 'low',
+          metadata: {
+            parser: {
+              confidence: 'low',
+              warnings: ['parser-unavailable'],
+              rawText: truncateForMetadata(emailData.body?.text, 4000),
+              rawHtml: truncateForMetadata(emailData.body?.html, 4000)
+            }
+          }
+        };
+      }
+
+      const parsed = parseResult.parsed;
+      const sanitizedText = parsed.sanitizedText || emailData.body?.text || '';
+      const sanitizedHtml = parsed.sanitizedHtml || undefined;
+      const metadata = {
+        parser: {
+          confidence: parsed.confidence,
+          strategy: parsed.strategy,
+          heuristics: parsed.appliedHeuristics,
+          warnings: parsed.warnings,
+          tokens: parsed.tokens || null
+        }
+      };
+
+      if (parsed.confidence === 'low') {
+        metadata.parser.rawText = truncateForMetadata(emailData.body?.text, 4000);
+        metadata.parser.rawHtml = truncateForMetadata(emailData.body?.html, 4000);
+      }
+
+      if (metadata.parser.warnings && metadata.parser.warnings.length > 0) {
+        metadata.parser.warnings = metadata.parser.warnings.map((warning) => String(warning));
+      }
+
+      return {
+        sanitizedText,
+        sanitizedHtml,
+        confidence: parsed.confidence,
+        metadata
+      };
+    } catch (error) {
+      console.warn(`Reply parser threw error; falling back to raw body: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return {
+        sanitizedText: emailData.body?.text || '',
+        sanitizedHtml: emailData.body?.html,
+        confidence: 'low',
+        metadata: {
+          parser: {
+            confidence: 'low',
+            warnings: ['parser-error'],
+            error: error instanceof Error ? error.message : 'Unknown error',
+            rawText: truncateForMetadata(emailData.body?.text, 4000),
+            rawHtml: truncateForMetadata(emailData.body?.html, 4000)
+          }
+        }
+      };
+    }
+  };
+
   /**
    * Check if email is part of existing conversation thread
    */
@@ -48,14 +129,20 @@ export async function systemEmailProcessingWorkflow(context) {
   /**
    * Handle email reply to existing ticket
    */
-  const handleEmailReply = async (emailData, existingTicket, actions) => {
+  const handleEmailReply = async (emailData, existingTicket, actions, parsedBody) => {
+    const commentContent = parsedBody.sanitizedHtml || parsedBody.sanitizedText || emailData.body.html || emailData.body.text;
+    const commentFormat = parsedBody.sanitizedHtml
+      ? 'html'
+      : (parsedBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text'));
+
     // Add email as comment to existing ticket
     await actions.create_comment_from_email({
       ticket_id: existingTicket.ticketId,
-      content: emailData.body.html || emailData.body.text,
-      format: emailData.body.html ? 'html' : 'text',
+      content: commentContent,
+      format: commentFormat,
       source: 'email',
-      author_type: 'client' // This is a reply from the client
+      author_type: 'contact', // Reply from the client
+      metadata: parsedBody.metadata
     });
     
     // Handle attachments for reply
@@ -191,17 +278,50 @@ export async function systemEmailProcessingWorkflow(context) {
   data.set('tenant', tenant);
   data.set('processedAt', new Date().toISOString());
   
+  const parsedEmailBody = await parseEmailBody(emailData, actions);
+  data.set('parsedEmail', parsedEmailBody);
+  
+  if (parsedEmailBody.confidence === 'low') {
+    console.warn('Reply parser reported low confidence; storing raw body for review.', {
+      tenant,
+      subject: emailData.subject,
+      appliedHeuristics: parsedEmailBody.metadata?.parser?.heuristics || []
+    });
+  }
+  
   try {
     // Step 1: Check if this is a threaded email (reply to existing ticket)
     setState('CHECKING_EMAIL_THREADING');
     console.log('Checking if email is part of existing conversation thread');
-    
-    const existingTicket = await checkEmailThreading(emailData, actions);
+    let existingTicket = null;
+
+    const parserTokens = parsedEmailBody.metadata?.parser?.tokens;
+    if (parserTokens && parserTokens.conversationToken) {
+      try {
+        const tokenResult = await actions.find_ticket_by_reply_token({ token: parserTokens.conversationToken });
+        if (tokenResult?.success && tokenResult.match?.ticketId) {
+          existingTicket = {
+            ticketId: tokenResult.match.ticketId,
+          };
+          parsedEmailBody.metadata.parser.matchedReplyToken = tokenResult.match;
+          console.log('Matched reply token to ticket', {
+            ticketId: tokenResult.match.ticketId,
+            commentId: tokenResult.match.commentId
+          });
+        }
+      } catch (tokenError) {
+        console.warn(`Failed to resolve reply token mapping: ${tokenError instanceof Error ? tokenError.message : tokenError}`);
+      }
+    }
+
+    if (!existingTicket) {
+      existingTicket = await checkEmailThreading(emailData, actions);
+    }
     
     if (existingTicket) {
       // This is a reply to an existing ticket - add as comment
       console.log(`Email is part of existing ticket: ${existingTicket.ticketId}`);
-      await handleEmailReply(emailData, existingTicket, actions);
+      await handleEmailReply(emailData, existingTicket, actions, parsedEmailBody);
       return; // Exit workflow after handling reply
     }
     
@@ -218,7 +338,7 @@ export async function systemEmailProcessingWorkflow(context) {
       const taskResult = await actions.createTaskAndWaitForResult({
         taskType: 'match_email_to_client' as any,
         title: `Match Email to Client: ${emailData.subject}`,
-        description: `Please match this email from ${emailData.from.email} (${emailData.from.name || 'No name'}) to a client. Email snippet: ${emailData.body.text.substring(0, 200)}...`
+        description: `Please match this email from ${emailData.from.email} (${emailData.from.name || 'No name'}) to a client. Email snippet: ${(parsedEmailBody.sanitizedText || emailData.body.text || '').substring(0, 200)}...`
       } as any);
       
       if (taskResult.success && taskResult.resolutionData) {
@@ -262,11 +382,11 @@ export async function systemEmailProcessingWorkflow(context) {
     
     const ticketResult = await actions.create_ticket_from_email({
       title: emailData.subject,
-      description: emailData.body.text,
+      description: parsedEmailBody.sanitizedText || emailData.body.text,
       company_id: finalCompanyId,
       contact_id: finalContactId,
       source: 'email',
-      channel_id: ticketDefaults.channel_id,
+      board_id: ticketDefaults.board_id,
       status_id: ticketDefaults.status_id,
       priority_id: ticketDefaults.priority_id,
       category_id: ticketDefaults.category_id,
@@ -315,10 +435,13 @@ export async function systemEmailProcessingWorkflow(context) {
     // Step 6: Create initial comment with original email content
     await actions.create_comment_from_email({
       ticket_id: ticketResult.ticket_id,
-      content: emailData.body.html || emailData.body.text,
-      format: emailData.body.html ? 'html' : 'text',
+      content: parsedEmailBody.sanitizedHtml || parsedEmailBody.sanitizedText || emailData.body.html || emailData.body.text,
+      format: parsedEmailBody.sanitizedHtml
+        ? 'html'
+        : (parsedEmailBody.sanitizedText ? 'text' : (emailData.body.html ? 'html' : 'text')),
       source: 'email',
-      author_type: 'internal'
+      author_type: 'internal',
+      metadata: parsedEmailBody.metadata
     });
     
     setState('EMAIL_PROCESSED');

@@ -122,17 +122,37 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
+        'c.company_name',
         'co.email as contact_email',
+        'co.full_name as contact_name',
+        'co.phone_number as contact_phone',
         'p.priority_name',
+        'p.color as priority_color',
         's.name as status_name',
         'au.email as assigned_to_email',
-        'eb.first_name',
-        'eb.last_name'
+        db.raw("TRIM(CONCAT(COALESCE(au.first_name, ''), ' ', COALESCE(au.last_name, ''))) as assigned_to_name"),
+        db.raw("TRIM(CONCAT(COALESCE(eb.first_name, ''), ' ', COALESCE(eb.last_name, ''))) as created_by_name"),
+        'ch.board_name',
+        'cat.category_name',
+        'subcat.category_name as subcategory_name',
+        'cl.location_name',
+        'cl.address_line1',
+        'cl.address_line2',
+        'cl.city',
+        'cl.state_province',
+        'cl.postal_code',
+        'cl.country_code'
       )
       .leftJoin('companies as c', function() {
         this.on('t.company_id', 'c.company_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 't.company_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('contacts as co', function() {
         this.on('t.contact_name_id', 'co.contact_name_id')
@@ -154,6 +174,22 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         this.on('t.status_id', 's.status_id')
             .andOn('t.tenant', 's.tenant');
       })
+      .leftJoin('boards as ch', function() {
+        this.on('t.board_id', 'ch.board_id')
+            .andOn('t.tenant', 'ch.tenant');
+      })
+      .leftJoin('categories as cat', function() {
+        this.on('t.category_id', 'cat.category_id')
+            .andOn('t.tenant', 'cat.tenant');
+      })
+      .leftJoin('categories as subcat', function() {
+        this.on('t.subcategory_id', 'subcat.category_id')
+            .andOn('t.tenant', 'subcat.tenant');
+      })
+      .leftJoin('company_locations as cl', function() {
+        this.on('t.location_id', 'cl.location_id')
+            .andOn('t.tenant', 'cl.tenant');
+      })
       .where('t.ticket_id', payload.ticketId)
       .first();
 
@@ -165,45 +201,190 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return;
     }
 
+    const safeString = (value?: unknown) => {
+      if (typeof value === 'string') {
+        return value.trim();
+      }
+      if (value === null || value === undefined) {
+        return '';
+      }
+      return String(value).trim();
+    };
+
     // Send to contact email if available, otherwise company email
-    const primaryEmail = ticket.contact_email || ticket.company_email;
-    if (!primaryEmail) {
-      logger.warn('Could not send ticket created email - missing both contact and company email:', {
+    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.company_email);
+    const assignedEmail = safeString(ticket.assigned_to_email);
+
+    if (!primaryEmail && !assignedEmail) {
+      logger.warn('Could not send ticket created email - missing contact, company, and assigned user emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
       return;
     }
 
+    if (!primaryEmail) {
+      logger.warn('Ticket created email missing contact and company emails, falling back to other recipients only:', {
+        eventId: event.id,
+        ticketId: payload.ticketId
+      });
+    }
+
+    const formatDateTime = (value?: Date | string | null) => {
+      if (!value) {
+        return 'Not available';
+      }
+      const date = value instanceof Date ? value : new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return typeof value === 'string' ? value : 'Not available';
+      }
+      return new Intl.DateTimeFormat('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      }).format(date);
+    };
+
+    const priorityName = safeString(ticket.priority_name) || 'Unspecified';
+    const statusName = safeString(ticket.status_name) || 'Unknown';
+    const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
+    const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
+
+    const companyName = safeString(ticket.company_name) || 'Unassigned Company';
+
+    const createdAt = formatDateTime(ticket.entered_at as string | Date | null);
+    const createdByName = safeString(ticket.created_by_name) || payload.userId || 'System';
+    const createdDetails = `${createdAt} · ${createdByName}`;
+
+    const assignedToName = safeString(ticket.assigned_to_name) || 'Unassigned';
+    const rawAssignedEmail = assignedEmail;
+    const assignedToEmailRaw = assignedToName === 'Unassigned' ? '' : rawAssignedEmail;
+    const assignedToEmailDisplay = assignedToName === 'Unassigned'
+      ? 'Not assigned'
+      : assignedToEmailRaw || 'Not provided';
+    const assignedDetails = assignedToName === 'Unassigned'
+      ? 'Unassigned'
+      : assignedToEmailRaw
+        ? `${assignedToName} (${assignedToEmailRaw})`
+        : assignedToName;
+
+    const requesterName = safeString(ticket.contact_name) || 'Not specified';
+    const requesterEmail = safeString(ticket.contact_email) || 'Not provided';
+    const requesterPhone = safeString(ticket.contact_phone) || 'Not provided';
+    const requesterContactParts: string[] = [];
+    if (requesterEmail && requesterEmail !== 'Not provided') {
+      requesterContactParts.push(requesterEmail);
+    }
+    if (requesterPhone && requesterPhone !== 'Not provided') {
+      requesterContactParts.push(requesterPhone);
+    }
+    const requesterDetailsParts: string[] = [];
+    if (requesterName && requesterName !== 'Not specified') {
+      requesterDetailsParts.push(requesterName);
+    }
+    requesterDetailsParts.push(...requesterContactParts);
+    const requesterContact = requesterContactParts.length > 0 ? requesterContactParts.join(' · ') : 'Not provided';
+    const requesterDetails = requesterDetailsParts.length > 0 ? requesterDetailsParts.join(' · ') : 'Not specified';
+
+    const boardName = safeString(ticket.board_name) || 'Not specified';
+    const categoryName = safeString(ticket.category_name);
+    const subcategoryName = safeString(ticket.subcategory_name);
+    const categoryDetails = categoryName && subcategoryName
+      ? `${categoryName} / ${subcategoryName}`
+      : categoryName || subcategoryName || 'Not categorized';
+
+    const locationSegments: string[] = [];
+    const locationName = safeString(ticket.location_name);
+    if (locationName) {
+      locationSegments.push(locationName);
+    }
+    const addressLines = [safeString(ticket.address_line1), safeString(ticket.address_line2)].filter(Boolean);
+    const cityState = [safeString(ticket.city), safeString(ticket.state_province)].filter(Boolean).join(', ');
+    const postalCountry = [safeString(ticket.postal_code), safeString(ticket.country_code)].filter(Boolean).join(' ');
+    const locationDetailsParts = [...addressLines];
+    if (cityState) {
+      locationDetailsParts.push(cityState);
+    }
+    if (postalCountry) {
+      locationDetailsParts.push(postalCountry);
+    }
+    if (locationDetailsParts.length > 0) {
+      locationSegments.push(locationDetailsParts.join(' · '));
+    }
+    const locationSummary = locationSegments.length > 0 ? locationSegments.join(' • ') : 'Not specified';
+
+    let rawDescription = '';
+    if (ticket.attributes && typeof ticket.attributes === 'object' && 'description' in ticket.attributes) {
+      rawDescription = safeString((ticket.attributes as Record<string, unknown>).description);
+    }
+    if (!rawDescription && 'description' in ticket) {
+      rawDescription = safeString((ticket as Record<string, unknown>).description);
+    }
+    const description = rawDescription || 'No description provided.';
+
+    const requesterDetailsForText = requesterDetails;
+    const assignedDetailsForText = assignedDetails;
+
     const emailContext = {
       ticket: {
         id: ticket.ticket_number,
         title: ticket.title,
-        description: ticket.attributes?.description || '',
-        priority: ticket.priority_name || 'Unknown',
-        status: ticket.status_name || 'Unknown',
-        createdBy: payload.userId,
+        description,
+        priority: priorityName,
+        priorityColor,
+        status: statusName,
+        createdAt,
+        createdBy: createdByName,
+        createdDetails,
+        assignedToName,
+        assignedToEmail: assignedToEmailDisplay,
+        assignedDetails: assignedDetailsForText,
+        requesterName,
+        requesterEmail,
+        requesterPhone,
+        requesterContact,
+        requesterDetails: requesterDetailsForText,
+        board: boardName,
+        category: categoryName || 'Not categorized',
+        subcategory: subcategoryName || 'Not specified',
+        categoryDetails,
+        locationSummary,
+        companyName,
+        metaLine,
         url: `/tickets/${ticket.ticket_number}`
       }
     };
 
-    // Send to primary recipient (contact or company)
-    await sendEventEmail({
-      tenantId,
-      to: primaryEmail,
-      subject: `Ticket Created: ${ticket.title}`,
-      template: 'ticket-created',
-      context: emailContext
-    });
+    const replyContext = {
+      ticketId: ticket.ticket_id || payload.ticketId,
+      threadId: ticket.email_metadata?.threadId
+    };
+    const emailSubject = `New Ticket • ${ticket.title} (${priorityName})`;
 
-    // Send to assigned user if different from primary recipient
-    if (ticket.assigned_to_email && ticket.assigned_to_email !== primaryEmail) {
+    // Send to primary recipient (contact or company)
+    if (primaryEmail) {
       await sendEventEmail({
         tenantId,
-        to: ticket.assigned_to_email,
-        subject: `Ticket Created: ${ticket.title}`,
+        to: primaryEmail,
+        subject: emailSubject,
         template: 'ticket-created',
-        context: emailContext
+        context: emailContext,
+        replyContext
+      });
+    }
+
+    // Send to assigned user if different from primary recipient
+    if (assignedEmail && assignedEmail !== primaryEmail) {
+      await sendEventEmail({
+        tenantId,
+        to: assignedEmail,
+        subject: emailSubject,
+        template: 'ticket-created',
+        context: emailContext,
+        replyContext
       });
     }
 
@@ -245,13 +426,19 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'p.priority_name',
         's.name as status_name'
       )
       .leftJoin('companies as c', function() {
         this.on('t.company_id', 'c.company_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 't.company_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
@@ -317,7 +504,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       to: primaryEmail,
       subject: `Ticket Updated: ${ticket.title}`,
       template: 'ticket-updated',
-      context: emailContext
+      context: emailContext,
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
     });
 
     // Send to assigned user if different from primary recipient
@@ -327,7 +518,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
         to: ticket.assigned_to_email,
         subject: `Ticket Updated: ${ticket.title}`,
         template: 'ticket-updated',
-        context: emailContext
+        context: emailContext,
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          threadId: ticket.email_metadata?.threadId
+        }
       });
     }
 
@@ -351,7 +546,11 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
           to: resource.email,
           subject: `Ticket Updated: ${ticket.title}`,
           template: 'ticket-updated',
-          context: emailContext
+          context: emailContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          }
         });
       }
     }
@@ -380,14 +579,21 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'p.priority_name',
         's.name as status_name',
-        'u.email as assigned_to_email'
+        'u.email as assigned_to_email',
+        'co.email as contact_email'
       )
       .leftJoin('companies as c', function() {
         this.on('t.company_id', 'c.company_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 't.company_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
@@ -401,6 +607,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         this.on('t.assigned_to', 'u.user_id')
             .andOn('t.tenant', 'u.tenant');
       })
+      .leftJoin('contacts as co', function() {
+        this.on('t.contact_name_id', 'co.contact_name_id')
+            .andOn('t.tenant', 'co.tenant');
+      })
       .where('t.ticket_id', payload.ticketId)
       .first();
 
@@ -412,6 +622,27 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       return;
     }
 
+    const assignerName = await db('users')
+      .where({ user_id: payload.userId, tenant: tenantId })
+      .first()
+      .then(user => user ? `${user.first_name} ${user.last_name}` : 'System');
+
+    const emailContext = {
+      ticket: {
+        id: ticket.ticket_number,
+        title: ticket.title,
+        priority: ticket.priority_name || 'Unknown',
+        status: ticket.status_name || 'Unknown',
+        assignedBy: assignerName,
+        url: `/tickets/${ticket.ticket_number}`
+      }
+    };
+
+    const replyContext = {
+      ticketId: ticket.ticket_id || payload.ticketId,
+      threadId: ticket.email_metadata?.threadId
+    };
+
     // Send to assigned user
     if (ticket.assigned_to_email) {
       await sendEventEmail({
@@ -419,19 +650,35 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
         to: ticket.assigned_to_email,
         subject: `You have been assigned to ticket: ${ticket.title}`,
         template: 'ticket-assigned',
-        context: {
-          ticket: {
-            id: ticket.ticket_number,
-            title: ticket.title,
-            priority: ticket.priority_name || 'Unknown',
-            status: ticket.status_name || 'Unknown',
-            assignedBy: await db('users')
-              .where({ user_id: payload.userId, tenant: tenantId })
-              .first()
-              .then(user => user ? `${user.first_name} ${user.last_name}` : 'System'),
-            url: `/tickets/${ticket.ticket_number}`
-          }
-        }
+        context: emailContext,
+        replyContext
+      });
+    }
+
+    const locationEmail = ticket.company_email;
+    const contactEmail = ticket.contact_email;
+
+    // Notify the company's default location email
+    if (locationEmail) {
+      await sendEventEmail({
+        tenantId,
+        to: locationEmail,
+        subject: `Ticket Assigned: ${ticket.title}`,
+        template: 'ticket-assigned',
+        context: emailContext,
+        replyContext
+      });
+    }
+
+    // Notify the ticket contact when different from the default location email
+    if (contactEmail && contactEmail !== locationEmail) {
+      await sendEventEmail({
+        tenantId,
+        to: contactEmail,
+        subject: `Ticket Assigned: ${ticket.title}`,
+        template: 'ticket-assigned',
+        context: emailContext,
+        replyContext
       });
     }
 
@@ -455,19 +702,8 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
           to: resource.email,
           subject: `You have been added as additional resource to ticket: ${ticket.title}`,
           template: 'ticket-assigned',
-          context: {
-            ticket: {
-              id: ticket.ticket_number,
-              title: ticket.title,
-              priority: ticket.priority_name || 'Unknown',
-              status: ticket.status_name || 'Unknown',
-              assignedBy: await db('users')
-                .where({ user_id: payload.userId, tenant: tenantId })
-                .first()
-                .then(user => user ? `${user.first_name} ${user.last_name}` : 'System'),
-              url: `/tickets/${ticket.ticket_number}`
-            }
-          }
+          context: emailContext,
+          replyContext
         });
       }
     }
@@ -494,7 +730,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       .select(
         't.*',
         'u.email as assigned_to_email',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'co.email as contact_email'
       )
       .leftJoin('users as u', function() {
@@ -504,6 +740,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       .leftJoin('companies as c', function() {
         this.on('t.company_id', 'c.company_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 't.company_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('contacts as co', function() {
         this.on('t.contact_name_id', 'co.contact_name_id')
@@ -549,6 +791,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             url: `/tickets/${ticket.ticket_number}`
           },
           comment: payload.comment
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
         }
       });
     }
@@ -567,6 +814,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             url: `/tickets/${ticket.ticket_number}`
           },
           comment: payload.comment
+        },
+        replyContext: {
+          ticketId: ticket.ticket_id || payload.ticketId,
+          commentId: payload.comment?.id,
+          threadId: ticket.email_metadata?.threadId
         }
       });
     }
@@ -586,6 +838,11 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               url: `/tickets/${ticket.ticket_number}`
             },
             comment: payload.comment
+          },
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            commentId: payload.comment?.id,
+            threadId: ticket.email_metadata?.threadId
           }
         });
       }
@@ -612,13 +869,19 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'c.email as company_email',
+        'dcl.email as company_email',
         'p.priority_name',
         's.name as status_name'
       )
       .leftJoin('companies as c', function() {
         this.on('t.company_id', 'c.company_id')
             .andOn('t.tenant', 'c.tenant');
+      })
+      .leftJoin('company_locations as dcl', function() {
+        this.on('dcl.company_id', '=', 't.company_id')
+            .andOn('dcl.tenant', '=', 't.tenant')
+            .andOn('dcl.is_default', '=', db.raw('true'))
+            .andOn('dcl.is_active', '=', db.raw('true'));
       })
       .leftJoin('priorities as p', function() {
         this.on('t.priority_id', 'p.priority_id')
@@ -658,7 +921,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       to: ticket.company_email,
       subject: `Ticket Closed: ${ticket.title}`,
       template: 'ticket-closed',
-      context: emailContext
+      context: emailContext,
+      replyContext: {
+        ticketId: ticket.ticket_id || payload.ticketId,
+        threadId: ticket.email_metadata?.threadId
+      }
     });
 
     // Get and notify all additional resources
@@ -681,7 +948,11 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
           to: resource.email,
           subject: `Ticket Closed: ${ticket.title}`,
           template: 'ticket-closed',
-          context: emailContext
+          context: emailContext,
+          replyContext: {
+            ticketId: ticket.ticket_id || payload.ticketId,
+            threadId: ticket.email_metadata?.threadId
+          }
         });
       }
     }

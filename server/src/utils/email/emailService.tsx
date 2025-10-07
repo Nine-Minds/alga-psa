@@ -79,7 +79,7 @@ export class EmailService {
     }
 
     const secretProvider = await getSecretProviderInstance();
-    
+
     // Get SMTP credentials from secret provider with fallback to environment variables
     const smtpUser = await secretProvider.getAppSecret('SMTP_USER') || process.env.SMTP_USER;
     const smtpPass = await secretProvider.getAppSecret('SMTP_PASS') || process.env.SMTP_PASS;
@@ -100,7 +100,7 @@ export class EmailService {
   async send(options: EmailOptions) {
     const user = await getCurrentUser();
     const transporter = await this.getTransporter();
-    
+
     return transporter.sendMail({
       from: `"${user?.email}" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
       ...options
@@ -108,10 +108,10 @@ export class EmailService {
   }
 
   async sendInvoiceEmail(
-    invoice: InvoiceViewModel & { 
+    invoice: InvoiceViewModel & {
       contact?: { name: string; address: string };
-      recipientEmail: string; 
-    }, 
+      recipientEmail: string;
+    },
     pdfPath: string
   ) {
     const template = await this.getInvoiceEmailTemplate();

@@ -140,9 +140,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps & AutomationProps>(
             handleRef(element);
           }}
           className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 placeholder:text-gray-400 ${
-            hasErrorState 
-              ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50' 
-              : 'border-[rgb(var(--color-border-400))] focus:ring-purple-500 focus:border-transparent'
+            hasErrorState
+              ? 'border-red-500 focus:ring-red-500 focus:border-red-500 bg-red-50'
+              : 'border-[rgb(var(--color-border-400))] focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent'
           } ${className}`}
           value={value}
           disabled={disabled}

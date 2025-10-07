@@ -4,15 +4,15 @@
 import BundleBillingPlan from 'server/src/lib/models/bundleBillingPlan';
 import { IBundleBillingPlan } from 'server/src/interfaces/planBundle.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 /**
  * Get all billing plans in a bundle
  */
 export async function getBundleBillingPlans(bundleId: string): Promise<IBundleBillingPlan[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -38,7 +38,7 @@ export async function getBundleBillingPlans(bundleId: string): Promise<IBundleBi
  * Get detailed information about plans in a bundle
  */
 export async function getDetailedBundlePlans(bundleId: string): Promise<any[]> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -68,7 +68,7 @@ export async function addPlanToBundle(
   planId: string, 
   customRate?: number
 ): Promise<IBundleBillingPlan> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -94,7 +94,7 @@ export async function addPlanToBundle(
  * Remove a billing plan from a bundle
  */
 export async function removePlanFromBundle(bundleId: string, planId: string): Promise<void> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -123,7 +123,7 @@ export async function updatePlanInBundle(
   planId: string, 
   updateData: Partial<IBundleBillingPlan>
 ): Promise<IBundleBillingPlan> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }
@@ -162,7 +162,7 @@ export async function updatePlanInBundle(
  * Check if a plan is already in a bundle
  */
 export async function isPlanInBundle(bundleId: string, planId: string): Promise<boolean> {
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error('Unauthorized');
   }

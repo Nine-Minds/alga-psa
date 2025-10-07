@@ -268,8 +268,6 @@ async fn root_dispatch(State(rstate): State<RootState>, headers: HeaderMap) -> R
 
     // Attach ALGA_AUTH_KEY if present for registry auth and log masked presence
     let mut rb = http.get(url.clone());
-    // Temporary canary routing header for testing; remove after canary period
-    rb = rb.header("x-canary", "robert");
     match rstate.api_key.as_ref() {
         Some(key) if !key.is_empty() => {
             let prefix: String = key.chars().take(4).collect();

@@ -55,7 +55,7 @@ wait_for_postgres() {
     
     # Get hocuspocus credentials, falling back to postgres password if needed
     local db_password=$(get_secret "db_password_hocuspocus" "DB_PASSWORD_HOCUSPOCUS" "$postgres_password")
-    local db_user=$(get_secret "db_user_hocuspocus" "DB_USER_HOCUSPOCUS" "hocuspocus")
+    local db_user=$(get_secret "db_user_hocuspocus" "DB_USER_HOCUSPOCUS" "hocuspocus_user")
     
     # Store credentials before logging
     export PGPASSWORD="$db_password"

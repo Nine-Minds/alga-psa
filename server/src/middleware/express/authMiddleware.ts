@@ -38,13 +38,37 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+function getRequestOrigin(req: Request): string {
+  const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim();
+  const forwardedHost = (req.headers['x-forwarded-host'] as string)?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol || 'http';
+  const host = req.get('host') || forwardedHost || 'localhost';
+  return `${protocol}://${host}`;
+}
+
+function buildClientPortalSigninUrl(req: Request, extraParams?: Record<string, string>): string {
+  const canonicalOrigin = process.env.NEXTAUTH_URL || getRequestOrigin(req);
+  const loginUrl = new URL('/auth/client-portal/signin', canonicalOrigin);
+  const callbackAbsolute = `${getRequestOrigin(req)}${req.originalUrl}`;
+  loginUrl.searchParams.set('callbackUrl', callbackAbsolute);
+
+  if (extraParams) {
+    for (const [key, value] of Object.entries(extraParams)) {
+      loginUrl.searchParams.set(key, value);
+    }
+  }
+
+  return loginUrl.toString();
+}
+
+
 /**
  * Helper function to adapt Express request for NextAuth getToken compatibility
  * NextAuth's getToken expects a Next.js-style request with cookies in a specific format
  */
 function adaptRequestForNextAuth(expressReq: Request): any {
   const cookies = expressReq.cookies || {};
-  
+
   // Create a minimal request object that NextAuth can understand
   // NextAuth primarily needs: cookies, headers, url, and method
   return {
@@ -67,14 +91,20 @@ function adaptRequestForNextAuth(expressReq: Request): any {
  */
 async function getNextAuthToken(expressReq: Request, secret: string): Promise<any> {
   const cookies = expressReq.cookies || {};
-  
+
   // Get the session token cookie
-  const sessionToken = cookies['next-auth.session-token'] || cookies['__Secure-next-auth.session-token'];
-  
+  const sessionToken =
+    cookies['authjs.session-token'] ||
+    cookies['__Secure-authjs.session-token'] ||
+    cookies['next-auth.session-token'] ||
+    cookies['__Secure-next-auth.session-token'];
+
+  console.log("Cookies: " + cookies);
+
   if (!sessionToken) {
     return null;
   }
-  
+
   try {
     // Decode the JWT token directly
     const decoded = await decode({
@@ -82,7 +112,7 @@ async function getNextAuthToken(expressReq: Request, secret: string): Promise<an
       secret: secret,
       salt: 'authjs.session-token'
     });
-    
+
     return decoded;
   } catch (error) {
     // Token decryption failed (likely wrong secret or corrupted token)
@@ -95,8 +125,8 @@ async function getNextAuthToken(expressReq: Request, secret: string): Promise<an
  * Replaces the HTTP round-trip with direct database validation
  */
 export async function apiKeyAuthMiddleware(
-  req: AuthenticatedRequest, 
-  res: Response, 
+  req: AuthenticatedRequest,
+  res: Response,
   next: NextFunction
 ) {
   // Only apply to API routes (excluding auth routes)
@@ -156,7 +186,7 @@ export async function apiKeyAuthMiddleware(
   } catch (_) {
     // ignore log errors
   }
-  
+
   if (!apiKey) {
     return res.status(401).json({
       error: 'Unauthorized: API key missing'
@@ -257,7 +287,7 @@ export async function apiKeyAuthMiddleware(
   try {
     // Direct database validation - eliminates HTTP round-trip
     const keyRecord = await ApiKeyServiceForApi.validateApiKeyAnyTenant(apiKey);
-    
+
     if (!keyRecord) {
       return res.status(401).json({
         error: 'Unauthorized: Invalid API key'
@@ -267,7 +297,7 @@ export async function apiKeyAuthMiddleware(
     // Add authentication info to request headers for downstream processing
     req.headers['x-auth-user-id'] = keyRecord.user_id;
     req.headers['x-auth-tenant'] = keyRecord.tenant;
-    
+
     // Store in request object for middleware use
     req.apiKey = {
       userId: keyRecord.user_id,
@@ -312,39 +342,34 @@ export async function sessionAuthMiddleware(
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
     const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
-    
+
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect to appropriate login page based on the path
       if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+        return res.redirect(buildClientPortalSigninUrl(req));
       }
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
     }
-    
+
     // Try alternative token parsing first
     let token = await getNextAuthToken(req, nextAuthSecret);
-    
+
     // Fallback to original method if direct parsing fails
     if (!token) {
       const adaptedReq = adaptRequestForNextAuth(req);
-      token = await getToken({ 
-        req: adaptedReq, 
-        secret: nextAuthSecret 
+      token = await getToken({
+        req: adaptedReq,
+        secret: nextAuthSecret
       });
     }
-    
+
     if (!token) {
-      // No session token, redirect to login
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect to appropriate login page based on the path
       if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
+        return res.redirect(buildClientPortalSigninUrl(req));
       }
+      const callbackUrl = encodeURIComponent(req.originalUrl);
+      return res.redirect(`/auth/msp/signin?callbackUrl=${callbackUrl}`);
     }
 
     const userType = token.user_type as string;
@@ -354,24 +379,15 @@ export async function sessionAuthMiddleware(
     // Enforce access rules based on user type
     if (isClientPortal && userType !== 'client') {
       // Non-client users cannot access client portal
-      const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect with error to appropriate login page
-      if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      }
+      return res.redirect(
+        buildClientPortalSigninUrl(req, { error: 'AccessDenied' })
+      );
     }
 
     if (!isClientPortal && userType === 'client') {
       // Client users cannot access MSP routes
       const callbackUrl = encodeURIComponent(req.originalUrl);
-      // Redirect with error to appropriate login page
-      if (req.originalUrl.includes('/client-portal')) {
-        return res.redirect(`/auth/client-portal/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      } else {
-        return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
-      }
+      return res.redirect(`/auth/msp/signin?error=AccessDenied&callbackUrl=${callbackUrl}`);
     }
 
     // Store user info for downstream middleware
@@ -399,7 +415,7 @@ export function tenantHeaderMiddleware(
 ) {
   // Add tenant headers from either API key or session
   const tenant = req.apiKey?.tenant || req.user?.tenant;
-  
+
   if (tenant) {
     res.setHeader('X-Cleanup-Connection', tenant);
     res.setHeader('x-tenant-id', tenant);
@@ -424,14 +440,14 @@ export async function authorizationMiddleware(
       return next();
     }
 
-    // Skip for auth endpoints  
+    // Skip for auth endpoints
     if (req.path.startsWith('/auth/') || req.path.startsWith('/api/auth/')) {
       return next();
     }
 
     // Skip for public assets (matches Next.js middleware config)
-    if (req.path.startsWith('/_next/static') || 
-        req.path.startsWith('/_next/image') || 
+    if (req.path.startsWith('/_next/static') ||
+        req.path.startsWith('/_next/image') ||
         req.path === '/favicon.ico') {
       return next();
     }
@@ -444,17 +460,17 @@ export async function authorizationMiddleware(
     // Get secret from provider only - the provider handles env vars and fallbacks
     const secretProvider = await getSecretProviderInstance();
     const nextAuthSecret = await secretProvider.getAppSecret('NEXTAUTH_SECRET');
-    
+
     if (!nextAuthSecret) {
       console.error('NEXTAUTH_SECRET not available from secret provider');
       return res.redirect('/auth/msp/signin');
     }
-    
+
     // Get token for web routes (session-based) with adapted request
     const adaptedReq = adaptRequestForNextAuth(req);
-    const token = await getToken({ 
-      req: adaptedReq, 
-      secret: nextAuthSecret 
+    const token = await getToken({
+      req: adaptedReq,
+      secret: nextAuthSecret
     }) as { error?: string; tenant?: string } | null;
 
     // For web routes, validate session token

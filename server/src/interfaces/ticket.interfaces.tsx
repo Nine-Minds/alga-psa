@@ -8,7 +8,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   ticket_number: string;
   title: string;
   url: string | null;
-  channel_id: string;
+  board_id: string;
   company_id: string | null;
   location_id?: string | null;
   contact_name_id: string | null;
@@ -23,22 +23,26 @@ export interface ITicket extends TenantEntity, ITaggable {
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
   attributes: Record<string, unknown> | null; // Changed from any to unknown
-  priority_id: string;
+  priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
   location?: ICompanyLocation; // For populated location data
+  // ITIL-specific fields (for priority calculation)
+  itil_impact?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
+  itil_urgency?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
+  itil_priority_level?: number; // 1-5 calculated ITIL priority based on impact × urgency matrix
 }
 
-export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'channel_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
+export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_id' | 'board_id' | 'entered_by' | 'category_id' | 'subcategory_id'> {
   status_id: string | null;
   priority_id: string | null;
-  channel_id: string | null;
+  board_id: string | null;
   category_id: string | null;
   subcategory_id: string | null;
   entered_by: string | null;
   status_name: string;
   priority_name: string;
   priority_color?: string;
-  channel_name: string;
+  board_name: string;
   category_name: string;
   company_name: string;
   entered_by_name: string;
@@ -46,14 +50,14 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
 }
 
 export interface ITicketListFilters {
-  channelId?: string;
+  boardId?: string;
   statusId?: string;
   priorityId?: string;
   categoryId?: string;
   companyId?: string;
   contactId?: string;
   searchQuery?: string;
-  channelFilterState: 'active' | 'inactive' | 'all';
+  boardFilterState: 'active' | 'inactive' | 'all';
   showOpenOnly?: boolean;
   tags?: string[];
 }
@@ -67,6 +71,8 @@ export interface IPriority extends TenantEntity {
   created_by: string;
   created_at: Date;
   updated_at?: Date;
+  is_from_itil_standard?: boolean;
+  itil_priority_level?: number;
 }
 
 export interface IStandardPriority {
@@ -89,11 +95,12 @@ export interface ITicketCategory extends TenantEntity {
   category_id: string;
   category_name: string;
   parent_category?: string;
-  channel_id?: string;
+  board_id?: string;
   created_by?: string;
   created_at?: Date;
   description?: string;
   display_order?: number;
+  is_from_itil_standard?: boolean; // Flag to distinguish ITIL categories from custom categories
 }
 
 export interface IAgentSchedule {

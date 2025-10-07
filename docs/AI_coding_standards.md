@@ -5,6 +5,12 @@
 - Do not proceed to updating files until you have enough context to do so.
 
 
+# Failure Handling Philosophy
+
+- Fail fast when assumptions are violated instead of silently attempting fallbacks.
+- Throw exceptions with actionable, descriptive messages to surface what went wrong.
+- Validate assumptions as early as possible and reject inputs that do not meet strict criteria.
+
 # UI coding standards
 
 Prefer radix components over other libraries
@@ -28,6 +34,39 @@ Prefer radix components over other libraries
     - [SwitchWithLabel](../server/src/components/ui/SwitchWithLabel.tsx)
     - [Table](../server/src/components/ui/Table.tsx)
     - [TextArea](../server/src/components/ui/TextArea.tsx)
+
+## Loading States for Remote Content
+
+- When embedding remote experiences (extension iframes, external dashboards, etc.), always surface a branded loading state until the surface reports it is ready.
+- Wrap the remote surface in a `relative` container and gate its visibility with an `isLoading` flag driven by the `onLoad`/`onError` lifecycle events.
+- Reuse the shared overlay styles defined in `server/src/app/globals.css` (`extension-loading-overlay`, `extension-loading-indicator`, `extension-loading-text`, `extension-loading-subtext`) to maintain consistent visuals.
+- Use the `LoadingIndicator` component with `layout="stacked"` for the primary status message and reserve the subtext paragraph for short explanations (<40 characters) so the layout stays balanced.
+- Example pattern:
+  ```tsx
+  <div className="relative h-full" aria-busy={isLoading}>
+    {isLoading && (
+      <div className="extension-loading-overlay" role="status">
+        <LoadingIndicator
+          layout="stacked"
+          className="extension-loading-indicator"
+          text="Starting extension"
+          textClassName="extension-loading-text"
+          spinnerProps={{ size: 'sm', color: 'border-primary-400' }}
+        />
+        <p className="extension-loading-subtext">Connecting to the runtime workspace&hellip;</p>
+      </div>
+    )}
+
+    <iframe
+      onLoad={() => setIsLoading(false)}
+      onError={() => {
+        setHasError(true);
+        setIsLoading(false);
+      }}
+      className={isLoading ? 'opacity-0' : 'opacity-100'}
+    />
+  </div>
+  ```
 
 ## Dialog Component Usage
 
@@ -485,6 +524,31 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
    ```tsx
    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
    ```
+
+# Testing Standards
+
+All tests should follow the conventions outlined in [docs/testing-standards.md](./testing-standards.md).
+
+**Quick Reference:**
+- **Unit tests**: `server/src/test/unit/` - Isolated tests with mocked dependencies
+- **Integration tests**: `server/src/test/integration/` - Multi-component tests with real database
+- **Infrastructure tests**: `server/src/test/infrastructure/` - Complete business workflows
+- **E2E tests**: `server/src/test/e2e/` - API endpoints and full user flows
+
+**Naming conventions:**
+- Unit: `<feature>.test.ts` or `<ComponentName>.test.tsx`
+- Integration: `<feature>Integration.test.ts`
+- Infrastructure: `<feature>.test.ts` or `<feature>_<aspect>.test.ts` (when split)
+- E2E: `<feature>.e2e.test.ts`
+
+**Key principles:**
+- Tests are centralized in `server/src/test/`, not colocated with source code
+- Mirror source structure using subdirectories within test directories
+- Split large test suites by concern using underscore notation (e.g., `billing_tax.test.ts`)
+- Use `TestContext` helpers for infrastructure tests
+- Use `setupE2ETestEnvironment()` for E2E tests
+
+See the full [Testing Standards](./testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
 
 # Time Entry Work Item Types
 They can be:

@@ -23,7 +23,7 @@ const SidebarSubMenuItem: React.FC<SidebarSubMenuItemProps> = ({
   });
 
   return (
-    <Link
+    <Link prefetch={false}
       href={item.href || '#'}
       className={`flex items-center px-4 py-2 hover:bg-[#2a2b32] ${isActive(item.href || '#') ? 'bg-[#2a2b32]' : ''}`}
       {...automationIdProps}

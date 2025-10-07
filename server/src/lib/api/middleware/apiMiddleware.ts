@@ -188,13 +188,13 @@ export async function withAuth(handler: (req: ApiRequest) => Promise<NextRespons
   return async (req: ApiRequest): Promise<NextResponse> => {
     try {
       const apiKey = req.headers.get('x-api-key');
-      
+
       if (!apiKey) {
         throw new UnauthorizedError('API key required');
       }
 
       const keyRecord = await ApiKeyService.validateApiKey(apiKey);
-      
+
       if (!keyRecord) {
         throw new UnauthorizedError('Invalid API key');
       }
@@ -252,7 +252,7 @@ export function withValidation(schema: ZodSchema) {
       try {
         const body = await req.json().catch(() => ({}));
         const validatedData = schema.parse(body);
-        
+
         return await handler(req, validatedData);
       } catch (error) {
         if (error instanceof ZodError) {
@@ -274,7 +274,7 @@ export function withQueryValidation(schema: ZodSchema) {
         const url = new URL(req.url);
         const query = Object.fromEntries(url.searchParams.entries());
         const validatedQuery = schema.parse(query);
-        
+
         return await handler(req, validatedQuery);
       } catch (error) {
         if (error instanceof ZodError) {
@@ -356,9 +356,9 @@ export function createSuccessResponse(data: any, status: number = 200, metadata?
   if (status === 204) {
     return new NextResponse(null, { status: 204 });
   }
-  
+
   const response: any = { data };
-  
+
   if (metadata) {
     response.meta = metadata;
   }
@@ -370,14 +370,14 @@ export function createSuccessResponse(data: any, status: number = 200, metadata?
  * Paginated response helper
  */
 export function createPaginatedResponse(
-  data: any[], 
-  total: number, 
-  page: number, 
+  data: any[],
+  total: number,
+  page: number,
   limit: number,
   metadata?: any
 ): NextResponse {
   const totalPages = Math.ceil(total / limit);
-  
+
   return NextResponse.json({
     data,
     pagination: {

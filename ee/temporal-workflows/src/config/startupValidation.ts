@@ -1,4 +1,3 @@
-import { getSecretProviderInstance } from '@alga-psa/shared/core/secretProvider';
 import { createLogger } from 'winston';
 
 // Configure logger for startup validation
@@ -6,6 +5,39 @@ const logger = createLogger({
   level: 'info',
   transports: []
 });
+
+type SecretProvider = {
+  getAppSecret(key: string): Promise<string | undefined>;
+};
+
+let secretProviderPromise: Promise<SecretProvider> | null = null;
+
+async function getSecretProvider(): Promise<SecretProvider> {
+  if (!secretProviderPromise) {
+    secretProviderPromise = (async () => {
+      try {
+        const module = await import('@alga-psa/shared/core/secretProvider.js');
+        const factory = (module as { getSecretProviderInstance?: () => Promise<SecretProvider> })
+          .getSecretProviderInstance;
+        if (typeof factory === 'function') {
+          return await factory();
+        }
+      } catch (error) {
+        logger.warn('Secret provider module unavailable, defaulting to env-only provider', {
+          error: error instanceof Error ? error.message : error,
+        });
+      }
+
+      return {
+        async getAppSecret(key: string): Promise<string | undefined> {
+          return process.env[key] ?? process.env[key.toUpperCase()] ?? process.env[key.toLowerCase()];
+        },
+      } satisfies SecretProvider;
+    })();
+  }
+
+  return secretProviderPromise;
+}
 
 /**
  * Critical configuration keys required for temporal worker startup
@@ -31,6 +63,7 @@ const REQUIRED_CONFIGS = {
   TEMPORAL_ADDRESS: 'Temporal server address (e.g., temporal-frontend:7233)',
   TEMPORAL_NAMESPACE: 'Temporal namespace (e.g., default)',
   TEMPORAL_TASK_QUEUE: 'Temporal task queue name',
+  PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE: 'Existing VirtualService name that anchors portal routing',
 } as const;
 
 /**
@@ -65,7 +98,7 @@ type OptionalConfigKey = keyof typeof OPTIONAL_CONFIGS;
 export async function validateRequiredConfiguration(): Promise<void> {
   logger.info('Validating required configuration for temporal worker...');
 
-  const secretProvider = await getSecretProviderInstance();
+  const secretProvider = await getSecretProvider();
   const missingConfigs: string[] = [];
   const validatedConfigs: Record<string, string> = {};
 
@@ -129,6 +162,8 @@ export async function validateRequiredConfiguration(): Promise<void> {
     TEMPORAL_ADDRESS: validatedConfigs.TEMPORAL_ADDRESS,
     TEMPORAL_NAMESPACE: validatedConfigs.TEMPORAL_NAMESPACE,
     TEMPORAL_TASK_QUEUE: validatedConfigs.TEMPORAL_TASK_QUEUE,
+    PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:
+      validatedConfigs.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE,
   });
 }
 
@@ -138,7 +173,7 @@ export async function validateRequiredConfiguration(): Promise<void> {
 export async function validateOptionalConfiguration(): Promise<void> {
   logger.info('Validating optional configuration for temporal worker...');
 
-  const secretProvider = await getSecretProviderInstance();
+  const secretProvider = await getSecretProvider();
   const configuredValues: Record<string, string> = {};
 
   // Check each optional configuration
@@ -294,6 +329,8 @@ export function logConfiguration(): void {
     TEMPORAL_ADDRESS: process.env.TEMPORAL_ADDRESS,
     TEMPORAL_NAMESPACE: process.env.TEMPORAL_NAMESPACE,
     TEMPORAL_TASK_QUEUE: process.env.TEMPORAL_TASK_QUEUE,
+    PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE,
     
     // Email
     EMAIL_PROVIDER: process.env.EMAIL_PROVIDER,

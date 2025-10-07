@@ -58,14 +58,21 @@ export default defineConfig({
     /* Global test timeout */
     actionTimeout: 15000,
     navigationTimeout: 30000,
-    headless: true
+    headless: false
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: [
+            '--host-resolver-rules=MAP portal.acme.local 127.0.0.1,MAP canonical.localhost 127.0.0.1,MAP localhost 127.0.0.1'
+          ],
+        },
+      },
     },
 
     // Uncomment for cross-browser testing
@@ -100,7 +107,8 @@ export default defineConfig({
     stderr: 'pipe',
     env: {
       ...process.env,
-      NEXT_PUBLIC_EDITION: 'enterprise'
+      NEXT_PUBLIC_EDITION: 'enterprise',
+      NEXTAUTH_URL: 'http://canonical.localhost:3000'
     }
   },
 

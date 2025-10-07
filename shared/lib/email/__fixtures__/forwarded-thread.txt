@@ -1,0 +1,11 @@
+Please see the forwarded ticket below – looks like the customer escalated again.
+
+Forwarded message
+From: Notifications <notify@example.com>
+Subject: Ticket created
+Date: January 20, 2025 at 09:30:00 AM CST
+To: helpdesk@example.com
+
+On Mon, Jan 20, 2025 at 09:15 MSP Support <support@alga.com> wrote:
+> Ticket Created: Printer maintenance
+> Body content...

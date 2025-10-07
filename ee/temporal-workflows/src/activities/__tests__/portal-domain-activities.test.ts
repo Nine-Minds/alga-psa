@@ -1,0 +1,99 @@
+import { describe, expect, it } from 'vitest';
+
+import type { PortalDomainActivityRecord } from '../../workflows/portal-domains/types.js';
+import type { PortalDomainConfig } from '../portal-domain-activities.js';
+import { renderPortalDomainResources } from '../portal-domain-activities.js';
+
+function createRecord(overrides: Partial<PortalDomainActivityRecord> = {}): PortalDomainActivityRecord {
+  const base: PortalDomainActivityRecord = {
+    id: '123e4567-e89b-12d3-a456-426614174000',
+    tenant: '123e4567-e89b-12d3-a456-426614174000',
+    domain: 'Example.COM ',
+    canonical_host: '123e456.portal.algapsa.com',
+    status: 'pending_certificate',
+    status_message: null,
+    verification_details: {},
+    certificate_secret_name: null,
+    last_synced_resource_version: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  return { ...base, ...overrides };
+}
+
+const baseConfig: PortalDomainConfig = {
+  certificateApiVersion: 'cert-manager.io/v1',
+  certificateNamespace: 'msp',
+  certificateIssuerName: 'letsencrypt-dns',
+  certificateIssuerKind: 'ClusterIssuer',
+  certificateIssuerGroup: 'cert-manager.io',
+  gatewayNamespace: 'istio-system',
+  gatewaySelector: { istio: 'ingressgateway' },
+  gatewayHttpsPort: 443,
+  virtualServiceNamespace: 'msp',
+  serviceHost: 'sebastian.msp.svc.cluster.local',
+  servicePort: 3000,
+  manifestOutputDirectory: null,
+};
+
+describe('renderPortalDomainResources', () => {
+  it('produces manifests using sanitized domain slug from record id', () => {
+    const record = createRecord();
+    const manifests = renderPortalDomainResources(record, baseConfig);
+
+    const expectedSlug = '123e4567-e89b-12d3-a456-426614174000';
+
+    expect(manifests.secretName).toBe(`portal-domain-${expectedSlug}`);
+    expect(manifests.certificate.metadata.namespace).toBe('msp');
+    expect(manifests.certificate.spec.secretName).toBe(manifests.secretName);
+    expect(manifests.certificate.spec.dnsNames).toEqual(['example.com']);
+    expect(manifests.gateway.metadata.name).toBe(
+      `portal-domain-gw-${expectedSlug}`,
+    );
+    expect(manifests.gateway.spec.servers).toHaveLength(1);
+    expect(manifests.gateway.spec.servers[0].tls.credentialName).toBe(manifests.secretName);
+    expect(manifests.virtualService.metadata.namespace).toBe('msp');
+    expect(manifests.virtualService.spec.gateways).toEqual([
+      `istio-system/portal-domain-gw-${expectedSlug}`,
+    ]);
+    expect(manifests.virtualService.spec.http).toHaveLength(1);
+    const [httpsRoute] = manifests.virtualService.spec.http ?? [];
+    expect(httpsRoute?.match?.[0]?.port).toBe(443);
+    expect(httpsRoute?.route?.[0]?.destination?.host).toBe(
+      baseConfig.serviceHost,
+    );
+
+    const labels = manifests.gateway.metadata.labels ?? {};
+    expect(labels['portal.alga-psa.com/domain-host']).toBe('example.com');
+    expect(labels['portal.alga-psa.com/tenant']).toBe('123e4567-e89b-12d3-a456-426614174000');
+  });
+
+  it('creates a gateway that references the generated TLS certificate', () => {
+    const record = createRecord({ domain: 'new.portal.example' });
+    const manifests = renderPortalDomainResources(record, baseConfig);
+
+    expect(manifests.gateway?.kind).toBe('Gateway');
+    expect(manifests.gateway?.metadata?.name).toBe(
+      'portal-domain-gw-123e4567-e89b-12d3-a456-426614174000',
+    );
+
+    const servers = manifests.gateway?.spec?.servers ?? [];
+    expect(servers).toHaveLength(1);
+
+    const [httpsServer] = servers;
+    expect(httpsServer?.tls?.credentialName).toBe(manifests.secretName);
+    expect(httpsServer?.hosts).toEqual(['new.portal.example']);
+  });
+
+  it('adds the portal domain host and gateway to the rendered virtual service', () => {
+    const record = createRecord({ domain: 'portal.mspmind.com' });
+    const manifests = renderPortalDomainResources(record, baseConfig);
+
+    expect(manifests.virtualService?.kind).toBe('VirtualService');
+    expect(manifests.virtualService?.spec?.hosts).toEqual(['portal.mspmind.com']);
+    expect(manifests.virtualService?.spec?.gateways).toEqual([
+      'istio-system/portal-domain-gw-123e4567-e89b-12d3-a456-426614174000',
+    ]);
+  });
+});

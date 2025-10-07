@@ -10,7 +10,7 @@ import UserAvatar from 'server/src/components/ui/UserAvatar';
 import CompanyAvatar from 'server/src/components/ui/CompanyAvatar';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 import { EntityType } from 'server/src/lib/services/EntityImageService';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface EntityImageUploadProps {
   entityType: EntityType;
@@ -107,7 +107,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
     }
 
     const formData = new FormData();
-    formData.append(entityType === 'company' ? 'logo' : 'avatar', file);
+    formData.append((entityType === 'company' || entityType === 'tenant') ? 'logo' : 'avatar', file);
 
     // Create a local object URL for immediate display
     const localImageUrl = URL.createObjectURL(file);
@@ -278,7 +278,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 {isPendingUpload ? (
                   <LoadingIndicator
                     spinnerProps={{ size: "xs" }}
-                    text={entityType === 'company'
+                    text={(entityType === 'company' || entityType === 'tenant')
                       ? t('profile.imageUpload.uploadingLogo', 'Uploading Logo...')
                       : t('profile.imageUpload.uploadingAvatar', 'Uploading Avatar...')
                     }
@@ -287,7 +287,7 @@ const EntityImageUpload: React.FC<EntityImageUploadProps> = ({
                 ) : (
                   <>
                     <Upload className="mr-2 h-4 w-4" />
-                    {entityType === 'company'
+                    {(entityType === 'company' || entityType === 'tenant')
                       ? t('profile.imageUpload.uploadLogo', 'Upload Logo')
                       : t('profile.imageUpload.uploadAvatar', 'Upload Avatar')
                     }

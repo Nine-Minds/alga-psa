@@ -13,7 +13,7 @@ import { Search, XCircle, ExternalLink } from 'lucide-react';
 import { IProject } from 'server/src/interfaces/project.interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export function ProjectsOverviewPage() {
   const { t } = useTranslation('clientPortal');

@@ -5,8 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    setupFiles: ['./src/test/setup.ts'],
-    globalSetup: ['./vitest.globalSetup.js'],
+    setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
+    globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
     sequence: {
       concurrent: false,
@@ -22,12 +22,16 @@ export default defineConfig({
       }
     },
     logHeapUsage: true,
-    testTimeout: 20000
+    testTimeout: 20000,
+    deps: {
+      inline: ['next-auth', '@auth/core', 'next'],
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../shared'),
+      'next/server': path.resolve(__dirname, '../node_modules/next/server.js'),
     },
   },
 });

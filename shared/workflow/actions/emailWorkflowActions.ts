@@ -108,8 +108,8 @@ export async function findContactByEmail(
   email: string,
   tenant: string
 ): Promise<FindContactByEmailOutput | null> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   const contact = await withAdminTransaction(async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .select(
@@ -131,7 +131,7 @@ export async function findContactByEmail(
         })
         .first();
     });
-    
+
     return contact || null;
 }
 
@@ -142,8 +142,8 @@ export async function createOrFindContact(
   input: CreateOrFindContactInput,
   tenant: string
 ): Promise<CreateOrFindContactOutput> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // First try to find existing contact
       const existingContact = await trx('contacts')
@@ -153,7 +153,7 @@ export async function createOrFindContact(
           tenant
         })
         .first();
-      
+
       if (existingContact) {
         return {
           id: existingContact.contact_name_id,
@@ -166,11 +166,11 @@ export async function createOrFindContact(
           is_new: false
         };
       }
-      
+
       // Create new contact
       const contactId = uuidv4();
       const now = new Date();
-      
+
       await trx('contacts').insert({
         contact_name_id: contactId,
         tenant,
@@ -182,7 +182,7 @@ export async function createOrFindContact(
         created_at: now,
         updated_at: now
       });
-      
+
       return {
         id: contactId,
         name: input.name || input.email,
@@ -207,21 +207,21 @@ export async function findTicketByEmailThread(
   input: FindTicketByEmailThreadInput,
   tenant: string
 ): Promise<FindTicketByEmailThreadOutput | null> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Strategy 1: Search by thread ID if available
       if (input.threadId) {
         const ticket = await findTicketByThreadId(trx, tenant, input.threadId);
         if (ticket) return ticket;
       }
-      
+
       // Strategy 2: Search by In-Reply-To header (most reliable)
       if (input.inReplyTo) {
         const ticket = await findTicketByOriginalMessageId(trx, tenant, input.inReplyTo);
         if (ticket) return ticket;
       }
-      
+
       // Strategy 3: Search by References headers
       if (input.references && input.references.length > 0) {
         for (const messageId of input.references) {
@@ -229,13 +229,13 @@ export async function findTicketByEmailThread(
           if (ticket) return ticket;
         }
       }
-      
+
       // Strategy 4: Search by original message ID directly
       if (input.originalMessageId) {
         const ticket = await findTicketByOriginalMessageId(trx, tenant, input.originalMessageId);
         if (ticket) return ticket;
       }
-      
+
       return null;
     });
 }
@@ -255,7 +255,7 @@ async function findTicketByThreadId(
     })
     .select(
       't.ticket_id as ticketId',
-      't.ticket_number as ticketNumber', 
+      't.ticket_number as ticketNumber',
       't.title as subject',
       's.name as status',
       't.email_metadata'
@@ -270,7 +270,7 @@ async function findTicketByThreadId(
   if (!ticket) return null;
 
   const emailMetadata = ticket.email_metadata || {};
-  
+
   return {
     ticketId: ticket.ticketId,
     ticketNumber: ticket.ticketNumber,
@@ -300,7 +300,7 @@ async function findTicketByOriginalMessageId(
     .select(
       't.ticket_id as ticketId',
       't.ticket_number as ticketNumber',
-      't.title as subject', 
+      't.title as subject',
       's.name as status',
       't.email_metadata'
     )
@@ -315,7 +315,7 @@ async function findTicketByOriginalMessageId(
   if (!ticket) return null;
 
   const emailMetadata = ticket.email_metadata || {};
-  
+
   return {
     ticketId: ticket.ticketId,
     ticketNumber: ticket.ticketNumber,
@@ -330,7 +330,7 @@ async function findTicketByOriginalMessageId(
 }
 
 // =============================================================================
-// EMAIL ATTACHMENT ACTIONS  
+// EMAIL ATTACHMENT ACTIONS
 // =============================================================================
 
 /**
@@ -340,8 +340,8 @@ export async function processEmailAttachment(
   input: ProcessEmailAttachmentInput,
   tenant: string
 ): Promise<ProcessEmailAttachmentOutput> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const documentId = uuidv4();
       const now = new Date();
@@ -394,8 +394,8 @@ export async function saveEmailClientAssociation(
   input: SaveEmailClientAssociationInput,
   tenant: string
 ): Promise<SaveEmailClientAssociationOutput> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const associationId = uuidv4();
       const now = new Date();
@@ -460,8 +460,8 @@ export async function resolveInboundTicketDefaults(
   tenant: string,
   providerId?: string
 ): Promise<any> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Require provider-specific defaults; no tenant-level fallback
       let defaults: any | null = null;
@@ -488,7 +488,7 @@ export async function resolveInboundTicketDefaults(
       defaults = await trx('inbound_ticket_defaults')
         .where({ tenant, id: provider.inbound_ticket_defaults_id, is_active: true })
         .select(
-          'channel_id',
+          'board_id',
           'status_id',
           'priority_id',
           'company_id',
@@ -504,7 +504,7 @@ export async function resolveInboundTicketDefaults(
         const fallback = await trx('inbound_ticket_defaults')
           .where({ tenant, is_active: true })
           .orderBy('updated_at', 'desc')
-          .select('channel_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
+          .select('board_id','status_id','priority_id','company_id','entered_by','category_id','subcategory_id','location_id')
           .first();
         if (!fallback) {
           console.warn(`resolveInboundTicketDefaults: no active tenant-level defaults found for tenant ${tenant}`);
@@ -541,7 +541,7 @@ export async function createTicketFromEmail(
     company_id?: string;
     contact_id?: string;
     source?: string;
-    channel_id?: string;
+    board_id?: string;
     status_id?: string;
     priority_id?: string;
     category_id?: string;
@@ -553,11 +553,11 @@ export async function createTicketFromEmail(
   tenant: string,
   userId?: string
 ): Promise<{ ticket_id: string; ticket_number: string }> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  const { TicketModel } = await import('@shared/models/ticketModel');
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
-  
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
@@ -570,7 +570,7 @@ export async function createTicketFromEmail(
         company_id: ticketData.company_id,
         contact_id: ticketData.contact_id,
         source: ticketData.source || 'email',
-        channel_id: ticketData.channel_id,
+        board_id: ticketData.board_id,
         status_id: ticketData.status_id,
         priority_id: ticketData.priority_id,
         category_id: ticketData.category_id,
@@ -603,11 +603,11 @@ export async function createCommentFromEmail(
   tenant: string,
   userId?: string
 ): Promise<string> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  const { TicketModel } = await import('@shared/models/ticketModel');
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+  const { TicketModel } = await import('@alga-psa/shared/models/ticketModel');
   const { WorkflowEventPublisher } = await import('../adapters/workflowEventPublisher');
   const { WorkflowAnalyticsTracker } = await import('../adapters/workflowAnalyticsTracker');
-  
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       // Create adapters for workflow context
       const eventPublisher = new WorkflowEventPublisher();
@@ -620,11 +620,54 @@ export async function createCommentFromEmail(
         is_internal: false,
         is_resolution: false,
         author_type: commentData.author_type as any || 'system',
-        author_id: commentData.author_id
+        author_id: commentData.author_id,
+        metadata: commentData.metadata
       }, tenant, trx, eventPublisher, analyticsTracker, userId);
 
       return result.comment_id;
     });
+}
+
+export async function parseEmailReplyBody(
+  body: {
+    text?: string;
+    html?: string;
+  },
+  config?: Record<string, any>
+): Promise<any> {
+  const module = await import('@shared/lib/email/replyParser');
+  const parseEmailReply = module.parseEmailReply as (input: { text: string; html?: string }, cfg?: Record<string, any>) => any;
+  return parseEmailReply({
+    text: body?.text || '',
+    html: body?.html || undefined,
+  }, config);
+}
+
+export async function findTicketByReplyToken(
+  token: string,
+  tenant: string
+): Promise<{ ticketId?: string; commentId?: string; projectId?: string } | null> {
+  if (!token) {
+    return null;
+  }
+
+  const { withAdminTransaction } = await import('@shared/db/index');
+
+  return withAdminTransaction(async (trx: Knex.Transaction) => {
+    const record = await trx('email_reply_tokens')
+      .where({ tenant, token })
+      .first();
+
+    if (!record) {
+      return null;
+    }
+
+    return {
+      ticketId: record.ticket_id || undefined,
+      commentId: record.comment_id || undefined,
+      projectId: record.project_id || undefined,
+    };
+  });
 }
 
 /**
@@ -638,11 +681,11 @@ export async function createCompanyFromEmail(
   },
   tenant: string
 ): Promise<{ company_id: string; company_name: string }> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const companyId = uuidv4();
-      
+
       await trx('companies')
         .insert({
           company_id: companyId,
@@ -668,8 +711,8 @@ export async function getCompanyByIdForEmail(
   companyId: string,
   tenant: string
 ): Promise<{ company_id: string; company_name: string } | null> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
       const company = await trx('companies')
         .select('company_id', 'company_name')
@@ -681,36 +724,36 @@ export async function getCompanyByIdForEmail(
 }
 
 /**
- * Create channel from email data
+ * Create board from email data
  */
-export async function createChannelFromEmail(
-  channelData: {
-    channel_name: string;
+export async function createBoardFromEmail(
+  boardData: {
+    board_name: string;
     description?: string;
     is_default?: boolean;
   },
   tenant: string
-): Promise<{ channel_id: string; channel_name: string }> {
-  const { withAdminTransaction } = await import('@shared/db/index');
-  
+): Promise<{ board_id: string; board_name: string }> {
+  const { withAdminTransaction } = await import('@alga-psa/shared/db/index');
+
   return await withAdminTransaction(async (trx: Knex.Transaction) => {
-      const channelId = uuidv4();
-      
-      await trx('channels')
+      const boardId = uuidv4();
+
+      await trx('boards')
         .insert({
-          channel_id: channelId,
+          board_id: boardId,
           tenant,
-          channel_name: channelData.channel_name,
-          description: channelData.description || '',
-          is_default: channelData.is_default || false,
+          board_name: boardData.board_name,
+          description: boardData.description || '',
+          is_default: boardData.is_default || false,
           is_inactive: false,
           created_at: new Date(),
           updated_at: new Date()
         });
 
       return {
-        channel_id: channelId,
-        channel_name: channelData.channel_name
+        board_id: boardId,
+        board_name: boardData.board_name
       };
     });
 }

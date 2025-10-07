@@ -1,7 +1,7 @@
 // server/src/components/settings/SettingsPage.tsx
 'use client'
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import ZeroDollarInvoiceSettings from '../billing/ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from '../billing/CreditExpirationSettings';
@@ -71,49 +71,66 @@ const SettingsPage = (): JSX.Element =>  {
   ) : () => null;
 
   // Map URL slugs (kebab-case) to Tab Labels
-  const slugToLabelMap: Record<string, string> = {
-    'general': 'General',
+  const slugToLabelMap = useMemo<Record<string, string>>(() => ({
+    general: 'General',
     'client-portal': 'Client Portal',
-    'users': 'Users',
-    'teams': 'Teams',
-    'ticketing': 'Ticketing',
+    users: 'Users',
+    teams: 'Teams',
+    ticketing: 'Ticketing',
     'interaction-types': 'Interaction Types',
-    'notifications': 'Notifications',
+    notifications: 'Notifications',
     'time-entry': 'Time Entry',
-    'billing': 'Billing',
-    'tax': 'Tax',
-    'email': 'Email',
-    'integrations': 'Integrations',
-    ...(isEEAvailable && { 'extensions': 'Extensions' }) // Only add if EE is available
-  };
+    billing: 'Billing',
+    tax: 'Tax',
+    email: 'Email',
+    integrations: 'Integrations',
+    ...(isEEAvailable && { extensions: 'Extensions' }) // Only add if EE is available
+  }), [isEEAvailable]);
 
-  // Initialize with a safe default for SSR
-  const [activeTab, setActiveTab] = useState<string>('General');
-  const [isClient, setIsClient] = useState(false);
+  const labelToSlugMap = useMemo<Record<string, string>>(() => (
+    Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
+      acc[label] = slug;
+      return acc;
+    }, {} as Record<string, string>)
+  ), [slugToLabelMap]);
+
+  const initialTabLabel = useMemo(() => {
+    const mappedLabel = tabParam
+      ? slugToLabelMap[tabParam.toLowerCase()]
+      : undefined;
+
+    return mappedLabel ?? 'General';
+  }, [tabParam, slugToLabelMap]);
+
+  // Initialize with URL-aware default so SSR and hydration stay aligned
+  const [activeTab, setActiveTab] = useState<string>(initialTabLabel);
+  const hydrationReadyRef = useRef(false);
 
   // Handle client-side initialization
   useEffect(() => {
-    setIsClient(true);
-    // Only update tab on client side to avoid hydration mismatch
-    if (tabParam) {
-      const initialLabel = slugToLabelMap[tabParam.toLowerCase()];
-      if (initialLabel) {
-        setActiveTab(initialLabel);
-      }
-    }
-  }, []); // Run once on mount
+    hydrationReadyRef.current = true;
 
-  // Update active tab when URL parameter changes
-  useEffect(() => {
-    if (!isClient) return;
+    const targetLabel = initialTabLabel;
 
-    const currentLabel = tabParam ? slugToLabelMap[tabParam.toLowerCase()] : undefined;
-    const targetTab = currentLabel || 'General';
-    // Only update state if the derived tab is different from the current state
-    if (targetTab !== activeTab) {
-       setActiveTab(targetTab);
+    setActiveTab((prev) => (prev === targetLabel ? prev : targetLabel));
+  }, [initialTabLabel]);
+
+  const handleTabChange = useCallback((tab: string) => {
+    if (!hydrationReadyRef.current) {
+      return;
     }
-  }, [tabParam, isClient]); // Include isClient to ensure client-side only
+
+    setActiveTab(tab);
+
+    const urlSlug = labelToSlugMap[tab];
+    const newUrl = urlSlug && urlSlug !== 'general'
+      ? `/msp/settings?tab=${urlSlug}`
+      : '/msp/settings';
+
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', newUrl);
+    }
+  }, [labelToSlugMap]);
 
   const baseTabContent: TabContent[] = [
     {
@@ -314,25 +331,7 @@ const SettingsPage = (): JSX.Element =>  {
       <CustomTabs
         tabs={tabContent}
         defaultTab={activeTab}
-        onTabChange={(tab) => {
-          // Map Tab Labels back to URL slugs (kebab-case)
-          const labelToSlugMap: Record<string, string> = Object.entries(slugToLabelMap).reduce((acc, [slug, label]) => {
-            acc[label] = slug;
-            return acc;
-          }, {} as Record<string, string>);
-
-          // Re-add immediate state update on tab change
-          setActiveTab(tab);
-
-          const urlSlug = labelToSlugMap[tab];
-          // Update URL using pushState to avoid full page reload
-          // Default to '/msp/settings' if the slug is 'general' or not found
-          const newUrl = urlSlug && urlSlug !== 'general'
-            ? `/msp/settings?tab=${urlSlug}`
-            : '/msp/settings';
-
-          window.history.pushState({}, '', newUrl);
-        }}
+        onTabChange={handleTabChange}
       />
     </div>
   );

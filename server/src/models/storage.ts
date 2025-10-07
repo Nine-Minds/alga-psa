@@ -47,20 +47,17 @@ export class FileStoreModel extends BaseModel {
   static async findById(
     knexOrTrx: Knex | Knex.Transaction,
     file_id: string
-  ): Promise<FileStore> {
+  ): Promise<FileStore | null> {
     const tenant = await this.getTenant();
     if (!tenant) {
       throw new Error('Tenant context is required');
     }
-    
+
     const file = await knexOrTrx('external_files')
       .where({ tenant, file_id, is_deleted: false })
       .first();
-    
-    if (!file) {
-      throw new Error('File not found');
-    }
-    return file;
+
+    return file || null;
   }
 
   static async softDelete(

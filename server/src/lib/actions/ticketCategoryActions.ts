@@ -62,7 +62,7 @@ export async function getTicketCategories() {
   });
 }
 
-export async function createTicketCategory(categoryName: string, channelId: string, parentCategory?: string) {
+export async function createTicketCategory(categoryName: string, boardId: string, parentCategory?: string) {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('Unauthorized');
@@ -72,19 +72,19 @@ export async function createTicketCategory(categoryName: string, channelId: stri
     throw new Error('Category name is required');
   }
 
-  if (!channelId) {
+  if (!boardId) {
     throw new Error('Board ID is required');
   }
 
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // Check if category with same name exists in the channel
+    // Check if category with same name exists in the board
     const existingCategory = await trx('categories')
       .where({
         tenant,
         category_name: categoryName,
-        channel_id: channelId
+        board_id: boardId
       })
       .first();
 
@@ -100,7 +100,7 @@ export async function createTicketCategory(categoryName: string, channelId: stri
       .insert({
         tenant,
         category_name: categoryName.trim(),
-        channel_id: channelId,
+        board_id: boardId,
         parent_category: parentCategory,
         created_by: user.user_id
       })
@@ -130,6 +130,18 @@ export async function deleteTicketCategory(categoryId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+    // Check if this is an ITIL standard category (immutable)
+    const category = await trx('categories')
+      .where({
+        tenant,
+        category_id: categoryId
+      })
+      .first();
+
+    if (category?.is_from_itil_standard) {
+      throw new Error('ITIL standard categories cannot be deleted');
+    }
+
     // Check if category has subcategories
     const hasSubcategories = await trx('categories')
       .where({
@@ -193,13 +205,24 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-    // Check if new name conflicts with existing category in the same channel
+    // Check if this is an ITIL standard category (immutable)
+    const existingCategory = await trx('categories')
+      .where({
+        tenant,
+        category_id: categoryId
+      })
+      .first();
+
+    if (existingCategory?.is_from_itil_standard) {
+      throw new Error('ITIL standard categories cannot be edited');
+    }
+    // Check if new name conflicts with existing category in the same board
     if (categoryData.category_name) {
       const existingCategory = await trx('categories')
         .where({
           tenant,
           category_name: categoryData.category_name,
-          channel_id: categoryData.channel_id || (await trx('categories').where({ category_id: categoryId }).first()).channel_id
+          board_id: categoryData.board_id || (await trx('categories').where({ category_id: categoryId }).first()).board_id
         })
         .whereNot('category_id', categoryId)
         .first();
@@ -236,27 +259,72 @@ export async function updateTicketCategory(categoryId: string, categoryData: Par
   });
 }
 
-export async function getTicketCategoriesByChannel(channelId: string) {
+export interface BoardCategoryData {
+  categories: ITicketCategory[];
+  boardConfig: {
+    category_type: 'custom' | 'itil';
+    priority_type: 'custom' | 'itil';
+    display_itil_impact?: boolean;
+    display_itil_urgency?: boolean;
+  };
+}
+
+export async function getTicketCategoriesByBoard(boardId: string): Promise<BoardCategoryData> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error('Unauthorized');
   }
 
-  if (!channelId) {
+  if (!boardId) {
     throw new Error('Board ID is required');
   }
 
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // Get all categories for the channel ordered by name
-      const categories = await trx<ITicketCategory>('categories')
+      // Get board configuration
+      const board = await trx('boards')
         .where('tenant', tenant!)
-        .where('channel_id', channelId)
-        .orderBy('category_name');
+        .where('board_id', boardId)
+        .select('category_type', 'priority_type', 'display_itil_impact', 'display_itil_urgency')
+        .first();
 
-      // Order them hierarchically
-      return orderCategoriesHierarchically(categories);
+      if (!board) {
+        throw new Error('Board not found');
+      }
+
+      const boardConfig = {
+        category_type: (board.category_type || 'custom') as 'custom' | 'itil',
+        priority_type: (board.priority_type || 'custom') as 'custom' | 'itil',
+        display_itil_impact: board.display_itil_impact || false,
+        display_itil_urgency: board.display_itil_urgency || false,
+      };
+
+      // Fetch categories for this board from tenant's categories table
+      // (ITIL categories are copied to tenant table when board is configured for ITIL)
+      let categories;
+
+      if (boardConfig.category_type === 'itil') {
+        // For ITIL boards, get all ITIL categories regardless of which board they were created for
+        categories = await trx('categories')
+          .where('tenant', tenant!)
+          .where('is_from_itil_standard', true)
+          .orderBy('category_name');
+      } else {
+        // For custom boards, get categories specific to this board
+        categories = await trx('categories')
+          .where('tenant', tenant!)
+          .where('board_id', boardId)
+          .orderBy('category_name');
+      }
+
+      // Apply hierarchical ordering
+      const orderedCategories = await orderCategoriesHierarchically(categories);
+
+      return {
+        categories: orderedCategories,
+        boardConfig
+      };
     } catch (error) {
       console.error('Error fetching ticket categories by board:', error);
       throw new Error('Failed to fetch ticket categories');
@@ -275,7 +343,7 @@ export async function getAllCategories(): Promise<ITicketCategory[]> {
     try {
       const categories = await trx<ITicketCategory>('categories')
         .where('tenant', tenant!)
-        .select('category_id', 'category_name', 'display_order', 'parent_category', 'channel_id')
+        .select('category_id', 'category_name', 'display_order', 'parent_category', 'board_id')
         .orderBy('display_order', 'asc');
 
       return categories;
@@ -289,7 +357,7 @@ export async function getAllCategories(): Promise<ITicketCategory[]> {
 export async function createCategory(data: { 
   category_name: string; 
   display_order?: number;
-  channel_id: string;
+  board_id: string;
   parent_category?: string;
 }): Promise<ITicketCategory> {
   const user = await getCurrentUser();
@@ -297,7 +365,7 @@ export async function createCategory(data: {
     throw new Error('Unauthorized');
   }
 
-  if (!data.channel_id) {
+  if (!data.board_id) {
     throw new Error('Board ID is required');
   }
 
@@ -329,12 +397,12 @@ export async function createCategory(data: {
         .insert({
           category_name: data.category_name,
           display_order: displayOrder,
-          channel_id: data.channel_id,
+          board_id: data.board_id,
           parent_category: data.parent_category || null,
           tenant,
           created_by: user.user_id
         })
-        .returning(['category_id', 'category_name', 'display_order', 'channel_id', 'parent_category']);
+        .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
       
       return newCategory;
     } catch (error) {
@@ -349,7 +417,7 @@ export async function updateCategory(
   data: { 
     category_name?: string; 
     display_order?: number;
-    channel_id?: string;
+    board_id?: string;
   }
 ): Promise<ITicketCategory> {
   const user = await getCurrentUser();
@@ -360,7 +428,7 @@ export async function updateCategory(
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // Check if this is a parent category and channel is being changed
+      // Check if this is a parent category and board is being changed
       const currentCategory = await trx('categories')
         .where({ category_id: categoryId, tenant })
         .first();
@@ -373,13 +441,13 @@ export async function updateCategory(
       const [updatedCategory] = await trx('categories')
         .where({ category_id: categoryId, tenant })
         .update(data)
-        .returning(['category_id', 'category_name', 'display_order', 'channel_id', 'parent_category']);
+        .returning(['category_id', 'category_name', 'display_order', 'board_id', 'parent_category']);
       
-      // If this is a parent category and channel_id was changed, update all subcategories
-      if (!currentCategory.parent_category && data.channel_id && data.channel_id !== currentCategory.channel_id) {
+      // If this is a parent category and board_id was changed, update all subcategories
+      if (!currentCategory.parent_category && data.board_id && data.board_id !== currentCategory.board_id) {
         await trx('categories')
           .where({ parent_category: categoryId, tenant })
-          .update({ channel_id: data.channel_id });
+          .update({ board_id: data.board_id });
       }
       
       return updatedCategory;

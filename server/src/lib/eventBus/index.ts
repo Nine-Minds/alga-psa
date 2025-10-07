@@ -50,12 +50,21 @@ const createRedisClient = async () => {
 
 // Singleton Redis client
 let client: Awaited<ReturnType<typeof createRedisClient>> | null = null;
+let clientPromise: Promise<Awaited<ReturnType<typeof createRedisClient>>> | null = null;
 
 async function getClient() {
   if (!client) {
-    logger.debug('[EventBus] Creating new Redis client');
-    client = await createRedisClient();
-    await client.connect();
+    // If another call is already creating the client, wait for it
+    if (!clientPromise) {
+      logger.info('[EventBus] Creating new Redis client');
+      clientPromise = (async () => {
+        const newClient = await createRedisClient();
+        await newClient.connect();
+        client = newClient;
+        return newClient;
+      })();
+    }
+    return await clientPromise;
   }
   return client;
 }
@@ -150,7 +159,7 @@ export class EventBus {
       try {
         const client = await getClient();
         const streams = Array.from(this.handlers.keys()).map((eventType): string => getEventStream(eventType));
-        
+
         if (streams.length === 0) {
           setTimeout(processEvents, 1000);
           return;
@@ -170,6 +179,11 @@ export class EventBus {
         );
 
         if (streamEntries) {
+          logger.info('[EventBus] Received stream entries:', {
+            streamsWithMessages: streamEntries.length,
+            totalMessages: streamEntries.reduce((sum, s) => sum + s.messages.length, 0)
+          });
+
           for (const { name: stream, messages } of streamEntries) {
             for (const message of messages) {
               try {
@@ -354,12 +368,10 @@ export class EventBus {
         convertToWorkflowEvent(fullEvent)
       );
 
-      logger.info('[EventBus] Publishing event in workflow format:', {
-        workflowEvent
+      logger.debug('[EventBus] Publishing event in workflow format:', {
+        eventType: workflowEvent.event_type,
+        eventId: workflowEvent.event_id
       });
-
-      // Log the object just before stringifying
-      console.log(`[DEBUG EventBus.publish] workflowEvent object BEFORE stringify:`, JSON.stringify(workflowEvent, null, 2));
 
       // Construct the message fields for XADD in the flat format
       const messageFields: { [key: string]: string } = {
@@ -388,7 +400,7 @@ export class EventBus {
         }
       );
 
-      logger.info('[EventBus] Event published to workflow stream:', {
+      logger.debug('[EventBus] Event published to workflow stream:', {
         stream: globalStream,
         eventType: fullEvent.eventType,
         eventId: fullEvent.id
@@ -402,7 +414,7 @@ export class EventBus {
       await client.xAdd(
         individualStream,
         '*',
-        { 
+        {
           event: JSON.stringify(fullEvent)
         },
         {
@@ -414,17 +426,10 @@ export class EventBus {
         }
       );
 
-      logger.info('[EventBus] Event published to individual stream:', {
-        stream: individualStream,
-        eventType: fullEvent.eventType,
-        eventId: fullEvent.id
-      });
-
-      logger.info('[EventBus] Event published successfully to both streams:', {
+      logger.info('[EventBus] Event published:', {
         eventType: fullEvent.eventType,
         eventId: fullEvent.id,
-        workflowStream: globalStream,
-        individualStream: individualStream
+        tenant: fullEvent.payload.tenantId
       });
     } catch (error) {
       logger.error('Error publishing event:', error);

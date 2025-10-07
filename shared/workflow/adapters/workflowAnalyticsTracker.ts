@@ -15,7 +15,7 @@ export class WorkflowAnalyticsTracker implements IAnalyticsTracker {
     has_category: boolean;
     has_subcategory: boolean;
     is_assigned: boolean;
-    channel_id?: string;
+    board_id?: string;
     created_via: string;
     has_asset?: boolean;
     metadata?: Record<string, any>;

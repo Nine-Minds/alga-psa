@@ -4,11 +4,11 @@
  * from both the server and the workflow-worker
  */
 
-import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@shared/workflow/core/index';
-import { logger } from '@shared/core';
-import { getTaskInboxService } from '@shared/workflow/core/taskInboxService';
+import { getActionRegistry, type ActionRegistry, type ActionExecutionContext } from '@alga-psa/shared/workflow/core/index';
+import { logger } from '@alga-psa/shared/core';
+import { getTaskInboxService } from '@alga-psa/shared/workflow/core/taskInboxService';
 import axios from 'axios'; // For QBO API calls
-import { getSecretProviderInstance } from '@shared/core';
+import { getSecretProviderInstance } from '@alga-psa/shared/core';
 
 // --- Mock Secret Retrieval ---
 
@@ -75,10 +75,10 @@ export function registerWorkflowActions(): ActionRegistry {
   logger.info('[WorkflowInit] Starting registration of workflow actions...');
   // Get the action registry
   const actionRegistry = getActionRegistry();
-  
+
   // Register common actions
   registerCommonActions(actionRegistry);
-  
+
   let registeredActions = Object.keys(actionRegistry.getRegisteredActions());
   logger.info(`[WorkflowInit] Actions registered after common actions: ${registeredActions.join(', ')}`);
   logger.info(`[WorkflowInit] Total common actions registered: ${registeredActions.length}`);
@@ -92,7 +92,7 @@ export function registerWorkflowActions(): ActionRegistry {
 
   // Email actions are registered separately in the workflow worker
   // to avoid server dependencies in the shared library
-  
+
   logger.info('[WorkflowInit] Workflow action registration complete.');
   return actionRegistry;
 }
@@ -120,13 +120,13 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
+        const { getFormRegistry } = await import('@alga-psa/shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
-        
+
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Register the form
         const formId = await formRegistry.register(
           knex,
@@ -144,7 +144,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           },
           context.userId
         );
-        
+
         return {
           success: true,
           formId
@@ -155,7 +155,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-  
+
   // Get form by ID and version action
   actionRegistry.registerSimpleAction(
     'get_form',
@@ -167,13 +167,13 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
+        const { getFormRegistry } = await import('@alga-psa/shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
-        
+
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Get the form
         const form = await formRegistry.getForm(
           knex,
@@ -181,7 +181,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           params.formId,
           params.version
         );
-        
+
         if (!form) {
           return {
             success: false,
@@ -189,7 +189,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             message: `Form with ID ${params.formId}${params.version ? ` and version ${params.version}` : ''} not found`
           };
         }
-        
+
         return {
           success: true,
           exists: true,
@@ -215,7 +215,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-  
+
   // Create new form version action
   actionRegistry.registerSimpleAction(
     'create_form_version',
@@ -234,13 +234,13 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the form registry
-        const { getFormRegistry } = await import('@shared/workflow/core/formRegistry');
+        const { getFormRegistry } = await import('@alga-psa/shared/workflow/core/formRegistry');
         const formRegistry = getFormRegistry();
-        
+
         // Create Knex instance
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Create new version
         const formId = await formRegistry.createNewVersion(
           knex,
@@ -257,7 +257,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             defaultValues: params.defaultValues
           }
         );
-        
+
         return {
           success: true,
           formId,
@@ -280,18 +280,18 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         logger.info(`Looking up user with email: ${params.email}`);
-        
+
         // Get database connection
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Find user by email - case insensitive search
         const user = await knex('users')
           .select('*')
           .where({ tenant: context.tenant })
           .whereRaw('LOWER(email) = LOWER(?)', [params.email])
           .first();
-        
+
         if (!user) {
           logger.info(`No user found with email: ${params.email}`);
           return {
@@ -300,9 +300,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             message: `User with email ${params.email} not found`
           };
         }
-        
+
         logger.info(`Found user with email ${params.email}: ${user.user_id}`);
-        
+
         // Return user using the same property names as IUser interface
         return {
           success: true,
@@ -329,7 +329,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-  
+
   // Find a role by its name
   actionRegistry.registerSimpleAction(
     'find_role_by_name',
@@ -340,18 +340,18 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         logger.info(`Looking up role with name: ${params.roleName}`);
-        
+
         // Get database connection
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Find role by name - case insensitive search
         const role = await knex('roles')
           .select('*')
           .where({ tenant: context.tenant })
           .whereRaw('LOWER(role_name) = LOWER(?)', [params.roleName])
           .first();
-        
+
         if (!role) {
           logger.info(`No role found with name: ${params.roleName}`);
           return {
@@ -360,9 +360,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             message: `Role with name ${params.roleName} not found`
           };
         }
-        
+
         logger.info(`Found role with name ${params.roleName}: ${role.role_id}`);
-        
+
         // Return role using the same property names as IRole interface
         return {
           success: true,
@@ -399,7 +399,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       return { success: true };
     }
   );
-  
+
   // Log audit message action
   actionRegistry.registerSimpleAction(
     'log_audit_message',
@@ -418,7 +418,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       return { success: true };
     }
   );
-  
+
   // Send notification action
   actionRegistry.registerSimpleAction(
     'send_notification',
@@ -432,7 +432,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       return { success: true, notificationId: `notif-${Date.now()}` };
     }
   );
-  
+
   // Get user role action
   actionRegistry.registerSimpleAction(
     'get_user_role',
@@ -448,11 +448,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         'user3': 'senior_manager',
         'user4': 'admin'
       };
-      
-      const role = params.userId in roles 
-        ? roles[params.userId as keyof typeof roles] 
+
+      const role = params.userId in roles
+        ? roles[params.userId as keyof typeof roles]
         : 'user';
-        
+
       return role;
     }
   );
@@ -468,14 +468,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_invoice called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const invoice = await knex('invoices')
           .select('*')
           .where({ invoice_id: params.id, tenant: context.tenant })
           .first();
-          
+
         if (!invoice) {
           logger.warn(`[ACTION] get_invoice: Invoice not found for id: ${params.id}, tenant: ${context.tenant}`);
           // To align with Promise<AlgaInvoice> as expected by the workflow's type definitions,
@@ -485,10 +485,10 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           (err as any).status = 404;
           throw err;
         }
-        
+
         logger.info(`[ACTION] get_invoice: Successfully fetched invoice id: ${params.id}`);
         logger.info(`[ACTION] get_invoice: Invoice details from DB: ${JSON.stringify(invoice)}`);
-        
+
         // Return the raw database object directly
         return invoice;
       } catch (error: any) {
@@ -512,14 +512,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
       logger.info(`${logPrefix} get_invoice_items called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const items = await knex('invoice_items')
           .select('invoice_items.*', 'service_catalog.service_name')
           .leftJoin('service_catalog', 'invoice_items.service_id', 'service_catalog.service_id')
           .where({ 'invoice_items.invoice_id': params.invoiceId, 'invoice_items.tenant': context.tenant });
-          
+
         logger.info(`${logPrefix} get_invoice_items: Successfully fetched ${items.length} items for invoiceId: ${params.invoiceId}`);
         return { success: true, items };
       } catch (error: any) {
@@ -539,21 +539,21 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const company = await knex('companies')
           .select('*') // This will fetch address and billing_email if they exist
           .where({ company_id: params.id, tenant: context.tenant })
           .first();
-          
+
         if (!company) {
           logger.warn(`[ACTION] get_company: Company not found for id: ${params.id}, tenant: ${context.tenant}`);
           const err = new Error(`Company with id ${params.id} not found for tenant ${context.tenant}.`);
           (err as any).status = 404;
           throw err;
         }
-        
+
         logger.info(`[ACTION] get_company: Successfully fetched company id: ${params.id}`);
         logger.info(`[ACTION] get_company: Company details from DB: ${JSON.stringify(company)}`);
 
@@ -575,19 +575,19 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company_default_location called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const location = await knex('company_locations')
           .select('*')
-          .where({ 
+          .where({
             company_id: params.companyId,
             tenant: context.tenant,
             is_default: true,
-            is_active: true 
+            is_active: true
           })
           .first();
-          
+
         if (!location) {
           logger.warn(`[ACTION] get_company_default_location: No default location found for company: ${params.companyId}, tenant: ${context.tenant}`);
           return {
@@ -597,9 +597,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             message: `No default location found for company ${params.companyId}`
           };
         }
-        
+
         logger.info(`[ACTION] get_company_default_location: Successfully fetched default location for company: ${params.companyId}`);
-        
+
         return {
           success: true,
           found: true,
@@ -627,21 +627,21 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] get_company_locations called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const locations = await knex('company_locations')
           .select('*')
-          .where({ 
+          .where({
             company_id: params.companyId,
             tenant: context.tenant,
-            is_active: true 
+            is_active: true
           })
           .orderBy('is_default', 'desc')
           .orderBy('location_name', 'asc');
-        
+
         logger.info(`[ACTION] get_company_locations: Successfully fetched ${locations.length} locations for company: ${params.companyId}`);
-        
+
         return {
           success: true,
           locations: locations,
@@ -672,9 +672,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] lookup_qbo_item_id called for algaProductId: ${params.algaProductId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const mapping = await knex('tenant_external_entity_mappings')
           .select('external_entity_id')
           .where({
@@ -693,7 +693,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.info(`[ACTION] lookup_qbo_item_id: Alga product ID ${params.algaProductId} not found in DB mapping.`);
           return { success: true, found: false, qboItemId: null };
         }
-        
+
       } catch (error: any) {
         logger.error(`[ACTION] lookup_qbo_item_id: Error looking up QBO item ID for Alga product ID: ${params.algaProductId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
@@ -714,10 +714,10 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] trigger_workflow called for name: ${params.name}, tenant: ${context.tenant}, correlationId: ${params.correlationId}`, { input: params.input });
       try {
-        const { getWorkflowRuntime } = await import('@shared/workflow/core/workflowRuntime');
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getWorkflowRuntime } = await import('@alga-psa/shared/workflow/core/workflowRuntime');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         // Determine if the target workflow is system_managed or tenant-specific.
         let isSystemManaged = false;
         let registrationTable = 'workflow_registrations';
@@ -767,7 +767,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.error(`[ACTION] trigger_workflow: Workflow named '${params.name}' not found or has no current version ${scopeMessage}`);
           return { success: false, message: `Workflow named '${params.name}' not found or has no current version ${scopeMessage}.` };
         }
-        
+
         const workflowRuntime = getWorkflowRuntime(getActionRegistry()); // Pass the action registry
 
         const result = await workflowRuntime.startWorkflowByVersionId(knex, {
@@ -778,7 +778,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           isSystemManaged: isSystemManaged,
           correlationId: params.correlationId, // Pass correlationId
         });
-        
+
         logger.info(`[ACTION] trigger_workflow: Successfully triggered workflow '${params.name}' (isSystemManaged: ${isSystemManaged}, correlationId: ${params.correlationId}) with execution ID: ${result.executionId}`);
         return { success: true, triggeredExecutionId: result.executionId, ...result };
       } catch (error: any) {
@@ -827,7 +827,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           SyncToken: params.qboSyncToken,
           sparse: true, // Important for QBO updates
         };
-        
+
         const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/invoice?operation=update&minorversion=69`;
         logger.debug(`[ACTION] update_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToUpdatePayload);
 
@@ -845,10 +845,10 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             logger.error(`[ACTION] update_qbo_invoice: QBO API response did not contain expected Invoice data. Tenant: ${context.tenant}, QBO Invoice ID: ${params.qboInvoiceId}`, response.data);
             return { success: false, message: 'QBO API response malformed or missing Invoice data after update.', qboRawResponse: response.data };
         }
-        
+
         logger.info(`[ACTION] update_qbo_invoice: Successfully updated QBO invoice ${qboResponseData.Id}. New SyncToken: ${qboResponseData.SyncToken}`);
         return { success: true, qboResponse: qboResponseData };
-        
+
       } catch (error: any) {
         logger.error(`[ACTION] update_qbo_invoice: Error updating QBO invoice ${params.qboInvoiceId}, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
@@ -887,10 +887,10 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.warn(`[ACTION] create_qbo_invoice: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
           return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
         }
-        
+
         // params.qboInvoiceData should be the complete QBO Invoice object structure for creation
         const invoiceToCreatePayload = { ...params.qboInvoiceData };
-        
+
         const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/invoice?minorversion=69`;
         logger.debug(`[ACTION] create_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToCreatePayload);
 
@@ -902,7 +902,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           },
           timeout: 30000,
         });
-        
+
         const qboResponseData = response.data?.Invoice;
         if (!qboResponseData || !qboResponseData.Id) {
             logger.error(`[ACTION] create_qbo_invoice: QBO API response did not contain expected Invoice data. Tenant: ${context.tenant}`, response.data);
@@ -911,7 +911,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 
         logger.info(`[ACTION] create_qbo_invoice: Successfully created QBO invoice. New ID: ${qboResponseData.Id}, SyncToken: ${qboResponseData.SyncToken}`);
         return { success: true, qboResponse: qboResponseData };
-        
+
       } catch (error: any) {
         logger.error(`[ACTION] create_qbo_invoice: Error creating QBO invoice, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
@@ -953,9 +953,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.warn(`${logPrefix} create_qbo_customer: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
           return { success: false, Customer: null, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
         }
-        
+
         const customerToCreatePayload = { ...params.qboCustomerData };
-        
+
         const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer?minorversion=69`;
         logger.debug(`${logPrefix} create_qbo_customer: Posting to QBO: ${apiUrl}`, customerToCreatePayload);
 
@@ -967,7 +967,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           },
           timeout: 30000,
         });
-        
+
         const qboResponseData = response.data?.Customer; // QBO typically returns the created object under a 'Customer' key
         if (!qboResponseData || !qboResponseData.Id) {
             logger.error(`${logPrefix} create_qbo_customer: QBO API response did not contain expected Customer data. Tenant: ${context.tenant}`, response.data);
@@ -977,7 +977,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         logger.info(`${logPrefix} create_qbo_customer: Successfully created QBO Customer. New ID: ${qboResponseData.Id}, SyncToken: ${qboResponseData.SyncToken}`);
         // Return a structure that includes the Customer object, similar to QBO's API response structure
         return { success: true, Customer: qboResponseData };
-        
+
       } catch (error: any) {
         logger.error(`${logPrefix} create_qbo_customer: Error creating QBO Customer, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
@@ -1022,14 +1022,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.warn(`${logPrefix} update_qbo_customer: QBO access token expired for tenant ${context.tenant}, realm ${params.realmId} (using provided credentials). Needs refresh.`);
           return { success: false, Customer: null, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
         }
-        
+
         const customerToUpdatePayload = {
           ...params.qboCustomerData, // Spread the customer data first
           Id: params.qboCustomerId,    // Add/override Id
           SyncToken: params.qboSyncToken, // Add/override SyncToken
           sparse: true,                // Ensure sparse update is true
         };
-        
+
         const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer?operation=update&minorversion=69`;
         logger.debug(`${logPrefix} update_qbo_customer: Posting to QBO: ${apiUrl}`, JSON.stringify(customerToUpdatePayload));
 
@@ -1041,7 +1041,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           },
           timeout: 30000, // Standard timeout for update operations
         });
-        
+
         const qboResponseData = response.data?.Customer;
         if (!qboResponseData || !qboResponseData.Id || !qboResponseData.SyncToken) {
             logger.error(`${logPrefix} update_qbo_customer: QBO API response did not contain expected Customer data (Id, SyncToken). Tenant: ${context.tenant}, QBO Customer ID: ${params.qboCustomerId}`, response.data);
@@ -1050,7 +1050,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 
         logger.info(`${logPrefix} update_qbo_customer: Successfully updated QBO Customer. ID: ${qboResponseData.Id}, New SyncToken: ${qboResponseData.SyncToken}`);
         return { success: true, Customer: { Id: qboResponseData.Id, SyncToken: qboResponseData.SyncToken } }; // Return only Id and SyncToken as specified
-        
+
       } catch (error: any) {
         logger.error(`${logPrefix} update_qbo_customer: Error updating QBO Customer ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const faultError = error.response?.data?.Fault?.Error?.[0];
@@ -1062,12 +1062,12 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         } else if (error.message) {
             errorMessage = error.message;
         }
-        
+
         return { success: false, Customer: null, message: errorMessage, errorDetails: error.response?.data || error.toString() };
       }
     }
   );
-  
+
   // Get QBO Customer by DisplayName or Email
   actionRegistry.registerSimpleAction(
     'get_qbo_customer_by_display_or_email',
@@ -1116,7 +1116,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           // QBO stores email in PrimaryEmailAddr.Address
           queryConditions.push(`PrimaryEmailAddr.Address = '${params.email.replace(/'/g, "\\'")}'`);
         }
-        
+
         const query = `SELECT Id, DisplayName, PrimaryEmailAddr, SyncToken FROM Customer WHERE ${queryConditions.join(' OR ')} MAXRESULTS 10`;
         const queryUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/query?query=${encodeURIComponent(query)}&minorversion=69`;
 
@@ -1138,7 +1138,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 
         logger.info(`${logPrefix} get_qbo_customer_by_display_or_email: No QBO Customer found via API for the given criteria.`);
         return { success: true, found: false, customers: [] };
-        
+
       } catch (error: any) {
         logger.error(`${logPrefix} get_qbo_customer_by_display_or_email: Error looking up QBO Customer for tenant: ${context.tenant}`, error.response?.data || error.message || error);
         const errorMessage = axios.isAxiosError(error) ? error.response?.data?.Fault?.Error?.[0]?.Detail || error.message : error.message;
@@ -1222,23 +1222,23 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         } else if (error.message) {
             errorMessage = error.message;
         }
-        
+
         // Specifically check for "Object Not Found" type errors from QBO.
         // QBO error code for "Object Not Found" is often 6240 in the detail.
         // Also check if the status code is 404, which QBO might return for a non-existent resource.
         if (error.response?.status === 404 || faultError?.Detail?.includes("Object Not Found") || faultError?.code === "6240" || (error.response?.status === 400 && faultError?.Message?.toLowerCase().includes("not found"))) {
             logger.info(`${logPrefix} QBO Customer ID ${params.qboCustomerId} not found in Realm ID ${params.realmId}. Status: ${error.response?.status}`);
-            return { 
-                success: false, 
-                message: `QBO Customer with ID ${params.qboCustomerId} not found. Detail: ${faultError?.Detail || 'Not found.'}`, 
+            return {
+                success: false,
+                message: `QBO Customer with ID ${params.qboCustomerId} not found. Detail: ${faultError?.Detail || 'Not found.'}`,
                 errorDetails: error.response?.data || error.toString(),
                 qboRawResponse: error.response?.data
             };
         }
 
-        return { 
-            success: false, 
-            message: errorMessage, 
+        return {
+            success: false,
+            message: errorMessage,
             errorDetails: error.response?.data || error.toString(),
             qboRawResponse: error.response?.data
         };
@@ -1261,7 +1261,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       logger.info(`${logPrefix} update_company_qbo_details called for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
         const mappingData = {
@@ -1280,7 +1280,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         // The conflict target should be the unique key identifying a mapping
         // Adjust conflict target columns as per your actual table schema's unique constraints for a mapping
         const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
-        
+
         const [updatedMapping] = await knex('tenant_external_entity_mappings')
           .insert(mappingData)
           .onConflict(conflictTarget)
@@ -1321,11 +1321,11 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
       const entityType = params.algaEntityType || 'company'; // Default to 'company' for backward compatibility
-      
+
       logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
         const mapping = await knex('tenant_external_entity_mappings')
@@ -1361,7 +1361,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-  
+
   // Create or update an external entity mapping
   actionRegistry.registerSimpleAction(
     'create_or_update_external_entity_mapping',
@@ -1378,7 +1378,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
       logger.info(`${logPrefix} create_or_update_external_entity_mapping called for algaEntityType: ${params.algaEntityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalEntityId: ${params.externalEntityId}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
-      
+
       // Validate required parameters to avoid database errors
       if (!params.externalEntityId) {
         const errorMsg = `Missing required parameter: externalEntityId cannot be null or empty`;
@@ -1387,12 +1387,12 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
 
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
         // Create timestamp for both created_at and updated_at
         const now = new Date();
-        
+
         // Include all required fields
         const mappingData = {
           tenant: context.tenant,
@@ -1409,7 +1409,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 
         // Perform an upsert operation
         const conflictTarget = ['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'];
-        
+
         const [updatedMapping] = await knex('tenant_external_entity_mappings')
           .insert(mappingData)
           .onConflict(conflictTarget)
@@ -1538,7 +1538,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       }
     }
   );
-  
+
   // Placeholder for update_invoice_qbo_details
   actionRegistry.registerSimpleAction(
     'update_invoice_qbo_details',
@@ -1552,9 +1552,9 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
       // Removed status from log as it's no longer a direct parameter for this action's core responsibility
       logger.info(`[ACTION] update_invoice_qbo_details called for invoiceId: ${params.invoiceId}, tenant: ${context.tenant}`);
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const updateData: Record<string, any> = {};
         let hasUpdates = false;
 
@@ -1597,7 +1597,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
   );
 
   // === Email Domain Verification Workflow Actions ===
-  
+
   // Create Resend Domain Action
   actionRegistry.registerSimpleAction(
     'createResendDomain',
@@ -1609,7 +1609,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] createResendDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
-      
+
       try {
         // For now, return a mock response until we implement the actual Resend provider
         // This will be replaced when we implement the ResendEmailProvider
@@ -1625,7 +1625,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
               value: 'mock-dkim-key-value'
             },
             {
-              type: 'TXT', 
+              type: 'TXT',
               name: `send.${params.domain}`,
               value: 'v=spf1 include:resend.net ~all'
             },
@@ -1636,7 +1636,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
             }
           ]
         };
-        
+
         logger.info(`[ACTION] createResendDomain: Mock domain created with ID: ${mockResult.resendDomainId}`);
         return { success: true, ...mockResult };
       } catch (error: any) {
@@ -1657,15 +1657,15 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] sendDNSInstructions called for domain: ${params.domain}, tenant: ${params.tenantId}`);
-      
+
       try {
         // For now, just log the DNS instructions
         // In a real implementation, this would send an email or create a notification
         logger.info(`[ACTION] sendDNSInstructions: DNS records for ${params.domain}:`, params.dnsRecords);
-        
+
         // Mock success response
-        return { 
-          success: true, 
+        return {
+          success: true,
           notificationSent: true,
           message: `DNS instructions sent for domain ${params.domain}`
         };
@@ -1686,20 +1686,20 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] triggerDomainVerification called for resendDomainId: ${params.resendDomainId}, tenant: ${params.tenantId}`);
-      
+
       try {
         // For now, return a mock response
         // In a real implementation, this would call the Resend API to verify the domain
         const mockStatuses = ['pending', 'verified', 'failed'];
         const randomStatus = mockStatuses[Math.floor(Math.random() * mockStatuses.length)];
-        
+
         const result = {
           status: randomStatus,
           resendDomainId: params.resendDomainId,
           verifiedAt: randomStatus === 'verified' ? new Date().toISOString() : null,
           failureReason: randomStatus === 'failed' ? 'DNS records not found' : null
         };
-        
+
         logger.info(`[ACTION] triggerDomainVerification: Domain verification status: ${result.status}`);
         return { success: true, ...result };
       } catch (error: any) {
@@ -1720,14 +1720,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] activateCustomDomain called for domain: ${params.domain}, tenant: ${params.tenantId}`);
-      
+
       try {
         // For now, just log the activation
         // In a real implementation, this would update tenant email settings in the database
         logger.info(`[ACTION] activateCustomDomain: Activating domain ${params.domain} for tenant ${params.tenantId}`);
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           domainActivated: true,
           domain: params.domain,
           resendDomainId: params.resendDomainId
@@ -1749,14 +1749,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       logger.info(`[ACTION] sendDomainVerificationSuccess called for domain: ${params.domain}, tenant: ${params.tenantId}`);
-      
+
       try {
         // For now, just log the success notification
         // In a real implementation, this would send an email or create a notification
         logger.info(`[ACTION] sendDomainVerificationSuccess: Domain ${params.domain} successfully verified for tenant ${params.tenantId}`);
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           notificationSent: true,
           message: `Success notification sent for domain ${params.domain}`
         };
@@ -1768,7 +1768,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
   );
 
   // === Email Processing Workflow Actions ===
-  
+
   // Register all email workflow actions that bridge to server actions
   registerEmailWorkflowActions(actionRegistry);
 }
@@ -1788,9 +1788,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import from shared workflow actions module
-        const { findContactByEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { findContactByEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const contact = await findContactByEmail(params.email, context.tenant);
-        
+
         return {
           success: !!contact,
           contact: contact
@@ -1818,7 +1818,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createOrFindContact } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { createOrFindContact } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const result = await createOrFindContact({
           email: params.email,
           name: params.name,
@@ -1826,7 +1826,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           phone: params.phone,
           title: params.title
         }, context.tenant);
-        
+
         return {
           success: true,
           contact: result
@@ -1854,9 +1854,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { findTicketByEmailThread } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { findTicketByEmailThread } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const ticket = await findTicketByEmailThread(params, context.tenant);
-        
+
         return {
           success: !!ticket,
           ticket: ticket
@@ -1882,7 +1882,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'company_id', type: 'string', required: false },
       { name: 'contact_id', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
-      { name: 'channel_id', type: 'string', required: false },
+      { name: 'board_id', type: 'string', required: false },
       { name: 'status_id', type: 'string', required: false },
       { name: 'priority_id', type: 'string', required: false },
       { name: 'category_id', type: 'string', required: false },
@@ -1893,14 +1893,14 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createTicketFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { createTicketFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const result = await createTicketFromEmail({
           title: params.title,
           description: params.description,
           company_id: params.company_id,
           contact_id: params.contact_id,
           source: params.source,
-          channel_id: params.channel_id,
+          board_id: params.board_id,
           status_id: params.status_id,
           priority_id: params.priority_id,
           category_id: params.category_id,
@@ -1909,7 +1909,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           entered_by: params.entered_by,
           email_metadata: params.email_metadata
         }, context.tenant);
-        
+
         return {
           success: true,
           ticket_id: result.ticket_id,
@@ -1935,9 +1935,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { resolveInboundTicketDefaults } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { resolveInboundTicketDefaults } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const defaults = await resolveInboundTicketDefaults(params.tenant, params.providerId);
-        
+
         return defaults;
       } catch (error: any) {
         logger.error(`[ACTION] resolve_inbound_ticket_defaults: Error resolving defaults for tenant ${params.tenant}`, error);
@@ -1955,20 +1955,22 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
       { name: 'format', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
       { name: 'author_type', type: 'string', required: false },
-      { name: 'author_id', type: 'string', required: false }
+      { name: 'author_id', type: 'string', required: false },
+      { name: 'metadata', type: 'object', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createCommentFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { createCommentFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const commentId = await createCommentFromEmail({
           ticket_id: params.ticket_id,
           content: params.content,
           format: params.format,
           source: params.source,
           author_type: params.author_type,
-          author_id: params.author_id
+          author_id: params.author_id,
+          metadata: params.metadata
         }, context.tenant);
-        
+
         return {
           success: true,
           comment_id: commentId
@@ -1979,6 +1981,63 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           success: false,
           comment_id: null,
           message: error.message
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'parse_email_reply',
+    'Parse inbound email reply content using heuristics',
+    [
+      { name: 'text', type: 'string', required: false },
+      { name: 'html', type: 'string', required: false },
+      { name: 'config', type: 'object', required: false }
+    ],
+    async (params: Record<string, any>) => {
+      try {
+        const { parseEmailReplyBody } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const parsed = await parseEmailReplyBody({
+          text: params.text,
+          html: params.html
+        }, params.config);
+
+        return {
+          success: true,
+          parsed
+        };
+      } catch (error: any) {
+        logger.error('[ACTION] parse_email_reply: Failed to parse inbound email', error);
+        return {
+          success: false,
+          parsed: null,
+          message: error?.message || 'Failed to parse email body'
+        };
+      }
+    }
+  );
+
+  actionRegistry.registerSimpleAction(
+    'find_ticket_by_reply_token',
+    'Find a ticket using a stored email reply token',
+    [
+      { name: 'token', type: 'string', required: true }
+    ],
+    async (params: Record<string, any>, context: ActionExecutionContext) => {
+      try {
+        const { findTicketByReplyToken } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const match = await findTicketByReplyToken(params.token, context.tenant);
+
+        return {
+          success: !!match,
+          match
+        };
+      } catch (error: any) {
+        logger.error('[ACTION] find_ticket_by_reply_token: Error looking up reply token', error);
+        return {
+          success: false,
+          match: null,
+          message: error?.message || 'Failed to locate reply token'
         };
       }
     }
@@ -1998,7 +2057,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { processEmailAttachment } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { processEmailAttachment } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         // Note: tenant is already in params for this action
         const result = await processEmailAttachment({
           emailId: params.emailId,
@@ -2008,7 +2067,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           providerId: params.providerId,
           attachmentData: params.attachmentData
         }, context.tenant);
-        
+
         return {
           success: result.success,
           documentId: result.documentId,
@@ -2038,13 +2097,13 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createCompanyFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { createCompanyFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const result = await createCompanyFromEmail({
           company_name: params.company_name,
           email: params.email,
           source: params.source
         }, context.tenant);
-        
+
         return {
           success: true,
           company: result
@@ -2066,9 +2125,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [{ name: 'companyId', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getCompanyByIdForEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { getCompanyByIdForEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const company = await getCompanyByIdForEmail(params.companyId, context.tenant);
-        
+
         return {
           success: !!company,
           company: company
@@ -2084,52 +2143,52 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Email Channel Actions
+  // Email Board Actions
   actionRegistry.registerSimpleAction(
-    'find_channel_by_name',
-    'Find a channel by name',
+    'find_board_by_name',
+    'Find a board by name',
     [{ name: 'name', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
         // Import the database connection
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
-        let channel = await knex('channels')
-          .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
-          .where({ tenant: context.tenant, channel_name: params.name })
+
+        let board = await knex('boards')
+          .select('board_id as id', 'board_name as name', 'description', 'is_default')
+          .where({ tenant: context.tenant, board_name: params.name })
           .andWhere('is_inactive', false)
           .first();
-        if (!channel) {
-          // Fallback: default active channel, else first active by display_order
-          channel = await knex('channels')
-            .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+        if (!board) {
+          // Fallback: default active board, else first active by display_order
+          board = await knex('boards')
+            .select('board_id as id', 'board_name as name', 'description', 'is_default')
             .where({ tenant: context.tenant })
             .andWhere('is_inactive', false)
             .andWhere('is_default', true)
             .first();
-          if (!channel) {
-            channel = await knex('channels')
-              .select('channel_id as id', 'channel_name as name', 'description', 'is_default')
+          if (!board) {
+            board = await knex('boards')
+              .select('board_id as id', 'board_name as name', 'description', 'is_default')
               .where({ tenant: context.tenant })
               .andWhere('is_inactive', false)
               .orderBy('display_order', 'asc')
               .first();
           }
-          if (!channel) {
-            logger.warn(`[ACTION] find_channel_by_name: No active channel found for tenant=${context.tenant}, name='${params.name}'`);
+          if (!board) {
+            logger.warn(`[ACTION] find_board_by_name: No active board found for tenant=${context.tenant}, name='${params.name}'`);
           }
         }
-        
+
         return {
-          success: !!channel,
-          channel: channel
+          success: !!board,
+          board: board
         };
       } catch (error: any) {
-        logger.error(`[ACTION] find_channel_by_name: Error finding channel ${params.name}`, error);
+        logger.error(`[ACTION] find_board_by_name: Error finding board ${params.name}`, error);
         return {
           success: false,
-          channel: null,
+          board: null,
           message: error.message
         };
       }
@@ -2137,31 +2196,31 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
   );
 
   actionRegistry.registerSimpleAction(
-    'create_channel_from_email',
-    'Create a channel from email data',
+    'create_board_from_email',
+    'Create a board from email data',
     [
-      { name: 'channel_name', type: 'string', required: true },
+      { name: 'board_name', type: 'string', required: true },
       { name: 'description', type: 'string', required: false },
       { name: 'is_default', type: 'boolean', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createChannelFromEmail } = await import('@shared/workflow/actions/emailWorkflowActions');
-        const result = await createChannelFromEmail({
-          channel_name: params.channel_name,
+        const { createBoardFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+        const result = await createBoardFromEmail({
+          board_name: params.board_name,
           description: params.description,
           is_default: params.is_default
         }, context.tenant);
-        
+
         return {
           success: true,
-          channel: result
+          board: result
         };
       } catch (error: any) {
-        logger.error(`[ACTION] create_channel_from_email: Error creating channel ${params.channel_name}`, error);
+        logger.error(`[ACTION] create_board_from_email: Error creating board ${params.board_name}`, error);
         return {
           success: false,
-          channel: null,
+          board: null,
           message: error.message
         };
       }
@@ -2178,17 +2237,17 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         const query = knex('statuses')
           .select('status_id as id', 'name', 'item_type', 'is_closed')
           .where({ tenant: context.tenant, name: params.name });
-        
+
         if (params.item_type) {
           query.where('item_type', params.item_type);
         }
-        
+
         let status = await query.first();
         if (!status) {
           // Fallback: default status for item_type (or 'ticket'), else first by order_number
@@ -2210,7 +2269,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
             logger.warn(`[ACTION] find_status_by_name: No status found for tenant=${context.tenant}, name='${params.name}'${it}`);
           }
         }
-        
+
         return {
           success: !!status,
           status: status
@@ -2232,9 +2291,9 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [{ name: 'name', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getAdminConnection } = await import('@shared/db/admin');
+        const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
-        
+
         let priority = await knex('priorities')
           .select('priority_id as id', 'priority_name as name', 'order_number', 'color', 'item_type')
           .where({ tenant: context.tenant, priority_name: params.name })
@@ -2250,7 +2309,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
             logger.warn(`[ACTION] find_priority_by_name: No priority found for tenant=${context.tenant}, name='${params.name}'`);
           }
         }
-        
+
         return {
           success: !!priority,
           priority: priority
@@ -2279,7 +2338,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { saveEmailClientAssociation } = await import('@shared/workflow/actions/emailWorkflowActions');
+        const { saveEmailClientAssociation } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const result = await saveEmailClientAssociation({
           email: params.email,
           company_id: params.company_id,
@@ -2287,7 +2346,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           confidence_score: params.confidence_score,
           notes: params.notes
         }, context.tenant);
-        
+
         return {
           success: result.success,
           associationId: result.associationId,

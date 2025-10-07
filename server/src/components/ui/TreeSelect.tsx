@@ -5,7 +5,7 @@ import { AutomationProps } from '../../types/ui-reflection/types';
 import { Button } from './Button';
 
 export interface TreeSelectOption<T extends string = string> {
-  label: string;
+  label: string | React.ReactNode;
   value: string;
   type: T;
   children?: TreeSelectOption<T>[];
@@ -45,7 +45,7 @@ function TreeSelect<T extends string>({
   label,
   selectedClassName = 'bg-gray-50',
   hoverClassName = 'hover:bg-gray-50',
-  triggerClassName = 'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent',
+  triggerClassName = 'hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent',
   contentClassName = 'bg-white rounded-md shadow-lg border border-gray-200',
   multiSelect = false,
   showExclude = false,
@@ -111,8 +111,24 @@ function TreeSelect<T extends string>({
       });
 
       // Set display label to show the full path
-      const labels = result.path.map((p: TreeSelectOption<T>): string => p.label);
-      setDisplayLabel(labels.join(' > '));
+      const labels = result.path.map((p: TreeSelectOption<T>): string => {
+        if (typeof p.label === 'string') {
+          return p.label;
+        }
+        // If label is JSX (e.g., with ITIL badge), extract the text content
+        if (React.isValidElement(p.label) && p.label.props.children) {
+          const children = p.label.props.children;
+          if (Array.isArray(children)) {
+            // Find the text content (usually the first string element)
+            const textContent = children.find(child => typeof child === 'string');
+            if (textContent) return textContent;
+          } else if (typeof children === 'string') {
+            return children;
+          }
+        }
+        return ''; // Don't fall back to value (UUID)
+      });
+      setDisplayLabel(labels.filter(l => l).join(' > '));
     }
   }, [value, options]);
 
@@ -170,17 +186,19 @@ function TreeSelect<T extends string>({
   };
 
   const renderOption = (
-    option: TreeSelectOption<T>, 
+    option: TreeSelectOption<T>,
     level: number = 0,
     ancestors: TreeSelectOption<T>[] = []
-  ): JSX.Element => {
+  ): JSX.Element[] => {
     const isExpanded = expandedItems.has(option.value);
     const hasChildren = option.children && option.children.length > 0;
 
-    return (
-      <React.Fragment key={option.value}>
-        <div
-          className={`
+    const elements: JSX.Element[] = [];
+
+    elements.push(
+      <div
+        key={option.value}
+        className={`
             relative flex items-center py-2 text-sm rounded text-gray-900
             bg-white select-none whitespace-nowrap pl-3
             ${hoverClassName}
@@ -265,12 +283,16 @@ function TreeSelect<T extends string>({
               </div>
             )}
           </div>
-        </div>
-        {isExpanded && option.children?.map((child: TreeSelectOption<T>): JSX.Element => 
-          renderOption(child, level + 1, [...ancestors, option])
-        )}
-      </React.Fragment>
+      </div>
     );
+
+    if (isExpanded && option.children) {
+      option.children.forEach((child: TreeSelectOption<T>) => {
+        elements.push(...renderOption(child, level + 1, [...ancestors, option]));
+      });
+    }
+
+    return elements;
   };
 
   const hasSelections = options.some(opt => opt.selected || opt.excluded);
@@ -350,7 +372,7 @@ function TreeSelect<T extends string>({
                     Clear selection
                   </div>
                 )}
-                {options.map((option: TreeSelectOption<T>): JSX.Element => renderOption(option))}
+                {options.flatMap((option: TreeSelectOption<T>) => renderOption(option))}
               </RadixSelect.Viewport>
             </RadixSelect.Content>
           </RadixSelect.Portal>

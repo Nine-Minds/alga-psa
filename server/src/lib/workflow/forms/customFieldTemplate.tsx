@@ -13,10 +13,8 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
     required,
     displayLabel,
     schema, // Added schema
+    formData // Added formContext
   } = props;
-
-  // Access formContext safely
-  const formContext = (props as any).formContext;
 
   // Log all props for debugging
   if (id === 'root_algaCompanyDisplay') {
@@ -93,10 +91,10 @@ export const CustomFieldTemplate = (props: FieldTemplateProps) => {
           }
           return null;
         }
-        if (formContext?.formData?.[fieldKey] && schema.readOnly && fieldKey) {
+        if (formData?.[fieldKey] && schema.readOnly && fieldKey) {
           return (
             <div className="text-sm text-gray-500 mt-1">
-              {formContext.formData[fieldKey]}
+              {formData[fieldKey]}
             </div>
           );
         } else if (description) {

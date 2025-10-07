@@ -15,6 +15,22 @@ export async function auditLog(
   params: AuditLogParams
 ) {
   try {
+    // If the current request hasn't established the tenant GUC, skip logging to avoid aborting the transaction.
+    try {
+      const tenantCheck = await knex.raw("select current_setting('app.current_tenant', true) as tenant");
+      const tenantValue = Array.isArray(tenantCheck?.rows)
+        ? tenantCheck.rows[0]?.tenant
+        : (tenantCheck as any)?.[0]?.tenant;
+
+      if (!tenantValue) {
+        console.warn('Skipping audit log insert; app.current_tenant GUC is unavailable in this context.');
+        return;
+      }
+    } catch (gucError) {
+      console.warn('Skipping audit log insert; unable to read app.current_tenant GUC.', gucError);
+      return;
+    }
+
     await knex('audit_logs').insert({
       audit_id: uuidv4(),
       user_id: params.userId,

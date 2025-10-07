@@ -17,10 +17,10 @@ import type {
 } from '../interfaces/user.interfaces';
 
 // Re-export types for convenience
-export type { 
-  CreatePortalUserInput, 
+export type {
+  CreatePortalUserInput,
   CreatePortalUserResult,
-  PortalRoleOptions 
+  PortalRoleOptions
 };
 
 // =============================================================================

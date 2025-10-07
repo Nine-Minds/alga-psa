@@ -14,8 +14,12 @@ exports.seed = async function (knex) {
     // Create permission map for easy lookup
     const permissionMap = new Map();
     permissions.forEach(p => {
-        const key = `${p.resource}:${p.action}:${p.msp ? 'msp' : 'client'}`;
-        permissionMap.set(key, p.permission_id);
+        if (p.msp) {
+            permissionMap.set(`${p.resource}:${p.action}:msp`, p.permission_id);
+        }
+        if (p.client) {
+            permissionMap.set(`${p.resource}:${p.action}:client`, p.permission_id);
+        }
     });
     
     // Clear existing role permissions

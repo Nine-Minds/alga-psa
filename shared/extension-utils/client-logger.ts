@@ -1,6 +1,6 @@
 /**
  * Client-safe logger for extension components
- * 
+ *
  * This logger works in both server and client contexts without dependencies
  * on Node.js-specific modules like 'fs' that cause build errors in Next.js.
  */

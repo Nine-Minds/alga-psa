@@ -261,7 +261,11 @@ export class StorageService {
     static async getFileMetadata(fileId: string): Promise<FileStore> {
       try {
         const { knex } = await createTenantKnex();
-        return await FileStoreModel.findById(knex, fileId);
+        const file = await FileStoreModel.findById(knex, fileId);
+        if (!file) {
+          throw new Error('File not found');
+        }
+        return file;
       } catch (error) {
         throw new Error('Failed to get file metadata: ' + (error as Error).message);
       }

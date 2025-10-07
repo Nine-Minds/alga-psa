@@ -415,12 +415,12 @@ export const bulkTeamMemberOperationSchema = z.object({
 // Team Communication and Collaboration Schemas
 // ============================================================================
 
-// Team communication channel schema
-export const teamCommunicationChannelSchema = z.object({
-  channel_id: uuidSchema,
+// Team communication board schema
+export const teamCommunicationBoardSchema = z.object({
+  board_id: uuidSchema,
   team_id: uuidSchema,
-  channel_name: z.string(),
-  channel_type: z.enum(['chat', 'email', 'video', 'forum']),
+  board_name: z.string(),
+  board_type: z.enum(['chat', 'email', 'video', 'forum']),
   is_default: z.boolean().default(false),
   is_archived: z.boolean().default(false),
   created_by: uuidSchema,
@@ -432,10 +432,10 @@ export const teamCommunicationChannelSchema = z.object({
   }).optional()
 });
 
-// Create team communication channel schema
-export const createTeamCommunicationChannelSchema = z.object({
-  channel_name: z.string().min(1).max(100),
-  channel_type: z.enum(['chat', 'email', 'video', 'forum']),
+// Create team communication board schema
+export const createTeamCommunicationBoardSchema = z.object({
+  board_name: z.string().min(1).max(100),
+  board_type: z.enum(['chat', 'email', 'video', 'forum']),
   is_default: z.boolean().default(false),
   settings: z.object({
     notifications_enabled: z.boolean().default(true),
@@ -575,7 +575,7 @@ export type TeamAnalyticsResponse = z.infer<typeof teamAnalyticsResponseSchema>;
 export type TeamPerformanceMetrics = z.infer<typeof teamPerformanceMetricsSchema>;
 export type TeamProjectAssignment = z.infer<typeof teamProjectAssignmentSchema>;
 export type TeamTaskAssignment = z.infer<typeof teamTaskAssignmentSchema>;
-export type TeamCommunicationChannel = z.infer<typeof teamCommunicationChannelSchema>;
+export type TeamCommunicationBoard = z.infer<typeof teamCommunicationBoardSchema>;
 export type TeamCollaborationWorkspace = z.infer<typeof teamCollaborationWorkspaceSchema>;
 export type TeamMeeting = z.infer<typeof teamMeetingSchema>;
 export type TeamWithExtendedInfo = z.infer<typeof teamWithExtendedInfoResponseSchema>;

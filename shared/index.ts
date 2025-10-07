@@ -1,14 +1,14 @@
 // Re-export core functionality
-export * from './core';
+export * from './core/index';
 
 // Re-export db functionality
-export * from './db';
+export * from './db/index';
 
 // Re-export workflow functionality
-export * from './workflow';
+export * from './workflow/index';
 
 // Re-export types
-export * from './types';
+export * from './types/index';
 
 // Re-export canonical interfaces
 export * from './interfaces/company.interfaces';
@@ -19,4 +19,4 @@ export * from './interfaces/validation.interfaces';
 export { default as logger } from '@alga-psa/shared/core/logger';
 
 // Re-export extension utilities
-export * from './extension-utils';
+export * from './extension-utils/index';

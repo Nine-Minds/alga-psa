@@ -4,7 +4,7 @@
 
 import { z } from 'zod';
 import logger from '@alga-psa/shared/core/logger';
-import { Project, Node, SyntaxKind, ObjectLiteralExpression, ModuleKind, ModuleResolutionKind, ScriptTarget } from 'ts-morph';
+import { Project, Node, SyntaxKind, ObjectLiteralExpression, ts } from 'ts-morph';
 
 // Zod schema for workflow metadata
 export const WorkflowMetadataSchema = z.object({
@@ -34,9 +34,9 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
     const project = new Project({
       useInMemoryFileSystem: true,
       compilerOptions: {
-        target: ScriptTarget.ES2020,
-        module: ModuleKind.ES2020,
-        moduleResolution: ModuleResolutionKind.NodeJs,
+        target: ts.ScriptTarget.ES2020,
+        module: 1, // CommonJS
+        moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files
       }
@@ -189,7 +189,7 @@ export function extractWorkflowMetadata(code: string): z.infer<typeof WorkflowMe
     // If we get here, we couldn't find valid metadata
     return null;
   } catch (error) {
-    (logger as any).error("Error extracting workflow metadata using AST:", error);
+    logger.error("Error extracting workflow metadata using AST:", error);
     return null;
   }
 }
@@ -219,9 +219,9 @@ export function validateWorkflowCode(code: string): {
     const project = new Project({
       useInMemoryFileSystem: true,
       compilerOptions: {
-        target: ScriptTarget.ES2020,
-        module: ModuleKind.ES2020,
-        moduleResolution: ModuleResolutionKind.NodeJs,
+        target: ts.ScriptTarget.ES2020,
+        module: 1, // CommonJS
+        moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files
       }
@@ -424,9 +424,9 @@ export function checkWorkflowSecurity(code: string): string[] {
     const project = new Project({
       useInMemoryFileSystem: true,
       compilerOptions: {
-        target: ScriptTarget.ES2020,
-        module: ModuleKind.ES2020,
-        moduleResolution: ModuleResolutionKind.NodeJs,
+        target: ts.ScriptTarget.ES2020,
+        module: 1, // CommonJS
+        moduleResolution: ts.ModuleResolutionKind.NodeJs,
         esModuleInterop: true,
         noLib: true // Don't use the default lib files
       }

@@ -2,7 +2,6 @@
 
 import User from 'server/src/lib/models/user';
 import { IUser, IRole, IUserWithRoles, IRoleWithPermissions, IUserRole } from 'server/src/interfaces/auth.interfaces';
-import { auth } from 'server/src/app/api/auth/[...nextauth]/auth';
 import { revalidatePath } from 'next/cache';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getAdminConnection } from '@shared/db/admin';
@@ -16,6 +15,7 @@ import { uploadEntityImage, deleteEntityImage } from 'server/src/lib/services/En
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { throwPermissionError } from 'server/src/lib/utils/errorHandling';
 import logger from '@alga-psa/shared/core/logger';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 interface ActionResult {
   success: boolean;
@@ -206,7 +206,7 @@ export async function deleteUser(userId: string): Promise<void> {
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
     logger.debug('Getting current user from session');
-    const session = await auth();
+    const session = await getSession();
 
     if (!session?.user) {
       logger.debug('No user found in session');

@@ -13,8 +13,10 @@ import {
   type Service,
   type ServicePlan
 } from "server/src/lib/actions/account";
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 export default function ServicesSection() {
+  const { t } = useTranslation('clientPortal');
   const [services, setServices] = useState<Service[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -30,7 +32,7 @@ export default function ServicesSection() {
         const data = await getActiveServices();
         setServices(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load services');
+        setError(err instanceof Error ? err.message : t('account.services.loadError', 'Failed to load services'));
       } finally {
         setIsLoading(false);
       }
@@ -49,7 +51,7 @@ export default function ServicesSection() {
       setAvailablePlans(plans);
       setIsManaging(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load service plans');
+      setError(err instanceof Error ? err.message : t('account.services.loadPlansError', 'Failed to load service plans'));
     }
   };
 
@@ -75,14 +77,14 @@ export default function ServicesSection() {
       setSelectedService(null);
       setAvailablePlans([]);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to update service');
+      setActionError(err instanceof Error ? err.message : t('account.services.updateError', 'Failed to update service'));
     } finally {
       setIsProcessing(false);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center py-8">Loading services...</div>;
+    return <div className="text-center py-8">{t('account.services.loading', 'Loading services...')}</div>;
   }
 
   if (error) {
@@ -97,23 +99,23 @@ export default function ServicesSection() {
     <div className="space-y-8">
       {/* Active Services */}
       <section>
-        <h3 className="text-lg font-medium mb-4">Active Services</h3>
+        <h3 className="text-lg font-medium mb-4">{t('account.services.activeTitle', 'Active Services')}</h3>
         <Table>
           <thead>
             <tr>
-              <th>Service</th>
-              <th>Description</th>
-              <th>Status</th>
-              <th>Current Plan</th>
-              <th>Next Billing</th>
-              <th>Actions</th>
+              <th>{t('account.services.columns.service', 'Service')}</th>
+              <th>{t('account.services.columns.description', 'Description')}</th>
+              <th>{t('account.services.columns.status', 'Status')}</th>
+              <th>{t('account.services.columns.currentPlan', 'Current Plan')}</th>
+              <th>{t('account.services.columns.nextBilling', 'Next Billing')}</th>
+              <th>{t('clientPortal.common.actions', 'Actions')}</th>
             </tr>
           </thead>
           <tbody>
             {services.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-4 text-gray-500">
-                  No active services found
+                  {t('account.services.empty', 'No active services found')}
                 </td>
               </tr>
             ) : (
@@ -147,7 +149,7 @@ export default function ServicesSection() {
                       onClick={() => handleManageService(service)}
                       disabled={!service.canManage}
                     >
-                      Manage
+                      {t('account.services.actions.manage', 'Manage')}
                     </Button>
                   </td>
                 </tr>
@@ -167,11 +169,14 @@ export default function ServicesSection() {
         <DialogContent>
           <div className="space-y-6">
             <h3 className="text-lg font-medium">
-              Manage {selectedService?.name || 'Service'}
+              {t('account.services.manageTitle', {
+                defaultValue: 'Manage {{service}}',
+                service: selectedService?.name || t('account.services.genericServiceLabel', 'Service')
+              })}
             </h3>
 
             <div>
-              <h4 className="text-sm font-medium mb-2">Current Plan</h4>
+              <h4 className="text-sm font-medium mb-2">{t('account.services.currentPlan', 'Current Plan')}</h4>
               <div className="text-sm text-gray-600">
                 {selectedService?.billing.display}
                 {selectedService?.rate && (
@@ -181,7 +186,7 @@ export default function ServicesSection() {
             </div>
 
             <div>
-              <h4 className="text-sm font-medium mb-4">Available Plans</h4>
+              <h4 className="text-sm font-medium mb-4">{t('account.services.availablePlans', 'Available Plans')}</h4>
               <div className="space-y-4">
                 {availablePlans.map((plan):JSX.Element => (
                   <Card key={plan.id} className="p-4">
@@ -205,10 +210,11 @@ export default function ServicesSection() {
                             )}
                             disabled={isProcessing}
                           >
-                            {isProcessing ? 'Processing...' : 
-                              Number(plan.rate.amount) > Number(selectedService?.rate?.amount || 0) 
-                                ? 'Upgrade' 
-                                : 'Downgrade'
+                            {isProcessing
+                              ? t('common:status.processing', 'Processing...')
+                              : Number(plan.rate.amount) > Number(selectedService?.rate?.amount || 0)
+                                ? t('account.services.actions.upgrade', 'Upgrade')
+                                : t('account.services.actions.downgrade', 'Downgrade')
                             }
                           </Button>
                         )}
@@ -235,7 +241,7 @@ export default function ServicesSection() {
                 }}
                 disabled={isProcessing}
               >
-                Close
+                {t('common.close', 'Close')}
               </Button>
             </div>
           </div>
@@ -244,23 +250,22 @@ export default function ServicesSection() {
 
       {/* Available Services */}
       <section>
-        <h3 className="text-lg font-medium mb-4">Available Services</h3>
+        <h3 className="text-lg font-medium mb-4">{t('account.services.catalog.title', 'Available Services')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">Managed IT Support</h4>
+              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.managedIt.title', 'Managed IT Support')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                24/7 IT support and monitoring for your business. Includes proactive maintenance,
-                security updates, and dedicated technical support.
+                {t('account.services.catalog.managedIt.description', '24/7 IT support and monitoring for your business. Includes proactive maintenance, security updates, and dedicated technical support.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">Starting at $299/mo</span>
+                <span className="text-sm font-medium">{t('account.services.catalog.managedIt.price', 'Starting at $299/mo')}</span>
                 <Button 
                   id="learn-more-managed-it"
                   variant="outline" 
                   size="sm"
                 >
-                  Learn More
+                  {t('account.services.catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>
@@ -268,19 +273,18 @@ export default function ServicesSection() {
 
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">Cloud Backup</h4>
+              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.cloudBackup.title', 'Cloud Backup')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                Secure cloud backup and disaster recovery solutions. Automated backups,
-                quick recovery options, and data encryption included.
+                {t('account.services.catalog.cloudBackup.description', 'Secure cloud backup and disaster recovery solutions. Automated backups, quick recovery options, and data encryption included.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">Starting at $99/mo</span>
+                <span className="text-sm font-medium">{t('account.services.catalog.cloudBackup.price', 'Starting at $99/mo')}</span>
                 <Button 
                   id="learn-more-cloud-backup"
                   variant="outline" 
                   size="sm"
                 >
-                  Learn More
+                  {t('account.services.catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>
@@ -288,19 +292,18 @@ export default function ServicesSection() {
 
           <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
             <div className="flex flex-col h-full">
-              <h4 className="text-lg font-medium mb-2">Cybersecurity</h4>
+              <h4 className="text-lg font-medium mb-2">{t('account.services.catalog.cybersecurity.title', 'Cybersecurity')}</h4>
               <p className="text-sm text-gray-600 mb-4 flex-grow">
-                Advanced security monitoring and threat prevention. Includes firewall management,
-                endpoint protection, and regular security assessments.
+                {t('account.services.catalog.cybersecurity.description', 'Advanced security monitoring and threat prevention. Includes firewall management, endpoint protection, and regular security assessments.')}
               </p>
               <div className="flex justify-between items-center mt-auto">
-                <span className="text-sm font-medium">Starting at $199/mo</span>
+                <span className="text-sm font-medium">{t('account.services.catalog.cybersecurity.price', 'Starting at $199/mo')}</span>
                 <Button 
                   id="learn-more-cybersecurity"
                   variant="outline" 
                   size="sm"
                 >
-                  Learn More
+                  {t('account.services.catalog.learnMore', 'Learn More')}
                 </Button>
               </div>
             </div>

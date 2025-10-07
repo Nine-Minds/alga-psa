@@ -15,7 +15,7 @@ import { Input } from 'server/src/components/ui/Input';
 import TextEditor from 'server/src/components/editor/TextEditor';
 import RichTextViewer from 'server/src/components/editor/RichTextViewer';
 import { Plus, Link, FileText, Edit3, Download } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { downloadDocument } from 'server/src/lib/utils/documentUtils';
 import { useAutomationIdAndRegister } from 'server/src/types/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from 'server/src/types/ui-reflection/ReflectionContainer';

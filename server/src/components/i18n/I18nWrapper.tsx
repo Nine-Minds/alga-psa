@@ -1,6 +1,6 @@
 'use client';
 
-import { I18nProvider } from '@/lib/i18n/client';
+import { I18nProvider } from 'server/src/lib/i18n/client';
 import { SupportedLocale, LOCALE_CONFIG } from '@/lib/i18n/config';
 import { ReactNode, useEffect, useState } from 'react';
 import { getHierarchicalLocaleAction } from '@/lib/actions/locale-actions/getHierarchicalLocale';

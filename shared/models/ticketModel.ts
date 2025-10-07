@@ -15,16 +15,19 @@ import { z } from 'zod';
 // Core ticket form validation schema extracted from server actions
 export const ticketFormSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  channel_id: z.string().uuid('Channel ID must be a valid UUID'),
+  board_id: z.string().uuid('Board ID must be a valid UUID'),
   company_id: z.string().uuid('Company ID must be a valid UUID'),
   location_id: z.string().uuid('Location ID must be a valid UUID').nullable().optional(),
   contact_name_id: z.string().uuid('Contact ID must be a valid UUID').nullable(),
   status_id: z.string().uuid('Status ID must be a valid UUID'),
   assigned_to: z.string().uuid('Assigned to must be a valid UUID').nullable(),
-  priority_id: z.string().uuid('Priority ID must be a valid UUID'),
+  priority_id: z.string().uuid('Priority ID must be a valid UUID').nullable(), // Required - used for both custom and ITIL priorities
   description: z.string(),
   category_id: z.string().uuid('Category ID must be a valid UUID').nullable(),
   subcategory_id: z.string().uuid('Subcategory ID must be a valid UUID').nullable(),
+  // ITIL-specific fields (for UI calculation only)
+  itil_impact: z.number().int().min(1).max(5).optional(),
+  itil_urgency: z.number().int().min(1).max(5).optional(),
 });
 
 // Ticket creation from asset schema
@@ -43,7 +46,7 @@ export const ticketSchema = z.object({
   ticket_number: z.string(),
   title: z.string(),
   url: z.string().nullable(),
-  channel_id: z.string().uuid(),
+  board_id: z.string().uuid(),
   company_id: z.string().uuid(),
   location_id: z.string().uuid().nullable().optional(),
   contact_name_id: z.string().uuid().nullable(),
@@ -58,7 +61,13 @@ export const ticketSchema = z.object({
   updated_at: z.string().nullable(),
   closed_at: z.string().nullable(),
   attributes: z.record(z.unknown()).nullable(),
-  priority_id: z.string().uuid()
+  priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
+  // ITIL-specific fields
+  itil_impact: z.number().int().min(1).max(5).nullable().optional(),
+  itil_urgency: z.number().int().min(1).max(5).nullable().optional(),
+  itil_priority_level: z.number().int().min(1).max(5).nullable().optional(),
+  itil_category: z.string().nullable().optional(),
+  itil_subcategory: z.string().nullable().optional()
 });
 
 // Ticket update schema
@@ -77,7 +86,8 @@ export const createCommentSchema = z.object({
   is_internal: z.boolean().optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
-  author_id: z.string().uuid('Author ID must be a valid UUID').optional()
+  author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
+  metadata: z.record(z.unknown()).optional()
 });
 
 // =============================================================================
@@ -95,7 +105,7 @@ export interface CreateTicketInput {
   priority_id?: string;
   category_id?: string;
   subcategory_id?: string;
-  channel_id?: string;
+  board_id?: string;
   source?: string;
   entered_by?: string;
   email_metadata?: any;
@@ -107,6 +117,9 @@ export interface CreateTicketInput {
   impact_id?: string;
   updated_by?: string;
   closed_by?: string;
+  // ITIL-specific fields (for UI calculation only)
+  itil_impact?: number;
+  itil_urgency?: number;
   closed_at?: string;
   is_closed?: boolean;
 }
@@ -172,7 +185,7 @@ export interface CreateTicketOutput {
   contact_id?: string; // Note: Mapped from contact_name_id
   status_id?: string;
   priority_id?: string;
-  channel_id?: string;
+  board_id?: string;
   entered_at: string;
   tenant: string;
 }
@@ -184,6 +197,7 @@ export interface CreateCommentInput {
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CreateCommentOutput {
@@ -246,7 +260,7 @@ export interface IAnalyticsTracker {
     has_category: boolean;
     has_subcategory: boolean;
     is_assigned: boolean;
-    channel_id?: string;
+    board_id?: string;
     created_via: string;
     has_asset?: boolean;
     metadata?: Record<string, any>;
@@ -627,11 +641,19 @@ export class TicketModel {
       priority_id: cleanedInput.priority_id || null,
       category_id: cleanedInput.category_id || null,
       subcategory_id: cleanedInput.subcategory_id || null,
-      channel_id: cleanedInput.channel_id || null,
+      board_id: cleanedInput.board_id || null,
       source: cleanedInput.source || null,
       entered_by: cleanedInput.entered_by || null,
       entered_at: now.toISOString(),
       updated_at: now.toISOString(),
+      // ITIL-specific fields (for UI display only - not stored in DB)
+      itil_impact: cleanedInput.itil_impact || null,
+      itil_urgency: cleanedInput.itil_urgency || null,
+      resolution_code: cleanedInput.resolution_code || null,
+      root_cause: cleanedInput.root_cause || null,
+      workaround: cleanedInput.workaround || null,
+      related_problem_id: cleanedInput.related_problem_id || null,
+      sla_target: cleanedInput.sla_target || null,
       // Store attributes and email_metadata as JSON
       attributes: Object.keys(attributes).length > 0 ? JSON.stringify(attributes) : null,
       email_metadata: cleanedInput.email_metadata ? JSON.stringify(cleanedInput.email_metadata) : null
@@ -643,7 +665,13 @@ export class TicketModel {
       attributes: Object.keys(attributes).length > 0 ? attributes : null
     };
 
-    // Final validation of complete ticket data
+    // Custom validation: priority_id is required for all tickets (unified system)
+    if (!validationData.priority_id) {
+      throw new Error('Validation failed: priority_id is required for all tickets');
+    }
+
+    // Final validation of complete ticket data using the database schema
+    // We use the database schema (which is more permissive) rather than the form schema
     const completeValidation = validateData(ticketSchema.partial(), validationData);
 
     // Prepare data for database insertion with stringified attributes
@@ -664,7 +692,7 @@ export class TicketModel {
           userId: userId,
           metadata: {
             source: cleanedInput.source,
-            channel_id: cleanedInput.channel_id,
+            board_id: cleanedInput.board_id,
             priority_id: cleanedInput.priority_id,
             company_id: cleanedInput.company_id
           }
@@ -685,7 +713,7 @@ export class TicketModel {
           has_category: !!cleanedInput.category_id,
           has_subcategory: !!cleanedInput.subcategory_id,
           is_assigned: !!cleanedInput.assigned_to,
-          channel_id: cleanedInput.channel_id,
+          board_id: cleanedInput.board_id,
           created_via: cleanedInput.source || 'unknown',
           has_asset: false
         }, userId);
@@ -709,7 +737,7 @@ export class TicketModel {
       contact_id: cleanedInput.contact_id,
       status_id: cleanedInput.status_id,
       priority_id: cleanedInput.priority_id,
-      channel_id: cleanedInput.channel_id,
+      board_id: cleanedInput.board_id,
       entered_at: now.toISOString(),
       tenant
     };
@@ -1044,14 +1072,14 @@ export class TicketModel {
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
-    // Map to DB enum/text values: prefer 'user' | 'contact' | 'unknown'
+    // Map to DB enum/text values that align with comment_author_type_new
     const dbAuthorType = (() => {
       switch (validatedData.author_type) {
         case 'internal':
         case 'system':
-          return 'user';
+          return 'internal';
         case 'contact':
-          return 'contact';
+          return 'client';
         default:
           return 'unknown';
       }
@@ -1066,6 +1094,7 @@ export class TicketModel {
       is_resolution: validatedData.is_resolution || false,
       author_type: dbAuthorType as any,
       user_id: validatedData.author_id || null,
+      metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : null,
       created_at: now,
       updated_at: now
     };
@@ -1131,34 +1160,34 @@ export class TicketModel {
   }
 
   /**
-   * Find or create a channel by name
+   * Find or create a board by name
    */
-  static async findOrCreateChannel(
-    channelName: string,
+  static async findOrCreateBoard(
+    boardName: string,
     tenant: string,
     trx: Knex.Transaction,
     description?: string
   ): Promise<string> {
-    // Try to find existing channel
-    const existingChannel = await trx('channels')
+    // Try to find existing board
+    const existingBoard = await trx('boards')
       .where({
-        channel_name: channelName,
+        board_name: boardName,
         tenant: tenant
       })
       .first();
 
-    if (existingChannel) {
-      return existingChannel.channel_id;
+    if (existingBoard) {
+      return existingBoard.board_id;
     }
 
-    // Create new channel
-    const channelId = uuidv4();
+    // Create new board
+    const boardId = uuidv4();
     const now = new Date();
 
-    await trx('channels').insert({
-      channel_id: channelId,
+    await trx('boards').insert({
+      board_id: boardId,
       tenant,
-      channel_name: channelName,
+      board_name: boardName,
       description: description || '',
       is_default: false,
       is_active: true,
@@ -1166,7 +1195,7 @@ export class TicketModel {
       updated_at: now
     });
 
-    return channelId;
+    return boardId;
   }
 
   /**

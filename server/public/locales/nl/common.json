@@ -1,0 +1,247 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tickets": "Tickets",
+    "clients": "Klanten",
+    "projects": "Projecten",
+    "billing": "Facturatie",
+    "reports": "Rapporten",
+    "settings": "Instellingen",
+    "profile": "Profiel",
+    "logout": "Afmelden",
+    "help": "Help"
+  },
+  "actions": {
+    "save": "Opslaan",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "create": "Aanmaken",
+    "update": "Bijwerken",
+    "submit": "Indienen",
+    "back": "Terug",
+    "next": "Volgende",
+    "previous": "Vorige",
+    "search": "Zoeken",
+    "filter": "Filteren",
+    "export": "Exporteren",
+    "import": "Importeren",
+    "download": "Downloaden",
+    "upload": "Uploaden",
+    "refresh": "Vernieuwen",
+    "close": "Sluiten",
+    "confirm": "Bevestigen",
+    "add": "Toevoegen",
+    "remove": "Verwijderen",
+    "clear": "Wissen",
+    "reset": "Resetten",
+    "view": "Bekijken",
+    "copy": "Kopiëren",
+    "duplicate": "Dupliceren",
+    "openMenu": "Menu openen",
+    "confirmDeletion": "Verwijderen bevestigen"
+  },
+  "status": {
+    "loading": "Bezig met laden...",
+    "saving": "Bezig met opslaan...",
+    "success": "Gelukt",
+    "error": "Fout",
+    "warning": "Waarschuwing",
+    "info": "Informatie",
+    "pending": "In behandeling",
+    "active": "Actief",
+    "inactive": "Inactief",
+    "completed": "Voltooid",
+    "cancelled": "Geannuleerd",
+    "processing": "Bezig..."
+  },
+  "messages": {
+    "welcome": "Welkom",
+    "confirmDelete": "Weet je zeker dat je dit item wilt verwijderen?",
+    "saveSuccess": "Wijzigingen succesvol opgeslagen",
+    "saveError": "Opslaan van wijzigingen is mislukt",
+    "loadError": "Laden van gegevens is mislukt",
+    "noData": "Geen gegevens beschikbaar",
+    "required": "Dit veld is verplicht",
+    "invalidEmail": "Ongeldig e-mailadres",
+    "invalidPassword": "Ongeldig wachtwoord",
+    "passwordMismatch": "Wachtwoorden komen niet overeen",
+    "confirmDeletion": "Verwijderen bevestigen"
+  },
+  "errors": {
+    "auth": {
+      "notAuthenticated": "Niet geauthenticeerd",
+      "accessDenied": "Toegang geweigerd",
+      "clientPortalOnly": "Toegang geweigerd: acties in het klantenportaal zijn alleen toegestaan voor klantgebruikers",
+      "insufficientPermissions": "Onvoldoende rechten",
+      "userIdNotFound": "Gebruikers-ID niet gevonden in sessie",
+      "tenantNotFound": "Tenant niet gevonden in sessie. Meld je af en weer aan.",
+      "userNotFound": "Gebruiker niet gevonden",
+      "contactNotFound": "Gebruiker is niet gekoppeld aan een contact",
+      "companyNotFound": "Contact is niet gekoppeld aan een bedrijf"
+    },
+    "permissions": {
+      "tickets": {
+        "read": "Onvoldoende rechten om tickets te bekijken",
+        "readDetails": "Onvoldoende rechten om ticketdetails te bekijken",
+        "create": "Onvoldoende rechten om tickets aan te maken",
+        "update": "Onvoldoende rechten om tickets bij te werken",
+        "updateStatus": "Onvoldoende rechten om ticketstatus bij te werken",
+        "addComments": "Onvoldoende rechten om opmerkingen toe te voegen",
+        "updateComments": "Onvoldoende rechten om opmerkingen bij te werken",
+        "deleteComments": "Onvoldoende rechten om opmerkingen te verwijderen"
+      }
+    }
+  },
+  "time": {
+    "today": "Vandaag",
+    "yesterday": "Gisteren",
+    "tomorrow": "Morgen",
+    "thisWeek": "Deze week",
+    "lastWeek": "Vorige week",
+    "thisMonth": "Deze maand",
+    "lastMonth": "Vorige maand",
+    "thisYear": "Dit jaar",
+    "lastYear": "Vorig jaar",
+    "seconds": "seconden",
+    "minutes": "minuten",
+    "hours": "uren",
+    "days": "dagen",
+    "weeks": "weken",
+    "months": "maanden",
+    "years": "jaren"
+  },
+  "language": {
+    "selectLanguage": "Selecteer taal",
+    "changeLanguage": "Taal wijzigen",
+    "currentLanguage": "Huidige taal",
+    "preference": {
+      "label": "Taalvoorkeur",
+      "helper": "Selecteer je voorkeurstaal voor de interface",
+      "placeholder": "Selecteer een taal",
+      "cleared": "Taalvoorkeur verwijderd. Standaardtaal wordt gebruikt...",
+      "updating": "Taalvoorkeur wordt bijgewerkt...",
+      "notSet": "Niet ingesteld",
+      "notSetWithSource": "Niet ingesteld (gebruikt {{source}}: {{languageName}} - {{locale}})",
+      "source": {
+        "company": "bedrijfsstandaard",
+        "tenant": "tenantstandaard",
+        "system": "systeemstandaard"
+      }
+    }
+  },
+  "yes": "Ja",
+  "no": "Nee",
+  "companies": {
+    "locations": {
+      "sectionTitle": "Bedrijfslocaties",
+      "manageButton": "Locaties beheren",
+      "dialogTitle": "Locaties beheren - {{company}}",
+      "managerLabel": "Beheerder bedrijfslocaties",
+      "listTitle": "Locaties",
+      "buttons": {
+        "add": "Locatie toevoegen",
+        "save": "Locatie opslaan"
+      },
+      "card": {
+        "unnamed": "Naamloze locatie",
+        "setDefault": "Als standaard instellen",
+        "edit": "Locatie bewerken",
+        "delete": "Locatie verwijderen",
+        "addressLabel": "Adres",
+        "addressHelper": "Volledig adres voor deze locatie",
+        "phoneLabel": "Telefoon",
+        "phoneHelper": "Telefoonnummer voor deze locatie",
+        "phoneValue": "Telefoon: {{phone}}",
+        "emailLabel": "E-mail",
+        "emailHelper": "E-mailadres voor deze locatie",
+        "emailValue": "E-mail: {{email}}",
+        "billingTag": "Facturatie",
+        "shippingTag": "Verzending",
+        "notesLabel": "Notities",
+        "notesHelper": "Aanvullende notities voor deze locatie"
+      },
+      "form": {
+        "locationName": "Naam van de locatie",
+        "locationNameHelper": "Naam voor deze locatie (bijv. Hoofdkantoor, Magazijn)",
+        "addressLine1": "Adresregel 1",
+        "addressLine1Helper": "Primaire adresregel (verplicht)",
+        "addressLine2": "Adresregel 2",
+        "addressLine2Helper": "Aanvullende adresinformatie (optioneel)",
+        "addressLine3": "Adresregel 3",
+        "city": "Stad",
+        "cityHelper": "Naam van de stad (verplicht)",
+        "stateProvince": "Staat/Provincie",
+        "stateProvinceHelper": "Naam van de staat of provincie",
+        "postalCode": "Postcode",
+        "postalCodeHelper": "Postcode of ZIP",
+        "country": "Land",
+        "countryHelper": "Selecteer een land (verplicht)",
+        "phone": "Telefoon",
+        "phoneHelper": "Telefoonnummer voor deze locatie",
+        "email": "E-mail",
+        "emailHelper": "E-mailadres voor deze locatie",
+        "taxRegion": "Belastingregio",
+        "taxRegionHelper": "Selecteer de toepasselijke belastingregio",
+        "notes": "Notities",
+        "notesHelper": "Aanvullende notities over deze locatie",
+        "defaultLocation": "Standaardlocatie",
+        "defaultLocationHelper": "Markeer dit als standaardlocatie voor het bedrijf",
+        "billingAddress": "Factuuradres",
+        "billingAddressHelper": "Gebruik deze locatie als factuuradres",
+        "shippingAddress": "Verzendadres",
+        "shippingAddressHelper": "Gebruik deze locatie als verzendadres",
+        "placeholder": {
+          "locationName": "bijv. Hoofdkantoor, Magazijn",
+          "addressLine1": "Voer adres in *",
+          "city": "Voer stad in *",
+          "country": "Selecteer land *",
+          "loadingCountries": "Landen worden geladen...",
+          "taxRegionOption": "Selecteer een belastingregio...",
+          "taxRegion": "Selecteer een belastingregio..."
+        }
+      },
+      "validation": {
+        "title": "Vul de vereiste velden in:"
+      },
+      "errors": {
+        "loadTaxRegions": "Belastingregio's laden is mislukt",
+        "loadCountries": "Landen laden is mislukt",
+        "loadLocations": "Bedrijfslocaties laden is mislukt",
+        "save": "Locatie opslaan is mislukt",
+        "delete": "Locatie verwijderen is mislukt",
+        "setDefault": "Standaardlocatie instellen is mislukt"
+      },
+      "success": {
+        "create": "Locatie succesvol gemaakt",
+        "update": "Locatie succesvol bijgewerkt",
+        "delete": "Locatie succesvol verwijderd",
+        "setDefault": "Standaardlocatie bijgewerkt"
+      },
+      "dialog": {
+        "addTitle": "Nieuwe locatie toevoegen",
+        "editTitle": "Locatie bewerken",
+        "deleteTitle": "Locatie verwijderen",
+        "deleteMessage": "Weet je zeker dat je de locatie \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt."
+      },
+      "empty": {
+        "title": "Nog geen locaties toegevoegd",
+        "description": "Klik op \"Locatie toevoegen\" om te beginnen"
+      }
+    }
+  },
+  "pagination": {
+    "previous": "Vorige",
+    "next": "Volgende",
+    "pageInfo": "Pagina {{current}} van {{total}} ({{count}} records in totaal)",
+    "page": "Pagina",
+    "of": "van",
+    "showing": "Resultaten {{from}} tot {{to}} van {{total}}",
+    "rowsPerPage": "Rijen per pagina",
+    "first": "Eerste",
+    "last": "Laatste"
+  },
+  "fields": {
+    "notes": "Notities"
+  }
+}

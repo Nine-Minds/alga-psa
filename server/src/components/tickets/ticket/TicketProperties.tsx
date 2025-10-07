@@ -34,7 +34,7 @@ interface TicketPropertiesProps {
   company: any;
   contactInfo: any;
   createdByUser: any;
-  channel: any;
+  board: any;
   elapsedTime: number;
   isRunning: boolean;
   isTimerLocked?: boolean;
@@ -69,6 +69,7 @@ interface TicketPropertiesProps {
   tags?: ITag[];
   allTagTexts?: string[];
   onTagsChange?: (tags: ITag[]) => void;
+  onItilFieldChange?: (field: string, value: any) => void;
 }
 
 // Helper function to format location display
@@ -104,7 +105,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   company,
   contactInfo,
   createdByUser,
-  channel,
+  board,
   elapsedTime,
   isRunning,
   isTimerLocked = false,
@@ -139,6 +140,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   tags = [],
   allTagTexts = [],
   onTagsChange,
+  onItilFieldChange,
 }) => {
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -740,6 +742,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
           </div>
         </div>
       </div>
+
 
     </div>
   );

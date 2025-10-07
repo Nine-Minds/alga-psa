@@ -103,7 +103,7 @@ export interface CreateTicketFromEmailInput {
   company_id?: string;
   contact_id?: string;
   source: string;
-  channel_id: string;
+  board_id: string;
   status_id: string;
   priority_id: string;
   email_metadata: {
@@ -166,22 +166,22 @@ export interface GetCompanyByIdForEmailOutput {
   address?: string;
 }
 
-export interface CreateChannelFromEmailInput {
-  channel_name: string;
+export interface CreateBoardFromEmailInput {
+  board_name: string;
   description: string;
   is_default: boolean;
 }
 
-export interface CreateChannelFromEmailOutput {
-  channel_id: string;
-  channel_name: string;
+export interface CreateBoardFromEmailOutput {
+  board_id: string;
+  board_name: string;
   description: string;
   is_default: boolean;
 }
 
-export interface FindChannelByNameOutput {
+export interface FindBoardByNameOutput {
   id: string;
-  channel_name: string;
+  board_name: string;
   description?: string;
   is_default: boolean;
 }
@@ -259,7 +259,7 @@ export class EmailService {
     try {
       // First try to find existing contact
       const existingContact = await this.findContactByEmail(input.email);
-      
+
       if (existingContact && existingContact.company_id === input.company_id) {
         return {
           id: existingContact.contact_id,
@@ -387,7 +387,7 @@ export class EmailService {
         description: input.description,
         company_id: input.company_id,
         contact_name_id: input.contact_id,
-        channel_id: input.channel_id,
+        board_id: input.board_id,
         status_id: input.status_id,
         priority_id: input.priority_id,
         source: input.source,
@@ -511,17 +511,17 @@ export class EmailService {
   }
 
   /**
-   * Create channel from email
+   * Create board from email
    */
-  async createChannelFromEmail(input: CreateChannelFromEmailInput): Promise<CreateChannelFromEmailOutput> {
+  async createBoardFromEmail(input: CreateBoardFromEmailInput): Promise<CreateBoardFromEmailOutput> {
     try {
-      const channelId = uuidv4();
+      const boardId = uuidv4();
       const now = new Date();
 
-      await this.knex('channels').insert({
-        channel_id: channelId,
+      await this.knex('boards').insert({
+        board_id: boardId,
         tenant: this.tenant,
-        channel_name: input.channel_name,
+        board_name: input.board_name,
         description: input.description,
         is_default: input.is_default,
         created_at: now,
@@ -529,33 +529,33 @@ export class EmailService {
       });
 
       return {
-        channel_id: channelId,
-        channel_name: input.channel_name,
+        board_id: boardId,
+        board_name: input.board_name,
         description: input.description,
         is_default: input.is_default
       };
     } catch (error: any) {
-      logger.error('Error creating channel from email:', error);
+      logger.error('Error creating board from email:', error);
       throw error;
     }
   }
 
   /**
-   * Find channel by name
+   * Find board by name
    */
-  async findChannelByName(name: string): Promise<FindChannelByNameOutput | null> {
+  async findBoardByName(name: string): Promise<FindBoardByNameOutput | null> {
     try {
-      const channel = await this.knex('channels')
-        .select('channel_id as id', 'channel_name', 'description', 'is_default')
+      const board = await this.knex('boards')
+        .select('board_id as id', 'board_name', 'description', 'is_default')
         .where({
-          channel_name: name,
+          board_name: name,
           tenant: this.tenant
         })
         .first();
 
-      return channel || null;
+      return board || null;
     } catch (error: any) {
-      logger.error('Error finding channel by name:', error);
+      logger.error('Error finding board by name:', error);
       throw error;
     }
   }
@@ -614,9 +614,9 @@ export class EmailService {
       // 4. Associate it with the ticket
 
       const documentId = uuidv4();
-      
+
       logger.info(`Processing email attachment: ${input.attachmentData.name} for ticket ${input.ticketId}`);
-      
+
       return {
         documentId,
         success: true,
@@ -636,12 +636,12 @@ export class EmailService {
   async saveEmailClientAssociation(input: SaveEmailClientAssociationInput): Promise<SaveEmailClientAssociationOutput> {
     try {
       const associationId = uuidv4();
-      
+
       // This would typically save the association to a dedicated table
       // for learning email-to-client mappings
-      
+
       logger.info(`Saving email association: ${input.email} -> company ${input.company_id}`);
-      
+
       return {
         success: true,
         associationId,

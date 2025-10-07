@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ITicketListItem, ITicketCategory, ITicketListFilters } from 'server/src/interfaces/ticket.interfaces';
-import { IChannel, IUser } from 'server/src/interfaces';
+import { IBoard, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
-import { ChannelPicker } from 'server/src/components/settings/general/ChannelPicker';
+import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
 import { CategoryPicker } from 'server/src/components/tickets/CategoryPicker';
 import CustomSelect, { SelectOption } from 'server/src/components/ui/CustomSelect';
 import { getTicketsForListWithCursor } from 'server/src/lib/actions/ticket-actions/optimizedTicketActions';
@@ -29,7 +29,7 @@ import { TagFilter } from 'server/src/components/tags';
 interface CompanyTicketsProps {
   companyId: string;
   companyName?: string;
-  initialChannels?: IChannel[];
+  initialBoards?: IBoard[];
   initialStatuses?: SelectOption[];
   initialPriorities?: SelectOption[];
   initialCategories?: ITicketCategory[];
@@ -52,7 +52,7 @@ const useDebounce = <T,>(value: T, delay: number): T => {
 const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   companyId,
   companyName = '',
-  initialChannels = [],
+  initialBoards = [],
   initialStatuses = [],
   initialPriorities = [],
   initialCategories = [],
@@ -72,13 +72,13 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   const { openDrawer } = useDrawer();
 
   // Filter states
-  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
+  const [selectedBoard, setSelectedBoard] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string>('open');
   const [selectedPriority, setSelectedPriority] = useState<string>('all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [excludedCategories, setExcludedCategories] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [channelFilterState, setChannelFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
 
@@ -113,12 +113,12 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
       
       const filters: ITicketListFilters = {
         companyId: companyId,
-        channelId: selectedChannel || undefined,
+        boardId: selectedBoard || undefined,
         statusId: selectedStatus,
         priorityId: selectedPriority,
         categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
         searchQuery: debouncedSearchQuery,
-        channelFilterState: channelFilterState,
+        boardFilterState: boardFilterState,
         showOpenOnly: selectedStatus === 'open',
         tags: selectedTags.length > 0 ? selectedTags : undefined,
       };
@@ -137,7 +137,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [companyId, currentUser, selectedChannel, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, channelFilterState, selectedTags]);
+  }, [companyId, currentUser, selectedBoard, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState, selectedTags]);
 
   // Load tickets when filters change
   useEffect(() => {
@@ -188,7 +188,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           isInDrawer={true}
           initialTicket={ticketData.ticket}
           initialComments={ticketData.comments}
-          initialChannel={ticketData.channel}
+          initialBoard={ticketData.board}
           initialCompany={ticketData.company}
           initialContactInfo={ticketData.contactInfo}
           initialCreatedByUser={ticketData.createdByUser}
@@ -197,7 +197,7 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
           initialUserMap={ticketData.userMap}
           statusOptions={ticketData.options.status}
           agentOptions={ticketData.options.agent}
-          channelOptions={ticketData.options.channel}
+          boardOptions={ticketData.options.board}
           priorityOptions={ticketData.options.priority}
           initialCategories={ticketData.categories}
           initialCompanies={ticketData.companies}
@@ -259,16 +259,17 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
   }, [tickets]);
 
 
-  const columns = useMemo(() => 
+  const columns = useMemo(() =>
     createTicketColumns({
       categories: initialCategories,
+      boards: initialBoards,
       displaySettings: displaySettings || undefined,
       onTicketClick: handleTicketClick,
       onDeleteClick: handleDeleteTicket,
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: false, // Don't show client column since we're already on company page
-    }), [initialCategories, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
+    }), [initialCategories, initialBoards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange]);
 
   // Filter tickets by selected tags
   const filteredTickets = useMemo(() => {
@@ -291,13 +292,13 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
     })), [filteredTickets]);
 
   const handleResetFilters = useCallback(() => {
-    setSelectedChannel(null);
+    setSelectedBoard(null);
     setSelectedStatus('open');
     setSelectedPriority('all');
     setSelectedCategories([]);
     setExcludedCategories([]);
     setSearchQuery('');
-    setChannelFilterState('active');
+    setBoardFilterState('active');
     setSelectedTags([]);
   }, []);
 
@@ -342,14 +343,14 @@ const CompanyTickets: React.FC<CompanyTicketsProps> = ({
 
       {/* Filters */}
       <div className="flex items-center gap-3 flex-wrap">
-        {initialChannels.length > 0 && (
-          <ChannelPicker
-            id="company-tickets-channel-picker"
-            channels={initialChannels}
-            onSelect={(channelId) => setSelectedChannel(channelId)}
-            selectedChannelId={selectedChannel}
-            filterState={channelFilterState}
-            onFilterStateChange={setChannelFilterState}
+        {initialBoards.length > 0 && (
+          <BoardPicker
+            id="company-tickets-board-picker"
+            boards={initialBoards}
+            onSelect={(boardId) => setSelectedBoard(boardId)}
+            selectedBoardId={selectedBoard}
+            filterState={boardFilterState}
+            onFilterStateChange={setBoardFilterState}
           />
         )}
         

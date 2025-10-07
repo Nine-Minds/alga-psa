@@ -1,7 +1,7 @@
 'use server';
 
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { getLicenseUsage, type LicenseUsage } from '../license/get-license-usage';
+import { getSession } from 'server/src/lib/auth/getSession';
 
 /**
  * Server action to get the current license usage for the session tenant
@@ -13,7 +13,7 @@ export async function getLicenseUsageAction(): Promise<{
   error?: string 
 }> {
   try {
-    const session = await auth();
+    const session = await getSession();
     
     if (!session?.user?.tenant) {
       return { 

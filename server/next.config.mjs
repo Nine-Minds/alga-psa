@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
+import fs from 'fs';
 import webpack from 'webpack';
 // import CopyPlugin from 'copy-webpack-plugin';
 
@@ -10,8 +11,27 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Determine if this is an EE build
 const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
+// DEBUG LOGGING - Remove after troubleshooting
+console.log('=== CE BUILD DEBUG ===');
+console.log('process.env.EDITION:', process.env.EDITION);
+console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
+console.log('isEE result:', isEE);
+console.log('Current working directory:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('=== END DEBUG ===');
+
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
+
+const aliasEeEntryVariants = (aliasMap, pairs) => {
+  pairs.forEach(({ fromCandidates = [], to }) => {
+    fromCandidates
+      .filter(Boolean)
+      .forEach((candidate) => {
+        aliasMap[candidate] = to;
+      });
+  });
+};
 
 // Optional verbose module resolution logging (enable with LOG_MODULE_RESOLUTION=1)
 class LogModuleResolutionPlugin {
@@ -21,8 +41,7 @@ class LogModuleResolutionPlugin {
         try {
           if (!data) return;
           const req = data.request || '';
-          if (req.startsWith('@ee') || req.includes('ee/server/src')) {
-            // Minimal, structured log for clarity during iteration
+          if (process.env.LOG_MODULE_RESOLUTION === '1' && (req.startsWith('@ee') || req.includes('ee/server/src'))) {
             console.log('[resolve:before]', {
               request: req,
               issuer: data.contextInfo?.issuer,
@@ -37,7 +56,7 @@ class LogModuleResolutionPlugin {
           const req = result.createData?.request || result.request || result.rawRequest || '';
           const res = result.resource || '';
           const hit = req.startsWith('@ee') || req.includes('ee/server/src') || res.includes('/ee/server/src/') || res.includes('/server/src/empty/');
-          if (!hit) return;
+          if (!hit || process.env.LOG_MODULE_RESOLUTION !== '1') return;
           const mappedTo = res.includes('/ee/server/src/') ? 'EE' : (res.includes('/server/src/empty/') ? 'CE-stub' : 'unknown');
           console.log('[resolve:after]', {
             request: req,
@@ -53,6 +72,74 @@ class LogModuleResolutionPlugin {
   }
 }
 
+class EditionBuildDiagnosticsPlugin {
+  constructor(options = {}) {
+    this.options = {
+      watchedRequests: options.watchedRequests || [
+        '@product/chat/entry',
+        '@product/extensions/entry',
+        '@product/settings-extensions/entry',
+        'ee/server/src/app/msp/chat/page',
+      ],
+    };
+  }
+
+  apply(compiler) {
+    const shouldLog = String(process.env.LOG_EDITION_DIAGNOSTICS || '').toLowerCase();
+    const enabled = shouldLog === '1' || shouldLog === 'true';
+    if (!enabled) {
+      return;
+    }
+
+    compiler.hooks.beforeCompile.tap('EditionBuildDiagnosticsPlugin', () => {
+      const editionSnapshot = {
+        EDITION: process.env.EDITION,
+        NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION,
+        NODE_ENV: process.env.NODE_ENV,
+        cwd: process.cwd(),
+        timestamp: new Date().toISOString(),
+      };
+      console.log('[edition-diagnostics] build env', editionSnapshot);
+
+      const eePaths = [
+        path.join(__dirname, '../ee/server/src/app/msp/chat/page.tsx'),
+        path.join(__dirname, '../ee/server/src/components/chat/Chat.tsx'),
+      ];
+
+      eePaths.forEach((candidate) => {
+        console.log('[edition-diagnostics] ee artifact', {
+          path: candidate,
+          exists: fs.existsSync(candidate),
+        });
+      });
+    });
+
+    compiler.hooks.normalModuleFactory.tap('EditionBuildDiagnosticsPlugin', (nmf) => {
+      nmf.hooks.afterResolve.tap('EditionBuildDiagnosticsPlugin', (result) => {
+        if (!result) return;
+
+        const request = result.request || result.rawRequest || '';
+        const matched = this.options.watchedRequests.some((token) => request && request.includes(token));
+        const resource = result.resource || '';
+
+        if (!matched && !resource.includes('/ee/server/src/')) return;
+
+        const createData = result.createData || {};
+        console.log('[edition-diagnostics] module resolution', {
+          request,
+          resource,
+          resolvedResource: resource || createData.resource || createData.resolvedModule,
+          resolvedPath: createData.path,
+          userRequest: createData.userRequest,
+          type: createData.type,
+          issuer: result.contextInfo?.issuer,
+          descriptionFilePath: result.resourceResolveData?.descriptionFilePath,
+        });
+      });
+    });
+  }
+}
+
 const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname, '..'),  // Point to the actual project root
@@ -62,6 +149,10 @@ const nextConfig = {
       '@emoji-mart/data/sets/15/native.json': path.join(__dirname, '../node_modules/@emoji-mart/data/sets/15/native.json'),
       // Base app alias
       '@': './src',
+      '@ee': isEE ? '../ee/server/src' : './src/empty',
+      '@ee/': isEE ? '../ee/server/src/' : './src/empty/',
+      'ee/server/src': isEE ? '../ee/server/src' : './src/empty',
+      'ee/server/src/': isEE ? '../ee/server/src/' : './src/empty/',
       // Native DB drivers not used
       'better-sqlite3': emptyShim,
       'sqlite3': emptyShim,
@@ -95,6 +186,9 @@ const nextConfig = {
       '@product/email-providers/entry': isEE
         ? '@product/email-providers/ee/entry'
         : '@product/email-providers/oss/entry',
+      '@product/client-portal-domain/entry': isEE
+        ? '@product/client-portal-domain/ee/entry'
+        : '@product/client-portal-domain/oss/entry',
       '@product/workflows/entry': isEE
         ? '@product/workflows/ee/entry'
         : '@product/workflows/oss/entry',
@@ -137,6 +231,7 @@ const nextConfig = {
     '@product/extensions',
     '@product/settings-extensions',
     '@product/email-providers',
+    '@product/client-portal-domain',
     '@product/billing',
     // New aliasing packages
     '@alga-psa/product-extension-actions',
@@ -168,7 +263,7 @@ const nextConfig = {
 
     // Add support for importing from ee/server/src using absolute paths
     // and ensure packages from root workspace are resolved
-    const isEE = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+    const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
     console.log('[next.config] edition', isEE ? 'enterprise' : 'community', {
       cwd: process.cwd(),
       dirname: __dirname,
@@ -196,18 +291,32 @@ const nextConfig = {
 
         // Avoid base-prefix aliases that can shadow more specific '/entry' aliases
         // Feature swap aliases for Webpack (point directly to ts/tsx files)
-        '@product/extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
-        '@product/settings-extensions/entry': isEE
-          ? path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx')
-          : path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+        '@product/extensions/entry': (() => {
+          const eePath = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
+          const ossPath = path.join(__dirname, '../packages/product-extensions/oss/entry.tsx');
+          const selectedPath = isEE ? eePath : ossPath;
+          console.log(`[WEBPACK ALIAS DEBUG] @product/extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+          return selectedPath;
+        })(),
+        '@product/settings-extensions/entry': (() => {
+          const eePath = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
+          const ossPath = path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx');
+          const selectedPath = isEE ? eePath : ossPath;
+          console.log(`[WEBPACK ALIAS DEBUG] @product/settings-extensions/entry -> ${selectedPath} (isEE: ${isEE})`);
+          return selectedPath;
+        })(),
         '@product/email-providers/entry': isEE
           ? path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx')
           : path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+        '@product/client-portal-domain/entry': isEE
+          ? path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx')
+          : path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
         '@product/workflows/entry': isEE
           ? path.join(__dirname, '../packages/product-workflows/ee/entry.ts')
           : path.join(__dirname, 'src/components/flow/DnDFlow.tsx'),
+        '@product/billing/entry': isEE
+          ? path.join(__dirname, '../packages/product-billing/ee/entry.ts')
+          : path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
         // Point stable specifiers to exact entry files to avoid conditional exports in package index
         '@alga-psa/product-extension-initialization': isEE
           ? path.join(__dirname, '../ee/server/src/lib/extensions/initialize.ts')
@@ -232,6 +341,95 @@ const nextConfig = {
       const ceEmptyAbs = path.join(__dirname, 'src', 'empty');
       const eeSrcAbs = path.join(__dirname, '../ee/server/src');
       config.resolve.alias[ceEmptyAbs] = eeSrcAbs;
+
+      const pkgSettingsEntry = path.join(__dirname, '../packages/product-settings-extensions/entry.ts');
+      const pkgSettingsEntryIndex = path.join(__dirname, '../packages/product-settings-extensions/entry.tsx');
+      const pkgSettingsEeEntry = path.join(__dirname, '../packages/product-settings-extensions/ee/entry.tsx');
+      config.resolve.alias[pkgSettingsEntry] = pkgSettingsEeEntry;
+      config.resolve.alias[pkgSettingsEntryIndex] = pkgSettingsEeEntry;
+
+      const pkgExtensionsEntry = path.join(__dirname, '../packages/product-extensions/entry.ts');
+      const pkgExtensionsEntryIndex = path.join(__dirname, '../packages/product-extensions/entry.tsx');
+      const pkgExtensionsEeEntry = path.join(__dirname, '../packages/product-extensions/ee/entry.tsx');
+      config.resolve.alias[pkgExtensionsEntry] = pkgExtensionsEeEntry;
+      config.resolve.alias[pkgExtensionsEntryIndex] = pkgExtensionsEeEntry;
+
+      const pkgChatEntry = path.join(__dirname, '../packages/product-chat/entry.ts');
+      const pkgChatEntryIndex = path.join(__dirname, '../packages/product-chat/entry.tsx');
+      const pkgChatEeEntry = path.join(__dirname, '../packages/product-chat/ee/entry.tsx');
+      config.resolve.alias[pkgChatEntry] = pkgChatEeEntry;
+      config.resolve.alias[pkgChatEntryIndex] = pkgChatEeEntry;
+
+      const pkgClientPortalEntry = path.join(__dirname, '../packages/product-client-portal-domain/entry.ts');
+      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/product-client-portal-domain/entry.tsx');
+      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/product-client-portal-domain/ee/entry.tsx');
+      config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
+      config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
+
+      aliasEeEntryVariants(config.resolve.alias, [
+        {
+          to: pkgExtensionsEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extensions/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-extensions/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: pkgSettingsEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: pkgClientPortalEeEntry,
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-client-portal-domain/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-email-providers/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-email-providers/entry.ts'),
+            path.join(__dirname, '../packages/product-email-providers/entry.tsx'),
+            path.join(__dirname, '../packages/product-email-providers/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-email-providers/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-billing/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-billing/entry.ts'),
+            path.join(__dirname, '../packages/product-billing/entry.tsx'),
+            path.join(__dirname, '../packages/product-billing/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-billing/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-chat/ee/entry.tsx'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-chat/entry.ts'),
+            path.join(__dirname, '../packages/product-chat/entry.tsx'),
+            path.join(__dirname, '../packages/product-chat/oss/entry.ts'),
+            path.join(__dirname, '../packages/product-chat/oss/entry.tsx'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-extension-actions/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extension-actions/entry.ts'),
+            path.join(__dirname, '../packages/product-extension-actions/oss/entry.ts'),
+          ],
+        },
+        {
+          to: path.join(__dirname, '../packages/product-extension-initialization/ee/entry.ts'),
+          fromCandidates: [
+            path.join(__dirname, '../packages/product-extension-initialization/entry.ts'),
+            path.join(__dirname, '../packages/product-extension-initialization/oss/entry.ts'),
+          ],
+        },
+      ]);
     }
 
     console.log('[next.config] aliases', {
@@ -242,6 +440,10 @@ const nextConfig = {
       ceEmptyAbs: isEE ? path.join(__dirname, 'src', 'empty') : undefined,
       eeSrcAbs: isEE ? path.join(__dirname, '../ee/server/src') : undefined,
     });
+
+    config.plugins = config.plugins || [];
+    config.plugins.push(new LogModuleResolutionPlugin());
+    config.plugins.push(new EditionBuildDiagnosticsPlugin());
 
     // Exclude database dialects we don't use and heavy dev dependencies
     config.externals = [

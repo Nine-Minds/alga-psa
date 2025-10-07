@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 import { Dialog, DialogContent } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { ChevronDown } from 'lucide-react';
@@ -298,8 +298,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       });
     } catch (error) {
       console.error('Failed to update comment:', error);
-      setError('Failed to update comment');
-      toast.error('Failed to update comment');
+      setError(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
+      toast.error(t('tickets.messages.failedToUpdateComment', 'Failed to update comment'));
     }
   };
 
@@ -314,8 +314,8 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       
       // Check if the comment belongs to the current user
       if (comment.user_id !== currentUser?.id) {
-        setError('You can only delete your own comments');
-        toast.error('You can only delete your own comments');
+        setError(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
+        toast.error(t('tickets.messages.deleteOwnCommentError', 'You can only delete your own comments'));
         return;
       }
       
@@ -323,11 +323,11 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
       // Refresh ticket details to remove deleted comment
       const details = await getClientTicketDetails(ticketId);
       setTicket(details);
-      toast.success('Comment deleted successfully');
+      toast.success(t('tickets.messages.commentDeleteSuccess', 'Comment deleted successfully'));
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      setError('Failed to delete comment');
-      toast.error('Failed to delete comment');
+      setError(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
+      toast.error(t('tickets.messages.failedToDeleteComment', 'Failed to delete comment'));
     }
   };
 
@@ -347,7 +347,7 @@ export function TicketDetails({ ticketId, isOpen, onClose }: TicketDetailsProps)
 
     try {
       await updateTicketStatus(ticketId, newStatusId);
-      toast.success(`Ticket status successfully updated to "${newStatusName}".`);
+      toast.success(t('tickets.messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusName }));
 
       setTicket(prevTicket => prevTicket ? { ...prevTicket, status_id: newStatusId, status_name: newStatusName } : null);
 

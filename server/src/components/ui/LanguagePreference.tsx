@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LOCALE_CONFIG, type SupportedLocale } from '@/lib/i18n/config';
-import { useI18n, useTranslation } from '@/lib/i18n/client';
+import { useI18n, useTranslation } from 'server/src/lib/i18n/client';
 import CustomSelect, { SelectOption } from './CustomSelect';
 import { toast } from 'react-hot-toast';
 

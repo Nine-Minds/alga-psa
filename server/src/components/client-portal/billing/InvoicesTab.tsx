@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
 } from 'server/src/components/ui/DropdownMenu';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number) => string;
@@ -106,7 +106,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       }
     } catch (error) {
       console.error('Failed to download PDF:', error);
-      setError('Failed to download PDF. Please try again.');
+      setError(t('billing.invoice.downloadFailed', 'Failed to download PDF. Please try again.'));
     }
   };
 
@@ -245,41 +245,41 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
 
       {selectedInvoice && (
         <div className="mt-8">
-          <h3 className="text-xl font-semibold mb-4">Invoice Details</h3>
+          <h3 className="text-xl font-semibold mb-4">{t('billing.invoice.details', 'Invoice Details')}</h3>
           <div className="border rounded-lg p-6 bg-white shadow-sm">
             <div className="grid grid-cols-2 gap-6 mb-6">
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Invoice Number</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.number', 'Invoice Number')}</h4>
                 <p className="text-lg font-medium">{selectedInvoice.invoice_number}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Date</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.date', 'Invoice Date')}</h4>
                 <p className="text-lg">{formatDate(selectedInvoice.invoice_date)}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Status</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.status', 'Status')}</h4>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   selectedInvoice.finalized_at ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                 }`}>
-                  {selectedInvoice.finalized_at ? 'Finalized' : 'Draft'}
+                  {selectedInvoice.finalized_at ? t('billing.invoice.finalized', 'Finalized') : t('billing.invoice.draft', 'Draft')}
                 </span>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Due Date</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.dueDate', 'Due Date')}</h4>
                 <p className="text-lg">{formatDate(selectedInvoice.due_date)}</p>
               </div>
             </div>
 
             <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-500 mb-2">Line Items</h4>
+              <h4 className="text-sm font-medium text-gray-500 mb-2">{t('billing.invoice.lineItems', 'Line Items')}</h4>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead>
                     <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.description', 'Description')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.quantity', 'Quantity')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.unitPrice', 'Unit Price')}</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase">{t('billing.invoice.total', 'Total')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -295,7 +295,7 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
                     ) : (
                       <tr>
                         <td colSpan={4} className="px-3 py-2 text-center text-gray-500">
-                          No line items available
+                          {t('billing.invoice.noLineItems', 'No line items available')}
                         </td>
                       </tr>
                     )}
@@ -306,15 +306,15 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
 
             <div className="flex justify-between border-t pt-4">
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Subtotal</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.subtotal', 'Subtotal')}</h4>
                 <p className="text-lg">${(selectedInvoice.subtotal / 100).toFixed(2)}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Tax</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.tax', 'Tax')}</h4>
                 <p className="text-lg">${(selectedInvoice.tax / 100).toFixed(2)}</p>
               </div>
               <div>
-                <h4 className="text-sm font-medium text-gray-500">Total</h4>
+                <h4 className="text-sm font-medium text-gray-500">{t('billing.invoice.total', 'Total')}</h4>
                 <p className="text-lg font-bold">${(selectedInvoice.total / 100).toFixed(2)}</p>
               </div>
             </div>

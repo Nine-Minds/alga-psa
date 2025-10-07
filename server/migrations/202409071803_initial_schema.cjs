@@ -984,26 +984,54 @@ exports.up = async function(knex) {
     await knex.schema.raw('CREATE INDEX idx_ticket_resources_ticket_user ON ticket_resources (tenant, ticket_id, additional_user_id)');
 
 
-    const dbUserServer = process.env.DB_USER_SERVER || 'default_user';
-    const dbNameServer = process.env.DB_NAME_SERVER || 'default_db_name';
+    const dbUserServer = process.env.DB_USER_SERVER;
+    const envDbNameServer = process.env.DB_NAME_SERVER;
 
-    // Grant permissions
-    await knex.schema.raw(`
-        GRANT USAGE ON SCHEMA public TO ${dbUserServer};
-        GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO ${dbUserServer};
-        GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO ${dbUserServer};
-        GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO ${dbUserServer};
-        GRANT ALL PRIVILEGES ON DATABASE ${dbNameServer} TO ${dbUserServer};
+    if (dbUserServer) {
+        const currentDatabaseResult = await knex.raw('SELECT current_database()');
+        const currentDatabaseRow = Array.isArray(currentDatabaseResult.rows)
+            ? currentDatabaseResult.rows[0]
+            : currentDatabaseResult[0];
+        const currentDatabaseName = currentDatabaseRow?.current_database;
+        if (!currentDatabaseName) {
+            throw new Error('Failed to resolve current database name when applying permissions');
+        }
+        let targetDbName = envDbNameServer && envDbNameServer !== 'default_db_name'
+            ? envDbNameServer
+            : currentDatabaseName;
 
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-        GRANT ALL PRIVILEGES ON TABLES TO ${dbUserServer};
+        try {
+            const databaseCheck = await knex.raw('SELECT 1 FROM pg_database WHERE datname = ?', [targetDbName]);
+            const hasDatabase = Array.isArray(databaseCheck.rows)
+                ? databaseCheck.rows.length > 0
+                : Array.isArray(databaseCheck) && databaseCheck.length > 0;
+            if (!hasDatabase) {
+                targetDbName = currentDatabaseName;
+            }
+        } catch (error) {
+            targetDbName = currentDatabaseName;
+        }
 
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-        GRANT ALL PRIVILEGES ON SEQUENCES TO ${dbUserServer};
+        const escapedUser = dbUserServer.replace(/"/g, '""');
+        const escapedDbName = targetDbName.replace(/"/g, '""');
 
-        ALTER DEFAULT PRIVILEGES IN SCHEMA public 
-        GRANT ALL PRIVILEGES ON FUNCTIONS TO ${dbUserServer};        
-    `);
+        await knex.schema.raw(`
+            GRANT USAGE ON SCHEMA public TO "${escapedUser}";
+            GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO "${escapedUser}";
+            GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO "${escapedUser}";
+            GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA public TO "${escapedUser}";
+            GRANT ALL PRIVILEGES ON DATABASE "${escapedDbName}" TO "${escapedUser}";
+
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+            GRANT ALL PRIVILEGES ON TABLES TO "${escapedUser}";
+
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+            GRANT ALL PRIVILEGES ON SEQUENCES TO "${escapedUser}";
+
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public 
+            GRANT ALL PRIVILEGES ON FUNCTIONS TO "${escapedUser}";       
+        `);
+    }
 }
 
 exports.down = async function(knex) {

@@ -29,7 +29,7 @@ jobs:
       - name: Run legacy extension grep guard
         run: npm run guard:ext-v2
 
-      - name: Run ESLint
+      - name: Run ESLint (errors only)
         env:
           NODE_OPTIONS: --max-old-space-size=16384
-        run: npm run lint
+        run: npm run lint -- --quiet

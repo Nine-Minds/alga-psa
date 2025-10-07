@@ -2,6 +2,7 @@
 import React, { ReactNode, useEffect, useState, useRef } from 'react';
 import * as RadixDialog from '@radix-ui/react-dialog';
 import { Cross2Icon } from '@radix-ui/react-icons';
+import * as VisuallyHidden from '@radix-ui/react-visually-hidden';
 import { ReflectionParentContext } from '../../types/ui-reflection/ReflectionParentContext';
 import { DialogComponent, AutomationProps } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
@@ -156,13 +157,13 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
         <RadixDialog.Content
           ref={dialogRef}
           {...withDataAutomationId(updateDialog)}
-          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2 max-h-[90vh] overflow-hidden flex flex-col`}
+          className={`fixed top-1/2 left-1/2 bg-white rounded-lg shadow-lg w-full ${className || 'max-w-3xl'} z-50 focus-within:ring-2 focus-within:ring-purple-100 focus-within:ring-offset-2 max-h-[90vh] flex flex-col`}
           style={dialogStyle}
           onKeyDown={onKeyDown}
           onOpenAutoFocus={onOpenAutoFocus}
         >
           {/* Drag handle area - always present for consistent dragging */}
-          <div 
+          <div
             data-drag-handle
             className={`${draggable ? 'cursor-move hover:bg-gray-50' : ''} ${title ? 'px-6 pt-6 pb-4' : 'p-2'} ${title ? 'border-b border-gray-100' : ''} rounded-t-lg transition-colors`}
             onMouseDown={handleMouseDown}
@@ -170,12 +171,17 @@ export const Dialog: React.FC<DialogProps & AutomationProps> = ({
             {title ? (
               <RadixDialog.Title className="text-xl font-semibold select-none">{title}</RadixDialog.Title>
             ) : (
-              <div className="flex items-center justify-center">
-                <div className="w-12 h-1 bg-gray-300 rounded-full" /> {/* Visual drag indicator */}
-              </div>
+              <>
+                <VisuallyHidden.Root>
+                  <RadixDialog.Title>Dialog</RadixDialog.Title>
+                </VisuallyHidden.Root>
+                <div className="flex items-center justify-center">
+                  <div className="w-12 h-1 bg-gray-300 rounded-full" /> {/* Visual drag indicator */}
+                </div>
+              </>
             )}
           </div>
-          <div className="px-6 pt-3 pb-6 flex-1 overflow-auto">
+          <div className="px-6 pt-3 pb-6 flex-1 overflow-y-auto overflow-x-visible min-h-0">
             <ReflectionParentContext.Provider value={updateDialog.id}>
               {children}
             </ReflectionParentContext.Provider>

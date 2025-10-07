@@ -5,20 +5,33 @@ import { i18nMiddleware, shouldSkipI18n } from './middleware/i18n';
 // Minimal, Edge-safe middleware: API key header presence check for select API routes
 // and auth gate for /msp paths, plus i18n locale resolution. Heavy logic stays in route handlers.
 const protectedPrefix = '/msp';
+const clientPortalPrefix = '/client-portal';
+const canonicalUrlEnv = process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL) : null;
 
 const _middleware = auth((request) => {
   const pathname = request.nextUrl.pathname;
+  const requestHost = request.headers.get('host') || '';
+  const requestHostname = requestHost.split(':')[0];
+
+  // Clone request headers so we can pass additional metadata downstream
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-pathname', pathname);
 
   // Create a response that will be modified throughout the middleware chain
-  let response = NextResponse.next();
+  let response = NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+
+  // Add pathname header for use in layouts (e.g., for branding injection)
+  response.headers.set('x-pathname', pathname);
 
   // Apply i18n middleware first (unless path should skip it)
   if (!shouldSkipI18n(pathname)) {
-    const i18nResponse = i18nMiddleware(request);
-    // Merge i18n response headers and cookies into our response
-    if (i18nResponse instanceof NextResponse) {
-      response = i18nResponse;
-    }
+    response = i18nMiddleware(request, response);
+    // Ensure header persists after i18n adjustments
+    response.headers.set('x-pathname', pathname);
   }
 
   // Only handle API routes that need API key authentication
@@ -33,7 +46,8 @@ const _middleware = auth((request) => {
       '/api/documents/download/',
       '/api/documents/view/',
       '/api/email/webhooks/',
-      '/api/email/oauth/'
+      '/api/email/oauth/',
+      '/api/client-portal/domain-session'
     ];
 
     if (skipPaths.some((path) => pathname.startsWith(path))) {
@@ -50,14 +64,70 @@ const _middleware = auth((request) => {
     }
   }
 
-  // Protect MSP app routes: redirect unauthenticated users to sign-in
+  // Skip auth pages to prevent redirect loops
+  const isAuthPage = pathname.startsWith('/auth/');
+
+  // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = '/auth/signin';
       const callbackUrl = request.nextUrl.pathname + (request.nextUrl.search || '');
       loginUrl.searchParams.set('callbackUrl', callbackUrl);
-      return NextResponse.redirect(loginUrl);
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
+    } else if (request.auth.user?.user_type !== 'internal') {
+      // Redirect authenticated client users to their dashboard instead of trapping them in a login loop
+      const redirectTarget = canonicalUrlEnv
+        ? new URL('/client-portal/dashboard', canonicalUrlEnv.origin)
+        : new URL('/client-portal/dashboard', request.nextUrl);
+      const redirectResponse = NextResponse.redirect(redirectTarget);
+      redirectResponse.headers.set('x-pathname', redirectTarget.pathname);
+      return redirectResponse;
+    }
+  }
+
+  // Protect Client Portal routes: validate user type (but not auth pages)
+  if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
+    if (!request.auth) {
+      const callbackUrlAbsolute = new URL(request.nextUrl.pathname + (request.nextUrl.search || ''), request.nextUrl);
+
+      if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
+        const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
+        const hostHeader = request.headers.get('host') || requestHostname;
+        const protocol = request.nextUrl.protocol.replace(/:$/, '');
+        const callbackUrl = `${protocol}://${hostHeader}${request.nextUrl.pathname}${request.nextUrl.search}`;
+        canonicalLogin.searchParams.set('callbackUrl', callbackUrl);
+        console.log('[middleware] vanity redirect', {
+          requestHost: requestHostname,
+          callback: callbackUrl,
+          redirect: canonicalLogin.toString(),
+        });
+        const redirectResponse = NextResponse.redirect(canonicalLogin);
+        redirectResponse.headers.set('x-pathname', canonicalLogin.pathname);
+        return redirectResponse;
+      }
+
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      const existingCallback = request.nextUrl.searchParams.get('callbackUrl');
+      if (existingCallback) {
+        loginUrl.searchParams.set('callbackUrl', existingCallback);
+      } else {
+        loginUrl.searchParams.set('callbackUrl', callbackUrlAbsolute.pathname + callbackUrlAbsolute.search);
+      }
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
+    } else if (request.auth.user?.user_type !== 'client') {
+      // Prevent non-client users (internal) from accessing client portal
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = '/auth/client-portal/signin';
+      loginUrl.searchParams.set('error', 'AccessDenied');
+      const redirectResponse = NextResponse.redirect(loginUrl);
+      redirectResponse.headers.set('x-pathname', loginUrl.pathname);
+      return redirectResponse;
     }
   }
 
@@ -75,4 +145,3 @@ export const config = {
     '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
   ]
 };
-

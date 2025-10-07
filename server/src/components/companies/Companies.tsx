@@ -4,6 +4,7 @@ import { ICompany } from 'server/src/interfaces/company.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import GenericDialog from '../ui/GenericDialog';
 import { Button } from '../ui/Button';
+import { Checkbox } from '../ui/Checkbox';
 import QuickAddCompany from './QuickAddCompany';
 import { 
   createCompany, 
@@ -854,12 +855,13 @@ const Companies: React.FC = () => {
 
       {/* Delete */}
       <div className="flex items-center gap-8 mb-6 ms-4">
-        <input
-          type="checkbox"
-          className="form-checkbox h-4 w-4 rounded"
-          checked={selectedCompanies.length > 0}
-          onChange={() => void handleSelectAll()}
-        />
+        <div className="[&>div]:mb-0 [&>div]:flex [&>div]:items-center">
+          <Checkbox
+            id="select-all-companies"
+            checked={selectedCompanies.length > 0}
+            onChange={() => void handleSelectAll()}
+          />
+        </div>
         {selectedCompanies.length > 0 &&
           <span className="text-sm font-medium text-gray-500">
             {isSelectAllMode ? `All ${selectedCompanies.length} companies selected` : `${selectedCompanies.length} Selected`}

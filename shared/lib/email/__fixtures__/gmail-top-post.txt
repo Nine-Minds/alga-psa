@@ -1,0 +1,20 @@
+Hi support team,
+
+Happy to confirm the restart worked fine.
+
+Thanks,
+Jane Doe
+Sent from my iPhone
+
+[ALGA-REPLY-TOKEN GHFTK-123 ticketId=8f4e9f72-1d7d-4b3c-94fb-2f8f9ccce901 commentId=6e5874a5-22a9-479d-a20e-052b43165c0d]
+--- Please reply above this line ---
+
+On Tue, Jan 28, 2025 at 1:42 PM MSP Support <support@alga.com> wrote:
+> Ticket Update: Power outage investigation
+> ---------------------------------------------------
+> Hello Jane,
+> 
+> We're still monitoring the power event and will send you another update soon.
+> 
+> Regards,
+> MSP Support

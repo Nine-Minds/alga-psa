@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useRegisterUIComponent } from '../../types/ui-reflection/useRegisterUIComponent';
 import { FormComponent, FormFieldComponent, ButtonComponent } from '../../types/ui-reflection/types';
 import { withDataAutomationId } from '../../types/ui-reflection/withDataAutomationId';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
@@ -96,6 +96,9 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
           onError(t('auth.invalidCredentials', 'Invalid email or password'))
         }
       } else if (result?.url) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.log('[client-login-form] navigating to', result.url);
+        }
         window.location.href = result.url
       }
     } catch (error) {

@@ -6,7 +6,16 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Reusable path to an empty shim for optional/native modules (used by Turbopack aliases)
 const emptyShim = './src/empty/shims/empty.ts';
 
-const isEE = process.env.EDITION === 'ee';
+const isEE = process.env.EDITION === 'ee' || process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+
+// DEBUG LOGGING - Remove after troubleshooting
+console.log('=== EE BUILD DEBUG ===');
+console.log('process.env.EDITION:', process.env.EDITION);
+console.log('process.env.NEXT_PUBLIC_EDITION:', process.env.NEXT_PUBLIC_EDITION);
+console.log('isEE result:', isEE);
+console.log('Current working directory:', process.cwd());
+console.log('__dirname:', __dirname);
+console.log('=== END DEBUG ===');
 
 const nextConfig = {
   // Transpile shared product packages used by EE server
@@ -43,9 +52,11 @@ const nextConfig = {
     },
   },
   experimental: {
+    // Allow importing code from outside this directory (monorepo OSS server code)
     externalDir: true,
   },
   images: {
+    // Avoid requiring the native `sharp` binary locally
     unoptimized: true,
   },
   eslint: {
@@ -72,6 +83,7 @@ const nextConfig = {
         '@': path.join(__dirname, 'src'),
         // Ensure EE imports resolve to this package's src (EE edition)
         '@ee': path.join(__dirname, 'src'),
+        // Hard-pin common EE import paths used by CE SettingsPage
         '@ee/lib/extensions/ExtensionComponentLoader': path.join(__dirname, 'src/lib/extensions/ExtensionComponentLoader.tsx'),
         '@ee/components': path.join(__dirname, 'src/components'),
         // Feature swap aliases (Webpack)
@@ -97,7 +109,7 @@ const nextConfig = {
       ],
     };
 
-    // Exclude optional DB drivers and sharp to prevent bundling/resolve errors
+    // Exclude optional DB drivers not used (prevents bundling/resolve errors)
     config.externals = [
       ...(config.externals || []),
       'oracledb',
@@ -106,7 +118,6 @@ const nextConfig = {
       'sqlite3',
       'better-sqlite3',
       'tedious',
-      'sharp', // Externalize sharp to prevent webpack bundling issues
     ];
 
     // Treat .mjs in node_modules as JS auto

@@ -254,7 +254,7 @@ export class PortalInvitationService {
             this.on('pi.tenant', '=', 'c.tenant')
                 .andOn('pi.contact_id', '=', 'c.contact_name_id');
           })
-          .join('companies as comp', function() {
+          .leftJoin('companies as comp', function() {
             this.on('c.tenant', '=', 'comp.tenant')
                 .andOn('c.company_id', '=', 'comp.company_id');
           })
@@ -286,7 +286,7 @@ export class PortalInvitationService {
             contact_name_id: invitation.contact_id,
             full_name: invitation.full_name,
             email: invitation.contact_email,
-            company_name: invitation.company_name
+            company_name: invitation.company_name || 'No Company'
           },
           invitation: {
             invitation_id: invitation.invitation_id,

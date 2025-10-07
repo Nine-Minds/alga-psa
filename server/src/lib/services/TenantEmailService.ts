@@ -81,17 +81,18 @@ export class TenantEmailService extends BaseEmailService {
 
     // Fallback: In EE hosted, use system email provider
     if (isEnterprise) {
-      logger.info(`[${this.getServiceName()}] Falling back to SystemEmailProvider (EE)`);
+      logger.info(`[${this.getServiceName()}] Using system email provider (Enterprise Edition)`);
       try {
         const systemProvider = await SystemEmailProviderFactory.createProvider();
         return systemProvider;
       } catch (err) {
-        logger.error(`[${this.getServiceName()}] Failed to create SystemEmailProvider:`, err);
+        logger.error(`[${this.getServiceName()}] Failed to create system email provider:`, err);
         return null;
       }
     }
 
     // Otherwise, no provider available
+    logger.error(`[${this.getServiceName()}] No email provider available`);
     return null;
   }
 
@@ -121,7 +122,7 @@ export class TenantEmailService extends BaseEmailService {
   ): Promise<TenantEmailSettings | null> {
     try {
       const settings = await knex('tenant_email_settings')
-        .where({ tenant: tenantId })
+        .where({ tenant_id: tenantId })
         .first();
       
       if (!settings) {

@@ -8,7 +8,7 @@ import { Button } from 'server/src/components/ui/Button';
 import { Eye, EyeOff } from 'lucide-react';
 import { changeOwnPassword, checkPasswordResetStatus } from 'server/src/lib/actions/user-actions/userActions';
 import { PasswordResetWarning } from 'server/src/components/ui/PasswordResetWarning';
-import { useTranslation } from '@/lib/i18n/client';
+import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface PasswordChangeFormProps {
   onSuccess?: () => void;

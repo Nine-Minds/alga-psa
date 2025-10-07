@@ -15,6 +15,7 @@ import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
+import { Checkbox } from 'server/src/components/ui/Checkbox';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
@@ -353,18 +354,17 @@ const ServiceCategoriesSettings: React.FC = () => {
                 </p>
                 <div className="border rounded-md">
                   <div className="flex items-center space-x-2 p-2 bg-muted/50 font-medium text-sm border-b">
-                    <div className="w-8">
-                      <input
-                        type="checkbox"
+                    <div className="w-8 [&>div]:mb-0">
+                      <Checkbox
+                        id="select-all-categories"
                         checked={availableReferenceCategories.length > 0 && selectedImportCategories.length === availableReferenceCategories.length}
                         onChange={(e) => {
-                          if (e.target.checked) {
+                          if ((e.target as HTMLInputElement).checked) {
                             setSelectedImportCategories(availableReferenceCategories.map(cat => cat.id));
                           } else {
                             setSelectedImportCategories([]);
                           }
                         }}
-                        className="w-4 h-4"
                       />
                     </div>
                     <div className="flex-1">Name</div>
@@ -373,22 +373,21 @@ const ServiceCategoriesSettings: React.FC = () => {
                   </div>
                   <div className="max-h-[300px] overflow-y-auto">
                     {availableReferenceCategories.map((category) => (
-                      <div 
-                        key={category.id} 
+                      <div
+                        key={category.id}
                         className="flex items-center space-x-2 p-2 hover:bg-muted/30 border-b"
                       >
-                        <div className="w-8">
-                          <input
-                            type="checkbox"
+                        <div className="w-8 [&>div]:mb-0">
+                          <Checkbox
+                            id={`import-category-${category.id}`}
                             checked={selectedImportCategories.includes(category.id)}
                             onChange={(e) => {
-                              if (e.target.checked) {
+                              if ((e.target as HTMLInputElement).checked) {
                                 setSelectedImportCategories([...selectedImportCategories, category.id]);
                               } else {
                                 setSelectedImportCategories(selectedImportCategories.filter(id => id !== category.id));
                               }
                             }}
-                            className="w-4 h-4"
                           />
                         </div>
                         <div className="flex-1">{category.category_name}</div>

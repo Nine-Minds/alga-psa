@@ -59,11 +59,17 @@ export async function deletePriority(priorityId: string) {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // Check if this is an ITIL standard priority (immutable)
+      const priority = await Priority.get(trx, priorityId);
+      if (priority?.is_from_itil_standard) {
+        throw new Error('ITIL standard priorities cannot be deleted');
+      }
+
       await Priority.delete(trx, priorityId);
       return true;
     } catch (error) {
       console.error(`Error deleting priority ${priorityId} for tenant ${tenant}:`, error);
-      throw new Error(`Failed to delete priority for tenant ${tenant}`);
+      throw new Error(error instanceof Error ? error.message : `Failed to delete priority for tenant ${tenant}`);
     }
   });
 }
@@ -72,6 +78,12 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      // Check if this is an ITIL standard priority (immutable)
+      const existingPriority = await Priority.get(trx, priorityId);
+      if (existingPriority?.is_from_itil_standard) {
+        throw new Error('ITIL standard priorities cannot be edited');
+      }
+
       const updatedPriority = await Priority.update(trx, priorityId, priorityData);
       if (!updatedPriority) {
         throw new Error(`Priority ${priorityId} not found for tenant ${tenant}`);
@@ -79,7 +91,7 @@ export async function updatePriority(priorityId: string, priorityData: Partial<I
       return updatedPriority;
     } catch (error) {
       console.error(`Error updating priority ${priorityId} for tenant ${tenant}:`, error);
-      throw new Error(`Failed to update priority for tenant ${tenant}`);
+      throw new Error(error instanceof Error ? error.message : `Failed to update priority for tenant ${tenant}`);
     }
   });
 }

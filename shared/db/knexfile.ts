@@ -20,7 +20,7 @@ if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
 setTypeParser(20, parseFloat);
 setTypeParser(1114, (str: string) => new Date(str + 'Z'));
 
-import { getSecret } from '@shared/core';
+import { getSecret } from '../core/getSecret';
 
 const getDbPassword = async () => await getSecret('db_password_server', 'DB_PASSWORD_SERVER');
 const getPostgresPassword = async () => await getSecret('postgres_password', 'DB_PASSWORD_ADMIN');
@@ -136,7 +136,7 @@ export const getKnexConfigWithTenant = async (tenant: string): Promise<CustomKne
 
   const env = (typeof process !== 'undefined' && process.env?.APP_ENV) || 'development';
   const config = await getKnexConfig(env);
-  
+
   return {
     ...config,
     asyncStackTraces: true,

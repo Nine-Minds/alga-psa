@@ -3,7 +3,6 @@
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex } from 'server/src/lib/db';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
-import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { getCurrentUser } from './user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import { validateData } from 'server/src/lib/utils/validation';
@@ -13,6 +12,7 @@ import {
   addWorkItemParamsSchema,
   AddWorkItemParams
 } from './timeEntrySchemas'; // Import schemas
+import { getSession } from 'server/src/lib/auth/getSession';
 
 export async function fetchWorkItemsForTimeSheet(timeSheetId: string): Promise<IWorkItem[]> {
   const currentUser = await getCurrentUser();
@@ -190,7 +190,7 @@ export async function deleteWorkItem(workItemId: string): Promise<void> {
   }
 
   const {knex: db, tenant} = await createTenantKnex();
-  const session = await auth();
+  const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("User not authenticated");
   }

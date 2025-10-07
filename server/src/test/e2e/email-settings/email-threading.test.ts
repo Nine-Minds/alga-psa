@@ -78,12 +78,12 @@ describe('Email Threading Tests', () => {
         console.log('     ✅ Ticket successfully created from email!');
         console.log(`     🎫 Ticket ID: ${ticket.ticket_id}`);
         console.log(`     📋 Title: "${ticket.title}"`);
-        console.log(`     📞 Channel: ${ticket.channel_id}`);
+        console.log(`     📞 Board: ${ticket.board_id}`);
         console.log(`     👤 Contact: ${ticket.contact_name_id}`);
         
         expect(ticket).toBeDefined();
         expect(ticket.title).toBe('Help with login issue');
-        expect(ticket.channel_id).toBe('email');
+        expect(ticket.board_id).toBe('email');
         expect(ticket.contact_name_id).toBe(contact.contact_name_id);
         
         // Verify email metadata stored
@@ -257,7 +257,7 @@ describe('Email Threading Tests', () => {
         company_id: company.company_id,
         contact_name_id: contact.contact_name_id,
         title: 'Thread test',
-        channel_id: 'email',
+        board_id: 'email',
         status_id: 'open',
         priority_id: 'medium',
         email_metadata: {

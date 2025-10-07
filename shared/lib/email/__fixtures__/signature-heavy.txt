@@ -1,0 +1,11 @@
+Hello,
+
+Here is the update you requested. The service has been restored as of 16:45 UTC.
+
+Thanks,
+Alex Mercer
+Senior Support Engineer | Contoso MSP
+Office: +1 (555) 010-8899
+support@contoso.com
+--
+Confidentiality Notice: This email and any attachments are confidential.

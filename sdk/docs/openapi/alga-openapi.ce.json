@@ -6836,7 +6836,7 @@
         }
       }
     },
-    "/api/v1/categories/ticket/tree/{channelId}": {
+    "/api/v1/categories/ticket/tree/{boardId}": {
       "get": {
         "summary": "GET v1",
         "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
