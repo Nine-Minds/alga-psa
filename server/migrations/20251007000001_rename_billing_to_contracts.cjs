@@ -65,10 +65,10 @@ exports.down = async function down(knex) {
     }
   }
 
-  // Drop client_contract_id column from company_billing_plans
-  const hasClientContractId = await knex.schema.hasColumn('company_billing_plans', 'client_contract_id');
+  // Drop client_contract_id column from client_billing_plans
+  const hasClientContractId = await knex.schema.hasColumn('client_billing_plans', 'client_contract_id');
   if (hasClientContractId) {
-    await knex.schema.table('company_billing_plans', (table) => {
+    await knex.schema.table('client_billing_plans', (table) => {
       table.dropColumn('client_contract_id');
     });
   }
@@ -227,7 +227,7 @@ async function createClientContracts(knex, state) {
       start_date, end_date, is_active, created_at, updated_at
     )
     SELECT
-      cpb.tenant, gen_random_uuid(), cpb.client_id, cpb.bundle_id,
+      cpb.tenant, cpb.client_bundle_id, cpb.client_id, cpb.bundle_id,
       cpb.start_date, cpb.end_date, cpb.is_active, cpb.created_at, cpb.updated_at
     FROM client_plan_bundles cpb
     ON CONFLICT (tenant, client_contract_id) DO NOTHING
@@ -297,17 +297,12 @@ async function addContractIdColumns(knex, state) {
 }
 
 async function backfillContractIds(knex) {
-  console.log('Backfilling client_billing_plans.client_contract_id from client_contracts...');
+  console.log('Backfilling client_billing_plans.client_contract_id from client_bundle_id...');
 
   await knex.raw(`
-    UPDATE client_billing_plans cbp
-    SET client_contract_id = cc.client_contract_id
-    FROM client_contracts cc
-    JOIN contract_line_mappings clm ON clm.tenant = cc.tenant AND clm.contract_id = cc.contract_id
-    WHERE cbp.tenant = cc.tenant
-      AND cbp.client_id = cc.client_id
-      AND cbp.plan_id = clm.plan_id
-      AND cbp.client_contract_id IS NULL
+    UPDATE client_billing_plans
+    SET client_contract_id = client_bundle_id
+    WHERE client_contract_id IS NULL AND client_bundle_id IS NOT NULL
   `);
 
   const [{ count }] = await knex('client_billing_plans')
@@ -447,7 +442,7 @@ async function createClientContractLines(knex, state) {
 
   await addTenantForeignKey(knex, 'client_contract_lines', 'client_contract_lines_tenant_fkey');
 
-  console.log('Backfilling client_contract_lines from company_billing_plans...');
+  console.log('Backfilling client_contract_lines from client_billing_plans...');
 
   await knex.raw(`
     INSERT INTO client_contract_lines (
@@ -455,9 +450,9 @@ async function createClientContractLines(knex, state) {
       service_category, is_active, start_date, end_date, client_contract_id
     )
     SELECT
-      cbp.tenant, cbp.company_billing_plan_id, cbp.client_id, cbp.plan_id,
+      cbp.tenant, cbp.client_billing_plan_id, cbp.client_id, cbp.plan_id,
       cbp.service_category, cbp.is_active, cbp.start_date, cbp.end_date, cbp.client_contract_id
-    FROM company_billing_plans cbp
+    FROM client_billing_plans cbp
     ON CONFLICT (tenant, client_contract_line_id) DO NOTHING
   `);
 
@@ -588,10 +583,10 @@ async function verifyContracts(knex) {
     throw new Error(`Row count mismatch: plan_bundles=${planBundles}, contracts=${contracts}`);
   }
 
-  const [{ count: companyPlanBundles }] = await knex('company_plan_bundles').count('* as count');
+  const [{ count: clientPlanBundles }] = await knex('client_plan_bundles').count('* as count');
   const [{ count: clientContracts }] = await knex('client_contracts').count('* as count');
-  if (companyPlanBundles !== clientContracts) {
-    throw new Error(`Row count mismatch: company_plan_bundles=${companyPlanBundles}, client_contracts=${clientContracts}`);
+  if (clientPlanBundles !== clientContracts) {
+    throw new Error(`Row count mismatch: client_plan_bundles=${clientPlanBundles}, client_contracts=${clientContracts}`);
   }
 
   const [{ count: bundleBillingPlans }] = await knex('bundle_billing_plans').count('* as count');
@@ -612,10 +607,10 @@ async function verifyContractLines(knex) {
     throw new Error(`Row count mismatch: billing_plans=${billingPlans}, contract_lines=${contractLines}`);
   }
 
-  const [{ count: companyBillingPlans }] = await knex('company_billing_plans').count('* as count');
+  const [{ count: clientBillingPlans }] = await knex('client_billing_plans').count('* as count');
   const [{ count: clientContractLines }] = await knex('client_contract_lines').count('* as count');
-  if (companyBillingPlans !== clientContractLines) {
-    throw new Error(`Row count mismatch: company_billing_plans=${companyBillingPlans}, client_contract_lines=${clientContractLines}`);
+  if (clientBillingPlans !== clientContractLines) {
+    throw new Error(`Row count mismatch: client_billing_plans=${clientBillingPlans}, client_contract_lines=${clientContractLines}`);
   }
 
   const timeEntriesExists = await knex.schema.hasTable('time_entries');
