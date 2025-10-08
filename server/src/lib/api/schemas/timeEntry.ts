@@ -71,7 +71,7 @@ export const timeEntryFilterSchema = baseFilterSchema.extend({
   date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   time_sheet_id: uuidSchema.optional(),
   billing_plan_id: uuidSchema.optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   duration_min: z.string().transform(val => parseInt(val)).optional(),
   duration_max: z.string().transform(val => parseInt(val)).optional()
 });
@@ -104,7 +104,7 @@ export const timeEntryResponseSchema = z.object({
   user_name: z.string().optional(),
   work_item_title: z.string().optional(),
   service_name: z.string().optional(),
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   duration_hours: z.number().optional(),
   is_billable: z.boolean().optional()
 });
@@ -122,7 +122,7 @@ export const timeEntryWithDetailsResponseSchema = timeEntryResponseSchema.extend
     id: uuidSchema,
     title: z.string(),
     type: workItemTypeSchema,
-    company_id: uuidSchema.optional(),
+    client_id: uuidSchema.optional(),
     project_id: uuidSchema.optional()
   }).optional(),
   

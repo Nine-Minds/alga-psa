@@ -92,10 +92,10 @@ secrets:
 services:
   postgres:
     image: ankane/pgvector:latest
-    container_name: ${APP_NAME:-sebastian}_postgres
     environment:
       <<: *shared-environment
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_HOST_AUTH_METHOD: md5
     secrets:
       - postgres_password
     ports:
@@ -107,7 +107,6 @@ services:
     build:
       context: .
       dockerfile: redis/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_redis
     environment:
       <<: *shared-environment
     ports:
@@ -134,5 +133,4 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge

@@ -5,7 +5,6 @@ services:
     extends:
       file: ./server/docker-compose.prebuilt.yaml
       service: server
-    container_name: ${APP_NAME:-sebastian}_server_ce
     image: "ghcr.io/nine-minds/alga-psa-ce:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
     environment:
@@ -74,7 +73,6 @@ services:
   setup:
     image: "ghcr.io/nine-minds/alga-psa-ce:${ALGA_IMAGE_TAG:-latest}"
     platform: linux/amd64
-    container_name: ${APP_NAME:-sebastian}_setup_ce
     restart: "no"
     environment:
       EDITION: community
@@ -194,7 +192,6 @@ services:
     extends:
       file: ./hocuspocus/docker-compose.yaml
       service: hocuspocus
-    container_name: ${APP_NAME:-sebastian}_hocuspocus_ce
     build:
       context: .
       dockerfile: hocuspocus/Dockerfile
@@ -246,7 +243,6 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
 
 volumes:

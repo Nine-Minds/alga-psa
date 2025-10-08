@@ -22,7 +22,7 @@ export interface EmailTestConfig {
  */
 export interface EmailTestScenario {
   tenant: any;
-  company: any;
+  client: any;
   contact: any;
   /**
    * Send an email and wait for processing
@@ -68,9 +68,9 @@ export class EmailTestHelpers {
   async createEmailScenario(): Promise<EmailTestScenario> {
     console.log('🏗️ Creating email test scenario...');
 
-    // Create the basic scenario (tenant, company, contact)
-    const { tenant, company, contact } = await this.context.emailTestFactory.createBasicEmailScenario();
-    console.log(`[TENANT-DEBUG] Test scenario created: tenant=${tenant.tenant}, company=${company.company_name}, contact=${contact.email}`);
+    // Create the basic scenario (tenant, client, contact)
+    const { tenant, client, contact } = await this.context.emailTestFactory.createBasicEmailScenario();
+    console.log(`[TENANT-DEBUG] Test scenario created: tenant=${tenant.tenant}, client=${client.client_name}, contact=${contact.email}`);
 
     // Ensure proper tenant synchronization
     await this.ensureTenantSynchronization(tenant);
@@ -78,7 +78,7 @@ export class EmailTestHelpers {
     // Create scenario object with helper methods
     const scenario: EmailTestScenario = {
       tenant,
-      company, 
+      client, 
       contact,
 
       sendEmail: async (config: EmailTestConfig) => {
@@ -118,7 +118,7 @@ export class EmailTestHelpers {
   }> {
     console.log('🏗️ Creating unknown email test scenario...');
 
-    // Create tenant and company, but no contact
+    // Create tenant and client, but no contact
     const { tenant } = await this.context.emailTestFactory.createBasicEmailScenario();
     await this.ensureTenantSynchronization(tenant);
 
@@ -154,7 +154,7 @@ export class EmailTestHelpers {
     if (!tenantCheck) {
       throw new Error(`Tenant ${tenant.tenant} not found in database after creation`);
     }
-    console.log(`[TENANT-DEBUG] Verified tenant exists: tenant=${tenantCheck.tenant}, company_name=${tenantCheck.company_name}`);
+    console.log(`[TENANT-DEBUG] Verified tenant exists: tenant=${tenantCheck.tenant}, client_name=${tenantCheck.client_name}`);
 
     // Force transaction commit for visibility across connections
     try {
@@ -182,7 +182,7 @@ export class EmailTestHelpers {
     
     const testEmail = {
       from: config.from || contact.email,
-      to: config.to || 'support@company.com',
+      to: config.to || 'support@client.com',
       subject: config.subject,
       body: config.body,
       attachments: config.attachments,
@@ -200,10 +200,10 @@ export class EmailTestHelpers {
    */
   private async getTicketsForContact(contactEmail: string): Promise<any[]> {
     const ticketResult = await this.context.db.raw(`
-      SELECT t.*, c.email as contact_email, comp.company_name
+      SELECT t.*, c.email as contact_email, comp.client_name
       FROM tickets t 
       JOIN contacts c ON t.contact_name_id = c.contact_name_id
-      LEFT JOIN companies comp ON c.company_id = comp.company_id
+      LEFT JOIN clients comp ON c.client_id = comp.client_id
       WHERE c.email = ?
       ORDER BY t.entered_at DESC
     `, [contactEmail]);

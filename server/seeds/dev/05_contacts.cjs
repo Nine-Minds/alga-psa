@@ -6,12 +6,12 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     full_name: 'Dorothy Gale',
-                    company_id: knex('companies')
+                    client_id: knex('clients')
                         .where({
                             tenant: tenant.tenant,
-                            company_name: 'Emerald City'
+                            client_name: 'Emerald City'
                         })
-                        .select('company_id')
+                        .select('client_id')
                         .first(),
                     phone_number: '+1-555-987-6543',
                     email: 'dorothy@oz.com',
@@ -20,12 +20,12 @@ exports.seed = function(knex) {
                 {
                     tenant: tenant.tenant,
                     full_name: 'Alice in Wonderland',
-                    company_id: knex('companies')
+                    client_id: knex('clients')
                         .where({
                             tenant: tenant.tenant,
-                            company_name: 'Wonderland'
+                            client_name: 'Wonderland'
                         })
-                        .select('company_id')
+                        .select('client_id')
                         .first(),
                     phone_number: '+1-555-246-8135',
                     email: 'alice@wonderland.com',

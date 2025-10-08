@@ -122,8 +122,8 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'dcl.email as company_email',
-        'c.company_name',
+        'dcl.email as client_email',
+        'c.client_name',
         'co.email as contact_email',
         'co.full_name as contact_name',
         'co.phone_number as contact_phone',
@@ -144,12 +144,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         'cl.postal_code',
         'cl.country_code'
       )
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 't.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
             .andOn('dcl.tenant', '=', 't.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -186,7 +186,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         this.on('t.subcategory_id', 'subcat.category_id')
             .andOn('t.tenant', 'subcat.tenant');
       })
-      .leftJoin('company_locations as cl', function() {
+      .leftJoin('client_locations as cl', function() {
         this.on('t.location_id', 'cl.location_id')
             .andOn('t.tenant', 'cl.tenant');
       })
@@ -211,12 +211,12 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
       return String(value).trim();
     };
 
-    // Send to contact email if available, otherwise company email
-    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.company_email);
+    // Send to contact email if available, otherwise client email
+    const primaryEmail = safeString(ticket.contact_email) || safeString(ticket.client_email);
     const assignedEmail = safeString(ticket.assigned_to_email);
 
     if (!primaryEmail && !assignedEmail) {
-      logger.warn('Could not send ticket created email - missing contact, company, and assigned user emails:', {
+      logger.warn('Could not send ticket created email - missing contact, client, and assigned user emails:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
@@ -224,7 +224,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     }
 
     if (!primaryEmail) {
-      logger.warn('Ticket created email missing contact and company emails, falling back to other recipients only:', {
+      logger.warn('Ticket created email missing contact and client emails, falling back to other recipients only:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
@@ -253,7 +253,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     const metaLine = `Ticket #${ticket.ticket_number} · ${priorityName} Priority · ${statusName}`;
     const priorityColor = safeString(ticket.priority_color) || '#8A4DEA';
 
-    const companyName = safeString(ticket.company_name) || 'Unassigned Company';
+    const clientName = safeString(ticket.client_name) || 'Unassigned Client';
 
     const createdAt = formatDateTime(ticket.entered_at as string | Date | null);
     const createdByName = safeString(ticket.created_by_name) || payload.userId || 'System';
@@ -352,7 +352,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
         subcategory: subcategoryName || 'Not specified',
         categoryDetails,
         locationSummary,
-        companyName,
+        clientName,
         metaLine,
         url: `/tickets/${ticket.ticket_number}`
       }
@@ -364,7 +364,7 @@ async function handleTicketCreated(event: TicketCreatedEvent): Promise<void> {
     };
     const emailSubject = `New Ticket • ${ticket.title} (${priorityName})`;
 
-    // Send to primary recipient (contact or company)
+    // Send to primary recipient (contact or client)
     if (primaryEmail) {
       await sendEventEmail({
         tenantId,
@@ -426,16 +426,16 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'dcl.email as company_email',
+        'dcl.email as client_email',
         'p.priority_name',
         's.name as status_name'
       )
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 't.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
             .andOn('dcl.tenant', '=', 't.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -459,13 +459,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       return;
     }
 
-    // Send to contact email if available, otherwise company email
-    const primaryEmail = ticket.contact_email || ticket.company_email;
+    // Send to contact email if available, otherwise client email
+    const primaryEmail = ticket.contact_email || ticket.client_email;
     if (!primaryEmail) {
-      console.warn('[EmailSubscriber] Ticket found but missing both contact and company email:', {
+      console.warn('[EmailSubscriber] Ticket found but missing both contact and client email:', {
         eventId: event.id,
         ticketId: payload.ticketId,
-        companyId: ticket.company_id
+        clientId: ticket.client_id
       });
       return;
     }
@@ -473,7 +473,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     console.log('[EmailSubscriber] Found ticket:', {
       ticketId: ticket.ticket_id,
       title: ticket.title,
-      companyId: ticket.company_id,
+      clientId: ticket.client_id,
       primaryEmail,
       status: ticket.status_name
     });
@@ -498,7 +498,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       }
     };
 
-    // Send to primary recipient (contact or company)
+    // Send to primary recipient (contact or client)
     await sendEventEmail({
       tenantId,
       to: primaryEmail,
@@ -579,18 +579,18 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'dcl.email as company_email',
+        'dcl.email as client_email',
         'p.priority_name',
         's.name as status_name',
         'u.email as assigned_to_email',
         'co.email as contact_email'
       )
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 't.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
             .andOn('dcl.tenant', '=', 't.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -655,10 +655,10 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
       });
     }
 
-    const locationEmail = ticket.company_email;
+    const locationEmail = ticket.client_email;
     const contactEmail = ticket.contact_email;
 
-    // Notify the company's default location email
+    // Notify the client's default location email
     if (locationEmail) {
       await sendEventEmail({
         tenantId,
@@ -725,24 +725,24 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   try {
     const db = await getConnection(tenantId);
     
-    // Get ticket details with assigned user, company and contact emails
+    // Get ticket details with assigned user, client and contact emails
     const ticket = await db('tickets as t')
       .select(
         't.*',
         'u.email as assigned_to_email',
-        'dcl.email as company_email',
+        'dcl.email as client_email',
         'co.email as contact_email'
       )
       .leftJoin('users as u', function() {
         this.on('t.assigned_to', 'u.user_id')
             .andOn('t.tenant', 'u.tenant');
       })
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 't.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
             .andOn('dcl.tenant', '=', 't.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -774,8 +774,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         'tr.tenant': tenantId
       });
 
-    // Determine primary email (contact first, then company)
-    const primaryEmail = ticket.contact_email || ticket.company_email;
+    // Determine primary email (contact first, then client)
+    const primaryEmail = ticket.contact_email || ticket.client_email;
 
     // Send to primary email if available
     if (primaryEmail) {
@@ -869,16 +869,16 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     const ticket = await db('tickets as t')
       .select(
         't.*',
-        'dcl.email as company_email',
+        'dcl.email as client_email',
         'p.priority_name',
         's.name as status_name'
       )
-      .leftJoin('companies as c', function() {
-        this.on('t.company_id', 'c.company_id')
+      .leftJoin('clients as c', function() {
+        this.on('t.client_id', 'c.client_id')
             .andOn('t.tenant', 'c.tenant');
       })
-      .leftJoin('company_locations as dcl', function() {
-        this.on('dcl.company_id', '=', 't.company_id')
+      .leftJoin('client_locations as dcl', function() {
+        this.on('dcl.client_id', '=', 't.client_id')
             .andOn('dcl.tenant', '=', 't.tenant')
             .andOn('dcl.is_default', '=', db.raw('true'))
             .andOn('dcl.is_active', '=', db.raw('true'));
@@ -894,8 +894,8 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       .where('t.ticket_id', payload.ticketId)
       .first();
 
-    if (!ticket || !ticket.company_email) {
-      logger.warn('Could not send ticket closed email - missing ticket or company email:', {
+    if (!ticket || !ticket.client_email) {
+      logger.warn('Could not send ticket closed email - missing ticket or client email:', {
         eventId: event.id,
         ticketId: payload.ticketId
       });
@@ -915,10 +915,10 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       }
     };
 
-    // Send to company email
+    // Send to client email
     await sendEventEmail({
       tenantId,
-      to: ticket.company_email,
+      to: ticket.client_email,
       subject: `Ticket Closed: ${ticket.title}`,
       template: 'ticket-closed',
       context: emailContext,

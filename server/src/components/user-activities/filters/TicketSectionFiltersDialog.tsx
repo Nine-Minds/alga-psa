@@ -16,11 +16,11 @@ import { Input } from "server/src/components/ui/Input";
 import { StringDateRangePicker } from "server/src/components/ui/DateRangePicker";
 import { ActivityFilters, ActivityPriority } from "server/src/interfaces/activity.interfaces";
 import { IStatus } from "server/src/interfaces/status.interface";
-import { ICompany } from "server/src/interfaces/company.interfaces";
+import { IClient } from "server/src/interfaces/client.interfaces";
 import { IContact } from "server/src/interfaces/contact.interfaces";
 import { DateRange } from 'react-day-picker';
 import { ISO8601String } from '@alga-psa/shared/types';
-import { CompanyPicker } from "server/src/components/companies/CompanyPicker";
+import { ClientPicker } from "server/src/components/clients/ClientPicker";
 import { ContactPicker } from "server/src/components/ui/ContactPicker";
 import CustomSelect from "server/src/components/ui/CustomSelect";
 
@@ -29,7 +29,7 @@ interface TicketSectionFiltersDialogProps {
   onOpenChange: (open: boolean) => void;
   initialFilters: Partial<ActivityFilters>;
   onApplyFilters: (filters: Partial<ActivityFilters>) => void;
-  companies: ICompany[];
+  clients: IClient[];
   contacts: IContact[];
   statuses: IStatus[];
 }
@@ -39,7 +39,7 @@ export function TicketSectionFiltersDialog({
   onOpenChange,
   initialFilters,
   onApplyFilters,
-  companies = [],
+  clients = [],
   contacts = [],
   statuses = [],
 }: TicketSectionFiltersDialogProps) {
@@ -51,8 +51,8 @@ export function TicketSectionFiltersDialog({
   // Separate state for the single-select status dropdown
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilters.status?.[0] || 'all');
 
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('active');
-  const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   // Sync local state when initial filters change from parent
   useEffect(() => {
@@ -123,7 +123,7 @@ export function TicketSectionFiltersDialog({
     };
 
     if (filtersToApply.priority?.length === 0) delete filtersToApply.priority;
-    if (!filtersToApply.companyId) delete filtersToApply.companyId;
+    if (!filtersToApply.clientId) delete filtersToApply.clientId;
     if (!filtersToApply.contactId) delete filtersToApply.contactId;
     if (!filtersToApply.status) delete filtersToApply.status; // Remove if undefined/empty array
 
@@ -137,7 +137,7 @@ export function TicketSectionFiltersDialog({
       isClosed: undefined,
       dueDateStart: undefined,
       dueDateEnd: undefined,
-      companyId: undefined,
+      clientId: undefined,
       contactId: undefined,
       // ticketNumber: undefined,
       search: undefined,
@@ -170,19 +170,19 @@ export function TicketSectionFiltersDialog({
           </div>
 
 
-          {/* Company, Contact, and Status Filters */}
+          {/* Client, Contact, and Status Filters */}
           <div className="grid grid-cols-2 gap-x-6 gap-y-0">
             <div className="space-y-1">
-              <Label htmlFor="ticket-company-picker" className="text-base font-semibold">Company</Label>
-              <CompanyPicker
-                id="ticket-company-picker"
-                companies={companies}
-                selectedCompanyId={localFilters.companyId || null}
-                onSelect={(companyId: string | null) => handleSingleFilterChange('companyId', companyId)}
-                filterState={companyFilterState}
-                onFilterStateChange={setCompanyFilterState}
-                clientTypeFilter={companyClientTypeFilter}
-                onClientTypeFilterChange={setCompanyClientTypeFilter}
+              <Label htmlFor="ticket-client-picker" className="text-base font-semibold">Client</Label>
+              <ClientPicker
+                id="ticket-client-picker"
+                clients={clients}
+                selectedClientId={localFilters.clientId || null}
+                onSelect={(clientId: string | null) => handleSingleFilterChange('clientId', clientId)}
+                filterState={clientFilterState}
+                onFilterStateChange={setClientFilterState}
+                clientTypeFilter={clientClientTypeFilter}
+                onClientTypeFilterChange={setClientClientTypeFilter}
                 fitContent={false}
               />
             </div>
@@ -193,7 +193,7 @@ export function TicketSectionFiltersDialog({
                 contacts={contacts}
                 value={localFilters.contactId || ''}
                 onValueChange={(contactId: string) => handleSingleFilterChange('contactId', contactId)}
-                companyId={localFilters.companyId}
+                clientId={localFilters.clientId}
                 buttonWidth="full"
               />
             </div>

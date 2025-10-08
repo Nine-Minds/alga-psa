@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IProject, ICompany } from 'server/src/interfaces';
+import { IProject, IClient } from 'server/src/interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -22,7 +22,7 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useDrawer } from "server/src/context/DrawerContext";
 import ProjectDetailsEdit from './ProjectDetailsEdit';
 import { Input } from 'server/src/components/ui/Input';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import UserPicker from 'server/src/components/ui/UserPicker';
 import { DatePicker } from 'server/src/components/ui/DatePicker';
@@ -32,14 +32,14 @@ import { IUserWithRoles } from 'server/src/interfaces/auth.interfaces';
 import { getAllContacts } from 'server/src/lib/actions/contact-actions/contactActions';
 import { getAllUsers } from 'server/src/lib/actions/user-actions/userActions';
 import Drawer from 'server/src/components/ui/Drawer';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 
 interface ProjectsProps {
   initialProjects: IProject[];
-  companies: ICompany[];
+  clients: IClient[];
 }
 
-export default function Projects({ initialProjects, companies }: ProjectsProps) {
+export default function Projects({ initialProjects, clients }: ProjectsProps) {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['project']);
   
@@ -57,19 +57,19 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
   
   // New filter states
-  const [filterCompanyId, setFilterCompanyId] = useState<string | null>(null);
+  const [filterClientId, setFilterClientId] = useState<string | null>(null);
   const [filterContactId, setFilterContactId] = useState<string | null>(null);
   const [filterManagerId, setFilterManagerId] = useState<string | null>(null);
   const [filterDeadline, setFilterDeadline] = useState<DeadlineFilterValue | undefined>(undefined);
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('all');
-  const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   
   // Data for pickers
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [users, setUsers] = useState<IUserWithRoles[]>([]);
   
   // Quick View state
-  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   const handleTagsChange = (projectId: string, tags: ITag[]) => {
@@ -159,9 +159,9 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
       });
     }
 
-    // Apply company filter
-    if (filterCompanyId) {
-      filtered = filtered.filter(project => project.company_id === filterCompanyId);
+    // Apply client filter
+    if (filterClientId) {
+      filtered = filtered.filter(project => project.client_id === filterClientId);
     }
 
     // Apply contact filter
@@ -205,13 +205,13 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     });
 
     return filtered;
-  }, [projects, searchTerm, filterStatus, selectedTags, filterCompanyId, filterContactId, filterManagerId, filterDeadline]);
+  }, [projects, searchTerm, filterStatus, selectedTags, filterClientId, filterContactId, filterManagerId, filterDeadline]);
 
   const handleEditProject = (project: IProject) => {
     openDrawer(
       <ProjectDetailsEdit
         initialProject={project}
-        companies={companies}
+        clients={clients}
         onSave={(updatedProject) => {
           setProjects(prevProjects =>
             prevProjects.map((p): IProject =>
@@ -248,10 +248,10 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     }
   };
 
-  const onQuickViewCompany = (companyId: string) => {
-    const company = companies.find(c => c.company_id === companyId);
-    if (company) {
-      setQuickViewCompany(company);
+  const onQuickViewClient = (clientId: string) => {
+    const client = clients.find(c => c.client_id === clientId);
+    if (client) {
+      setQuickViewClient(client);
       setIsQuickViewOpen(true);
     }
   };
@@ -269,21 +269,21 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
     },
     {
       title: 'Client',
-      dataIndex: 'company_id',
+      dataIndex: 'client_id',
       width: '15%',
       render: (value, record) => {
-        const company = companies.find(c => c.company_id === value);
-        if (!company) return 'No Client';
+        const client = clients.find(c => c.client_id === value);
+        if (!client) return 'No Client';
         
         return (
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onQuickViewCompany(value);
+              onQuickViewClient(value);
             }}
             className="text-blue-500 hover:underline text-left whitespace-normal break-words"
           >
-            {company.company_name}
+            {client.client_name}
           </button>
         );
       }
@@ -456,16 +456,16 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
           />
         </div>
 
-        {/* Company filter */}
-        <CompanyPicker
-          id="project-company-filter"
-          companies={companies}
-          onSelect={(companyId) => setFilterCompanyId(companyId)}
-          selectedCompanyId={filterCompanyId}
-          filterState={companyFilterState}
-          onFilterStateChange={setCompanyFilterState}
-          clientTypeFilter={companyClientTypeFilter}
-          onClientTypeFilterChange={setCompanyClientTypeFilter}
+        {/* Client filter */}
+        <ClientPicker
+          id="project-client-filter"
+          clients={clients}
+          onSelect={(clientId) => setFilterClientId(clientId)}
+          selectedClientId={filterClientId}
+          filterState={clientFilterState}
+          onFilterStateChange={setClientFilterState}
+          clientTypeFilter={clientClientTypeFilter}
+          onClientTypeFilterChange={setClientClientTypeFilter}
           fitContent={true}
         />
 
@@ -475,7 +475,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
           contacts={contacts}
           value={filterContactId || ''}
           onValueChange={(value) => setFilterContactId(value || null)}
-          companyId={filterCompanyId || undefined}
+          clientId={filterClientId || undefined}
           placeholder="Filter by contact"
           buttonWidth="fit"
         />
@@ -513,7 +513,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
 
         {/* Clear filters button */}
         {(searchTerm || filterStatus !== 'active' || selectedTags.length > 0 || 
-          filterCompanyId || filterContactId || filterManagerId || filterDeadline) && (
+          filterClientId || filterContactId || filterManagerId || filterDeadline) && (
           <Button
             id="clear-all-filters-button"
             variant="outline"
@@ -522,12 +522,12 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
               setSearchTerm('');
               setFilterStatus('active');
               setSelectedTags([]);
-              setFilterCompanyId(null);
+              setFilterClientId(null);
               setFilterContactId(null);
               setFilterManagerId(null);
               setFilterDeadline(undefined);
-              setCompanyFilterState('all');
-              setCompanyClientTypeFilter('all');
+              setClientFilterState('all');
+              setClientClientTypeFilter('all');
             }}
             className="flex items-center gap-1 bg-white"
           >
@@ -548,7 +548,7 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         <ProjectQuickAdd
           onClose={() => setShowQuickAdd(false)}
           onProjectAdded={handleProjectAdded}
-          companies={companies}
+          clients={clients}
         />
       )}
 
@@ -566,17 +566,17 @@ export default function Projects({ initialProjects, companies }: ProjectsProps) 
         cancelLabel="Cancel"
       />
 
-      {/* Company Quick View Drawer */}
+      {/* Client Quick View Drawer */}
       <Drawer
         isOpen={isQuickViewOpen}
         onClose={() => {
           setIsQuickViewOpen(false);
-          setQuickViewCompany(null);
+          setQuickViewClient(null);
         }}
       >
-        {quickViewCompany && (
-          <CompanyDetails
-            company={quickViewCompany}
+        {quickViewClient && (
+          <ClientDetails
+            client={quickViewClient}
             isInDrawer={true}
             quickView={true}
           />

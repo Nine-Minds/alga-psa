@@ -2,29 +2,29 @@ import { runScheduledCreditBalanceValidation } from 'server/src/lib/actions/cred
 
 export interface CreditReconciliationJobData extends Record<string, unknown> {
   tenantId: string;
-  companyId?: string; // Optional: process only a specific company
+  clientId?: string; // Optional: process only a specific client
 }
 
 /**
  * Job handler for running credit reconciliation
  * This job:
- * 1. Runs credit balance validation for all companies in a tenant or a specific company
+ * 1. Runs credit balance validation for all clients in a tenant or a specific client
  * 2. Creates reconciliation reports for any discrepancies found
  * 3. Also runs credit tracking validations to identify missing or inconsistent entries
  * 
- * @param data Job data containing tenant ID and optional company ID
+ * @param data Job data containing tenant ID and optional client ID
  */
 export async function creditReconciliationHandler(data: CreditReconciliationJobData): Promise<void> {
-  const { tenantId, companyId } = data;
+  const { tenantId, clientId } = data;
   
   if (!tenantId) {
     throw new Error('Tenant ID is required for credit reconciliation job');
   }
   
-  console.log(`Running credit reconciliation for tenant ${tenantId}${companyId ? ` and company ${companyId}` : ''}`);
+  console.log(`Running credit reconciliation for tenant ${tenantId}${clientId ? ` and client ${clientId}` : ''}`);
   
   try {
-    const results = await runScheduledCreditBalanceValidation(companyId);
+    const results = await runScheduledCreditBalanceValidation(clientId);
     
     console.log(`Credit reconciliation completed for tenant ${tenantId}`);
     console.log(`Results: ${results.balanceValidCount} valid balances, ${results.balanceDiscrepancyCount} balance discrepancies found`);

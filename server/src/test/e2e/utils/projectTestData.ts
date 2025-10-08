@@ -6,10 +6,13 @@ import { faker } from '@faker-js/faker';
 export function createProjectTestData(overrides: Partial<any> = {}) {
   const startDate = faker.date.future({ years: 0.5 });
   const endDate = faker.date.future({ years: 1, refDate: startDate });
+
   
+  const clientId = overrides.client_id || overrides.client_id || faker.string.uuid();
+
   return {
     project_name: overrides.project_name || faker.company.catchPhrase(),
-    company_id: overrides.company_id || faker.string.uuid(),
+    client_id: clientId,
     description: overrides.description || faker.lorem.paragraph(),
     start_date: overrides.start_date || startDate.toISOString(),
     end_date: overrides.end_date || endDate.toISOString(),
@@ -73,38 +76,38 @@ export function createTaskChecklistItemData(taskId: string, overrides: Partial<a
 /**
  * Create multiple test projects
  */
-export function createMultipleProjects(count: number, companyId: string) {
-  return Array.from({ length: count }, () => createProjectTestData({ company_id: companyId }));
+export function createMultipleProjects(count: number, clientId: string) {
+  return Array.from({ length: count }, () => createProjectTestData({ client_id: clientId }));
 }
 
 /**
  * Create project with phases
  */
-export function createProjectWithPhases(companyId: string, phaseCount: number = 3) {
-  const project = createProjectTestData({ company_id: companyId });
-  const phases = Array.from({ length: phaseCount }, (_, index) => 
+export function createProjectWithPhases(clientId: string, phaseCount: number = 3) {
+  const project = createProjectTestData({ client_id: clientId });
+  const phases = Array.from({ length: phaseCount }, (_, index) =>
     createProjectPhaseData(faker.string.uuid(), { order_index: index + 1 })
   );
-  
+
   return { project, phases };
 }
 
 /**
  * Create project with tasks
  */
-export function createProjectWithTasks(companyId: string, taskCount: number = 5) {
-  const project = createProjectTestData({ company_id: companyId });
-  const tasks = Array.from({ length: taskCount }, () => 
+export function createProjectWithTasks(clientId: string, taskCount: number = 5) {
+  const project = createProjectTestData({ client_id: clientId });
+  const tasks = Array.from({ length: taskCount }, () =>
     createProjectTaskData(faker.string.uuid())
   );
-  
+
   return { project, tasks };
 }
 
 /**
  * Create project by type
  */
-export function createProjectByType(type: string, companyId: string, overrides: Partial<any> = {}) {
+export function createProjectByType(type: string, clientId: string, overrides: Partial<any> = {}) {
   const typeDefaults: Record<string, any> = {
     development: {
       project_type: 'development',
@@ -127,9 +130,9 @@ export function createProjectByType(type: string, companyId: string, overrides: 
       tags: ['maintenance', 'support']
     }
   };
-  
+
   return createProjectTestData({
-    company_id: companyId,
+    client_id: clientId,
     ...typeDefaults[type] || {},
     ...overrides
   });

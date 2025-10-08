@@ -274,7 +274,6 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge
  
 volumes:

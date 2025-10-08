@@ -6,11 +6,11 @@ import { generateInvoiceNumber } from 'server/src/lib/actions/invoiceGeneration'
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
 import { InvoiceViewModel, IInvoiceItem as ManualInvoiceItem, NetAmountItem, DiscountType } from 'server/src/interfaces/invoice.interfaces'; // Renamed for clarity
 import { IBillingCharge, IFixedPriceCharge, IService, TransactionType } from 'server/src/interfaces/billing.interfaces'; // Added import
-import { ICompanyWithLocation } from 'server/src/interfaces/company.interfaces';
+import { IClientWithLocation } from 'server/src/interfaces/client.interfaces';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
 import { ISO8601String } from 'server/src/types/types.d';
-import { getCompanyDefaultTaxRegionCode } from 'server/src/lib/actions/company-actions/companyTaxRateActions'; // Import the new lookup function
+import { getClientDefaultTaxRegionCode } from 'server/src/lib/actions/client-actions/clientTaxRateActions'; // Import the new lookup function
 import { getSession } from 'server/src/lib/auth/getSession';
 
 // Helper interface for tax calculation
@@ -43,10 +43,10 @@ export async function validateSessionAndTenant(): Promise<InvoiceContext> {
   return { session, knex, tenant };
 }
 
-export async function getCompanyDetails(knex: Knex, tenant: string, companyId: string): Promise<ICompanyWithLocation> {
-  const company = await knex('companies as c')
-    .leftJoin('company_locations as cl', function() {
-      this.on('c.company_id', '=', 'cl.company_id')
+export async function getClientDetails(knex: Knex, tenant: string, clientId: string): Promise<IClientWithLocation> {
+  const client = await knex('clients as c')
+    .leftJoin('client_locations as cl', function() {
+      this.on('c.client_id', '=', 'cl.client_id')
           .andOn('c.tenant', '=', 'cl.tenant')
           .andOn('cl.is_default', '=', knex.raw('true'));
     })
@@ -55,14 +55,14 @@ export async function getCompanyDetails(knex: Knex, tenant: string, companyId: s
       'cl.address_line1 as location_address'
     )
     .where({
-      'c.company_id': companyId,
+      'c.client_id': clientId,
       'c.tenant': tenant
     })
     .first();
-  if (!company) {
-    throw new Error(`Company not found for tenant ${tenant}`);
+  if (!client) {
+    throw new Error(`Client not found for tenant ${tenant}`);
   }
-  return company;
+  return client;
 }
 
 // Renamed interface for clarity within manual context
@@ -109,7 +109,7 @@ export async function persistManualInvoiceItems(
   tx: Knex.Transaction,
   invoiceId: string,
   manualItems: ManualInvoiceItemInput[],
-  company: any,
+  client: any,
   session: Session,
   tenant: string
 ): Promise<number> {
@@ -159,9 +159,9 @@ export async function persistManualInvoiceItems(
     } else {
       // No service linked, use fallback logic below for purely manual items
       serviceIsTaxable = requestItem.is_taxable ?? true; // Existing fallback
-      // serviceTaxRegion is derived from tax_rate_id now, or company default if no service/rate
+      // serviceTaxRegion is derived from tax_rate_id now, or client default if no service/rate
       // No direct tax_region on requestItem anymore
-      serviceTaxRegion = company.region_code ?? null; // Fallback to company default region if no service linked
+      serviceTaxRegion = client.region_code ?? null; // Fallback to client default region if no service linked
     }
     // --- End Determine Tax Info ---
 
@@ -179,7 +179,7 @@ export async function persistManualInvoiceItems(
       unit_price: Math.round(requestItem.rate), // Store the actual rate
       net_amount: netAmount,
       tax_amount: 0, // Placeholder
-      tax_region: service ? serviceTaxRegion : (company.region_code ?? null), // Fallback to company region if no service
+      tax_region: service ? serviceTaxRegion : (client.region_code ?? null), // Fallback to client region if no service
       tax_rate: 0, // Placeholder
       total_price: netAmount, // Placeholder
       is_manual: true,
@@ -248,7 +248,7 @@ export async function persistManualInvoiceItems(
         // If service exists but no tax_rate_id, region remains null
     } else {
         // No service linked, use fallback
-        discountTaxRegion = company.region_code ?? null; // Fallback to company region if no service
+        discountTaxRegion = client.region_code ?? null; // Fallback to client region if no service
     }
     // --- End Determine Tax Region ---
 
@@ -294,7 +294,7 @@ async function persistFixedInvoiceItems(
   tx: Knex.Transaction,
   invoiceId: string,
   fixedCharges: IFixedPriceCharge[],
-  company: any,
+  client: any,
   session: Session,
   tenant: string
 ): Promise<number> {
@@ -310,21 +310,21 @@ async function persistFixedInvoiceItems(
     // --- END DEBUG LOGGING ---
     // Rely on config_id being present and truthy, as 'in' check might be unreliable depending on object creation
     if (charge.config_id) {
-      // Use company_billing_plan_id from the base IBillingCharge interface if needed for grouping
-      const companyBillingPlanId = charge.company_billing_plan_id;
-      if (!companyBillingPlanId) {
+      // Use client_billing_plan_id from the base IBillingCharge interface if needed for grouping
+      const clientBillingPlanId = charge.client_billing_plan_id;
+      if (!clientBillingPlanId) {
         // This shouldn't happen if billingEngine adds it correctly, but good to check.
-        console.error("Detailed fixed price charge is missing company_billing_plan_id:", charge);
-        throw new Error("Internal error: Detailed fixed price charge must have a company_billing_plan_id.");
+        console.error("Detailed fixed price charge is missing client_billing_plan_id:", charge);
+        throw new Error("Internal error: Detailed fixed price charge must have a client_billing_plan_id.");
       }
 
-      if (!fixedPlanDetailsMap.has(companyBillingPlanId)) {
-        fixedPlanDetailsMap.set(companyBillingPlanId, {
+      if (!fixedPlanDetailsMap.has(clientBillingPlanId)) {
+        fixedPlanDetailsMap.set(clientBillingPlanId, {
           details: []
         });
       }
 
-      const planEntry = fixedPlanDetailsMap.get(companyBillingPlanId)!;
+      const planEntry = fixedPlanDetailsMap.get(clientBillingPlanId)!;
       planEntry.details.push(charge);
 
     } else {
@@ -336,13 +336,13 @@ async function persistFixedInvoiceItems(
         invoice_id: invoiceId,
         service_id: charge.serviceId || null, // Bundled might not have a single service ID
         // plan_id: charge.planId ?? null, // Removed - planId not part of IFixedPriceCharge
-        // company_billing_plan_id could be added here if needed for the DB schema, but invoice_items doesn't have it.
+        // client_billing_plan_id could be added here if needed for the DB schema, but invoice_items doesn't have it.
         description: charge.serviceName, // Use the name from the charge
         quantity: charge.quantity,
         unit_price: charge.rate, // The custom rate
         net_amount: netAmount,
         tax_amount: charge.tax_amount || 0, // Use tax from charge if available
-        tax_region: company.tax_region, // Use company default
+        tax_region: client.tax_region, // Use client default
         tax_rate: charge.tax_rate || 0, // Use rate from charge if available
         total_price: netAmount + (charge.tax_amount || 0),
         is_manual: false,
@@ -364,13 +364,13 @@ async function persistFixedInvoiceItems(
   // --- Process Consolidated Fixed Plan Items and Details ---
 
   // Fetch plan details (name and fixed config base rate) for all consolidated items first
-  const companyPlanIds = Array.from(fixedPlanDetailsMap.keys());
-  // Map: companyBillingPlanId -> { plan_name: string, plan_base_rate: number | null }
+  const clientPlanIds = Array.from(fixedPlanDetailsMap.keys());
+  // Map: clientBillingPlanId -> { plan_name: string, plan_base_rate: number | null }
   const planInfoMap = new Map<string, { plan_name: string; plan_base_rate: number | null }>();
 
   // Filter out virtual bundle IDs that start with "bundle-" as they're not real UUIDs in the database
-  const validDbPlanIds = companyPlanIds.filter(id => !id.startsWith('bundle-'));
-  const bundlePlanIds = companyPlanIds.filter(id => id.startsWith('bundle-'));
+  const validDbPlanIds = clientPlanIds.filter(id => !id.startsWith('bundle-'));
+  const bundlePlanIds = clientPlanIds.filter(id => id.startsWith('bundle-'));
   
   // Add default info for bundle plans that won't be found in the database
   for (const bundlePlanId of bundlePlanIds) {
@@ -381,7 +381,7 @@ async function persistFixedInvoiceItems(
   }
 
   if (validDbPlanIds.length > 0) {
-    const planDetails = await tx('company_billing_plans as cbp')
+    const planDetails = await tx('client_billing_plans as cbp')
       .join('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -391,16 +391,16 @@ async function persistFixedInvoiceItems(
         this.on('bp.plan_id', '=', 'bpfc.plan_id')
             .andOn('bp.tenant', '=', 'bpfc.tenant');
       })
-      .whereIn('cbp.company_billing_plan_id', validDbPlanIds)
+      .whereIn('cbp.client_billing_plan_id', validDbPlanIds)
       .andWhere('cbp.tenant', tenant) // Ensure tenant match on cbp
       .select(
-        'cbp.company_billing_plan_id',
+        'cbp.client_billing_plan_id',
         'bp.plan_name',
         'bpfc.base_rate as plan_base_rate' // Select base_rate from the fixed config table
        );
 
     for (const detail of planDetails) {
-      planInfoMap.set(detail.company_billing_plan_id, {
+      planInfoMap.set(detail.client_billing_plan_id, {
         plan_name: detail.plan_name,
         // Parse the base_rate fetched from billing_plan_fixed_config
         plan_base_rate: detail.plan_base_rate ? parseFloat(detail.plan_base_rate) : null
@@ -409,11 +409,11 @@ async function persistFixedInvoiceItems(
   }
 
 
-  // Iterate using companyBillingPlanId as the key
-  for (const [companyBillingPlanId, planEntry] of fixedPlanDetailsMap.entries()) {
-    const planInfo = planInfoMap.get(companyBillingPlanId);
+  // Iterate using clientBillingPlanId as the key
+  for (const [clientBillingPlanId, planEntry] of fixedPlanDetailsMap.entries()) {
+    const planInfo = planInfoMap.get(clientBillingPlanId);
     if (!planInfo) {
-      console.error(`Could not find plan info for companyBillingPlanId: ${companyBillingPlanId}`);
+      console.error(`Could not find plan info for clientBillingPlanId: ${clientBillingPlanId}`);
       // Decide how to handle missing plan info (skip? throw error?)
       continue;
     }
@@ -517,7 +517,7 @@ export async function persistInvoiceItems(
   tx: Knex.Transaction,
   invoiceId: string,
   billingCharges: IBillingCharge[],
-  company: any,
+  client: any,
   session: Session,
   tenant: string
 ): Promise<number> {
@@ -543,7 +543,7 @@ export async function persistInvoiceItems(
     tx,
     invoiceId,
     fixedCharges,
-    company,
+    client,
     session,
     tenant
   );
@@ -564,7 +564,7 @@ export async function persistInvoiceItems(
       unit_price: charge.rate ?? 0,
       net_amount: netAmount,
       tax_amount: charge.tax_amount || 0,
-      tax_region: charge.tax_region || company.tax_region, // Use charge region or default
+      tax_region: charge.tax_region || client.tax_region, // Use charge region or default
       tax_rate: charge.tax_rate || 0,
       total_price: netAmount + (charge.tax_amount || 0), // Will be updated by tax calculation
       is_manual: false,
@@ -589,7 +589,7 @@ export async function persistInvoiceItems(
 export async function calculateAndDistributeTax(
   tx: Knex.Transaction,
   invoiceId: string,
-  company: any,
+  client: any,
   taxService: TaxService,
   tenant: string
 ): Promise<number> {
@@ -660,8 +660,8 @@ export async function calculateAndDistributeTax(
         id: detail.item_detail_id,
         type: 'fixed_detail',
         amount: allocatedAmount,
-        // Use service region first, then lookup company default. Provide empty string if null.
-        taxRegion: parentItem.tax_region || await getCompanyDefaultTaxRegionCode(company.company_id) || '', // Get region from parent
+        // Use service region first, then lookup client default. Provide empty string if null.
+        taxRegion: parentItem.tax_region || await getClientDefaultTaxRegionCode(client.client_id) || '', // Get region from parent
         isTaxable: true,
         parentId: detail.parent_item_id,
       });
@@ -684,8 +684,8 @@ export async function calculateAndDistributeTax(
         id: item.item_id,
         type: 'item',
         amount: Number(item.net_amount),
-        // Use item region first, then lookup company default. Provide empty string if null.
-        taxRegion: item.tax_region || await getCompanyDefaultTaxRegionCode(company.company_id) || '',
+        // Use item region first, then lookup client default. Provide empty string if null.
+        taxRegion: item.tax_region || await getClientDefaultTaxRegionCode(client.client_id) || '',
         isTaxable: true,
       });
     }
@@ -700,7 +700,7 @@ export async function calculateAndDistributeTax(
 
   // Initialize groups for all items to ensure all regions are captured
   for (const item of invoiceItems) {
-      const region = item.tax_region || company.tax_region;
+      const region = item.tax_region || client.tax_region;
       if (!regionGroups[region]) {
           regionGroups[region] = { taxable: [], credits: [], discounts: [] };
       }
@@ -716,7 +716,7 @@ export async function calculateAndDistributeTax(
 
   // Group credit items (negative net_amount, NOT explicitly discount)
   for (const credit of creditItems) { // creditItems already filtered for net_amount < 0 and is_discount !== true
-    const region = credit.tax_region || company.tax_region;
+    const region = credit.tax_region || client.tax_region;
     if (!regionGroups[region]) regionGroups[region] = { taxable: [], credits: [], discounts: [] }; // Safety check
     regionGroups[region].credits.push(credit);
   }
@@ -724,7 +724,7 @@ export async function calculateAndDistributeTax(
   // Group explicit discount items (is_discount === true)
   const explicitDiscountItems = invoiceItems.filter(item => item.is_discount === true);
   for (const discount of explicitDiscountItems) {
-      const region = discount.tax_region || company.tax_region;
+      const region = discount.tax_region || client.tax_region;
       if (!regionGroups[region]) regionGroups[region] = { taxable: [], credits: [], discounts: [] }; // Safety check
       regionGroups[region].discounts.push(discount);
   }
@@ -747,7 +747,7 @@ export async function calculateAndDistributeTax(
     if (regionalTaxableBase > 0) {
       try {
         const regionalTaxResult = await taxService.calculateTax(
-          company.company_id,
+          client.client_id,
           regionalTaxableBase,
           Temporal.Now.plainDateISO().toString(), // Consider using invoice date if available
           region
@@ -916,7 +916,7 @@ export async function calculateAndDistributeTax(
 export async function updateInvoiceTotalsAndRecordTransaction(
   tx: Knex.Transaction,
   invoiceId: string,
-  company: any,
+  client: any,
   // subtotal and computedTotalTax are now calculated implicitly by summing items
   tenant: string,
   invoiceNumber: string,
@@ -950,7 +950,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   // Get current balance
   const currentBalance = await tx('transactions')
     .where({
-      company_id: company.company_id,
+      client_id: client.client_id,
       tenant
     })
     .orderBy('created_at', 'desc')
@@ -960,7 +960,7 @@ export async function updateInvoiceTotalsAndRecordTransaction(
   // Record transaction
   await tx('transactions').insert({
     transaction_id: uuidv4(),
-    company_id: company.company_id,
+    client_id: client.client_id,
     invoice_id: invoiceId,
     amount: Math.round(finalTotalAmount), // Use rounded final amount
     type: transactionType,

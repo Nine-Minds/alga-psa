@@ -5,7 +5,7 @@
     "projects": "Projects",
     "billing": "Billing",
     "assets": "Assets",
-    "companySettings": "Company Settings",
+    "clientSettings": "Client Settings",
     "profile": "Profile",
     "signOut": "Sign out",
     "clientPortal": "Client Portal",
@@ -95,7 +95,7 @@
       "updatedAt": "Last Updated",
       "assignedTo": "Assigned To",
       "requester": "Requester",
-      "company": "Company",
+      "client": "Client",
       "dueDate": "Due Date",
       "resolution": "Resolution",
       "timeSpent": "Time Spent",
@@ -133,7 +133,7 @@
       "userNotFound": "User ID not found in session",
       "tenantNotFound": "Tenant not found in session. Please log out and log back in.",
       "userNotAssociatedWithContact": "User not associated with a contact",
-      "contactNotAssociatedWithCompany": "Contact not associated with a company. Please contact support.",
+      "contactNotAssociatedWithClient": "Contact not associated with a client. Please contact support.",
       "ticketNotFound": "Ticket not found",
       "commentNotFound": "Comment not found or not authorized",
       "noDefaultBoard": "No default board configured for tickets",
@@ -343,7 +343,7 @@
     "title": "My Profile",
     "personalInfo": "Personal Information",
     "contactInfo": "Contact Information",
-    "companyInfo": "Company Information",
+    "clientInfo": "Client Information",
     "preferences": "Preferences",
     "security": "Security",
     "fields": {
@@ -354,7 +354,7 @@
       "mobile": "Mobile Phone",
       "title": "Job Title",
       "department": "Department",
-      "company": "Company",
+      "client": "Client",
       "address": "Address",
       "city": "City",
       "state": "State/Province",
@@ -417,7 +417,7 @@
       "uploadingAvatar": "Uploading Avatar...",
       "uploadingLogo": "Uploading Logo...",
       "deleteAvatar": "Delete Profile Picture",
-      "deleteLogo": "Delete Company Logo",
+      "deleteLogo": "Delete Client Logo",
       "deleteProfilePicture": "Delete Profile Picture",
       "delete": "Delete",
       "deleting": "Deleting...",
@@ -434,27 +434,27 @@
       "deleteConfirm": "Are you sure you want to delete this? This action cannot be undone."
     },
     "validation": {
-      "companyNameRequired": "Company name is required",
+      "clientNameRequired": "Client name is required",
       "emailRequired": "Email is required",
       "emailInvalid": "Please enter a valid email address",
       "phoneInvalid": "Please enter a valid phone number",
       "addressInvalid": "Address cannot be empty if provided"
     }
   },
-  "companySettings": {
-    "title": "Company Settings",
-    "details": "Company Details",
+  "clientSettings": {
+    "title": "Client Settings",
+    "details": "Client Details",
     "billing": "Billing Information",
-    "description": "Manage your company settings and configurations.",
+    "description": "Manage your client settings and configurations.",
     "tabs": {
       "account": "Account",
-      "companyDetails": "Company Details",
+      "clientDetails": "Client Details",
       "userManagement": "User Management"
     },
     "fields": {
-      "companyLogo": "Company Logo",
-      "companyName": "Company Name",
-      "companyLocations": "Company Locations",
+      "clientLogo": "Client Logo",
+      "clientName": "Client Name",
+      "clientLocations": "Client Locations",
       "manageLocations": "Manage Locations",
       "mainOffice": "Main Office",
       "warehouse": "Warehouse",
@@ -467,7 +467,7 @@
       "billingAddress": "Billing Address",
       "primaryContact": "Primary Contact",
       "uploadLogo": "Upload Logo",
-      "deleteLogo": "Delete Company Logo"
+      "deleteLogo": "Delete Client Logo"
     },
     "users": {
       "title": "User Management",
@@ -499,7 +499,7 @@
       "noRolesAssigned": "No roles assigned",
       "assignRole": "Assign Role",
       "resetPassword": "Reset User Password",
-      "companyNotFound": "Company not found",
+      "clientNotFound": "Client not found",
       "permissionError": "You do not have permission to manage users",
       "loadError": "Failed to load users",
       "emailExists": "A contact with this email address already exists",
@@ -509,14 +509,14 @@
     "messages": {
       "saveChanges": "Save Changes",
       "failedToLoad": "Failed to load account information",
-      "updateSuccess": "Company settings updated successfully",
+      "updateSuccess": "Client settings updated successfully",
       "userAdded": "User added successfully",
       "userRemoved": "User removed successfully",
       "inviteSent": "Invitation sent successfully",
-      "noPermission": "You do not have permission to access company settings",
-      "companyNotFound": "Company not found",
-      "detailsLoadError": "Failed to load company details",
-      "updateError": "Failed to update company details"
+      "noPermission": "You do not have permission to access client settings",
+      "clientNotFound": "Client not found",
+      "detailsLoadError": "Failed to load client details",
+      "updateError": "Failed to update client details"
     }
   },
   "account": {

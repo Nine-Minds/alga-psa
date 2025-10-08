@@ -3,13 +3,13 @@
 import React, { useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import type { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import type { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface PlanDetailsDialogProps {
-  plan: ICompanyBillingPlan | null;
+  plan: IClientBillingPlan | null;
   isOpen: boolean;
   onClose: () => void;
   formatCurrency?: (amount: number) => string;

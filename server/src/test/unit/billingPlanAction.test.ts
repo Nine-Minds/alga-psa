@@ -41,7 +41,7 @@ describe('Billing Plan Actions', () => {
     it('should throw an error if fetching plans fails', async () => {
       (BillingPlan.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(getBillingPlans()).rejects.toThrow('Failed to fetch company billing plans');
+      await expect(getBillingPlans()).rejects.toThrow('Failed to fetch client billing plans');
     });
   });
 

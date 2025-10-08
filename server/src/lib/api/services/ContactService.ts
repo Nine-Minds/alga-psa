@@ -43,10 +43,10 @@ export class ContactService extends BaseService<IContact> {
       order
     } = options;
 
-    // Build base query with company join
+    // Build base query with client join
     let dataQuery = knex('contacts as c')
-      .leftJoin('companies as comp', function() {
-        this.on('c.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
       })
       .where('c.tenant', context.tenant);
@@ -62,9 +62,9 @@ export class ContactService extends BaseService<IContact> {
     const sortField = sort || this.defaultSort;
     const sortOrder = order || this.defaultOrder;
     
-    // Handle sorting by company name
-    if (sortField === 'company_name') {
-      dataQuery = dataQuery.orderBy('comp.company_name', sortOrder);
+    // Handle sorting by client name
+    if (sortField === 'client_name') {
+      dataQuery = dataQuery.orderBy('comp.client_name', sortOrder);
     } else {
       dataQuery = dataQuery.orderBy(`c.${sortField}`, sortOrder);
     }
@@ -76,7 +76,7 @@ export class ContactService extends BaseService<IContact> {
     // Select fields
     dataQuery = dataQuery.select(
       'c.*',
-      'comp.company_name'
+      'comp.client_name'
     );
 
     // Execute queries
@@ -100,27 +100,27 @@ export class ContactService extends BaseService<IContact> {
   }
 
   /**
-   * Get contact by ID with company details
+   * Get contact by ID with client details
    */
   async getById(id: string, context: ServiceContext): Promise<IContact | null> {
     const { knex } = await this.getKnex();
 
     const contact = await knex('contacts as c')
-      .leftJoin('companies as comp', function() {
-        this.on('c.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
       })
-      .leftJoin('company_locations as cl', function() {
-        this.on('comp.company_id', '=', 'cl.company_id')
+      .leftJoin('client_locations as cl', function() {
+        this.on('comp.client_id', '=', 'cl.client_id')
             .andOn('comp.tenant', '=', 'cl.tenant')
             .andOn('cl.is_default', '=', knex.raw('true'));
       })
       .select(
         'c.*',
-        'comp.company_name',
-        'cl.email as company_email',
-        'cl.phone as company_phone',
-        'comp.is_inactive as company_inactive'
+        'comp.client_name',
+        'cl.email as client_email',
+        'cl.phone as client_phone',
+        'comp.is_inactive as client_inactive'
       )
       .where({ 'c.contact_name_id': id, 'c.tenant': context.tenant })
       .first();
@@ -145,14 +145,14 @@ export class ContactService extends BaseService<IContact> {
       const { knex } = await this.getKnex();
   
       return withTransaction(knex, async (trx) => {
-        // Validate company exists if provided
-        if (data.company_id) {
-          const company = await trx('companies')
-            .where({ company_id: data.company_id, tenant: context.tenant })
+        // Validate client exists if provided
+        if (data.client_id) {
+          const client = await trx('clients')
+            .where({ client_id: data.client_id, tenant: context.tenant })
             .first();
           
-          if (!company) {
-            throw new Error('Company not found');
+          if (!client) {
+            throw new Error('Client not found');
           }
         }
   
@@ -160,7 +160,7 @@ export class ContactService extends BaseService<IContact> {
         const contactData = {
           contact_name_id: knex.raw('gen_random_uuid()'),
           full_name: data.full_name,
-          company_id: data.company_id || null,
+          client_id: data.client_id || null,
           phone_number: data.phone_number || '',
           email: data.email,
           role: data.role || '',
@@ -198,14 +198,14 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      // Validate company exists if provided
-      if (data.company_id) {
-        const company = await trx('companies')
-          .where({ company_id: data.company_id, tenant: context.tenant })
+      // Validate client exists if provided
+      if (data.client_id) {
+        const client = await trx('clients')
+          .where({ client_id: data.client_id, tenant: context.tenant })
           .first();
         
-        if (!company) {
-          throw new Error('Company not found');
+        if (!client) {
+          throw new Error('Client not found');
         }
       }
 
@@ -242,14 +242,14 @@ export class ContactService extends BaseService<IContact> {
   }
 
   /**
-   * Get contacts by company ID
+   * Get contacts by client ID
    */
-  async getContactsByCompany(companyId: string, context: ServiceContext): Promise<IContact[]> {
+  async getContactsByClient(clientId: string, context: ServiceContext): Promise<IContact[]> {
     const { knex } = await this.getKnex();
 
     const contacts = await knex('contacts')
       .where({
-        company_id: companyId,
+        client_id: clientId,
         tenant: context.tenant
       })
       .orderBy('full_name', 'asc');
@@ -272,8 +272,8 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     let query = knex('contacts as c')
-      .leftJoin('companies as comp', function() {
-        this.on('c.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
       })
       .where('c.tenant', context.tenant);
@@ -283,8 +283,8 @@ export class ContactService extends BaseService<IContact> {
       query = query.where('c.is_inactive', false);
     }
 
-    if (searchData.company_id) {
-      query = query.where('c.company_id', searchData.company_id);
+    if (searchData.client_id) {
+      query = query.where('c.client_id', searchData.client_id);
     }
 
     // Apply search query
@@ -298,13 +298,13 @@ export class ContactService extends BaseService<IContact> {
         }
       });
       
-      // Also search in company name
-      subQuery.orWhereILike('comp.company_name', `%${searchData.query}%`);
+      // Also search in client name
+      subQuery.orWhereILike('comp.client_name', `%${searchData.query}%`);
     });
 
     // Apply limit and execute
     const contacts = await query
-      .select('c.*', 'comp.company_name')
+      .select('c.*', 'comp.client_name')
       .limit(searchData.limit || 25)
       .orderBy('c.full_name', 'asc');
 
@@ -337,8 +337,8 @@ export class ContactService extends BaseService<IContact> {
           knex.raw('COUNT(*) as total_contacts'),
           knex.raw('COUNT(CASE WHEN is_inactive = false THEN 1 END) as active_contacts'),
           knex.raw('COUNT(CASE WHEN is_inactive = true THEN 1 END) as inactive_contacts'),
-          knex.raw('COUNT(CASE WHEN company_id IS NOT NULL THEN 1 END) as contacts_with_company'),
-          knex.raw('COUNT(CASE WHEN company_id IS NULL THEN 1 END) as contacts_without_company')
+          knex.raw('COUNT(CASE WHEN client_id IS NOT NULL THEN 1 END) as contacts_with_client'),
+          knex.raw('COUNT(CASE WHEN client_id IS NULL THEN 1 END) as contacts_without_client')
         )
         .first(),
 
@@ -362,8 +362,8 @@ export class ContactService extends BaseService<IContact> {
       total_contacts: parseInt(totalStats.total_contacts as string),
       active_contacts: parseInt(totalStats.active_contacts as string),
       inactive_contacts: parseInt(totalStats.inactive_contacts as string),
-      contacts_with_company: parseInt(totalStats.contacts_with_company as string),
-      contacts_without_company: parseInt(totalStats.contacts_without_company as string),
+      contacts_with_client: parseInt(totalStats.contacts_with_client as string),
+      contacts_without_client: parseInt(totalStats.contacts_without_client as string),
       contacts_by_role: roleStats.reduce((acc: any, row: any) => {
         acc[row.role] = parseInt(row.count);
         return acc;
@@ -383,8 +383,8 @@ export class ContactService extends BaseService<IContact> {
     const { knex } = await this.getKnex();
 
     let query = knex('contacts as c')
-      .leftJoin('companies as comp', function() {
-        this.on('c.company_id', '=', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('c.client_id', '=', 'comp.client_id')
             .andOn('c.tenant', '=', 'comp.tenant');
       })
       .where('c.tenant', context.tenant);
@@ -405,7 +405,7 @@ export class ContactService extends BaseService<IContact> {
       'c.role',
       'c.is_inactive',
       'c.created_at',
-      'comp.company_name'
+      'comp.client_name'
     ).orderBy('c.full_name', 'asc');
 
     if (format === 'json') {
@@ -414,7 +414,7 @@ export class ContactService extends BaseService<IContact> {
       // Convert to CSV format
       const headers = [
         'ID', 'Full Name', 'Email', 'Phone', 'Role',
-        'Company', 'Inactive', 'Created At'
+        'Client', 'Inactive', 'Created At'
       ];
       
       const rows = contacts.map(contact => [
@@ -423,7 +423,7 @@ export class ContactService extends BaseService<IContact> {
         contact.email,
         contact.phone_number,
         contact.role || '',
-        contact.company_name || '',
+        contact.client_name || '',
         contact.is_inactive ? 'Yes' : 'No',
         contact.created_at
       ]);
@@ -451,8 +451,8 @@ export class ContactService extends BaseService<IContact> {
         case 'phone_number':
           query.whereILike('c.phone_number', `%${value}%`);
           break;
-        case 'company_id':
-          query.where('c.company_id', value);
+        case 'client_id':
+          query.where('c.client_id', value);
           break;
         case 'role':
           query.whereILike('c.role', `%${value}%`);
@@ -460,15 +460,15 @@ export class ContactService extends BaseService<IContact> {
         case 'is_inactive':
           query.where('c.is_inactive', value);
           break;
-        case 'has_company':
+        case 'has_client':
           if (value) {
-            query.whereNotNull('c.company_id');
+            query.whereNotNull('c.client_id');
           } else {
-            query.whereNull('c.company_id');
+            query.whereNull('c.client_id');
           }
           break;
-        case 'company_name':
-          query.whereILike('comp.company_name', `%${value}%`);
+        case 'client_name':
+          query.whereILike('comp.client_name', `%${value}%`);
           break;
         case 'search':
           if (this.searchableFields.length > 0) {
@@ -480,8 +480,8 @@ export class ContactService extends BaseService<IContact> {
                   subQuery.orWhereILike(`c.${field}`, `%${value}%`);
                 }
               });
-              // Also search in company name
-              subQuery.orWhereILike('comp.company_name', `%${value}%`);
+              // Also search in client name
+              subQuery.orWhereILike('comp.client_name', `%${value}%`);
             });
           }
           break;

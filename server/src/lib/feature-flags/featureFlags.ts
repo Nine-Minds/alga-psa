@@ -307,24 +307,27 @@ export class FeatureFlags {
       'enable_billing': true,
       'enable_reporting': true,
       'email-configuration': false, // Email configuration feature flag (disabled by default)
-      
+
+      // Migration features
+      'enable_client_client_dual_write': true, // Dual-write to both clients and clients tables during migration
+
       // New features (disabled by default)
       'new_ticket_ui': false,
       'ai_ticket_suggestions': false,
       'advanced_workflow_engine': false,
       'beta_mobile_app': false,
       'new_dashboard_layout': false,
-      
+
       // Experimental features
       'enable_voice_commands': false,
       'enable_ai_time_tracking': false,
       'enable_predictive_analytics': false,
-      
+
       // Performance features
       'enable_query_caching': true,
       'enable_lazy_loading': true,
       'enable_websocket_updates': false,
-      
+
       // Integration features
       'enable_slack_integration': true,
       'enable_teams_integration': true,

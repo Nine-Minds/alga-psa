@@ -12,11 +12,11 @@ import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { BoardPicker } from 'server/src/components/settings/general/BoardPicker';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { findTagsByEntityIds } from 'server/src/lib/actions/tagActions';
 import { TagFilter, TagManager } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
-import { IBoard, ICompany, IUser } from 'server/src/interfaces';
+import { IBoard, IClient, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket } from 'server/src/lib/actions/ticket-actions/ticketActions';
@@ -29,7 +29,7 @@ import { TicketingDisplaySettings } from 'server/src/lib/actions/ticket-actions/
 import { saveTimeEntry } from 'server/src/lib/actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
 import Drawer from 'server/src/components/ui/Drawer';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import { createTicketColumns } from 'server/src/lib/utils/ticket-columns';
 
 interface TicketingDashboardProps {
@@ -39,7 +39,7 @@ interface TicketingDashboardProps {
   initialStatuses: SelectOption[];
   initialPriorities: SelectOption[];
   initialCategories: ITicketCategory[];
-  initialCompanies: ICompany[];
+  initialClients: IClient[];
   initialTags?: string[];
   nextCursor: string | null;
   onLoadMore: () => Promise<void>;
@@ -70,7 +70,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   initialStatuses,
   initialPriorities,
   initialCategories,
-  initialCompanies,
+  initialClients,
   initialTags = [],
   nextCursor,
   onLoadMore,
@@ -91,13 +91,13 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [currentUser, setCurrentUser] = useState<any>(user || null);
 
   const [boards] = useState<IBoard[]>(initialBoards);
-  const [companies] = useState<ICompany[]>(initialCompanies);
+  const [clients] = useState<IClient[]>(initialClients);
   const [categories] = useState<ITicketCategory[]>(initialCategories);
   const [statusOptions] = useState<SelectOption[]>(initialStatuses);
   const [priorityOptions] = useState<SelectOption[]>(initialPriorities);
   
   const [selectedBoard, setSelectedBoard] = useState<string | null>(initialFilterValues.boardId || null);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(initialFilterValues.companyId === undefined ? null : initialFilterValues.companyId); // Keep previous fix for company
+  const [selectedClient, setSelectedClient] = useState<string | null>(initialFilterValues.clientId === undefined ? null : initialFilterValues.clientId); // Keep previous fix for client
   const [selectedStatus, setSelectedStatus] = useState<string>(initialFilterValues.statusId || 'open');
   const [selectedPriority, setSelectedPriority] = useState<string>(initialFilterValues.priorityId || 'all');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialFilterValues.categoryId ? [initialFilterValues.categoryId] : []);
@@ -105,14 +105,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [searchQuery, setSearchQuery] = useState<string>(initialFilterValues.searchQuery || '');
   const [boardFilterState, setBoardFilterState] = useState<'active' | 'inactive' | 'all'>(initialFilterValues.boardFilterState || 'active');
   
-  const [companyFilterState, setCompanyFilterState] = useState<'active' | 'inactive' | 'all'>('active');
+  const [clientFilterState, setClientFilterState] = useState<'active' | 'inactive' | 'all'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
 
   const [isQuickAddOpen, setIsQuickAddOpen] = useState(false);
   const [isLoadingSelf, setIsLoadingSelf] = useState(false);
   
   // Quick View state
-  const [quickViewCompanyId, setQuickViewCompanyId] = useState<string | null>(null);
+  const [quickViewClientId, setQuickViewClientId] = useState<string | null>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   
   // Tag-related state
@@ -174,7 +174,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     
     // Only add non-default/non-empty values to URL
     if (selectedBoard) params.set('boardId', selectedBoard);
-    if (selectedCompany) params.set('companyId', selectedCompany);
+    if (selectedClient) params.set('clientId', selectedClient);
     if (selectedStatus && selectedStatus !== 'open') params.set('statusId', selectedStatus);
     if (selectedPriority && selectedPriority !== 'all') params.set('priorityId', selectedPriority);
     if (selectedCategories.length > 0) params.set('categoryId', selectedCategories[0]);
@@ -184,7 +184,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     }
 
     return params.toString();
-  }, [selectedBoard, selectedCompany, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
+  }, [selectedBoard, selectedClient, selectedStatus, selectedPriority, selectedCategories, debouncedSearchQuery, boardFilterState]);
 
   const hasSyncedInitialFilters = useRef(false);
 
@@ -194,7 +194,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       statusId: selectedStatus,
       priorityId: selectedPriority,
       categoryId: selectedCategories.length > 0 ? selectedCategories[0] : undefined,
-      companyId: selectedCompany || undefined,
+      clientId: selectedClient || undefined,
       searchQuery: debouncedSearchQuery,
       boardFilterState: boardFilterState,
       showOpenOnly: selectedStatus === 'open',
@@ -210,7 +210,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     selectedStatus, 
     selectedPriority, 
     selectedCategories, 
-    selectedCompany, 
+    selectedClient, 
     debouncedSearchQuery, 
     boardFilterState,
     selectedTags
@@ -223,14 +223,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setDeleteError(null);
   };
   
-  const [quickViewCompany, setQuickViewCompany] = useState<ICompany | null>(null);
+  const [quickViewClient, setQuickViewClient] = useState<IClient | null>(null);
   
-  const onQuickViewCompany = async (companyId: string) => {
-    // First try to find the company in our existing data
-    const company = initialCompanies.find(c => c.company_id === companyId);
-    if (company) {
-      setQuickViewCompany(company);
-      setQuickViewCompanyId(companyId);
+  const onQuickViewClient = async (clientId: string) => {
+    // First try to find the client in our existing data
+    const client = initialClients.find(c => c.client_id === clientId);
+    if (client) {
+      setQuickViewClient(client);
+      setQuickViewClientId(clientId);
       setIsQuickViewOpen(true);
     }
   };
@@ -303,8 +303,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: true,
-      onClientClick: onQuickViewCompany,
-    }), [categories, boards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewCompany]);
+      onClientClick: onQuickViewClient,
+    }), [categories, boards, displaySettings, handleTicketClick, handleDeleteTicket, handleTagsChange, ticketTagsRef, onQuickViewClient]);
 
   // Handle saving time entries created from intervals
   const handleCreateTimeEntry = async (timeEntry: any): Promise<void> => {
@@ -353,9 +353,9 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
       }
       
-      // Find the company name
-      const company = initialCompanies.find(c => c.company_id === newTicket.company_id);
-      const companyName = company ? company.company_name : 'Unknown';
+      // Find the client name
+      const client = initialClients.find(c => c.client_id === newTicket.client_id);
+      const clientName = client ? client.client_name : 'Unknown';
       
       // Convert the new ticket to match the ITicketListItem format
       const newTicketListItem: ITicketListItem = {
@@ -372,8 +372,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         category_id: newTicket.category_id,
         subcategory_id: newTicket.subcategory_id,
         category_name: categoryName,
-        company_id: newTicket.company_id,
-        company_name: companyName,
+        client_id: newTicket.client_id,
+        client_name: clientName,
         contact_name_id: newTicket.contact_name_id,
         entered_by: newTicket.entered_by,
         entered_by_name: currentUser ? `${currentUser.first_name} ${currentUser.last_name}` : '',
@@ -404,12 +404,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setExcludedCategories(newExcludedCategories);
   }, []);
   
-  const handleCompanySelect = useCallback((companyId: string | null) => {
-    setSelectedCompany(companyId);
+  const handleClientSelect = useCallback((clientId: string | null) => {
+    setSelectedClient(clientId);
   }, []);
 
-  const handleCompanyFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
-    setCompanyFilterState(state);
+  const handleClientFilterStateChange = useCallback((state: 'active' | 'inactive' | 'all') => {
+    setClientFilterState(state);
   }, []);
 
   const handleClientTypeFilterChange = useCallback((type: 'all' | 'company' | 'individual') => {
@@ -419,7 +419,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const handleResetFilters = useCallback(() => {
     // Define the true default/reset states
     const defaultBoard: string | null = null;
-    const defaultCompany: string | null = null;
+    const defaultClient: string | null = null;
     const defaultStatus: string = 'open';
     const defaultPriority: string = 'all';
     const defaultCategories: string[] = [];
@@ -427,7 +427,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     const defaultBoardFilterState: 'active' | 'inactive' | 'all' = 'active';
 
     setSelectedBoard(defaultBoard);
-    setSelectedCompany(defaultCompany);
+    setSelectedClient(defaultClient);
     setSelectedStatus(defaultStatus);
     setSelectedPriority(defaultPriority);
     setSelectedCategories(defaultCategories);
@@ -436,12 +436,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setBoardFilterState(defaultBoardFilterState);
     setSelectedTags([]);
     
-    setCompanyFilterState('active'); 
+    setClientFilterState('active'); 
     setClientTypeFilter('all');
 
     onFiltersChanged({
       boardId: defaultBoard === null ? undefined : defaultBoard,
-      companyId: defaultCompany === null ? undefined : defaultCompany,
+      clientId: defaultClient === null ? undefined : defaultClient,
       statusId: defaultStatus,
       priorityId: defaultPriority,
       categoryId: defaultCategories.length > 0 ? defaultCategories[0] : undefined,
@@ -484,14 +484,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               filterState={boardFilterState}
               onFilterStateChange={setBoardFilterState}
             />
-            <CompanyPicker
-              id='company-picker'
-              data-automation-id={`${id}-company-picker`}
-              companies={companies}
-              onSelect={handleCompanySelect}
-              selectedCompanyId={selectedCompany}
-              filterState={companyFilterState}
-              onFilterStateChange={handleCompanyFilterStateChange}
+            <ClientPicker
+              id='client-picker'
+              data-automation-id={`${id}-client-picker`}
+              clients={clients}
+              onSelect={handleClientSelect}
+              selectedClientId={selectedClient}
+              filterState={clientFilterState}
+              onFilterStateChange={handleClientFilterStateChange}
               clientTypeFilter={clientTypeFilter}
               onClientTypeFilterChange={handleClientTypeFilterChange}
               fitContent={true}
@@ -621,18 +621,18 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         />
       )}
       
-      {/* Company Quick View Drawer */}
+      {/* Client Quick View Drawer */}
       <Drawer
         isOpen={isQuickViewOpen}
         onClose={() => {
           setIsQuickViewOpen(false);
-          setQuickViewCompanyId(null);
-          setQuickViewCompany(null);
+          setQuickViewClientId(null);
+          setQuickViewClient(null);
         }}
       >
-        {quickViewCompany && (
-          <CompanyDetails
-            company={quickViewCompany}
+        {quickViewClient && (
+          <ClientDetails
+            client={quickViewClient}
             isInDrawer={true}
             quickView={true}
           />

@@ -9,12 +9,12 @@ import { Pen, Plus, ArrowLeft, ExternalLink } from 'lucide-react';
 import { useDrawer } from 'server/src/context/DrawerContext';
 import ContactDetailsEdit from 'server/src/components/contacts/ContactDetailsEdit';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
-import CompanyDetails from 'server/src/components/companies/CompanyDetails';
+import { IClient } from 'server/src/interfaces/client.interfaces';
+import ClientDetails from 'server/src/components/clients/ClientDetails';
 import InteractionsFeed from 'server/src/components/interactions/InteractionsFeed';
 import { IInteraction } from 'server/src/interfaces/interaction.interfaces';
 import { TagManager } from 'server/src/components/tags';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { updateContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import Documents from 'server/src/components/documents/Documents';
 import { IDocument } from 'server/src/interfaces/document.interface';
@@ -24,12 +24,12 @@ import { ButtonComponent, ContainerComponent } from 'server/src/types/ui-reflect
 import ContactAvatar from 'server/src/components/ui/ContactAvatar';
 import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions';
 import { getDocumentsByEntity } from 'server/src/lib/actions/document-actions/documentActions';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
-  companies: ICompany[];
+  clients: IClient[];
   isInDrawer?: boolean;
   userId?: string;
   documents?: IDocument[];
@@ -64,7 +64,7 @@ const TableRow: React.FC<TableRowProps> = ({ label, value, onClick }) => (
 const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({ 
   id = 'contact-details',
   initialContact, 
-  companies,
+  clients,
   isInDrawer = false,
   userId,
   documents: initialDocuments = [],
@@ -76,8 +76,8 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   const [documents, setDocuments] = useState<IDocument[]>(initialDocuments);
   const [error, setError] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [isEditingCompany, setIsEditingCompany] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(contact.company_id || null);
+  const [isEditingClient, setIsEditingClient] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(contact.client_id || null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const { openDrawer, goBack } = useDrawer();
@@ -144,7 +144,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
       <ContactDetailsEdit
         id={`${id}-edit`}
         initialContact={contact}
-        companies={companies}
+        clients={clients}
         isInDrawer={true}
         onSave={(updatedContact) => {
           setContact(updatedContact);
@@ -152,7 +152,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <ContactDetailsView 
               id={id}
               initialContact={updatedContact} 
-              companies={companies}
+              clients={clients}
               isInDrawer={true}
               userId={userId}
               documents={documents}
@@ -164,7 +164,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
           <ContactDetailsView 
             id={id}
             initialContact={contact} 
-            companies={companies}
+            clients={clients}
             isInDrawer={true}
             userId={userId}
             documents={documents}
@@ -176,38 +176,38 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
   };
 
 
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.company_id === companyId);
-    return company ? company.company_name : 'Unknown Company';
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c.client_id === clientId);
+    return client ? client.client_name : 'Unknown Client';
   };
 
-  const handleCompanyClick = async () => {
-    if (contact.company_id) {
+  const handleClientClick = async () => {
+    if (contact.client_id) {
       try {
         setError(null);
-        const company = await getCompanyById(contact.company_id);
-        if (company) {
+        const client = await getClientById(contact.client_id);
+        if (client) {
           openDrawer(
-            <CompanyDetails 
-              id={`${id}-company-details`}
-              company={company} 
-              documents={[]} 
-              contacts={[]} 
+            <ClientDetails
+              id={`${id}-client-details`}
+              client={client}
+              documents={[]}
+              contacts={[]}
               isInDrawer={true}
             />
           );
         } else {
-          setError('Company not found. The company may have been deleted.');
+          setError('Client not found. The client may have been deleted.');
         }
       } catch (err) {
-        console.error('Error fetching company details:', err);
+        console.error('Error fetching client details:', err);
         if (err instanceof Error) {
           if (err.message.includes('SYSTEM_ERROR:')) {
-            setError('An unexpected error occurred while loading company details. Please try again or contact support.');
+            setError('An unexpected error occurred while loading client details. Please try again or contact support.');
           } else if (err.message.includes('FOREIGN_KEY_ERROR:')) {
-            setError('The company no longer exists in the system.');
+            setError('The client no longer exists in the system.');
           } else {
-            setError('Failed to load company details. Please try again.');
+            setError('Failed to load client details. Please try again.');
           }
         } else {
           setError('An unexpected error occurred. Please try again.');
@@ -225,27 +225,27 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
     });
   };
 
-  const handleCompanyChange = async (companyId: string | null) => {
+  const handleClientChange = async (clientId: string | null) => {
     try {
       setError(null);
-      setSelectedCompanyId(companyId);
+      setSelectedClientId(clientId);
       
       const updatedContact = await updateContact({
         ...contact,
-        company_id: companyId || ''
+        client_id: clientId || ''
       });
       
       setContact(updatedContact);
-      setIsEditingCompany(false);
+      setIsEditingClient(false);
     } catch (err) {
-      console.error('Error updating company:', err);
+      console.error('Error updating client:', err);
       if (err instanceof Error) {
-        setError(`Failed to update company: ${err.message}`);
+        setError(`Failed to update client: ${err.message}`);
       } else {
-        setError('Failed to update company. Please try again.');
+        setError('Failed to update client. Please try again.');
       }
       // Revert the selection on error
-      setSelectedCompanyId(contact.company_id || null);
+      setSelectedClientId(contact.client_id || null);
     }
   };
   
@@ -319,15 +319,15 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
             <TableRow label="Email" value={contact.email} />
             <TableRow label="Phone" value={contact.phone_number} />
             <tr>
-              <td className="py-2 font-semibold">Company:</td>
+              <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">
-                {isEditingCompany ? (
+                {isEditingClient ? (
                   <div className="flex-1">
-                    <CompanyPicker
-                      id="contact-company-picker"
-                      companies={companies}
-                      onSelect={handleCompanyChange}
-                      selectedCompanyId={selectedCompanyId}
+                    <ClientPicker
+                      id="contact-client-picker"
+                      clients={clients}
+                      onSelect={handleClientChange}
+                      selectedClientId={selectedClientId}
                       filterState={filterState}
                       onFilterStateChange={setFilterState}
                       clientTypeFilter={clientTypeFilter}
@@ -337,21 +337,21 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    {contact.company_id ? (
+                    {contact.client_id ? (
                       <button
-                        onClick={handleCompanyClick}
+                        onClick={handleClientClick}
                         className="text-blue-600 hover:underline focus:outline-none"
                       >
-                        {getCompanyName(contact.company_id)}
+                        {getClientName(contact.client_id)}
                       </button>
                     ) : (
-                      <span className="text-gray-500 italic">No company assigned</span>
+                      <span className="text-gray-500 italic">No client assigned</span>
                     )}
                     <Button
-                      id="edit-company-btn"
+                      id="edit-client-btn"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setIsEditingCompany(true)}
+                      onClick={() => setIsEditingClient(true)}
                       className="p-1 ml-2"
                     >
                       <Pen className="h-3 w-3 text-gray-600" />
@@ -406,7 +406,7 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
               id={`${id}-interactions`}
               entityId={contact.contact_name_id} 
               entityType="contact"
-              companyId={contact.company_id!}
+              clientId={contact.client_id!}
               interactions={interactions}
               setInteractions={setInteractions}
             />

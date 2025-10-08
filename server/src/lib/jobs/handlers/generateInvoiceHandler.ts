@@ -2,7 +2,7 @@ import { generateInvoice } from '../../actions/invoiceGeneration';
 
 export interface GenerateInvoiceData extends Record<string, unknown> {
   tenantId: string;
-  companyId: string;
+  clientId: string;
   billingCycleId: string;
 }
 

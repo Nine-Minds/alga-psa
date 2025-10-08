@@ -12,7 +12,7 @@ import {
     createMockUser
 } from '../../../test-utils/testMocks';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
-import { createTestEnvironment, createCompany } from '../../../test-utils/testDataFactory';
+import { createTestEnvironment, createClient } from '../../../test-utils/testDataFactory';
 import { resetDatabase, cleanupTables, createCleanupHook } from '../../../test-utils/dbReset';
 import {
     createProject,
@@ -217,7 +217,7 @@ async function getNextPhaseWbsCode(db: Knex, projectWbsCode: string): Promise<st
 describe('Project Management', () => {
     let db: Knex;
     let tenantId: string;
-    let companyId: string;
+    let clientId: string;
     let initialStatusId: string;
 
     beforeAll(async () => {
@@ -239,8 +239,8 @@ describe('Project Management', () => {
         });
         tenantId = mockTenantId;
 
-        // Create test company
-        companyId = await createCompany(db, tenantId, 'Test Company');
+        // Create test client
+        clientId = await createClient(db, tenantId, 'Test Client');
 
         // Get initial status ID
         const status = await db('statuses')
@@ -253,7 +253,7 @@ describe('Project Management', () => {
         it('should create a new project with initial status', async () => {
             const wbsCode = await getNextWbsCode(db, tenantId);
             const projectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Test Project',
                 description: 'Test Project Description',
                 start_date: new Date(),
@@ -267,7 +267,7 @@ describe('Project Management', () => {
             const result = await createProject(projectData);
 
             expect(result).toMatchObject({
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Test Project',
                 description: 'Test Project Description',
                 is_inactive: false,
@@ -282,7 +282,7 @@ describe('Project Management', () => {
         it('should update project details', async () => {
             const wbsCode = await getNextWbsCode(db, tenantId);
             const projectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Initial Project',
                 description: 'Initial Description',
                 start_date: new Date(),
@@ -319,7 +319,7 @@ describe('Project Management', () => {
         beforeEach(async () => {
             projectWbsCode = await getNextWbsCode(db, tenantId);
             const projectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Test Project',
                 description: 'Test Description',
                 start_date: new Date(),
@@ -403,7 +403,7 @@ describe('Project Management', () => {
             // Create project
             projectWbsCode = await getNextWbsCode(db, tenantId);
             const projectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Test Project',
                 description: 'Test Description',
                 start_date: new Date(),
@@ -550,7 +550,7 @@ describe('Project Management', () => {
             // Create another project
             const newProjectWbsCode = await getNextWbsCode(db, tenantId);
             const newProjectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'New Project',
                 description: 'New Project Description',
                 start_date: new Date(),
@@ -626,7 +626,7 @@ describe('Project Management', () => {
             // Create project
             projectWbsCode = await getNextWbsCode(db, tenantId);
             const projectData: CreateProjectInput = {
-                company_id: companyId,
+                client_id: clientId,
                 project_name: 'Test Project',
                 description: 'Test Description',
                 start_date: new Date(),

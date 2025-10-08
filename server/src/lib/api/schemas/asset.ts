@@ -18,7 +18,7 @@ export const assetTypeSchema = z.enum(['workstation', 'network_device', 'server'
 
 // Base asset schema
 export const createAssetSchema = z.object({
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   asset_type: assetTypeSchema,
   asset_tag: z.string().min(1, 'Asset tag is required').max(255),
   name: z.string().min(1, 'Asset name is required').max(255),
@@ -111,11 +111,11 @@ export const createAssetWithExtensionSchema = createAssetSchema.extend({
 export const assetFilterSchema = baseFilterSchema.extend({
   asset_tag: z.string().optional(),
   name: z.string().optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   asset_type: assetTypeSchema.optional(),
   status: z.string().optional(),
   location: z.string().optional(),
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   has_warranty: booleanTransform.optional(),
   warranty_expired: booleanTransform.optional(),
   maintenance_due: booleanTransform.optional(),
@@ -131,7 +131,7 @@ export const assetListQuerySchema = createListQuerySchema(assetFilterSchema);
 // Asset response schema
 export const assetResponseSchema = z.object({
   asset_id: uuidSchema,
-  company_id: uuidSchema,
+  client_id: uuidSchema,
   asset_type: assetTypeSchema,
   asset_tag: z.string(),
   name: z.string(),
@@ -145,16 +145,16 @@ export const assetResponseSchema = z.object({
   tenant: uuidSchema,
   
   // Computed/joined fields
-  company_name: z.string().optional(),
+  client_name: z.string().optional(),
   warranty_status: z.string().optional(),
   maintenance_status: z.string().optional()
 });
 
 // Asset with details response schema (includes extension data)
 export const assetWithDetailsResponseSchema = assetResponseSchema.extend({
-  company: z.object({
-    company_id: uuidSchema,
-    company_name: z.string(),
+  client: z.object({
+    client_id: uuidSchema,
+    client_name: z.string(),
     email: z.string().nullable(),
     phone_no: z.string().nullable()
   }).optional(),
@@ -337,7 +337,7 @@ export const assetStatsResponseSchema = z.object({
   total_assets: z.number(),
   assets_by_type: z.record(z.number()),
   assets_by_status: z.record(z.number()),
-  assets_by_company: z.record(z.number()),
+  assets_by_client: z.record(z.number()),
   warranty_expiring_soon: z.number(),
   warranty_expired: z.number(),
   maintenance_due: z.number(),
@@ -350,10 +350,10 @@ export const assetStatsResponseSchema = z.object({
 // Asset search schema
 export const assetSearchSchema = z.object({
   query: z.string().min(1, 'Search query is required'),
-  fields: z.array(z.enum(['asset_tag', 'name', 'serial_number', 'location', 'company_name'])).optional(),
+  fields: z.array(z.enum(['asset_tag', 'name', 'serial_number', 'location', 'client_name'])).optional(),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
-  company_ids: z.array(uuidSchema).optional(),
+  client_ids: z.array(uuidSchema).optional(),
   include_extension_data: booleanTransform.optional().default('false'),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
@@ -366,7 +366,7 @@ export const assetExportQuerySchema = z.object({
   include_documents: booleanTransform.optional().default('false'),
   asset_types: z.array(assetTypeSchema).optional(),
   statuses: z.array(z.string()).optional(),
-  company_ids: z.array(uuidSchema).optional(),
+  client_ids: z.array(uuidSchema).optional(),
   fields: z.array(z.string()).optional()
 });
 

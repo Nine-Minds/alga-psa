@@ -127,7 +127,7 @@ describe('Ticket API E2E Tests', () => {
     describe('Create Ticket (POST /api/v1/tickets)', () => {
       it('should create a new ticket', async () => {
         const newTicket = createTicketTestData({
-          company_id: env.companyId,
+          client_id: env.clientId,
           board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium
@@ -138,7 +138,7 @@ describe('Ticket API E2E Tests', () => {
         
         expect(response.data.data).toMatchObject({
           title: newTicket.title,
-          company_id: env.companyId,
+          client_id: env.clientId,
           status_id: statusIds.open,
           priority_id: priorityIds.medium,
           tenant: env.tenant
@@ -163,7 +163,7 @@ describe('Ticket API E2E Tests', () => {
         await env.db('contacts').insert({
           contact_name_id: contactId,
           tenant: env.tenant,
-          company_id: env.companyId,
+          client_id: env.clientId,
           full_name: 'Test Contact',
           email: 'test.contact@example.com',
           created_at: new Date().toISOString()
@@ -171,7 +171,7 @@ describe('Ticket API E2E Tests', () => {
 
         const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
         const fullTicket = createTicketTestData({
-          company_id: env.companyId,
+          client_id: env.clientId,
           board_id: boardId,
           contact_name_id: contactId,
           status_id: statusIds.open,
@@ -202,7 +202,7 @@ describe('Ticket API E2E Tests', () => {
         const ticket = await createTestTicket(env.db, env.tenant, {
           title: 'Test Ticket for Retrieval',
           description: 'This ticket will be retrieved',
-          company_id: env.companyId,
+          client_id: env.clientId,
           board_id: boardId,
           status_id: statusIds.open,
           priority_id: priorityIds.low
@@ -214,7 +214,7 @@ describe('Ticket API E2E Tests', () => {
         expect(response.data.data).toMatchObject({
           ticket_id: ticket.ticket_id,
           title: ticket.title,
-          company_id: ticket.company_id
+          client_id: ticket.client_id
         });
         
         // Check description in attributes
@@ -334,7 +334,7 @@ describe('Ticket API E2E Tests', () => {
     });
 
     it('should support pagination parameters', async () => {
-      await createTicketsForPagination(env.db, env.tenant, env.companyId, boardId, 15);
+      await createTicketsForPagination(env.db, env.tenant, env.clientId, boardId, 15);
 
       const query = buildQueryString({ page: 2, limit: 5 });
       const response = await env.apiClient.get(`${API_BASE}${query}`);
@@ -346,13 +346,13 @@ describe('Ticket API E2E Tests', () => {
       expect(pagination.hasPrev).toBe(true);
     });
 
-    it('should filter by company_id', async () => {
-      const query = buildQueryString({ company_id: env.companyId });
+    it('should filter by client_id', async () => {
+      const query = buildQueryString({ client_id: env.clientId });
       const response = await env.apiClient.get(`${API_BASE}${query}`);
       assertSuccess(response);
 
       response.data.data.forEach((ticket: any) => {
-        expect(ticket.company_id).toBe(env.companyId);
+        expect(ticket.client_id).toBe(env.clientId);
       });
     });
 
@@ -423,7 +423,7 @@ describe('Ticket API E2E Tests', () => {
       
       const ticket1 = await createTestTicket(env.db, env.tenant, {
         title: 'Important ticket for search test',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
@@ -433,7 +433,7 @@ describe('Ticket API E2E Tests', () => {
       
       const ticket2 = await createTestTicket(env.db, env.tenant, {
         title: 'Another ticket to find',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
@@ -443,7 +443,7 @@ describe('Ticket API E2E Tests', () => {
       
       const ticket3 = await createTestTicket(env.db, env.tenant, {
         title: 'Special ticket case',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
@@ -480,7 +480,7 @@ describe('Ticket API E2E Tests', () => {
       // Create a ticket with unique content in the title
       const uniqueTicket = await createTestTicket(env.db, env.tenant, {
         title: 'UniqueTitle123',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         entered_by: env.userId,
         status_id: statusIds.open,
@@ -514,7 +514,7 @@ describe('Ticket API E2E Tests', () => {
     beforeEach(async () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
         title: 'Ticket for Comments',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
@@ -620,7 +620,7 @@ describe('Ticket API E2E Tests', () => {
     beforeEach(async () => {
       testTicket = await createTestTicket(env.db, env.tenant, {
         title: 'Ticket for Assignment',
-        company_id: env.companyId,
+        client_id: env.clientId,
         board_id: boardId,
         status_id: statusIds.open,
         priority_id: priorityIds.medium
@@ -695,8 +695,8 @@ describe('Ticket API E2E Tests', () => {
       expect(response.data.data).toBeDefined();
     });
 
-    it('should filter statistics by company', async () => {
-      const query = buildQueryString({ company_id: env.companyId });
+    it('should filter statistics by client', async () => {
+      const query = buildQueryString({ client_id: env.clientId });
       const response = await env.apiClient.get(`${API_BASE}/stats${query}`);
       assertSuccess(response);
 
@@ -713,7 +713,7 @@ describe('Ticket API E2E Tests', () => {
         title: 'Issue with server',
         description: 'Server is not responding',
         priority_id: priorityIds.high,
-        company_id: env.companyId
+        client_id: env.clientId
       };
 
       const response = await env.apiClient.post(`${API_BASE}/from-asset`, ticketData);

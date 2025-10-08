@@ -41,21 +41,21 @@ class GetNavigationHelpTool implements Tool {
             route: "/msp/contacts",
             navigation: "Click 'Contacts' in sidebar (menu-contacts)"
           },
-          "companies": {
-            route: "/msp/companies",
+          "clients": {
+            route: "/msp/clients",
             navigation: "Click 'Clients' in sidebar (menu-clients)",
             views: ["grid", "table"],
             features: ["search", "filters", "bulk-operations", "csv-import-export"],
             details: {
-              route: "/msp/companies/[id]",
+              route: "/msp/clients/[id]",
               tabs: ["details", "tickets", "billing", "billing-dashboard", "contacts", "documents", "tax-settings", "additional-info", "notes", "interactions"],
-              keyActions: ["create-client", "edit-company", "delete-company", "manage-locations", "add-ticket"]
+              keyActions: ["create-client", "edit-client", "delete-client", "manage-locations", "add-ticket"]
             }
           },
           "clients": {
-            route: "/msp/companies", 
+            route: "/msp/clients", 
             navigation: "Click 'Clients' in sidebar (menu-clients)",
-            note: "Same as companies - 'Clients' is the menu label for companies"
+            note: "Same as clients - 'Clients' is the menu label for clients"
           }
         },
 
@@ -70,13 +70,13 @@ class GetNavigationHelpTool implements Tool {
           "login": "Use helper.type() for username/password fields, helper.click() for submit",
           "navigate-screen": "Use sidebar menu items first, then any tab navigation",
           "create-record": "Look for 'Add' or 'Create' buttons, usually opens drawer/dialog",
-          "create-company": "Click 'Create Client' button (create-client-btn) to open QuickAddCompany form",
+          "create-client": "Click 'Create Client' button (create-client-btn) to open QuickAddClient form",
           "view-all": "Use 'View All' buttons to switch to table view with filters",
           "filter-data": "Use filter buttons to open filter dialogs",
           "switch-view": "Use ViewSwitcher component to toggle between Cards/Grid and Table views",
           "bulk-operations": "Use checkboxes to select multiple items, then use bulk action buttons",
-          "manage-company": "Use company cards or table rows to access edit/delete, or click to view details",
-          "company-details": "Access via company cards/rows, then use tabs for different aspects (billing, tickets, etc.)"
+          "manage-client": "Use client cards or table rows to access edit/delete, or click to view details",
+          "client-details": "Access via client cards/rows, then use tabs for different aspects (billing, tickets, etc.)"
         }
       };
 

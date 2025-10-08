@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog } from 'server/src/components/ui/Dialog';
 import { WizardProgress } from './WizardProgress';
 import { WizardNavigation } from './WizardNavigation';
-import { CompanyInfoStep } from './steps/CompanyInfoStep';
+import { ClientInfoStep } from './steps/ClientInfoStep';
 import { TeamMembersStep } from './steps/TeamMembersStep';
 import { AddClientStep } from './steps/AddClientStep';
 import { ClientContactStep } from './steps/ClientContactStep';
@@ -12,7 +12,7 @@ import { BillingSetupStep } from './steps/BillingSetupStep';
 import { TicketingConfigStep } from './steps/TicketingConfigStep';
 import { WizardData, STEPS, REQUIRED_STEPS } from './types';
 import {
-  saveCompanyInfo,
+  saveClientInfo,
   addTeamMembers,
   createClient,
   addClientContact,
@@ -47,7 +47,7 @@ export function OnboardingWizard({
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const [wizardData, setWizardData] = useState<WizardData>({
-    // Company Info
+    // MSP Company Info
     firstName: '',
     lastName: '',
     companyName: '',
@@ -103,16 +103,16 @@ export function OnboardingWizard({
     
     try {
       switch (stepIndex) {
-        case 0: // Company Info
-          const companyResult = await saveCompanyInfo({
+        case 0: // Client Info
+          const clientResult = await saveClientInfo({
             firstName: wizardData.firstName,
             lastName: wizardData.lastName,
-            companyName: wizardData.companyName,
+            clientName: wizardData.clientName,
             email: wizardData.email,
             newPassword: wizardData.newPassword
           });
-          if (!companyResult.success) {
-            setErrors(prev => ({ ...prev, [stepIndex]: companyResult.error || 'Failed to save company info' }));
+          if (!clientResult.success) {
+            setErrors(prev => ({ ...prev, [stepIndex]: clientResult.error || 'Failed to save client info' }));
             return false;
           }
           break;
@@ -318,10 +318,10 @@ export function OnboardingWizard({
   };
 
   const isFirstStepValid = () => {
-    const { firstName, lastName, companyName, email, newPassword, confirmPassword } = wizardData;
+    const { firstName, lastName, clientName, email, newPassword, confirmPassword } = wizardData;
     
     // Basic field validation
-    if (!firstName || !lastName || !companyName || !email || !newPassword || !confirmPassword) {
+    if (!firstName || !lastName || !clientName || !email || !newPassword || !confirmPassword) {
       return false;
     }
     
@@ -392,7 +392,7 @@ export function OnboardingWizard({
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <CompanyInfoStep data={wizardData} updateData={updateData} />;
+        return <ClientInfoStep data={wizardData} updateData={updateData} />;
       case 1:
         return <TeamMembersStep data={wizardData} updateData={updateData} />;
       case 2:

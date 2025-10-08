@@ -15,7 +15,7 @@ export const validResources = [
   'api',
   'ticket',
   'project',
-  'company',
+  'client',
   'contact',
   'billing',
   'schedule',

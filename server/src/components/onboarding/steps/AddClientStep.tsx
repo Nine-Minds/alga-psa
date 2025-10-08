@@ -197,7 +197,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
       {!isClientCreated && (
         <div className="rounded-md bg-blue-50 p-4 space-y-2">
           <p className="text-sm text-blue-800">
-            <span className="font-semibold">Note:</span> The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the company settings.
+            <span className="font-semibold">Note:</span> The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.
           </p>
           <p className="text-sm text-blue-800">
             <span className="font-semibold">Optional:</span> You can skip this step and add clients later from your dashboard.

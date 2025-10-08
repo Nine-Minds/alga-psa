@@ -25,7 +25,7 @@ export async function getInboundTicketDefaults(): Promise<{ defaults: InboundTic
         'board_id',
         'status_id',
         'priority_id',
-        'company_id',
+        'client_id',
         'entered_by',
         'category_id',
         'subcategory_id',
@@ -49,7 +49,7 @@ export async function createInboundTicketDefaults(data: {
   board_id?: string;
   status_id?: string;
   priority_id?: string;
-  company_id?: string;
+  client_id?: string;
   entered_by?: string | null;
   category_id?: string;
   subcategory_id?: string;
@@ -82,7 +82,7 @@ export async function createInboundTicketDefaults(data: {
         board_id: data.board_id,
         status_id: data.status_id,
         priority_id: data.priority_id,
-        company_id: data.company_id,
+        client_id: data.client_id,
         entered_by: data.entered_by,
         category_id: normalizeUuid(data.category_id),
         subcategory_id: normalizeUuid(data.subcategory_id),
@@ -100,7 +100,7 @@ export async function createInboundTicketDefaults(data: {
         'board_id',
         'status_id',
         'priority_id',
-        'company_id',
+        'client_id',
         'entered_by',
         'category_id',
         'subcategory_id',
@@ -129,7 +129,7 @@ export async function updateInboundTicketDefaults(
     board_id?: string;
     status_id?: string;
     priority_id?: string;
-    company_id?: string;
+    client_id?: string;
     entered_by?: string | null;
     category_id?: string;
     subcategory_id?: string;
@@ -173,7 +173,7 @@ export async function updateInboundTicketDefaults(
     if (data.board_id !== undefined) updateData.board_id = data.board_id;
     if (data.status_id !== undefined) updateData.status_id = data.status_id;
     if (data.priority_id !== undefined) updateData.priority_id = data.priority_id;
-    if (data.company_id !== undefined) updateData.company_id = data.company_id;
+    if (data.client_id !== undefined) updateData.client_id = data.client_id;
     if (data.entered_by !== undefined) updateData.entered_by = data.entered_by;
     if (data.category_id !== undefined) updateData.category_id = normalizeUuid(data.category_id);
     if (data.subcategory_id !== undefined) updateData.subcategory_id = normalizeUuid(data.subcategory_id);
@@ -192,7 +192,7 @@ export async function updateInboundTicketDefaults(
         'board_id',
         'status_id',
         'priority_id',
-        'company_id',
+        'client_id',
         'entered_by',
         'category_id',
         'subcategory_id',

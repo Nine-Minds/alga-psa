@@ -22,7 +22,7 @@ export class TenantService {
         // Create the tenant record
         const [tenant] = await trx('tenants')
           .insert({
-            company_name: input.company_name,
+            client_name: input.client_name,
             email: input.email,
             phone_number: input.phone_number,
             industry: input.industry,
@@ -40,7 +40,7 @@ export class TenantService {
 
       return {
         tenant: result.tenant,
-        company_name: result.company_name,
+        client_name: result.client_name,
         email: result.email,
         phone_number: result.phone_number,
         industry: result.industry,

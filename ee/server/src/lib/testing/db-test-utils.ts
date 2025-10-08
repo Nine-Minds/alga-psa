@@ -117,7 +117,7 @@ export async function resetDatabase(
     }
 
     // Reset sequences and clean up test data
-    await db.raw('TRUNCATE TABLE user_roles, users, tenant_companies, tenant_email_settings, companies, tenants RESTART IDENTITY CASCADE');
+    await db.raw('TRUNCATE TABLE user_roles, users, tenant_companies, tenant_email_settings, clients, tenants RESTART IDENTITY CASCADE');
 
     // Run seeds if requested
     if (runSeeds) {
@@ -206,13 +206,13 @@ export async function waitForDatabase(
 export async function getDatabaseStats(db: Knex): Promise<{
   tenantCount: number;
   userCount: number;
-  companyCount: number;
+  clientCount: number;
   connectionCount: number;
 }> {
-  const [tenantCount, userCount, companyCount] = await Promise.all([
+  const [tenantCount, userCount, clientCount] = await Promise.all([
     db('tenants').count('* as count').first(),
     db('users').count('* as count').first(),
-    db('companies').count('* as count').first(),
+    db('clients').count('* as count').first(),
   ]);
 
   // Get connection count
@@ -225,7 +225,7 @@ export async function getDatabaseStats(db: Knex): Promise<{
   return {
     tenantCount: parseInt(tenantCount?.count as string) || 0,
     userCount: parseInt(userCount?.count as string) || 0,
-    companyCount: parseInt(companyCount?.count as string) || 0,
+    clientCount: parseInt(clientCount?.count as string) || 0,
     connectionCount: parseInt(connectionStats.rows[0]?.count) || 0,
   };
 }

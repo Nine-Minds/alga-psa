@@ -20,8 +20,8 @@ import { ButtonComponent, FormFieldComponent, ContainerComponent } from 'server/
 interface InteractionsFeedProps {
   id?: string; // Made optional to maintain backward compatibility
   entityId: string;
-  entityType: 'contact' | 'company';
-  companyId?: string;
+  entityType: 'contact' | 'client';
+  clientId?: string;
   interactions: IInteraction[];
   setInteractions: React.Dispatch<React.SetStateAction<IInteraction[]>>;
 }
@@ -31,7 +31,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
   id = 'interactions-feed',
   entityId, 
   entityType, 
-  companyId, 
+  clientId, 
   interactions, 
   setInteractions 
 }) => {
@@ -343,7 +343,7 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
         onClose={() => setIsQuickAddOpen(false)}
         entityId={entityId}
         entityType={entityType}
-        companyId={companyId}
+        clientId={clientId}
         onInteractionAdded={handleInteractionAdded}
       />
     </ReflectionContainer>

@@ -163,14 +163,22 @@ export abstract class ApiBaseController {
     const pathParts = url.pathname.split('/');
     // Handle special cases for plural forms
     let resourcePlural: string;
-    if (this.options.resource === 'company') {
-      resourcePlural = 'companies';
+    let resourceAlternative: string | null = null;
+    if (this.options.resource === 'client') {
+      resourcePlural = 'clients';
+      resourceAlternative = 'clients'; // Support new client terminology
+    } else if (this.options.resource === 'client') {
+      resourcePlural = 'clients';
+      resourceAlternative = 'clients'; // Support old client terminology for backward compatibility
     } else if (this.options.resource === 'time_entry') {
       resourcePlural = 'time-entries';
     } else {
       resourcePlural = this.options.resource + 's';
     }
-    const resourceIndex = pathParts.findIndex(part => part === resourcePlural);
+    let resourceIndex = pathParts.findIndex(part => part === resourcePlural);
+    if (resourceIndex === -1 && resourceAlternative) {
+      resourceIndex = pathParts.findIndex(part => part === resourceAlternative);
+    }
     const id = pathParts[resourceIndex + 1] || '';
     
     // Validate UUID format (including nil UUID)

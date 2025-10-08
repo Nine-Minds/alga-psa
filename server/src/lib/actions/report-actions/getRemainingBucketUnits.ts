@@ -5,7 +5,7 @@ import { createTenantKnex } from '../../db';
 import { withTransaction } from '@shared/db';
 // Import interfaces from correct files
 import {
-  ICompanyBillingPlan,
+  IClientBillingPlan,
   IBillingPlan,
   IBucketUsage,
   IPlanService,
@@ -19,7 +19,7 @@ import { Knex } from 'knex'; // Import Knex type for query builder
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
-  companyId: z.string().uuid(),
+  clientId: z.string().uuid(),
   currentDate: z.string().refine((date) => !isNaN(Date.parse(date)), {
     message: "Invalid current date format (YYYY-MM-DD)",
   }),
@@ -42,9 +42,9 @@ export interface RemainingBucketUnitsResult {
 
 /**
  * Server action to fetch remaining units (hours) for active bucket plans
- * associated with a specific company for the current period.
+ * associated with a specific client for the current period.
  *
- * @param input - Object containing companyId and currentDate.
+ * @param input - Object containing clientId and currentDate.
  * @returns A promise that resolves to an array of bucket plan usage details.
  */
 export async function getRemainingBucketUnits(
@@ -56,7 +56,7 @@ export async function getRemainingBucketUnits(
     const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
     throw new Error(`Validation Error: ${errorMessages}`);
   }
-  const { companyId, currentDate } = validationResult.data;
+  const { clientId, currentDate } = validationResult.data;
 
   const { knex, tenant } = await createTenantKnex();
 
@@ -64,11 +64,11 @@ export async function getRemainingBucketUnits(
     throw new Error('Tenant context is required.');
   }
 
-  console.log(`Fetching remaining bucket units for company ${companyId} in tenant ${tenant} as of ${currentDate}`);
+  console.log(`Fetching remaining bucket units for client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
   try {
     const results: RemainingBucketUnitsResult[] = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      const query = trx<ICompanyBillingPlan>('company_billing_plans as cbp')
+      const query = trx<IClientBillingPlan>('client_billing_plans as cbp')
       .join<IBillingPlan>('billing_plans as bp', function() {
         this.on('cbp.plan_id', '=', 'bp.plan_id')
             .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -100,16 +100,16 @@ export async function getRemainingBucketUnits(
         // Sticking with plan_id only for now based on previous structure.
         // If issues arise, consider adding service_id to bucket_usage table and join condition.
         this.on('bp.plan_id', '=', 'bu.plan_id')
-            .andOn('cbp.company_id', '=', 'bu.company_id') // Join on company_id as well
+            .andOn('cbp.client_id', '=', 'bu.client_id') // Join on client_id as well
             .andOn('cbp.tenant', '=', 'bu.tenant')
             // Filter bucket_usage for the period containing currentDate
             .andOn('bu.period_start', '<=', knex.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', knex.raw('?', [currentDate]));
       })
-      .where('cbp.company_id', companyId)
+      .where('cbp.client_id', clientId)
       .andWhere('cbp.tenant', tenant)
       .andWhere('bp.plan_type', 'Bucket') // Filter for Bucket plans
-      .andWhere('cbp.is_active', true) // Only active company plans
+      .andWhere('cbp.is_active', true) // Only active client plans
       // Ensure the plan itself is active based on start/end dates relative to currentDate
       .andWhere('cbp.start_date', '<=', knex.raw('?', [currentDate]))
       .andWhere(function() {
@@ -155,11 +155,11 @@ export async function getRemainingBucketUnits(
       });
     });
       
-    console.log(`Found ${results.length} active bucket plans for company ${companyId}`);
+    console.log(`Found ${results.length} active bucket plans for client ${clientId}`);
     return results;
 
   } catch (error) {
-    console.error(`Error fetching remaining bucket units for company ${companyId} in tenant ${tenant}:`, error);
+    console.error(`Error fetching remaining bucket units for client ${clientId} in tenant ${tenant}:`, error);
     throw new Error(`Failed to fetch remaining bucket units: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

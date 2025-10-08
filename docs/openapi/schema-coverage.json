@@ -1209,81 +1209,81 @@
     ]
   },
   {
-    "route_path": "/api/v1/companies",
+    "route_path": "/api/v1/clients",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ]
   },
   {
-    "route_path": "/api/v1/companies/stats",
+    "route_path": "/api/v1/clients/stats",
     "edition": "CE",
     "methods": [
       "GET"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ]
   },
   {
-    "route_path": "/api/v1/companies/{id}",
+    "route_path": "/api/v1/clients/{id}",
     "edition": "CE",
     "methods": [
       "DELETE",
       "GET",
       "PUT"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ]
   },
   {
-    "route_path": "/api/v1/companies/{id}/contacts",
+    "route_path": "/api/v1/clients/{id}/contacts",
     "edition": "CE",
     "methods": [
       "GET"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ]
   },
   {
-    "route_path": "/api/v1/companies/{id}/locations",
+    "route_path": "/api/v1/clients/{id}/locations",
     "edition": "CE",
     "methods": [
       "GET",
       "POST"
     ],
-    "controller_file": "server/src/lib/api/controllers/ApiCompanyController.ts",
+    "controller_file": "server/src/lib/api/controllers/ApiClientController.ts",
     "schema_imports": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ],
     "canonical_schemas": [
-      "server/src/lib/api/schemas/company.ts"
+      "server/src/lib/api/schemas/client.ts"
     ]
   },
   {
-    "route_path": "/api/v1/company-billing-plans",
+    "route_path": "/api/v1/client-billing-plans",
     "edition": "CE",
     "methods": [
       "GET",
@@ -1298,7 +1298,7 @@
     ]
   },
   {
-    "route_path": "/api/v1/company-billing-plans/{id}",
+    "route_path": "/api/v1/client-billing-plans/{id}",
     "edition": "CE",
     "methods": [
       "DELETE"

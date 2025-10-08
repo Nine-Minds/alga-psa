@@ -7,7 +7,7 @@ import * as Collapsible from '@radix-ui/react-collapsible';
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  companyUrl: string;
+  clientUrl: string;
   accountId: string;
   messages: any[];
   userRole: string;

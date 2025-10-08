@@ -38,13 +38,13 @@ interface CreditDiscrepancy {
  * Main function to reconcile credit_tracking table with transactions
  *
  * @param tenant The tenant ID
- * @param companyId Optional company ID to limit reconciliation to a specific company
+ * @param clientId Optional client ID to limit reconciliation to a specific client
  * @param dryRun If true, will only report discrepancies without making changes
  * @returns ReconciliationResult with statistics about the reconciliation
  */
 export async function reconcileCreditTracking(
   tenant: string,
-  companyId?: string,
+  clientId?: string,
   dryRun: boolean = false
 ): Promise<ReconciliationResult> {
   const { knex, tenant: tenantId } = await createTenantKnex();
@@ -61,11 +61,11 @@ export async function reconcileCreditTracking(
 
   try {
     // Find missing credit tracking entries
-    const missingCredits = await findMissingCredits(knex, tenant, companyId);
+    const missingCredits = await findMissingCredits(knex, tenant, clientId);
     result.missingEntries = missingCredits.length;
 
     // Find inconsistent credit tracking entries
-    const inconsistentCredits = await findInconsistentCredits(knex, tenant, companyId);
+    const inconsistentCredits = await findInconsistentCredits(knex, tenant, clientId);
     result.inconsistentEntries = inconsistentCredits.length;
 
     // If not a dry run, correct the discrepancies
@@ -105,13 +105,13 @@ export async function reconcileCreditTracking(
  *
  * @param knex Knex instance
  * @param tenant Tenant ID
- * @param companyId Optional company ID to limit search
+ * @param clientId Optional client ID to limit search
  * @returns Array of discrepancies for missing credit tracking entries
  */
 async function findMissingCredits(
   knex: Knex,
   tenant: string,
-  companyId?: string
+  clientId?: string
 ): Promise<CreditDiscrepancy[]> {
   // Build the query to find credit transactions
   let query = knex('transactions')
@@ -119,9 +119,9 @@ async function findMissingCredits(
     .where('tenant', tenant)
     .andWhere('amount', '>', 0); // Only positive amounts create credits
 
-  // Add company filter if provided
-  if (companyId) {
-    query = query.andWhere('company_id', companyId);
+  // Add client filter if provided
+  if (clientId) {
+    query = query.andWhere('client_id', clientId);
   }
 
   // Get all credit transactions
@@ -152,21 +152,21 @@ async function findMissingCredits(
  * 
  * @param knex Knex instance
  * @param tenant Tenant ID
- * @param companyId Optional company ID to limit search
+ * @param clientId Optional client ID to limit search
  * @returns Array of discrepancies for inconsistent credit tracking entries
  */
 async function findInconsistentCredits(
   knex: Knex,
   tenant: string,
-  companyId?: string
+  clientId?: string
 ): Promise<CreditDiscrepancy[]> {
   // Build the query to find credit_tracking entries
   let query = knex('credit_tracking')
     .where('tenant', tenant);
 
-  // Add company filter if provided
-  if (companyId) {
-    query = query.andWhere('company_id', companyId);
+  // Add client filter if provided
+  if (clientId) {
+    query = query.andWhere('client_id', clientId);
   }
 
   // Get all credit_tracking entries
@@ -216,7 +216,7 @@ async function createCreditTrackingEntry(
   await trx('credit_tracking').insert({
     credit_id: uuidv4(),
     tenant,
-    company_id: transaction.company_id,
+    client_id: transaction.client_id,
     transaction_id: transaction.transaction_id,
     amount: transaction.amount,
     remaining_amount: transaction.amount, // Initially, remaining amount equals the full amount
@@ -324,19 +324,19 @@ export async function calculateRemainingCredit(
 }
 
 /**
- * Perform a full reconciliation of all credits for a company
+ * Perform a full reconciliation of all credits for a client
  * This includes:
  * 1. Finding and creating missing credit_tracking entries
  * 2. Correcting inconsistent credit_tracking entries
  * 3. Recalculating remaining amounts based on transaction history
  * 
- * @param companyId Company ID to reconcile
+ * @param clientId Client ID to reconcile
  * @param tenant Tenant ID
  * @param dryRun If true, will only report discrepancies without making changes
  * @returns ReconciliationResult with statistics about the reconciliation
  */
 export async function fullCreditReconciliation(
-  companyId: string,
+  clientId: string,
   tenant: string,
   dryRun: boolean = false
 ): Promise<ReconciliationResult> {
@@ -354,7 +354,7 @@ export async function fullCreditReconciliation(
 
   try {
     // First, perform basic reconciliation
-    const basicResult = await reconcileCreditTracking(tenant, companyId, dryRun);
+    const basicResult = await reconcileCreditTracking(tenant, clientId, dryRun);
     
     // Merge results
     result.missingEntries = basicResult.missingEntries;
@@ -365,9 +365,9 @@ export async function fullCreditReconciliation(
     // If not a dry run, recalculate remaining amounts for all credits
     if (!dryRun) {
       await knex.transaction(async (trx: Knex.Transaction) => {
-        // Get all credit_tracking entries for this company
+        // Get all credit_tracking entries for this client
         const creditTrackingEntries = await trx('credit_tracking')
-          .where('company_id', companyId)
+          .where('client_id', clientId)
           .where('tenant', tenant)
           .select();
 
