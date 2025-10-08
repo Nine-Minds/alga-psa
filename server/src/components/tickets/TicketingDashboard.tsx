@@ -19,7 +19,7 @@ import { TagFilter } from 'server/src/components/tags';
 import { useTagPermissions } from 'server/src/hooks/useTagPermissions';
 import { IBoard, IClient, IUser } from 'server/src/interfaces';
 import { DataTable } from 'server/src/components/ui/DataTable';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from 'server/src/components/ui/Dialog';
+import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { deleteTicket, deleteTickets } from 'server/src/lib/actions/ticket-actions/ticketActions';
 import { XCircle, Clock } from 'lucide-react';
@@ -451,7 +451,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const isSelectionIndeterminate = selectedTicketIds.size > 0 && (!allVisibleTicketsSelected || hasHiddenSelections) && !allFilteredTicketsSelected;
   const selectedTicketDetails = useMemo(() => {
     if (selectedTicketIds.size === 0) {
-      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; company_name?: string }>;
+      return [] as Array<{ ticket_id: string; ticket_number?: string; title?: string; client_name?: string }>;
     }
 
     const selectedSet = new Set(selectedTicketIds);
@@ -462,7 +462,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         ticket_id: ticket.ticket_id as string,
         ticket_number: ticket.ticket_number,
         title: ticket.title,
-        company_name: ticket.company_name,
+        client_name: ticket.client_name,
       }))
       .sort((a, b) => {
         if (a.ticket_number && b.ticket_number) {
@@ -503,7 +503,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       ticketTagsRef,
       onTagsChange: handleTagsChange,
       showClient: true,
-      onClientClick: onQuickViewCompany,
+      onClientClick: onQuickViewClient,
     });
 
     const selectionColumn: ColumnDefinition<ITicketListItem> = {
@@ -571,7 +571,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     handleDeleteTicket,
     handleTagsChange,
     ticketTagsRef,
-    onQuickViewCompany,
+    onQuickViewClient,
     id,
     allVisibleTicketsSelected,
     isSelectionIndeterminate,
@@ -977,9 +977,6 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         id={`${id}-bulk-delete-dialog`}
         title="Delete Selected Tickets"
       >
-        <DialogHeader>
-          <DialogTitle>Delete Selected Tickets</DialogTitle>
-        </DialogHeader>
         <DialogContent>
           {bulkDeleteErrors.length > 0 && (
             <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -1013,8 +1010,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
                     {detail.title && detail.ticket_number && (
                       <span className="ml-2 text-sm text-gray-500">{detail.title}</span>
                     )}
-                    {detail.company_name && (
-                      <span className="ml-2 text-sm text-gray-400">· {detail.company_name}</span>
+                    {detail.client_name && (
+                      <span className="ml-2 text-sm text-gray-400">· {detail.client_name}</span>
                     )}
                   </li>
                 ))}
