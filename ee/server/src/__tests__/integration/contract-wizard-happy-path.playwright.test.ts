@@ -16,6 +16,10 @@ import { createTestDbConnection, type DbTestConfig } from '../../lib/testing/db-
 import { createTestTenant, type TenantTestData } from '../../lib/testing/tenant-test-factory';
 import { rollbackTenant } from '../../lib/testing/tenant-creation';
 import { applyPlaywrightDatabaseEnv, PLAYWRIGHT_DB_CONFIG } from './utils/playwrightDatabaseConfig';
+import {
+  buildSessionCookie,
+  encodePortalSessionToken,
+} from 'server/src/lib/auth/sessionCookies';
 
 type UIComponentNode = {
   id: string;
@@ -35,6 +39,41 @@ process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secr
 
 let adminDb: Knex | null = null;
 let databasePrepared = false;
+
+async function establishSession(page: Page, tenantData: TenantTestData): Promise<void> {
+  const tenantId = tenantData.tenant.tenantId;
+  const adminUser = tenantData.adminUser;
+
+  const sessionToken = await encodePortalSessionToken({
+    id: adminUser.userId,
+    email: adminUser.email,
+    name: `${adminUser.firstName} ${adminUser.lastName}`,
+    tenant: tenantId,
+    user_type: 'internal',
+    roles: ['Admin'],
+  });
+
+  const cookie = buildSessionCookie(sessionToken);
+  const baseHost = new URL(TEST_CONFIG.baseUrl).hostname;
+  const sameSite =
+    cookie.options.sameSite === 'strict'
+      ? 'Strict'
+      : cookie.options.sameSite === 'none'
+      ? 'None'
+      : 'Lax';
+
+  await page.context().addCookies([
+    {
+      name: cookie.name,
+      value: cookie.value,
+      domain: baseHost,
+      path: cookie.options.path ?? '/',
+      httpOnly: cookie.options.httpOnly ?? true,
+      secure: cookie.options.secure ?? false,
+      sameSite,
+    },
+  ]);
+}
 
 async function ensurePlaywrightDatabase(config?: Partial<DbTestConfig>): Promise<void> {
   if (databasePrepared) {
@@ -347,17 +386,11 @@ async function completeContractWizardFlow(
 
   attachFailFastHandlers(page, TEST_CONFIG.baseUrl);
 
-  await page.goto(TEST_CONFIG.baseUrl);
-  await page.waitForSelector('#msp-email-field');
-  await page.fill('#msp-email-field', tenantData.adminUser.email);
-  await page.fill('#msp-password-field', tenantData.adminUser.temporaryPassword);
-
-  await Promise.all([
-    page.waitForURL(/\/msp\/dashboard/, { timeout: 45_000 }),
-    page.locator('#msp-sign-in-button').click({ force: true }),
-  ]);
-
-  await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+  await establishSession(page, tenantData);
+  await page.goto(`${TEST_CONFIG.baseUrl}/msp/billing?tab=contracts`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 60_000,
+  });
   const wizardButtonLocator = page.locator('[data-automation-id="wizard-contract-button"]');
   await wizardButtonLocator.waitFor({ timeout: 15_000 });
   await findComponent(page, (component) => component.id === 'wizard-contract-button');
