@@ -787,7 +787,7 @@ export class BillingEngine {
 
       if (hasServiceBaseRate) {
         planLevelBaseRate = derivedBaseRate;
-        console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
+        console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Derived plan base rate from service configs: ${planLevelBaseRate}`);
       }
     }
 
@@ -800,12 +800,12 @@ export class BillingEngine {
 
       if (totalDefaultRateCents !== 0) {
         planLevelBaseRate = totalDefaultRateCents / 100;
-        console.log(`[DEBUG] Plan ${companyBillingPlan.plan_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
+        console.log(`[DEBUG] Plan ${clientBillingPlan.plan_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`);
       }
     }
 
     if (isFixedFeePlan && (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))) {
-      console.error(`[DEBUG] Unable to determine base_rate for plan ${companyBillingPlan.plan_id}.`);
+      console.error(`[DEBUG] Unable to determine base_rate for plan ${clientBillingPlan.plan_id}.`);
       return [];
     }
 
@@ -1039,9 +1039,9 @@ export class BillingEngine {
           // Add other relevant fields from IFixedPriceCharge if needed
           config_id: service.config_id,
           base_rate: baseRateInCents,
-          company_billing_plan_id: companyBillingPlan.company_billing_plan_id,
-          company_bundle_id: companyBillingPlan.company_bundle_id || undefined,
-          bundle_name: companyBillingPlan.bundle_name || undefined,
+          client_billing_plan_id: clientBillingPlan.client_billing_plan_id,
+          client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
+          bundle_name: clientBillingPlan.bundle_name || undefined,
           // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
         };
         // Recalculate tax based on derived info for this edge case
@@ -1291,8 +1291,8 @@ export class BillingEngine {
         tax_region: effectiveTaxRegion, // Use derived region, fallback to client default lookup
         entryId: entry.entry_id,
         is_taxable: isTaxable, // Use derived value
-        company_billing_plan_id: companyBillingPlan.company_billing_plan_id,
-        tenant: company.tenant,
+        client_billing_plan_id: clientBillingPlan.client_billing_plan_id,
+        tenant: client.tenant,
         // Add bundle information when the plan is part of a bundle
         client_bundle_id: clientBillingPlan.client_bundle_id || undefined,
         bundle_name: clientBillingPlan.bundle_name || undefined
@@ -1664,7 +1664,7 @@ export class BillingEngine {
       const usageRecords = await this.knex('bucket_usage')
         .where({
           tenant: client.tenant,
-          company_id: clientId,
+          client_id: clientId,
           plan_id: billingPlan.plan_id,
           service_catalog_id: bucketConfig.service_id
         })
@@ -1743,8 +1743,8 @@ export class BillingEngine {
           tax_amount: taxAmount,
           is_taxable: isTaxable,
           quantity: overageHours,
-          company_billing_plan_id: billingPlan.company_billing_plan_id,
-          tenant: company.tenant,
+          client_billing_plan_id: billingPlan.client_billing_plan_id,
+          tenant: client.tenant,
           // Add bundle information when the plan is part of a bundle
           client_bundle_id: billingPlan.client_bundle_id || undefined,
           bundle_name: billingPlan.bundle_name || undefined

@@ -7,7 +7,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import {
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 
@@ -63,7 +63,7 @@ describe('Client Billing Cycle Creation', () => {
   let context: TestContext;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -80,8 +80,8 @@ describe('Client Billing Cycle Creation', () => {
         'client_billing_cycles',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates'
+        'client_tax_settings',
+        'client_tax_rates'
       ],
       clientName: 'Test Client',
       userType: 'internal'
@@ -122,13 +122,13 @@ describe('Client Billing Cycle Creation', () => {
   }, 30000);
 
   it('creates a monthly billing cycle if none exists', async () => {
-    const { db, client } = context;
+    const { db, client, clientId, tenantId } = context;
 
     // Verify no cycles exist initially
     const initialCycles = await db('client_billing_cycles')
       .where({
-        client_id: client.client_id,
-        tenant: client.tenant
+        client_id: clientId,
+        tenant: tenantId
       })
       .orderBy('effective_date', 'asc');
     expect(initialCycles).toHaveLength(0);
@@ -139,16 +139,16 @@ describe('Client Billing Cycle Creation', () => {
     // Verify cycles were created
     const cycles = await db('client_billing_cycles')
       .where({
-        client_id: client.client_id,
-        tenant: client.tenant
+        client_id: clientId,
+        tenant: tenantId
       })
       .orderBy('effective_date', 'asc');
 
     expect(cycles).toHaveLength(1);
     expect(cycles[0]).toMatchObject({
-      client_id: client.client_id,
+      client_id: clientId,
       billing_cycle: 'monthly',
-      tenant: client.tenant
+      tenant: tenantId
     });
 
     // Verify period dates

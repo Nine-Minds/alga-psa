@@ -10,12 +10,12 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const QUICK_ADD_COMPANY_PATH = path.join(__dirname, '../../components/companies/QuickAddClient.tsx');
+const QUICK_ADD_CLIENT_PATH = path.join(__dirname, '../../components/clients/QuickAddClient.tsx');
 
 function analyzeQuickAddClientUIReflection() {
   console.log('📋 Analyzing QuickAddClient UI Reflection Integration...\n');
   
-  const fileContent = fs.readFileSync(QUICK_ADD_COMPANY_PATH, 'utf8');
+  const fileContent = fs.readFileSync(QUICK_ADD_CLIENT_PATH, 'utf8');
   
   const checks = [
     {
@@ -122,7 +122,7 @@ function analyzeQuickAddClientUIReflection() {
 
   // Additional debugging info
   console.log(`\n🔍 Debugging Info:`);
-  console.log(`   File path: ${QUICK_ADD_COMPANY_PATH}`);
+  console.log(`   File path: ${QUICK_ADD_CLIENT_PATH}`);
   console.log(`   File size: ${fileContent.length} characters`);
   
   // Extract and show the useAutomationIdAndRegister usage

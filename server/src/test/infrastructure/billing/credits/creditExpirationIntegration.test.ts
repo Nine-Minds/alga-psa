@@ -633,7 +633,7 @@ describe('Credit Expiration Integration Tests', () => {
           updated_at: nowIso
         });
 
-      await context.db('companies')
+      await context.db('clients')
         .where({ client_id: context.clientId, tenant: context.tenantId })
         .update({
           credit_balance: newBalance,

@@ -455,7 +455,7 @@ async function persistFixedInvoiceItems(
       net_amount: planNetTotal,
       tax_amount: planTaxTotal,
       total_price: planNetTotal + planTaxTotal,
-      tax_region: planTaxRegion ?? company.tax_region ?? null,
+      tax_region: planTaxRegion ?? client.tax_region ?? null,
       tax_rate: aggregatedTaxRate,
       is_manual: false,
       is_discount: false,
