@@ -1641,6 +1641,7 @@ async function syncBaseVirtualServiceRouting(
 
   try {
     await ensureDirectory(dirname(vsFilePath));
+    sanitizeKubernetesResourceForApply(baseVirtualService);
     const yamlContent = dumpYaml(baseVirtualService, { sortKeys: true, noRefs: true });
     console.log('[syncBaseVS] Writing base VirtualService to file', {
       path: vsFilePath,
@@ -1661,6 +1662,48 @@ async function syncBaseVirtualServiceRouting(
         `Failed to write base VirtualService to ${vsFilePath}`,
       ),
     );
+  }
+}
+
+function sanitizeKubernetesResourceForApply(resource: Record<string, any> | undefined | null): void {
+  if (!resource || typeof resource !== 'object') {
+    return;
+  }
+
+  if ('status' in resource) {
+    delete resource.status;
+  }
+
+  const metadata = resource.metadata;
+  if (!metadata || typeof metadata !== 'object') {
+    return;
+  }
+
+  const runtimeFields = [
+    'creationTimestamp',
+    'deletionTimestamp',
+    'resourceVersion',
+    'uid',
+    'generation',
+    'managedFields',
+    'selfLink',
+  ];
+
+  for (const field of runtimeFields) {
+    if (field in metadata) {
+      delete (metadata as Record<string, unknown>)[field];
+    }
+  }
+
+  if (metadata.annotations && typeof metadata.annotations === 'object') {
+    delete metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'];
+    if (Object.keys(metadata.annotations).length === 0) {
+      delete metadata.annotations;
+    }
+  }
+
+  if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
+    delete metadata.finalizers;
   }
 }
 
