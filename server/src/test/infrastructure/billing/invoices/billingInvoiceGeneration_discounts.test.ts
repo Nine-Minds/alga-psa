@@ -22,10 +22,10 @@ describe('Billing Invoice Discount Applications', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings'

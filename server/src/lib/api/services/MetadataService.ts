@@ -459,7 +459,7 @@ export class MetadataService {
       'schedules': 'Time Management',
       'time-periods': 'Time Management',
       'invoices': 'Financial',
-      'billing-plans': 'Financial',
+      'contract-lines': 'Financial',
       'financial': 'Financial',
       'users': 'Users & Teams',
       'teams': 'Users & Teams',

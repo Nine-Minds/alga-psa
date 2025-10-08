@@ -50,7 +50,7 @@ export default class PlanServiceConfiguration {
     
     const configs = await this.knex('plan_service_configuration')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: this.tenant
       })
       .select('*');
@@ -66,7 +66,7 @@ export default class PlanServiceConfiguration {
     
     const config = await this.knex('plan_service_configuration')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         tenant: this.tenant
       })
@@ -86,7 +86,7 @@ export default class PlanServiceConfiguration {
     
     await this.knex('plan_service_configuration').insert({
       config_id: configId,
-      plan_id: data.plan_id,
+      contract_line_id: data.contract_line_id,
       service_id: data.service_id,
       configuration_type: data.configuration_type,
       custom_rate: data.custom_rate,

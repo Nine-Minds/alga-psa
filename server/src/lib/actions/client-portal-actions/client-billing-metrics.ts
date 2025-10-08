@@ -8,8 +8,8 @@ import { ITimeEntry } from 'server/src/interfaces/timeEntry.interfaces';
 import { 
   IService, 
   IServiceType, 
-  IClientBillingPlan,
-  IBillingPlan,
+  IClientContractLine,
+  IContractLine,
   IBucketUsage,
   IPlanService
 } from 'server/src/interfaces/billing.interfaces';
@@ -310,8 +310,8 @@ export async function getClientUsageMetrics(
 
 // Define the structure for the bucket usage returned data
 export interface ClientBucketUsageResult {
-  plan_id: string;
-  plan_name: string;
+  contract_line_id: string;
+  contract_line_name: string;
   service_id: string;
   service_name: string;
   display_label: string;
@@ -379,21 +379,21 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD
       console.log(`Fetching bucket usage for client client ${clientId} in tenant ${tenant} as of ${currentDate}`);
 
-      const query = trx<IClientBillingPlan>('client_billing_plans as cbp')
-      .join<IBillingPlan>('billing_plans as bp', function() {
-        this.on('cbp.plan_id', '=', 'bp.plan_id')
-            .andOn('cbp.tenant', '=', 'bp.tenant');
+      const query = trx<IClientContractLine>('client_contract_lines as ccl')
+      .join<IContractLine>('contract_lines as cl', function() {
+        this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
+            .andOn('ccl.tenant', '=', 'cl.tenant');
       })
       .join<IPlanService>('plan_services as ps', function() {
-        this.on('bp.plan_id', '=', 'ps.plan_id')
-            .andOn('bp.tenant', '=', 'ps.tenant');
+        this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
+            .andOn('cl.tenant', '=', 'ps.tenant');
       })
       .join<IService>('service_catalog as sc', function() {
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
       .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() { 
-        this.on('ps.plan_id', '=', 'psc.plan_id')
+        this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
@@ -402,24 +402,24 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
       .leftJoin<IBucketUsage>('bucket_usage as bu', function() {
-        this.on('bp.plan_id', '=', 'bu.plan_id')
-            .andOn('cbp.client_id', '=', 'bu.client_id')
-            .andOn('cbp.tenant', '=', 'bu.tenant')
+        this.on('cl.contract_line_id', '=', 'bu.contract_line_id')
+            .andOn('ccl.client_id', '=', 'bu.client_id')
+            .andOn('ccl.tenant', '=', 'bu.tenant')
             .andOn('bu.period_start', '<=', trx.raw('?', [currentDate]))
             .andOn('bu.period_end', '>', trx.raw('?', [currentDate]));
       })
-      .where('cbp.client_id', clientId)
-      .andWhere('cbp.tenant', tenant)
-      .andWhere('bp.plan_type', 'Bucket')
-      .andWhere('cbp.is_active', true)
-        .andWhere('cbp.start_date', '<=', trx.raw('?', [currentDate]))
+      .where('ccl.client_id', clientId)
+      .andWhere('ccl.tenant', tenant)
+      .andWhere('cl.contract_line_type', 'Bucket')
+      .andWhere('ccl.is_active', true)
+        .andWhere('ccl.start_date', '<=', trx.raw('?', [currentDate]))
         .andWhere(function() {
-          this.whereNull('cbp.end_date')
-              .orWhere('cbp.end_date', '>', trx.raw('?', [currentDate]));
+          this.whereNull('ccl.end_date')
+              .orWhere('ccl.end_date', '>', trx.raw('?', [currentDate]));
         })
         .select(
-          'bp.plan_id',
-          'bp.plan_name',
+          'cl.contract_line_id',
+          'cl.contract_line_name',
           'ps.service_id',
           'sc.service_name',
           'psbc.total_minutes',
@@ -436,7 +436,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const minutesUsed = typeof row.minutes_used === 'string' ? parseFloat(row.minutes_used) : row.minutes_used;
       const rolledOverMinutes = typeof row.rolled_over_minutes === 'string' ? parseFloat(row.rolled_over_minutes) : row.rolled_over_minutes;
       const remainingMinutes = totalMinutes + rolledOverMinutes - minutesUsed;
-      const displayLabel = `${row.plan_name} - ${row.service_name}`;
+      const displayLabel = `${row.contract_line_name} - ${row.service_name}`;
       
       // Calculate additional metrics for enhanced display
       const totalWithRollover = totalMinutes + rolledOverMinutes;
@@ -449,8 +449,8 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
       const hoursRemaining = remainingMinutes / 60;
       
         return {
-          plan_id: row.plan_id,
-          plan_name: row.plan_name,
+          contract_line_id: row.contract_line_id,
+          contract_line_name: row.contract_line_name,
           service_id: row.service_id,
           service_name: row.service_name,
           display_label: displayLabel,

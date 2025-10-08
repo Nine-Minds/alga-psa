@@ -27,10 +27,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings',
@@ -95,12 +95,12 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   describe('Usage-Based Plans', () => {
     it('should generate an invoice based on usage records', async () => {
       // Arrange
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Usage Plan',
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Usage Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Usage'
-      }, 'plan_id');
+        contract_line_type: 'Usage'
+      }, 'contract_line_id');
 
       const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Data Transfer',
@@ -111,7 +111,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       }, 'service_id');
 
       await context.db('plan_services').insert({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         tenant: context.tenantId
       });
@@ -125,10 +125,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -191,12 +191,12 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   describe('Bucket Plans', () => {
     it('should handle overage charges correctly', async () => {
       // Arrange
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Bucket Plan',
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Bucket Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Bucket'
-      }, 'plan_id');
+        contract_line_type: 'Bucket'
+      }, 'contract_line_id');
 
       const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Consulting Hours',
@@ -207,12 +207,12 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       }, 'service_id');
 
       const bucketPlanId = await context.createEntity('bucket_plans', {
-        plan_id: planId,
+        contract_line_id: planId,
         total_hours: 40,
         billing_period: 'Monthly',
         overage_rate: 7500,
         tenant: context.tenantId
-      }, 'bucket_plan_id');
+      }, 'bucket_contract_line_id');
 
       // Create billing cycle and assign plan
       const billingCycleId = await context.createEntity('client_billing_cycles', {
@@ -223,10 +223,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
       }, 'billing_cycle_id');
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -235,7 +235,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       // Create bucket usage
       await context.db('bucket_usage').insert({
         usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
+        bucket_contract_line_id: bucketPlanId,
         client_id: context.clientId,
         period_start: '2023-01-01',
         period_end: '2023-01-31',
@@ -272,12 +272,12 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
   describe('Invoice Finalization', () => {
     it('should finalize an invoice correctly', async () => {
       // Arrange
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Simple Plan',
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Simple Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Basic Service',
@@ -288,7 +288,7 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
       }, 'service_id');
 
       await context.db('plan_services').insert({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
@@ -301,10 +301,10 @@ describe('Billing Invoice Generation – Usage, Bucket Plans, and Finalization',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId

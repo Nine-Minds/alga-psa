@@ -28,7 +28,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
 
   return (
     <Card className={`p-4 ${className}`}>
-      <h3 className="text-lg font-medium mb-4">Plan Disambiguation Guide</h3>
+      <h3 className="text-lg font-medium mb-4">Contract Line Disambiguation Guide</h3>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="mb-4">
@@ -42,29 +42,29 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
             <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
               <Info className="h-5 w-5 mr-2" />
-              Understanding Plan Disambiguation for This Client
+              Understanding Contract Line Disambiguation for This Client
             </h4>
             <p className="text-sm text-blue-700 mb-3">
-              When a client has multiple billing plans that include the same service, the system needs to determine which plan to use for time entries and usage records. This guide explains how to manage this situation for this specific client.
+              When a client has multiple contract lines that include the same service, the system needs to determine which contract line to use for time entries and usage records. This guide explains how to manage this situation for this specific client.
             </p>
             <div className="bg-white p-3 rounded-md border border-blue-200">
               <h5 className="text-sm font-medium mb-2">Key Concepts:</h5>
               <ul className="text-xs space-y-2 text-gray-700">
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Service Overlap:</strong> When the same service appears in multiple billing plans for this client.</span>
+                  <span><strong>Service Overlap:</strong> When the same service appears in multiple contract lines for this client.</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Explicit Selection:</strong> When users must manually choose which plan to bill against for this client.</span>
+                  <span><strong>Explicit Selection:</strong> When users must manually choose which contract line to bill against for this client.</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple plans for this client.</span>
+                  <span><strong>Default Plan:</strong> The system's automatic choice when a service appears in multiple contract lines for this client.</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0 text-blue-500" />
-                  <span><strong>Bucket Priority:</strong> Bucket plans are given priority when disambiguating services for this client.</span>
+                  <span><strong>Bucket Priority:</strong> Bucket contract lines are given priority when disambiguating services for this client.</span>
                 </li>
               </ul>
             </div>
@@ -79,15 +79,15 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               <ul className="text-sm space-y-2 text-amber-700">
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Incorrect billing due to automatic plan selection</span>
+                  <span>Incorrect billing due to automatic contract line selection</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>User confusion when selecting plans for time entry</span>
+                  <span>User confusion when selecting contract lines for time entry</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
-                  <span>Reporting inconsistencies across different plans</span>
+                  <span>Reporting inconsistencies across different contract lines</span>
                 </li>
                 <li className="flex items-start">
                   <ArrowRight className="h-3 w-3 mt-0.5 mr-1 flex-shrink-0" />
@@ -127,10 +127,10 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
             <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
               <CheckCircle className="h-5 w-5 mr-2" />
-              Best Practices for Plan Disambiguation
+              Best Practices for Contract Line Disambiguation
             </h4>
             <p className="text-sm text-blue-700 mb-3">
-              Follow these best practices to ensure accurate billing and minimize confusion when managing multiple plans for this client.
+              Follow these best practices to ensure accurate billing and minimize confusion when managing multiple contract lines for this client.
             </p>
           </div>
           
@@ -146,12 +146,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['bp1'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    Whenever possible, avoid having the same service in multiple billing plans for this client. This simplifies billing and reporting.
+                    Whenever possible, avoid having the same service in multiple contract lines for this client. This simplifies billing and reporting.
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
                     <li>Review the Service Overlap Matrix to identify overlapping services</li>
-                    <li>Consider consolidating plans or reorganizing services</li>
-                    <li>If overlaps are necessary, ensure clear documentation of which plan should be used when</li>
+                    <li>Consider consolidating contract lines or reorganizing services</li>
+                    <li>If overlaps are necessary, ensure clear documentation of which contract line should be used when</li>
                   </ul>
                 </div>
               )}
@@ -168,12 +168,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['bp2'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    Name plans in a way that clearly indicates their purpose and scope for this client.
+                    Name contract lines in a way that clearly indicates their purpose and scope for this client.
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Include the plan type in the name (e.g., "Monthly Support Bucket", "Project-Based Plan")</li>
-                    <li>Consider including dates or version numbers for plans that change over time</li>
-                    <li>Use consistent naming patterns across all plans for this client</li>
+                    <li>Include the contract line type in the name (e.g., "Monthly Support Bucket", "Project-Based Plan")</li>
+                    <li>Consider including dates or version numbers for contract lines that change over time</li>
+                    <li>Use consistent naming patterns across all contract lines for this client</li>
                   </ul>
                 </div>
               )}
@@ -193,7 +193,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
                     Clearly document how service overlaps should be handled for this specific client.
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Create client-specific guidelines for which plan to use in different scenarios</li>
+                    <li>Create client-specific guidelines for which contract line to use in different scenarios</li>
                     <li>Share these guidelines with all team members who work with this client</li>
                     <li>Include examples of common situations and how they should be handled</li>
                   </ul>
@@ -210,7 +210,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               Common Disambiguation Scenarios
             </h4>
             <p className="text-sm text-blue-700 mb-3">
-              These examples illustrate how plan disambiguation works in common scenarios for this client.
+              These examples illustrate how contract line disambiguation works in common scenarios for this client.
             </p>
           </div>
           
@@ -226,13 +226,13 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['sc1'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    When a service appears in both a bucket plan and a standard plan for this client:
+                    When a service appears in both a bucket contract line and a standard contract line for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>The bucket plan is given priority by default</li>
-                    <li>Time entries and usage will be billed against the bucket plan until it's depleted</li>
-                    <li>After the bucket is depleted, the standard plan will be used automatically</li>
-                    <li>Users can manually override this behavior by explicitly selecting a plan during time entry</li>
+                    <li>The bucket contract line is given priority by default</li>
+                    <li>Time entries and usage will be billed against the bucket contract line until it's depleted</li>
+                    <li>After the bucket is depleted, the standard contract line will be used automatically</li>
+                    <li>Users can manually override this behavior by explicitly selecting a contract line during time entry</li>
                   </ul>
                 </div>
               )}
@@ -249,13 +249,13 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['sc2'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    When a service appears in multiple standard plans for this client:
+                    When a service appears in multiple standard contract lines for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Users will be prompted to select which plan to bill against during time entry</li>
-                    <li>The most recently created plan will be suggested as the default</li>
-                    <li>If no plan is explicitly selected, the system will use the most recently created plan</li>
-                    <li>Consider consolidating these plans to avoid confusion</li>
+                    <li>Users will be prompted to select which contract line to bill against during time entry</li>
+                    <li>The most recently created contract line will be suggested as the default</li>
+                    <li>If no contract line is explicitly selected, the system will use the most recently created contract line</li>
+                    <li>Consider consolidating these contract lines to avoid confusion</li>
                   </ul>
                 </div>
               )}
@@ -272,7 +272,7 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['sc3'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    When a service appears in multiple bucket plans for this client:
+                    When a service appears in multiple bucket contract lines for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
                     <li>Users will be prompted to select which bucket to bill against during time entry</li>
@@ -290,10 +290,10 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
           <div className="p-4 bg-blue-50 border border-blue-100 rounded-md">
             <h4 className="text-md font-medium text-blue-800 mb-2 flex items-center">
               <HelpCircle className="h-5 w-5 mr-2" />
-              Troubleshooting Plan Disambiguation
+              Troubleshooting Contract Line Disambiguation
             </h4>
             <p className="text-sm text-blue-700 mb-3">
-              Solutions for common issues related to plan disambiguation for this client.
+              Solutions for common issues related to contract line disambiguation for this client.
             </p>
           </div>
           
@@ -309,14 +309,14 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['ts1'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    If time entries are being billed to the wrong plan for this client:
+                    If time entries are being billed to the wrong contract line for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Check if the time entry has an explicit billing_plan_id assigned</li>
-                    <li>Verify that the service is included in the expected billing plan</li>
-                    <li>Review the disambiguation rules to understand why a particular plan was selected</li>
-                    <li>Update the time entry to explicitly select the correct plan</li>
-                    <li>Consider updating the client's billing plan configuration to avoid future issues</li>
+                    <li>Check if the time entry has an explicit contract_line_id assigned</li>
+                    <li>Verify that the service is included in the expected contract line</li>
+                    <li>Review the disambiguation rules to understand why a particular contract line was selected</li>
+                    <li>Update the time entry to explicitly select the correct contract line</li>
+                    <li>Consider updating the client's contract line configuration to avoid future issues</li>
                   </ul>
                 </div>
               )}
@@ -333,12 +333,12 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['ts2'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    If the plan selection dropdown is not appearing during time entry for this client:
+                    If the contract line selection dropdown is not appearing during time entry for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Verify that the service is actually included in multiple active billing plans</li>
-                    <li>Check if one of the plans has expired or is not yet active</li>
-                    <li>Ensure that the client and service selections are made before expecting the plan dropdown</li>
+                    <li>Verify that the service is actually included in multiple active contract lines</li>
+                    <li>Check if one of the contract lines has expired or is not yet active</li>
+                    <li>Ensure that the client and service selections are made before expecting the contract line dropdown</li>
                     <li>Try refreshing the page or clearing the browser cache</li>
                   </ul>
                 </div>
@@ -356,13 +356,13 @@ const ClientPlanDisambiguationGuide: React.FC<ClientPlanDisambiguationGuideProps
               {expandedSections['ts3'] && (
                 <div className="p-3 border-t border-gray-200">
                   <p className="text-sm text-gray-700 mb-2">
-                    If you're seeing inconsistent reporting for services that appear in multiple plans for this client:
+                    If you're seeing inconsistent reporting for services that appear in multiple contract lines for this client:
                   </p>
                   <ul className="text-sm space-y-1 text-gray-700 list-disc pl-5">
-                    <li>Use the billing_plan_id filter in reports to see data for specific plans</li>
-                    <li>Check if time entries or usage records have explicit plan assignments</li>
-                    <li>Review historical data to see if plan assignments have changed over time</li>
-                    <li>Consider updating the client's billing plan configuration to reduce overlaps</li>
+                    <li>Use the contract_line_id filter in reports to see data for specific contract lines</li>
+                    <li>Check if time entries or usage records have explicit contract line assignments</li>
+                    <li>Review historical data to see if contract line assignments have changed over time</li>
+                    <li>Consider updating the client's contract line configuration to reduce overlaps</li>
                   </ul>
                 </div>
               )}

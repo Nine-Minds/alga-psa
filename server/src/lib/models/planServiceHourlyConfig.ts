@@ -54,7 +54,7 @@ export default class PlanServiceHourlyConfig {
       hourly_rate: data.hourly_rate, // Add hourly_rate back
       minimum_billable_time: data.minimum_billable_time,
       round_up_to_nearest: data.round_up_to_nearest,
-      // Removed plan-wide fields that are now in billing_plans table:
+      // Removed plan-wide fields that are now in contract_lines table:
       // enable_overtime: data.enable_overtime,
       // overtime_rate: data.overtime_rate,
       // overtime_threshold: data.overtime_threshold,

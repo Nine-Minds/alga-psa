@@ -15,7 +15,7 @@ import {
 import { Tooltip } from 'server/src/components/ui/Tooltip'; // Corrected Tooltip import
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IBillingPlan, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
 import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 import {
   getPlanServices,
@@ -29,7 +29,7 @@ import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActi
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { EditPlanServiceQuantityDialog } from './EditPlanServiceQuantityDialog'; // Added dialog import
-// Removed BillingPlanServiceForm import as 'Configure' is removed
+// Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options
 const BILLING_METHOD_OPTIONS: Array<{ value: 'fixed' | 'per_unit'; label: string }> = [
@@ -88,7 +88,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
       // Enhance associated services with details for display
       const enhancedServices: SimplePlanService[] = servicesWithConfigs.map((configInfo: PlanServiceWithConfig) => {
         return {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: configInfo.configuration.service_id,
           tenant: configInfo.configuration.tenant,
           created_at: configInfo.configuration.created_at,
@@ -351,7 +351,7 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
           </div>
         </>
       )}
-      {/* Removed BillingPlanServiceForm modal */}
+      {/* Removed ContractLineServiceForm modal */}
 
       {/* Add the dialog component */}
       {selectedService && (

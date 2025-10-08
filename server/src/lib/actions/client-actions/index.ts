@@ -12,8 +12,8 @@ export * from './clientActions';
 export * from './clientLocationActions';
 export * from './clientLocaleActions';
 export * from './clientTaxRateActions';
-export * from './clientBillingPlanActions';
-export * from './clientPlanBundleActions';
+export * from './clientContractLineActions';
+export * from './clientContractActions';
 export * from './countryActions';
 
 // TODO: Create client-specific action files with dual-write logic:
@@ -21,5 +21,5 @@ export * from './countryActions';
 // - clientLocationActions.ts (replaces clientLocationActions.ts)
 // - clientLocaleActions.ts (replaces clientLocaleActions.ts)
 // - clientTaxRateActions.ts (replaces clientTaxRateActions.ts)
-// - clientBillingPlanActions.ts (replaces clientBillingPlanActions.ts)
-// - clientPlanBundleActions.ts (replaces clientPlanBundleActions.ts)
+// - clientContractLineActions.ts (replaces clientContractLineActions.ts)
+// - clientContractActions.ts (replaces clientContractActions.ts)

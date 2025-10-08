@@ -7,7 +7,7 @@ import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate } from '../../../test-utils/dateUtils';
 
 // Setup TestContext
@@ -23,10 +23,10 @@ describe('Negative Invoice Credit Tests', () => {
         'invoices',
         'transactions',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
@@ -102,24 +102,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 5. Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
+      // 5. Create a contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Credit Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 6. Assign services to plan
       await context.db('plan_services').insert([
         {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceB,
           quantity: 1,
           tenant: context.tenantId
@@ -140,17 +140,17 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 8. Assign plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
       });
 
       // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate invoice
@@ -170,7 +170,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(invoice.invoice_id);
 
       // 13. Verify the client credit balance has increased
-      const updatedCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const updatedCredit = await ClientContractLine.getClientCredit(client_id);
       expect(updatedCredit).toBe(12500); // $125.00 credit
 
       // 14. Verify credit issuance transaction
@@ -260,30 +260,30 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 5. Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Mixed Credit Plan',
+      // 5. Create a contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Mixed Credit Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 6. Assign services to plan
       await context.db('plan_services').insert([
         {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceB,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceC,
           quantity: 1,
           tenant: context.tenantId
@@ -304,17 +304,17 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 8. Assign plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
       });
 
       // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate invoice
@@ -356,7 +356,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(invoice.invoice_id);
 
       // 13. Verify the client credit balance has increased by the absolute value of the total
-      const updatedCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const updatedCredit = await ClientContractLine.getClientCredit(client_id);
       expect(updatedCredit).toBe(11500); // $115.00 credit (absolute value of -$115.00)
 
       // 14. Verify credit issuance transaction
@@ -429,24 +429,24 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 5. Create a billing plan for negative services
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Credit Plan',
+      // 5. Create a contract line for negative services
+      const planId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Credit Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 6. Assign negative services to plan
       await context.db('plan_services').insert([
         {
-          plan_id: planId1,
+          contract_line_id: planId1,
           service_id: negativeServiceA,
           quantity: 1,
           tenant: context.tenantId
         },
         {
-          plan_id: planId1,
+          contract_line_id: planId1,
           service_id: negativeServiceB,
           quantity: 1,
           tenant: context.tenantId
@@ -468,17 +468,17 @@ describe('Negative Invoice Credit Tests', () => {
 
       // 8. Assign first plan to client
       const firstPlanId = uuidv4();
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: firstPlanId,
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: firstPlanId,
         client_id: client_id,
-        plan_id: planId1,
+        contract_line_id: planId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
       });
 
       // 9. Check initial credit balance is zero
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(0);
 
       // 10. Generate negative invoice
@@ -500,7 +500,7 @@ describe('Negative Invoice Credit Tests', () => {
       // await new Promise(resolve => setTimeout(resolve, 100));
 
       // 13. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(12500); // $125.00 credit
 
       // Verify transaction record for the negative invoice credit
@@ -528,17 +528,17 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 15. Create a billing plan for positive service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Regular Plan',
+      // 15. Create a contract line for positive service
+      const planId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Regular Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 16. Assign positive service to second plan
       await context.db('plan_services').insert({
-        plan_id: planId2,
+        contract_line_id: planId2,
         service_id: positiveService,
         quantity: 1,
         tenant: context.tenantId
@@ -557,14 +557,14 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 18. Deactivate first plan and assign second plan to client
-      await context.db('client_billing_plans')
-        .where({ client_billing_plan_id: firstPlanId })
+      await context.db('client_contract_lines')
+        .where({ client_contract_line_id: firstPlanId })
         .update({ is_active: false });
         
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId2,
+        contract_line_id: planId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true
@@ -595,7 +595,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
 
       // 23. Verify the credit balance is reduced
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(1500); // $15.00 = $125.00 - $110.00 
 
       // 24. Verify credit application transaction
@@ -657,17 +657,17 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 5. Create a billing plan for negative services
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Small Credit Plan',
+      // 5. Create a contract line for negative services
+      const planId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Small Credit Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 6. Assign negative service to plan
       await context.db('plan_services').insert({
-        plan_id: planId1,
+        contract_line_id: planId1,
         service_id: negativeService,
         quantity: 1,
         tenant: context.tenantId
@@ -687,10 +687,10 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 8. Assign first plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId1,
+        contract_line_id: planId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -712,7 +712,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(negativeInvoice.invoice_id);
 
       // 12. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(5000); // $50.00 credit
 
       // Now create a positive invoice with a larger amount
@@ -727,17 +727,17 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 14. Create a billing plan for expensive service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Expensive Plan',
+      // 14. Create a contract line for expensive service
+      const planId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Expensive Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 15. Assign positive service to second plan
       await context.db('plan_services').insert({
-        plan_id: planId2,
+        contract_line_id: planId2,
         service_id: expensiveService,
         quantity: 1,
         tenant: context.tenantId
@@ -756,18 +756,18 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 17. Deactivate the first plan and assign second plan to client
-      await context.db('client_billing_plans')
+      await context.db('client_contract_lines')
         .where({ 
           client_id: client_id,
-          plan_id: planId1,
+          contract_line_id: planId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
         
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId2,
+        contract_line_id: planId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true
@@ -798,7 +798,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(14250); // $142.50 remaining total ($192.50 - $50.00)
 
       // 22. Verify the credit balance is now zero
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(0); // All credit was used
 
       // 23. Verify credit application transaction
@@ -860,17 +860,17 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 5. Create a billing plan for negative service
-      const planId1 = await context.createEntity('billing_plans', {
-        plan_name: 'Large Credit Plan',
+      // 5. Create a contract line for negative service
+      const planId1 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Large Credit Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 6. Assign negative service to plan
       await context.db('plan_services').insert({
-        plan_id: planId1,
+        contract_line_id: planId1,
         service_id: largeNegativeService,
         quantity: 1,
         tenant: context.tenantId
@@ -890,10 +890,10 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 8. Assign first plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId1,
+        contract_line_id: planId1,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -915,7 +915,7 @@ describe('Negative Invoice Credit Tests', () => {
       await finalizeInvoice(negativeInvoice.invoice_id);
 
       // 12. Verify credit was created
-      const creditAfterNegativeInvoice = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterNegativeInvoice = await ClientContractLine.getClientCredit(client_id);
       expect(creditAfterNegativeInvoice).toBe(20000); // $200.00 credit
 
       // Now create a positive invoice with a smaller amount
@@ -930,17 +930,17 @@ describe('Negative Invoice Credit Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // 14. Create a billing plan for small service
-      const planId2 = await context.createEntity('billing_plans', {
-        plan_name: 'Small Service Plan',
+      // 14. Create a contract line for small service
+      const planId2 = await context.createEntity('contract_lines', {
+        contract_line_name: 'Small Service Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // 15. Assign positive service to second plan
       await context.db('plan_services').insert({
-        plan_id: planId2,
+        contract_line_id: planId2,
         service_id: smallService,
         quantity: 1,
         tenant: context.tenantId
@@ -959,18 +959,18 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'billing_cycle_id');
 
       // 17. Deactivate the first plan and assign second plan to client
-      await context.db('client_billing_plans')
+      await context.db('client_contract_lines')
         .where({ 
           client_id: client_id,
-          plan_id: planId1,
+          contract_line_id: planId1,
           tenant: context.tenantId
         })
         .update({ is_active: false });
         
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId2,
+        contract_line_id: planId2,
         tenant: context.tenantId,
         start_date: startDate2,
         is_active: true
@@ -1001,7 +1001,7 @@ describe('Negative Invoice Credit Tests', () => {
       expect(parseInt(finalPositiveInvoice.total_amount)).toBe(0); // $0.00 remaining total
 
       // 22. Verify the credit balance is reduced but still has remaining credit
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(14500); // $145.00 remaining credit ($200.00 - $55.00)
 
       // 23. Verify credit application transaction

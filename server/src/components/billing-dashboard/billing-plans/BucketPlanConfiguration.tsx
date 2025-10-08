@@ -6,13 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, ChevronDown } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
-import { BillingPlanDialog } from '../BillingPlanDialog';
+import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
 import GenericPlanServicesList from './GenericPlanServicesList';
-import { IService, IBillingPlan } from 'server/src/interfaces/billing.interfaces'; // Added IBillingPlan
-import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Added action to get base plan details
+import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces'; // Added IContractLine
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import {
   IPlanServiceConfiguration,
   IPlanServiceBucketConfig,
@@ -57,7 +57,7 @@ export function BucketPlanConfiguration({
   planId,
   className = '',
 }: BucketPlanConfigurationProps) {
-  const [plan, setPlan] = useState<IBillingPlan | null>(null); // State for base plan details
+  const [plan, setPlan] = useState<IContractLine | null>(null); // State for base plan details
   const [planServices, setPlanServices] = useState<PlanServiceWithDetails[]>([]);
   const [serviceConfigs, setServiceConfigs] = useState<ServiceConfigsState>({});
   const [initialServiceConfigs, setInitialServiceConfigs] = useState<ServiceConfigsState>({});
@@ -73,8 +73,8 @@ export function BucketPlanConfiguration({
     setPlan(null); // Reset plan on fetch
     try {
       // 0. Fetch base plan details first
-      const fetchedPlan = await getBillingPlanById(planId);
-      if (!fetchedPlan || fetchedPlan.plan_type !== 'Bucket') {
+      const fetchedPlan = await getContractLineById(planId);
+      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Bucket') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
         return;
@@ -293,9 +293,9 @@ export function BucketPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Bucket) - Service Configurations</CardTitle>
+          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Bucket) - Service Configurations</CardTitle>
           {plan && (
-            <BillingPlanDialog
+            <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchAndInitializeConfigs()}
               triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}

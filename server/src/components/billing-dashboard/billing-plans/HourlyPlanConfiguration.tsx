@@ -10,16 +10,16 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle, Trash2, Info, ChevronDown } from 'lucide-react';
 import { Button, ButtonProps } from 'server/src/components/ui/Button'; // Import ButtonProps
-import { BillingPlanDialog } from '../BillingPlanDialog';
+import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import * as Accordion from '@radix-ui/react-accordion';
 import * as Tooltip from '@radix-ui/react-tooltip'; // Correct Radix UI import
 // Removed incorrect import: import { TooltipContent, TooltipProvider, TooltipTrigger } from 'server/src/components/ui/Tooltip';
-import { getBillingPlanById, updateBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { getContractLineById, updateContractLine } from 'server/src/lib/actions/contractLineAction';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Corrected import path
 import GenericPlanServicesList from './GenericPlanServicesList';
-import { IBillingPlan, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
+import { IContractLine, IService as IBillingService } from 'server/src/interfaces/billing.interfaces'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
@@ -81,8 +81,8 @@ interface IPlanServiceWithHourlyConfig {
     isHourlyConfigurable: boolean; // Flag to indicate if the service *should* be hourly
 }
 
-// Define the expected shape of the plan object returned by getBillingPlanById for Hourly
-type HourlyPlanData = IBillingPlan & {
+// Define the expected shape of the plan object returned by getContractLineById for Hourly
+type HourlyPlanData = IContractLine & {
     enable_overtime?: boolean;
     overtime_rate?: number;
     overtime_threshold?: number;
@@ -144,8 +144,8 @@ export function HourlyPlanConfiguration({
     setPlanValidationErrors({});
     try {
       // Fetch base plan details
-      const fetchedPlan = await getBillingPlanById(planId) as HourlyPlanData;
-      if (!fetchedPlan || fetchedPlan.plan_type !== 'Hourly') {
+      const fetchedPlan = await getContractLineById(planId) as HourlyPlanData;
+      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
         return;
@@ -409,7 +409,7 @@ export function HourlyPlanConfiguration({
         // }
 
         if (planChanged) {
-            await updateBillingPlan(planId, planUpdatePayload);
+            await updateContractLine(planId, planUpdatePayload);
             // Update initial plan data after successful save
             setInitialPlanData(prev => ({ ...prev, ...planUpdatePayload }));
         }
@@ -588,9 +588,9 @@ export function HourlyPlanConfiguration({
             {/* Service Specific Settings */}
             <Card>
                 <CardHeader className="flex items-center justify-between">
-                    <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
+                    <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Hourly) - Service Rates & Settings</CardTitle>
                     {plan && (
-                        <BillingPlanDialog
+                        <ContractLineDialog
                             editingPlan={plan}
                             onPlanAdded={() => fetchPlanData()}
                             triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}

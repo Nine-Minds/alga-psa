@@ -15,7 +15,7 @@ import {
   IPlanServiceRateTier,
   IUserTypeRate
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { IService, IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IService, IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { Button } from 'server/src/components/ui/Button';
 
@@ -23,12 +23,12 @@ interface ServiceConfigurationPanelProps {
   configuration: Partial<IPlanServiceConfiguration>;
   service?: IService;
   typeConfig?: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig> | null;
-  planFixedConfig?: Partial<IBillingPlanFixedConfig>;
+  planFixedConfig?: Partial<IContractLineFixedConfig>;
   rateTiers?: IPlanServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
   onConfigurationChange: (updates: Partial<IPlanServiceConfiguration>) => void;
   onTypeConfigChange: (type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket', config: Partial<IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig>) => void;
-  onPlanFixedConfigChange?: (updates: Partial<IBillingPlanFixedConfig>) => void;
+  onPlanFixedConfigChange?: (updates: Partial<IContractLineFixedConfig>) => void;
   onRateTiersChange?: (tiers: IPlanServiceRateTier[]) => void;
   onUserTypeRatesChange?: (rates: IUserTypeRate[]) => void;
   onSave?: () => void;

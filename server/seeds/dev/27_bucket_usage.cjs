@@ -7,13 +7,13 @@ exports.seed = function (knex) {
             return knex('bucket_usage').insert([
                 {
                     tenant: tenant.tenant,
-                    bucket_plan_id: knex('bucket_plans').where({ 
+                    bucket_contract_line_id: knex('bucket_plans').where({ 
                         tenant: tenant.tenant, 
-                        plan_id: knex('billing_plans').where({ 
+                        contract_line_id: knex('contract_lines').where({ 
                             tenant: tenant.tenant, 
-                            plan_name: 'Wonderland Basic' 
-                        }).select('plan_id').first() 
-                    }).select('bucket_plan_id').first(),
+                            contract_line_name: 'Wonderland Basic' 
+                        }).select('contract_line_id').first() 
+                    }).select('bucket_contract_line_id').first(),
                     client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
                         client_name: 'Wonderland' 
@@ -29,13 +29,13 @@ exports.seed = function (knex) {
                 },
                 {
                     tenant: tenant.tenant,
-                    bucket_plan_id: knex('bucket_plans').where({ 
+                    bucket_contract_line_id: knex('bucket_plans').where({ 
                         tenant: tenant.tenant, 
-                        plan_id: knex('billing_plans').where({ 
+                        contract_line_id: knex('contract_lines').where({ 
                             tenant: tenant.tenant, 
-                            plan_name: 'Oz Premium' 
-                        }).select('plan_id').first() 
-                    }).select('bucket_plan_id').first(),
+                            contract_line_name: 'Oz Premium' 
+                        }).select('contract_line_id').first() 
+                    }).select('bucket_contract_line_id').first(),
                     client_id: knex('clients').where({ 
                         tenant: tenant.tenant, 
                         client_name: 'Emerald City' 

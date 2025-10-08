@@ -37,7 +37,7 @@ const activities = proxyActivities<{
     tenantId: string;
     adminUserId: string;
     clientId?: string;
-    billingPlan?: string;
+    contractLine?: string;
   }): Promise<SetupTenantDataActivityResult>;
   run_onboarding_seeds(tenantId: string): Promise<{ success: boolean; seedsApplied: string[] }>;
   sendWelcomeEmail(input: SendWelcomeEmailActivityInput): Promise<SendWelcomeEmailActivityResult>;
@@ -267,7 +267,7 @@ export async function tenantCreationWorkflow(
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
       clientId: tenantResult.clientId,
-      billingPlan: input.billingPlan,
+      contractLine: input.contractLine,
     });
 
     workflowState.progress = 90;

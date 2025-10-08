@@ -5,32 +5,32 @@ This document lists all action files that import and use models, along with the 
 
 ## Files Using Models from lib/models/
 
-### 1. **billingPlanAction.ts**
-- **Model**: `BillingPlan` from 'server/src/lib/models/billingPlan'
-- **Model**: `BillingPlanFixedConfig` from 'server/src/lib/models/billingPlanFixedConfig'
+### 1. **contractLineAction.ts**
+- **Model**: `ContractLine` from 'server/src/lib/models/contractLine'
+- **Model**: `ContractLineFixedConfig` from 'server/src/lib/models/contractLineFixedConfig'
 - **Methods Used**: 
-  - `BillingPlan.getAll()`
-  - `BillingPlan.findById(planId)`
-  - `BillingPlan.create(safePlanData)`
-  - `BillingPlan.update(planId, safeUpdateData)`
-  - `BillingPlan.delete(planId)`
-  - `BillingPlan.isInUse(planId)`
-  - `BillingPlan.hasAssociatedServices(planId)`
+  - `ContractLine.getAll()`
+  - `ContractLine.findById(planId)`
+  - `ContractLine.create(safePlanData)`
+  - `ContractLine.update(planId, safeUpdateData)`
+  - `ContractLine.delete(planId)`
+  - `ContractLine.isInUse(planId)`
+  - `ContractLine.hasAssociatedServices(planId)`
 
-### 2. **bundleBillingPlanActions.ts**
-- **Model**: `BundleBillingPlan` from 'server/src/lib/models/bundleBillingPlan'
+### 2. **contractLineMappingActions.ts**
+- **Model**: `ContractLineMapping` from 'server/src/lib/models/contractLineMapping'
 
 ### 3. **channel-actions/channelActions.ts**
 - **Model**: `Channel` from '../../models/channel'
 
-### 4. **clientBillingAction.ts**
-- **Model**: `CompanyBillingPlan` from 'server/src/lib/models/clientBilling'
+### 4. **clientContractLineAction.ts**
+- **Model**: `CompanyContractLine` from 'server/src/lib/models/clientContractLine'
 
 ### 5. **comment-actions/commentActions.ts**
 - **Model**: `Comment` from 'server/src/lib/models/comment'
 
-### 6. **company-actions/companyPlanBundleActions.ts**
-- **Model**: `CompanyPlanBundle` from 'server/src/lib/models/companyPlanBundle'
+### 6. **company-actions/companyContractActions.ts**
+- **Model**: `CompanyContract` from 'server/src/lib/models/companyContract'
 
 ### 7. **creditReconciliationActions.ts** & **creditReconciliationFixActions.ts**
 - **Model**: `CreditReconciliationReport` from 'server/src/lib/models/creditReconciliationReport'
@@ -45,8 +45,8 @@ This document lists all action files that import and use models, along with the 
 ### 10. **invoiceActions.ts** (and related invoice files)
 - **Model**: `Invoice` from 'server/src/lib/models/invoice'
 
-### 11. **planBundleActions.ts**
-- **Model**: `PlanBundle` from 'server/src/lib/models/planBundle'
+### 11. **contractActions.ts**
+- **Model**: `Contract` from 'server/src/lib/models/contract'
 
 ### 12. **priorityActions.ts**
 - **Model**: `Priority` from 'server/src/lib/models/priority'
@@ -117,7 +117,7 @@ Based on the analysis, models typically expose these methods:
 - `update(id, data)` - Update an existing record
 - `delete(id)` - Delete a record
 - `isInUse(id)` - Check if record is referenced elsewhere
-- `hasAssociatedServices(id)` - Check for related services (specific to BillingPlan)
+- `hasAssociatedServices(id)` - Check for related services (specific to ContractLine)
 
 ## Transaction Support Needed
 

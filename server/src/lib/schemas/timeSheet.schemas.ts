@@ -86,6 +86,6 @@ export const timeEntrySchema = tenantSchema.extend({
   approval_status: timeSheetStatusSchema,
   service_id: z.string().optional(),
   tax_region: z.string().optional(),
-  billing_plan_id: z.string().optional(),
+  contract_line_id: z.string().optional(),
   tax_rate_id: z.string().nullable().optional()
 });

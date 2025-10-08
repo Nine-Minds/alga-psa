@@ -22,7 +22,7 @@ export const billingOverviewReport: ReportDefinition = {
       description: 'Count of currently active billing plans',
       type: 'count',
       query: {
-        table: 'billing_plans',
+        table: 'contract_lines',
         aggregation: 'count',
         filters: [
           { field: 'is_active', operator: 'eq', value: true },
@@ -45,17 +45,17 @@ export const billingOverviewReport: ReportDefinition = {
         joins: [
           {
             type: 'inner',
-            table: 'client_billing_plans',
+            table: 'client_contract_lines',
             on: [
-              { left: 'clients.client_id', right: 'client_billing_plans.client_id' },
-              { left: 'clients.tenant', right: 'client_billing_plans.tenant' }
+              { left: 'clients.client_id', right: 'client_contract_lines.client_id' },
+              { left: 'clients.tenant', right: 'client_contract_lines.tenant' }
             ]
           }
         ],
         aggregation: 'count_distinct',
         fields: ['clients.client_id'],
         filters: [
-          { field: 'client_billing_plans.is_active', operator: 'eq', value: true },
+          { field: 'client_contract_lines.is_active', operator: 'eq', value: true },
           { field: 'clients.tenant', operator: 'eq', value: '{{tenant}}' }
         ]
       },
@@ -194,6 +194,6 @@ export const billingOverviewReport: ReportDefinition = {
   caching: {
     ttl: 300, // 5 minutes
     key: 'billing.overview.{{tenant}}',
-    invalidateOn: ['invoice.created', 'invoice.updated', 'billing_plan.updated']
+    invalidateOn: ['invoice.created', 'invoice.updated', 'contract_line.updated']
   }
 };
