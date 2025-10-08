@@ -172,7 +172,7 @@ When implementing action menus in DataTable components, follow these guidelines:
    ```tsx
    <DropdownMenuTrigger asChild>
      <Button
-       id="billing-plan-actions-menu"  // Follow pattern: {object}-actions-menu
+       id="contract-line-actions-menu"  // Follow pattern: {object}-actions-menu
        variant="ghost"
        className="h-8 w-8 p-0"
        onClick={(e) => e.stopPropagation()}
@@ -189,8 +189,8 @@ When implementing action menus in DataTable components, follow these guidelines:
    - Menu items: `{action}-{object}-menu-item`
    Example:
    ```tsx
-   <Button id="billing-plan-actions-menu">
-   <DropdownMenuItem id="edit-billing-plan-menu-item">
+   <Button id="contract-line-actions-menu">
+   <DropdownMenuItem id="edit-contract-line-menu-item">
    ```
 
 4. **Event Handling**

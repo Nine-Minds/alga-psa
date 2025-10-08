@@ -93,7 +93,7 @@ export async function updateDefaultBillingSettings(data: BillingSettings): Promi
   return { success: true };
 }
 
-export async function getClientBillingSettings(clientId: string): Promise<BillingSettings | null> {
+export async function getClientContractLineSettings(clientId: string): Promise<BillingSettings | null> {
   const session = await getSession();
   if (!session?.user?.id) {
     throw new Error("Unauthorized");
@@ -126,7 +126,7 @@ export async function getClientBillingSettings(clientId: string): Promise<Billin
   };
 }
 
-export async function updateClientBillingSettings(
+export async function updateClientContractLineSettings(
   clientId: string,
   data: BillingSettings | null // null to remove override
 ): Promise<{ success: boolean }> {

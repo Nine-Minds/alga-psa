@@ -22,10 +22,10 @@ describe('Billing Invoice Edge Cases', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings',
@@ -96,24 +96,24 @@ describe('Billing Invoice Edge Cases', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Credit Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -130,10 +130,10 @@ describe('Billing Invoice Edge Cases', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: '2025-02-01',
       is_active: true,
       tenant: context.tenantId
@@ -213,17 +213,17 @@ describe('Billing Invoice Edge Cases', () => {
       is_taxable: true // Even though it's taxable, tax on $0 is $0
     }, 'service_id');
 
-    // Create a billing plan with the free service
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Free Plan',
+    // Create a contract line with the free service
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Free Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign free service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: freeService,
       quantity: 1,
       tenant: context.tenantId
@@ -239,10 +239,10 @@ describe('Billing Invoice Edge Cases', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: '2025-02-01',
       is_active: true,
       tenant: context.tenantId

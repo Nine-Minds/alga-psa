@@ -3,7 +3,7 @@ import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Switch } from 'server/src/components/ui/Switch';
 import { Label } from 'server/src/components/ui/Label';
 import toast from 'react-hot-toast';
-import { getClientBillingSettings, updateClientBillingSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
+import { getClientContractLineSettings, updateClientContractLineSettings, type BillingSettings } from "server/src/lib/actions/billingSettingsActions";
 
 interface ClientZeroDollarInvoiceSettingsProps {
   clientId: string;
@@ -16,7 +16,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const clientSettings = await getClientBillingSettings(clientId);
+        const clientSettings = await getClientContractLineSettings(clientId);
         if (clientSettings) {
           setSettings(clientSettings);
           setUseDefault(false);
@@ -37,7 +37,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         zeroDollarInvoiceHandling: value as 'normal' | 'finalized',
         suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
       };
-      const result = await updateClientBillingSettings(clientId, newSettings);
+      const result = await updateClientContractLineSettings(clientId, newSettings);
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
@@ -54,7 +54,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
         zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
         suppressZeroDollarInvoices: checked,
       };
-      const result = await updateClientBillingSettings(clientId, newSettings);
+      const result = await updateClientContractLineSettings(clientId, newSettings);
       if (result.success) {
         setSettings(newSettings);
         setUseDefault(false);
@@ -69,7 +69,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
     try {
       if (checked) {
         // Remove client override
-        const result = await updateClientBillingSettings(clientId, null);
+        const result = await updateClientContractLineSettings(clientId, null);
         if (result.success) {
           setSettings(null);
           setUseDefault(true);
@@ -81,7 +81,7 @@ const ClientZeroDollarInvoiceSettings: React.FC<ClientZeroDollarInvoiceSettingsP
           zeroDollarInvoiceHandling: settings?.zeroDollarInvoiceHandling || 'normal',
           suppressZeroDollarInvoices: settings?.suppressZeroDollarInvoices || false,
         };
-        const result = await updateClientBillingSettings(clientId, newSettings);
+        const result = await updateClientContractLineSettings(clientId, newSettings);
         if (result.success) {
           setSettings(newSettings);
           setUseDefault(false);

@@ -27,10 +27,10 @@ describe('Billing Invoice Generation – Error Handling', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings',
@@ -99,7 +99,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     );
   });
 
-  it('should handle missing billing plans', async () => {
+  it('should handle missing contract lines', async () => {
     // Create client without plans
     const newClientId = await context.createEntity('clients', {
       client_name: 'Client Without Plans',
@@ -119,19 +119,19 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: new RegExp(`No active billing plans found for client ${newClientId} in the given period`)
+        messagePattern: new RegExp(`No active contract lines found for client ${newClientId} in the given period`)
       }
     );
   });
 
   it('should handle undefined service rates', async () => {
     // Arrange
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Invalid Plan',
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Invalid Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Service Without Rate',
@@ -142,7 +142,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     }, 'service_id');
 
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       tenant: context.tenantId
     });
@@ -154,10 +154,10 @@ describe('Billing Invoice Generation – Error Handling', () => {
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: context.clientId,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
       tenant: context.tenantId
@@ -168,12 +168,12 @@ describe('Billing Invoice Generation – Error Handling', () => {
 
   it('should throw error when regenerating for same period', async () => {
     // Arrange
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Fixed Plan',
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Fixed Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Monthly Service',
@@ -184,7 +184,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     }, 'service_id');
 
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       quantity: 1,
       tenant: context.tenantId
@@ -197,10 +197,10 @@ describe('Billing Invoice Generation – Error Handling', () => {
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 })
     }, 'billing_cycle_id');
 
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: context.clientId,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       is_active: true,
       tenant: context.tenantId
@@ -219,7 +219,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        message: 'No active billing plans for this period'
+        message: 'No active contract lines for this period'
       }
     );
   });

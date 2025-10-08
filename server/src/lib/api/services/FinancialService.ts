@@ -53,9 +53,9 @@ import {
   PaymentMethodResponse,
   
   // Billing plan types
-  CreateBillingPlanRequest,
-  UpdateBillingPlanRequest,
-  BillingPlanResponse,
+  CreateContractLineRequest,
+  UpdateContractLineRequest,
+  ContractLineResponse,
   
   // Tax types
   CreateTaxRateRequest,
@@ -91,11 +91,11 @@ import {
   ITransaction,
   ICreditTracking,
   PaymentMethod,
-  IBillingPlan,
+  IContractLine,
   ITaxRate,
   ICreditReconciliationReport,
   IDefaultBillingSettings,
-  IClientBillingSettings
+  IClientContractLineSettings
 } from '../../../interfaces/billing.interfaces';
 
 // Import existing actions to integrate with

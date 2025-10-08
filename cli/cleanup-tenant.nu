@@ -337,12 +337,12 @@ def "main cleanup" [
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
-        "client_plan_bundles" "plan_service_rate_tiers" "plan_service_bucket_config"
+        "client_contracts" "plan_service_rate_tiers" "plan_service_bucket_config"
         "plan_service_hourly_config" "plan_service_hourly_configs" "plan_service_usage_config"
-        "plan_service_fixed_config" "plan_service_configuration" "billing_plan_fixed_config"
+        "plan_service_fixed_config" "plan_service_configuration" "contract_line_fixed_config"
         "service_rate_tiers" "plan_discounts" "discounts"
-        "client_billing_plans" "client_billing_cycles" "client_billing_settings"
-        "plan_services" "bundle_billing_plans" "plan_bundles"
+        "client_contract_lines" "client_billing_cycles" "client_billing_settings"
+        "plan_services" "contract_line_mappings" "contracts"
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings"
@@ -364,7 +364,7 @@ def "main cleanup" [
         "asset_maintenance_schedules" "assets"
         
         # Billing plans
-        "billing_plans" "payment_methods"
+        "contract_lines" "payment_methods"
         
         # Interactions must come BEFORE tickets (tickets reference interactions in some cases)
         "interactions" "interaction_types"

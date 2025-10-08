@@ -2,15 +2,15 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
-import { DatePicker } from 'server/src/components/ui/DatePicker';import { IBillingPlan, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
+import { DatePicker } from 'server/src/components/ui/DatePicker';import { IContractLine, IServiceCategory } from 'server/src/interfaces/billing.interfaces';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
 import { Checkbox } from 'server/src/components/ui/Checkbox';
 
 interface PlanPickerDialogProps {
     isOpen: boolean;
     onClose: () => void;
-    onSelect: (plan: IBillingPlan, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
-    availablePlans: IBillingPlan[];
+    onSelect: (plan: IContractLine, serviceCategory: string | undefined, startDate: string, endDate: string | null) => void;
+    availablePlans: IContractLine[];
     serviceCategories: IServiceCategory[];
     initialValues?: {
         planId?: string;
@@ -29,8 +29,8 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
     serviceCategories,
     initialValues
 }) => {
-    const [selectedPlan, setSelectedPlan] = useState<IBillingPlan | null>(
-        initialValues?.planId ? availablePlans.find(p => p.plan_id === initialValues.planId) || null : null
+    const [selectedPlan, setSelectedPlan] = useState<IContractLine | null>(
+        initialValues?.planId ? availablePlans.find(p => p.contract_line_id === initialValues.planId) || null : null
     );
     const [selectedCategory, setSelectedCategory] = useState<string>(
         !initialValues?.categoryId ? 'none' : initialValues.categoryId
@@ -62,25 +62,25 @@ const PlanPickerDialog: React.FC<PlanPickerDialogProps> = ({
           isOpen={isOpen} 
           onClose={onClose} 
           className="sm:max-w-4xl" 
-          title="Select a Billing Plan"
+          title="Select a Contract Line"
         >
             <DialogContent>
                 <div className="mt-4 space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Billing Plan
+                            Contract Line
                         </label>
                         <CustomSelect
-                            value={selectedPlan?.plan_id || ''}
+                            value={selectedPlan?.contract_line_id || ''}
                             onValueChange={(planId) => {
-                                const plan = availablePlans.find(p => p.plan_id === planId);
+                                const plan = availablePlans.find(p => p.contract_line_id === planId);
                                 setSelectedPlan(plan || null);
                             }}
                             options={availablePlans.map((plan): { value: string; label: string } => ({
-                                value: plan.plan_id || '',
-                                label: plan.plan_name
+                                value: plan.contract_line_id || '',
+                                label: plan.contract_line_name
                             }))}
-                            placeholder="Select billing plan..."
+                            placeholder="Select contract line..."
                         />
                     </div>
 

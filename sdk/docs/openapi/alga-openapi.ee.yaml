@@ -39,7 +39,7 @@ tags:
   - name: meta
   - name: permission-checks
   - name: permissions
-  - name: plan-bundles
+  - name: contracts
   - name: plan-templates
   - name: projects
   - name: provisioning
@@ -8959,13 +8959,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/plan-bundles:
+  /api/v1/contracts:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - plan-bundles
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -8993,7 +8993,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - plan-bundles
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -9024,13 +9024,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/plan-bundles/{bundleId}/plans:
+  /api/v1/contracts/{bundleId}/plans:
     post:
       summary: POST v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - plan-bundles
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -9061,13 +9061,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/plan-bundles/{bundleId}/plans/{planId}:
+  /api/v1/contracts/{bundleId}/plans/{planId}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - plan-bundles
+        - contracts
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true

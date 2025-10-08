@@ -7,7 +7,7 @@ import { TestContext } from '../../../test-utils/testContext';
 import { setupCommonMocks } from '../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../test-utils/dateUtils';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { runWithTenant } from 'server/src/lib/db';
 import '../../../test-utils/nextApiMock';
 
@@ -27,7 +27,7 @@ beforeAll(async () => {
       'client_tax_settings',
       'transactions',
       'client_billing_cycles',
-      'client_billing_plans',
+      'client_contract_lines',
       'bucket_plans',
       'bucket_usage'
     ]
@@ -69,17 +69,17 @@ async function createTestService(overrides = {}) {
 async function createTestPlan(serviceId: string, overrides = {}) {
   const planId = uuidv4();
   const defaultPlan = {
-    plan_id: planId,
+    contract_line_id: planId,
     tenant: context.tenantId,
-    plan_name: 'Test Plan',
+    contract_line_name: 'Test Plan',
     billing_frequency: 'monthly',
     is_custom: false,
-    plan_type: 'Fixed'
+    contract_line_type: 'Fixed'
   };
 
-  await context.db('billing_plans').insert({ ...defaultPlan, ...overrides });
+  await context.db('contract_lines').insert({ ...defaultPlan, ...overrides });
   await context.db('plan_services').insert({
-    plan_id: planId,
+    contract_line_id: planId,
     service_id: serviceId,
     tenant: context.tenantId,
     quantity: 1
@@ -282,7 +282,7 @@ describe('Prepayment Invoice System', () => {
       expect(parseFloat(creditTransaction.amount)).toBe(prepaymentAmount);
 
       const creditBalance = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(creditBalance+'')).toBe(prepaymentAmount);
     });
@@ -315,10 +315,10 @@ describe('Prepayment Invoice System', () => {
       });
 
       // Link plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -334,8 +334,8 @@ describe('Prepayment Invoice System', () => {
       // Create bucket plan
       const bucketPlanId = uuidv4();
       await context.db('bucket_plans').insert({
-        bucket_plan_id: bucketPlanId,
-        plan_id: planId,
+        bucket_contract_line_id: bucketPlanId,
+        contract_line_id: planId,
         total_hours: 40,
         billing_period: 'monthly',
         overage_rate: 150,
@@ -345,7 +345,7 @@ describe('Prepayment Invoice System', () => {
       // Create bucket usage
       await context.db('bucket_usage').insert({
         usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
+        bucket_contract_line_id: bucketPlanId,
         client_id: context.clientId,
         period_start: startDate,
         period_end: dateHelpers.startOf(now, 'month'),
@@ -368,7 +368,7 @@ describe('Prepayment Invoice System', () => {
       });
 
       const initialCredit = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
@@ -384,7 +384,7 @@ describe('Prepayment Invoice System', () => {
 
       // Verify credit balance update
       const finalCredit = await runWithTenant(context.tenantId, async () => {
-        return await ClientBillingPlan.getClientCredit(context.clientId);
+        return await ClientContractLine.getClientCredit(context.clientId);
       });
       expect(parseInt(finalCredit+'')).toBe(prepaymentAmount - creditApplied);
 
@@ -444,11 +444,11 @@ describe('Multiple Credit Applications', () => {
     ]);
 
     // Link plan to client
-    await context.db('client_billing_plans').insert([
+    await context.db('client_contract_lines').insert([
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -465,8 +465,8 @@ describe('Multiple Credit Applications', () => {
     // Create bucket plan
     const bucketPlanId = uuidv4();
     await context.db('bucket_plans').insert({
-      bucket_plan_id: bucketPlanId,
-      plan_id: planId,
+      bucket_contract_line_id: bucketPlanId,
+      contract_line_id: planId,
       total_hours: 40,
       billing_period: 'monthly',
       overage_rate: 150,
@@ -477,7 +477,7 @@ describe('Multiple Credit Applications', () => {
     await context.db('bucket_usage').insert([
       {
         usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
+        bucket_contract_line_id: bucketPlanId,
         client_id: context.clientId,
         period_start: dateHelpers.startOf(now, 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
@@ -488,7 +488,7 @@ describe('Multiple Credit Applications', () => {
       },
       {
         usage_id: uuidv4(),
-        bucket_plan_id: bucketPlanId,
+        bucket_contract_line_id: bucketPlanId,
         client_id: context.clientId,
         period_start: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 1 }), 'month'),
         period_end: dateHelpers.startOf(dateHelpers.addDuration(now, { months: 2 }), 'month'),
@@ -522,7 +522,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -538,7 +538,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify credit balance update
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
 
@@ -577,7 +577,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -606,7 +606,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - totalCreditApplied);
   });
@@ -633,7 +633,7 @@ describe('Multiple Credit Applications', () => {
 
     const totalPrepayment = prepaymentAmount1 + prepaymentAmount2;
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(totalPrepayment);
 
@@ -649,7 +649,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(totalPrepayment - creditApplied);
   });
@@ -680,7 +680,7 @@ describe('Multiple Credit Applications', () => {
     });
 
     const initialCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(initialCredit+'')).toBe(prepaymentAmount);
 
@@ -696,7 +696,7 @@ describe('Multiple Credit Applications', () => {
 
     // Verify final credit balance
     const finalCredit = await runWithTenant(context.tenantId, async () => {
-      return await ClientBillingPlan.getClientCredit(context.clientId);
+      return await ClientContractLine.getClientCredit(context.clientId);
     });
     expect(parseInt(finalCredit+'')).toBe(0);
   });

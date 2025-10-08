@@ -50,7 +50,7 @@ export async function createTestTenant(
     },
     companyName: options.companyName || options.clientName || options.tenantName || `Test Client ${testId}`,
     clientName: options.clientName || options.tenantName || `Test Client ${testId}`,
-    billingPlan: options.billingPlan || 'basic',
+    contractLine: options.contractLine || 'basic',
   };
 
   const result = await createTenantComplete(db, tenantInput);

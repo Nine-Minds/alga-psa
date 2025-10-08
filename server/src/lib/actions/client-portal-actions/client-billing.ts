@@ -5,7 +5,7 @@ import { withTransaction } from '@shared/db';
 import { Knex } from 'knex';
 import { getUserRolesWithPermissions } from 'server/src/lib/actions/user-actions/userActions';
 import {
-  IClientBillingPlan,
+  IClientContractLine,
   IBillingResult,
   IBucketUsage,
   IService
@@ -23,7 +23,7 @@ import { scheduleInvoiceZipAction } from 'server/src/lib/actions/job-actions/sch
 import { scheduleInvoiceEmailAction } from 'server/src/lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { getSession } from 'server/src/lib/auth/getSession';
 
-export async function getClientBillingPlan(): Promise<IClientBillingPlan | null> {
+export async function getClientContractLine(): Promise<IClientContractLine | null> {
   const session = await getSession();
   
   if (!session?.user?.tenant || !session.user.clientId) {
@@ -34,25 +34,25 @@ export async function getClientBillingPlan(): Promise<IClientBillingPlan | null>
   
   try {
     const plan = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await trx('client_billing_plans')
+      return await trx('client_contract_lines')
         .select(
-          'client_billing_plans.*',
-          'billing_plans.plan_name',
-          'billing_plans.billing_frequency',
+          'client_contract_lines.*',
+          'contract_lines.contract_line_name',
+          'contract_lines.billing_frequency',
           'service_categories.category_name as service_category_name'
         )
-        .join('billing_plans', function() {
-          this.on('client_billing_plans.plan_id', '=', 'billing_plans.plan_id')
-            .andOn('billing_plans.tenant', '=', 'client_billing_plans.tenant')
+        .join('contract_lines', function() {
+          this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
+            .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant')
         })
         .leftJoin('service_categories', function() {
-          this.on('client_billing_plans.service_category', '=', 'service_categories.category_id')
-            .andOn('service_categories.tenant', '=', 'client_billing_plans.tenant')
+          this.on('client_contract_lines.service_category', '=', 'service_categories.category_id')
+            .andOn('service_categories.tenant', '=', 'client_contract_lines.tenant')
         })
         .where({
-          'client_billing_plans.client_id': session.user.clientId,
-          'client_billing_plans.is_active': true,
-          'client_billing_plans.tenant': session.user.tenant
+          'client_contract_lines.client_id': session.user.clientId,
+          'client_contract_lines.is_active': true,
+          'client_contract_lines.tenant': session.user.tenant
         })
         .first();
     });
@@ -337,16 +337,16 @@ export async function getCurrentUsage(): Promise<{
           this.on('service_catalog.service_id', '=', 'plan_services.service_id')
             .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
         })
-        .join('client_billing_plans', function() {
-          this.on('plan_services.plan_id', '=', 'client_billing_plans.plan_id')
-            .andOn('plan_services.tenant', '=', 'client_billing_plans.tenant')
+        .join('client_contract_lines', function() {
+          this.on('plan_services.contract_line_id', '=', 'client_contract_lines.contract_line_id')
+            .andOn('plan_services.tenant', '=', 'client_contract_lines.tenant')
         })
         .where({
-          'client_billing_plans.client_id': session.user.clientId,
-          'client_billing_plans.is_active': true,
+          'client_contract_lines.client_id': session.user.clientId,
+          'client_contract_lines.is_active': true,
           'service_catalog.tenant': session.user.tenant,
           'plan_services.tenant': session.user.tenant,
-          'client_billing_plans.tenant': session.user.tenant
+          'client_contract_lines.tenant': session.user.tenant
         });
 
       return {

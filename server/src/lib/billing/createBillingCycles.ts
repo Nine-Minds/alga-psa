@@ -1,5 +1,5 @@
 import { Knex } from 'knex';
-import { IClientBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { IClientContractLineCycle } from 'server/src/interfaces/billing.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { 
   addWeeks, 
@@ -178,7 +178,7 @@ function getStartOfCurrentCycle(date: ISO8601String, billingCycle: string): {
 
 async function createBillingCycle(
   knex: Knex,
-  cycle: Partial<IClientBillingCycle> & { effective_date: ISO8601String }
+  cycle: Partial<IClientContractLineCycle> & { effective_date: ISO8601String }
 ): Promise<BillingCycleCreationResult> {
   // Validate that input date is UTC midnight
   const dateObj = parseISO(cycle.effective_date);
@@ -198,7 +198,7 @@ async function createBillingCycle(
 
   const cycleDates = getNextCycleDate(cycle.effective_date, cycle.billing_cycle!);
 
-  const fullCycle: Partial<IClientBillingCycle> = {
+  const fullCycle: Partial<IClientContractLineCycle> = {
     ...cycle,
     period_start_date: cycleDates.periodStart,
     period_end_date: cycleDates.periodEnd
@@ -305,7 +305,7 @@ function isDateObject(val: unknown): val is Date {
   return Object.prototype.toString.call(val) === '[object Date]';
 }
 
-export async function createClientBillingCycles(
+export async function createClientContractLineCycles(
   knex: Knex,
   client: IClient,
   options: { manual?: boolean; effectiveDate?: string } = {}
@@ -322,7 +322,7 @@ export async function createClientBillingCycles(
     })
     .orderBy('effective_date', 'desc')
     .first()
-    .select('effective_date') as IClientBillingCycle;
+    .select('effective_date') as IClientContractLineCycle;
 
   const now = new Date().toISOString().split('T')[0] + 'T00:00:00Z';
   

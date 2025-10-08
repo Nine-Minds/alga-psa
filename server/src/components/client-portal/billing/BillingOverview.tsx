@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { CustomTabs, TabContent } from 'server/src/components/ui/CustomTabs';
 import {
-  getClientBillingPlan,
+  getClientContractLine,
   getClientInvoices,
   getCurrentUsage
 } from 'server/src/lib/actions/client-portal-actions/client-billing';
@@ -17,7 +17,7 @@ import {
 } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { format, subDays } from 'date-fns';
 import {
-  IClientBillingPlan,
+  IClientContractLine,
   IBucketUsage,
   IService
 } from 'server/src/interfaces/billing.interfaces';
@@ -80,7 +80,7 @@ const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
   const { t } = useTranslation('clientPortal');
   const [currentTab, setCurrentTab] = useState<string | null>(null);
-  const [billingPlan, setBillingPlan] = useState<IClientBillingPlan | null>(null);
+  const [contractLine, setContractLine] = useState<IClientContractLine | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [usage, setUsage] = useState<{ bucketUsage: IBucketUsage | null; services: IService[] }>({
@@ -120,13 +120,13 @@ export default function BillingOverview() {
       try {
         // Load billing plan and usage data for all users
         const [plan, usageData] = await Promise.all([
-          getClientBillingPlan(),
+          getClientContractLine(),
           getCurrentUsage()
         ]);
 
         if (!isMounted) return;
         
-        setBillingPlan(plan);
+        setContractLine(plan);
         setUsage(usageData);
         
         // Try to load invoices (will fail if user doesn't have permission)
@@ -303,7 +303,7 @@ export default function BillingOverview() {
         content: (
           <div id="overview-tab">
             <BillingOverviewTab
-              billingPlan={billingPlan}
+              contractLine={contractLine}
               invoices={invoices}
               bucketUsage={bucketUsage}
               isBucketUsageLoading={isBucketUsageLoading}
@@ -366,7 +366,7 @@ export default function BillingOverview() {
     
     return tabsArray;
   }, [
-    billingPlan,
+    contractLine,
     invoices,
     bucketUsage,
     isBucketUsageLoading,

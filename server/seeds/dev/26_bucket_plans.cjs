@@ -6,14 +6,14 @@ exports.seed = function (knex) {
     //         return knex('bucket_plans').insert([
     //             {
     //                 tenant: tenant.tenant,
-    //                 plan_id: knex('billing_plans').where({ tenant: tenant.tenant, plan_name: 'Wonderland Basic' }).select('plan_id').first(),
+    //                 contract_line_id: knex('contract_lines').where({ tenant: tenant.tenant, contract_line_name: 'Wonderland Basic' }).select('contract_line_id').first(),
     //                 total_hours: 40,
     //                 billing_period: 'Monthly',
     //                 overage_rate: 100.00
     //             },
     //             {
     //                 tenant: tenant.tenant,
-    //                 plan_id: knex('billing_plans').where({ tenant: tenant.tenant, plan_name: 'Oz Premium' }).select('plan_id').first(),
+    //                 contract_line_id: knex('contract_lines').where({ tenant: tenant.tenant, contract_line_name: 'Oz Premium' }).select('contract_line_id').first(),
     //                 total_hours: 100,
     //                 billing_period: 'Monthly',
     //                 overage_rate: 150.00

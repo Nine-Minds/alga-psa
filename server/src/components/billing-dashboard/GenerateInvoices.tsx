@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import CustomSelect from '../ui/CustomSelect';
-import { IClientBillingCycle, IService } from '../../interfaces/billing.interfaces';
+import { IClientContractLineCycle, IService } from '../../interfaces/billing.interfaces';
 import { IClient } from '../../interfaces';
 import { getAvailableBillingPeriods } from '../../lib/actions/billingAndTax';
 import { getAllClients } from '../../lib/actions/client-actions/clientActions';
@@ -35,7 +35,7 @@ const invoiceTypeOptions: SelectOption[] = [
 const GenerateInvoices: React.FC = () => {
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<(IClientBillingCycle & {
+  const [periods, setPeriods] = useState<(IClientContractLineCycle & {
     client_name: string;
     can_generate: boolean;
     is_early?: boolean;

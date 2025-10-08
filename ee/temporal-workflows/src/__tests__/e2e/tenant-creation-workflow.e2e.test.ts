@@ -119,8 +119,8 @@ async function setupTestDatabase(): Promise<TestDatabase> {
           await db('user_roles').where({ tenant: tenantId }).del();
           await db('tenant_companies').where({ tenant: tenantId }).del();
           await db('clients').where({ tenant: tenantId }).del();
-          await db('client_billing_plans').where({ tenant: tenantId }).del();
-          await db('billing_plans').where({ tenant: tenantId }).del();
+          await db('client_contract_lines').where({ tenant: tenantId }).del();
+          await db('contract_lines').where({ tenant: tenantId }).del();
           await db('statuses').where({ tenant: tenantId }).del();
           await db('roles').where({ tenant: tenantId }).del();
         }
@@ -255,7 +255,7 @@ describe('Tenant Creation Workflow E2E Tests', () => {
         },
         companyName: `E2E Test Company ${timestamp}`,
         clientName: `E2E Test Client ${timestamp}`,
-        billingPlan: 'Enterprise',
+        contractLine: 'Enterprise',
       };
 
       // Execute the workflow using the real dev server

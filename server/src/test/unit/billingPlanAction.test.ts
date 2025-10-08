@@ -1,9 +1,9 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { getBillingPlans, createBillingPlan } from 'server/src/lib/actions/billingPlanAction';
-import BillingPlan from 'server/src/lib/models/billingPlan';
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { getContractLines, createContractLine } from 'server/src/lib/actions/contractLineAction';
+import ContractLine from 'server/src/lib/models/contractLine';
+import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
-vi.mock('@/lib/models/billingPlan');
+vi.mock('@/lib/models/contractLine');
 vi.mock('@/lib/db/db');
 
 describe('Billing Plan Actions', () => {
@@ -11,70 +11,70 @@ describe('Billing Plan Actions', () => {
     vi.clearAllMocks();
   });
 
-  describe('getBillingPlans', () => {
-    it('should return all billing plans', async () => {
-      const mockPlans: IBillingPlan[] = [
+  describe('getContractLines', () => {
+    it('should return all contract lines', async () => {
+      const mockPlans: IContractLine[] = [
         { 
-          plan_id: '1', 
-          plan_name: 'Basic', 
+          contract_line_id: '1', 
+          contract_line_name: 'Basic', 
           billing_frequency: 'monthly', 
           is_custom: false,
-          plan_type: 'Fixed'
+          contract_line_type: 'Fixed'
         },
         { 
-          plan_id: '2', 
-          plan_name: 'Pro', 
+          contract_line_id: '2', 
+          contract_line_name: 'Pro', 
           billing_frequency: 'yearly', 
           is_custom: false,
-          plan_type: 'Hourly'
+          contract_line_type: 'Hourly'
         },
       ];
 
-      (BillingPlan.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(mockPlans);
+      (ContractLine.getAll as ReturnType<typeof vi.fn>).mockResolvedValue(mockPlans);
 
-      const result = await getBillingPlans();
+      const result = await getContractLines();
 
       expect(result).toEqual(mockPlans);
-      expect(BillingPlan.getAll).toHaveBeenCalled();
+      expect(ContractLine.getAll).toHaveBeenCalled();
     });
 
     it('should throw an error if fetching plans fails', async () => {
-      (BillingPlan.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
+      (ContractLine.getAll as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(getBillingPlans()).rejects.toThrow('Failed to fetch client billing plans');
+      await expect(getContractLines()).rejects.toThrow('Failed to fetch client contract lines');
     });
   });
 
-  describe('createBillingPlan', () => {
-    it('should create a new billing plan', async () => {
-      const newPlan: Omit<IBillingPlan, 'plan_id'> = {
-        plan_name: 'New Plan',
+  describe('createContractLine', () => {
+    it('should create a new contract line', async () => {
+      const newPlan: Omit<IContractLine, 'contract_line_id'> = {
+        contract_line_name: 'New Plan',
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'Fixed',
+        contract_line_type: 'Fixed',
       };
 
-      const createdPlan: IBillingPlan = { ...newPlan, plan_id: '3' };
+      const createdPlan: IContractLine = { ...newPlan, contract_line_id: '3' };
 
-      (BillingPlan.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdPlan);
+      (ContractLine.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdPlan);
 
-      const result = await createBillingPlan(newPlan);
+      const result = await createContractLine(newPlan);
 
       expect(result).toEqual(createdPlan);
-      expect(BillingPlan.create).toHaveBeenCalledWith(newPlan);
+      expect(ContractLine.create).toHaveBeenCalledWith(newPlan);
     });
 
     it('should throw an error if creating a plan fails', async () => {
-      const newPlan: Omit<IBillingPlan, 'plan_id'> = {
-        plan_name: 'New Plan',
+      const newPlan: Omit<IContractLine, 'contract_line_id'> = {
+        contract_line_name: 'New Plan',
         billing_frequency: 'monthly',
         is_custom: true,
-        plan_type: 'Fixed',
+        contract_line_type: 'Fixed',
       };
 
-      (BillingPlan.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
+      (ContractLine.create as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(createBillingPlan(newPlan)).rejects.toThrow('Failed to create billing plan');
+      await expect(createContractLine(newPlan)).rejects.toThrow('Failed to create contract line');
     });
   });
 });

@@ -27,10 +27,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings',
@@ -107,13 +107,13 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for successful generations
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
+    // Create a contract line for successful generations
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
@@ -124,7 +124,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }, 'service_id');
 
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       quantity: 1,
       tenant: context.tenantId
@@ -170,20 +170,20 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    // Only assign billing plan to success client
-    await context.db('client_billing_plans').insert([
+    // Only assign contract line to success client
+    await context.db('client_contract_lines').insert([
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: successClientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
       },
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: successClientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -197,11 +197,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }
     expect(invoice1.invoice_number).toBe('INV-000001');
 
-    // Failed generation attempt (no billing plan for this client)
+    // Failed generation attempt (no contract line for this client)
     await expectError(
       () => generateInvoice(failCycle),
       {
-        messagePattern: new RegExp(`No active billing plans found for client ${failClientId}`)
+        messagePattern: new RegExp(`No active contract lines found for client ${failClientId}`)
       }
     );
 
@@ -258,13 +258,13 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         padding_length: 6
       });
 
-      // Create a billing plan for generating invoice
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Basic Plan',
+      // Create a contract line for generating invoice
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Basic Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       const serviceId = await context.createEntity('service_catalog', {
         service_name: 'Basic Service',
@@ -275,7 +275,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       }, 'service_id');
 
       await context.db('plan_services').insert({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
@@ -290,10 +290,10 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
@@ -324,13 +324,13 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
       padding_length: 6
     });
 
-    // Create a billing plan for generating invoices
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Basic Plan',
+    // Create a contract line for generating invoices
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Basic Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     const serviceId = await context.createEntity('service_catalog', {
       service_name: 'Basic Service',
@@ -341,7 +341,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }, 'service_id');
 
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       quantity: 1,
       tenant: context.tenantId
@@ -365,19 +365,19 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 1)', ()
     }, 'billing_cycle_id');
 
     // Assign plan to client for both periods
-    await context.db('client_billing_plans').insert([
+    await context.db('client_contract_lines').insert([
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
         tenant: context.tenantId
       },
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         is_active: true,
         tenant: context.tenantId

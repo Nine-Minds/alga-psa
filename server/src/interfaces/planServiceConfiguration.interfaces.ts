@@ -6,7 +6,7 @@ import { ISO8601String } from '../types/types.d';
  */
 export interface IPlanServiceConfiguration extends TenantEntity {
   config_id: string;
-  plan_id: string;
+  contract_line_id: string;
   service_id: string;
   configuration_type: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
   custom_rate?: number;
@@ -23,8 +23,8 @@ export interface IPlanServiceConfiguration extends TenantEntity {
 export interface IPlanServiceFixedConfig extends TenantEntity {
   config_id: string;
   base_rate?: number | null; // Added base_rate field
-  // enable_proration: boolean; // Removed: Moved to billing_plan_fixed_config
-  // billing_cycle_alignment: 'start' | 'end' | 'prorated'; // Removed: Moved to billing_plan_fixed_config
+  // enable_proration: boolean; // Removed: Moved to contract_line_fixed_config
+  // billing_cycle_alignment: 'start' | 'end' | 'prorated'; // Removed: Moved to contract_line_fixed_config
   tenant: string;
   created_at: Date;
   updated_at: Date;

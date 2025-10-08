@@ -2,12 +2,12 @@ import { BillingCycleType, TenantEntity } from './index';
 import { ISO8601String } from 'server/src/types/types.d';
 import { ITaggable } from './tag.interfaces';
 import { IClient as SharedIClient } from '@alga-psa/shared/interfaces/client.interfaces';
-import { IBillingPlan } from './billing.interfaces';
+import { IContractLine } from './billing.interfaces';
 
 export interface IClientSummary extends TenantEntity {
     id: string;
     name: string;
-    billingPlan?: IBillingPlan;
+    contractLine?: IContractLine;
 }
 
 // Extend the shared IClient interface with server-specific fields

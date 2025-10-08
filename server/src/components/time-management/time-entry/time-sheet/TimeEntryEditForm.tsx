@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { getEligibleBillingPlansForUI, getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { getEligibleContractLinesForUI, getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { formatISO, parseISO, addMinutes, setHours, setMinutes, setSeconds } from 'date-fns';
 import { IService } from 'server/src/interfaces/billing.interfaces';
@@ -18,13 +18,13 @@ import { TimeEntryFormProps } from './types';
 import { calculateDuration, formatTimeForInput, parseTimeToDate, getDurationParts } from './utils';
 import { ISO8601String } from 'server/src/types/types.d';
 
-// Define the expected structure returned by getEligibleBillingPlansForUI,
+// Define the expected structure returned by getEligibleContractLinesForUI,
 // including the date fields needed for filtering.
-// Type matching the apparent return structure of getEligibleBillingPlansForUI
+// Type matching the apparent return structure of getEligibleContractLinesForUI
 interface EligiblePlanUI {
-  client_billing_plan_id: string;
-  plan_name: string;
-  plan_type: string;
+  client_contract_line_id: string;
+  contract_line_name: string;
+  contract_line_type: string;
   start_date: ISO8601String; // Required for filtering
   end_date?: ISO8601String | null; // Required for filtering
 }
@@ -90,12 +90,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     endTime?: string;
     duration?: string;
     service?: string;
-    billingPlan?: string;
+    contractLine?: string;
   }>({});
 
   const [showErrors, setShowErrors] = useState(false);
-  const [eligibleBillingPlans, setEligibleBillingPlans] = useState<EligiblePlanUI[]>([]);
-  const [showBillingPlanSelector, setShowBillingPlanSelector] = useState(false);
+  const [eligibleContractLines, setEligibleContractLines] = useState<EligiblePlanUI[]>([]);
+  const [showContractLineSelector, setShowContractLineSelector] = useState(false);
   const [clientId, setClientId] = useState<string | null>(null);
   const prevServiceIdRef = useRef<string | undefined | null>();
   const [selectedDate, setSelectedDate] = useState<Date>(() => {
@@ -166,7 +166,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // --- End Removed Logic ---
 
       // Always show the plan selector
-      setShowBillingPlanSelector(true);
+      setShowContractLineSelector(true);
 
       let clientDetails: any | null = null;
       let currentEligiblePlans: EligiblePlanUI[] = [];
@@ -187,14 +187,14 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
       // 2. Load Eligible Billing Plans (dependent on service and client)
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
-        setEligibleBillingPlans([]);
+        setEligibleContractLines([]);
       } else if (!clientId) {
         console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
-        setEligibleBillingPlans([]);
+        setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleBillingPlansForUI(clientId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -205,20 +205,20 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           });
 
           currentEligiblePlans = filteredPlans;
-          setEligibleBillingPlans(currentEligiblePlans);
+          setEligibleContractLines(currentEligiblePlans);
           console.log('Eligible billing plans loaded:', currentEligiblePlans);
 
           // 3. Set Default Billing Plan (only if plans were loaded)
-          const currentBillingPlanId = entry?.billing_plan_id; // Use entry from closure
-          if (!currentBillingPlanId && currentEligiblePlans.length > 0) {
+          const currentContractLineId = entry?.contract_line_id; // Use entry from closure
+          if (!currentContractLineId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_billing_plan_id;
+              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
               console.log('Setting default billing plan (only one eligible):', defaultPlanId);
             } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
+              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
               if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_billing_plan_id;
+                defaultPlanId = bucketPlans[0].client_contract_line_id;
                 console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
               } else {
                 console.log('Multiple eligible plans, no single default determined.');
@@ -228,7 +228,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             if (defaultPlanId) {
               const entryWithUpdatedPlan = {
                 ...entry, // Includes tax updates already applied
-                billing_plan_id: defaultPlanId
+                contract_line_id: defaultPlanId
               };
               onUpdateEntry(index, entryWithUpdatedPlan);
               // Update the 'entry' variable in this scope
@@ -240,21 +240,21 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
         } catch (error) {
           console.error('Error loading eligible billing plans:', error);
-          setEligibleBillingPlans([]); // Reset on error
+          setEligibleContractLines([]); // Reset on error
         }
       }
 
       // 2. Load Eligible Billing Plans (dependent on service and client)
       if (!entry?.service_id) {
         console.log('No service ID available, cannot load billing plans');
-        setEligibleBillingPlans([]);
+        setEligibleContractLines([]);
       } else if (!clientId) {
         console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
-        setEligibleBillingPlans([]);
+        setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
         try {
-          const plans = await getEligibleBillingPlansForUI(clientId, entry.service_id) as EligiblePlanUI[];
+          const plans = await getEligibleContractLinesForUI(clientId, entry.service_id) as EligiblePlanUI[];
           const entryDate = entry.start_time ? new Date(entry.start_time) : new Date(); // Use current date if start_time not set yet
 
           const filteredPlans = plans.filter(plan => {
@@ -265,20 +265,20 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
           });
 
           currentEligiblePlans = filteredPlans;
-          setEligibleBillingPlans(currentEligiblePlans);
+          setEligibleContractLines(currentEligiblePlans);
           console.log('Eligible billing plans loaded:', currentEligiblePlans);
 
           // 3. Set Default Billing Plan (only if plans were loaded)
-          const currentBillingPlanId = entry?.billing_plan_id; // Use entry from closure
-          if (!currentBillingPlanId && currentEligiblePlans.length > 0) {
+          const currentContractLineId = entry?.contract_line_id; // Use entry from closure
+          if (!currentContractLineId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
-              defaultPlanId = currentEligiblePlans[0].client_billing_plan_id;
+              defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
               console.log('Setting default billing plan (only one eligible):', defaultPlanId);
             } else {
-              const bucketPlans = currentEligiblePlans.filter(plan => plan.plan_type === 'Bucket');
+              const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
               if (bucketPlans.length === 1) {
-                defaultPlanId = bucketPlans[0].client_billing_plan_id;
+                defaultPlanId = bucketPlans[0].client_contract_line_id;
                 console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
               } else {
                 console.log('Multiple eligible plans, no single default determined.');
@@ -288,7 +288,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
             if (defaultPlanId) {
               const entryWithUpdatedPlan = {
                 ...entry, // Includes tax updates already applied
-                billing_plan_id: defaultPlanId
+                contract_line_id: defaultPlanId
               };
               onUpdateEntry(index, entryWithUpdatedPlan);
               // Update the 'entry' variable in this scope
@@ -300,7 +300,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
         } catch (error) {
           console.error('Error loading eligible billing plans:', error);
-          setEligibleBillingPlans([]); // Reset on error
+          setEligibleContractLines([]); // Reset on error
         }
       }
     }
@@ -309,7 +309,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     if (entry) {
       loadDataAndSetDefaults();
     }
-  }, [entry?.service_id, clientId, entry?.start_time, entry?.billing_plan_id, index, onUpdateEntry]);
+  }, [entry?.service_id, clientId, entry?.start_time, entry?.contract_line_id, index, onUpdateEntry]);
 
 const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDuration: number) => {
   const durationToSet = Math.max(0, newDuration);
@@ -355,7 +355,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
     // Call parent's onSave with the current entry
     onSave(index);
-  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showBillingPlanSelector, eligibleBillingPlans.length, entry?.billing_plan_id, index, setShowErrors]);
+  }, [onSave, validateTimes, entry?.service_id, entry?.work_item_type, showContractLineSelector, eligibleContractLines.length, entry?.contract_line_id, index, setShowErrors]);
 
   const handleTimeChange = useCallback((type: 'start' | 'end', value: string) => {
     if (!isEditable || !entry) return;
@@ -476,9 +476,9 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
         </div>
 
         {/* Billing Plan Selector with enhanced guidance */}
-        {showBillingPlanSelector && (
+        {showContractLineSelector && (
           <div>
-            {eligibleBillingPlans.length > 1 && (
+            {eligibleContractLines.length > 1 && (
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-md mb-2">
                 <div className="flex items-center">
                   <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
@@ -490,17 +490,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             )}
 
             <div className="flex items-center space-x-1">
-              <label className={`block text-sm font-medium ${eligibleBillingPlans.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
+              <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
                 Billing Plan <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <Tooltip content={
                 <p className="max-w-xs">
                   {!clientId
                     ? "Client information not available. The system will use the default billing plan."
-                    : eligibleBillingPlans.length > 1
+                    : eligibleContractLines.length > 1
                       ? "This service appears in multiple billing plans. You can optionally select which plan to use for this time entry, or leave it blank to use the default billing plan."
-                      : eligibleBillingPlans.length === 1
-                        ? `This time entry will be billed under the "${eligibleBillingPlans[0].plan_name}" plan.`
+                      : eligibleContractLines.length === 1
+                        ? `This time entry will be billed under the "${eligibleContractLines[0].contract_line_name}" plan.`
                         : "No eligible billing plans found for this service."}
                 </p>
               }>
@@ -509,29 +509,29 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
             </div>
 
             <CustomSelect
-              value={entry?.billing_plan_id || ''}
+              value={entry?.contract_line_id || ''}
               onValueChange={(value) => {
                 if (entry) {
-                  const updatedEntry = { ...entry, billing_plan_id: value };
+                  const updatedEntry = { ...entry, contract_line_id: value };
                   onUpdateEntry(index, updatedEntry);
                 }
               }}
-              disabled={!isEditable || !clientId || eligibleBillingPlans.length <= 1}
-              className={`mt-1 w-full ${eligibleBillingPlans.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
-              options={eligibleBillingPlans.map(plan => ({
-                value: plan.client_billing_plan_id,
-                label: `${plan.plan_name} (${plan.plan_type})` // Now plan_type exists on EligiblePlanUI
+              disabled={!isEditable || !clientId || eligibleContractLines.length <= 1}
+              className={`mt-1 w-full ${eligibleContractLines.length > 1 ? 'border-blue-300 focus:border-blue-500 focus:ring-blue-500' : ''}`}
+              options={eligibleContractLines.map(plan => ({
+                value: plan.client_contract_line_id,
+                label: `${plan.contract_line_name} (${plan.contract_line_type})` // Now contract_line_type exists on EligiblePlanUI
               }))}
               placeholder={!clientId
                 ? "Using default billing plan"
-                : eligibleBillingPlans.length === 0
+                : eligibleContractLines.length === 0
                   ? "No eligible plans"
-                  : eligibleBillingPlans.length === 1
-                    ? `Using ${eligibleBillingPlans[0].plan_name}`
+                  : eligibleContractLines.length === 1
+                    ? `Using ${eligibleContractLines[0].contract_line_name}`
                       : "Select a billing plan (optional)"}
               />
 
-            {eligibleBillingPlans.length > 1 && (
+            {eligibleContractLines.length > 1 && (
               <div className="mt-1 text-xs text-gray-600">
                 <span className="flex items-center">
                   <Info className="h-3 w-3 text-blue-500 mr-1" />
@@ -540,8 +540,8 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
               </div>
             )}
 
-            {showErrors && validationErrors.billingPlan && (
-              <span className="text-sm text-red-500">{validationErrors.billingPlan}</span>
+            {showErrors && validationErrors.contractLine && (
+              <span className="text-sm text-red-500">{validationErrors.contractLine}</span>
             )}
           </div>
         )}

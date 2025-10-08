@@ -3,13 +3,13 @@
 import React, { useMemo } from 'react';
 import { Button } from 'server/src/components/ui/Button';
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
-import type { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import type { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import { Skeleton } from 'server/src/components/ui/Skeleton';
 import { X, Package } from 'lucide-react';
 import { useTranslation } from 'server/src/lib/i18n/client';
 
 interface PlanDetailsDialogProps {
-  plan: IClientBillingPlan | null;
+  plan: IClientContractLine | null;
   isOpen: boolean;
   onClose: () => void;
   formatCurrency?: (amount: number) => string;
@@ -36,7 +36,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.plan.name')}</p>
-            <p className="mt-1">{plan.plan_name}</p>
+            <p className="mt-1">{plan.contract_line_name}</p>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-500">{t('billing.plan.frequency')}</p>

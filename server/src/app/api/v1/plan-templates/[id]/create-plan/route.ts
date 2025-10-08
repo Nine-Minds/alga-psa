@@ -1,5 +1,5 @@
-import { ApiBillingPlanController } from '@/lib/api/controllers/ApiBillingPlanController';
+import { ApiContractLineController } from '@/lib/api/controllers/ApiContractLineController';
 
-const controller = new ApiBillingPlanController();
+const controller = new ApiContractLineController();
 
 export const POST = controller.createFromTemplate();

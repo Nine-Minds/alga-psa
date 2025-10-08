@@ -7,22 +7,22 @@ import { Badge } from 'server/src/components/ui/Badge';
 import { Button } from 'server/src/components/ui/Button';
 import { AlertTriangle, Info, CheckCircle } from 'lucide-react';
 import { Tooltip } from 'server/src/components/ui/Tooltip';
-import { IClientBillingPlan, IBillingPlan, IService } from 'server/src/interfaces/billing.interfaces';
-import { getBillingPlans } from 'server/src/lib/actions/billingPlanAction';
+import { IClientContractLine, IContractLine, IService } from 'server/src/interfaces/billing.interfaces';
+import { getContractLines } from 'server/src/lib/actions/contractLineAction';
 import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
 import { PLAN_TYPE_DISPLAY } from 'server/src/constants/billing';
 
 interface ClientServiceOverlapMatrixProps {
   clientId: string;
-  clientBillingPlans: IClientBillingPlan[];
+  clientContractLines: IClientContractLine[];
   services: IService[];
-  onEdit?: (billing: IClientBillingPlan) => void;
+  onEdit?: (billing: IClientContractLine) => void;
   className?: string;
 }
 
 const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   clientId,
-  clientBillingPlans,
+  clientContractLines,
   services,
   onEdit,
   className = ''
@@ -32,7 +32,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAllServices, setShowAllServices] = useState(false);
-  const [allBillingPlans, setAllBillingPlans] = useState<IBillingPlan[]>([]);
+  const [allContractLines, setAllContractLines] = useState<IContractLine[]>([]);
 
   // Fetch services for each client billing plan
   useEffect(() => {
@@ -40,38 +40,38 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
       setLoading(true);
       try {
         // Get all billing plans to get plan details
-        const billingPlans = await getBillingPlans();
-        setAllBillingPlans(billingPlans);
+        const contractLines = await getContractLines();
+        setAllContractLines(contractLines);
         
-        // Create a map of plan_id to plan details
-        const planDetailsMap = billingPlans.reduce((map, plan) => {
-          if (plan.plan_id) {
-            map[plan.plan_id] = plan;
+        // Create a map of contract_line_id to plan details
+        const planDetailsMap = contractLines.reduce((map, plan) => {
+          if (plan.contract_line_id) {
+            map[plan.contract_line_id] = plan;
           }
           return map;
-        }, {} as Record<string, IBillingPlan>);
+        }, {} as Record<string, IContractLine>);
         
         // Get services for each client billing plan
         const servicesMap: Record<string, IService[]> = {};
         const serviceToPlans: Record<string, string[]> = {};
         
-        for (const clientPlan of clientBillingPlans) {
-          if (clientPlan.plan_id) {
-            const planServicesList = await getPlanServices(clientPlan.plan_id);
+        for (const clientPlan of clientContractLines) {
+          if (clientPlan.contract_line_id) {
+            const planServicesList = await getPlanServices(clientPlan.contract_line_id);
             
             // Convert plan services to full service objects
             const fullServices = planServicesList.map(ps => 
               services.find(s => s.service_id === ps.service_id)
             ).filter(Boolean) as IService[];
             
-            servicesMap[clientPlan.client_billing_plan_id] = fullServices;
+            servicesMap[clientPlan.client_contract_line_id] = fullServices;
             
             // Track which services appear in which client billing plans
             for (const service of fullServices) {
               if (!serviceToPlans[service.service_id]) {
                 serviceToPlans[service.service_id] = [];
               }
-              serviceToPlans[service.service_id].push(clientPlan.client_billing_plan_id);
+              serviceToPlans[service.service_id].push(clientPlan.client_contract_line_id);
             }
           }
         }
@@ -96,12 +96,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
       }
     };
     
-    if (clientBillingPlans.length > 0) {
+    if (clientContractLines.length > 0) {
       fetchData();
     } else {
       setLoading(false);
     }
-  }, [clientBillingPlans, services]);
+  }, [clientContractLines, services]);
 
   // Get all services that are in at least one client billing plan
   const servicesInPlans = React.useMemo(() => {
@@ -129,25 +129,25 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     }
   }, [servicesInPlans, serviceOverlaps, showAllServices]);
 
-  // Sort client billing plans by start date (newest first) and add plan_type
+  // Sort client billing plans by start date (newest first) and add contract_line_type
   const sortedClientPlans = React.useMemo(() => {
-    return [...clientBillingPlans].map(plan => {
+    return [...clientContractLines].map(plan => {
       // Get the billing plan that corresponds to this client billing plan
-      const billingPlan = allBillingPlans.find(bp => bp.plan_id === plan.plan_id);
+      const contractLine = allContractLines.find(bp => bp.contract_line_id === plan.contract_line_id);
       
       // Create a new object with all properties from the client billing plan
-      // plus the plan_type from the billing plan
+      // plus the contract_line_type from the billing plan
       return {
         ...plan,
-        plan_type: billingPlan?.plan_type,
-        plan_name: billingPlan?.plan_name // Add plan_name here
+        contract_line_type: contractLine?.contract_line_type,
+        contract_line_name: contractLine?.contract_line_name // Add contract_line_name here
       };
     }).sort((a, b) => {
       const dateA = new Date(a.start_date).getTime();
       const dateB = new Date(b.start_date).getTime();
       return dateB - dateA;
     });
-  }, [clientBillingPlans, allBillingPlans]);
+  }, [clientContractLines, allContractLines]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-32">Loading service overlap matrix...</div>;
@@ -157,7 +157,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     return <div className="text-red-500">{error}</div>;
   }
 
-  if (clientBillingPlans.length === 0) {
+  if (clientContractLines.length === 0) {
     return (
       <Card className={`p-4 ${className}`}>
         <div className="flex justify-between items-center mb-4">
@@ -204,19 +204,19 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                 <TableRow>
                   <TableHead className="min-w-[200px]">Service</TableHead>
                   {sortedClientPlans.map(plan => (
-                    <TableHead key={plan.client_billing_plan_id} className="text-center min-w-[120px]">
+                    <TableHead key={plan.client_contract_line_id} className="text-center min-w-[120px]">
                       <div className="flex flex-col items-center">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="text-xs p-1 h-auto"
                           onClick={() => onEdit && onEdit(plan)}
-                          id={`edit-plan-${plan.client_billing_plan_id}-button`}
+                          id={`edit-plan-${plan.client_contract_line_id}-button`}
                         >
-                          {plan.plan_name || 'Unnamed Plan'}
+                          {plan.contract_line_name || 'Unnamed Plan'}
                         </Button>
                         <Badge className="mt-1 text-xs">
-                          {plan.plan_type ? (PLAN_TYPE_DISPLAY[plan.plan_type as keyof typeof PLAN_TYPE_DISPLAY] || plan.plan_type) : 'Unknown'}
+                          {plan.contract_line_type ? (PLAN_TYPE_DISPLAY[plan.contract_line_type as keyof typeof PLAN_TYPE_DISPLAY] || plan.contract_line_type) : 'Unknown'}
                         </Badge>
                       </div>
                     </TableHead>
@@ -251,11 +251,11 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                       </TableCell>
                       
                       {sortedClientPlans.map(plan => {
-                        const planServicesList = planServices[plan.client_billing_plan_id] || [];
+                        const planServicesList = planServices[plan.client_contract_line_id] || [];
                         const isInPlan = planServicesList.some(s => s.service_id === service.service_id);
                         
                         return (
-                          <TableCell key={`${service.service_id}-${plan.client_billing_plan_id}`} className="text-center">
+                          <TableCell key={`${service.service_id}-${plan.client_contract_line_id}`} className="text-center">
                             {isInPlan ? (
                               <div className="flex justify-center">
                                 <CheckCircle className={`h-5 w-5 ${isOverlapping ? 'text-amber-500' : 'text-green-500'}`} />

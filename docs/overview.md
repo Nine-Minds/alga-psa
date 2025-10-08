@@ -8,11 +8,11 @@ This document provides a high-level architectural overview of the open-source MS
 
 * **Asset Management:** Manages asset lifecycle. Key files located under `server/src/models/asset.ts`, `server/src/lib/models/assetRelationship.ts`, and components under `server/src/components/assets`.
 
-* **Billing:** The Billing module handles complex billing scenarios, including fixed-price services, time-based billing, usage-based billing, bucket of hours/retainer plans, discounts, promotions, multi-currency, tax handling, bundling, plan bundles, refunds, and adjustments. It integrates with other modules like Projects, Time Management, and Documents to produce and store invoices.
+* **Billing:** The Billing module handles complex billing scenarios, including fixed-price services, time-based billing, usage-based billing, bucket of hours/retainer plans, discounts, promotions, multi-currency, tax handling, bundling, contracts, refunds, and adjustments. It integrates with other modules like Projects, Time Management, and Documents to produce and store invoices.
 
   * Key Features:
     - Billing Plans: Assign multiple billing plans to a single client (company).
-    - Plan Bundles: Create named collections of billing plans that can be managed as a single entity.
+    - Contracts: Create named collections of billing plans that can be managed as a single entity.
     - Automated Invoice Generation: Automatically generate invoices for time- or usage-based charges.
     - Manual Invoicing: Allows ad-hoc or on-demand invoice creation and updates. Useful for one-off or custom charges that do not originate from usage/time entries.
     - Tax Calculation: Supports flexible tax rules via a dedicated TaxService that looks up tax rates from the database.
@@ -25,13 +25,13 @@ This document provides a high-level architectural overview of the open-source MS
       * `server/src/lib/actions/manualInvoiceActions.ts`: Server-side logic for generating and updating manual invoices
       * `server/src/components/billing-dashboard/ManualInvoices.tsx`: Front-end form to create and edit manual invoices
       * `server/src/components/billing-dashboard/Invoices.tsx`: Overall invoices screen, which also provides an "Edit" option for manual invoices
-    - Plan Bundles:
-      * `server/src/lib/models/planBundle.ts`: Core model for plan bundles
-      * `server/src/lib/models/bundleBillingPlan.ts`: Model for plans within bundles
-      * `server/src/lib/models/companyPlanBundle.ts`: Model for company bundle assignments
-      * `server/src/lib/actions/planBundleActions.ts`: Server-side logic for managing plan bundles
-      * `server/src/lib/actions/companyPlanBundleActions.ts`: Server-side logic for assigning bundles to companies
-      * `server/src/components/billing-dashboard/plan-bundles/PlanBundles.tsx`: Front-end components for managing plan bundles
+    - Contracts:
+      * `server/src/lib/models/contract.ts`: Core model for contracts
+      * `server/src/lib/models/contractLineMapping.ts`: Model for contract lines within contracts
+      * `server/src/lib/models/companyContract.ts`: Model for company contract assignments
+      * `server/src/lib/actions/contractActions.ts`: Server-side logic for managing contracts
+      * `server/src/lib/actions/companyContractActions.ts`: Server-side logic for assigning contracts to companies
+      * `server/src/components/billing-dashboard/contracts/Contracts.tsx`: Front-end components for managing contracts
     - Invoice Templates: `server/src/components/billing-dashboard/InvoiceTemplates.tsx`
 
 * **Companies/Clients:** Manages client information. See `server/src/lib/models/company.tsx` and components under `server/src/components/companies`.

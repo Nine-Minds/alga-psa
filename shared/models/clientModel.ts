@@ -35,7 +35,7 @@ export const clientFormSchema = z.object({
   notes: z.string().optional(),
   properties: z.record(z.any()).optional(),
   parent_client_id: z.string().uuid().optional().nullable(),
-  plan_id: z.string().uuid().optional().nullable()
+  contract_line_id: z.string().uuid().optional().nullable()
 });
 
 // Complete client schema for validation
@@ -59,7 +59,7 @@ export const clientSchema = z.object({
   updated_at: z.string(),
   properties: z.record(z.any()).nullable(),
   parent_client_id: z.string().uuid().nullable(),
-  plan_id: z.string().uuid().nullable(),
+  contract_line_id: z.string().uuid().nullable(),
   is_default: z.boolean().nullable()
 });
 
@@ -109,7 +109,7 @@ export function cleanNullableFields(data: Record<string, any>): Record<string, a
   const nullableFields = [
     'url', 'phone_no', 'email', 'address', 'address_2', 
     'city', 'state', 'zip', 'country', 'notes', 
-    'parent_client_id', 'plan_id'
+    'parent_client_id', 'contract_line_id'
   ];
   
   for (const field of nullableFields) {

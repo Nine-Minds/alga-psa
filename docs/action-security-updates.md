@@ -358,7 +358,7 @@ server/src/lib/actions/user-actions/registrationActions.ts
 server/src/lib/actions/invoiceGeneration.ts
 server/src/lib/actions/invoiceModification.ts
 server/src/lib/actions/creditActions.ts
-server/src/lib/actions/billingPlanAction.ts
+server/src/lib/actions/contractLineAction.ts
 server/src/lib/actions/taxRateActions.ts
 server/src/lib/actions/timeEntryCrudActions.ts
 server/src/lib/actions/timeSheetActions.ts
@@ -408,7 +408,7 @@ server/src/lib/actions/timePeriodsActions.ts
 ```
 server/src/lib/actions/company-actions/companyActions.ts
 server/src/lib/actions/company-actions/companyTaxRateActions.ts
-server/src/lib/actions/company-actions/companyBillingPlanActions.ts
+server/src/lib/actions/company-actions/companyContractLineActions.ts
 server/src/lib/actions/company-actions/companyLocationActions.ts
 server/src/lib/actions/document-actions/documentActions.ts
 server/src/lib/actions/document-actions/documentContentActions.ts

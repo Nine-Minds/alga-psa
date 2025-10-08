@@ -1,7 +1,7 @@
-import { ApiBillingPlanController } from '@/lib/api/controllers/ApiBillingPlanController';
+import { ApiContractLineController } from '@/lib/api/controllers/ApiContractLineController';
 
 export const dynamic = 'force-dynamic';
 
-const controller = new ApiBillingPlanController();
+const controller = new ApiContractLineController();
 
 export const GET = controller.getBillingOverviewAnalytics();

@@ -39,7 +39,7 @@ Data Sources (Server Actions already present)
   - Permissions: `getCompanyById` enforces `client.read` permission; handle “no permission” with a friendly message.
 
 - Billing Plan
-  - Use: `getClientBillingPlan()` from `server/src/lib/actions/client-portal-actions/client-billing.ts`
+  - Use: `getClientContractLine()` from `server/src/lib/actions/client-portal-actions/client-billing.ts`
   - Displays: plan name, billing frequency, service category if present. If none, show “No active plan”.
 
 - Invoices

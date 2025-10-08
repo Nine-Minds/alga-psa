@@ -8,7 +8,7 @@ import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActi
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate } from '../../../test-utils/dateUtils';
 
 /**
@@ -33,10 +33,10 @@ describe('Credit Reconciliation Tests', () => {
         'credit_tracking',
         'credit_allocations',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
@@ -140,17 +140,17 @@ describe('Credit Reconciliation Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // 8. Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Regular Plan',
+    // 8. Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Regular Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // 9. Assign service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       quantity: 1,
       tenant: context.tenantId
@@ -170,10 +170,10 @@ describe('Credit Reconciliation Tests', () => {
     }, 'billing_cycle_id');
 
     // 11. Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -190,12 +190,12 @@ describe('Credit Reconciliation Tests', () => {
     await finalizeInvoice(invoice.invoice_id);
 
     // 14. Manually apply some credit to create a partial application
-    const remainingCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const remainingCredit = await ClientContractLine.getClientCredit(client_id);
     const partialCreditAmount = 3000; // $30.00
     await applyCreditToInvoice(client_id, invoice.invoice_id, partialCreditAmount);
 
     // 15. Get the current credit balance before validation
-    const beforeValidationCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const beforeValidationCredit = await ClientContractLine.getClientCredit(client_id);
     
     // 16. Get all credit tracking entries before validation
     const preValidationCreditEntries = await context.db('credit_tracking')
@@ -227,7 +227,7 @@ describe('Credit Reconciliation Tests', () => {
       });
     
     // Get the modified balance
-    const modifiedBalance = await ClientBillingPlan.getClientCredit(client_id);
+    const modifiedBalance = await ClientContractLine.getClientCredit(client_id);
     console.log(`Artificially modified balance: ${modifiedBalance}, Expected from tracking: ${expectedCreditBalance}`);
     
     // 19. Verify that there's a discrepancy between the actual and expected balance
@@ -335,7 +335,7 @@ describe('Credit Reconciliation Tests', () => {
     }
     
     // 28. Verify the client's credit balance matches the sum of remaining amounts in credit tracking
-    const clientCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const clientCredit = await ClientContractLine.getClientCredit(client_id);
     const sumOfRemainingAmounts = creditTrackingEntries.reduce(
       (sum, entry) => sum + Number(entry.remaining_amount),
       0

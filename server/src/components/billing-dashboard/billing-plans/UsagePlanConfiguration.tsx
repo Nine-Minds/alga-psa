@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
-import { BillingPlanDialog } from '../BillingPlanDialog';
+import { ContractLineDialog } from '../ContractLineDialog';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import Spinner from 'server/src/components/ui/Spinner';
@@ -16,8 +16,8 @@ import { ChevronDownIcon } from '@radix-ui/react-icons'; // Icon for Accordion
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions'; // Get list of services
 import { getPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Get config per service
 // Import specific interfaces needed
-import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService, IBillingPlan } from 'server/src/interfaces'; // Added IBillingPlan
-import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Added action to get base plan details
+import { IPlanServiceConfiguration, IPlanServiceUsageConfig, IPlanServiceRateTier, IService, IContractLine } from 'server/src/interfaces'; // Added IContractLine
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import { upsertPlanServiceConfiguration } from 'server/src/lib/actions/planServiceConfigurationActions'; // Import the upsert action
 import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } from './ServiceUsageConfigForm'; // Import the new form component and types
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
@@ -59,7 +59,7 @@ export function UsagePlanConfiguration({
   className = '',
 }: UsagePlanConfigurationProps) {
   // State for the base plan details
-  const [plan, setPlan] = useState<IBillingPlan | null>(null);
+  const [plan, setPlan] = useState<IContractLine | null>(null);
   // State for the list of services associated with the plan
   const [planServices, setPlanServices] = useState<PlanServiceWithConfig[]>([]);
   // State to hold configuration for each service, keyed by serviceId (current state)
@@ -85,8 +85,8 @@ export function UsagePlanConfiguration({
     setPlanServices([]); // Reset services on fetch
     try {
       // 0. Fetch base plan details first
-      const fetchedPlan = await getBillingPlanById(planId);
-      if (!fetchedPlan || fetchedPlan.plan_type !== 'Usage') {
+      const fetchedPlan = await getContractLineById(planId);
+      if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
         return;
@@ -406,9 +406,9 @@ export function UsagePlanConfiguration({
           <div className={`space-y-6 ${className}`}>
               <Card>
                   <CardHeader className="flex items-center justify-between">
-                      <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage)</CardTitle>
+                      <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage)</CardTitle>
                       {plan && (
-                        <BillingPlanDialog
+                        <ContractLineDialog
                           editingPlan={plan}
                           onPlanAdded={() => fetchPlanData()}
                           triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
@@ -430,9 +430,9 @@ export function UsagePlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Usage) - Service Pricing</CardTitle>
+          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Usage) - Service Pricing</CardTitle>
           {plan && (
-            <BillingPlanDialog
+            <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
               triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}

@@ -129,9 +129,9 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=plans'
       },
       {
-        name: 'Plan Bundles',
+        name: 'Contracts',
         icon: Box,
-        href: '/msp/billing?tab=plan-bundles'
+        href: '/msp/billing?tab=contracts'
       },
       {
         name: 'Billing Cycles',

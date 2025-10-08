@@ -1,8 +1,8 @@
 'use server'
 
 import { createTenantKnex } from 'server/src/lib/db';
-import { BillingCycleType, IClientBillingCycle } from 'server/src/interfaces/billing.interfaces';
-import { createClientBillingCycles } from "../billing/createBillingCycles";
+import { BillingCycleType, IClientContractLineCycle } from 'server/src/interfaces/billing.interfaces';
+import { createClientContractLineCycles } from "../billing/createBillingCycles";
 import { v4 as uuidv4 } from 'uuid';
 import { getNextBillingDate } from './billingAndTax';
 import { hardDeleteInvoice } from './invoiceModification';
@@ -141,7 +141,7 @@ export async function createNextBillingCycle(
     throw new Error('Cannot create next billing cycle at this time');
   }
 
-  return await createClientBillingCycles(conn, client, { manual: true });
+  return await createClientContractLineCycles(conn, client, { manual: true });
 }
 
 // function for rollback (deactivate cycle, delete invoice)
@@ -273,7 +273,7 @@ export async function hardDeleteBillingCycle(cycleId: string): Promise<void> {
   }
 }
 
-export async function getInvoicedBillingCycles(): Promise<(IClientBillingCycle & {
+export async function getInvoicedBillingCycles(): Promise<(IClientContractLineCycle & {
   client_name: string;
   period_start_date: ISO8601String;
   period_end_date: ISO8601String;

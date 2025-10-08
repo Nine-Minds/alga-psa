@@ -21,10 +21,10 @@ describe('Billing Invoice Consistency Checks', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings'
@@ -69,25 +69,25 @@ describe('Billing Invoice Consistency Checks', () => {
         period_end_date: '2025-03-01'
       }, 'billing_cycle_id');
 
-      // Create and assign billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Test Plan',
+      // Create and assign contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Test Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       await context.db('plan_services').insert({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         quantity: 1,
         tenant: context.tenantId
       });
 
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: context.clientId,
-        plan_id: planId,
+        contract_line_id: planId,
         start_date: '2025-02-01',
         is_active: true,
         tenant: context.tenantId

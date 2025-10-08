@@ -12,9 +12,9 @@ import {
   IUserTypeRate, // Added comma
   IPlanServiceRateTierInput
 } from 'server/src/interfaces/planServiceConfiguration.interfaces';
-import { IBillingPlanFixedConfig } from 'server/src/interfaces/billing.interfaces';
+import { IContractLineFixedConfig } from 'server/src/interfaces/billing.interfaces';
 import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
-import { getBillingPlanFixedConfig } from 'server/src/lib/actions/billingPlanAction';
+import { getContractLineFixedConfig } from 'server/src/lib/actions/contractLineAction';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
 
@@ -24,7 +24,7 @@ import { Knex } from 'knex';
 export async function getConfigurationWithDetails(configId: string): Promise<{
   baseConfig: IPlanServiceConfiguration;
   typeConfig: IPlanServiceFixedConfig | IPlanServiceHourlyConfig | IPlanServiceUsageConfig | IPlanServiceBucketConfig | null;
-  planFixedConfig?: Partial<IBillingPlanFixedConfig>;
+  planFixedConfig?: Partial<IContractLineFixedConfig>;
   rateTiers?: IPlanServiceRateTier[];
   userTypeRates?: IUserTypeRate[];
 }> {
@@ -36,15 +36,15 @@ export async function getConfigurationWithDetails(configId: string): Promise<{
   const configDetails = await configService.getConfigurationWithDetails(configId);
   
   // If this is a Fixed configuration, also fetch the plan fixed config
-  let planFixedConfig: Partial<IBillingPlanFixedConfig> | undefined;
+  let planFixedConfig: Partial<IContractLineFixedConfig> | undefined;
   if (configDetails.baseConfig.configuration_type === 'Fixed') {
     try {
-      planFixedConfig = await getBillingPlanFixedConfig(configDetails.baseConfig.plan_id) || {
+      planFixedConfig = await getContractLineFixedConfig(configDetails.baseConfig.contract_line_id) || {
         enable_proration: false,
         billing_cycle_alignment: 'start'
       };
     } catch (error) {
-      console.error(`Error fetching plan fixed config for plan ${configDetails.baseConfig.plan_id}:`, error);
+      console.error(`Error fetching plan fixed config for plan ${configDetails.baseConfig.contract_line_id}:`, error);
       // Provide default values if the plan fixed config couldn't be fetched
       planFixedConfig = {
         enable_proration: false,
@@ -458,7 +458,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       } else {
         // Create if not exists
         const newBaseConfig: Omit<IPlanServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: serviceId,
           configuration_type: 'Usage', // Explicitly set type
           tenant: tenant!,

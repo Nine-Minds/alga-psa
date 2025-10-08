@@ -11,13 +11,13 @@ import {
 } from 'server/src/components/ui/DropdownMenu';
 import { Input } from 'server/src/components/ui/Input';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
-import { BillingPlanDialog } from './BillingPlanDialog';
+import { ContractLineDialog } from './ContractLineDialog';
 import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput';
-import { getBillingPlans, getBillingPlanById, updateBillingPlan, deleteBillingPlan } from 'server/src/lib/actions/billingPlanAction';
+import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from 'server/src/lib/actions/contractLineAction';
 import { getPlanServices, addServiceToPlan, updatePlanService, removeServiceFromPlan } from 'server/src/lib/actions/planServiceActions';
 // Import new action and type
 import { getServiceTypesForSelection } from 'server/src/lib/actions/serviceActions';
-import { IBillingPlan, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
+import { IContractLine, IPlanService, IService, IServiceType } from 'server/src/interfaces/billing.interfaces';
 import { useTenant } from '../TenantProvider';
 import { toast } from 'react-hot-toast';
 import { DataTable } from 'server/src/components/ui/DataTable';
@@ -25,25 +25,25 @@ import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { PLAN_TYPE_DISPLAY, BILLING_FREQUENCY_DISPLAY } from 'server/src/constants/billing';
 import { add } from 'date-fns';
 
-interface BillingPlansProps {
+interface ContractLinesProps {
   initialServices: IService[];
 }
 
-const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
+const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const router = useRouter();
-  const [billingPlans, setBillingPlans] = useState<IBillingPlan[]>([]);
+  const [contractLines, setContractLines] = useState<IContractLine[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [planServices, setPlanServices] = useState<IPlanService[]>([]);
   const [selectedServiceToAdd, setSelectedServiceToAdd] = useState<string | null>(null);
   const [availableServices, setAvailableServices] = useState<IService[]>(initialServices);
   const [error, setError] = useState<string | null>(null);
-  const [editingPlan, setEditingPlan] = useState<IBillingPlan | null>(null);
+  const [editingPlan, setEditingPlan] = useState<IContractLine | null>(null);
   // Add state for all service types (standard + tenant-specific)
   const [allServiceTypes, setAllServiceTypes] = useState<{ id: string; name: string; billing_method: 'fixed' | 'per_unit'; is_standard: boolean }[]>([]);
   const tenant = useTenant();
 
   useEffect(() => {
-    fetchBillingPlans();
+    fetchContractLines();
     fetchAllServiceTypes(); // Fetch service types on mount
   }, []);
 
@@ -78,10 +78,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     }
   }, [planServices, initialServices, selectedServiceToAdd]);
 
-  const fetchBillingPlans = async () => {
+  const fetchContractLines = async () => {
     try {
-      const plans = await getBillingPlans();
-      setBillingPlans(plans);
+      const plans = await getContractLines();
+      setContractLines(plans);
       setError(null);
     } catch (error) {
       console.error('Error fetching billing plans:', error);
@@ -106,7 +106,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
       const addedService = initialServices.find(s => s.service_id === serviceId);
       if (addedService) {
         const newPlanService = {
-          plan_id: selectedPlan,
+          contract_line_id: selectedPlan,
           service_id: serviceId,
           quantity: 1,
           custom_rate: addedService.default_rate,
@@ -152,10 +152,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     }
   };
 
-  const billingPlanColumns: ColumnDefinition<IBillingPlan>[] = [
+  const contractLineColumns: ColumnDefinition<IContractLine>[] = [
     {
       title: 'Plan Name',
-      dataIndex: 'plan_name',
+      dataIndex: 'contract_line_name',
     },
     {
       title: 'Billing Frequency',
@@ -164,7 +164,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     },
     {
       title: 'Plan Type',
-      dataIndex: 'plan_type',
+      dataIndex: 'contract_line_type',
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
     {
@@ -174,12 +174,12 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     },
     {
       title: 'Actions',
-      dataIndex: 'plan_id',
+      dataIndex: 'contract_line_id',
       render: (value, record) => (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              id="billing-plan-actions-menu"
+              id="contract-line-actions-menu"
               variant="ghost"
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
@@ -190,7 +190,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem
-              id="edit-billing-plan-menu-item"
+              id="edit-contract-line-menu-item"
               onClick={(e) => {
                 e.stopPropagation();
                 setEditingPlan({...record});
@@ -199,13 +199,13 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
-              id="delete-billing-plan-menu-item"
+              id="delete-contract-line-menu-item"
               className="text-red-600 focus:text-red-600"
               onClick={async (e) => {
                 e.stopPropagation();
                 try {
-                  await deleteBillingPlan(record.plan_id!);
-                  fetchBillingPlans();
+                  await deleteContractLine(record.contract_line_id!);
+                  fetchContractLines();
                   toast.success('Billing plan deleted successfully');
                 } catch (error) {
                   if (error instanceof Error) {
@@ -327,9 +327,9 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
     },
   ];
 
-  const handleBillingPlanClick = (plan: IBillingPlan) => {
-    if (plan.plan_id) {
-      setSelectedPlan(plan.plan_id);
+  const handleContractLineClick = (plan: IContractLine) => {
+    if (plan.contract_line_id) {
+      setSelectedPlan(plan.contract_line_id);
     }
   };
 
@@ -340,15 +340,15 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
           <Box p="4">
             <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
             <div className="mb-4">
-              <BillingPlanDialog
+              <ContractLineDialog
                 onPlanAdded={(newPlanId) => {
-                  fetchBillingPlans().then(async () => {
+                  fetchContractLines().then(async () => {
                     if (newPlanId) {
                       setSelectedPlan(newPlanId);
                       
                       // Fetch the newly created plan and navigate to its configuration page
                       try {
-                        const newPlan = await getBillingPlanById(newPlanId);
+                        const newPlan = await getContractLineById(newPlanId);
                         if (newPlan) {
                           // Navigate to the appropriate configuration page based on plan type
                           router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
@@ -363,7 +363,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
                 onClose={() => setEditingPlan(null)}
                 allServiceTypes={allServiceTypes} // Pass service types down
                 triggerButton={
-                  <Button id='add-billing-plan-button'>
+                  <Button id='add-contract-line-button'>
                     <Plus className="h-4 w-4 mr-2" />
                     Add Plan
                   </Button>
@@ -371,10 +371,10 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
               />
             </div>
             <DataTable
-              data={billingPlans.filter(plan => plan.plan_id !== undefined)}
-              columns={billingPlanColumns}
+              data={contractLines.filter(plan => plan.contract_line_id !== undefined)}
+              columns={contractLineColumns}
               pagination={false}
-              onRowClick={handleBillingPlanClick}
+              onRowClick={handleContractLineClick}
             />
           </Box>
         </Card>
@@ -384,7 +384,7 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
             {selectedPlan ? (
               <>
                 <div className="flex justify-between items-center mb-4">
-                  <h4>Services for {billingPlans.find(p => p.plan_id === selectedPlan)?.plan_name}</h4>
+                  <h4>Services for {contractLines.find(p => p.contract_line_id === selectedPlan)?.contract_line_name}</h4>
                 </div>
                 <div className="overflow-x-auto">
                   <DataTable
@@ -426,4 +426,4 @@ const BillingPlans: React.FC<BillingPlansProps> = ({ initialServices }) => {
   );
 };
 
-export default BillingPlans;
+export default ContractLines;

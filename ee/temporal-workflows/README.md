@@ -253,7 +253,7 @@ const { workflowId, result } = await client.startTenantCreation({
     password: 'securePassword123!'
   },
   companyName: 'Acme Corp',
-  billingPlan: 'Enterprise'
+  contractLine: 'Enterprise'
 });
 
 console.log('Workflow started:', workflowId);
