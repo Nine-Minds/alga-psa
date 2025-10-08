@@ -4,14 +4,14 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from 'server/src/components/ui/Card';
 import UserList from './UserList';
 import { getAllUsers, addUser, getUserWithRoles, deleteUser, getMSPRoles, getClientPortalRoles } from 'server/src/lib/actions/user-actions/userActions';
-import { getAllCompanies } from 'server/src/lib/actions/company-actions/companyActions';
-import { addContact, getContactsByCompany, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
+import { addContact, getContactsByClient, getAllContacts, getContactsEligibleForInvitation } from 'server/src/lib/actions/contact-actions/contactActions';
 import { sendPortalInvitation, createClientPortalUser } from 'server/src/lib/actions/portal-actions/portalInvitationActions';
-import { CompanyPicker } from 'server/src/components/companies/CompanyPicker';
+import { ClientPicker } from 'server/src/components/clients/ClientPicker';
 import { ContactPicker } from 'server/src/components/ui/ContactPicker';
 import toast from 'react-hot-toast';
 import { IUser, IRole } from 'server/src/interfaces/auth.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Label } from 'server/src/components/ui/Label';
@@ -25,19 +25,19 @@ import { validateContactName, validateEmailAddress } from 'server/src/lib/utils/
 const UserManagement = (): JSX.Element => {
   const [users, setUsers] = useState<IUser[]>([]);
   const [roles, setRoles] = useState<IRole[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [searchTerm, setSearchTerm] = useState('');
-  const [companyFilterState, setCompanyFilterState] = useState<'all' | 'active' | 'inactive'>('active');
-  const [companyClientTypeFilter, setCompanyClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('active');
+  const [clientClientTypeFilter, setClientClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showNewUserForm, setShowNewUserForm] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [pwdReq, setPwdReq] = useState({minLength:false,hasUpper:false,hasLower:false,hasNumber:false,hasSpecial:false});
   const [portalType, setPortalType] = useState<'msp' | 'client'>('msp');
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
   const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
   const [newUser, setNewUser] = useState({ 
     firstName: '', 
@@ -45,7 +45,7 @@ const UserManagement = (): JSX.Element => {
     email: '', 
     password: '', 
     role: '',
-    companyId: ''
+    clientId: ''
   });
   const [requirePwdChange, setRequirePwdChange] = useState(false);
   const [licenseUsage, setLicenseUsage] = useState<LicenseUsage | null>(null);
@@ -66,7 +66,7 @@ const UserManagement = (): JSX.Element => {
     fetchRoles();
     fetchLicenseUsage();
     if (portalType === 'client') {
-      fetchCompanies();
+      fetchClients();
       fetchContacts();
     }
   }, [portalType]);
@@ -76,7 +76,7 @@ const UserManagement = (): JSX.Element => {
       fetchContacts();
     }
     setSelectedContactId(null);
-  }, [selectedCompanyId]);
+  }, [selectedClientId]);
 
   useEffect(() => {
     if (portalType === 'client') {
@@ -207,13 +207,13 @@ const UserManagement = (): JSX.Element => {
     }
   };
 
-  const fetchCompanies = async (): Promise<void> => {
+  const fetchClients = async (): Promise<void> => {
     try {
-      const fetchedCompanies = await getAllCompanies();
-      setCompanies(fetchedCompanies);
+      const fetchedClients = await getAllClients();
+      setClients(fetchedClients);
     } catch (err) {
-      console.error('Error fetching companies:', err);
-      setError('Failed to fetch companies');
+      console.error('Error fetching clients:', err);
+      setError('Failed to fetch clients');
     }
   };
 
@@ -222,11 +222,11 @@ const fetchContacts = async (): Promise<void> => {
     try {
       const invitationMode = portalType === 'client' && !newUser.password;
       if (invitationMode) {
-        const cs = await getContactsEligibleForInvitation(selectedCompanyId || undefined, 'active' as any);
+        const cs = await getContactsEligibleForInvitation(selectedClientId || undefined, 'active' as any);
         setContacts(cs);
       } else {
-        if (selectedCompanyId) {
-          const cs = await getContactsByCompany(selectedCompanyId, 'active' as any);
+        if (selectedClientId) {
+          const cs = await getContactsByClient(selectedClientId, 'active' as any);
           setContacts(cs);
         } else {
           const cs = await getAllContacts('active' as any);
@@ -301,7 +301,7 @@ const fetchContacts = async (): Promise<void> => {
             const contact = await addContact({
               full_name: `${newUser.firstName} ${newUser.lastName}`,
               email: newUser.email,
-              company_id: newUser.companyId || undefined,
+              client_id: newUser.clientId || undefined,
               is_inactive: false
             });
             try {
@@ -325,7 +325,7 @@ const fetchContacts = async (): Promise<void> => {
           const result = await createClientPortalUser(
             selectedContactId
               ? { password: newUser.password, contactId: selectedContactId, roleId: newUser.role, requirePasswordChange: requirePwdChange }
-              : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, companyId: newUser.companyId || '', isClientAdmin: false }, roleId: newUser.role, requirePasswordChange: requirePwdChange }
+              : { password: newUser.password, contact: { email: newUser.email, fullName: `${newUser.firstName} ${newUser.lastName}`, clientId: newUser.clientId || '', isClientAdmin: false }, roleId: newUser.role, requirePasswordChange: requirePwdChange }
           );
           if (result.success) {
             toast.success('Client portal user created successfully!');
@@ -361,7 +361,7 @@ const fetchContacts = async (): Promise<void> => {
         email: '', 
         password: '', 
         role: roles.length > 0 ? roles[0].role_id : '',
-        companyId: ''
+        clientId: ''
       });
       // Clear field errors
       setFieldErrors({
@@ -397,14 +397,14 @@ const fetchContacts = async (): Promise<void> => {
   const handlePortalTypeChange = (type: 'msp' | 'client') => {
     setPortalType(type);
     setShowNewUserForm(false);
-    setSelectedCompanyId(null);
+    setSelectedClientId(null);
     setNewUser({ 
       firstName: '', 
       lastName: '', 
       email: '', 
       password: '', 
       role: '',
-      companyId: ''
+      clientId: ''
     });
     setError(null);
     setFieldErrors({
@@ -484,15 +484,15 @@ const fetchContacts = async (): Promise<void> => {
             </div>
             {portalType === 'client' && (
               <div>
-                <CompanyPicker
-                  id="user-management-company-filter"
-                  companies={companies}
-                  selectedCompanyId={selectedCompanyId}
-                  onSelect={(companyId) => setSelectedCompanyId(companyId)}
-                  filterState={companyFilterState}
-                  onFilterStateChange={(state) => setCompanyFilterState(state)}
-                  clientTypeFilter={companyClientTypeFilter}
-                  onClientTypeFilterChange={(filter) => setCompanyClientTypeFilter(filter)}
+                <ClientPicker
+                  id="user-management-client-filter"
+                  clients={clients}
+                  selectedClientId={selectedClientId}
+                  onSelect={(clientId) => setSelectedClientId(clientId)}
+                  filterState={clientFilterState}
+                  onFilterStateChange={(state) => setClientFilterState(state)}
+                  clientTypeFilter={clientClientTypeFilter}
+                  onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
                   placeholder="Select client"
                   fitContent={true}
                 />
@@ -574,18 +574,18 @@ const fetchContacts = async (): Promise<void> => {
                   </div>
                   {portalType === 'client' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Client 
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Client
                         <span className="text-sm text-gray-500"> (optional)</span>
                       </label>
-                      <CompanyPicker
-                        id="new-user-company-picker"
-                        companies={companies}
-                        selectedCompanyId={newUser.companyId || null}
-                        onSelect={(companyId) => setNewUser({ ...newUser, companyId: companyId || '' })}
-                        filterState={companyFilterState}
-                        onFilterStateChange={(state) => setCompanyFilterState(state)}
-                        clientTypeFilter={companyClientTypeFilter}
-                        onClientTypeFilterChange={(filter) => setCompanyClientTypeFilter(filter)}
+                      <ClientPicker
+                        id="new-user-client-picker"
+                        clients={clients}
+                        selectedClientId={newUser.clientId || null}
+                        onSelect={(clientId) => setNewUser({ ...newUser, clientId: clientId || '' })}
+                        filterState={clientFilterState}
+                        onFilterStateChange={(state) => setClientFilterState(state)}
+                        clientTypeFilter={clientClientTypeFilter}
+                        onClientTypeFilterChange={(filter) => setClientClientTypeFilter(filter)}
                         placeholder="Select Client"
                         fitContent={false}
                       />
@@ -627,7 +627,7 @@ const fetchContacts = async (): Promise<void> => {
                                 firstName: parts[0] || c.full_name || '',
                                 lastName: parts.slice(1).join(' '),
                                 email: c.email || '',
-                                companyId: c.company_id || ''
+                                clientId: c.client_id || ''
                               });
                               
                               // Check if contact has email when sending invitation
@@ -639,7 +639,7 @@ const fetchContacts = async (): Promise<void> => {
                             setContactValidationError(null);
                           }
                         }}
-                        companyId={newUser.companyId || undefined}
+                        clientId={newUser.clientId || undefined}
                         label={newUser.password ? 'Select existing contact (optional)' : 'Select existing contact'}
                         placeholder={newUser.password ? 'Select existing contact' : 'Select contact to invite'}
                       />
@@ -712,7 +712,7 @@ const fetchContacts = async (): Promise<void> => {
                       email: '', 
                       password: '', 
                       role: roles.length > 0 ? roles[0].role_id : '',
-                      companyId: ''
+                      clientId: ''
                     });
                     setError(null);
                     setFieldErrors({
@@ -735,7 +735,7 @@ const fetchContacts = async (): Promise<void> => {
             users={filteredUsers} 
             onUpdate={fetchUsers} 
             onDeleteUser={handleDeleteUser} 
-            selectedCompanyId={portalType === 'client' ? selectedCompanyId : null}
+            selectedClientId={portalType === 'client' ? selectedClientId : null}
           />
         )}
       </CardContent>

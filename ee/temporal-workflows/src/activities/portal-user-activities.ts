@@ -11,7 +11,7 @@ import type {
 const logger = () => Context.current().log;
 
 /**
- * Creates a portal user for a client company
+ * Creates a portal user for a client client
  */
 export async function createPortalUser(
   input: CreatePortalUserActivityInput,
@@ -21,7 +21,7 @@ export async function createPortalUser(
     tenantId: input.tenantId,
     email: input.email,
     contactId: input.contactId,
-    companyId: input.companyId,
+    clientId: input.clientId,
   });
 
   try {

@@ -23,7 +23,7 @@ describe('Invoice Template Parser', () => {
   test('parses a template with blank lines at the end', () => {
     const input = `
       section header grid 12 x 3 {
-        field company_name at 1 1 span 6 1
+        field client_name at 1 1 span 6 1
       }
 
       section items grid 12 x 10 {
@@ -155,7 +155,7 @@ describe('Invoice Template Parser', () => {
     const input = `
       section header grid 12 x 3 {
         text 'Invoice' at 1 1 span 3 1
-        field company_name at 4 1 span 5 1
+        field client_name at 4 1 span 5 1
         text 'Date:' at 9 1 span 2 1
         field invoice_date at 11 1 span 2 1
       }`;
@@ -168,7 +168,7 @@ describe('Invoice Template Parser', () => {
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'field',
-      name: 'company_name'
+      name: 'client_name'
     });
     expect(result.sections[0].content[2]).toMatchObject({
       type: 'staticText',
@@ -183,8 +183,8 @@ describe('Invoice Template Parser', () => {
   test('parses a simple section', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1 span 3 2
-      field company_name at 4 1 span 5 1
+      field client_logo at 1 1 span 3 2
+      field client_name at 4 1 span 5 1
     }`;
 
     const result = parser.tryParse(input);
@@ -196,13 +196,13 @@ describe('Invoice Template Parser', () => {
       content: expect.arrayContaining([
         {
           type: 'field',
-          name: 'company_logo',
+          name: 'client_logo',
           position: { column: 1, row: 1 },
           span: { columnSpan: 3, rowSpan: 2 }
         },
         {
           type: 'field',
-          name: 'company_name',
+          name: 'client_name',
           position: { column: 4, row: 1 },
           span: { columnSpan: 5, rowSpan: 1 }
         }
@@ -455,8 +455,8 @@ describe('Invoice Template Parser', () => {
   test('parses a simple section with leading whitespace', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1 span 3 2
-      field company_name at 4 1 span 5 1
+      field client_logo at 1 1 span 3 2
+      field client_name at 4 1 span 5 1
     }`;
 
     const result = parser.tryParse(input);
@@ -468,13 +468,13 @@ describe('Invoice Template Parser', () => {
       content: expect.arrayContaining([
         {
           type: 'field',
-          name: 'company_logo',
+          name: 'client_logo',
           position: { column: 1, row: 1 },
           span: { columnSpan: 3, rowSpan: 2 }
         },
         {
           type: 'field',
-          name: 'company_name',
+          name: 'client_name',
           position: { column: 4, row: 1 },
           span: { columnSpan: 5, rowSpan: 1 }
         }
@@ -485,9 +485,9 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with styles', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1 span 3 2
-      field company_name at 4 1 span 5 1
-      style company_name {
+      field client_logo at 1 1 span 3 2
+      field client_name at 4 1 span 5 1
+      style client_name {
         font-size: 24;
         font-weight: 'bold';
       }
@@ -534,8 +534,8 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1 span 3 2
-      field company_name at 4 1 span 5 1
+      field client_logo at 1 1 span 3 2
+      field client_name at 4 1 span 5 1
       field invoice_number at 10 1 span 3 1
       field invoice_date at 10 2 span 3 1
     }
@@ -594,8 +594,8 @@ describe('Invoice Template Parser', () => {
   test('parses a field with various whitespace', () => {
     const input = `
     section header grid 12 x 3 {
-      field   company_logo    at    1    1    span    3    2
-      field company_name at 4 1 span 5 1
+      field   client_logo    at    1    1    span    3    2
+      field client_name at 4 1 span 5 1
     }`;
 
     const result = parser.tryParse(input);
@@ -603,13 +603,13 @@ describe('Invoice Template Parser', () => {
     expect(result.sections[0].content).toHaveLength(2);
     expect(result.sections[0].content[0]).toMatchObject({
       type: 'field',
-      name: 'company_logo',
+      name: 'client_logo',
       position: { column: 1, row: 1 },
       span: { columnSpan: 3, rowSpan: 2 }
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'field',
-      name: 'company_name',
+      name: 'client_name',
       position: { column: 4, row: 1 },
       span: { columnSpan: 5, rowSpan: 1 }
     });
@@ -618,13 +618,13 @@ describe('Invoice Template Parser', () => {
   test('parses a field without span', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1
+      field client_logo at 1 1
     }`;
 
     const result = parser.tryParse(input);
     expect(result.sections[0].content[0]).toMatchObject({
       type: 'field',
-      name: 'company_logo',
+      name: 'client_logo',
       position: { column: 1, row: 1 },
       span: { columnSpan: 1, rowSpan: 1 }
     });
@@ -633,9 +633,9 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with various style value types', () => {
     const input = `
         section header grid 12 x 3 {
-          field company_logo at 1 1 span 3 2
-          field company_name at 4 1 span 5 1
-          style company_name {
+          field client_logo at 1 1 span 3 2
+          field client_name at 4 1 span 5 1
+          style client_name {
             font-size: 24;
             font-weight: 'bold';
             color: '#444444';
@@ -678,8 +678,8 @@ describe('Invoice Template Parser', () => {
   test('parses multiple fields in a section', () => {
     const input = `
     section header grid 12 x 3 {
-      field company_logo at 1 1 span 3 2
-      field company_name at 4 1 span 5 1
+      field client_logo at 1 1 span 3 2
+      field client_name at 4 1 span 5 1
       field invoice_number at 10 1 span 3 1
     }`;
 
@@ -688,13 +688,13 @@ describe('Invoice Template Parser', () => {
     expect(result.sections[0].content).toHaveLength(3);
     expect(result.sections[0].content[0]).toMatchObject({
       type: 'field',
-      name: 'company_logo',
+      name: 'client_logo',
       position: { column: 1, row: 1 },
       span: { columnSpan: 3, rowSpan: 2 }
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'field',
-      name: 'company_name',
+      name: 'client_name',
       position: { column: 4, row: 1 },
       span: { columnSpan: 5, rowSpan: 1 }
     });
@@ -754,9 +754,9 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with multiple style blocks', () => {
     const input = `
         section header grid 12 x 3 {
-          field company_logo at 1 1 span 3 2
-          field company_name at 4 1 span 5 1
-          style company_name {
+          field client_logo at 1 1 span 3 2
+          field client_name at 4 1 span 5 1
+          style client_name {
             font-size: 24;
             font-weight: 'bold';
           }
@@ -799,7 +799,7 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with list', () => {
     const input = `
       section header grid 12 x 3 {
-        field company_name at 1 1 span 6 1
+        field client_name at 1 1 span 6 1
       }
 
       section items grid 12 x 10 {
@@ -827,7 +827,7 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with lists', () => {
     const input = `
       section header grid 12 x 3 {
-        field company_name at 1 1 span 6 1
+        field client_name at 1 1 span 6 1
       }
 
       section items grid 12 x 10 {
@@ -910,7 +910,7 @@ describe('Invoice Template Parser', () => {
   test('parses a complete template with fields and lists', () => {
     const input = `
       section header grid 12 x 3 {
-        field company_name at 1 1 span 6 1
+        field client_name at 1 1 span 6 1
         field invoice_number at 10 1 span 2 1
       }
 
@@ -939,7 +939,7 @@ describe('Invoice Template Parser', () => {
     expect(result.sections).toHaveLength(4);
     expect(result.sections[0].content[0]).toMatchObject({
       type: 'field',
-      name: 'company_name',
+      name: 'client_name',
       position: { column: 1, row: 1 },
       span: { columnSpan: 6, rowSpan: 1 }
     });
@@ -1014,7 +1014,7 @@ describe('Invoice Template Parser', () => {
     const input = `
       section header grid 12 x 3 {
         text 'INVOICE' at 1 1 span 12 1
-        field company_name at 1 2 span 6 1
+        field client_name at 1 2 span 6 1
         text 'Invoice Number:' at 7 2 span 3 1
         field invoice_number at 10 2 span 3 1
       }
@@ -1065,9 +1065,9 @@ describe('Invoice Template Parser', () => {
   test('parses fields with nested properties', () => {
     const input = `
       section header grid 12 x 4 {
-        field company.company_logo at 1 1 span 3 2
-        field company.company_name at 4 1 span 5 1
-        field company.company_address at 4 2 span 5 1
+        field client.client_logo at 1 1 span 3 2
+        field client.client_name at 4 1 span 5 1
+        field client.client_address at 4 2 span 5 1
         field invoice_number at 10 1 span 3 1
         field invoice_date at 10 2 span 3 1
         field client.client_name at 1 3 span 6 1
@@ -1079,13 +1079,13 @@ describe('Invoice Template Parser', () => {
     expect(result.sections[0].content).toHaveLength(7);
     expect(result.sections[0].content[0]).toMatchObject({
       type: 'field',
-      name: 'company.company_logo',
+      name: 'client.client_logo',
       position: { column: 1, row: 1 },
       span: { columnSpan: 3, rowSpan: 2 }
     });
     expect(result.sections[0].content[1]).toMatchObject({
       type: 'field',
-      name: 'company.company_name',
+      name: 'client.client_name',
       position: { column: 4, row: 1 },
       span: { columnSpan: 5, rowSpan: 1 }
     });
@@ -1193,7 +1193,7 @@ describe('Invoice Template Parser', () => {
   test('parses grouped items with a global calculation', () => {
     const input = `
       section header grid 12 x 3 {
-        field company_name at 1 1 span 6 1
+        field client_name at 1 1 span 6 1
         field invoice_number at 10 1 span 3 1
       }
     

@@ -7,18 +7,18 @@ interface SetupTaxOptions {
   taxPercentage?: number;
   startDate?: string;
   description?: string;
-  companyId?: string;
+  clientId?: string;
 }
 
 interface AssignServiceTaxRateOptions {
   onlyUnset?: boolean;
 }
 
-let companyTaxSettingsColumnsCache: Record<string, unknown> | null | undefined;
-let companyTaxRatesColumnsCache: Record<string, unknown> | null | undefined;
+let clientTaxSettingsColumnsCache: Record<string, unknown> | null | undefined;
+let clientTaxRatesColumnsCache: Record<string, unknown> | null | undefined;
 const serviceTypeCache = new Map<string, string>();
 
-export async function setupCompanyTaxConfiguration(
+export async function setupClientTaxConfiguration(
   context: TestContext,
   options: SetupTaxOptions = {}
 ): Promise<string> {
@@ -30,7 +30,7 @@ export async function setupCompanyTaxConfiguration(
     description = `${regionCode} Tax`
   } = options;
 
-  const targetCompanyId = options.companyId ?? context.companyId;
+  const targetClientId = options.clientId ?? context.clientId;
 
   const existingActiveRate = await context.db('tax_rates')
     .where({ tenant: context.tenantId, region_code: regionCode, is_active: true })
@@ -80,8 +80,8 @@ export async function setupCompanyTaxConfiguration(
     }
   }
 
-  await upsertCompanyTaxSettings(context, taxRateId, targetCompanyId);
-  await upsertCompanyDefaultTaxRate(context, taxRateId, targetCompanyId);
+  await upsertClientTaxSettings(context, taxRateId, targetClientId);
+  await upsertClientDefaultTaxRate(context, taxRateId, targetClientId);
   await assignServiceTaxRate(context, '*', regionCode, { onlyUnset: true });
 
   return taxRateId;
@@ -116,95 +116,95 @@ export async function assignServiceTaxRate(
   await query.update({ tax_rate_id: taxRate.tax_rate_id });
 }
 
-async function upsertCompanyTaxSettings(
+async function upsertClientTaxSettings(
   context: TestContext,
   taxRateId: string,
-  companyId: string
+  clientId: string
 ): Promise<void> {
   try {
-    if (companyTaxSettingsColumnsCache === undefined) {
-      companyTaxSettingsColumnsCache = await context.db('company_tax_settings').columnInfo();
+    if (clientTaxSettingsColumnsCache === undefined) {
+      clientTaxSettingsColumnsCache = await context.db('client_tax_settings').columnInfo();
     }
   } catch (error) {
-    companyTaxSettingsColumnsCache = null;
+    clientTaxSettingsColumnsCache = null;
   }
 
-  if (!companyTaxSettingsColumnsCache || Object.keys(companyTaxSettingsColumnsCache).length === 0) {
+  if (!clientTaxSettingsColumnsCache || Object.keys(clientTaxSettingsColumnsCache).length === 0) {
     return;
   }
 
-  const companyExists = await context.db('companies')
-    .where({ tenant: context.tenantId, company_id: companyId })
+  const clientExists = await context.db('clients')
+    .where({ tenant: context.tenantId, client_id: clientId })
     .first();
 
-  if (!companyExists) {
+  if (!clientExists) {
     return;
   }
 
   const baseData: Record<string, unknown> = {
     tenant: context.tenantId,
-    company_id: companyId,
+    client_id: clientId,
     is_reverse_charge_applicable: false
   };
 
-  if ('tax_rate_id' in companyTaxSettingsColumnsCache) {
+  if ('tax_rate_id' in clientTaxSettingsColumnsCache) {
     baseData.tax_rate_id = taxRateId;
   }
 
-  await context.db('company_tax_settings')
+  await context.db('client_tax_settings')
     .insert(baseData)
-    .onConflict(['tenant', 'company_id'])
+    .onConflict(['tenant', 'client_id'])
     .merge(baseData);
 }
 
-async function upsertCompanyDefaultTaxRate(
+async function upsertClientDefaultTaxRate(
   context: TestContext,
   taxRateId: string,
-  companyId: string
+  clientId: string
 ): Promise<void> {
   try {
-    if (companyTaxRatesColumnsCache === undefined) {
-      companyTaxRatesColumnsCache = await context.db('company_tax_rates').columnInfo();
+    if (clientTaxRatesColumnsCache === undefined) {
+      clientTaxRatesColumnsCache = await context.db('client_tax_rates').columnInfo();
     }
   } catch (error) {
-    companyTaxRatesColumnsCache = null;
+    clientTaxRatesColumnsCache = null;
   }
 
-  if (!companyTaxRatesColumnsCache || Object.keys(companyTaxRatesColumnsCache).length === 0) {
+  if (!clientTaxRatesColumnsCache || Object.keys(clientTaxRatesColumnsCache).length === 0) {
     return;
   }
 
-  const companyExists = await context.db('companies')
-    .where({ tenant: context.tenantId, company_id: companyId })
+  const clientExists = await context.db('clients')
+    .where({ tenant: context.tenantId, client_id: clientId })
     .first();
 
-  if (!companyExists) {
+  if (!clientExists) {
     return;
   }
 
-  if ('is_default' in companyTaxRatesColumnsCache) {
-    await context.db('company_tax_rates')
-      .where({ tenant: context.tenantId, company_id: companyId })
+  if ('is_default' in clientTaxRatesColumnsCache) {
+    await context.db('client_tax_rates')
+      .where({ tenant: context.tenantId, client_id: clientId })
       .update({ is_default: false });
   }
 
   const rateData: Record<string, unknown> = {
     tenant: context.tenantId,
-    company_id: companyId,
+    client_id: clientId,
     tax_rate_id: taxRateId
   };
 
-  if ('is_default' in companyTaxRatesColumnsCache) {
+  if ('is_default' in clientTaxRatesColumnsCache) {
     rateData.is_default = true;
   }
 
-  if ('location_id' in companyTaxRatesColumnsCache) {
+  if ('location_id' in clientTaxRatesColumnsCache) {
     rateData.location_id = null;
   }
 
-  await context.db('company_tax_rates')
+  await context.db('client_tax_rates')
     .insert(rateData)
-    .onConflict(['company_id', 'tax_rate_id', 'tenant'])
+    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
     .merge(rateData);
 }
 
@@ -223,7 +223,7 @@ interface CreateServiceOptions {
 
 interface CreateFixedPlanOptions {
   planId?: string;
-  companyBillingPlanId?: string;
+  clientBillingPlanId?: string;
   planName?: string;
   billingFrequency?: 'monthly' | 'annual';
   baseRateCents?: number;
@@ -242,7 +242,7 @@ interface AddServiceToPlanOptions {
 
 interface CreateBucketPlanOptions {
   planId?: string;
-  companyBillingPlanId?: string;
+  clientBillingPlanId?: string;
   configId?: string;
   planName?: string;
   billingFrequency?: 'monthly' | 'quarterly' | 'annually';
@@ -259,7 +259,7 @@ interface CreateBucketUsageOptions {
   usageId?: string;
   planId: string;
   serviceId: string;
-  companyId: string;
+  clientId: string;
   periodStart: string;
   periodEnd: string;
   minutesUsed: number;
@@ -346,9 +346,9 @@ export async function createFixedPlanAssignment(
   context: TestContext,
   serviceId: string,
   options: CreateFixedPlanOptions = {}
-): Promise<{ planId: string; companyBillingPlanId: string }> {
+): Promise<{ planId: string; clientBillingPlanId: string }> {
   const planId = options.planId ?? uuidv4();
-  const companyBillingPlanId = options.companyBillingPlanId ?? uuidv4();
+  const clientBillingPlanId = options.clientBillingPlanId ?? uuidv4();
   const configId = uuidv4();
   const baseRateCents = options.baseRateCents ?? 1000;
   const baseRateDollars = baseRateCents / 100;
@@ -407,26 +407,26 @@ export async function createFixedPlanAssignment(
       base_rate: detailBaseRateDollars
     });
 
-  const existingAssignment = await context.db('company_billing_plans')
-    .where({ tenant: context.tenantId, company_id: context.companyId, plan_id: planId })
+  const existingAssignment = await context.db('client_billing_plans')
+    .where({ tenant: context.tenantId, client_id: context.clientId, plan_id: planId })
     .first();
 
   if (!existingAssignment) {
-    await context.db('company_billing_plans')
+    await context.db('client_billing_plans')
       .insert({
         tenant: context.tenantId,
-        company_billing_plan_id: companyBillingPlanId,
-        company_id: context.companyId,
+        client_billing_plan_id: clientBillingPlanId,
+        client_id: context.clientId,
         plan_id: planId,
         service_category: null,
         is_active: true,
         start_date: options.startDate ?? '2025-02-01',
         end_date: options.endDate ?? null,
-        company_bundle_id: null
+        client_bundle_id: null
       });
   }
 
-  return { planId, companyBillingPlanId };
+  return { planId, clientBillingPlanId };
 }
 
 export async function addServiceToFixedPlan(
@@ -492,9 +492,9 @@ export async function createBucketPlanAssignment(
   context: TestContext,
   serviceId: string,
   options: CreateBucketPlanOptions = {}
-): Promise<{ planId: string; configId: string; companyBillingPlanId: string }> {
+): Promise<{ planId: string; configId: string; clientBillingPlanId: string }> {
   const planId = options.planId ?? uuidv4();
-  const companyBillingPlanId = options.companyBillingPlanId ?? uuidv4();
+  const clientBillingPlanId = options.clientBillingPlanId ?? uuidv4();
   const configId = options.configId ?? uuidv4();
   const planName = options.planName ?? 'Bucket Plan';
   const billingFrequency = options.billingFrequency ?? 'monthly';
@@ -571,25 +571,25 @@ export async function createBucketPlanAssignment(
 
   await context.db('plan_service_bucket_config').insert(bucketConfigData);
 
-  const existingAssignment = await context.db('company_billing_plans')
-    .where({ tenant: context.tenantId, company_id: context.companyId, plan_id: planId })
+  const existingAssignment = await context.db('client_billing_plans')
+    .where({ tenant: context.tenantId, client_id: context.clientId, plan_id: planId })
     .first();
 
   if (!existingAssignment) {
-    await context.db('company_billing_plans').insert({
+    await context.db('client_billing_plans').insert({
       tenant: context.tenantId,
-      company_billing_plan_id: companyBillingPlanId,
-      company_id: context.companyId,
+      client_billing_plan_id: clientBillingPlanId,
+      client_id: context.clientId,
       plan_id: planId,
       service_category: null,
       is_active: true,
       start_date: startDate,
       end_date: endDate,
-      company_bundle_id: null
+      client_bundle_id: null
     });
   }
 
-  return { planId, configId, companyBillingPlanId };
+  return { planId, configId, clientBillingPlanId };
 }
 
 export async function createBucketUsageRecord(
@@ -606,7 +606,7 @@ export async function createBucketUsageRecord(
   const record: Record<string, unknown> = {
     usage_id: usageId,
     tenant: context.tenantId,
-    company_id: options.companyId,
+    client_id: options.clientId,
     plan_id: options.planId,
     service_catalog_id: options.serviceId,
     period_start: options.periodStart,

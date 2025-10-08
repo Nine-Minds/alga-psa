@@ -12,7 +12,7 @@ describe('Projects API E2E Tests', () => {
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
-      companyName: 'Projects API Test Company',
+      clientName: 'Projects API Test Client',
       userName: 'projects_api_test'
     });
   });
@@ -68,7 +68,7 @@ describe('Projects API E2E Tests', () => {
 
   describe('CRUD Operations', () => {
     it('should create a project', async () => {
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const response = await env.apiClient.post('/api/v1/projects', projectData);
       
       if (response.status !== 201) {
@@ -78,7 +78,7 @@ describe('Projects API E2E Tests', () => {
       expect(response.status).toBe(201);
       expect(response.data.data).toMatchObject({
         project_name: projectData.project_name,
-        company_id: projectData.company_id
+        client_id: projectData.client_id
       });
       // Status should be set to a default UUID
       expect(response.data.data.status).toBeTruthy();
@@ -90,7 +90,7 @@ describe('Projects API E2E Tests', () => {
 
     it('should get a project by ID', async () => {
       // Create a project first
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const createResponse = await env.apiClient.post('/api/v1/projects', projectData);
       const projectId = createResponse.data.data.project_id;
       createdProjectIds.push(projectId);
@@ -102,13 +102,13 @@ describe('Projects API E2E Tests', () => {
       expect(response.data.data).toMatchObject({
         project_id: projectId,
         project_name: projectData.project_name,
-        company_id: projectData.company_id
+        client_id: projectData.client_id
       });
     });
 
     it('should update a project', async () => {
       // Create a project first
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const createResponse = await env.apiClient.post('/api/v1/projects', projectData);
       const projectId = createResponse.data.data.project_id;
       createdProjectIds.push(projectId);
@@ -132,7 +132,7 @@ describe('Projects API E2E Tests', () => {
 
     it('should delete a project', async () => {
       // Create a project first
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const createResponse = await env.apiClient.post('/api/v1/projects', projectData);
       const projectId = createResponse.data.data.project_id;
       
@@ -150,7 +150,7 @@ describe('Projects API E2E Tests', () => {
       // Create multiple projects
       const projects: any[] = [];
       for (let i = 0; i < 5; i++) {
-        const projectData = createProjectTestData({ company_id: env.companyId });
+        const projectData = createProjectTestData({ client_id: env.clientId });
         const response = await env.apiClient.post('/api/v1/projects', projectData);
         if (response.status === 201) {
           projects.push(response.data.data);
@@ -183,7 +183,7 @@ describe('Projects API E2E Tests', () => {
       
       for (const project of projects) {
         const response = await env.apiClient.post('/api/v1/projects', 
-          createProjectTestData({ ...project, company_id: env.companyId })
+          createProjectTestData({ ...project, client_id: env.clientId })
         );
         if (response.status === 201) {
           createdProjectIds.push(response.data.data.project_id);
@@ -221,7 +221,7 @@ describe('Projects API E2E Tests', () => {
 
     beforeEach(async () => {
       // Create a test project
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const response = await env.apiClient.post('/api/v1/projects', projectData);
       if (response.status === 201) {
         testProjectId = response.data.data.project_id;
@@ -260,7 +260,7 @@ describe('Projects API E2E Tests', () => {
     it('should return 400 for invalid project data', async () => {
       const invalidData = {
         project_name: '', // Required field
-        company_id: 'invalid-uuid' // Invalid format
+        client_id: 'invalid-uuid' // Invalid format
       };
       
       const response = await env.apiClient.post('/api/v1/projects', invalidData);
@@ -289,7 +289,7 @@ describe('Projects API E2E Tests', () => {
       
       for (const project of projects) {
         const response = await env.apiClient.post('/api/v1/projects', 
-          createProjectTestData({ ...project, company_id: env.companyId })
+          createProjectTestData({ ...project, client_id: env.clientId })
         );
         if (response.status === 201) {
           createdProjectIds.push(response.data.data.project_id);
@@ -330,13 +330,13 @@ describe('Projects API E2E Tests', () => {
       expect(response.data.data).toBeInstanceOf(Array);
     });
 
-    it('should filter projects by company', async () => {
-      const response = await env.apiClient.get(`/api/v1/projects?company_id=${env.companyId}`);
+    it('should filter projects by client', async () => {
+      const response = await env.apiClient.get(`/api/v1/projects?client_id=${env.clientId}`);
       
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       response.data.data.forEach((project: any) => {
-        expect(project.company_id).toBe(env.companyId);
+        expect(project.client_id).toBe(env.clientId);
       });
     });
   });
@@ -364,7 +364,7 @@ describe('Projects API E2E Tests', () => {
     });
 
     it('should enforce create permissions', async () => {
-      const projectData = createProjectTestData({ company_id: env.companyId });
+      const projectData = createProjectTestData({ client_id: env.clientId });
       const response = await env.apiClient.post('/api/v1/projects', projectData);
       
       expect([201, 403]).toContain(response.status);

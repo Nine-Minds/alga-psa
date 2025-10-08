@@ -14,8 +14,8 @@ export interface FindContactByEmailOutput {
   contact_id: string;
   name: string;
   email: string;
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   phone?: string;
   title?: string;
 }
@@ -23,7 +23,7 @@ export interface FindContactByEmailOutput {
 export interface CreateOrFindContactInput {
   email: string;
   name?: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
 }
@@ -32,7 +32,7 @@ export interface CreateOrFindContactOutput {
   id: string;
   name: string;
   email: string;
-  company_id: string;
+  client_id: string;
   phone?: string;
   title?: string;
   created_at: string;
@@ -83,7 +83,7 @@ export interface ProcessEmailAttachmentOutput {
 
 export interface SaveEmailClientAssociationInput {
   email: string;
-  company_id: string;
+  client_id: string;
   contact_id?: string;
   confidence_score?: number;
   notes?: string;
@@ -93,7 +93,7 @@ export interface SaveEmailClientAssociationOutput {
   success: boolean;
   associationId: string;
   email: string;
-  company_id: string;
+  client_id: string;
 }
 
 // =============================================================================
@@ -116,22 +116,22 @@ export async function findContactByEmail(email: string): Promise<FindContactByEm
     contact_id: contact.contact_name_id,
     name: contact.full_name,
     email: contact.email,
-    company_id: contact.company_id || '',
-    company_name: (contact as any).company_name || '',
+    client_id: contact.client_id || '',
+    client_name: (contact as any).client_name || '',
     phone: contact.phone_number,
     title: contact.role
   };
 }
 
 /**
- * Create or find contact by email and company
+ * Create or find contact by email and client
  * This is a thin wrapper around the contactActions domain function
  */
 export async function createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput> {
   const result = await createOrFindContactByEmail({
     email: input.email,
     name: input.name,
-    companyId: input.company_id,
+    clientId: input.client_id,
     phone: input.phone,
     title: input.title
   });
@@ -141,7 +141,7 @@ export async function createOrFindContact(input: CreateOrFindContactInput): Prom
     id: result.contact.contact_name_id,
     name: result.contact.full_name,
     email: result.contact.email,
-    company_id: result.contact.company_id || '',
+    client_id: result.contact.client_id || '',
     phone: result.contact.phone_number,
     title: result.contact.role,
     created_at: result.contact.created_at ? new Date(result.contact.created_at).toISOString() : new Date().toISOString(),
@@ -271,7 +271,7 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
     const existing = await trx('email_client_associations')
       .where('tenant', tenant)
       .whereRaw('LOWER(email) = LOWER(?)', [input.email])
-      .where('company_id', input.company_id)
+      .where('client_id', input.client_id)
       .first();
 
     if (existing) {
@@ -289,7 +289,7 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
         success: true,
         associationId: existing.id,
         email: input.email,
-        company_id: input.company_id
+        client_id: input.client_id
       };
     } else {
       // Create new association
@@ -297,7 +297,7 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
         id: associationId,
         tenant,
         email: input.email.toLowerCase(),
-        company_id: input.company_id,
+        client_id: input.client_id,
         contact_id: input.contact_id,
         confidence_score: input.confidence_score || 1.0,
         notes: input.notes,
@@ -309,7 +309,7 @@ export async function saveEmailClientAssociation(input: SaveEmailClientAssociati
         success: true,
         associationId,
         email: input.email,
-        company_id: input.company_id
+        client_id: input.client_id
       };
     }
   });
@@ -360,53 +360,53 @@ export async function createCommentFromEmail(commentData: {
 }
 
 /**
- * Create company from email data - wrapper for email workflows
+ * Create client from email data - wrapper for email workflows
  */
-export async function createCompanyFromEmail(companyData: {
-  company_name: string;
+export async function createClientFromEmail(clientData: {
+  client_name: string;
   email?: string;
   source?: string;
-}): Promise<{ company_id: string; company_name: string }> {
+}): Promise<{ client_id: string; client_name: string }> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const [company] = await trx('companies')
+    const [client] = await trx('clients')
       .insert({
         tenant,
-        company_name: companyData.company_name,
-        email: companyData.email,
-        source: companyData.source || 'email',
+        client_name: clientData.client_name,
+        email: clientData.email,
+        source: clientData.source || 'email',
         created_at: new Date(),
         updated_at: new Date()
       })
-      .returning(['company_id', 'company_name']);
+      .returning(['client_id', 'client_name']);
 
     return {
-      company_id: company.company_id,
-      company_name: company.company_name
+      client_id: client.client_id,
+      client_name: client.client_name
     };
   });
 }
 
 /**
- * Get company by ID - wrapper for email workflows
+ * Get client by ID - wrapper for email workflows
  */
-export async function getCompanyByIdForEmail(companyId: string): Promise<{ company_id: string; company_name: string } | null> {
+export async function getClientByIdForEmail(clientId: string): Promise<{ client_id: string; client_name: string } | null> {
   const { knex: db, tenant } = await createTenantKnex();
   if (!tenant) {
     throw new Error('Tenant not found');
   }
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
-    const company = await trx('companies')
-      .select('company_id', 'company_name')
-      .where({ company_id: companyId, tenant })
+    const client = await trx('clients')
+      .select('client_id', 'client_name')
+      .where({ client_id: clientId, tenant })
       .first();
 
-    return company || null;
+    return client || null;
   });
 }
 

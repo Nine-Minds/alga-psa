@@ -137,7 +137,7 @@ export async function deletePlanBundle(bundleId: string): Promise<void> {
     // Check if bundle is in use before attempting to delete
     const isInUse = await PlanBundle.isInUse(bundleId);
     if (isInUse) {
-      throw new Error(`Cannot delete bundle that is currently in use by companies in tenant ${tenant}`);
+      throw new Error(`Cannot delete bundle that is currently in use by clients in tenant ${tenant}`);
     }
 
     await PlanBundle.delete(bundleId);
@@ -145,7 +145,7 @@ export async function deletePlanBundle(bundleId: string): Promise<void> {
     console.error('Error deleting plan bundle:', error);
     if (error instanceof Error) {
       if (error.message.includes('in use')) {
-        throw new Error(`Cannot delete bundle that is currently in use by companies in tenant ${tenant}`);
+        throw new Error(`Cannot delete bundle that is currently in use by clients in tenant ${tenant}`);
       }
       throw error; // Preserve other specific error messages
     }

@@ -152,9 +152,9 @@ export async function deleteDocument(documentId: string, userId: string) {
         throw new Error('Document not found');
       }
 
-      // First, update any companies that reference this document as notes_document_id
+      // First, update any clients that reference this document as notes_document_id
       // We need to do this manually because of the composite foreign key constraint
-      await trx('companies')
+      await trx('clients')
         .where({
           notes_document_id: documentId,
           tenant
@@ -313,8 +313,8 @@ export async function getDocumentByTicketId(ticketId: string) {
   }
 }
 
-// Get documents by company
-export async function getDocumentByCompanyId(companyId: string) {
+// Get documents by client
+export async function getDocumentByClientId(clientId: string) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -334,8 +334,8 @@ export async function getDocumentByCompanyId(companyId: string) {
       const documents = await trx('documents')
         .join('document_associations', 'documents.document_id', 'document_associations.document_id')
         .where({
-          'document_associations.entity_id': companyId,
-          'document_associations.entity_type': 'company',
+          'document_associations.entity_id': clientId,
+          'document_associations.entity_type': 'client',
           'documents.tenant': tenant,
           'document_associations.tenant': tenant
         })
@@ -1403,7 +1403,7 @@ export async function uploadDocument(
   file: FormData,
   options: {
     userId: string;
-    companyId?: string;
+    clientId?: string;
     ticketId?: string;
     contactNameId?: string;
     assetId?: string;
@@ -1482,11 +1482,11 @@ export async function uploadDocument(
       });
     }
 
-    if (options.companyId) {
+    if (options.clientId) {
       associations.push({
         document_id: documentWithId.document_id,
-        entity_id: options.companyId,
-        entity_type: 'company',
+        entity_id: options.clientId,
+        entity_type: 'client',
         tenant
       });
     }

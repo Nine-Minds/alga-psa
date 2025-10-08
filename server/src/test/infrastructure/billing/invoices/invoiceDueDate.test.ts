@@ -6,7 +6,7 @@ import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import {
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 
@@ -63,7 +63,7 @@ describe('Invoice Due Date Calculation', () => {
   const billingEndDate = '2025-01-31T00:00:00Z';
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -77,14 +77,14 @@ describe('Invoice Due Date Calculation', () => {
     context = await setupContext({
       runSeeds: true,
       cleanupTables: [
-        'companies',
+        'clients',
         'invoices',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates'
+        'client_tax_settings',
+        'client_tax_rates'
       ],
-      companyName: 'Due Date Test Company',
+      clientName: 'Due Date Test Client',
       userType: 'internal'
     });
 
@@ -123,13 +123,13 @@ describe('Invoice Due Date Calculation', () => {
   }, 30000);
 
   it('should calculate due date for net_30 terms', async () => {
-    // Create test company with net_30 terms
-    const companyId = await context.createEntity('companies', {
-      company_name: 'Test Company 2',
+    // Create test client with net_30 terms
+    const clientId = await context.createEntity('clients', {
+      client_name: 'Test Client 2',
       payment_terms: 'net_30'
-    }, 'company_id');
+    }, 'client_id');
 
-    const dueDate = await getDueDate(companyId, billingEndDate);
+    const dueDate = await getDueDate(clientId, billingEndDate);
     const expectedDate = Temporal.PlainDate.from('2025-03-02');
     expect(Temporal.PlainDate.compare(
       Temporal.PlainDate.from(dueDate),
@@ -138,13 +138,13 @@ describe('Invoice Due Date Calculation', () => {
   });
 
   it('should calculate due date for net_15 terms', async () => {
-    // Create test company with net_15 terms
-    const companyId = await context.createEntity('companies', {
-      company_name: 'Test Company 2',
+    // Create test client with net_15 terms
+    const clientId = await context.createEntity('clients', {
+      client_name: 'Test Client 2',
       payment_terms: 'net_15'
-    }, 'company_id');
+    }, 'client_id');
 
-    const dueDate = await getDueDate(companyId, billingEndDate);
+    const dueDate = await getDueDate(clientId, billingEndDate);
     const expectedDate = Temporal.PlainDate.from('2025-02-15');
     expect(Temporal.PlainDate.compare(
       Temporal.PlainDate.from(dueDate),
@@ -153,13 +153,13 @@ describe('Invoice Due Date Calculation', () => {
   });
 
   it('should calculate due date for due_on_receipt terms', async () => {
-    // Create test company with due_on_receipt terms
-    const companyId = await context.createEntity('companies', {
-      company_name: 'Test Company 2',
+    // Create test client with due_on_receipt terms
+    const clientId = await context.createEntity('clients', {
+      client_name: 'Test Client 2',
       payment_terms: 'due_on_receipt'
-    }, 'company_id');
+    }, 'client_id');
 
-    const dueDate = await getDueDate(companyId, billingEndDate);
+    const dueDate = await getDueDate(clientId, billingEndDate);
     const expectedDate = Temporal.PlainDate.from('2025-01-31');
     expect(Temporal.PlainDate.compare(
       Temporal.PlainDate.from(dueDate),
@@ -168,13 +168,13 @@ describe('Invoice Due Date Calculation', () => {
   });
 
   it('should default to net_30 for unknown payment terms', async () => {
-    // Create test company with unknown terms
-    const companyId = await context.createEntity('companies', {
-      company_name: 'Test Company 2',
+    // Create test client with unknown terms
+    const clientId = await context.createEntity('clients', {
+      client_name: 'Test Client 2',
       payment_terms: 'unknown'
-    }, 'company_id');
+    }, 'client_id');
 
-    const dueDate = await getDueDate(companyId, billingEndDate);
+    const dueDate = await getDueDate(clientId, billingEndDate);
     const expectedDate = Temporal.PlainDate.from('2025-03-02');
     expect(Temporal.PlainDate.compare(
       Temporal.PlainDate.from(dueDate),

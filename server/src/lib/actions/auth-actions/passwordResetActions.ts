@@ -140,28 +140,28 @@ export async function requestPasswordReset(
           };
         }
 
-        // Get the tenant's default company for email branding
-        const tenantDefaultCompany = await trx('tenant_companies')
-          .join('companies', function() {
-            this.on('companies.company_id', '=', 'tenant_companies.company_id')
-                .andOn('companies.tenant', '=', 'tenant_companies.tenant');
+        // Get the tenant's default client for email branding
+        const tenantDefaultClient = await trx('tenant_companies')
+          .join('clients', function() {
+            this.on('clients.client_id', '=', 'tenant_companies.client_id')
+                .andOn('clients.tenant', '=', 'tenant_companies.tenant');
           })
           .where({ 
             'tenant_companies.tenant': tenant,
             'tenant_companies.is_default': true 
           })
-          .select('companies.*')
+          .select('clients.*')
           .first();
         
-        const companyName = tenantDefaultCompany?.company_name || 'Our Platform';
+        const clientName = tenantDefaultClient?.client_name || 'Our Platform';
         
         // Get support email from default location if available
         let supportEmail = 'support@example.com';
-        if (tenantDefaultCompany) {
-          const defaultLocation = await trx('company_locations')
+        if (tenantDefaultClient) {
+          const defaultLocation = await trx('client_locations')
             .where({ 
               tenant, 
-              company_id: tenantDefaultCompany.company_id,
+              client_id: tenantDefaultClient.client_id,
               is_default: true,
               is_active: true
             })
@@ -182,7 +182,7 @@ export async function requestPasswordReset(
         // Send password reset email - if this fails, transaction will rollback
         console.log('[PasswordReset] Sending email to:', normalizedEmail);
         console.log('[PasswordReset] Reset URL:', resetUrl);
-        console.log('[PasswordReset] Company name:', companyName);
+        console.log('[PasswordReset] Client name:', clientName);
         console.log('[PasswordReset] Support email:', supportEmail);
         
         await sendPasswordResetEmail({
@@ -192,7 +192,7 @@ export async function requestPasswordReset(
           expirationTime: expirationTime,
           tenant: tenant,
           supportEmail: supportEmail,
-          companyName: companyName
+          clientName: clientName
         });
         
         console.log('[PasswordReset] Email sent successfully');

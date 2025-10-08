@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import {
   createTestService,
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -73,11 +73,11 @@ describe('Tax Allocation Strategy', () => {
         'service_catalog',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
-        'companies'
+        'client_tax_settings',
+        'client_tax_rates',
+        'clients'
       ],
-      companyName: 'Tax Test Company',
+      clientName: 'Tax Test Client',
       userType: 'internal'
     });
 
@@ -125,7 +125,7 @@ describe('Tax Allocation Strategy', () => {
   describe('Tax Distribution Rules', () => {
     it('should distribute tax proportionally among positive line items only', async () => {
       // Set up tax rate of 10% for simple calculation
-      await setupCompanyTaxConfiguration(context, {
+      await setupClientTaxConfiguration(context, {
         regionCode: 'US-NY',
         regionName: 'New York',
         description: 'Test Tax Rate',
@@ -136,7 +136,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with mixed positive and negative amounts
       const invoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,
@@ -181,7 +181,7 @@ describe('Tax Allocation Strategy', () => {
 
     it('should handle rounding by using Math.floor for all but last item', async () => {
       // Set up tax rate of 8.875% (NY rate)
-      await setupCompanyTaxConfiguration(context, {
+      await setupClientTaxConfiguration(context, {
         regionCode: 'US-NY',
         regionName: 'New York',
         description: 'NY State + City Tax',
@@ -192,7 +192,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with amounts that will produce fractional tax cents
       const invoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,
@@ -236,7 +236,7 @@ describe('Tax Allocation Strategy', () => {
 
     it('should handle very small amounts by allocating to last positive item', async () => {
       // Set up tax rate of 1% for testing small amounts
-      await setupCompanyTaxConfiguration(context, {
+      await setupClientTaxConfiguration(context, {
         regionCode: 'US-NY',
         regionName: 'New York',
         description: 'Test Tax Rate',
@@ -247,7 +247,7 @@ describe('Tax Allocation Strategy', () => {
 
       // Create invoice with small amounts
       const invoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: default_service_id,

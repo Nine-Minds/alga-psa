@@ -1,7 +1,7 @@
 // server/src/interfaces/ticket.interfaces.tsx
 import { TenantEntity } from ".";
 import { ITaggable } from './tag.interfaces';
-import { ICompanyLocation } from "./company.interfaces";
+import { IClientLocation } from "./client.interfaces";
 
 export interface ITicket extends TenantEntity, ITaggable {
   ticket_id?: string;
@@ -9,7 +9,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   title: string;
   url: string | null;
   board_id: string;
-  company_id: string | null;
+  client_id: string | null;
   location_id?: string | null;
   contact_name_id: string | null;
   status_id: string;
@@ -25,7 +25,7 @@ export interface ITicket extends TenantEntity, ITaggable {
   attributes: Record<string, unknown> | null; // Changed from any to unknown
   priority_id?: string; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
-  location?: ICompanyLocation; // For populated location data
+  location?: IClientLocation; // For populated location data
   // ITIL-specific fields (for priority calculation)
   itil_impact?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
   itil_urgency?: number; // 1-5 scale (1 = High, 5 = Low) - used for ITIL priority calculation
@@ -44,7 +44,7 @@ export interface ITicketListItem extends Omit<ITicket, 'status_id' | 'priority_i
   priority_color?: string;
   board_name: string;
   category_name: string;
-  company_name: string;
+  client_name: string;
   entered_by_name: string;
   assigned_to_name: string | null;
 }
@@ -54,7 +54,7 @@ export interface ITicketListFilters {
   statusId?: string;
   priorityId?: string;
   categoryId?: string;
-  companyId?: string;
+  clientId?: string;
   contactId?: string;
   searchQuery?: string;
   boardFilterState: 'active' | 'inactive' | 'all';

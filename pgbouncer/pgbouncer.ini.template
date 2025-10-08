@@ -1,5 +1,6 @@
 [databases]
-* = host=${POSTGRES_HOST} port=5432
+server = host=${POSTGRES_HOST} port=5432 dbname=server
+postgres = host=${POSTGRES_HOST} port=5432 dbname=postgres
 
 [pgbouncer]
 listen_addr = 0.0.0.0

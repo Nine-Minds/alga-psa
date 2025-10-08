@@ -19,7 +19,7 @@ export interface JobStepResult {
   recipientEmail?: string;
   error?: string;
   path?: string;
-  company_id?: string;
+  client_id?: string;
   details?: string;
 }
 

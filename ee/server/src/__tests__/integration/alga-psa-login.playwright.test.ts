@@ -68,7 +68,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
     try {
       // Create test tenant with admin user
       const tenantData = await createTestTenant(db, {
-        companyName: 'Test Login Company',
+        clientName: 'Test Login Client',
         adminUser: { 
           firstName: 'Login', 
           lastName: 'Admin', 
@@ -138,7 +138,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
     try {
       // Create test tenant with admin user
       const tenantData = await createTestTenant(db, {
-        companyName: 'Test Redirect Company',
+        clientName: 'Test Redirect Client',
         adminUser: { 
           firstName: 'Redirect', 
           lastName: 'Admin', 
@@ -186,7 +186,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
       // Create test tenant with admin user (first-time login)
       const timestamp = Date.now();
       const tenantData = await createTestTenant(db, {
-        companyName: 'Test Onboarding Company',
+        clientName: 'Test Onboarding Client',
         adminUser: { 
           firstName: 'Onboarding', 
           lastName: 'Admin', 
@@ -240,7 +240,7 @@ test.describe('Alga PSA Login Integration Tests', () => {
       // Create test tenant with admin user (first-time login)
       const timestamp = Date.now();
       const tenantData = await createTestTenant(db, {
-        companyName: 'Complete Onboarding Test',
+        clientName: 'Complete Onboarding Test',
         adminUser: { 
           firstName: 'Complete', 
           lastName: 'Test', 
@@ -269,8 +269,8 @@ test.describe('Alga PSA Login Integration Tests', () => {
       
       console.log('Starting complete onboarding wizard flow...');
       
-      // Step 1: Company Information
-      console.log('Step 1: Company Information');
+      // Step 1: Client Information
+      console.log('Step 1: Client Information');
       await page.screenshot({ path: `wizard-step1-${timestamp}.png`, fullPage: true });
       
       // Wait for form to be ready
@@ -284,8 +284,8 @@ test.describe('Alga PSA Login Integration Tests', () => {
       const lastNameField = page.locator('input').nth(1);
       await lastNameField.fill('Doe');
       
-      const companyNameField = page.locator('input').nth(2);
-      await companyNameField.fill('Test MSP Company');
+      const clientNameField = page.locator('input').nth(2);
+      await clientNameField.fill('Test MSP Client');
       
       const emailField = page.locator('input[type="email"], input').nth(3);
       await emailField.fill('admin@testmsp.com');

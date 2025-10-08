@@ -16,7 +16,7 @@ export class OnboardingWizard {
   readonly finishButton: Locator;
 
   // Step-specific locators
-  readonly companyInfoForm: Locator;
+  readonly clientInfoForm: Locator;
   readonly teamMembersForm: Locator;
   readonly clientForm: Locator;
   readonly contactForm: Locator;
@@ -34,7 +34,7 @@ export class OnboardingWizard {
     this.finishButton = page.locator('button:has-text("Finish"), button:has-text("Complete")');
 
     // Step-specific forms
-    this.companyInfoForm = page.locator('[data-testid="company-info-form"], .company-info-step');
+    this.clientInfoForm = page.locator('[data-testid="client-info-form"], .client-info-step');
     this.teamMembersForm = page.locator('[data-testid="team-members-form"], .team-members-step');
     this.clientForm = page.locator('[data-testid="client-form"], .client-step');
     this.contactForm = page.locator('[data-testid="contact-form"], .contact-step');
@@ -104,18 +104,18 @@ export class OnboardingWizard {
   }
 
   /**
-   * Complete Company Info step (Step 1)
+   * Complete Client Info step (Step 1)
    */
-  async completeCompanyInfoStep(data: {
-    companyName?: string;
+  async completeClientInfoStep(data: {
+    clientName?: string;
     industry?: string;
     size?: string;
     address?: string;
   } = {}): Promise<void> {
-    await expect(this.companyInfoForm).toBeVisible();
+    await expect(this.clientInfoForm).toBeVisible();
 
-    if (data.companyName) {
-      await this.page.locator('input[name="companyName"], input[name="company_name"]').fill(data.companyName);
+    if (data.clientName) {
+      await this.page.locator('input[name="clientName"], input[name="client_name"]').fill(data.clientName);
     }
 
     if (data.industry) {
@@ -272,13 +272,13 @@ export class OnboardingWizard {
    * Complete entire onboarding wizard with default data
    */
   async completeOnboardingFlow(data: {
-    companyName?: string;
+    clientName?: string;
     skipOptionalSteps?: boolean;
   } = {}): Promise<void> {
-    const { companyName = 'Test Company', skipOptionalSteps = false } = data;
+    const { clientName = 'Test Client', skipOptionalSteps = false } = data;
 
-    // Step 1: Company Info (Required)
-    await this.completeCompanyInfoStep({ companyName });
+    // Step 1: Client Info (Required)
+    await this.completeClientInfoStep({ clientName });
 
     // Step 2: Team Members (Optional)
     if (skipOptionalSteps) {

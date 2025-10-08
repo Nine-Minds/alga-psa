@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../ui/Card';
 import CustomSelect from '../ui/CustomSelect';
-import { ICompanyBillingCycle, IService } from '../../interfaces/billing.interfaces';
-import { ICompany } from '../../interfaces';
+import { IClientBillingCycle, IService } from '../../interfaces/billing.interfaces';
+import { IClient } from '../../interfaces';
 import { getAvailableBillingPeriods } from '../../lib/actions/billingAndTax';
-import { getAllCompanies } from '../../lib/actions/company-actions/companyActions';
+import { getAllClients } from '../../lib/actions/client-actions/clientActions';
 import { getServices } from '../../lib/actions/serviceActions';
 import AutomaticInvoices from './AutomaticInvoices';
 import PrepaymentInvoices from './PrepaymentInvoices';
@@ -35,12 +35,12 @@ const invoiceTypeOptions: SelectOption[] = [
 const GenerateInvoices: React.FC = () => {
   const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
   const [error, setError] = useState<string | null>(null);
-  const [periods, setPeriods] = useState<(ICompanyBillingCycle & {
-    company_name: string;
+  const [periods, setPeriods] = useState<(IClientBillingCycle & {
+    client_name: string;
     can_generate: boolean;
     is_early?: boolean;
   })[]>([]);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -50,14 +50,14 @@ const GenerateInvoices: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [periodsData, companiesData, servicesData] = await Promise.all([
+      const [periodsData, clientsData, servicesData] = await Promise.all([
         getAvailableBillingPeriods(),
-        getAllCompanies(),
+        getAllClients(),
         getServices()
       ]);
 
       setPeriods(periodsData);
-      setCompanies(companiesData);
+      setClients(clientsData);
       // Transform IService to Service, using default_rate as rate
       if (servicesData && Array.isArray(servicesData.services)) {
         setServices(servicesData.services.map((service): Service => ({
@@ -92,7 +92,7 @@ const GenerateInvoices: React.FC = () => {
       case 'manual':
         return (
           <ManualInvoices
-            companies={companies}
+            clients={clients}
             services={services}
             onGenerateSuccess={handleGenerateSuccess}
           />
@@ -100,7 +100,7 @@ const GenerateInvoices: React.FC = () => {
       case 'prepayment':
         return (
           <PrepaymentInvoices
-            companies={companies}
+            clients={clients}
             onGenerateSuccess={handleGenerateSuccess}
           />
         );

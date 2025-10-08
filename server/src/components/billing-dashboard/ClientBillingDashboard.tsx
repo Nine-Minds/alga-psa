@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Text } from '@radix-ui/themes';
 import { DataTable } from 'server/src/components/ui/DataTable'; // Import DataTable
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces'; // Import ColumnDefinition
-import { getRecentCompanyInvoices, RecentInvoice } from 'server/src/lib/actions/report-actions'; // Import action and type
+import { getRecentClientInvoices, RecentInvoice } from 'server/src/lib/actions/report-actions'; // Import action and type
 import { Skeleton } from 'server/src/components/ui/Skeleton'; // Import Skeleton for loading state
 import { formatCurrency } from 'server/src/lib/utils/formatters'; // Import currency formatter
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils'; // Import date formatter
@@ -34,7 +34,7 @@ const PolarAngleAxis = dynamic(() => import('recharts').then(mod => mod.PolarAng
 // Removed Progress import
 
 interface ClientBillingDashboardProps {
-  companyId: string;
+  clientId: string;
 }
 
 // Define columns for the Recent Invoices table
@@ -122,7 +122,7 @@ const CustomBucketTooltip = ({ active, payload, label }: any) => {
 };
 
 
-const ClientBillingDashboard: React.FC<ClientBillingDashboardProps> = ({ companyId }) => {
+const ClientBillingDashboard: React.FC<ClientBillingDashboardProps> = ({ clientId }) => {
  // State for Invoices
  const [loadingInvoices, setLoadingInvoices] = useState(true);
  const [invoices, setInvoices] = useState<RecentInvoice[]>([]);
@@ -156,7 +156,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     const fetchInvoices = async () => {
       try {
         setLoadingInvoices(true);
-        const fetchedInvoices = await getRecentCompanyInvoices({ companyId }); // Default limit is 10
+        const fetchedInvoices = await getRecentClientInvoices({ clientId }); // Default limit is 10
         setInvoices(fetchedInvoices);
       } catch (error) {
         console.error("Error fetching recent invoices:", error);
@@ -167,7 +167,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
     };
 
    fetchInvoices();
- }, [companyId]);
+ }, [clientId]);
 
  // Fetch hours by service on mount and when date range changes
  useEffect(() => {
@@ -175,7 +175,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
      try {
        setLoadingHours(true);
        const fetchedHours = await getHoursByServiceType({
-         companyId,
+         clientId,
         startDate: dateRange.startDate,
         endDate: dateRange.endDate,
         groupByServiceType: false // Explicitly set to false
@@ -190,7 +190,7 @@ const [usageData, setUsageData] = useState<UsageMetricResult[]>([]);
    };
 
    fetchHours();
- }, [companyId, dateRange]);
+ }, [clientId, dateRange]);
 
 
 // Fetch bucket usage on mount
@@ -200,7 +200,7 @@ useEffect(() => {
       setLoadingBuckets(true);
       const currentDate = format(new Date(), 'yyyy-MM-dd'); // Get current date in YYYY-MM-DD format
       const fetchedBuckets = await getRemainingBucketUnits({
-        companyId,
+        clientId,
         currentDate,
       });
       setBucketData(fetchedBuckets);
@@ -213,7 +213,7 @@ useEffect(() => {
   };
 
   fetchBuckets();
-}, [companyId]);
+}, [clientId]);
 
 
 // Fetch usage metrics on mount and when date range changes
@@ -222,7 +222,7 @@ useEffect(() => {
    try {
      setLoadingUsage(true);
      const fetchedUsage = await getUsageDataMetrics({
-       companyId,
+       clientId,
        startDate: dateRange.startDate,
        endDate: dateRange.endDate,
      });
@@ -236,7 +236,7 @@ useEffect(() => {
  };
 
  fetchUsage();
-}, [companyId, dateRange]);
+}, [clientId, dateRange]);
 
  // TODO: Add UI elements to change the dateRange state
 

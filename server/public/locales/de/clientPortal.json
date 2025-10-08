@@ -5,7 +5,7 @@
     "projects": "Projekte",
     "billing": "Abrechnung",
     "assets": "Assets",
-    "companySettings": "Unternehmenseinstellungen",
+    "clientSettings": "Unternehmenseinstellungen",
     "profile": "Profil",
     "signOut": "Abmelden",
     "clientPortal": "Kundenportal",
@@ -95,7 +95,7 @@
       "updatedAt": "Zuletzt aktualisiert",
       "assignedTo": "Zugewiesen an",
       "requester": "Anfragende Person",
-      "company": "Unternehmen",
+      "client": "Unternehmen",
       "dueDate": "Fälligkeitsdatum",
       "resolution": "Lösung",
       "timeSpent": "Aufgewendete Zeit",
@@ -133,7 +133,7 @@
       "userNotFound": "Benutzer-ID wurde in der Sitzung nicht gefunden",
       "tenantNotFound": "Mandant wurde in der Sitzung nicht gefunden. Bitte ab- und wieder anmelden.",
       "userNotAssociatedWithContact": "Der Benutzer ist keinem Kontakt zugeordnet",
-      "contactNotAssociatedWithCompany": "Der Kontakt ist keinem Unternehmen zugeordnet. Bitte wende dich an den Support.",
+      "contactNotAssociatedWithClient": "Der Kontakt ist keinem Unternehmen zugeordnet. Bitte wende dich an den Support.",
       "ticketNotFound": "Ticket nicht gefunden",
       "commentNotFound": "Kommentar nicht gefunden oder nicht autorisiert",
       "noDefaultBoard": "Kein Standardkanal für Tickets konfiguriert",
@@ -343,7 +343,7 @@
     "title": "Mein Profil",
     "personalInfo": "Persönliche Informationen",
     "contactInfo": "Kontaktinformationen",
-    "companyInfo": "Unternehmensinformationen",
+    "clientInfo": "Unternehmensinformationen",
     "preferences": "Einstellungen",
     "security": "Sicherheit",
     "fields": {
@@ -354,7 +354,7 @@
       "mobile": "Mobiltelefon",
       "title": "Position",
       "department": "Abteilung",
-      "company": "Unternehmen",
+      "client": "Unternehmen",
       "address": "Adresse",
       "city": "Stadt",
       "state": "Bundesland/Provinz",
@@ -434,27 +434,27 @@
       "deleteConfirm": "Möchtest du dies wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
     },
     "validation": {
-      "companyNameRequired": "Firmenname ist erforderlich",
+      "clientNameRequired": "Firmenname ist erforderlich",
       "emailRequired": "E-Mail ist erforderlich",
       "emailInvalid": "Bitte gib eine gültige E-Mail-Adresse ein",
       "phoneInvalid": "Bitte gib eine gültige Telefonnummer ein",
       "addressInvalid": "Adresse darf nicht leer sein, falls angegeben"
     }
   },
-  "companySettings": {
+  "clientSettings": {
     "title": "Unternehmenseinstellungen",
     "details": "Unternehmensdetails",
     "billing": "Abrechnungsinformationen",
     "description": "Verwalte die Einstellungen und Konfigurationen deines Unternehmens.",
     "tabs": {
       "account": "Konto",
-      "companyDetails": "Unternehmensdetails",
+      "clientDetails": "Unternehmensdetails",
       "userManagement": "Benutzerverwaltung"
     },
     "fields": {
-      "companyLogo": "Unternehmenslogo",
-      "companyName": "Unternehmensname",
-      "companyLocations": "Standorte des Unternehmens",
+      "clientLogo": "Unternehmenslogo",
+      "clientName": "Unternehmensname",
+      "clientLocations": "Standorte des Unternehmens",
       "manageLocations": "Standorte verwalten",
       "mainOffice": "Hauptsitz",
       "warehouse": "Lager",
@@ -499,7 +499,7 @@
       "noRolesAssigned": "Keine Rollen zugewiesen",
       "assignRole": "Rolle zuweisen",
       "resetPassword": "Benutzerpasswort zurücksetzen",
-      "companyNotFound": "Unternehmen nicht gefunden",
+      "clientNotFound": "Unternehmen nicht gefunden",
       "permissionError": "Sie haben keine Berechtigung, Benutzer zu verwalten",
       "loadError": "Benutzer konnten nicht geladen werden",
       "emailExists": "Ein Kontakt mit dieser E-Mail-Adresse existiert bereits",
@@ -514,7 +514,7 @@
       "userRemoved": "Benutzer erfolgreich entfernt",
       "inviteSent": "Einladung erfolgreich gesendet",
       "noPermission": "Du hast keine Berechtigung, auf die Unternehmenseinstellungen zuzugreifen",
-      "companyNotFound": "Unternehmen nicht gefunden",
+      "clientNotFound": "Unternehmen nicht gefunden",
       "detailsLoadError": "Unternehmensdetails konnten nicht geladen werden",
       "updateError": "Unternehmensdetails konnten nicht aktualisiert werden"
     }

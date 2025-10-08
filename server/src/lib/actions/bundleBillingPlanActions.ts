@@ -109,7 +109,7 @@ export async function removePlanFromBundle(bundleId: string, planId: string): Pr
   } catch (error) {
     console.error(`Error removing plan ${planId} from bundle ${bundleId}:`, error);
     if (error instanceof Error) {
-      throw error; // Preserve specific error messages including "Cannot remove plan from bundle as it is currently assigned to companies"
+      throw error; // Preserve specific error messages including "Cannot remove plan from bundle as it is currently assigned to clients"
     }
     throw new Error(`Failed to remove plan from bundle: ${error}`);
   }

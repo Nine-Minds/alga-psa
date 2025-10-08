@@ -23,7 +23,7 @@ export interface TokenVerificationResult {
     contact_name_id: string;
     full_name: string;
     email: string;
-    company_name: string;
+    client_name: string;
   };
   invitation?: PortalInvitation;
   error?: string;
@@ -254,9 +254,9 @@ export class PortalInvitationService {
             this.on('pi.tenant', '=', 'c.tenant')
                 .andOn('pi.contact_id', '=', 'c.contact_name_id');
           })
-          .leftJoin('companies as comp', function() {
+          .leftJoin('clients as comp', function() {
             this.on('c.tenant', '=', 'comp.tenant')
-                .andOn('c.company_id', '=', 'comp.company_id');
+                .andOn('c.client_id', '=', 'comp.client_id');
           })
           .where('pi.tenant', tokenTenant)
           .where({
@@ -268,7 +268,7 @@ export class PortalInvitationService {
             'pi.*',
             'c.full_name',
             'c.email as contact_email',
-            'comp.company_name'
+            'comp.client_name'
           )
           .first();
 
@@ -286,7 +286,7 @@ export class PortalInvitationService {
             contact_name_id: invitation.contact_id,
             full_name: invitation.full_name,
             email: invitation.contact_email,
-            company_name: invitation.company_name || 'No Company'
+            client_name: invitation.client_name || 'No Client'
           },
           invitation: {
             invitation_id: invitation.invitation_id,

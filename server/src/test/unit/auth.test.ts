@@ -72,7 +72,7 @@ describe('Auth Functions', () => {
         username: 'testUser',
         email: 'test@example.com',
         password: 'password123',
-        companyName: 'TestCompany',
+        clientName: 'TestClient',
         user_type: 'internal'
     };
 
@@ -91,7 +91,7 @@ describe('Auth Functions', () => {
                 username: mockUser.username,
                 email: mockUser.email,
                 password: mockUser.password,
-                companyName: mockUser.companyName
+                clientName: mockUser.clientName
             }, expect.any(String), { expiresIn: expect.any(String) });
 
             expect(token).toBe(mockToken);

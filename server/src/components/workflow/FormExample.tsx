@@ -5,11 +5,11 @@ import { Action } from '../../lib/workflow/forms/actionHandlerRegistry';
 // Example schema for a credit reimbursement form
 const creditReimbursementSchema: RJSFSchema = {
   type: "object",
-  required: ["company_id", "amount", "reason"],
+  required: ["client_id", "amount", "reason"],
   properties: {
-    company_id: {
+    client_id: {
       type: "string",
-      title: "Company"
+      title: "Client"
     },
     amount: {
       type: "number",
@@ -37,12 +37,12 @@ const creditReimbursementSchema: RJSFSchema = {
 
 // UI Schema specifying which widgets to use
 const creditReimbursementUiSchema: UiSchema = {
-  company_id: {
-    "ui:widget": "CompanyPickerWidget",
+  client_id: {
+    "ui:widget": "ClientPickerWidget",
     "ui:options": {
       filters: { isActive: true },
       updateFields: true,
-      fieldPrefix: "company_"
+      fieldPrefix: "client_"
     }
   },
   amount: {

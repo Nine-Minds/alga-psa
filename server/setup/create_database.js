@@ -244,6 +244,9 @@ async function createDatabase(retryCount = 0) {
     // Ensure PgBouncer (md5 auth) can connect by storing md5 hashes for app users
     await dbClient.query("SET password_encryption = 'md5';");
 
+    // Always ensure the postgres superuser stores an MD5-compatible secret
+    await dbClient.query(`ALTER USER postgres WITH PASSWORD '${postgresPassword}'`);
+
     let skipDbSetup = false;
     try {
       const tenantsCheck = await dbClient.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'tenants'");

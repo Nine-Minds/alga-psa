@@ -15,14 +15,14 @@ async function getSecretKey(): Promise<Secret> {
 
 export async function createToken(userRegister: IUserRegister) {
     logger.debug('Creating token');
-    const { username, email, password, companyName, user_type } = userRegister;
+    const { username, email, password, clientName, user_type } = userRegister;
     const secretKey = await getSecretKey();
 
     // expiresIn can be a number (seconds) or a string like '1h', '7d', etc.
     const expiresIn: string | number = process.env.TOKEN_EXPIRES || '1h';
     
     const token = jwt.sign(
-        { username, email, password, companyName, user_type },
+        { username, email, password, clientName, user_type },
         secretKey,
         { 
             expiresIn
@@ -44,7 +44,7 @@ export async function getInfoFromToken(token: string): Promise<TokenResponse> {
                 username: decoded.username,
                 email: decoded.email,
                 password: decoded.password,
-                companyName: decoded.companyName,
+                clientName: decoded.clientName,
                 user_type: decoded.user_type
             }
         };

@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { generateManualInvoice } from 'server/src/lib/actions/manualInvoiceActions';
-import { setupCompanyTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment } from '../../../../../test-utils/billingTestHelpers';
+import { setupClientTaxConfiguration, assignServiceTaxRate, createTestService, createFixedPlanAssignment } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
@@ -55,7 +55,7 @@ describe('Billing Invoice Consistency Checks', () => {
 let context: TestContext;
 
 async function ensureDefaultTaxConfiguration() {
-  await setupCompanyTaxConfiguration(context, {
+  await setupClientTaxConfiguration(context, {
     regionCode: 'US-NY',
     regionName: 'New York',
     description: 'NY State + City Tax',
@@ -74,16 +74,16 @@ async function ensureDefaultTaxConfiguration() {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings'
+        'client_tax_settings'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -135,8 +135,8 @@ async function ensureDefaultTaxConfiguration() {
       });
 
       // Create billing cycle for automatic invoice
-      const billingCycle = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycle = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: '2025-02-01',
         period_start_date: '2025-02-01',
@@ -148,7 +148,7 @@ async function ensureDefaultTaxConfiguration() {
 
       // Generate manual invoice with same parameters
       const manualInvoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [{
           service_id: serviceId,
           quantity: 1,

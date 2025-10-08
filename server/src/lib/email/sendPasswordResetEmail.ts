@@ -13,7 +13,7 @@ interface SendPasswordResetEmailParams {
   expirationTime: string;
   tenant: string;
   supportEmail: string;
-  companyName: string;
+  clientName: string;
 }
 
 export async function sendPasswordResetEmail({ 
@@ -23,7 +23,7 @@ export async function sendPasswordResetEmail({
   expirationTime,
   tenant,
   supportEmail,
-  companyName
+  clientName
 }: SendPasswordResetEmailParams): Promise<boolean> {
   logger.info('[sendPasswordResetEmail] Starting email send for:', email);
   logger.info('[sendPasswordResetEmail] Tenant:', tenant);
@@ -40,7 +40,7 @@ export async function sendPasswordResetEmail({
         resetLink,
         expirationTime,
         supportEmail,
-        companyName,
+        clientName,
         currentYear: new Date().getFullYear()
       };
 

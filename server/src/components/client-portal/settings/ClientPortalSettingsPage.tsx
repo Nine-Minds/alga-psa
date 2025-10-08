@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { CustomTabs } from 'server/src/components/ui/CustomTabs';
-import { CompanyDetailsSettings } from './CompanyDetailsSettings';
+import { ClientDetailsSettings } from './ClientDetailsSettings';
 import { UserManagementSettings } from './UserManagementSettings';
 import ClientAccount from '../account/ClientAccount';
 import { DrawerProvider } from "server/src/context/DrawerContext";
@@ -29,19 +29,19 @@ export default function ClientPortalSettingsPage() {
 
   const tabs = [
     {
-      label: t('companySettings.tabs.account'),
+      label: t('clientSettings.tabs.account'),
       content: <ClientAccount />
     },
     {
-      label: t('companySettings.tabs.companyDetails'),
-      content: <CompanyDetailsSettings />
+      label: t('clientSettings.tabs.clientDetails'),
+      content: <ClientDetailsSettings />
     }
   ];
   
   // Only add User Management tab if user has permission
   if (hasUserManagementAccess) {
     tabs.push({
-      label: t('companySettings.tabs.userManagement'),
+      label: t('clientSettings.tabs.userManagement'),
       content: <UserManagementSettings />
     });
   }
@@ -50,9 +50,9 @@ export default function ClientPortalSettingsPage() {
     <DrawerProvider>
     <div className="container mx-auto py-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold">{t('companySettings.title')}</h1>
+        <h1 className="text-2xl font-semibold">{t('clientSettings.title')}</h1>
         <p className="text-gray-600">
-          {t('companySettings.description')}
+          {t('clientSettings.description')}
         </p>
       </div>
 

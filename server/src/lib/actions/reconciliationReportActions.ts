@@ -5,17 +5,17 @@ import { ReconciliationStatus } from 'server/src/interfaces/billing.interfaces';
 import { withTransaction } from '@alga-psa/shared/db';
 import { createTenantKnex } from 'server/src/lib/db';
 import { Knex } from 'knex';
-// Mock function for getting company by ID - in a real implementation, this would be imported from a company model
-async function getCompanyById(companyId: string) {
-  // This is a placeholder - in a real implementation, you would fetch the company from the database
-  const mockCompanies = {
-    'company1': { id: 'company1', name: 'Acme Inc' },
-    'company2': { id: 'company2', name: 'Globex Corp' },
-    'company3': { id: 'company3', name: 'Initech' },
-    'company4': { id: 'company4', name: 'Umbrella Corp' }
+// Mock function for getting client by ID - in a real implementation, this would be imported from a client model
+async function getClientById(clientId: string) {
+  // This is a placeholder - in a real implementation, you would fetch the client from the database
+  const mockClients = {
+    'client1': { id: 'client1', name: 'Acme Inc' },
+    'client2': { id: 'client2', name: 'Globex Corp' },
+    'client3': { id: 'client3', name: 'Initech' },
+    'client4': { id: 'client4', name: 'Umbrella Corp' }
   };
   
-  return mockCompanies[companyId as keyof typeof mockCompanies] || null;
+  return mockClients[clientId as keyof typeof mockClients] || null;
 }
 
 /**
@@ -24,14 +24,14 @@ async function getCompanyById(companyId: string) {
  * @returns Object containing reports and pagination info
  */
 export async function fetchReconciliationReports({
-  companyId,
+  clientId,
   status,
   startDate,
   endDate,
   page = 1,
   pageSize = 10
 }: {
-  companyId?: string;
+  clientId?: string;
   status?: ReconciliationStatus | ReconciliationStatus[];
   startDate?: string;
   endDate?: string;
@@ -43,7 +43,7 @@ export async function fetchReconciliationReports({
     try {
       // Fetch reports with pagination and filtering
       const result = await CreditReconciliationReport.listReports({
-        companyId,
+        clientId,
         status,
         startDate,
         endDate,
@@ -51,20 +51,20 @@ export async function fetchReconciliationReports({
         pageSize
       });
 
-    // Fetch company names for each report
-    const reportsWithCompanyNames = await Promise.all(
+    // Fetch client names for each report
+    const reportsWithClientNames = await Promise.all(
       result.reports.map(async (report) => {
-        const company = await getCompanyById(report.company_id);
+        const client = await getClientById(report.client_id);
         return {
           ...report,
-          company_name: company?.name || 'Unknown Company'
+          client_name: client?.name || 'Unknown Client'
         };
       })
     );
 
       return {
         ...result,
-        reports: reportsWithCompanyNames
+        reports: reportsWithClientNames
       };
     } catch (error) {
       console.error('Error fetching reconciliation reports:', error);
@@ -74,23 +74,23 @@ export async function fetchReconciliationReports({
 }
 
 /**
- * Fetch all companies for the dropdown
- * @returns Array of company objects with id and name
+ * Fetch all clients for the dropdown
+ * @returns Array of client objects with id and name
  */
-export async function fetchCompaniesForDropdown() {
+export async function fetchClientsForDropdown() {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // This is a placeholder - in a real implementation, you would fetch companies from the database
+      // This is a placeholder - in a real implementation, you would fetch clients from the database
       // For now, we'll return a mock list
       return [
-        { id: 'company1', name: 'Acme Inc' },
-        { id: 'company2', name: 'Globex Corp' },
-        { id: 'company3', name: 'Initech' },
-        { id: 'company4', name: 'Umbrella Corp' }
+        { id: 'client1', name: 'Acme Inc' },
+        { id: 'client2', name: 'Globex Corp' },
+        { id: 'client3', name: 'Initech' },
+        { id: 'client4', name: 'Umbrella Corp' }
       ];
     } catch (error) {
-      console.error('Error fetching companies for dropdown:', error);
+      console.error('Error fetching clients for dropdown:', error);
       throw error;
     }
   });

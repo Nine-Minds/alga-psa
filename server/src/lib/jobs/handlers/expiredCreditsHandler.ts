@@ -6,7 +6,7 @@ import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 
 export interface ExpiredCreditsJobData extends Record<string, unknown> {
   tenantId: string;
-  companyId?: string; // Optional: process only a specific company
+  clientId?: string; // Optional: process only a specific client
 }
 
 /**
@@ -16,10 +16,10 @@ export interface ExpiredCreditsJobData extends Record<string, unknown> {
  * 2. Marks these credits as expired
  * 3. Creates credit_expiration transactions to record the expiration
  * 
- * @param data Job data containing tenant ID and optional company ID
+ * @param data Job data containing tenant ID and optional client ID
  */
 export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promise<void> {
-  const { tenantId, companyId } = data;
+  const { tenantId, clientId } = data;
   
   if (!tenantId) {
     throw new Error('Tenant ID is required for expired credits job');
@@ -30,7 +30,7 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
     throw new Error('No tenant found');
   }
   
-  console.log(`Processing expired credits for tenant ${tenant}${companyId ? ` and company ${companyId}` : ''}`);
+  console.log(`Processing expired credits for tenant ${tenant}${clientId ? ` and client ${clientId}` : ''}`);
   
   try {
     await knex.transaction(async (trx: Knex.Transaction) => {
@@ -49,9 +49,9 @@ export async function expiredCreditsHandler(data: ExpiredCreditsJobData): Promis
         .where('expiration_date', '<', now)
         .where('remaining_amount', '>', 0);
       
-      // Add company filter if provided
-      if (companyId) {
-        query = query.where('company_id', companyId);
+      // Add client filter if provided
+      if (clientId) {
+        query = query.where('client_id', clientId);
       }
       
       const expiredCredits: ICreditTracking[] = await query;
@@ -111,24 +111,24 @@ async function processExpiredCredit(
       return;
     }
     
-    // Get the current company credit balance
-    const [company] = await trx('companies')
-      .where({ company_id: credit.company_id, tenant })
+    // Get the current client credit balance
+    const [client] = await trx('clients')
+      .where({ client_id: credit.client_id, tenant })
       .select('credit_balance');
     
-    if (!company) {
-      throw new Error(`Company ${credit.company_id} not found`);
+    if (!client) {
+      throw new Error(`Client ${credit.client_id} not found`);
     }
     
     // Calculate the new balance after expiration
     const expirationAmount = -Number(credit.remaining_amount);
-    const newBalance = Number(company.credit_balance) + expirationAmount;
+    const newBalance = Number(client.credit_balance) + expirationAmount;
     
     // Create the credit expiration transaction
     const expirationTxId = uuidv4();
     await trx('transactions').insert({
       transaction_id: expirationTxId,
-      company_id: credit.company_id,
+      client_id: credit.client_id,
       amount: expirationAmount, // Negative amount to reduce the balance
       type: 'credit_expiration',
       status: 'completed',
@@ -151,9 +151,9 @@ async function processExpiredCredit(
         updated_at: now
       });
     
-    // Update the company's credit balance
-    await trx('companies')
-      .where({ company_id: credit.company_id, tenant })
+    // Update the client's credit balance
+    await trx('clients')
+      .where({ client_id: credit.client_id, tenant })
       .update({
         credit_balance: newBalance,
         updated_at: now
@@ -181,7 +181,7 @@ async function processExpiredCredit(
       }
     );
     
-    console.log(`Processed expired credit ${credit.credit_id} for company ${credit.company_id}, amount: ${credit.remaining_amount}`);
+    console.log(`Processed expired credit ${credit.credit_id} for client ${credit.client_id}, amount: ${credit.remaining_amount}`);
   } catch (error: any) {
     console.error(`Error processing expired credit ${credit.credit_id}: ${error.message}`);
     throw error;

@@ -17,7 +17,7 @@ import {
 } from 'server/src/lib/actions/client-portal-actions/client-billing-metrics';
 import { format, subDays } from 'date-fns';
 import {
-  ICompanyBillingPlan,
+  IClientBillingPlan,
   IBucketUsage,
   IService
 } from 'server/src/interfaces/billing.interfaces';
@@ -80,7 +80,7 @@ const SHOW_USAGE_FEATURES = false;
 export default function BillingOverview() {
   const { t } = useTranslation('clientPortal');
   const [currentTab, setCurrentTab] = useState<string | null>(null);
-  const [billingPlan, setBillingPlan] = useState<ICompanyBillingPlan | null>(null);
+  const [billingPlan, setBillingPlan] = useState<IClientBillingPlan | null>(null);
   const [invoices, setInvoices] = useState<InvoiceViewModel[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [usage, setUsage] = useState<{ bucketUsage: IBucketUsage | null; services: IService[] }>({

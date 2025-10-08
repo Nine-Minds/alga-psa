@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
 // Base schemas
-const assetCompanyInfoSchema = z.object({
-  company_id: z.string().uuid(),
-  company_name: z.string()
+const assetClientInfoSchema = z.object({
+  client_id: z.string().uuid(),
+  client_name: z.string()
 });
 
 const assetRelationshipSchema = z.object({
@@ -94,7 +94,7 @@ const printerAssetSchema = z.object({
 export const assetSchema = z.object({
   asset_id: z.string().uuid(),
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
-  company_id: z.string().uuid(),
+  client_id: z.string().uuid(),
   asset_tag: z.string(),
   serial_number: z.string().optional(),
   name: z.string(),
@@ -105,7 +105,7 @@ export const assetSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   tenant: z.string().uuid(),
-  company: assetCompanyInfoSchema.optional(),
+  client: assetClientInfoSchema.optional(),
   relationships: z.array(assetRelationshipSchema).optional(),
   workstation: workstationAssetSchema.optional(),
   network_device: network_device_asset_schema.optional(),
@@ -190,7 +190,7 @@ export const assetMaintenanceHistorySchema = z.object({
 // Request schemas
 export const createAssetSchema = z.object({
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']),
-  company_id: z.string().uuid(),
+  client_id: z.string().uuid(),
   asset_tag: z.string(),
   name: z.string(),
   status: z.string(),
@@ -238,8 +238,8 @@ export const createMaintenanceHistorySchema = z.object({
 });
 
 export const assetQuerySchema = z.object({
-  company_id: z.string().uuid().optional(),
-  company_name: z.string().optional(),
+  client_id: z.string().uuid().optional(),
+  client_name: z.string().optional(),
   asset_type: z.enum(['workstation', 'network_device', 'server', 'mobile_device', 'printer', 'unknown']).optional(),
   status: z.string().optional(),
   search: z.string().optional(),
@@ -248,7 +248,7 @@ export const assetQuerySchema = z.object({
   page: z.number().optional(),
   limit: z.number().optional(),
   include_extension_data: z.boolean().optional(),
-  include_company_details: z.boolean().optional()
+  include_client_details: z.boolean().optional()
 });
 
 // Report schemas
@@ -266,8 +266,8 @@ export const assetMaintenanceReportSchema = z.object({
 });
 
 export const clientMaintenanceSummarySchema = z.object({
-  company_id: z.string().uuid(),
-  company_name: z.string(),
+  client_id: z.string().uuid(),
+  client_name: z.string(),
   total_assets: z.number(),
   assets_with_maintenance: z.number(),
   total_schedules: z.number(),

@@ -137,7 +137,7 @@ View ticket at: {{ticket.url}}
           <p><strong>Invoice Number:</strong> {{invoice.number}}</p>
           <p><strong>Amount:</strong> {{invoice.amount}}</p>
           <p><strong>Due Date:</strong> {{invoice.dueDate}}</p>
-          <p><strong>Company:</strong> {{invoice.companyName}}</p>
+          <p><strong>Client:</strong> {{invoice.clientName}}</p>
         </div>
         <a href="{{invoice.url}}" class="button">View Invoice</a>
       `,
@@ -149,7 +149,7 @@ A new invoice has been generated for your review:
 Invoice Number: {{invoice.number}}
 Amount: {{invoice.amount}}
 Due Date: {{invoice.dueDate}}
-Company: {{invoice.companyName}}
+Client: {{invoice.clientName}}
 
 View invoice at: {{invoice.url}}
       `

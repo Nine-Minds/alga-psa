@@ -172,7 +172,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
           {branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
-              alt={branding.companyName || 'Company Logo'}
+              alt={branding.clientName || 'Client Logo'}
               width={50}
               height={50}
               className="rounded-full mr-4 object-contain"
@@ -188,8 +188,8 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
           )}
           <div>
             <span className="text-2xl font-bold text-gray-800">
-              {branding?.companyName ?
-                `${branding.companyName} ${t('nav.clientPortal', 'Client Portal')}` :
+              {branding?.clientName ?
+                `${branding.clientName} ${t('nav.clientPortal', 'Client Portal')}` :
                 t('nav.clientPortal', 'Client Portal')}
             </span>
           </div>
@@ -204,7 +204,7 @@ export default function ClientPortalSignIn({ branding }: ClientPortalSignInProps
               {branding?.logoUrl ? (
                 <img
                   src={branding.logoUrl}
-                  alt={branding.companyName || 'Company Logo'}
+                  alt={branding.clientName || 'Client Logo'}
                   className="w-24 h-24 object-contain"
                 />
               ) : (

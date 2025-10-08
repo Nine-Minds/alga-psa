@@ -339,7 +339,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 type="email"
                 value={member.email}
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
-                placeholder="jane@company.com"
+                placeholder="jane@client.com"
                 disabled={isAlreadyCreated}
                 autoComplete="off"
               />

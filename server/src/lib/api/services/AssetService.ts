@@ -57,8 +57,8 @@ export class AssetService extends BaseService<any> {
       if (filters.name) {
         query.where(`${this.tableName}.name`, 'ilike', `%${filters.name}%`);
       }
-      if (filters.company_id) {
-        query.where(`${this.tableName}.company_id`, filters.company_id);
+      if (filters.client_id) {
+        query.where(`${this.tableName}.client_id`, filters.client_id);
       }
       if (filters.asset_type) {
         query.where(`${this.tableName}.asset_type`, filters.asset_type);
@@ -69,9 +69,9 @@ export class AssetService extends BaseService<any> {
       if (filters.location) {
         query.where(`${this.tableName}.location`, 'ilike', `%${filters.location}%`);
       }
-      if (filters.company_name) {
-        query.join('companies', `${this.tableName}.company_id`, 'companies.company_id')
-          .where('companies.company_name', 'ilike', `%${filters.company_name}%`);
+      if (filters.client_name) {
+        query.join('clients', `${this.tableName}.client_id`, 'clients.client_id')
+          .where('clients.client_name', 'ilike', `%${filters.client_name}%`);
       }
       if (filters.purchase_date_from) {
         query.where(`${this.tableName}.purchase_date`, '>=', filters.purchase_date_from);
@@ -106,10 +106,10 @@ export class AssetService extends BaseService<any> {
     }
 
     // Add joins for additional data
-    query.leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+    query.leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
       .select(
         `${this.tableName}.*`,
-        'companies.company_name',
+        'clients.client_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -126,8 +126,8 @@ export class AssetService extends BaseService<any> {
 
     if (filters) {
       // Apply the same filters to count query
-      if (filters.company_id) {
-        countQuery.where(`${this.tableName}.company_id`, filters.company_id);
+      if (filters.client_id) {
+        countQuery.where(`${this.tableName}.client_id`, filters.client_id);
       }
       if (filters.status) {
         countQuery.where(`${this.tableName}.status`, filters.status);
@@ -174,7 +174,7 @@ export class AssetService extends BaseService<any> {
   async getById(id: string, context: ServiceContext): Promise<any | null> {
     const knex = await this.getDbForContext(context);
     const query = knex(this.tableName)
-      .leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
+      .leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
       .where({
         [`${this.tableName}.${this.primaryKey}`]: id,
         [`${this.tableName}.tenant`]: context.tenant
@@ -182,7 +182,7 @@ export class AssetService extends BaseService<any> {
       
     const asset = await query.select(
         `${this.tableName}.*`,
-        'companies.company_name',
+        'clients.client_name',
         knex.raw(`
           CASE 
             WHEN ${this.tableName}.warranty_end_date IS NULL THEN 'no_warranty'
@@ -201,8 +201,8 @@ export class AssetService extends BaseService<any> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
 
-    const [company, extensionData, relationships, documents, maintenanceSchedules] = await Promise.all([
-      this.getAssetCompany(asset.company_id, context),
+    const [client, extensionData, relationships, documents, maintenanceSchedules] = await Promise.all([
+      this.getAssetClient(asset.client_id, context),
       this.getAssetExtensionData(id, asset.asset_type, context),
       this.getAssetRelationships(id, context),
       this.getAssetDocuments(id, context),
@@ -211,7 +211,7 @@ export class AssetService extends BaseService<any> {
 
     return {
       ...asset,
-      company,
+      client,
       extension_data: extensionData,
       relationships,
       documents,
@@ -582,8 +582,8 @@ export class AssetService extends BaseService<any> {
     if (searchData.fields && searchData.fields.length > 0) {
       query.where(function() {
         searchData.fields!.forEach(field => {
-          if (field === 'company_name') {
-            this.orWhere('companies.company_name', 'ilike', `%${searchData.query}%`);
+          if (field === 'client_name') {
+            this.orWhere('clients.client_name', 'ilike', `%${searchData.query}%`);
           } else {
             this.orWhere(`${tableName}.${field}`, 'ilike', `%${searchData.query}%`);
           }
@@ -606,13 +606,13 @@ export class AssetService extends BaseService<any> {
     if (searchData.statuses && searchData.statuses.length > 0) {
       query.whereIn(`${this.tableName}.status`, searchData.statuses);
     }
-    if (searchData.company_ids && searchData.company_ids.length > 0) {
-      query.whereIn(`${this.tableName}.company_id`, searchData.company_ids);
+    if (searchData.client_ids && searchData.client_ids.length > 0) {
+      query.whereIn(`${this.tableName}.client_id`, searchData.client_ids);
     }
 
     // Add joins for searching
-    query.leftJoin('companies', `${this.tableName}.company_id`, 'companies.company_id')
-      .select(`${this.tableName}.*`, 'companies.company_name')
+    query.leftJoin('clients', `${this.tableName}.client_id`, 'clients.client_id')
+      .select(`${this.tableName}.*`, 'clients.client_name')
       .limit(searchData.limit || 25);
 
     const assets = await query;
@@ -630,11 +630,11 @@ export class AssetService extends BaseService<any> {
 
   // Statistics
   async getStatistics(context: ServiceContext): Promise<any> {
-    const [basicStats, typeStats, statusStats, companyStats, warrantyStats, maintenanceStats] = await Promise.all([
+    const [basicStats, typeStats, statusStats, clientStats, warrantyStats, maintenanceStats] = await Promise.all([
       this.getBasicStatistics(context),
       this.getAssetsByType(context),
       this.getAssetsByStatus(context),
-      this.getAssetsByCompany(context),
+      this.getAssetsByClient(context),
       this.getWarrantyStatistics(context),
       this.getMaintenanceStatistics(context)
     ]);
@@ -643,7 +643,7 @@ export class AssetService extends BaseService<any> {
       ...basicStats,
       assets_by_type: typeStats,
       assets_by_status: statusStats,
-      assets_by_company: companyStats,
+      assets_by_client: clientStats,
       ...warrantyStats,
       ...maintenanceStats
     };
@@ -710,11 +710,11 @@ export class AssetService extends BaseService<any> {
     }
   }
 
-  private async getAssetCompany(companyId: string, context: ServiceContext): Promise<any> {
+  private async getAssetClient(clientId: string, context: ServiceContext): Promise<any> {
     const knex = await this.getDbForContext(context);
-    return knex('companies')
-      .where({ company_id: companyId, tenant: context.tenant })
-      .select('company_id', 'company_name', 'email', 'phone_no')
+    return knex('clients')
+      .where({ client_id: clientId, tenant: context.tenant })
+      .select('client_id', 'client_name', 'email', 'phone_no')
       .first();
   }
 
@@ -766,17 +766,17 @@ export class AssetService extends BaseService<any> {
     }
 
 
-  private async getAssetsByCompany(context: ServiceContext): Promise<Record<string, number>> {
+  private async getAssetsByClient(context: ServiceContext): Promise<Record<string, number>> {
     const knex = await this.getDbForContext(context);
     const results = await knex(this.tableName)
-      .join('companies', `${this.tableName}.company_id`, 'companies.company_id')
+      .join('clients', `${this.tableName}.client_id`, 'clients.client_id')
       .where(`${this.tableName}.tenant`, context.tenant)
-      .groupBy('companies.company_name')
-      .select('companies.company_name', knex.raw('COUNT(*) as count'))
+      .groupBy('clients.client_name')
+      .select('clients.client_name', knex.raw('COUNT(*) as count'))
       .limit(10);
 
     return results.reduce((acc, item) => {
-      acc[item.company_name] = parseInt(item.count);
+      acc[item.client_name] = parseInt(item.count);
       return acc;
     }, {} as Record<string, number>);
   }

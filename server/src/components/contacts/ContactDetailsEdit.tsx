@@ -9,8 +9,8 @@ import { Flex, Text, Heading } from '@radix-ui/themes';
 import { updateContact } from '../../lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds } from '../../lib/actions/tagActions';
 import { ITag } from '../../interfaces/tag.interfaces';
-import { CompanyPicker } from '../companies/CompanyPicker';
-import { ICompany } from '../../interfaces/company.interfaces';
+import { ClientPicker } from '../clients/ClientPicker';
+import { IClient } from '../../interfaces/client.interfaces';
 import { TagManager } from '../tags';
 import { useTags } from '../../context/TagContext';
 import { ArrowLeft } from 'lucide-react';
@@ -25,7 +25,7 @@ import { getContactAvatarUrlAction } from 'server/src/lib/actions/avatar-actions
 interface ContactDetailsEditProps {
   id?: string; // Made optional to maintain backward compatibility
   initialContact: IContact;
-  companies: ICompany[];
+  clients: IClient[];
   onSave: (contact: IContact) => void;
   onCancel: () => void;
   isInDrawer?: boolean;
@@ -34,7 +34,7 @@ interface ContactDetailsEditProps {
 const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
   id = 'contact-edit',
   initialContact,
-  companies,
+  clients,
   onSave,
   onCancel,
   isInDrawer = false
@@ -68,8 +68,8 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
     setContact(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleCompanySelect = (companyId: string | null) => {
-    setContact(prev => ({ ...prev, company_id: companyId || '' }));
+  const handleClientSelect = (clientId: string | null) => {
+    setContact(prev => ({ ...prev, client_id: clientId || '' }));
   };
 
   const handleSave = async () => {
@@ -171,13 +171,13 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
               placeholder="e.g., Manager, Developer, etc."
             />
             <tr>
-              <td className="py-2 font-semibold">Company:</td>
+              <td className="py-2 font-semibold">Client:</td>
               <td className="py-2">
-                <CompanyPicker
-                  id={`${id}-company-picker`}
-                  companies={companies}
-                  onSelect={handleCompanySelect}
-                  selectedCompanyId={contact.company_id}
+                <ClientPicker
+                  id={`${id}-client-picker`}
+                  clients={clients}
+                  onSelect={handleClientSelect}
+                  selectedClientId={contact.client_id}
                   filterState={filterState}
                   onFilterStateChange={setFilterState}
                   clientTypeFilter={clientTypeFilter}

@@ -50,7 +50,7 @@ export async function createMissingCreditTrackingEntry(
       await trx('credit_tracking').insert({
         credit_id: creditId,
         tenant,
-        company_id: report.company_id,
+        client_id: report.client_id,
         transaction_id: report.metadata.transaction_id,
         amount: report.metadata.transaction_amount,
         remaining_amount: report.metadata.transaction_amount, // Initially, remaining amount equals the full amount
@@ -76,7 +76,7 @@ export async function createMissingCreditTrackingEntry(
           details: {
             action: 'Created missing credit tracking entry',
             report_id: reportId,
-            company_id: report.company_id,
+            client_id: report.client_id,
             notes
           }
         }
@@ -179,7 +179,7 @@ export async function updateCreditTrackingRemainingAmount(
           details: {
             action: 'Updated credit tracking remaining amount',
             report_id: reportId,
-            company_id: report.company_id,
+            client_id: report.client_id,
             notes
           }
         }
@@ -253,23 +253,23 @@ export async function applyCustomCreditAdjustment(
       // Use the provided amount or default to the report difference
       const adjustmentAmount = amount !== undefined ? amount : report.difference;
       
-      // Get the current company credit balance
-      const [company] = await trx('companies')
-        .where({ company_id: report.company_id, tenant })
+      // Get the current client credit balance
+      const [client] = await trx('clients')
+        .where({ client_id: report.client_id, tenant })
         .select('credit_balance');
       
-      if (!company) {
-        throw new Error(`Company ${report.company_id} not found`);
+      if (!client) {
+        throw new Error(`Client ${report.client_id} not found`);
       }
       
-      const currentBalance = Number(company.credit_balance);
+      const currentBalance = Number(client.credit_balance);
       const newBalance = currentBalance + adjustmentAmount;
 
       // Create a transaction to record the adjustment
       const transactionId = uuidv4();
       await trx('transactions').insert({
         transaction_id: transactionId,
-        company_id: report.company_id,
+        client_id: report.client_id,
         amount: adjustmentAmount,
         type: 'credit_adjustment',
         status: 'completed',
@@ -285,9 +285,9 @@ export async function applyCustomCreditAdjustment(
         }
       });
 
-      // Update the company's credit balance
-      await trx('companies')
-        .where({ company_id: report.company_id, tenant })
+      // Update the client's credit balance
+      await trx('clients')
+        .where({ client_id: report.client_id, tenant })
         .update({
           credit_balance: newBalance,
           updated_at: now
@@ -299,8 +299,8 @@ export async function applyCustomCreditAdjustment(
         {
           userId,
           operation: 'custom_credit_adjustment',
-          tableName: 'companies',
-          recordId: report.company_id,
+          tableName: 'clients',
+          recordId: report.client_id,
           changedData: {
             previous_balance: currentBalance,
             adjustment_amount: adjustmentAmount,
@@ -309,7 +309,7 @@ export async function applyCustomCreditAdjustment(
           details: {
             action: 'Custom credit adjustment applied',
             report_id: reportId,
-            company_id: report.company_id,
+            client_id: report.client_id,
             notes
           }
         }
@@ -398,7 +398,7 @@ export async function markReportAsResolvedNoAction(
           details: {
             action: 'Reconciliation report resolved without action',
             report_id: reportId,
-            company_id: report.company_id,
+            client_id: report.client_id,
             notes
           }
         }

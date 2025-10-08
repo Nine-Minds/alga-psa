@@ -232,7 +232,7 @@ export class ApiFinancialController extends ApiBaseController {
   // ============================================================================
 
   /**
-   * GET /api/v1/financial/credits - List company credits
+   * GET /api/v1/financial/credits - List client credits
    */
   listCredits() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -250,7 +250,7 @@ export class ApiFinancialController extends ApiBaseController {
 
           const validatedQuery = creditListQuerySchema.parse(query);
           
-          const result = await this.financialService.listCompanyCredits(validatedQuery, apiRequest.context!);
+          const result = await this.financialService.listClientCredits(validatedQuery, apiRequest.context!);
           
           return createPaginatedResponse(
             result.data,
@@ -316,7 +316,7 @@ export class ApiFinancialController extends ApiBaseController {
   }
 
   /**
-   * POST /api/v1/financial/credits/transfer - Transfer credit between companies
+   * POST /api/v1/financial/credits/transfer - Transfer credit between clients
    */
   transferCredit() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -352,7 +352,7 @@ export class ApiFinancialController extends ApiBaseController {
           const body = await apiRequest.json();
           const validatedData = validateCreditBalanceSchema.parse(body);
 
-          const result = await this.financialService.validateCreditBalance(validatedData.company_id, apiRequest.context!);
+          const result = await this.financialService.validateCreditBalance(validatedData.client_id, apiRequest.context!);
           return createSuccessResponse(result);
         });
       } catch (error) {
@@ -411,7 +411,7 @@ export class ApiFinancialController extends ApiBaseController {
 
           const body = await apiRequest.json();
           const taxCalculationSchema = z.object({
-            company_id: z.string().uuid(),
+            client_id: z.string().uuid(),
             amount: z.number().min(0),
             tax_region: z.string(),
             date: z.string().optional()
@@ -420,7 +420,7 @@ export class ApiFinancialController extends ApiBaseController {
           const validatedData = taxCalculationSchema.parse(body);
 
           const result = await this.financialService.calculateTax(
-            validatedData.company_id,
+            validatedData.client_id,
             validatedData.amount,
             validatedData.tax_region,
             validatedData.date,
@@ -453,7 +453,7 @@ export class ApiFinancialController extends ApiBaseController {
           const validatedData = calculateBillingSchema.parse(body);
 
           const result = await this.financialService.calculateBilling(
-            validatedData.company_id,
+            validatedData.client_id,
             validatedData.period_start!,
             validatedData.period_end!,
             validatedData.billing_cycle_id,
@@ -503,15 +503,15 @@ export class ApiFinancialController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const url = new URL(apiRequest.url);
-          const companyId = url.searchParams.get('company_id');
+          const clientId = url.searchParams.get('client_id');
           const asOfDate = url.searchParams.get('as_of_date') || undefined;
 
-          if (!companyId) {
-            throw new ValidationError('company_id parameter is required');
+          if (!clientId) {
+            throw new ValidationError('client_id parameter is required');
           }
 
           const result = await this.financialService.getAccountBalanceReport(
-            companyId,
+            clientId,
             asOfDate,
             apiRequest.context!
           );
@@ -535,9 +535,9 @@ export class ApiFinancialController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'read');
 
           const url = new URL(apiRequest.url);
-          const companyId = url.searchParams.get('company_id') || undefined;
+          const clientId = url.searchParams.get('client_id') || undefined;
 
-          const result = await this.financialService.getAgingReport(companyId, apiRequest.context!);
+          const result = await this.financialService.getAgingReport(clientId, apiRequest.context!);
           return createSuccessResponse(result);
         });
       } catch (error) {
@@ -590,9 +590,9 @@ export class ApiFinancialController extends ApiBaseController {
           await this.checkPermission(apiRequest, 'update');
 
           const url = new URL(apiRequest.url);
-          const companyId = url.searchParams.get('company_id') || undefined;
+          const clientId = url.searchParams.get('client_id') || undefined;
 
-          const result = await this.financialService.runCreditReconciliation(companyId, apiRequest.context!);
+          const result = await this.financialService.runCreditReconciliation(clientId, apiRequest.context!);
           return createSuccessResponse(result);
         });
       } catch (error) {
@@ -737,7 +737,7 @@ export class ApiFinancialController extends ApiBaseController {
               self: `/api/v1/financial/transactions/${item.data.transaction_id}`,
               edit: `/api/v1/financial/transactions/${item.data.transaction_id}`,
               related: `/api/v1/financial/transactions/${item.data.transaction_id}/related`,
-              company: `/api/v1/companies/${item.data.company_id}`,
+              client: `/api/v1/clients/${item.data.client_id}`,
               collection: '/api/v1/financial/transactions'
             }
           }));
@@ -789,9 +789,9 @@ export class ApiFinancialController extends ApiBaseController {
               self: `/api/v1/financial/transactions/${id}`,
               edit: `/api/v1/financial/transactions/${id}`,
               related: `/api/v1/financial/transactions/${id}/related`,
-              company: `/api/v1/companies/${result.data.company_id}`,
+              client: `/api/v1/clients/${result.data.client_id}`,
               collection: '/api/v1/financial/transactions',
-              reports: `/api/v1/financial/reports/account-balance?company_id=${result.data.company_id}`,
+              reports: `/api/v1/financial/reports/account-balance?client_id=${result.data.client_id}`,
               ...(result.data.invoice_id && {
                 invoice: `/api/v1/financial/invoices/${result.data.invoice_id}`
               })
@@ -834,9 +834,9 @@ export class ApiFinancialController extends ApiBaseController {
             _links: {
               self: `/api/v1/financial/transactions/${result.data.transaction_id}`,
               edit: `/api/v1/financial/transactions/${result.data.transaction_id}`,
-              company: `/api/v1/companies/${result.data.company_id}`,
+              client: `/api/v1/clients/${result.data.client_id}`,
               collection: '/api/v1/financial/transactions',
-              balance_report: `/api/v1/financial/reports/account-balance?company_id=${result.data.company_id}`,
+              balance_report: `/api/v1/financial/reports/account-balance?client_id=${result.data.client_id}`,
               ...(result.data.invoice_id && {
                 invoice: `/api/v1/financial/invoices/${result.data.invoice_id}`
               })

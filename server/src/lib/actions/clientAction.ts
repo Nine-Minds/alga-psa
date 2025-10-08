@@ -1,11 +1,11 @@
 'use server'
 
-import { IClient } from 'server/src/interfaces/client.interfaces';
+import { IClientSummary } from 'server/src/interfaces/client.interfaces';
 import { createTenantKnex } from 'server/src/lib/db';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 
-export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
+export async function getClients(): Promise<Omit<IClientSummary, "tenant">[]> {
   try {
     const {knex: db, tenant} = await createTenantKnex();
     if (!tenant) {
@@ -13,20 +13,20 @@ export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
     }
 
     const clients = await withTransaction(db, async (trx: Knex.Transaction) => {
-      return await trx('companies')
+      return await trx('clients')
         .select(
-          'companies.company_id',
-          'companies.company_name',
+          'clients.client_id',
+          'clients.client_name',
           'billing_plans.plan_id',
           'billing_plans.plan_name',
           'billing_plans.billing_frequency',
           'billing_plans.is_custom',
           'billing_plans.plan_type'
         )
-        .where('companies.tenant', tenant)
+        .where('clients.tenant', tenant)
         .leftJoin('client_billing', function() {
-          this.on('companies.company_id', '=', 'client_billing.company_id')
-              .andOn('companies.tenant', '=', 'client_billing.tenant');
+          this.on('clients.client_id', '=', 'client_billing.client_id')
+              .andOn('clients.tenant', '=', 'client_billing.tenant');
         })
         .leftJoin('billing_plans', function() {
           this.on('client_billing.plan_id', '=', 'billing_plans.plan_id')
@@ -34,15 +34,15 @@ export async function getClients(): Promise<Omit<IClient, "tenant">[]> {
         });
     });
     
-    return clients.map((company): Omit<IClient, "tenant"> => ({
-      id: company.company_id,
-      name: company.company_name,
-      billingPlan: company.plan_id ? {
-        plan_id: company.plan_id,
-        plan_name: company.plan_name,
-        billing_frequency: company.billing_frequency,
-        is_custom: company.is_custom,
-        plan_type: company.plan_type
+    return clients.map((client): Omit<IClientSummary, "tenant"> => ({
+      id: client.client_id,
+      name: client.client_name,
+      billingPlan: client.plan_id ? {
+        plan_id: client.plan_id,
+        plan_name: client.plan_name,
+        billing_frequency: client.billing_frequency,
+        is_custom: client.is_custom,
+        plan_type: client.plan_type
       } : undefined
     }));
   } catch (error) {

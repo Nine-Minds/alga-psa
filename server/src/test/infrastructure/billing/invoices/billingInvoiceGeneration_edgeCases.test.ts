@@ -3,7 +3,7 @@ import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { generateInvoice } from 'server/src/lib/actions/invoiceGeneration';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { createTestService, assignServiceTaxRate, setupCompanyTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan } from '../../../../../test-utils/billingTestHelpers';
+import { createTestService, assignServiceTaxRate, setupClientTaxConfiguration, createFixedPlanAssignment, addServiceToFixedPlan } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -52,9 +52,9 @@ const {
 
 let context: TestContext;
 
-async function configureTaxForCompany(companyId: string, taxPercentage = 10) {
-  await setupCompanyTaxConfiguration(context, {
-    companyId,
+async function configureTaxForClient(clientId: string, taxPercentage = 10) {
+  await setupClientTaxConfiguration(context, {
+    clientId,
     regionCode: 'US-NY',
     regionName: 'New York',
     taxPercentage
@@ -73,17 +73,17 @@ describe('Billing Invoice Edge Cases', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates'
+        'client_tax_settings',
+        'client_tax_rates'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -95,7 +95,7 @@ describe('Billing Invoice Edge Cases', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    await configureTaxForCompany(context.companyId, 10);
+    await configureTaxForClient(context.clientId, 10);
   }, 60000);
 
   beforeEach(async () => {
@@ -108,7 +108,7 @@ describe('Billing Invoice Edge Cases', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    await configureTaxForCompany(context.companyId, 10);
+    await configureTaxForClient(context.clientId, 10);
   }, 30000);
 
   afterEach(async () => {
@@ -142,8 +142,8 @@ describe('Billing Invoice Edge Cases', () => {
       detailBaseRateCents: 7500
     });
 
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',
@@ -182,8 +182,8 @@ describe('Billing Invoice Edge Cases', () => {
       startDate: '2025-02-01'
     });
 
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: '2025-02-01',
       period_start_date: '2025-02-01',

@@ -4,10 +4,10 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from 'server/src/interfaces/timeEntry.interfaces';
 import { IWorkItem } from 'server/src/interfaces/workItem.interfaces';
 import { TaxRegion } from 'server/src/types/types.d';
-import { fetchCompanyTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
-import { getCompanyIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
+import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from 'server/src/lib/actions/timeEntryActions';
+import { getClientIdForWorkItem } from 'server/src/lib/utils/planDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
-import { getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
+import { getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 
 interface Service {
   id: string;
@@ -20,7 +20,7 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
-  company_id?: string; // Added for billing plan selection
+  client_id?: string; // Added for billing plan selection
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
 }
@@ -144,14 +144,14 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       dispatch({ type: 'SET_LOADING', payload: true });
       
       // Load all required data in parallel
-      const companyId = (workItem.type === 'ticket' || workItem.type === 'project_task')
-        ? await getCompanyIdForWorkItem(workItem.work_item_id, workItem.type)
+      const clientId = (workItem.type === 'ticket' || workItem.type === 'project_task')
+        ? await getClientIdForWorkItem(workItem.work_item_id, workItem.type)
         : null;
 
-      const [services, taxRegions, company] = await Promise.all([
+      const [services, taxRegions, client] = await Promise.all([
         fetchServicesForTimeEntry(workItem.type),
         fetchTaxRegions(),
-        companyId ? getCompanyById(companyId) : Promise.resolve(null)
+        clientId ? getClientById(clientId) : Promise.resolve(null)
       ]);
 
       dispatch({
@@ -169,10 +169,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         end_time: formatISO(parseISO(rest.end_time)),
         created_at: formatISO(parseISO(rest.created_at)),
         updated_at: formatISO(parseISO(rest.updated_at)),
-        tax_region: rest.tax_region || defaultTaxRegion || company?.region_code || '',
+        tax_region: rest.tax_region || defaultTaxRegion || client?.region_code || '',
         isNew: false,
         isDirty: false,
-        company_id: companyId || undefined,
+        client_id: clientId || undefined,
       }));
     } else if (defaultStartTime && defaultEndTime) {
       const duration = calculateDuration(defaultStartTime, defaultEndTime);
@@ -199,10 +199,10 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         updated_at: formatISO(new Date()),
         approval_status: 'DRAFT',
         service_id: '',
-        tax_region: defaultTaxRegion || company?.region_code || '',
+        tax_region: defaultTaxRegion || client?.region_code || '',
         isNew: true,
         tempId: crypto.randomUUID(),
-        company_id: companyId || undefined,
+        client_id: clientId || undefined,
       }];
     } else {
       // For ad-hoc items, get the scheduled times from the schedule entry
@@ -250,7 +250,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         tax_region: defaultTaxRegion || '',
         isNew: true,
         tempId: crypto.randomUUID(),
-        company_id: companyId || undefined,
+        client_id: clientId || undefined,
       }];
     }
 

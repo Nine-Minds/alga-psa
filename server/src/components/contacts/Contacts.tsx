@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import { IDocument } from 'server/src/interfaces/document.interface';
-import { getAllContacts, getContactsByCompany, getAllCompanies, exportContactsToCSV, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllContacts, getContactsByClient, getAllClients, exportContactsToCSV, deleteContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { findTagsByEntityIds, findAllTagsByType } from 'server/src/lib/actions/tagActions';
 import { Button } from 'server/src/components/ui/Button';
 import { SearchInput } from 'server/src/components/ui/SearchInput';
@@ -16,7 +16,7 @@ import { useDrawer } from "server/src/context/DrawerContext";
 import ContactDetails from './ContactDetails';
 import ContactDetailsEdit from './ContactDetailsEdit';
 import ContactsImportDialog from './ContactsImportDialog';
-import CompanyDetails from '../companies/CompanyDetails';
+import ClientDetails from '../clients/ClientDetails';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { TagManager, TagFilter } from 'server/src/components/tags';
@@ -32,16 +32,16 @@ import { useRouter } from 'next/navigation';
 import ContactsSkeleton from './ContactsSkeleton';
 interface ContactsProps {
   initialContacts: IContact[];
-  companyId?: string;
-  preSelectedCompanyId?: string;
+  clientId?: string;
+  preSelectedClientId?: string;
 }
 
-const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSelectedCompanyId }) => {
+const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelectedClientId }) => {
   // Pre-fetch tag permissions to prevent individual API calls
   useTagPermissions(['contact']);
   
   const [contacts, setContacts] = useState<IContact[]>(initialContacts);
-  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [clients, setClients] = useState<IClient[]>([]);
   const [documents, setDocuments] = useState<Record<string, IDocument[]>>({});
   const [documentLoading, setDocumentLoading] = useState<Record<string, boolean>>({});
   const [currentUser, setCurrentUser] = useState<string | null>(null);
@@ -85,21 +85,21 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     }
   };
 
-  // Fetch contacts and companies when filter status changes
+  // Fetch contacts and clients when filter status changes
   useEffect(() => {
-    const fetchContactsAndCompanies = async () => {
+    const fetchContactsAndClients = async () => {
       setIsLoading(true);
       try {
         let fetchedContacts: IContact[] = [];
 
         // Fetch contacts based on filter status
-        if (companyId) {
+        if (clientId) {
           if (filterStatus === 'all') {
-            fetchedContacts = await getContactsByCompany(companyId, 'all');
+            fetchedContacts = await getContactsByClient(clientId, 'all');
           } else if (filterStatus === 'active') {
-            fetchedContacts = await getContactsByCompany(companyId, 'active');
+            fetchedContacts = await getContactsByClient(clientId, 'active');
           } else { // 'inactive'
-            fetchedContacts = await getContactsByCompany(companyId, 'inactive');
+            fetchedContacts = await getContactsByClient(clientId, 'inactive');
           }
         } else {
           if (filterStatus === 'all') {
@@ -111,25 +111,25 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           }
         }
 
-        // Fetch companies and user data
-        const [allCompanies, userData] = await Promise.all([
-          getAllCompanies(),
+        // Fetch clients and user data
+        const [allClients, userData] = await Promise.all([
+          getAllClients(),
           getCurrentUser()
         ]);
 
         setContacts(fetchedContacts);
-        setCompanies(allCompanies);
+        setClients(allClients);
         if (userData?.user_id) {
           setCurrentUser(userData.user_id);
         }
       } catch (error) {
-        console.error('Error fetching contacts and companies:', error);
+        console.error('Error fetching contacts and clients:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchContactsAndCompanies();
-  }, [companyId, filterStatus, refreshKey]);
+    fetchContactsAndClients();
+  }, [clientId, filterStatus, refreshKey]);
 
   // Fetch tags separately - only fetch contact-specific tags when contacts change
   useEffect(() => {
@@ -185,9 +185,9 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
     });
   };
 
-  const getCompanyName = (companyId: string) => {
-    const company = companies.find(c => c.company_id === companyId);
-    return company ? company.company_name : 'Unknown Company';
+  const getClientName = (clientId: string) => {
+    const client = clients.find(c => c.client_id === clientId);
+    return client ? client.client_name : 'Unknown Client';
   };
 
   const handleContactAdded = (newContact: IContact) => {
@@ -202,10 +202,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
   };
 
   const handleQuickView = async (contact: IContact) => {
-    // If this is being used within a company context (companyId prop exists),
+    // If this is being used within a client context (clientId prop exists),
     // maintain the drawer behavior. Otherwise, open drawer with quick view functionality.
-    if (companyId) {
-      // Company context - keep existing drawer behavior for quick view
+    if (clientId) {
+      // Client context - keep existing drawer behavior for quick view
       if (!currentUser) return;
 
       try {
@@ -231,7 +231,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         openDrawer(
           <ContactDetails
             contact={contact}
-            companies={companies}
+            clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
             isInDrawer={true}
@@ -291,7 +291,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
         openDrawer(
           <ContactDetails
             contact={contact}
-            companies={companies}
+            clients={clients}
             documents={documents[contact.contact_name_id] || []}
             userId={currentUser}
             isInDrawer={true}
@@ -373,7 +373,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
 
   const handleExportToCSV = async () => {
     try {
-      const csvData = await exportContactsToCSV(filteredContacts, companies, contactTagsRef.current);
+      const csvData = await exportContactsToCSV(filteredContacts, clients, contactTagsRef.current);
 
       const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
 
@@ -445,18 +445,18 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
       render: (value, record): React.ReactNode => record.phone_number || 'N/A',
     },
     {
-      title: 'Company',
-      dataIndex: 'company_id',
+      title: 'Client',
+      dataIndex: 'client_id',
       width: '17%',
       render: (value, record): React.ReactNode => {
-        const companyId = record.company_id;
-        if (typeof companyId !== 'string' || !companyId) {
-          return <span className="text-gray-500">No Company</span>;
+        const clientId = record.client_id;
+        if (typeof clientId !== 'string' || !clientId) {
+          return <span className="text-gray-500">No Client</span>;
         }
 
-        const company = companies.find(c => c.company_id === companyId);
-        if (!company) {
-          return <span className="text-gray-500">{getCompanyName(companyId)}</span>;
+        const client = clients.find(c => c.client_id === clientId);
+        if (!client) {
+          return <span className="text-gray-500">{getClientName(clientId)}</span>;
         }
 
         return (
@@ -464,8 +464,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             role="button"
             tabIndex={0}
             onClick={() => openDrawer(
-              <CompanyDetails
-                company={company}
+              <ClientDetails
+                client={client}
                 documents={[]}
                 contacts={[]}
                 isInDrawer={true}
@@ -476,8 +476,8 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 openDrawer(
-                  <CompanyDetails
-                    company={company}
+                  <ClientDetails
+                    client={client}
                     documents={[]}
                     contacts={[]}
                     isInDrawer={true}
@@ -488,7 +488,7 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
             }}
             className="text-blue-600 hover:underline cursor-pointer"
           >
-            {company.company_name}
+            {client.client_name}
           </div>
         );
       },
@@ -699,15 +699,15 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, companyId, preSele
           isOpen={isQuickAddOpen}
           onClose={() => setIsQuickAddOpen(false)}
           onContactAdded={handleContactAdded}
-          companies={companies}
-          selectedCompanyId={preSelectedCompanyId}
+          clients={clients}
+          selectedClientId={preSelectedClientId}
         />
 
         <ContactsImportDialog
           isOpen={isImportDialogOpen}
           onClose={() => setIsImportDialogOpen(false)}
           onImportComplete={handleImportComplete}
-          companies={companies}
+          clients={clients}
         />
 
         {/* ConfirmationDialog for Delete */}

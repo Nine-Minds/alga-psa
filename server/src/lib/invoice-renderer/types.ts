@@ -10,12 +10,12 @@ export interface WasmInvoiceViewModel {
     name: string;
     address: string;
   };
-  tenantCompany: { // Details of the company issuing the invoice (the tenant)
+  tenantClient: { // Details of the client issuing the invoice (the tenant)
     name: string | null;
     address: string | null;
     logoUrl: string | null;
   } | null;
-  companyLogoUrl?: string; // Optional company logo URL - KEEPING FOR NOW, maybe rename/remove later?
+  clientLogoUrl?: string; // Optional client logo URL - KEEPING FOR NOW, maybe rename/remove later?
   items: Array<{
     id: string; // Add an ID for better referencing
     description: string;

@@ -22,7 +22,7 @@ export interface AssetRelationship {
 export interface Asset {
   asset_id: string;
   asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
-  company_id: string;
+  client_id: string;
   asset_tag: string;
   serial_number?: string;
   name: string;
@@ -33,7 +33,7 @@ export interface Asset {
   created_at: string;
   updated_at: string;
   tenant: string;
-  company?: AssetCompanyInfo;
+  client?: AssetClientInfo;
   relationships?: AssetRelationship[];
   workstation?: WorkstationAsset;
   network_device?: NetworkDeviceAsset;
@@ -42,9 +42,9 @@ export interface Asset {
   printer?: PrinterAsset;
 }
 
-export interface AssetCompanyInfo {
-  company_id: string;
-  company_name: string;
+export interface AssetClientInfo {
+  client_id: string;
+  client_name: string;
 }
 
 // Extension table interfaces
@@ -235,7 +235,7 @@ export function isPrinterAsset(asset: unknown): asset is PrinterAsset {
 // Request interfaces
 export interface CreateAssetRequest {
   asset_type: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
-  company_id: string;
+  client_id: string;
   asset_tag: string;
   name: string;
   status: string;
@@ -289,8 +289,8 @@ export interface CreateMaintenanceHistoryRequest {
 }
 
 export interface AssetQueryParams {
-  company_id?: string;
-  company_name?: string;
+  client_id?: string;
+  client_name?: string;
   asset_type?: 'workstation' | 'network_device' | 'server' | 'mobile_device' | 'printer' | 'unknown';
   status?: string;
   search?: string;
@@ -299,12 +299,12 @@ export interface AssetQueryParams {
   page?: number;
   limit?: number;
   include_extension_data?: boolean;
-  include_company_details?: boolean;
+  include_client_details?: boolean;
 }
 
-export interface CompanySummary {
-  total_companies: number;
-  assets_by_company: Record<string, number>;
+export interface ClientSummary {
+  total_clients: number;
+  assets_by_client: Record<string, number>;
 }
 
 export interface AssetListResponse {
@@ -312,7 +312,7 @@ export interface AssetListResponse {
   total: number;
   page: number;
   limit: number;
-  company_summary?: CompanySummary;
+  client_summary?: ClientSummary;
 }
 
 export interface AssetMaintenanceReport {
@@ -329,8 +329,8 @@ export interface AssetMaintenanceReport {
 }
 
 export interface ClientMaintenanceSummary {
-  company_id: string;
-  company_name: string;
+  client_id: string;
+  client_name: string;
   total_assets: number;
   assets_with_maintenance: number;
   total_schedules: number;

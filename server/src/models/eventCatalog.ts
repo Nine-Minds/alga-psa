@@ -294,11 +294,11 @@ export class EventCatalogModel extends BaseModel {
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
             invoiceId: { type: 'string', format: 'uuid' },
-            companyId: { type: 'string', format: 'uuid' },
+            clientId: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
             amount: { type: 'number' }
           },
-          required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
+          required: ['tenantId', 'invoiceId', 'clientId', 'userId', 'amount']
         },
         tenant: tenantId
       },
@@ -312,11 +312,11 @@ export class EventCatalogModel extends BaseModel {
           properties: {
             tenantId: { type: 'string', format: 'uuid' },
             invoiceId: { type: 'string', format: 'uuid' },
-            companyId: { type: 'string', format: 'uuid' },
+            clientId: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
             amount: { type: 'number' }
           },
-          required: ['tenantId', 'invoiceId', 'companyId', 'userId', 'amount']
+          required: ['tenantId', 'invoiceId', 'clientId', 'userId', 'amount']
         },
         tenant: tenantId
       }

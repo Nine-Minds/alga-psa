@@ -17,7 +17,7 @@ import Pagination from 'server/src/components/ui/Pagination';
 interface DocumentSelectorProps {
     id: string;
     entityId: string;
-    entityType: 'ticket' | 'company' | 'contact' | 'asset' | 'project_task';
+    entityType: 'ticket' | 'client' | 'contact' | 'asset' | 'project_task';
     onDocumentSelected?: (document: IDocument) => Promise<void>;
     onDocumentsSelected?: () => Promise<void>;
     singleSelect?: boolean;

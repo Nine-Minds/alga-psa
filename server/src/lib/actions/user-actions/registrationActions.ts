@@ -43,15 +43,15 @@ export async function initiateRegistration(
     }
     
     if (contactVerification.exists) {
-      // Get contact's company and tenant
+      // Get contact's client and tenant
       const contact = await adminDb('contacts')
-        .join('companies', 'contacts.company_id', 'companies.company_id')
+        .join('clients', 'contacts.client_id', 'clients.client_id')
         .where('contacts.email', email)
-        .select('companies.company_id', 'companies.tenant')
+        .select('clients.client_id', 'clients.tenant')
         .first();
       
       if (!contact?.tenant) {
-        return { success: false, error: "Contact company not found" };
+        return { success: false, error: "Contact client not found" };
       }
       
       const result = await registerContactUser(email, password);
@@ -79,23 +79,23 @@ export async function initiateRegistration(
 // Email suffix registration functions removed for security
 // Only contact-based registration is now allowed
 
-// Function for getting user company ID during registration (without tenant context)
-export async function getUserCompanyIdForRegistration(userId: string): Promise<string | null> {
+// Function for getting user client ID during registration (without tenant context)
+export async function getUserClientIdForRegistration(userId: string): Promise<string | null> {
   try {
     const adminDb = await getAdminConnection();
     const user = await User.getForRegistration(userId);
     if (!user) return null;
 
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
-      // First try to get company ID from contact if user is contact-based
+      // First try to get client ID from contact if user is contact-based
       if (user.contact_id) {
         const contact = await trx('contacts')
           .where('contact_name_id', user.contact_id)
-          .select('company_id')
+          .select('client_id')
           .first();
 
-        if (contact?.company_id) {
-          return contact.company_id;
+        if (contact?.client_id) {
+          return contact.client_id;
         }
       }
 
@@ -103,8 +103,8 @@ export async function getUserCompanyIdForRegistration(userId: string): Promise<s
       return null;
     });
   } catch (error) {
-    console.error('Error getting user company ID for registration:', error);
-    throw new Error('Failed to get user company ID for registration');
+    console.error('Error getting user client ID for registration:', error);
+    throw new Error('Failed to get user client ID for registration');
   }
 }
 
@@ -119,9 +119,9 @@ async function registerContactUser(
     return await withTransaction(adminDb, async (trx: Knex.Transaction) => {
       // Get contact details and tenant
       const contact = await trx('contacts')
-        .join('companies', 'contacts.company_id', 'companies.company_id')
+        .join('clients', 'contacts.client_id', 'clients.client_id')
         .where({ 'contacts.email': email })
-        .select('contacts.contact_name_id', 'contacts.company_id', 'contacts.is_inactive', 'contacts.full_name', 'companies.tenant')
+        .select('contacts.contact_name_id', 'contacts.client_id', 'contacts.is_inactive', 'contacts.full_name', 'clients.tenant')
         .first();
 
       if (!contact) {

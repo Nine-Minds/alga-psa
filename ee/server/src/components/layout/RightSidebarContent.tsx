@@ -10,7 +10,7 @@ import '../chat/chat.css';
 interface RightSidebarProps {
   isOpen: boolean;
   setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  companyUrl: string;
+  clientUrl: string;
   accountId: string;
   messages: any[];
   userId: string;
@@ -25,7 +25,7 @@ interface RightSidebarProps {
 const RightSidebarContent: React.FC<RightSidebarProps> = ({
   isOpen,
   setIsOpen,
-  companyUrl,
+  clientUrl,
   accountId,
   messages,
   userRole,
@@ -76,7 +76,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
             {hf && ( // Only render Chat when hf is initialized
               <Chat
                 key={chatKey}
-                companyUrl={companyUrl}
+                clientUrl={clientUrl}
                 accountId={accountId}
                 messages={messages}
                 userRole={userRole}

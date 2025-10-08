@@ -7,20 +7,28 @@ import { faker } from '@faker-js/faker';
 
 interface ProjectInput {
   tenant: string;
-  company_id: string;
+  client_id: string;
   project_name?: string;
   description?: string;
   status?: string;
   start_date?: Date;
   end_date?: Date;
   is_inactive?: boolean;
+  // Backward compatibility
+  client_id?: string;
 }
 
 export async function projectFactory(db: any, input: ProjectInput) {
+  // Support both client_id and client_id (backward compatibility)
+  const clientId = input.client_id || input.client_id;
+  if (!clientId) {
+    throw new Error('Either client_id or client_id must be provided');
+  }
+
   const project = {
     project_id: faker.string.uuid(),
     tenant: input.tenant,
-    company_id: input.company_id,
+    client_id: clientId,
     project_name: input.project_name || faker.company.catchPhrase() + ' Project',
     description: input.description || faker.lorem.paragraph(),
     status: input.status || 'active',
@@ -35,7 +43,7 @@ export async function projectFactory(db: any, input: ProjectInput) {
     .insert({
       project_id: project.project_id,
       tenant: project.tenant,
-      company_id: project.company_id,
+      client_id: project.client_id,
       project_name: project.project_name,
       description: project.description,
       status: project.status,

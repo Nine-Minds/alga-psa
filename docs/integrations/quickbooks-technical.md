@@ -7,7 +7,7 @@ The QuickBooks Online (QBO) integration is built upon the Alga PSA's existing **
 **Key Components:**
 
 1.  **Event Bus:** Utilizes the existing Redis Streams-based event bus (`server/src/lib/eventBus/index.ts`). Specific business events trigger integration workflows.
-    *   Relevant Events: `INVOICE_CREATED`, `INVOICE_UPDATED`, `COMPANY_CREATED`, `COMPANY_UPDATED` (defined in `server/src/lib/eventBus/events.ts`).
+    *   Relevant Events: `INVOICE_CREATED`, `INVOICE_UPDATED`, `CLIENT_CREATED`, `CLIENT_UPDATED` (defined in `shared/workflow/streams/eventBusSchema.ts`).
 2.  **Automation Hub:** The UI where users configure integrations, enable/disable workflows, and manage entity mappings.
     *   QBO Connection UI: Handles the OAuth 2.0 flow (`/msp/settings/integrations/qbo`).
     *   Entity Mapping UI: Allows mapping Alga entities to QBO entities (`server/src/components/integrations/qbo/QboMappingManager.tsx` and related components).
@@ -56,27 +56,27 @@ The QuickBooks Online (QBO) integration is built upon the Alga PSA's existing **
 
 *   Initially, Alga PSA acts as the primary source of truth, pushing data *to* QBO. Bi-directional sync is not implemented in the initial version due to complexity.
 
-### Company Synchronization Specifics & Conflict Resolution
+### Client Synchronization Specifics & Conflict Resolution
 
-The `qboCustomerSyncWorkflow.ts` (located in `server/src/lib/workflows/`) handles the synchronization of Alga PSA `Company` entities to QuickBooks Online `Customer` entities. A key enhancement in this workflow is the interactive handling of potential duplicate customers found in QBO during the creation of a new customer.
+The `qboCustomerSyncWorkflow.ts` (located in `server/src/lib/workflows/`) handles the synchronization of Alga PSA `Client` entities to QuickBooks Online `Customer` entities. A key enhancement in this workflow is the interactive handling of potential duplicate customers found in QBO during the creation of a new customer.
 
 **Conflict Detection and Inline Form Invocation:**
 1.  When attempting to create a new QBO customer, the workflow first checks for potential duplicates in QBO based on display name or email using the `actions.get_qbo_customer_by_display_or_email` action.
 2.  If potential duplicates are found (using `actions.get_qbo_customer_by_display_or_email`), the workflow invokes a specialized **inline form task** via the `actions.createInlineTaskAndWaitForResult` action. This replaces previous generic error tasking for this scenario.
 3.  This inline form is designed to provide the user with comprehensive information to make an informed decision. It displays:
-    *   Details of the Alga company being synced.
+    *   Details of the Alga client being synced.
     *   Details of the potential QuickBooks duplicate(s).
     *   Contextual information about the sync job.
-4.  The form utilizes a `RichTextViewerWidget` (registered in `server/src/lib/workflow/forms/customWidgets.tsx`) for an enhanced display of this information, rendering formatted text (e.g., bolding) from Markdown. For the Alga company's address, which is stored as a single string in the Alga system, the workflow prepares hardcoded, delineated address parts (street, city, etc.) specifically for the form's `contextData`, while also displaying the original full address string for user reference.
+4.  The form utilizes a `RichTextViewerWidget` (registered in `server/src/lib/workflow/forms/customWidgets.tsx`) for an enhanced display of this information, rendering formatted text (e.g., bolding) from Markdown. For the Alga client's address, which is stored as a single string in the Alga system, the workflow prepares hardcoded, delineated address parts (street, city, etc.) specifically for the form's `contextData`, while also displaying the original full address string for user reference.
 
 **User Resolution Options and Workflow Processing:**
 The inline form presents the user with two primary resolution options:
-*   **"Link Alga company to this existing QuickBooks company":**
+*   **"Link Alga client to this existing QuickBooks client":**
     *   If selected, the user chooses one of the potential QB duplicates (or an explicitly searched one, if the form supports it).
-    *   The workflow receives the `quickbooks_company_id_linked` from the form.
+    *   The workflow receives the `quickbooks_client_id_linked` from the form.
     *   It then sets this ID as the `existingQboCustomerId` and explicitly clears any existing `qboSyncToken`. This action ensures that when the workflow transitions to the "UPDATE PATH" for the selected QBO customer, it will re-fetch the customer's latest details, including the current `SyncToken`, before attempting an update, thus preventing sync token errors.
-*   **"Create this Alga company as a new company in QuickBooks":**
-    *   If selected, the workflow proceeds with the original "CREATE PATH", creating a new customer record in QBO based on the Alga company's data.
+*   **"Create this Alga client as a new client in QuickBooks":**
+    *   If selected, the workflow proceeds with the original "CREATE PATH", creating a new customer record in QBO based on the Alga client's data.
 
 **Task Cancellation:**
 *   If the user cancels the inline form task (e.g., by closing the modal), the `createInlineTaskAndWaitForResult` action returns a status indicating cancellation.
@@ -89,13 +89,13 @@ This inline form mechanism significantly improves the user experience for resolv
 *   **External IDs:** The primary mechanism for linking Alga entities to their QBO counterparts is the `tenant_external_entity_mappings` table.
     *   **Schema:** Stores `tenant_id`, `integration_type` ('quickbooks_online'), `alga_entity_type`, `alga_entity_id`, `external_entity_id`, `external_realm_id`, `sync_status`, `metadata`, etc.
     *   **Purpose:** Allows looking up the QBO ID for a given Alga entity (and vice-versa) within the context of a specific tenant and QBO realm.
-    *   **Example Lookup:** To find the QBO Customer ID for Alga Company 'XYZ' for Tenant 'ABC' connected to Realm '123':
+    *   **Example Lookup:** To find the QBO Customer ID for Alga Client 'XYZ' for Tenant 'ABC' connected to Realm '123':
         ```sql
         SELECT external_entity_id
         FROM tenant_external_entity_mappings
         WHERE tenant_id = 'ABC'
           AND integration_type = 'quickbooks_online'
-          AND alga_entity_type = 'customer' -- or 'company' depending on convention
+          AND alga_entity_type = 'client'
           AND alga_entity_id = 'XYZ'
           AND external_realm_id = '123';
         ```
@@ -134,4 +134,4 @@ Integrating with an external API like QBO in a multi-tenant environment requires
 *   **Mapping UI:** `server/src/components/integrations/qbo/`
 *   **Mapping Storage:** `tenant_external_entity_mappings` table schema (defined in a migration file).
 *   **Secret Storage:** Implementation depends on the chosen method (see Section 4).
-*   **Core Models:** `server/src/lib/models/invoice.ts`, `server/src/lib/models/company.tsx`, etc.
+*   **Core Models:** `server/src/lib/models/invoice.ts`, `server/src/lib/models/client.ts`, etc.

@@ -41,8 +41,8 @@ describe('Email Provider UI Integration', () => {
     // Create test tenant
     await testDb('tenants').insert({
       tenant: testTenant,
-      company_name: 'UI Test Company',
-      email: 'ui-test@company.com',
+      client_name: 'UI Test Client',
+      email: 'ui-test@client.com',
       created_at: new Date(),
       updated_at: new Date()
     });
@@ -73,7 +73,7 @@ describe('Email Provider UI Integration', () => {
 
     // Fill in the form fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Production Gmail');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'production@company.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'production@client.com');
     await user.type(screen.getByPlaceholderText('xxxxxxxxx.apps.googleusercontent.com'), 'prod-client-id.apps.googleusercontent.com');
     await user.type(screen.getByPlaceholderText('Enter client secret'), 'prod-client-secret');
     await user.type(screen.getByPlaceholderText('my-project-id'), 'production-project');
@@ -97,7 +97,7 @@ describe('Email Provider UI Integration', () => {
     // Verify the provider was saved to the database
     const savedProvider = await testDb('email_provider_configs')
       .where('tenant', testTenant)
-      .where('mailbox', 'production@company.com')
+      .where('mailbox', 'production@client.com')
       .first();
 
     expect(savedProvider).toBeDefined();
@@ -124,7 +124,7 @@ describe('Email Provider UI Integration', () => {
         tenant: testTenant,
         name: 'Existing Gmail',
         provider_type: 'google',
-        mailbox: 'existing@company.com',
+        mailbox: 'existing@client.com',
         active: true,
         connection_status: 'disconnected',
         folder_to_monitor: 'Inbox',
@@ -181,7 +181,7 @@ describe('Email Provider UI Integration', () => {
       .first();
 
     expect(updatedProvider.name).toBe('Updated Gmail');
-    expect(updatedProvider.mailbox).toBe('existing@company.com'); // Should not change
+    expect(updatedProvider.mailbox).toBe('existing@client.com'); // Should not change
   });
 
   it('should show validation errors when required fields are missing', async () => {
@@ -204,7 +204,7 @@ describe('Email Provider UI Integration', () => {
 
     // Fill only some fields
     await user.type(screen.getByPlaceholderText('e.g., Support Gmail'), 'Incomplete Provider');
-    await user.type(screen.getByPlaceholderText('support@company.com'), 'incomplete@company.com');
+    await user.type(screen.getByPlaceholderText('support@client.com'), 'incomplete@client.com');
 
     // Button should still be disabled without all required fields
     expect(submitButton).toBeDisabled();

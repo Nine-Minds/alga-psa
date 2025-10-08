@@ -19,8 +19,8 @@ tags:
   - name: billing-plans
   - name: categories
   - name: chat
-  - name: companies
-  - name: company-billing-plans
+  - name: clients
+  - name: client-billing-plans
   - name: contacts
   - name: documents
   - name: email
@@ -4516,13 +4516,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/companies:
+  /api/v1/clients:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4550,7 +4550,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4581,13 +4581,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/companies/stats:
+  /api/v1/clients/stats:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4610,13 +4610,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/companies/{id}:
+  /api/v1/clients/{id}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4644,7 +4644,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4672,7 +4672,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4703,13 +4703,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/companies/{id}/contacts:
+  /api/v1/clients/{id}/contacts:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4732,13 +4732,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/companies/{id}/locations:
+  /api/v1/clients/{id}/locations:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4766,7 +4766,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - companies
+        - clients
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4797,13 +4797,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/company-billing-plans:
+  /api/v1/client-billing-plans:
     get:
       summary: GET v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4831,7 +4831,7 @@ paths:
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true
@@ -4862,13 +4862,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-  /api/v1/company-billing-plans/{id}:
+  /api/v1/client-billing-plans/{id}:
     delete:
       summary: DELETE v1
       description: This operation was generated automatically from the route
         inventory. Replace with canonical OpenAPI metadata.
       tags:
-        - company-billing-plans
+        - client-billing-plans
       extensions:
         x-generated-from: docs/openapi/route-inventory.json
         x-placeholder: true

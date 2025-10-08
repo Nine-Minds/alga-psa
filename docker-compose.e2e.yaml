@@ -169,7 +169,9 @@ services:
     build:
       context: .
       dockerfile: setup/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_setup_test
+      args:
+        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}
+        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
     networks:
       - app-network
     environment:
@@ -189,7 +191,7 @@ services:
     secrets:
       - postgres_password
       - db_password_server
-    entrypoint: ["/app/setup/entrypoint.sh"]
+    entrypoint: ["/opt/setup/entrypoint.sh"]
     depends_on:
       postgres-test:
         condition: service_healthy

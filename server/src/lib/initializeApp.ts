@@ -13,7 +13,7 @@ import { JobScheduler, IJobScheduler } from 'server/src/lib/jobs/jobScheduler';
 import { JobService } from 'server/src/services/job.service';
 import { InvoiceZipJobHandler } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
 import type { InvoiceZipJobData } from 'server/src/lib/jobs/handlers/invoiceZipHandler';
-import { createCompanyBillingCycles } from 'server/src/lib/billing/createBillingCycles';
+import { createClientBillingCycles } from 'server/src/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
 import { createNextTimePeriod } from './actions/timePeriodsActions';
 import { TimePeriodSettings } from './models/timePeriodSettings';
@@ -279,10 +279,10 @@ async function initializeJobScheduler(storageService: StorageService) {
   await initializeScheduler(storageService);
 
   // Register billing cycles job if it doesn't exist
-  const existingBillingJobs = await jobScheduler.getJobs({ jobName: 'createCompanyBillingCycles' });
+  const existingBillingJobs = await jobScheduler.getJobs({ jobName: 'createClientBillingCycles' });
   if (existingBillingJobs.length === 0) {
     // Register the nightly billing cycle creation job
-    jobScheduler.registerJobHandler('createCompanyBillingCycles', async () => {
+    jobScheduler.registerJobHandler('createClientBillingCycles', async () => {
       // Get all tenants
       const rootKnex = await getConnection(null);
       const tenants = await rootKnex('tenants').select('tenant');
@@ -293,17 +293,17 @@ async function initializeJobScheduler(storageService: StorageService) {
           // Get tenant-specific connection
           const tenantKnex = await getConnection(tenant);
 
-          // Get all active companies for this tenant
-          const companies = await tenantKnex('companies')
+          // Get all active clients for this tenant
+          const clients = await tenantKnex('clients')
             .where({ is_inactive: false })
             .select('*');
 
-          // Create billing cycles for each company
-          for (const company of companies) {
+          // Create billing cycles for each client
+          for (const client of clients) {
             try {
-              await createCompanyBillingCycles(tenantKnex, company);
+              await createClientBillingCycles(tenantKnex, client);
             } catch (error) {
-              logger.error(`Error creating billing cycles for company ${company.company_id} in tenant ${tenant}:`, error);
+              logger.error(`Error creating billing cycles for client ${client.client_id} in tenant ${tenant}:`, error);
             }
           }
         } catch (error) {
@@ -314,7 +314,7 @@ async function initializeJobScheduler(storageService: StorageService) {
 
     // Schedule the billing cycles job
     await jobScheduler.scheduleRecurringJob(
-      'createCompanyBillingCycles',
+      'createClientBillingCycles',
       '24 hours',
       { tenantId: 'system' }
     );

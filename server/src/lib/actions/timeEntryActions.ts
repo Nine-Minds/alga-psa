@@ -2,7 +2,7 @@
 
 // Import and re-export async functions explicitly to comply with 'use server'
 
-import { getCompanyIdForWorkItem } from './timeEntryHelpers';
+import { getClientIdForWorkItem } from './timeEntryHelpers';
 import {
   fetchTimeSheets,
   submitTimeSheet,
@@ -23,14 +23,14 @@ import {
 } from './timeEntryWorkItemActions';
 import {
   fetchTaxRegions,
-  fetchCompanyTaxRateForWorkItem,
+  fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,
   fetchScheduleEntryForWorkItem,
-  fetchDefaultCompanyTaxRateInfoForWorkItem // Added export
+  fetchDefaultClientTaxRateInfoForWorkItem // Added export
 } from './timeEntryServices';
 
 export {
-  getCompanyIdForWorkItem,
+  getClientIdForWorkItem,
   fetchTimeSheets,
   submitTimeSheet,
   fetchAllTimeSheets,
@@ -44,10 +44,10 @@ export {
   addWorkItem,
   deleteWorkItem,
   fetchTaxRegions,
-  fetchCompanyTaxRateForWorkItem,
+  fetchClientTaxRateForWorkItem,
   fetchServicesForTimeEntry,
   fetchScheduleEntryForWorkItem,
-  fetchDefaultCompanyTaxRateInfoForWorkItem // Added export
+  fetchDefaultClientTaxRateInfoForWorkItem // Added export
 };
 
 // Note: Types and schemas previously re-exported from here must now be imported

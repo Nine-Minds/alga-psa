@@ -9,7 +9,7 @@ import {
   createTestService,
   createFixedPlanAssignment,
   addServiceToFixedPlan,
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -66,7 +66,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
   let context: TestContext;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -86,8 +86,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_service_configuration',
         'plan_service_fixed_config',
         'service_catalog',
@@ -95,11 +95,11 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
+        'client_tax_settings',
+        'client_tax_rates',
         'next_number'
       ],
-      companyName: 'Fixed Price Test Company',
+      clientName: 'Fixed Price Test Client',
       userType: 'internal'
     });
 
@@ -166,8 +166,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -216,8 +216,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -259,8 +259,8 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
       });
 
       // Create billing cycle
-      const billingCycleId = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycleId = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -276,9 +276,9 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         plan_type: 'Hourly'
       }, 'plan_id');
 
-      await context.db('company_billing_plans').insert({
-        company_billing_plan_id: uuidv4(),
-        company_id: context.companyId,
+      await context.db('client_billing_plans').insert({
+        client_billing_plan_id: uuidv4(),
+        client_id: context.clientId,
         plan_id: planId,
         start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         is_active: true,
@@ -292,7 +292,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
 
       const ticketId = await context.createEntity('tickets', {
         title: 'Test Ticket',
-        company_id: context.companyId,
+        client_id: context.clientId,
         status_id: statusId,
         entered_by: context.userId,
         entered_at: createTestDateISO(),

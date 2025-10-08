@@ -32,13 +32,14 @@ export interface TenantCreationInput {
     email: string;
   };
   companyName?: string;
+  clientName?: string;
   billingPlan?: string;
 }
 
 export interface TenantCreationResult {
   tenantId: string;
   adminUserId: string;
-  companyId?: string;
+  clientId?: string;
   temporaryPassword: string;
   success: boolean;
   createdAt: string;
@@ -46,7 +47,7 @@ export interface TenantCreationResult {
 
 export interface CreateTenantResult {
   tenantId: string;
-  companyId?: string;
+  clientId?: string;
 }
 
 export interface CreateAdminUserResult {
@@ -60,13 +61,14 @@ export interface CreateAdminUserResult {
  */
 export async function createTenant(
   db: Knex,
-  input: { tenantName: string; email: string; companyName?: string }
+  input: { tenantName: string; email: string; clientName?: string }
 ): Promise<CreateTenantResult> {
   return await db.transaction(async (trx) => {
     // Create tenant first
+    const tenantCompanyName = input.clientName ?? input.tenantName;
     const tenantResult = await trx('tenants')
       .insert({
-        company_name: input.tenantName,
+        client_name: tenantCompanyName,
         email: input.email,
         created_at: new Date(),
         updated_at: new Date()
@@ -75,24 +77,23 @@ export async function createTenant(
     
     const tenantId = tenantResult[0].tenant || tenantResult[0];
     
-    // Create company if companyName is provided
-    let companyId: string | undefined;
-    
-    if (input.companyName) {
-      const companyResult = await trx('companies')
+    // Create client using provided name or fallback to tenant company name
+    let clientId: string | undefined;
+    if (input.clientName ?? tenantCompanyName) {
+      const clientResult = await trx('clients')
         .insert({
-          company_id: uuidv4(),
-          company_name: input.companyName,
+          client_id: uuidv4(),
+          client_name: input.clientName ?? tenantCompanyName,
           tenant: tenantId,
           created_at: new Date(),
           updated_at: new Date()
         })
-        .returning('company_id');
+        .returning('client_id');
       
-      companyId = companyResult[0].company_id || companyResult[0];
+      clientId = clientResult[0].client_id || clientResult[0];
     }
 
-    return { tenantId, companyId };
+    return { tenantId, clientId };
   });
 }
 
@@ -106,7 +107,7 @@ export async function createAdminUser(
     firstName: string;
     lastName: string;
     email: string;
-    companyId?: string;
+    clientId?: string;
   }
 ): Promise<CreateAdminUserResult> {
   return await db.transaction(async (trx) => {
@@ -181,14 +182,14 @@ export async function createAdminUser(
 }
 
 /**
- * Setup tenant data (email settings, company associations, etc.)
+ * Setup tenant data (email settings, client associations, etc.)
  */
 export async function setupTenantData(
   db: Knex,
   input: {
     tenantId: string;
     adminUserId: string;
-    companyId?: string;
+    clientId?: string;
     billingPlan?: string;
   }
 ): Promise<{ setupSteps: string[] }> {
@@ -211,20 +212,20 @@ export async function setupTenantData(
       console.log('Tenant email settings already exist, skipping');
     }
 
-    // Create tenant-company association if we have a company
-    if (input.companyId) {
+    // Create tenant-client association if we have a client
+    if (input.clientId) {
       try {
         await trx('tenant_companies').insert({
           tenant: input.tenantId,
-          company_id: input.companyId,
+          client_id: input.clientId,
           is_default: true,
           created_at: new Date(),
           updated_at: new Date()
         });
-        setupSteps.push('tenant_company_association');
+        setupSteps.push('tenant_client_association');
       } catch (error) {
         // If it already exists, that's fine
-        console.log('Tenant-company association already exists, skipping');
+        console.log('Tenant-client association already exists, skipping');
       }
     }
 
@@ -244,7 +245,7 @@ export async function createTenantComplete(
     const tenantResult = await createTenant(db, {
       tenantName: input.tenantName,
       email: input.adminUser.email,
-      companyName: input.companyName,
+      clientName: input.clientName,
     });
 
     // Step 2: Create admin user
@@ -253,21 +254,21 @@ export async function createTenantComplete(
       firstName: input.adminUser.firstName,
       lastName: input.adminUser.lastName,
       email: input.adminUser.email,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
     });
 
     // Step 3: Setup tenant data
     await setupTenantData(db, {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
       billingPlan: input.billingPlan,
     });
 
     return {
       tenantId: tenantResult.tenantId,
       adminUserId: userResult.userId,
-      companyId: tenantResult.companyId,
+      clientId: tenantResult.clientId,
       temporaryPassword: userResult.temporaryPassword,
       success: true,
       createdAt: new Date().toISOString(),
@@ -292,7 +293,7 @@ export async function rollbackTenant(db: Knex, tenantId: string): Promise<void> 
     await deleteTenantScopedRows(trx, 'roles', tenantId);
     await deleteTenantScopedRows(trx, 'tenant_companies', tenantId);
     await deleteTenantScopedRows(trx, 'tenant_email_settings', tenantId);
-    await deleteTenantScopedRows(trx, 'companies', tenantId);
+    await deleteTenantScopedRows(trx, 'clients', tenantId);
     await deleteTenantScopedRows(trx, 'tenants', tenantId);
   });
 }

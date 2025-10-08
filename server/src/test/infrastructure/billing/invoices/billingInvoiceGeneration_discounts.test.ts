@@ -83,30 +83,30 @@ async function configureNyTax(taxPercentage = 10) {
     start_date: '2025-01-01T00:00:00.000Z'
   });
 
-  await context.db('company_tax_settings')
+  await context.db('client_tax_settings')
     .insert({
       tenant: context.tenantId,
-      company_id: context.companyId,
+      client_id: context.clientId,
       is_reverse_charge_applicable: false
     })
-    .onConflict(['tenant', 'company_id'])
+    .onConflict(['tenant', 'client_id'])
     .merge({ is_reverse_charge_applicable: false });
 
-  await context.db('company_tax_rates')
-    .where({ tenant: context.tenantId, company_id: context.companyId })
+  await context.db('client_tax_rates')
+    .where({ tenant: context.tenantId, client_id: context.clientId })
     .update({ is_default: false })
     .catch(() => undefined);
 
-  await context.db('company_tax_rates')
+  await context.db('client_tax_rates')
     .insert({
-      company_tax_rates_id: uuidv4(),
+      client_tax_rates_id: uuidv4(),
       tenant: context.tenantId,
-      company_id: context.companyId,
+      client_id: context.clientId,
       tax_rate_id: taxRateId,
       is_default: true,
       location_id: null
     })
-    .onConflict(['company_id', 'tax_rate_id', 'tenant'])
+    .onConflict(['client_id', 'tax_rate_id', 'tenant'])
     .merge({ is_default: true, location_id: null });
 
   await assignServiceTaxRate(context, '*', 'US-NY', { onlyUnset: true });
@@ -125,18 +125,18 @@ describe('Billing Invoice Discount Applications', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_services',
         'service_catalog',
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
+        'client_tax_settings',
+        'client_tax_rates',
         'transactions'
       ],
-      companyName: 'Test Company',
+      clientName: 'Test Client',
       userType: 'internal'
     });
 
@@ -159,7 +159,7 @@ describe('Billing Invoice Discount Applications', () => {
     mockedTenantId = mockContext.tenantId;
     mockedUserId = mockContext.userId;
 
-    expect(context.company.is_tax_exempt).toBe(false);
+    expect(context.client.is_tax_exempt).toBe(false);
   }, 30000);
 
   afterEach(async () => {
@@ -196,7 +196,7 @@ describe('Billing Invoice Discount Applications', () => {
       expect(serviceBTax?.tax_rate_id).toBeTruthy();
 
       const invoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: serviceA,
@@ -266,7 +266,7 @@ describe('Billing Invoice Discount Applications', () => {
       await configureNyTax(10);
 
       const invoice = await generateManualInvoice({
-        companyId: context.companyId,
+        clientId: context.clientId,
         items: [
           {
             service_id: serviceA,
@@ -330,7 +330,7 @@ describe('Billing Invoice Discount Applications', () => {
     await configureNyTax(10);
 
     const invoice = await generateManualInvoice({
-      companyId: context.companyId,
+      clientId: context.clientId,
       items: [
         {
           service_id: serviceId,
@@ -388,7 +388,7 @@ describe('Billing Invoice Discount Applications', () => {
     await configureNyTax(10);
 
     const invoice = await generateManualInvoice({
-      companyId: context.companyId,
+      clientId: context.clientId,
       items: [
         {
           service_id: serviceId,

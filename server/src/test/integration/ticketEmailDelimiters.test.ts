@@ -19,7 +19,7 @@ interface TicketRecord {
   ticket_id: string;
   ticket_number: string;
   title: string;
-  company_email?: string | null;
+  client_email?: string | null;
   contact_email?: string | null;
   assigned_to_email?: string | null;
   email_metadata?: { threadId?: string | null } | null;
