@@ -4,9 +4,12 @@ import { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from 'serv
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
-import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
+import { getAllPriorities, getPrioritiesByBoardType } from 'server/src/lib/actions/priorityActions';
 import { getAllClients, getClientById } from 'server/src/lib/actions/client-actions/clientActions';
 import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
+import { createTenantKnex } from 'server/src/lib/db';
+import { withTransaction } from '@alga-psa/shared/db';
+import { Knex } from 'knex';
 
 export interface TicketFormData {
   users: IUser[];
@@ -103,10 +106,25 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       throw new Error('No authenticated user found');
     }
 
-    // Client portal users only need priorities for ticket creation
-    // Clients are handled automatically based on the user's associated client
-    const priorities = await getAllPriorities('ticket').catch(error => {
-      console.error('Error fetching priorities:', error);
+    const { knex: db, tenant } = await createTenantKnex();
+
+    // Get the default board for client portal tickets
+    const defaultBoard = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const board = await trx('boards')
+        .select('board_id', 'priority_type')
+        .where({ tenant, is_default: true })
+        .first();
+
+      return board;
+    });
+
+    if (!defaultBoard) {
+      throw new Error('No default board found for client portal tickets');
+    }
+
+    // Get priorities filtered by the default board's priority type
+    const priorities = await getPrioritiesByBoardType(defaultBoard.board_id, 'ticket').catch((error: unknown) => {
+      console.error('Error fetching priorities for default board:', error);
       return [];
     });
 
