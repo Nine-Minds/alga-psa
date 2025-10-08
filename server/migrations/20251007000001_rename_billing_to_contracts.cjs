@@ -219,10 +219,7 @@ async function createClientContracts(knex, state) {
 
   await addTenantForeignKey(knex, 'client_contracts', 'client_contracts_tenant_fkey');
 
-  console.log('Backfilling client_contracts from company_plan_bundles...');
-
-  const hasClientId = await knex.schema.hasColumn('company_plan_bundles', 'client_id');
-  const idColumn = hasClientId ? 'client_id' : 'company_id';
+  console.log('Backfilling client_contracts from client_plan_bundles...');
 
   await knex.raw(`
     INSERT INTO client_contracts (
@@ -230,9 +227,9 @@ async function createClientContracts(knex, state) {
       start_date, end_date, is_active, created_at, updated_at
     )
     SELECT
-      cpb.tenant, cpb.company_bundle_id, cpb.${idColumn}, cpb.bundle_id,
+      cpb.tenant, gen_random_uuid(), cpb.client_id, cpb.bundle_id,
       cpb.start_date, cpb.end_date, cpb.is_active, cpb.created_at, cpb.updated_at
-    FROM company_plan_bundles cpb
+    FROM client_plan_bundles cpb
     ON CONFLICT (tenant, client_contract_id) DO NOTHING
   `);
 
@@ -284,35 +281,40 @@ async function createContractLineMappings(knex, state) {
 }
 
 async function addContractIdColumns(knex, state) {
-  const hasColumn = await knex.schema.hasColumn('company_billing_plans', 'client_contract_id');
+  const hasColumn = await knex.schema.hasColumn('client_billing_plans', 'client_contract_id');
   if (hasColumn) {
-    console.log('company_billing_plans.client_contract_id already exists, skipping');
+    console.log('client_billing_plans.client_contract_id already exists, skipping');
     return;
   }
 
-  console.log('Adding client_contract_id column to company_billing_plans...');
+  console.log('Adding client_contract_id column to client_billing_plans...');
 
-  await knex.schema.table('company_billing_plans', (table) => {
+  await knex.schema.table('client_billing_plans', (table) => {
     table.uuid('client_contract_id');
   });
 
-  state.addedColumns.push({ table: 'company_billing_plans', column: 'client_contract_id' });
+  state.addedColumns.push({ table: 'client_billing_plans', column: 'client_contract_id' });
 }
 
 async function backfillContractIds(knex) {
-  console.log('Backfilling company_billing_plans.client_contract_id from company_bundle_id...');
+  console.log('Backfilling client_billing_plans.client_contract_id from client_contracts...');
 
   await knex.raw(`
-    UPDATE company_billing_plans
-    SET client_contract_id = company_bundle_id
-    WHERE client_contract_id IS NULL AND company_bundle_id IS NOT NULL
+    UPDATE client_billing_plans cbp
+    SET client_contract_id = cc.client_contract_id
+    FROM client_contracts cc
+    JOIN contract_line_mappings clm ON clm.tenant = cc.tenant AND clm.contract_id = cc.contract_id
+    WHERE cbp.tenant = cc.tenant
+      AND cbp.client_id = cc.client_id
+      AND cbp.plan_id = clm.plan_id
+      AND cbp.client_contract_id IS NULL
   `);
 
-  const [{ count }] = await knex('company_billing_plans')
+  const [{ count }] = await knex('client_billing_plans')
     .whereNotNull('client_contract_id')
     .count('* as count');
 
-  console.log(`  ✓ Backfilled ${count} rows in company_billing_plans`);
+  console.log(`  ✓ Backfilled ${count} rows in client_billing_plans`);
 }
 
 async function createContractLinesTable(knex, state) {
