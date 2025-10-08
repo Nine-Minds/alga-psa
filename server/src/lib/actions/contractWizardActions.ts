@@ -8,11 +8,18 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 import BillingPlanFixedConfig from 'server/src/lib/models/billingPlanFixedConfig';
+import { PlanServiceConfigurationService } from 'server/src/lib/services/planServiceConfigurationService';
 
 type FixedServiceInput = {
   service_id: string;
   service_name?: string;
   quantity?: number;
+};
+
+type HourlyServiceInput = {
+  service_id: string;
+  service_name?: string;
+  hourly_rate?: number; // cents
 };
 
 export type ContractWizardSubmission = {
@@ -27,11 +34,15 @@ export type ContractWizardSubmission = {
   fixed_base_rate?: number; // cents
   enable_proration: boolean;
   fixed_services: FixedServiceInput[];
+  hourly_services?: HourlyServiceInput[];
+  minimum_billable_time?: number;
+  round_up_to_nearest?: number;
 };
 
 export type ContractWizardResult = {
   bundle_id: string;
   plan_id?: string;
+  plan_ids?: string[];
 };
 
 function roundToTwo(value: number): number {
@@ -73,12 +84,23 @@ export async function createContractFromWizard(
 
     let createdPlanId: string | undefined;
 
-    const filteredServices = (submission.fixed_services || []).filter(
+    const filteredFixedServices = (submission.fixed_services || []).filter(
+      (service) => service?.service_id
+    );
+    const filteredHourlyServices = (submission.hourly_services || []).filter(
       (service) => service?.service_id
     );
 
-    if (filteredServices.length > 0) {
+    const createdPlanIds: string[] = [];
+    let primaryPlanId: string | undefined;
+    let nextDisplayOrder = 0;
+
+    if (filteredFixedServices.length > 0) {
       const planId = uuidv4();
+      createdPlanIds.push(planId);
+      if (!primaryPlanId) {
+        primaryPlanId = planId;
+      }
       createdPlanId = planId;
 
       await trx('billing_plans').insert({
@@ -105,11 +127,11 @@ export async function createContractFromWizard(
       });
 
       const totalQuantity =
-        filteredServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) ||
-        filteredServices.length;
+        filteredFixedServices.reduce((sum, svc) => sum + (svc.quantity ?? 1), 0) ||
+        filteredFixedServices.length;
       let allocated = 0;
 
-      for (const [index, service] of filteredServices.entries()) {
+      for (const [index, service] of filteredFixedServices.entries()) {
         const quantity = service.quantity ?? 1;
         await trx('plan_services').insert({
           tenant,
@@ -124,7 +146,7 @@ export async function createContractFromWizard(
           const share = quantity / totalQuantity;
           const provisionalValue = baseRateDollars * share;
 
-          if (index === filteredServices.length - 1) {
+          if (index === filteredFixedServices.length - 1) {
             serviceBaseRate = roundToTwo(baseRateDollars - allocated);
           } else {
             serviceBaseRate = roundToTwo(provisionalValue);
@@ -158,7 +180,57 @@ export async function createContractFromWizard(
         tenant,
         bundle_id: bundleId,
         plan_id: planId,
-        display_order: 0,
+        display_order: nextDisplayOrder++,
+        created_at: now,
+      });
+    }
+
+    const planServiceConfigService = new PlanServiceConfigurationService(trx, tenant);
+
+    if (filteredHourlyServices.length > 0) {
+      const hourlyPlanId = uuidv4();
+      createdPlanIds.push(hourlyPlanId);
+      if (!primaryPlanId) {
+        primaryPlanId = hourlyPlanId;
+      }
+
+      await trx('billing_plans').insert({
+        tenant,
+        plan_id: hourlyPlanId,
+        plan_name: `${submission.contract_name} - Hourly`,
+        description: submission.description ?? null,
+        billing_frequency: 'monthly',
+        is_custom: true,
+        plan_type: 'Hourly',
+      });
+
+      const minimumBillable = submission.minimum_billable_time ?? 0;
+      const roundUp = submission.round_up_to_nearest ?? 0;
+
+      for (const service of filteredHourlyServices) {
+        await trx('plan_services').insert({
+          tenant,
+          plan_id: hourlyPlanId,
+          service_id: service.service_id,
+          quantity: 1,
+          custom_rate: null,
+        });
+        await planServiceConfigService.upsertPlanServiceHourlyConfiguration(
+          hourlyPlanId,
+          service.service_id,
+          {
+            hourly_rate: service.hourly_rate ?? 0,
+            minimum_billable_time: minimumBillable,
+            round_up_to_nearest: roundUp,
+          }
+        );
+      }
+
+      await trx('bundle_billing_plans').insert({
+        tenant,
+        bundle_id: bundleId,
+        plan_id: hourlyPlanId,
+        display_order: nextDisplayOrder++,
         created_at: now,
       });
     }
@@ -180,7 +252,8 @@ export async function createContractFromWizard(
 
     return {
       bundle_id: bundleId,
-      plan_id: createdPlanId,
+      plan_id: primaryPlanId,
+      plan_ids: createdPlanIds,
     };
   });
 }

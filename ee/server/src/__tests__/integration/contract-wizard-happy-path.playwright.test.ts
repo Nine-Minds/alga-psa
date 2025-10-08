@@ -5,6 +5,7 @@
  * - UI interactions are driven through automation IDs harvested from the reflection system (`__UI_STATE__`).
  * - Fail-fast listeners surface client/network/server errors immediately to tighten feedback.
  * - Database assertions validate that finishing the wizard persists bundles, plans, and fixed-fee configs.
+ * - RBI Reminder - make sure server is not running independently of playwright test, so that server side is loaded in the same process to allow mocking to work correctly
  */
 
 import { expect, Page, test } from '@playwright/test';
@@ -56,13 +57,6 @@ function getSessionCookieName(): string {
   return process.env.NODE_ENV === 'production'
     ? '__Secure-authjs.session-token'
     : 'authjs.session-token';
-}
-
-function shouldAttachDomain(hostname: string): boolean {
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return false;
-  }
-  return hostname.length > 0;
 }
 
 async function setupAuthenticatedSession(
@@ -411,7 +405,48 @@ async function seedFixedServiceForTenant(
   return { serviceTypeId, serviceId };
 }
 
+async function seedHourlyServiceForTenant(
+  db: Knex,
+  tenantId: string,
+  serviceName: string,
+  now: Date,
+  defaultRateCents = 12500
+): Promise<{ serviceTypeId: string; serviceId: string }> {
+  const serviceTypeId = uuidv4();
+  const serviceId = uuidv4();
+
+  await db('service_types').insert({
+    id: serviceTypeId,
+    tenant: tenantId,
+    name: `Hourly Type ${serviceName}`,
+    billing_method: 'per_unit',
+    is_active: true,
+    description: 'Playwright hourly service type',
+    order_number: 2,
+    standard_service_type_id: null,
+    created_at: now,
+    updated_at: now,
+  });
+
+  await db('service_catalog').insert({
+    service_id: serviceId,
+    tenant: tenantId,
+    service_name: serviceName,
+    description: 'Playwright hourly service',
+    custom_service_type_id: serviceTypeId,
+    billing_method: 'per_unit',
+    default_rate: defaultRateCents,
+    unit_of_measure: 'hour',
+    category_id: null,
+    tax_rate_id: null,
+  });
+
+  return { serviceTypeId, serviceId };
+}
+
 async function cleanupContractArtifacts(db: Knex, tenantId: string): Promise<void> {
+  await db('user_type_rates').where({ tenant: tenantId }).del().catch(() => {});
+  await db('plan_service_hourly_configs').where({ tenant: tenantId }).del().catch(() => {});
   await db('plan_service_fixed_config').where({ tenant: tenantId }).del().catch(() => {});
   await db('plan_service_configuration').where({ tenant: tenantId }).del().catch(() => {});
   await db('plan_services').where({ tenant: tenantId }).del().catch(() => {});
@@ -434,6 +469,13 @@ async function completeContractWizardFlow(
       required: boolean;
       number: string;
       amountCents?: number;
+    };
+    hourlyService?: {
+      serviceId: string;
+      serviceName: string;
+      hourlyRate?: number;
+      minimumBillableTime?: number;
+      roundUpToNearest?: number;
     };
   }
 ): Promise<void> {
@@ -544,6 +586,29 @@ async function completeContractWizardFlow(
     await expect(
       page.getByRole('heading', { name: 'Hourly Services' }).first()
     ).toBeVisible({ timeout: 3000 });
+
+    if (options?.hourlyService) {
+      const hourly = options.hourlyService;
+      await page.getByRole('button', { name: /Add Hourly Service/i }).click();
+
+      const serviceSelect = page.getByRole('combobox', { name: /Select a service/i }).last();
+      await serviceSelect.click();
+      await page.getByRole('option', { name: hourly.serviceName }).click();
+
+      if (hourly.hourlyRate !== undefined) {
+        const rateLocator = page.locator('#hourly-rate-0');
+        await rateLocator.fill((hourly.hourlyRate / 100).toFixed(2));
+        await rateLocator.press('Tab');
+      }
+
+      if (hourly.minimumBillableTime !== undefined) {
+        await page.fill('#minimum_billable_time', String(hourly.minimumBillableTime));
+      }
+
+      if (hourly.roundUpToNearest !== undefined) {
+        await page.fill('#round_up_to_nearest', String(hourly.roundUpToNearest));
+      }
+    }
 
     const remainingHeadings: Array<{ heading: string; buttonId: string }> = [
       { heading: 'Bucket Hours', buttonId: 'wizard-next' },
@@ -730,6 +795,101 @@ test.describe('Contract Wizard Happy Path', () => {
         .first();
       expect(planServiceFixedConfig).toBeDefined();
       expect(Number(planServiceFixedConfig?.base_rate)).toBeCloseTo(500, 2);
+    } finally {
+      if (tenantData) {
+        const tenantId = tenantData.tenant.tenantId;
+        await cleanupContractArtifacts(db, tenantId);
+        await db('service_catalog').where({ tenant: tenantId }).del().catch(() => {});
+        await db('service_types').where({ tenant: tenantId }).del().catch(() => {});
+        await rollbackTenant(db, tenantId).catch(() => {});
+      }
+      await db.destroy();
+    }
+  });
+
+  test('creates hourly plan and service configuration via wizard', async ({ page }) => {
+    test.setTimeout(300000);
+    const db = createTestDbConnection();
+    let tenantData: TenantTestData | null = null;
+    const now = new Date();
+    const fixedServiceName = `Playwright Fixed Service ${uuidv4().slice(0, 8)}`;
+    const hourlyServiceName = `Playwright Hourly Service ${uuidv4().slice(0, 8)}`;
+    const contractName = `Playwright Contract ${uuidv4().slice(0, 8)}`;
+    const hourlyRateCents = 16500;
+    const minimumBillableTime = 15;
+    const roundUpMinutes = 30;
+
+    try {
+      tenantData = await createTestTenant(db, {
+        companyName: `Contract Wizard Client ${uuidv4().slice(0, 6)}`,
+      });
+
+      const tenantId = tenantData.tenant.tenantId;
+      await markOnboardingComplete(db, tenantId, now);
+      await seedFixedServiceForTenant(db, tenantId, fixedServiceName, now);
+      const { serviceId: hourlyServiceId } = await seedHourlyServiceForTenant(
+        db,
+        tenantId,
+        hourlyServiceName,
+        now,
+        hourlyRateCents
+      );
+      await ensureRoleHasPermission(db, tenantId, 'Admin', [
+        { resource: 'client', action: 'read' },
+        { resource: 'service', action: 'read' },
+        { resource: 'billing', action: 'create' },
+        { resource: 'billing', action: 'update' },
+      ]);
+
+      await completeContractWizardFlow(page, tenantData, fixedServiceName, contractName, {
+        baseRate: 500,
+        hourlyService: {
+          serviceId: hourlyServiceId,
+          serviceName: hourlyServiceName,
+          hourlyRate: hourlyRateCents,
+          minimumBillableTime,
+          roundUpToNearest: roundUpMinutes,
+        },
+      });
+
+      const bundle = await db('plan_bundles')
+        .where({ tenant: tenantId, bundle_name: contractName })
+        .first();
+      expect(bundle).toBeDefined();
+
+      const bundlePlans = await db('bundle_billing_plans')
+        .where({ tenant: tenantId, bundle_id: bundle!.bundle_id })
+        .orderBy('display_order', 'asc');
+      expect(bundlePlans.length).toBeGreaterThanOrEqual(2);
+
+      const planIds = bundlePlans.map((bp: any) => bp.plan_id);
+      const hourlyPlan = await db('billing_plans')
+        .whereIn('plan_id', planIds)
+        .andWhere({ tenant: tenantId, plan_type: 'Hourly' })
+        .first();
+      expect(hourlyPlan).toBeDefined();
+
+      const hourlyPlanId = hourlyPlan!.plan_id;
+
+      const planServiceRow = await db('plan_services')
+        .where({ tenant: tenantId, plan_id: hourlyPlanId, service_id: hourlyServiceId })
+        .first();
+      expect(planServiceRow).toBeDefined();
+      expect(planServiceRow?.quantity).toBe(1);
+
+      const hourlyConfigRow = await db('plan_service_configuration')
+        .where({ tenant: tenantId, plan_id: hourlyPlanId, service_id: hourlyServiceId })
+        .andWhere({ configuration_type: 'Hourly' })
+        .first();
+      expect(hourlyConfigRow).toBeDefined();
+
+      const hourlyConfigDetails = await db('plan_service_hourly_configs')
+        .where({ tenant: tenantId, config_id: hourlyConfigRow!.config_id })
+        .first();
+      expect(hourlyConfigDetails).toBeDefined();
+      expect(Number(hourlyConfigDetails?.hourly_rate)).toBe(hourlyRateCents);
+      expect(hourlyConfigDetails?.minimum_billable_time).toBe(minimumBillableTime);
+      expect(hourlyConfigDetails?.round_up_to_nearest).toBe(roundUpMinutes);
     } finally {
       if (tenantData) {
         const tenantId = tenantData.tenant.tenantId;

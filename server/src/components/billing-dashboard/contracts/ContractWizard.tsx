@@ -249,6 +249,9 @@ export function ContractWizard({
         fixed_base_rate: wizardData.fixed_base_rate,
         enable_proration: wizardData.enable_proration,
         fixed_services: wizardData.fixed_services,
+        hourly_services: wizardData.hourly_services,
+        minimum_billable_time: wizardData.minimum_billable_time,
+        round_up_to_nearest: wizardData.round_up_to_nearest,
       });
 
       const completedData: ContractWizardData = {
