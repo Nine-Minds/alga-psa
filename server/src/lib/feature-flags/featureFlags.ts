@@ -99,14 +99,14 @@ export class FeatureFlags {
     flagKey: string,
     context: FeatureFlagContext = {}
   ): Promise<boolean> {
+    if (featureFlagsAreDisabled()) {
+      return true;
+    }
+
     // Check cache first
     const cached = this.getCachedValue(flagKey);
     if (cached !== null && typeof cached === 'boolean') {
       return cached;
-    }
-
-    if (featureFlagsAreDisabled()) {
-      return true;
     }
 
     // If analytics is disabled, use default values
