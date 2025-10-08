@@ -1580,7 +1580,8 @@ async function syncBaseVirtualServiceRouting(
     desiredManagedGatewaysList,
   );
 
-  const requiresMetadataSanitization = needsMetadataSanitization(baseVirtualService);
+  const metadataSanitizationReasons = getMetadataSanitizationReasons(baseVirtualService);
+  const requiresMetadataSanitization = metadataSanitizationReasons.length > 0;
 
   console.log('[syncBaseVS] All change flags:', {
     hostsChanged,
@@ -1589,6 +1590,7 @@ async function syncBaseVirtualServiceRouting(
     managedGatewaysChanged,
     httpRoutesChanged,
     requiresMetadataSanitization,
+    metadataSanitizationReasons,
   });
 
   if (
@@ -1604,6 +1606,11 @@ async function syncBaseVirtualServiceRouting(
   }
 
   console.log('[syncBaseVS] Changes detected, updating base VirtualService');
+  if (requiresMetadataSanitization) {
+    console.log('[syncBaseVS] Metadata sanitization required before writing base VirtualService', {
+      reasons: metadataSanitizationReasons,
+    });
+  }
 
   if (hostsChanged) {
     baseVirtualService.spec.hosts = desiredHosts;
@@ -1669,28 +1676,35 @@ async function syncBaseVirtualServiceRouting(
   }
 }
 
-function needsMetadataSanitization(resource: Record<string, any> | undefined | null): boolean {
+const RUNTIME_METADATA_FIELDS = [
+  'creationTimestamp',
+  'deletionTimestamp',
+  'resourceVersion',
+  'uid',
+  'generation',
+  'managedFields',
+  'selfLink',
+];
+
+function getMetadataSanitizationReasons(resource: Record<string, any> | undefined | null): string[] {
+  const reasons: string[] = [];
+
   if (!resource || typeof resource !== 'object') {
-    return false;
+    return reasons;
+  }
+
+  if ('status' in resource) {
+    reasons.push('status field present');
   }
 
   const metadata = resource.metadata;
   if (!metadata || typeof metadata !== 'object') {
-    return false;
+    return reasons;
   }
 
-  const runtimeFields = [
-    'creationTimestamp',
-    'deletionTimestamp',
-    'resourceVersion',
-    'uid',
-    'generation',
-    'managedFields',
-    'selfLink',
-  ];
-
-  if (runtimeFields.some((field) => field in metadata)) {
-    return true;
+  const presentRuntimeFields = RUNTIME_METADATA_FIELDS.filter((field) => field in metadata);
+  if (presentRuntimeFields.length > 0) {
+    reasons.push(`metadata fields: ${presentRuntimeFields.join(', ')}`);
   }
 
   if (
@@ -1698,14 +1712,14 @@ function needsMetadataSanitization(resource: Record<string, any> | undefined | n
     typeof metadata.annotations === 'object' &&
     'kubectl.kubernetes.io/last-applied-configuration' in metadata.annotations
   ) {
-    return true;
+    reasons.push('last-applied annotation present');
   }
 
   if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
-    return true;
+    reasons.push('empty finalizers array present');
   }
 
-  return false;
+  return reasons;
 }
 
 function sanitizeKubernetesResourceForApply(resource: Record<string, any> | undefined | null): void {
@@ -1713,8 +1727,15 @@ function sanitizeKubernetesResourceForApply(resource: Record<string, any> | unde
     return;
   }
 
+  let statusRemoved = false;
+  const removedMetadataFields: string[] = [];
+  const removedAnnotations: string[] = [];
+  let annotationsObjectCleared = false;
+  let emptyFinalizersRemoved = false;
+
   if ('status' in resource) {
     delete resource.status;
+    statusRemoved = true;
   }
 
   const metadata = resource.metadata;
@@ -1722,31 +1743,43 @@ function sanitizeKubernetesResourceForApply(resource: Record<string, any> | unde
     return;
   }
 
-  const runtimeFields = [
-    'creationTimestamp',
-    'deletionTimestamp',
-    'resourceVersion',
-    'uid',
-    'generation',
-    'managedFields',
-    'selfLink',
-  ];
-
-  for (const field of runtimeFields) {
+  for (const field of RUNTIME_METADATA_FIELDS) {
     if (field in metadata) {
       delete (metadata as Record<string, unknown>)[field];
+      removedMetadataFields.push(field);
     }
   }
 
   if (metadata.annotations && typeof metadata.annotations === 'object') {
-    delete metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'];
+    if ('kubectl.kubernetes.io/last-applied-configuration' in metadata.annotations) {
+      delete metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'];
+      removedAnnotations.push('kubectl.kubernetes.io/last-applied-configuration');
+    }
     if (Object.keys(metadata.annotations).length === 0) {
       delete metadata.annotations;
+      annotationsObjectCleared = true;
     }
   }
 
   if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
     delete metadata.finalizers;
+    emptyFinalizersRemoved = true;
+  }
+
+  if (
+    statusRemoved ||
+    removedMetadataFields.length > 0 ||
+    removedAnnotations.length > 0 ||
+    annotationsObjectCleared ||
+    emptyFinalizersRemoved
+  ) {
+    console.log('[syncBaseVS] Sanitized base VirtualService metadata', {
+      statusRemoved,
+      removedMetadataFields,
+      removedAnnotations,
+      annotationsObjectCleared,
+      emptyFinalizersRemoved,
+    });
   }
 }
 
