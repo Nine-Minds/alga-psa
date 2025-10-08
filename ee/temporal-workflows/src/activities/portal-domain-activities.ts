@@ -1580,12 +1580,15 @@ async function syncBaseVirtualServiceRouting(
     desiredManagedGatewaysList,
   );
 
+  const requiresMetadataSanitization = needsMetadataSanitization(baseVirtualService);
+
   console.log('[syncBaseVS] All change flags:', {
     hostsChanged,
     gatewaysChanged,
     managedHostsChanged,
     managedGatewaysChanged,
     httpRoutesChanged,
+    requiresMetadataSanitization,
   });
 
   if (
@@ -1593,7 +1596,8 @@ async function syncBaseVirtualServiceRouting(
     !gatewaysChanged &&
     !managedHostsChanged &&
     !managedGatewaysChanged &&
-    !httpRoutesChanged
+    !httpRoutesChanged &&
+    !requiresMetadataSanitization
   ) {
     console.log('[syncBaseVS] No changes detected, skipping file write');
     return;
@@ -1663,6 +1667,45 @@ async function syncBaseVirtualServiceRouting(
       ),
     );
   }
+}
+
+function needsMetadataSanitization(resource: Record<string, any> | undefined | null): boolean {
+  if (!resource || typeof resource !== 'object') {
+    return false;
+  }
+
+  const metadata = resource.metadata;
+  if (!metadata || typeof metadata !== 'object') {
+    return false;
+  }
+
+  const runtimeFields = [
+    'creationTimestamp',
+    'deletionTimestamp',
+    'resourceVersion',
+    'uid',
+    'generation',
+    'managedFields',
+    'selfLink',
+  ];
+
+  if (runtimeFields.some((field) => field in metadata)) {
+    return true;
+  }
+
+  if (
+    metadata.annotations &&
+    typeof metadata.annotations === 'object' &&
+    'kubectl.kubernetes.io/last-applied-configuration' in metadata.annotations
+  ) {
+    return true;
+  }
+
+  if (Array.isArray(metadata.finalizers) && metadata.finalizers.length === 0) {
+    return true;
+  }
+
+  return false;
 }
 
 function sanitizeKubernetesResourceForApply(resource: Record<string, any> | undefined | null): void {

@@ -1171,6 +1171,64 @@ describe('portal domain git integration helpers', () => {
       expect(parsed.status).toBeUndefined();
     });
 
+    it('should sanitize base VirtualService metadata even when routing is unchanged', async () => {
+      process.env.GITHUB_ACCESS_TOKEN = 'test-token';
+      process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
+      process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+      process.env.PORTAL_DOMAIN_GIT_BRANCH = 'main';
+      process.env.PORTAL_DOMAIN_GIT_ROOT = 'portal-domains';
+      process.env.PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE = 'msp/alga-psa-vs';
+      process.env.PORTAL_DOMAIN_SERVICE_HOST = 'sebastian.msp.svc.cluster.local';
+
+      baseVirtualService.metadata.resourceVersion = '12345';
+      baseVirtualService.metadata.creationTimestamp = '2025-01-01T00:00:00Z';
+      baseVirtualService.metadata.annotations['kubectl.kubernetes.io/last-applied-configuration'] = '{"mock":"config"}';
+      baseVirtualService.spec.hosts = ['apps.algapsa.com'];
+      baseVirtualService.spec.gateways = ['istio-system/alga-psa-gw'];
+
+      const repoDir = path.join(tmpDir, 'nm-kube-config');
+
+      const knexMock = Object.assign(
+        (table: string) => {
+          if (table === 'portal_domains') {
+            return {
+              select: () => Promise.resolve([]),
+              where() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+              whereIn() {
+                return {
+                  update: () => Promise.resolve(0),
+                };
+              },
+            };
+          }
+          throw new Error(`Unexpected table ${table}`);
+        },
+        {
+          fn: {
+            now: () => new Date(),
+          },
+        }
+      );
+
+      __setConnectionFactoryForTests(() => Promise.resolve(knexMock as unknown as Knex));
+
+      await applyPortalDomainResources({ tenantId: 'tenant-one', portalDomainId: 'inactive-id' });
+
+      const vsFilePath = path.join(repoDir, 'istio-virtualservice.yaml');
+      const fileContent = await fs.readFile(vsFilePath, 'utf8');
+      const parsed = yamlLoad(fileContent) as any;
+
+      expect(parsed.metadata.resourceVersion).toBeUndefined();
+      expect(parsed.metadata.creationTimestamp).toBeUndefined();
+      expect(parsed.metadata.annotations?.['kubectl.kubernetes.io/last-applied-configuration']).toBeUndefined();
+      expect(parsed.spec.hosts).toEqual(['apps.algapsa.com']);
+      expect(parsed.spec.gateways).toEqual(['istio-system/alga-psa-gw']);
+    });
+
     it('should commit base VirtualService changes to git', async () => {
       process.env.GITHUB_ACCESS_TOKEN = 'test-token';
       process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/mock-config.git';
