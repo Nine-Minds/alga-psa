@@ -23,7 +23,7 @@ export const contactFormSchema = z.object({
   full_name: z.string().min(1, 'Full name is required'),
   email: z.union([z.string().email('Invalid email address'), z.literal(''), z.null()]).optional(),
   phone_number: z.string().optional(),
-  company_id: z.string().uuid('Company ID must be a valid UUID').optional().nullable(),
+  client_id: z.string().uuid('Client ID must be a valid UUID').optional().nullable(),
   role: z.string().optional(),
   notes: z.string().optional(),
   is_inactive: z.boolean().optional()
@@ -36,7 +36,7 @@ export const contactSchema = z.object({
   full_name: z.string(),
   email: z.string().nullable(),
   phone_number: z.string().nullable(),
-  company_id: z.string().uuid().nullable(),
+  client_id: z.string().uuid().nullable(),
   role: z.string().nullable(),
   notes: z.string().nullable(),
   is_inactive: z.boolean().nullable(),
@@ -87,7 +87,7 @@ export function validateData<T>(schema: z.ZodSchema<T>, data: unknown): T {
 export function cleanNullableFields(data: Record<string, any>): Record<string, any> {
   const cleaned = { ...data };
   const nullableFields = [
-    'email', 'phone_number', 'company_id', 'role', 
+    'email', 'phone_number', 'client_id', 'role', 
     'title', 'department', 'notes', 'login_email'
   ];
   
@@ -225,14 +225,14 @@ export class ContactModel {
       throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
     }
 
-    // If company_id is provided, verify it exists
-    if (input.company_id) {
-      const company = await trx('companies')
-        .where({ company_id: input.company_id, tenant })
+    // If client_id is provided, verify it exists
+    if (input.client_id) {
+      const client = await trx('clients')
+        .where({ client_id: input.client_id, tenant })
         .first();
 
-      if (!company) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected company no longer exists');
+      if (!client) {
+        throw new Error('FOREIGN_KEY_ERROR: The selected client no longer exists');
       }
     }
 
@@ -246,7 +246,7 @@ export class ContactModel {
       full_name: input.full_name.trim(),
       email: input.email.trim().toLowerCase(),
       phone_number: input.phone_number?.trim() || null,
-      company_id: input.company_id || null,
+      client_id: input.client_id || null,
       role: input.role?.trim() || null,
       notes: input.notes?.trim() || null,
       is_inactive: input.is_inactive || false,
@@ -291,8 +291,8 @@ export class ContactModel {
           throw new Error(`VALIDATION_ERROR: The ${field} is required`);
         }
 
-        if (message.includes('violates foreign key constraint') && message.includes('company_id')) {
-          throw new Error('FOREIGN_KEY_ERROR: The selected company is no longer valid');
+        if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
+          throw new Error('FOREIGN_KEY_ERROR: The selected client is no longer valid');
         }
       }
 
@@ -353,16 +353,16 @@ export class ContactModel {
   }
 
   /**
-   * Get contacts by company
+   * Get contacts by client
    */
-  static async getContactsByCompany(
-    companyId: string,
+  static async getContactsByClient(
+    clientId: string,
     tenant: string,
     trx: Knex.Transaction,
     options: { includeInactive?: boolean } = {}
   ): Promise<any[]> {
     let query = trx('contacts')
-      .where({ company_id: companyId, tenant });
+      .where({ client_id: clientId, tenant });
     
     if (!options.includeInactive) {
       query = query.where(function() {

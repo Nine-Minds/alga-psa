@@ -2,7 +2,6 @@ version: '3.8'
 
 x-common-config: &common-config
   build: .
-  container_name: hocuspocus
   ports:
     - "${EXPOSE_HOCUSPOCUS_PORT}:1234"
   environment:
@@ -26,4 +25,4 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
+    driver: bridge

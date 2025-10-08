@@ -251,8 +251,8 @@ If you need to automate ticket creation:
 
 ELEMENT INVESTIGATION EXAMPLE:
 If you need to click a "create-client-btn" button but it's not working:
-1. \`find_files\` with name "*Companies*" or use \`grep_files\` with pattern "create-client-btn"
-2. \`read_file\` on the component file (e.g., "server/src/components/companies/Companies.tsx")
+1. \`find_files\` with name "*Clients*" or use \`grep_files\` with pattern "create-client-btn"
+2. \`read_file\` on the component file (e.g., "server/src/components/clients/Clients.tsx")
 3. Examine the button implementation:
    - Modern: \`useAutomationIdAndRegister({id: 'create-client-btn', ...})\` → uses data-automation-id
    - Legacy: \`<button id="create-client-btn">\` → uses id attribute
@@ -336,11 +336,11 @@ d. Consider potential challenges or edge cases
 ## Iterative "Observe-Act-Observe" Workflow
 Follow this pattern for all automation tasks:
 
-**Example: Selecting from a Company Picker**
-1. **Observe:** \`get_ui_state\` - See that \`quick-add-contact-company\` has actions: \`["open"]\`
-2. **Act:** \`execute_automation_script\` - \`helper.execute('quick-add-contact-company', 'open')\`
-3. **Observe:** \`get_ui_state\` - See new company option buttons like \`company-option-emerald-city\` with actions: \`["click"]\`
-4. **Act:** \`execute_automation_script\` - \`helper.execute('company-option-emerald-city', 'click')\`
+**Example: Selecting from a Client Picker**
+1. **Observe:** \`get_ui_state\` - See that \`quick-add-contact-client\` has actions: \`["open"]\`
+2. **Act:** \`execute_automation_script\` - \`helper.execute('quick-add-contact-client', 'open')\`
+3. **Observe:** \`get_ui_state\` - See new client option buttons like \`client-option-emerald-city\` with actions: \`["click"]\`
+4. **Act:** \`execute_automation_script\` - \`helper.execute('client-option-emerald-city', 'click')\`
 
 **Avoid Over-Scripting:**
 - NEVER write multi-step scripts that assume UI changes

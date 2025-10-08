@@ -197,9 +197,9 @@ export function TimeSheetTable({
                                                     {workItem.project_name} • {workItem.phase_name}
                                                 </div>
                                             )}
-                                            {workItem.type === 'interaction' && workItem.company_name && (
+                                            {workItem.type === 'interaction' && workItem.client_name && (
                                                 <div className="text-xs text-gray-600 mt-1">
-                                                    {workItem.company_name}
+                                                    {workItem.client_name}
                                                     {workItem.contact_name && ` • ${workItem.contact_name}`}
                                                 </div>
                                             )}

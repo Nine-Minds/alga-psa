@@ -7,8 +7,8 @@ import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { hashPassword } from 'server/src/utils/encryption/encryption';
-import { createCompany } from 'server/src/lib/actions/company-actions/companyActions';
-import { createCompanyContact } from 'server/src/lib/actions/contact-actions/contactActions';
+import { createClient as createClientInternal } from 'server/src/lib/actions/client-actions/clientActions';
+import { createClientContact } from 'server/src/lib/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from 'server/src/lib/actions/tenant-settings-actions/tenantSettingsActions';
 import { hasPermission } from 'server/src/lib/auth/rbac';
 
@@ -18,10 +18,10 @@ export interface OnboardingActionResult {
   data?: any;
 }
 
-export interface CompanyInfoData {
+export interface ClientInfoData {
   firstName: string;
   lastName: string;
-  companyName: string;
+  clientName: string;
   email: string;
   newPassword?: string;
 }
@@ -80,7 +80,7 @@ export interface TicketingData {
   statuses?: any[];
 }
 
-export async function saveCompanyInfo(data: CompanyInfoData): Promise<OnboardingActionResult> {
+export async function saveClientInfo(data: ClientInfoData): Promise<OnboardingActionResult> {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -95,7 +95,7 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Update current user with company owner information
+      // Update current user with client owner information
       const updateData: any = {
         first_name: data.firstName,
         last_name: data.lastName,
@@ -127,7 +127,7 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
       await saveTenantOnboardingProgress({
         firstName: data.firstName,
         lastName: data.lastName,
-        companyName: data.companyName,
+        clientName: data.clientName,
         email: data.email
       });
     });
@@ -135,7 +135,7 @@ export async function saveCompanyInfo(data: CompanyInfoData): Promise<Onboarding
     revalidatePath('/msp/onboarding');
     return { success: true };
   } catch (error) {
-    console.error('Error saving company info:', error);
+    console.error('Error saving client info:', error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
@@ -447,27 +447,27 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
 
     const { knex } = await createTenantKnex();
 
-    let companyId: string | undefined = data.clientId;
+    let clientId: string | undefined = data.clientId;
 
     // If we have an existing clientId, update instead of create
-    if (companyId) {
+    if (clientId) {
       await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Update the company
-        await trx('companies')
-          .where({ company_id: companyId, tenant })
+        // Update the client
+        await trx('clients')
+          .where({ client_id: clientId, tenant })
           .update({
-            company_name: data.clientName,
+            client_name: data.clientName,
             url: data.clientUrl,
             updated_at: new Date()
           });
 
         // Update the default location if email or phone changed
-        const defaultLocation = await trx('company_locations')
-          .where({ company_id: companyId, tenant, is_default: true })
+        const defaultLocation = await trx('client_locations')
+          .where({ client_id: clientId, tenant, is_default: true })
           .first();
 
         if (defaultLocation && (data.clientEmail || data.clientPhone)) {
-          await trx('company_locations')
+          await trx('client_locations')
             .where({ location_id: defaultLocation.location_id, tenant })
             .update({
               email: data.clientEmail || defaultLocation.email || '',
@@ -482,21 +482,21 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
         clientEmail: data.clientEmail,
         clientPhone: data.clientPhone,
         clientUrl: data.clientUrl,
-        clientId: companyId
+        clientId: clientId
       });
 
       revalidatePath('/msp/onboarding');
       return { 
         success: true, 
-        data: { clientId: companyId, updated: true }
+        data: { clientId: clientId, updated: true }
       };
     }
 
     // Create new client
     await withTransaction(knex, async (trx: Knex.Transaction) => {
-      // Create the company without email/phone (those go in locations)
-      const companyData = {
-        company_name: data.clientName,
+      // Create the client without email/phone (those go in locations)
+      const clientData = {
+        client_name: data.clientName,
         url: data.clientUrl,
         credit_balance: 0,
         is_inactive: false,
@@ -506,20 +506,20 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
         tenant
       };
 
-      // Use createCompany for consistency and to get all the default setup
-      const result = await createCompany(companyData);
+      // Use createClientInternal for consistency and to get all the default setup
+      const result = await createClientInternal(clientData);
       
       if (!result.success) {
-        throw new Error(result.error || 'Failed to create company');
+        throw new Error(result.error || 'Failed to create client');
       }
 
-      companyId = result.data.company_id;
+      clientId = result.data.client_id;
 
       // Create default location with email and phone if provided
       if (data.clientEmail || data.clientPhone) {
-        await trx('company_locations').insert({
+        await trx('client_locations').insert({
           location_id: require('crypto').randomUUID(),
-          company_id: companyId,
+          client_id: clientId,
           tenant,
           location_name: 'Main Office',
           email: data.clientEmail || '',
@@ -538,19 +538,19 @@ export async function createClient(data: ClientData): Promise<OnboardingActionRe
       }
     });
 
-    if (companyId) {
+    if (clientId) {
       await saveTenantOnboardingProgress({
         clientName: data.clientName,
         clientEmail: data.clientEmail,
         clientPhone: data.clientPhone,
         clientUrl: data.clientUrl,
-        clientId: companyId
+        clientId: clientId
       });
 
       revalidatePath('/msp/onboarding');
       return { 
         success: true, 
-        data: { clientId: companyId }
+        data: { clientId: clientId }
       };
     }
 
@@ -575,12 +575,12 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
 
     const { knex } = await createTenantKnex();
 
-    // First, check if a contact with this email already exists for this company
+    // First, check if a contact with this email already exists for this client
     const existingContact = await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await trx('contacts')
         .where({ 
           email: data.contactEmail.toLowerCase(),
-          company_id: data.clientId,
+          client_id: data.clientId,
           tenant 
         })
         .first();
@@ -625,8 +625,8 @@ export async function addClientContact(data: ClientContactData): Promise<Onboard
     }
 
     // Contact doesn't exist, create it
-    const result = await createCompanyContact({
-      companyId: data.clientId,
+    const result = await createClientContact({
+      clientId: data.clientId,
       fullName: data.contactName,
       email: data.contactEmail,
       jobTitle: data.contactRole
@@ -1114,7 +1114,7 @@ export async function getAvailableRoles(): Promise<{
 
 export async function getOnboardingInitialData(): Promise<{
   success: boolean;
-  data?: Partial<CompanyInfoData>;
+  data?: Partial<ClientInfoData>;
   error?: string;
 }> {
   try {
@@ -1130,8 +1130,8 @@ export async function getOnboardingInitialData(): Promise<{
 
     const { knex } = await createTenantKnex();
 
-    // Get the tenant's company information
-    const company = await knex('companies')
+    // Get the tenant's client information
+    const client = await knex('clients')
       .where({ tenant, is_inactive: false })
       .orderBy('created_at', 'asc')
       .first();
@@ -1142,7 +1142,7 @@ export async function getOnboardingInitialData(): Promise<{
         firstName: currentUser.first_name || '',
         lastName: currentUser.last_name || '',
         email: currentUser.email || '',
-        companyName: company?.company_name || tenant // Use tenant name as fallback
+        clientName: client?.client_name || tenant // Use tenant name as fallback
       }
     };
   } catch (error) {

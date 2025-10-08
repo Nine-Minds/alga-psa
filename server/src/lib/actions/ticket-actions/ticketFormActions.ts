@@ -1,28 +1,28 @@
 'use server'
 
-import { IUser, IBoard, ITicketStatus, IPriority, ICompany, IContact } from 'server/src/interfaces';
+import { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from 'server/src/interfaces';
 import { getAllUsers, getCurrentUser } from 'server/src/lib/actions/user-actions/userActions';
 import { getAllBoards } from 'server/src/lib/actions/board-actions/boardActions';
 import { getTicketStatuses } from 'server/src/lib/actions/status-actions/statusActions';
 import { getAllPriorities } from 'server/src/lib/actions/priorityActions';
-import { getAllCompanies, getCompanyById } from 'server/src/lib/actions/company-actions/companyActions';
-import { getContactsByCompany } from 'server/src/lib/actions/contact-actions/contactActions';
+import { getAllClients, getClientById } from 'server/src/lib/actions/client-actions/clientActions';
+import { getContactsByClient } from 'server/src/lib/actions/contact-actions/contactActions';
 
 export interface TicketFormData {
   users: IUser[];
   boards: IBoard[];
   statuses: ITicketStatus[];
   priorities: IPriority[];
-  companies: ICompany[];
+  clients: IClient[];
   contacts?: IContact[];
-  selectedCompany?: {
-    company_id: string;
-    company_name: string;
+  selectedClient?: {
+    client_id: string;
+    client_name: string;
     client_type: string;
   };
 }
 
-export async function getTicketFormData(prefilledCompanyId?: string): Promise<TicketFormData> {
+export async function getTicketFormData(prefilledClientId?: string): Promise<TicketFormData> {
   try {
     // Get current user first to ensure tenant context
     const user = await getCurrentUser();
@@ -31,7 +31,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
     }
 
     // Fetch required data first
-    const [users, boards, statuses, priorities, companies] = await Promise.all([
+    const [users, boards, statuses, priorities, clients] = await Promise.all([
       getAllUsers(false).catch(error => {
         console.error('Error fetching users:', error);
         return [];
@@ -48,24 +48,24 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
         console.error('Error fetching priorities:', error);
         return [];
       }),
-      getAllCompanies(false).catch(error => {
-        console.error('Error fetching companies:', error);
+      getAllClients(false).catch(error => {
+        console.error('Error fetching clients:', error);
         return [];
       })
     ]);
 
-    // Handle optional prefilled company data separately
-    let selectedCompany: any | null = null;
+    // Handle optional prefilled client data separately
+    let selectedClient: any | null = null;
     let contacts: IContact[] = [];
 
-    if (prefilledCompanyId) {
+    if (prefilledClientId) {
       try {
-        selectedCompany = await getCompanyById(prefilledCompanyId);
-        if (selectedCompany?.client_type === 'company') {
-          contacts = await getContactsByCompany(selectedCompany.company_id).catch(() => []);
+        selectedClient = await getClientById(prefilledClientId);
+        if (selectedClient?.client_type === 'company') {
+          contacts = await getContactsByClient(selectedClient.client_id).catch(() => []);
         }
       } catch (error) {
-        console.error('Error fetching prefilled company data:', error);
+        console.error('Error fetching prefilled client data:', error);
         // Continue without the prefilled data
       }
     }
@@ -75,12 +75,12 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
       boards: boards || [],
       statuses: statuses || [],
       priorities: priorities || [],
-      companies: companies || [],
+      clients: clients || [],
       contacts: contacts.length > 0 ? contacts : undefined,
-      selectedCompany: selectedCompany && selectedCompany.client_type ? {
-        company_id: selectedCompany.company_id,
-        company_name: selectedCompany.company_name,
-        client_type: selectedCompany.client_type
+      selectedClient: selectedClient && selectedClient.client_type ? {
+        client_id: selectedClient.client_id,
+        client_name: selectedClient.client_name,
+        client_type: selectedClient.client_type
       } : undefined
     };
   } catch (error) {
@@ -91,7 +91,7 @@ export async function getTicketFormData(prefilledCompanyId?: string): Promise<Ti
       boards: [],
       statuses: [],
       priorities: [],
-      companies: [],
+      clients: [],
     };
   }
 }
@@ -104,7 +104,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
     }
 
     // Client portal users only need priorities for ticket creation
-    // Companies are handled automatically based on the user's associated company
+    // Clients are handled automatically based on the user's associated client
     const priorities = await getAllPriorities('ticket').catch(error => {
       console.error('Error fetching priorities:', error);
       return [];
@@ -116,7 +116,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       users: [],
       boards: [],
       statuses: [],
-      companies: [],
+      clients: [],
     };
   } catch (error) {
     console.error('Error fetching client ticket form data:', error);
@@ -125,7 +125,7 @@ export async function getClientTicketFormData(): Promise<Partial<TicketFormData>
       boards: [],
       statuses: [],
       priorities: [],
-      companies: [],
+      clients: [],
     };
   }
 }

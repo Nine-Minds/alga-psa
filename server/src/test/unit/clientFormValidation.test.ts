@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  validateCompanyName,
+  validateClientName,
   validateWebsiteUrl,
   validateEmailAddress,
   validatePhoneNumber,
@@ -12,19 +12,19 @@ import {
 } from '../../lib/utils/clientFormValidation';
 
 describe('Client Form Validation', () => {
-  describe('validateCompanyName', () => {
-    it('should accept valid company names', () => {
-      expect(validateCompanyName('Acme Corp')).toBeNull();
-      expect(validateCompanyName('Microsoft Corporation')).toBeNull();
-      expect(validateCompanyName('ABC-123 Industries')).toBeNull();
+  describe('validateClientName', () => {
+    it('should accept valid client names', () => {
+      expect(validateClientName('Acme Corp')).toBeNull();
+      expect(validateClientName('Microsoft Corporation')).toBeNull();
+      expect(validateClientName('ABC-123 Industries')).toBeNull();
     });
 
-    it('should reject invalid company names', () => {
-      expect(validateCompanyName('')).toBe('Company name is required');
-      expect(validateCompanyName('1')).toBe('Company name must be at least 2 characters long');
-      expect(validateCompanyName('123')).toBe('Company name must contain letters and be meaningful');
-      expect(validateCompanyName('!!!')).toBe('Company name must contain letters and be meaningful');
-      expect(validateCompanyName('A')).toBe('Company name must be at least 2 characters long');
+    it('should reject invalid client names', () => {
+      expect(validateClientName('')).toBe('Client name is required');
+      expect(validateClientName('1')).toBe('Client name must be at least 2 characters long');
+      expect(validateClientName('123')).toBe('Client name must contain letters and be meaningful');
+      expect(validateClientName('!!!')).toBe('Client name must contain letters and be meaningful');
+      expect(validateClientName('A')).toBe('Client name must be at least 2 characters long');
     });
   });
 
@@ -45,7 +45,7 @@ describe('Client Form Validation', () => {
   describe('validateEmailAddress', () => {
     it('should accept valid email addresses', () => {
       expect(validateEmailAddress('user@example.com')).toBeNull();
-      expect(validateEmailAddress('test.email@company.org')).toBeNull();
+      expect(validateEmailAddress('test.email@client.org')).toBeNull();
       expect(validateEmailAddress('')).toBeNull(); // Optional field
     });
 
@@ -134,7 +134,7 @@ describe('Client Form Validation', () => {
   describe('validateClientForm', () => {
     it('should validate a complete form successfully', () => {
       const result = validateClientForm({
-        companyName: 'Acme Corp',
+        clientName: 'Acme Corp',
         websiteUrl: 'https://acme.com',
         email: 'info@acme.com',
         phone: '+1-555-123-4567',
@@ -153,7 +153,7 @@ describe('Client Form Validation', () => {
 
     it('should return errors for invalid form data', () => {
       const result = validateClientForm({
-        companyName: '1', // Invalid
+        clientName: '1', // Invalid
         websiteUrl: '1', // Invalid
         email: '😀@test.com', // Invalid
         phone: '123', // Invalid
@@ -167,7 +167,7 @@ describe('Client Form Validation', () => {
       });
 
       expect(result.isValid).toBe(false);
-      expect(result.errors.companyName).toContain('2 characters');
+      expect(result.errors.clientName).toContain('2 characters');
       expect(result.errors.websiteUrl).toContain('valid website URL');
       expect(result.errors.email).toContain('emojis');
       expect(result.errors.phone).toContain('valid phone number');
@@ -181,7 +181,7 @@ describe('Client Form Validation', () => {
 
     it('should allow empty optional fields', () => {
       const result = validateClientForm({
-        companyName: 'Acme Corp',
+        clientName: 'Acme Corp',
         websiteUrl: '',
         email: '',
         phone: '',

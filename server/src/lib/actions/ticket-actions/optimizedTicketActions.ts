@@ -3,7 +3,7 @@
 import { ITicket, ITicketListItem, ITicketListFilters, IAgentSchedule } from 'server/src/interfaces/ticket.interfaces';
 import { IUser } from 'server/src/interfaces/auth.interfaces';
 import { IComment } from 'server/src/interfaces/comment.interface';
-import { ICompany } from 'server/src/interfaces/company.interfaces';
+import { IClient } from 'server/src/interfaces/client.interfaces';
 import { IContact } from 'server/src/interfaces/contact.interfaces';
 import { IBoard } from 'server/src/interfaces/board.interface';
 import { ITicketCategory } from 'server/src/interfaces/ticket.interfaces';
@@ -19,7 +19,7 @@ import { validateData } from 'server/src/lib/utils/validation';
 import { getEventBus } from '../../../lib/eventBus';
 import { convertBlockNoteToMarkdown } from 'server/src/lib/utils/blocknoteUtils';
 import { getImageUrl } from 'server/src/lib/actions/document-actions/documentActions';
-import { getCompanyLogoUrl, getUserAvatarUrl, getCompanyLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
+import { getClientLogoUrl, getUserAvatarUrl, getClientLogoUrlsBatch } from 'server/src/lib/utils/avatarUtils';
 import {
   ticketFormSchema,
   ticketSchema,
@@ -98,7 +98,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         this.on('t.status_id', 's.status_id')
            .andOn('t.tenant', 's.tenant')
       })
-      .leftJoin('company_locations as cl', function() {
+      .leftJoin('client_locations as cl', function() {
         this.on('t.location_id', 'cl.location_id')
            .andOn('t.tenant', 'cl.tenant')
       })
@@ -116,7 +116,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
     const [
       comments,
       documents,
-      companies,
+      clients,
       resources,
       users,
       statuses,
@@ -145,18 +145,18 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           'd.tenant': tenant
         }),
       
-      trx('companies as c')
+      trx('clients as c')
         .select(
           'c.*',
           'da.document_id'
         )
         .leftJoin('document_associations as da', function() {
-          this.on('da.entity_id', '=', 'c.company_id')
+          this.on('da.entity_id', '=', 'c.client_id')
               .andOn('da.tenant', '=', 'c.tenant')
-              .andOnVal('da.entity_type', '=', 'company');
+              .andOnVal('da.entity_type', '=', 'client');
         })
         .where({ 'c.tenant': tenant })
-        .orderBy('c.company_name', 'asc'),
+        .orderBy('c.client_name', 'asc'),
 
       trx('ticket_resources')
         .where({
@@ -166,6 +166,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       
       // Users
       trx('users as u')
+        .distinct('u.user_id')
         .select(
           'u.*',
           'd.file_id as avatar_file_id'
@@ -207,9 +208,9 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         .orderBy('category_name', 'asc')
     ]);
 
-    // --- Add Logo URL Processing for the fetched 'companies' list ---
-    const companiesData = companies as (ICompany & { document_id?: string })[];
-    const documentIds = companiesData
+    // --- Add Logo URL Processing for the fetched 'clients' list ---
+    const clientsData = clients as (IClient & { document_id?: string })[];
+    const documentIds = clientsData
       .map((c: any) => c.document_id)
       .filter((id: any): id is string => !!id);
 
@@ -228,60 +229,60 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       }, {} as Record<string, string>);
     }
 
-    // Process the full companies list to add logoUrl using batch loading
-    const companyIds = companiesData.map(c => c.company_id);
-    const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+    // Process the full clients list to add logoUrl using batch loading
+    const clientIds = clientsData.map(c => c.client_id);
+    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
-    const companiesWithLogos = companiesData.map((companyData) => {
-      const logoUrl = logoUrlsMap.get(companyData.company_id) || null;
-      const { document_id, ...companyResult } = companyData;
+    const clientsWithLogos = clientsData.map((clientData) => {
+      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
+      const { document_id, ...clientResult } = clientData;
       return {
-        ...companyResult,
-        properties: companyData.properties || {},
+        ...clientResult,
+        properties: clientData.properties || {},
         logoUrl,
       };
     });
-    // --- End Logo URL Processing for 'companies' list ---
+    // --- End Logo URL Processing for 'clients' list ---
 
 
-    // Fetch specific company and contact data if available
-    let company: any = null;
+    // Fetch specific client and contact data if available
+    let client: any = null;
     let contacts: IContact[] = [];
     let contactInfo: any = null;
     let locations: any[] = [];
     
-    if (ticket.company_id) {
-      [company, contacts, locations] = await Promise.all([
-        trx('companies as c')
+    if (ticket.client_id) {
+      [client, contacts, locations] = await Promise.all([
+        trx('clients as c')
           .select(
             'c.*',
             'd.file_id'
           )
           .leftJoin('document_associations as da', function() {
-            this.on('da.entity_id', '=', 'c.company_id')
+            this.on('da.entity_id', '=', 'c.client_id')
                 .andOn('da.tenant', '=', 'c.tenant')
-                .andOnVal('da.entity_type', '=', 'company');
+                .andOnVal('da.entity_type', '=', 'client');
           })
           .leftJoin('documents as d', function() {
              this.on('d.document_id', '=', 'da.document_id')
                 .andOn('d.tenant', '=', 'c.tenant');
           })
           .where({
-            'c.company_id': ticket.company_id,
+            'c.client_id': ticket.client_id,
             'c.tenant': tenant
           })
           .first(),
 
         trx('contacts')
           .where({
-            company_id: ticket.company_id,
+            client_id: ticket.client_id,
             tenant: tenant
           })
           .orderBy('full_name', 'asc'),
           
-        trx('company_locations')
+        trx('client_locations')
           .where({
-            company_id: ticket.company_id,
+            client_id: ticket.client_id,
             tenant: tenant,
             is_active: true
           })
@@ -289,15 +290,15 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
           .orderBy('location_name', 'asc')
       ]);
       
-      if (company) {
+      if (client) {
         try {
-          company.logoUrl = await getCompanyLogoUrl(company.company_id, tenant);
+          client.logoUrl = await getClientLogoUrl(client.client_id, tenant);
         } catch (imgError) {
-          console.error(`Error fetching logo URL for company ${company.company_id}:`, imgError);
-          company.logoUrl = null;
+          console.error(`Error fetching logo URL for client ${client.client_id}:`, imgError);
+          client.logoUrl = null;
         }
-        if ('file_id' in company) {
-            delete company.file_id;
+        if ('file_id' in client) {
+            delete client.file_id;
         }
       }
     }
@@ -480,7 +481,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       category_id: ticketData.category_id,
       board_id: ticketData.board_id,
       assigned_to: ticketData.assigned_to,
-      company_id: ticketData.company_id,
+      client_id: ticketData.client_id,
       has_comments: comments.length > 0,
       comment_count: comments.length,
       has_documents: documents.length > 0,
@@ -501,7 +502,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
       },
       comments,
       documents,
-      company,
+      client,
       contacts,
       contactInfo,
       createdByUser,
@@ -516,7 +517,7 @@ export async function getConsolidatedTicketData(ticketId: string, user: IUser) {
         priority: priorityOptions
       },
       categories,
-      companies: companiesWithLogos,
+      clients: clientsWithLogos,
       locations,
       agentSchedules: agentSchedulesList
     };
@@ -558,8 +559,8 @@ export async function getTicketsForListWithCursor(
       if (validatedFilters.categoryId === '$undefined') {
         validatedFilters.categoryId = undefined;
       }
-      if (validatedFilters.companyId === '$undefined') {
-        validatedFilters.companyId = undefined;
+      if (validatedFilters.clientId === '$undefined') {
+        validatedFilters.clientId = undefined;
       }
       if (validatedFilters.contactId === '$undefined') {
         validatedFilters.contactId = undefined;
@@ -573,7 +574,7 @@ export async function getTicketsForListWithCursor(
         'p.color as priority_color',
         'c.board_name',
         'cat.category_name',
-        'comp.company_name',
+        'comp.client_name',
         trx.raw("CONCAT(u.first_name, ' ', u.last_name) as entered_by_name"),
         trx.raw("CONCAT(au.first_name, ' ', au.last_name) as assigned_to_name")
       )
@@ -594,8 +595,8 @@ export async function getTicketsForListWithCursor(
         this.on('t.category_id', 'cat.category_id')
            .andOn('t.tenant', 'cat.tenant')
       })
-      .leftJoin('companies as comp', function() {
-        this.on('t.company_id', 'comp.company_id')
+      .leftJoin('clients as comp', function() {
+        this.on('t.client_id', 'comp.client_id')
            .andOn('t.tenant', 'comp.tenant')
       })
       .leftJoin('users as u', function() {
@@ -660,8 +661,8 @@ export async function getTicketsForListWithCursor(
       query = query.where('t.category_id', validatedFilters.categoryId);
     }
 
-    if (validatedFilters.companyId) {
-      query = query.where('t.company_id', validatedFilters.companyId);
+    if (validatedFilters.clientId) {
+      query = query.where('t.client_id', validatedFilters.clientId);
     }
 
     if (validatedFilters.contactId) {
@@ -725,7 +726,7 @@ export async function getTicketsForListWithCursor(
         priority_color,
         board_name,
         category_name,
-        company_name,
+        client_name,
         entered_by_name,
         assigned_to_name,
         // NOTE: Legacy ITIL fields removed - now using unified system
@@ -755,7 +756,7 @@ export async function getTicketsForListWithCursor(
         priority_color: priority_color || '#6B7280',
         board_name: board_name || 'Unknown',
         category_name: category_name || 'Unknown',
-        company_name: company_name || 'Unknown',
+        client_name: client_name || 'Unknown',
         entered_by_name: entered_by_name || 'Unknown',
         assigned_to_name: assigned_to_name || 'Unknown'
       };
@@ -795,7 +796,7 @@ export async function getTicketFormOptions(user: IUser) {
       priorities,
       boards,
       categories,
-      companies,
+      clients,
       users,
       tags
     ] = await Promise.all([
@@ -823,10 +824,10 @@ export async function getTicketFormOptions(user: IUser) {
         .orderBy('display_order', 'asc')
         .orderBy('category_name', 'asc'),
       
-      trx('companies as c')
+      trx('clients as c')
         .select('c.*')
         .where({ 'c.tenant': tenant })
-        .orderBy('c.company_name', 'asc'),
+        .orderBy('c.client_name', 'asc'),
 
       trx('users')
         .where({ tenant })
@@ -867,17 +868,17 @@ export async function getTicketFormOptions(user: IUser) {
     }));
 
     // --- Add Logo URL Processing ---
-    const companiesData = companies; 
+    const clientsData = clients; 
 
-    // Process companies to add logoUrl using batch loading
-    const companyIds = companiesData.map(c => c.company_id);
-    const logoUrlsMap = await getCompanyLogoUrlsBatch(companyIds, tenant);
+    // Process clients to add logoUrl using batch loading
+    const clientIds = clientsData.map(c => c.client_id);
+    const logoUrlsMap = await getClientLogoUrlsBatch(clientIds, tenant);
     
-    const companiesWithLogos = companiesData.map((companyData) => {
-      const logoUrl = logoUrlsMap.get(companyData.company_id) || null;
+    const clientsWithLogos = clientsData.map((clientData) => {
+      const logoUrl = logoUrlsMap.get(clientData.client_id) || null;
       return {
-        ...companyData,
-        properties: companyData.properties || {}, 
+        ...clientData,
+        properties: clientData.properties || {}, 
         logoUrl,
       };
     });
@@ -891,7 +892,7 @@ export async function getTicketFormOptions(user: IUser) {
       boardOptions,
       agentOptions,
       categories,
-      companies: companiesWithLogos, // Return companies with logos
+      clients: clientsWithLogos, // Return clients with logos
       users,
       tags: Array.isArray(tags) ? tags.map((tag: any) => tag.tag_text) : [] // Return unique tag texts
     };

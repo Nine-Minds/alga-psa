@@ -13,8 +13,8 @@ import {
   canCreateNextBillingCycle,
   createNextBillingCycle
 } from 'server/src/lib/actions/billingCycleActions';
-import { getAllCompaniesPaginated } from 'server/src/lib/actions/company-actions/companyActions';
-import { BillingCycleType, ICompany } from 'server/src/interfaces';
+import { getAllClientsPaginated } from 'server/src/lib/actions/client-actions/clientActions';
+import { BillingCycleType, IClient } from 'server/src/interfaces';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 
 const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
@@ -27,8 +27,8 @@ const BILLING_CYCLE_OPTIONS: { value: BillingCycleType; label: string }[] = [
 ];
 
 const BillingCycles: React.FC = () => {
-  const [billingCycles, setBillingCycles] = useState<{ [companyId: string]: BillingCycleType }>({});
-  const [companies, setCompanies] = useState<Partial<ICompany>[]>([]);
+  const [billingCycles, setBillingCycles] = useState<{ [clientId: string]: BillingCycleType }>({});
+  const [clients, setClients] = useState<Partial<IClient>[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -36,18 +36,18 @@ const BillingCycles: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [sortBy, setSortBy] = useState<string>('company_name');
+  const [sortBy, setSortBy] = useState<string>('client_name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [cycleStatus, setCycleStatus] = useState<{
-    [companyId: string]: {
+    [clientId: string]: {
       canCreate: boolean;
       isEarly: boolean;
       periodEndDate?: string;
     }
   }>({});
-  const [creatingCycle, setCreatingCycle] = useState<{ [companyId: string]: boolean }>({});
+  const [creatingCycle, setCreatingCycle] = useState<{ [clientId: string]: boolean }>({});
   const [dateConflict, setDateConflict] = useState<{
-    companyId: string;
+    clientId: string;
     suggestedDate: Date;
     show: boolean;
     error?: string;
@@ -71,9 +71,9 @@ const BillingCycles: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [cycles, companiesResponse] = await Promise.all([
+      const [cycles, clientsResponse] = await Promise.all([
         getAllBillingCycles(),
-        getAllCompaniesPaginated({
+        getAllClientsPaginated({
           page: currentPage,
           pageSize,
           searchTerm: debouncedSearchTerm,
@@ -84,22 +84,22 @@ const BillingCycles: React.FC = () => {
       ]);
 
       setBillingCycles(cycles);
-      setCompanies(companiesResponse.companies);
-      setTotalCount(companiesResponse.totalCount);
+      setClients(clientsResponse.clients);
+      setTotalCount(clientsResponse.totalCount);
 
-      // Check which companies can have cycles created
+      // Check which clients can have cycles created
       const cycleCreationStatus: {
-        [companyId: string]: {
+        [clientId: string]: {
           canCreate: boolean;
           isEarly: boolean;
           periodEndDate?: string;
         }
       } = {};
       
-      for (const company of companiesResponse.companies) {
-        if (company.company_id) {
-          const status = await canCreateNextBillingCycle(company.company_id);
-          cycleCreationStatus[company.company_id] = status;
+      for (const client of clientsResponse.clients) {
+        if (client.client_id) {
+          const status = await canCreateNextBillingCycle(client.client_id);
+          cycleCreationStatus[client.client_id] = status;
         }
       }
       
@@ -113,28 +113,28 @@ const BillingCycles: React.FC = () => {
     }
   };
 
-  const handleBillingCycleChange = async (companyId: string, cycle: BillingCycleType) => {
+  const handleBillingCycleChange = async (clientId: string, cycle: BillingCycleType) => {
     if (!cycle) return;
     
     // Optimistic update
-    setBillingCycles(prev => ({ ...prev, [companyId]: cycle }));
+    setBillingCycles(prev => ({ ...prev, [clientId]: cycle }));
 
     try {
-      await updateBillingCycle(companyId, cycle);
+      await updateBillingCycle(clientId, cycle);
       setError(null);
     } catch (error) {
       console.error('Error updating billing cycle:', error);
       // Revert the optimistic update
-      setBillingCycles(prev => ({ ...prev, [companyId]: prev[companyId] }));
+      setBillingCycles(prev => ({ ...prev, [clientId]: prev[clientId] }));
       setError('Failed to update billing cycle. Please try again.');
     }
   };
 
-  const handleCreateNextCycle = async (companyId: string, selectedDate?: Date) => {
-    setCreatingCycle(prev => ({ ...prev, [companyId]: true }));
+  const handleCreateNextCycle = async (clientId: string, selectedDate?: Date) => {
+    setCreatingCycle(prev => ({ ...prev, [clientId]: true }));
     try {
       const result = await createNextBillingCycle(
-        companyId,
+        clientId,
         selectedDate?.toISOString()
       );
       if (!result.success && result.error === 'duplicate') {
@@ -143,7 +143,7 @@ const BillingCycles: React.FC = () => {
         // Optionally, also show the date conflict dialog if a suggestion is present
         if (result.suggestedDate) {
           setDateConflict({
-            companyId,
+            clientId,
             suggestedDate: new Date(result.suggestedDate),
             show: true
           });
@@ -152,29 +152,29 @@ const BillingCycles: React.FC = () => {
       }
 
       // Update the cycle status after successful creation
-      const status = await canCreateNextBillingCycle(companyId);
+      const status = await canCreateNextBillingCycle(clientId);
       setCycleStatus(prev => ({
         ...prev,
-        [companyId]: status
+        [clientId]: status
       }));
       setError(null);
     } catch (error) {
       console.error('Error creating next billing cycle:', error);
       setError('Failed to create next billing cycle. Please try again.');
     } finally {
-      setCreatingCycle(prev => ({ ...prev, [companyId]: false }));
+      setCreatingCycle(prev => ({ ...prev, [clientId]: false }));
     }
   };
 
-  const columns: ColumnDefinition<Partial<ICompany>>[] = [
+  const columns: ColumnDefinition<Partial<IClient>>[] = [
     {
-      title: 'Company',
-      dataIndex: 'company_name',
+      title: 'Client',
+      dataIndex: 'client_name',
     },
     {
       title: 'Current Billing Cycle',
-      dataIndex: 'company_id',
-      render: (value: string, record: Partial<ICompany>) => {
+      dataIndex: 'client_id',
+      render: (value: string, record: Partial<IClient>) => {
         const cycle = billingCycles[value];
         if (!cycle) return 'Not set';
         
@@ -186,7 +186,7 @@ const BillingCycles: React.FC = () => {
     },
     {
       title: 'Actions',
-      dataIndex: 'company_id',
+      dataIndex: 'client_id',
       render: (value: string) => (
         <div className="flex items-center gap-2">
           <CustomSelect
@@ -232,7 +232,7 @@ const BillingCycles: React.FC = () => {
         <div className="flex flex-row items-center justify-between">
           <div className="flex items-center">
             <h3 className="text-lg font-semibold">Billing Cycles</h3>
-            <Tooltip content="Configure billing cycles for companies and create new billing periods.">
+            <Tooltip content="Configure billing cycles for clients and create new billing periods.">
               <Info className="ml-2 h-4 w-4 text-gray-500" />
             </Tooltip>
           </div>
@@ -241,7 +241,7 @@ const BillingCycles: React.FC = () => {
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
             type="text"
-            placeholder="Search companies..."
+            placeholder="Search clients..."
             value={searchTerm}
             onChange={(e) => {
               setSearchTerm(e.target.value);
@@ -261,7 +261,7 @@ const BillingCycles: React.FC = () => {
           <div className="text-center py-4">Loading billing cycles...</div>
         ) : (
           <DataTable
-            data={companies}
+            data={clients}
             columns={columns}
             pagination={true}
             currentPage={currentPage}

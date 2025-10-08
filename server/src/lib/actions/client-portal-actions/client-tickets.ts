@@ -64,10 +64,10 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
 
     console.log('Debug - Session user ID:', session.user.id);
     console.log('Debug - Tenant:', tenant);
-    console.log('Debug - CompanyId:', session.user.companyId);
+    console.log('Debug - ClientId:', session.user.clientId);
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's company_id
+      // Get user's client_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -86,8 +86,8 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
       let query = trx('tickets as t')
@@ -97,7 +97,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
         't.title',
         't.url',
         't.board_id',
-        't.company_id',
+        't.client_id',
         't.contact_name_id',
         't.status_id',
         't.category_id',
@@ -146,7 +146,7 @@ export async function getClientTickets(status: string): Promise<ITicketListItem[
       })
       .where({
         't.tenant': tenant,
-        't.company_id': contact.company_id
+        't.client_id': contact.client_id
       });
 
     // Filter by status
@@ -221,7 +221,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's company_id
+      // Get user's client_id
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -240,8 +240,8 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
       // Get ticket details with related data
@@ -264,7 +264,7 @@ export async function getClientTicketDetails(ticketId: string): Promise<ITicket>
         .where({
           't.ticket_id': ticketId,
           't.tenant': tenant,
-          't.company_id': contact.company_id
+          't.client_id': contact.client_id
         })
         .first(),
       
@@ -612,7 +612,7 @@ export async function updateTicketStatus(ticketId: string, newStatusId: string):
         throw new Error('User not associated with a contact');
       }
 
-      // Verify the ticket belongs to the user's company
+      // Verify the ticket belongs to the user's client
       const ticket = await trx('tickets')
         .where({
           ticket_id: ticketId,
@@ -758,7 +758,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
     }
 
     const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // Get user's contact and company information
+      // Get user's contact and client information
       const user = await trx('users')
         .where({
           user_id: session.user.id,
@@ -777,8 +777,8 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         })
         .first();
 
-      if (!contact?.company_id) {
-        throw new Error('Contact not associated with a company');
+      if (!contact?.client_id) {
+        throw new Error('Contact not associated with a client');
       }
 
       // Fetch default board for client portal tickets
@@ -818,7 +818,7 @@ export async function createClientTicket(data: FormData): Promise<ITicket> {
         title: validatedData.title,
         description: validatedData.description,
         priority_id: validatedData.priority_id,
-        company_id: contact.company_id,
+        client_id: contact.client_id,
         contact_id: user.contact_id, // Maps to contact_name_id in database
         entered_by: session.user.id,
         source: 'client_portal',

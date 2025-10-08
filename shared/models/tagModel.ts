@@ -24,7 +24,7 @@ import { ValidationResult } from '../interfaces/validation.interfaces';
 export const tagFormSchema = z.object({
   tag_text: z.string().min(1, 'Tag text is required').max(50, 'Tag text too long (max 50 characters)'),
   tagged_id: z.string().uuid('Tagged ID must be a valid UUID'),
-  tagged_type: z.enum(['company', 'contact', 'project_task', 'document', 'knowledge_base_article']),
+  tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article']),
   board_id: z.string().uuid().optional().nullable(),
   background_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable(),
   text_color: z.string().regex(/^#[0-9A-F]{6}$/i).optional().nullable()
@@ -35,7 +35,7 @@ export const tagDefinitionSchema = z.object({
   tag_id: z.string().uuid(),
   tenant: z.string().uuid(),
   tag_text: z.string(),
-  tagged_type: z.enum(['company', 'contact', 'project_task', 'document', 'knowledge_base_article']),
+  tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article']),
   board_id: z.string().uuid().nullable(),
   background_color: z.string().nullable(),
   text_color: z.string().nullable(),
@@ -48,7 +48,7 @@ export const tagMappingSchema = z.object({
   tenant: z.string().uuid(),
   tag_id: z.string().uuid(),
   tagged_id: z.string().uuid(),
-  tagged_type: z.enum(['company', 'contact', 'project_task', 'document', 'knowledge_base_article']),
+  tagged_type: z.enum(['client', 'contact', 'project_task', 'document', 'knowledge_base_article']),
   created_by: z.string().uuid().nullable(),
   created_at: z.string()
 });
@@ -467,7 +467,7 @@ export class TagModel {
    * Get or create a tag for PSA Customer tracking
    */
   static async ensurePSACustomerTag(
-    companyId: string,
+    clientId: string,
     tenant: string,
     trx: Knex.Transaction,
     createdBy?: string
@@ -475,8 +475,8 @@ export class TagModel {
     return await this.createTag(
       {
         tag_text: 'PSA Customer',
-        tagged_id: companyId,
-        tagged_type: 'company',
+        tagged_id: clientId,
+        tagged_type: 'client',
         created_by: createdBy || 'system'
       },
       tenant,

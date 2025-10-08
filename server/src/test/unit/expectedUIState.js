@@ -1,14 +1,14 @@
 /**
- * Expected UI State Structure for QuickAddCompany Dialog
+ * Expected UI State Structure for QuickAddClient Dialog
  * This shows what should appear in the UI reflection state when the dialog is open
  */
 
-export const expectedQuickAddCompanyUIState = {
+export const expectedQuickAddClientUIState = {
   // This should appear in the UI state components array when dialog is open
   dialogComponent: {
-    id: 'quick-add-company-dialog',
+    id: 'quick-add-client-dialog',
     type: 'dialog',
-    label: 'Quick Add Company Dialog',
+    label: 'Quick Add Client Dialog',
     title: 'Add New Client',
     open: true, // When dialog is open
     helperText: undefined, // Or error message if there's an error
@@ -19,18 +19,18 @@ export const expectedQuickAddCompanyUIState = {
 
   // This should appear as a child component when dialog is open
   formContainer: {
-    id: 'quick-add-company-form',
+    id: 'quick-add-client-form',
     type: 'container',
-    label: 'Quick Add Company Form',
-    parentId: 'quick-add-company-dialog', // Should be nested under dialog
+    label: 'Quick Add Client Form',
+    parentId: 'quick-add-client-dialog', // Should be nested under dialog
     children: [
       // Form fields should be registered as children
-      'company_name',
+      'client_name',
       'client_type_select', 
       'email',
       'phone_no',
-      'create-company-btn',
-      'cancel-quick-add-company-btn'
+      'create-client-btn',
+      'cancel-quick-add-client-btn'
     ]
   }
 };
@@ -41,7 +41,7 @@ export const expectedClosedState = {
   dialogShouldBeAbsent: true,
   // OR dialog should have open: false
   dialogComponent: {
-    id: 'quick-add-company-dialog',
+    id: 'quick-add-client-dialog',
     open: false
   }
 };
@@ -49,19 +49,19 @@ export const expectedClosedState = {
 // What to look for when there's an error
 export const expectedErrorState = {
   dialogComponent: {
-    id: 'quick-add-company-dialog',
+    id: 'quick-add-client-dialog',
     type: 'dialog',
-    label: 'Quick Add Company Dialog',
+    label: 'Quick Add Client Dialog',
     title: 'Add New Client',
     open: true,
-    helperText: 'Failed to create company. Please try again.', // Error message
+    helperText: 'Failed to create client. Please try again.', // Error message
     disabled: false // Should not be disabled when error occurs
   }
 };
 
-console.log('🔍 Expected UI State for QuickAddCompany Dialog:');
+console.log('🔍 Expected UI State for QuickAddClient Dialog:');
 console.log('\n📋 When Dialog is OPEN:');
-console.log(JSON.stringify(expectedQuickAddCompanyUIState, null, 2));
+console.log(JSON.stringify(expectedQuickAddClientUIState, null, 2));
 
 console.log('\n❌ When Dialog is CLOSED:');
 console.log(JSON.stringify(expectedClosedState, null, 2));
@@ -71,18 +71,18 @@ console.log(JSON.stringify(expectedErrorState, null, 2));
 
 console.log('\n🔧 Manual Testing Steps:');
 console.log('1. Open the application in development mode');
-console.log('2. Navigate to a page with QuickAddCompany (e.g., companies list)');  
-console.log('3. Open the QuickAddCompany dialog');
+console.log('2. Navigate to a page with QuickAddClient (e.g., clients list)');  
+console.log('3. Open the QuickAddClient dialog');
 console.log('4. Check the UI state WebSocket/API endpoint for the dialog component');
-console.log('5. Verify the component appears with id: "quick-add-company-dialog"');
+console.log('5. Verify the component appears with id: "quick-add-client-dialog"');
 console.log('6. Close the dialog and verify it disappears from UI state');
 console.log('7. Try submitting invalid data to trigger error state');
 
 console.log('\n🕷️ Automation Testing:');
 console.log('The dialog should now be discoverable by:');
-console.log('- data-automation-id="quick-add-company-dialog"');
-console.log('- Puppeteer: await page.waitForSelector(\'[data-automation-id="quick-add-company-dialog"]\')');
-console.log('- UI State API: components.find(c => c.id === "quick-add-company-dialog")');
+console.log('- data-automation-id="quick-add-client-dialog"');
+console.log('- Puppeteer: await page.waitForSelector(\'[data-automation-id="quick-add-client-dialog"]\')');
+console.log('- UI State API: components.find(c => c.id === "quick-add-client-dialog")');
 
 console.log('\n📍 If dialog still not visible in UI state, check:');
 console.log('1. UIStateProvider is wrapping the parent component');

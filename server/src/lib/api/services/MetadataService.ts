@@ -249,7 +249,7 @@ export class MetadataService {
 
     // Check database connectivity
     try {
-      await this.db.findOne('companies', { limit: 1 });
+      await this.db.findOne('clients', { limit: 1 });
       services.database = { status: 'up', latency: Date.now() - startTime };
     } catch (error) {
       services.database = { 
@@ -449,7 +449,7 @@ export class MetadataService {
     const mainResource = parts[0];
     
     const tagMap: Record<string, string> = {
-      'companies': 'Companies',
+      'clients': 'Clients',
       'contacts': 'Contacts',
       'tickets': 'Tickets',
       'projects': 'Projects',
@@ -517,15 +517,15 @@ export class MetadataService {
       // Fallback to known schemas
       return [
       {
-        name: 'Company',
+        name: 'Client',
         type: 'model',
-        description: 'Company entity schema',
+        description: 'Client entity schema',
         properties: {
-          company_id: { type: 'string', description: 'Unique company identifier' },
-          company_name: { type: 'string', description: 'Company name' },
-          status: { type: 'string', description: 'Company status' }
+          client_id: { type: 'string', description: 'Unique client identifier' },
+          client_name: { type: 'string', description: 'Client name' },
+          status: { type: 'string', description: 'Client status' }
         },
-        required: ['company_name']
+        required: ['client_name']
       },
       {
         name: 'Contact',
@@ -773,7 +773,7 @@ export class MetadataService {
   private getSchemaCategory(schemaName: string): string {
     const name = schemaName.toLowerCase();
     
-    if (name.includes('company') || name.includes('contact')) return 'Core Business';
+    if (name.includes('client') || name.includes('contact')) return 'Core Business';
     if (name.includes('ticket') || name.includes('project')) return 'Operations';
     if (name.includes('invoice') || name.includes('billing')) return 'Financial';
     if (name.includes('user') || name.includes('team')) return 'Administration';

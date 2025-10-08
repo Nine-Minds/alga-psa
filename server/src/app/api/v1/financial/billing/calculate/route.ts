@@ -1,6 +1,6 @@
 /**
  * Financial Billing Calculation API Route
- * POST /api/v1/financial/billing/calculate - Calculate billing for company
+ * POST /api/v1/financial/billing/calculate - Calculate billing for client
  */
 
 import { ApiFinancialController } from 'server/src/lib/api/controllers/ApiFinancialController';

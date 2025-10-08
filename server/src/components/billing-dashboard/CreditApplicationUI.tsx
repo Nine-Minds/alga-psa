@@ -9,11 +9,11 @@ import { formatCurrency } from 'server/src/lib/utils/formatters';
 import { ICreditTracking } from 'server/src/interfaces/billing.interfaces';
 import CreditExpirationBadge from 'server/src/components/ui/CreditExpirationBadge';
 import { formatDateOnly } from 'server/src/lib/utils/dateTimeUtils';
-import { listCompanyCredits, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
+import { listClientCredits, applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { DataTable } from 'server/src/components/ui/DataTable';
 
 interface CreditApplicationUIProps {
-  companyId: string;
+  clientId: string;
   invoiceId?: string;
   invoiceAmount?: number;
   onApplyCredit: (creditId: string, amount: number) => Promise<void>;
@@ -21,7 +21,7 @@ interface CreditApplicationUIProps {
 }
 
 const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
-  companyId,
+  clientId,
   invoiceId,
   invoiceAmount = 0,
   onApplyCredit,
@@ -44,7 +44,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         setLoading(true);
         
         // Fetch real credits from the server using the server action
-        const result = await listCompanyCredits(companyId, false, page, 10);
+        const result = await listClientCredits(clientId, false, page, 10);
         
         setAvailableCredits(result.credits);
         setTotalPages(result.totalPages);
@@ -68,7 +68,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     };
     
     fetchCredits();
-  }, [companyId, invoiceAmount, page, selectedCreditId]);
+  }, [clientId, invoiceAmount, page, selectedCreditId]);
 
   const handleCreditSelection = (creditId: string) => {
     setSelectedCreditId(creditId);
@@ -112,7 +112,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     try {
       if (invoiceId) {
         // If we have an invoiceId, use the server action directly
-        await applyCreditToInvoice(companyId, invoiceId, applicationAmount);
+        await applyCreditToInvoice(clientId, invoiceId, applicationAmount);
         // Call the parent callback to handle UI updates
         await onApplyCredit(selectedCreditId, applicationAmount);
       } else {
@@ -198,7 +198,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
         ) : error ? (
           <div className="text-red-500">{error}</div>
         ) : availableCredits.length === 0 ? (
-          <div className="text-gray-500">No credits available for this company</div>
+          <div className="text-gray-500">No credits available for this client</div>
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between text-sm">

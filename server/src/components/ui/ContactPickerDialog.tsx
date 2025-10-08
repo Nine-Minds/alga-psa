@@ -18,7 +18,7 @@ interface ContactPickerDialogProps {
   onClose: () => void;
   onSelect: (contact: IContact) => void;
   contacts: IContact[];
-  prefilledCompanyId?: string;
+  prefilledClientId?: string;
   /** Unique identifier for UI reflection system */
   id?: string;
 }
@@ -28,7 +28,7 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
   onClose,
   onSelect,
   contacts,
-  prefilledCompanyId,
+  prefilledClientId,
   id
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,16 +71,16 @@ const ContactPickerDialog: React.FC<ContactPickerDialogProps & AutomationProps> 
 
   useEffect(() => {
     const filtered = contacts.filter((contact: IContact) => {
-      const matchesCompany = !prefilledCompanyId || contact.company_id === prefilledCompanyId;
+      const matchesClient = !prefilledClientId || contact.client_id === prefilledClientId;
       const matchesSearch = !searchTerm || (
         contact.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contact.phone_number.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      return matchesCompany && matchesSearch;
+      return matchesClient && matchesSearch;
     });
     setFilteredContacts(filtered);
-  }, [contacts, searchTerm, prefilledCompanyId]);
+  }, [contacts, searchTerm, prefilledClientId]);
 
   const columns: ColumnDefinition<IContact>[] = [
     {

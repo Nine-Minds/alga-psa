@@ -9,7 +9,7 @@ import { expectError, expectNotFound } from '../../../../../test-utils/errorUtil
 import {
   createTestService,
   createFixedPlanAssignment,
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -66,7 +66,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
   let context: TestContext;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -86,8 +86,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_service_configuration',
         'plan_service_fixed_config',
         'service_catalog',
@@ -95,11 +95,11 @@ describe('Billing Invoice Generation – Error Handling', () => {
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
+        'client_tax_settings',
+        'client_tax_rates',
         'next_number'
       ],
-      companyName: 'Error Handling Test Company',
+      clientName: 'Error Handling Test Client',
       userType: 'internal'
     });
 
@@ -156,21 +156,21 @@ describe('Billing Invoice Generation – Error Handling', () => {
   });
 
   it('should handle missing billing plans', async () => {
-    // Create company without plans
-    const newCompanyId = await context.createEntity('companies', {
-      company_name: 'Company Without Plans',
+    // Create client without plans
+    const newClientId = await context.createEntity('clients', {
+      client_name: 'Client Without Plans',
       billing_cycle: 'monthly'
-    }, 'company_id');
+    }, 'client_id');
 
-    // Configure tax for the new company
-    await setupCompanyTaxConfiguration(context, {
+    // Configure tax for the new client
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
-      companyId: newCompanyId
+      clientId: newClientId
     });
 
     // Create billing cycle
-    const billingCycleId = await context.createEntity('company_billing_cycles', {
-      company_id: newCompanyId,
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: newClientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -180,7 +180,7 @@ describe('Billing Invoice Generation – Error Handling', () => {
     await expectError(
       () => generateInvoice(billingCycleId),
       {
-        messagePattern: new RegExp(`No active billing plans found for company ${newCompanyId}`)
+        messagePattern: new RegExp(`No active billing plans found for client ${newClientId}`)
       }
     );
   });
@@ -195,8 +195,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
     });
 
     // Create billing cycle
-    const billingCycleId = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -224,8 +224,8 @@ describe('Billing Invoice Generation – Error Handling', () => {
     });
 
     // Create billing cycle
-    const billingCycleId = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycleId = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),

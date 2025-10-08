@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ICompany, IProject, IUserWithRoles } from 'server/src/interfaces';
+import { IClient, IProject, IUserWithRoles } from 'server/src/interfaces';
 import { ITag } from 'server/src/interfaces/tag.interfaces';
 import HoursProgressBar from './HoursProgressBar';
 import { calculateProjectCompletion } from 'server/src/lib/utils/projectUtils';
@@ -19,7 +19,7 @@ interface ProjectInfoProps {
   };
   assignedUser?: IUserWithRoles;
   users: IUserWithRoles[];
-  companies: ICompany[];
+  clients: IClient[];
   onContactChange?: (contactId: string | null) => void;
   onAssignedUserChange?: (userId: string | null) => void;
   onProjectUpdate?: (project: IProject) => void;
@@ -33,7 +33,7 @@ export default function ProjectInfo({
   contact,
   assignedUser,
   users,
-  companies,
+  clients,
   onContactChange,
   onAssignedUserChange,
   onProjectUpdate,
@@ -80,7 +80,7 @@ export default function ProjectInfo({
     openDrawer(
       <ProjectDetailsEdit
         initialProject={currentProject}
-        companies={companies}
+        clients={clients}
         onSave={(updatedProject) => {
           setCurrentProject(updatedProject);
           if (onProjectUpdate) {

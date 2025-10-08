@@ -4,7 +4,7 @@ import { ISO8601String } from 'server/src/types/types.d';
 import { createTenantKnex } from 'server/src/lib/db'; // Assuming needed if trx doesn't carry tenant context reliably
 import { toPlainDate, toISODate } from 'server/src/lib/utils/dateTimeUtils';
 // Import necessary interfaces - adjust paths if needed
-import { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
 
 // Define IBucketUsage locally for now, aligning with Phase 1 needs.
 // This might be replaced/merged with the main interface later.
@@ -15,7 +15,7 @@ import { ICompanyBillingPlan } from 'server/src/interfaces/billing.interfaces';
 interface IBucketUsage {
     usage_id: string;
     tenant: string;
-    company_id: string;
+    client_id: string;
     plan_id: string;
     service_catalog_id: string;
     period_start: ISO8601String;
@@ -56,12 +56,12 @@ interface PeriodInfo {
 }
 
 /**
- * Calculates the billing period start and end dates for a given company, service, and date,
+ * Calculates the billing period start and end dates for a given client, service, and date,
  * based on the active billing plan and its frequency.
  *
  * @param trx Knex transaction object.
  * @param tenant The tenant identifier.
- * @param companyId The ID of the company.
+ * @param clientId The ID of the client.
  * @param serviceCatalogId The ID of the service catalog item (used to ensure the plan covers this service).
  * @param date The target date (ISO8601 string) for which to find the period.
  * @returns An object containing period start/end, plan ID, and frequency, or null if no suitable plan is found.
@@ -69,18 +69,18 @@ interface PeriodInfo {
 async function calculatePeriod(
     trx: Knex.Transaction,
     tenant: string,
-    companyId: string,
+    clientId: string,
     serviceCatalogId: string,
     date: ISO8601String
 ): Promise<PeriodInfo | null> {
     const targetDate = toPlainDate(date);
     const targetDateISO = toISODate(targetDate); // Use consistent ISO format for DB queries
 
-    console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, companyId=${companyId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
+    console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
-    // Find the active company billing plan that covers the target date AND
+    // Find the active client billing plan that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
-    const companyPlan = await trx('company_billing_plans as cbp')
+    const clientPlan = await trx('client_billing_plans as cbp')
         .join('billing_plans as bp', function() {
             this.on('cbp.plan_id', '=', 'bp.plan_id')
                 .andOn('cbp.tenant', '=', 'bp.tenant');
@@ -94,7 +94,7 @@ async function calculatePeriod(
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant');
         })
-        .where('cbp.company_id', companyId)
+        .where('cbp.client_id', clientId)
         .andWhere('cbp.tenant', tenant)
         .andWhere('cbp.is_active', true)
         .andWhere('cbp.start_date', '<=', targetDateISO) // Plan must start on or before the target date
@@ -105,21 +105,21 @@ async function calculatePeriod(
         })
         .select(
             'cbp.plan_id',
-            'cbp.start_date', // Use the company-specific plan start date as the anchor
+            'cbp.start_date', // Use the client-specific plan start date as the anchor
             'bp.billing_frequency'
          )
         .orderBy('cbp.start_date', 'desc') // Prefer the most recently started plan if overlaps occur
         .first<{ plan_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
 
-    if (!companyPlan) {
-        console.warn(`[calculatePeriod] No active billing plan with bucket config found. tenant=${tenant}, companyId=${companyId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
+    if (!clientPlan) {
+        console.warn(`[calculatePeriod] No active billing plan with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
 
-    console.debug(`[calculatePeriod] Found companyPlan: plan_id=${companyPlan.plan_id}, start_date=${companyPlan.start_date}, billing_frequency=${companyPlan.billing_frequency}`);
+    console.debug(`[calculatePeriod] Found clientPlan: plan_id=${clientPlan.plan_id}, start_date=${clientPlan.start_date}, billing_frequency=${clientPlan.billing_frequency}`);
 
-    const planStartDate = toPlainDate(companyPlan.start_date);
-    const frequency = companyPlan.billing_frequency;
+    const planStartDate = toPlainDate(clientPlan.start_date);
+    const frequency = clientPlan.billing_frequency;
 
     let periodStart: Temporal.PlainDate;
     let periodEnd: Temporal.PlainDate;
@@ -162,19 +162,19 @@ async function calculatePeriod(
     return {
         periodStart,
         periodEnd,
-        planId: companyPlan.plan_id,
+        planId: clientPlan.plan_id,
         billingFrequency: frequency,
     };
 }
 
 
 /**
- * Finds the bucket usage record for a specific company, service, and date.
+ * Finds the bucket usage record for a specific client, service, and date.
  * If a record for the corresponding billing period doesn't exist, it creates one,
  * calculating potential rollover minutes from the previous period if applicable.
  *
  * @param trx The Knex transaction object.
- * @param companyId The ID of the company.
+ * @param clientId The ID of the client.
  * @param serviceCatalogId The ID of the service catalog item.
  * @param date The date (ISO8601 string) falling within the desired usage period.
  * @returns A promise resolving to the found or created IBucketUsage record.
@@ -183,7 +183,7 @@ async function calculatePeriod(
  */
 export async function findOrCreateCurrentBucketUsageRecord(
     trx: Knex.Transaction,
-    companyId: string,
+    clientId: string,
     serviceCatalogId: string,
     date: ISO8601String
 ): Promise<IBucketUsage> {
@@ -197,11 +197,11 @@ export async function findOrCreateCurrentBucketUsageRecord(
      }
 
     // 1. Determine Billing Period and Active Plan
-    const periodInfo = await calculatePeriod(trx, tenant, companyId, serviceCatalogId, date);
+    const periodInfo = await calculatePeriod(trx, tenant, clientId, serviceCatalogId, date);
 
     if (!periodInfo) {
         // If no period info, it means no suitable active plan was found.
-        throw new Error(`Could not determine active billing plan/period for company ${companyId}, service ${serviceCatalogId}, date ${date}`);
+        throw new Error(`Could not determine active billing plan/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
     }
 
     const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;
@@ -212,7 +212,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
     const existingRecord = await trx('bucket_usage')
         .where({
             tenant: tenant,
-            company_id: companyId,
+            client_id: clientId,
             service_catalog_id: serviceCatalogId,
             period_start: periodStartISO,
             period_end: periodEndISO,
@@ -290,7 +290,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         const previousRecord = await trx('bucket_usage')
             .where({
                 tenant: tenant,
-                company_id: companyId,
+                client_id: clientId,
                 service_catalog_id: serviceCatalogId,
                 period_start: prevPeriodStartISO,
                 period_end: prevPeriodEndISO,
@@ -312,7 +312,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
     const newRecordData = {
         // usage_id should be generated by DB (assuming UUID default or sequence)
         tenant: tenant,
-        company_id: companyId,
+        client_id: clientId,
         plan_id: planId, // Link to the plan active in this period
         service_catalog_id: serviceCatalogId,
         period_start: periodStartISO,
@@ -450,7 +450,7 @@ export async function reconcileBucketUsageRecord(
        .where('bu.usage_id', bucketUsageId)
        .andWhere('bu.tenant', tenant)
        .select(
-           'bu.company_id',
+           'bu.client_id',
            'bu.service_catalog_id',
            'bu.period_start',
            'bu.period_end',
@@ -458,7 +458,7 @@ export async function reconcileBucketUsageRecord(
            'psbc.total_minutes'      // Updated to minutes
        )
        .first<{
-           company_id: string;
+           client_id: string;
            service_catalog_id: string;
            period_start: ISO8601String;
            period_end: ISO8601String;
@@ -470,13 +470,13 @@ export async function reconcileBucketUsageRecord(
        throw new Error(`Bucket usage record with ID ${bucketUsageId} or its associated configuration not found in tenant ${tenant}.`);
    }
 
-   const { company_id, service_catalog_id, period_start, period_end, total_minutes } = usageRecord;
+   const { client_id, service_catalog_id, period_start, period_end, total_minutes } = usageRecord;
 
    // 3. Sum Billable Time Entries (billable_duration is in minutes)
    const timeEntrySumResult = await trx('time_entries')
        .where({
            tenant: tenant,
-           company_id: company_id,
+           client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
        })
@@ -492,7 +492,7 @@ export async function reconcileBucketUsageRecord(
    const usageTrackingSumResult = await trx('usage_tracking')
        .where({
            tenant: tenant,
-           company_id: company_id,
+           client_id: client_id,
            service_id: service_catalog_id,
            is_billable: true,
        })

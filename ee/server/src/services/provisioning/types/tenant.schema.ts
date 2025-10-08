@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const CreateTenantSchema = z.object({
-  company_name: z.string().min(1, 'Company name is required'),
+  client_name: z.string().min(1, 'Client name is required'),
   email: z.string().email('Valid email is required'),
   phone_number: z.string().optional(),
   industry: z.string().optional(),
@@ -13,7 +13,7 @@ export type CreateTenantInput = z.infer<typeof CreateTenantSchema>;
 
 export const TenantResponseSchema = z.object({
   tenant: z.string().uuid(),
-  company_name: z.string(),
+  client_name: z.string(),
   email: z.string(),
   phone_number: z.string().nullable(),
   industry: z.string().nullable(),

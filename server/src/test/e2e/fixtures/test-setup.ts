@@ -31,7 +31,7 @@ export async function withTestSetup(): Promise<TestSetup> {
     // Create tenant
     await db('tenants').insert({
       tenant: tenantId,
-      company_name: `Test Company ${faker.company.name()}`,
+      client_name: `Test Client ${faker.company.name()}`,
       phone_number: faker.phone.number(),
       email: faker.internet.email(),
       created_at: new Date(),
@@ -147,10 +147,10 @@ export async function withTestSetup(): Promise<TestSetup> {
       { resource: 'contact', action: 'create' },
       { resource: 'contact', action: 'update' },
       { resource: 'contact', action: 'delete' },
-      { resource: 'company', action: 'read' },
-      { resource: 'company', action: 'create' },
-      { resource: 'company', action: 'update' },
-      { resource: 'company', action: 'delete' },
+      { resource: 'client', action: 'read' },
+      { resource: 'client', action: 'create' },
+      { resource: 'client', action: 'update' },
+      { resource: 'client', action: 'delete' },
       { resource: 'user', action: 'read' },
       { resource: 'user', action: 'create' },
       { resource: 'user', action: 'update' },

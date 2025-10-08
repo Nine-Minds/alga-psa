@@ -174,7 +174,7 @@ export const userFilterSchema = baseFilterSchema.extend({
                is_google_user: booleanTransform.optional(),
                has_avatar: booleanTransform.optional(),
                timezone: z.string().optional(),
-               company_id: uuidSchema.optional(),
+               client_id: uuidSchema.optional(),
                include_teams: booleanTransform.optional(),
                include_permissions: booleanTransform.optional()
              });
@@ -245,14 +245,14 @@ export const registerUserSchema = z.object({
   password: passwordSchema,
   first_name: z.string().min(1).max(100).optional(),
   last_name: z.string().min(1).max(100).optional(),
-  company_name: z.string().min(1).max(255).optional(),
+  client_name: z.string().min(1).max(255).optional(),
   user_type: userTypeSchema.default('internal')
 });
 
 export const registerClientUserSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
-  company_id: uuidSchema.optional() // Will be determined from email domain or contact
+  client_id: uuidSchema.optional() // Will be determined from email domain or contact
 });
 
 // Bulk operations schemas

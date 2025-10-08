@@ -32,7 +32,7 @@ export function PostHogUserIdentifier() {
         username: user.username,
         tenant: user.tenant,
         user_type: user.user_type,
-        company_id: user.companyId,
+        client_id: user.clientId,
         contact_id: user.contactId
       });
     } else {

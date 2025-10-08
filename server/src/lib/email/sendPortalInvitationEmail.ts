@@ -9,24 +9,24 @@ import logger from '@alga-psa/shared/core/logger';
 interface SendPortalInvitationEmailParams {
   email: string;
   contactName: string;
-  companyName: string;
+  clientName: string;
   portalLink: string;
   expirationTime: string;
   tenant: string;
-  companyLocationEmail?: string;
-  companyLocationPhone?: string;
+  clientLocationEmail?: string;
+  clientLocationPhone?: string;
   fromName?: string;
 }
 
 export async function sendPortalInvitationEmail({ 
   email, 
   contactName,
-  companyName,
+  clientName,
   portalLink,
   expirationTime,
   tenant,
-  companyLocationEmail,
-  companyLocationPhone,
+  clientLocationEmail,
+  clientLocationPhone,
   fromName: _fromName
 }: SendPortalInvitationEmailParams): Promise<boolean> {
   try {
@@ -36,12 +36,12 @@ export async function sendPortalInvitationEmail({
       // Prepare template data
       const templateData = {
         contactName,
-        companyName,
+        clientName,
         portalLink,
         expirationTime,
         currentYear: new Date().getFullYear(),
-        companyLocationEmail: companyLocationEmail || 'Not provided',
-        companyLocationPhone: companyLocationPhone || 'Not provided'
+        clientLocationEmail: clientLocationEmail || 'Not provided',
+        clientLocationPhone: clientLocationPhone || 'Not provided'
       };
 
       // Create database template processor to get the template from tenant DB
@@ -54,7 +54,7 @@ export async function sendPortalInvitationEmail({
         to: email,
         templateProcessor,
         templateData,
-        replyTo: companyLocationEmail // Company email as reply-to
+        replyTo: clientLocationEmail // Client email as reply-to
       });
 
       if (!result.success) {

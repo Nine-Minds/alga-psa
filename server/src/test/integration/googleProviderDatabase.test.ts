@@ -29,8 +29,8 @@ describe('Google Provider Database Integration Tests', () => {
     try {
       await testDb('tenants').insert({
         tenant: testTenant,
-        company_name: 'Google Test Company',
-        email: 'google-test@company.com',
+        client_name: 'Google Test Client',
+        email: 'google-test@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -137,13 +137,13 @@ describe('Google Provider Database Integration Tests', () => {
       const workspaceConfig = {
         tenant: testTenant,
         providerType: 'google' as const,
-        providerName: 'Company Workspace',
-        mailbox: 'support-test@company.com',
+        providerName: 'Client Workspace',
+        mailbox: 'support-test@client.com',
         isActive: true,
         vendorConfig: {
           clientId: 'workspace-client-id.apps.googleusercontent.com',
           clientSecret: 'workspace-secret',
-          projectId: 'company-project',
+          projectId: 'client-project',
           pubSubTopic: 'workspace-notifications',
           pubSubSubscription: 'workspace-subscription',
           labelFilters: ['INBOX', 'Support'],
@@ -157,12 +157,12 @@ describe('Google Provider Database Integration Tests', () => {
 
       // Assert
       expect(result).toBeDefined();
-      expect(result.mailbox).toBe('support-test@company.com');
+      expect(result.mailbox).toBe('support-test@client.com');
 
       // Verify in database
       const dbRecord = await testDb('email_provider_configs')
         .where('tenant', testTenant)
-        .where('mailbox', 'support-test@company.com')
+        .where('mailbox', 'support-test@client.com')
         .first();
 
       expect(dbRecord).toBeDefined();

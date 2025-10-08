@@ -99,14 +99,14 @@ export class ApiInvoiceController extends ApiBaseController {
           
           // Invoice-specific includes
           const include_items = url.searchParams.get('include_items') === 'true';
-          const include_company = url.searchParams.get('include_company') === 'true';
+          const include_client = url.searchParams.get('include_client') === 'true';
           const include_billing_cycle = url.searchParams.get('include_billing_cycle') === 'true';
           const include_transactions = url.searchParams.get('include_transactions') === 'true';
 
           // Get filters
           const filters: any = {};
           url.searchParams.forEach((value, key) => {
-            if (!['page', 'limit', 'sort', 'order', 'include_items', 'include_company', 'include_billing_cycle', 'include_transactions'].includes(key)) {
+            if (!['page', 'limit', 'sort', 'order', 'include_items', 'include_client', 'include_billing_cycle', 'include_transactions'].includes(key)) {
               filters[key] = value;
             }
           });
@@ -117,7 +117,7 @@ export class ApiInvoiceController extends ApiBaseController {
             sort, 
             order,
             include_items,
-            include_company,
+            include_client,
             include_billing_cycle,
             include_transactions
           };
@@ -157,12 +157,12 @@ export class ApiInvoiceController extends ApiBaseController {
           const url = new URL(apiRequest.url);
           const includeItems = url.searchParams.get('include_items') === 'true';
           const includeTransactions = url.searchParams.get('include_transactions') === 'true';
-          const includeCompany = url.searchParams.get('include_company') === 'true';
+          const includeClient = url.searchParams.get('include_client') === 'true';
           
           const options = {
             include_items: includeItems,
             include_transactions: includeTransactions,
-            include_company: includeCompany
+            include_client: includeClient
           };
           
           const invoice = await this.invoiceService.getById(id, apiRequest.context, options);
@@ -946,7 +946,7 @@ export class ApiInvoiceController extends ApiBaseController {
           
           // Create a new invoice based on the original
           const duplicateData = {
-            company_id: originalInvoice.company_id,
+            client_id: originalInvoice.client_id,
             invoice_date: new Date().toISOString().split('T')[0],
             due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
             subtotal: originalInvoice.subtotal,

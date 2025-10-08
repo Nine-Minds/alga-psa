@@ -13,12 +13,12 @@ const BillingPlan = {
     }
 
     try {
-      const result = await knexOrTrx('company_billing_plans')
+      const result = await knexOrTrx('client_billing_plans')
         .where({
           plan_id: planId,
           tenant
         })
-        .count('company_billing_plan_id as count')
+        .count('client_billing_plan_id as count')
         .first() as { count: string };
       
       return parseInt(result?.count || '0', 10) > 0;
@@ -61,7 +61,7 @@ const BillingPlan = {
     try {
       const isUsed = await BillingPlan.isInUse(knexOrTrx, planId);
       if (isUsed) {
-        throw new Error('Cannot delete plan that is in use by companies');
+        throw new Error('Cannot delete plan that is in use by clients');
       }
 
       const deletedCount = await knexOrTrx('billing_plans')

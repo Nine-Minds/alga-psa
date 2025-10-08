@@ -78,7 +78,9 @@ services:
     build:
       context: .
       dockerfile: setup/Dockerfile
-    container_name: ${APP_NAME:-sebastian}_setup_ce
+      args:
+        SERVER_IMAGE_REPO: ${ALGA_SETUP_IMAGE_REPO:-ghcr.io/nine-minds/alga-psa-ce}
+        ALGA_IMAGE_TAG: ${ALGA_IMAGE_TAG:-latest}
     environment:
       EDITION: community
       NODE_OPTIONS: --experimental-vm-modules
@@ -109,11 +111,11 @@ services:
     volumes:
       - type: bind
         source: ./setup/config.ini
-        target: /app/setup/config.ini
+        target: /opt/setup/config.ini
         read_only: true
       - type: bind
         source: ./setup/entrypoint.sh
-        target: /app/setup/entrypoint.sh
+        target: /opt/setup/entrypoint.sh
         read_only: true
       - type: bind
         source: ./secrets/postgres_password
@@ -133,7 +135,7 @@ services:
         condition: service_started
       pgbouncer: # Added dependency on pgbouncer
         condition: service_started
-    entrypoint: ["/app/setup/entrypoint.sh"]
+    entrypoint: ["/opt/setup/entrypoint.sh"]
 
   workflow-worker:
     # Remove extends to use a custom build
@@ -261,5 +263,4 @@ services:
 
 networks:
   app-network:
-    name: ${APP_NAME:-sebastian}_app-network
     driver: bridge

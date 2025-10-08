@@ -17,7 +17,7 @@ import {
 // Create contact schema
 export const createContactSchema = z.object({
   full_name: z.string().min(1, 'Full name is required').max(255),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   phone_number: phoneSchema,
   email: emailSchema,
   role: z.string().max(100).optional(),
@@ -34,11 +34,11 @@ export const contactFilterSchema = baseFilterSchema.extend({
   full_name: z.string().optional(),
   email: z.string().optional(),
   phone_number: z.string().optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   role: z.string().optional(),
   is_inactive: booleanTransform.optional(),
-  has_company: booleanTransform.optional(),
-  company_name: z.string().optional()
+  has_client: booleanTransform.optional(),
+  client_name: z.string().optional()
 });
 
 // Contact list query schema
@@ -48,7 +48,7 @@ export const contactListQuerySchema = createListQuerySchema(contactFilterSchema)
 export const contactResponseSchema = z.object({
   contact_name_id: uuidSchema,
   full_name: z.string(),
-  company_id: uuidSchema.nullable(),
+  client_id: uuidSchema.nullable(),
   phone_number: z.string().nullable(),
   email: z.string(),
   role: z.string().nullable(),
@@ -60,14 +60,14 @@ export const contactResponseSchema = z.object({
   tenant: uuidSchema,
   tags: z.array(z.string()).optional(),
   // Joined fields
-  company_name: z.string().nullable().optional()
+  client_name: z.string().nullable().optional()
 });
 
-// Contact with company details
-export const contactWithCompanyResponseSchema = contactResponseSchema.extend({
-  company: z.object({
-    company_id: uuidSchema,
-    company_name: z.string(),
+// Contact with client details
+export const contactWithClientResponseSchema = contactResponseSchema.extend({
+  client: z.object({
+    client_id: uuidSchema,
+    client_name: z.string(),
     email: z.string().nullable(),
     phone_no: z.string().nullable(),
     is_inactive: z.boolean()
@@ -99,7 +99,7 @@ export const contactImportSchema = z.object({
 export const contactExportQuerySchema = z.object({
   format: z.enum(['csv', 'json']).optional().default('csv'),
   include_inactive: booleanTransform.optional().default("false"),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   fields: z.array(z.string()).optional()
 });
 
@@ -108,8 +108,8 @@ export const contactStatsResponseSchema = z.object({
   total_contacts: z.number(),
   active_contacts: z.number(),
   inactive_contacts: z.number(),
-  contacts_with_company: z.number(),
-  contacts_without_company: z.number(),
+  contacts_with_client: z.number(),
+  contacts_without_client: z.number(),
   contacts_by_role: z.record(z.number()),
   recent_contacts: z.number() // contacts created in last 30 days
 });
@@ -121,7 +121,7 @@ export const contactSearchSchema = z.object({
     z.array(z.enum(['full_name', 'email', 'phone_number', 'role', 'notes'])),
     z.string().transform(val => val.split(',').map(f => f.trim()))
   ]).optional(),
-  company_id: uuidSchema.optional(),
+  client_id: uuidSchema.optional(),
   include_inactive: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
@@ -131,7 +131,7 @@ export type CreateContactData = z.infer<typeof createContactSchema>;
 export type UpdateContactData = z.infer<typeof updateContactSchema>;
 export type ContactFilterData = z.infer<typeof contactFilterSchema>;
 export type ContactResponse = z.infer<typeof contactResponseSchema>;
-export type ContactWithCompanyResponse = z.infer<typeof contactWithCompanyResponseSchema>;
+export type ContactWithClientResponse = z.infer<typeof contactWithClientResponseSchema>;
 export type ContactSearchData = z.infer<typeof contactSearchSchema>;
 export type ContactImportData = z.infer<typeof contactImportSchema>;
 export type ContactExportQuery = z.infer<typeof contactExportQuerySchema>;

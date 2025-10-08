@@ -63,7 +63,7 @@ describe('Contact API E2E Tests', () => {
           full_name: 'John Doe',
           email: 'john.doe@example.com',
           phone_number: '+1-555-123-4567',
-          company_id: env.companyId,
+          client_id: env.clientId,
           role: 'Manager',
           notes: 'Test contact'
         };
@@ -75,7 +75,7 @@ describe('Contact API E2E Tests', () => {
           full_name: newContact.full_name,
           email: newContact.email,
           phone_number: newContact.phone_number,
-          company_id: env.companyId,
+          client_id: env.clientId,
           role: newContact.role,
           notes: newContact.notes,
           is_inactive: false,
@@ -112,7 +112,7 @@ describe('Contact API E2E Tests', () => {
         const contact = await createTestContact(env.db, env.tenant, {
           full_name: 'Jane Smith',
           email: 'jane.smith@example.com',
-          company_id: env.companyId
+          client_id: env.clientId
         });
 
         const response = await env.apiClient.get(`${API_BASE}/${contact.contact_name_id}`);
@@ -122,7 +122,7 @@ describe('Contact API E2E Tests', () => {
           contact_name_id: contact.contact_name_id,
           full_name: contact.full_name,
           email: contact.email,
-          company_id: contact.company_id
+          client_id: contact.client_id
         });
       });
 
@@ -196,7 +196,7 @@ describe('Contact API E2E Tests', () => {
   describe('List Contacts (GET /api/v1/contacts)', () => {
     beforeEach(async () => {
       // Create test data set
-      await createTestContactSet(env.db, env.tenant, env.companyId);
+      await createTestContactSet(env.db, env.tenant, env.clientId);
     });
 
     it('should list all contacts with default pagination', async () => {
@@ -226,13 +226,13 @@ describe('Contact API E2E Tests', () => {
       expect(pagination.hasPrev).toBe(true);
     });
 
-    it('should filter by company_id', async () => {
-      const query = buildQueryString({ company_id: env.companyId });
+    it('should filter by client_id', async () => {
+      const query = buildQueryString({ client_id: env.clientId });
       const response = await env.apiClient.get(`${API_BASE}${query}`);
       assertSuccess(response);
 
       response.data.data.forEach((contact: any) => {
-        expect(contact.company_id).toBe(env.companyId);
+        expect(contact.client_id).toBe(env.clientId);
       });
     });
 
@@ -347,7 +347,7 @@ describe('Contact API E2E Tests', () => {
   describe('Contact Statistics (GET /api/v1/contacts/stats)', () => {
     it('should return contact statistics', async () => {
       // Create test data
-      await createTestContactSet(env.db, env.tenant, env.companyId);
+      await createTestContactSet(env.db, env.tenant, env.clientId);
 
       const response = await env.apiClient.get(`${API_BASE}/stats`);
       assertSuccess(response);
@@ -356,8 +356,8 @@ describe('Contact API E2E Tests', () => {
         total_contacts: expect.any(Number),
         active_contacts: expect.any(Number),
         inactive_contacts: expect.any(Number),
-        contacts_with_company: expect.any(Number),
-        contacts_without_company: expect.any(Number),
+        contacts_with_client: expect.any(Number),
+        contacts_without_client: expect.any(Number),
         contacts_by_role: expect.any(Object),
         recent_contacts: expect.any(Number)
       });

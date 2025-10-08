@@ -4,7 +4,7 @@ import { IInteraction, IInteractionType } from '../../interfaces/interaction.int
 import { createTenantKnex } from '../db';
 
 class InteractionModel {
-  static async getForEntity(entityId: string, entityType: 'contact' | 'company'): Promise<IInteraction[]> {
+  static async getForEntity(entityId: string, entityType: 'contact' | 'client'): Promise<IInteraction[]> {
     const { knex: db, tenant } = await createTenantKnex();
 
     try {
@@ -22,8 +22,8 @@ class InteractionModel {
           'interactions.end_time',
           'interactions.contact_name_id',
           'contacts.full_name as contact_name',
-          'interactions.company_id',
-          'companies.company_name',
+          'interactions.client_id',
+          'clients.client_name',
           'interactions.user_id',
           'users.username as user_name',
           'interactions.ticket_id',
@@ -43,9 +43,9 @@ class InteractionModel {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');
         })
-        .leftJoin('companies', function() {
-          this.on('interactions.company_id', '=', 'companies.company_id')
-            .andOn('interactions.tenant', '=', 'companies.tenant');
+        .leftJoin('clients', function() {
+          this.on('interactions.client_id', '=', 'clients.client_id')
+            .andOn('interactions.tenant', '=', 'clients.tenant');
         })
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')
@@ -60,7 +60,7 @@ class InteractionModel {
       if (entityType === 'contact') {
         query.where('interactions.contact_name_id', entityId);
       } else {
-        query.where('interactions.company_id', entityId);
+        query.where('interactions.client_id', entityId);
       }
 
       const result = await query;
@@ -78,7 +78,7 @@ class InteractionModel {
   static async getRecentInteractions(filters: {
     userId?: string;
     contactId?: string;
-    companyId?: string;
+    clientId?: string;
     dateFrom?: Date;
     dateTo?: Date;
     typeId?: string;
@@ -96,8 +96,8 @@ class InteractionModel {
           db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'interactions.contact_name_id',
           'contacts.full_name as contact_name',
-          'interactions.company_id',
-          'companies.company_name',
+          'interactions.client_id',
+          'clients.client_name',
           'interactions.user_id',
           'users.username as user_name',
           'interactions.ticket_id',
@@ -123,9 +123,9 @@ class InteractionModel {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');
         })
-        .leftJoin('companies', function() {
-          this.on('interactions.company_id', '=', 'companies.company_id')
-            .andOn('interactions.tenant', '=', 'companies.tenant');
+        .leftJoin('clients', function() {
+          this.on('interactions.client_id', '=', 'clients.client_id')
+            .andOn('interactions.tenant', '=', 'clients.tenant');
         })
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')
@@ -142,8 +142,8 @@ class InteractionModel {
       if (filters.contactId) {
         query.where('interactions.contact_name_id', filters.contactId);
       }
-      if (filters.companyId) {
-        query.where('interactions.company_id', filters.companyId);
+      if (filters.clientId) {
+        query.where('interactions.client_id', filters.clientId);
       }
       if (filters.dateFrom) {
         query.where('interactions.interaction_date', '>=', filters.dateFrom);
@@ -254,7 +254,7 @@ class InteractionModel {
           db.raw(`COALESCE(it.type_name, sit.type_name) as type_name`),
           db.raw(`COALESCE(it.icon, sit.icon) as icon`),
           'contacts.full_name as contact_name',
-          'companies.company_name',
+          'clients.client_name',
           'users.username as user_name',
           'statuses.name as status_name',
           'statuses.is_closed as is_status_closed'
@@ -270,9 +270,9 @@ class InteractionModel {
           this.on('interactions.contact_name_id', '=', 'contacts.contact_name_id')
             .andOn('interactions.tenant', '=', 'contacts.tenant');
         })
-        .leftJoin('companies', function() {
-          this.on('interactions.company_id', '=', 'companies.company_id')
-            .andOn('interactions.tenant', '=', 'companies.tenant');
+        .leftJoin('clients', function() {
+          this.on('interactions.client_id', '=', 'clients.client_id')
+            .andOn('interactions.tenant', '=', 'clients.tenant');
         })
         .leftJoin('users', function() {
           this.on('interactions.user_id', '=', 'users.user_id')

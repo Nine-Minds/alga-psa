@@ -24,7 +24,8 @@ const sessionUserRef = vi.hoisted(() => ({
 }));
 
 const permissionCheckRef = vi.hoisted(() => ({
-  fn: (user: IUserWithRoles) => user.user_type === 'admin'
+  fn: (user: IUserWithRoles, resource?: string, action?: string) =>
+    user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 }));
 
 vi.mock('server/src/lib/actions/user-actions/userActions', () => ({
@@ -123,8 +124,8 @@ export function mockNextCache() {
  * @param permissionCheck Function to determine if a user has permission
  */
 export function mockRBAC(
-  permissionCheck: (user: IUserWithRoles, resource: string, action: string) => boolean = 
-    (user) => user.user_type === 'admin'
+  permissionCheck: (user: IUserWithRoles, resource?: string, action?: string) => boolean =
+    (user) => user.roles?.some(role => role.role_name.toLowerCase() === 'admin') ?? true
 ) {
   permissionCheckRef.fn = permissionCheck;
 }
@@ -139,12 +140,12 @@ export function mockGetCurrentUser(mockUser: IUserWithRoles) {
 
 /**
  * Helper to create a mock user with roles
- * @param type User type ('admin' or 'user')
+ * @param type User type ('internal' or 'client')
  * @param overrides Optional user property overrides
  * @returns Mock user object
  */
 export function createMockUser(
-  type: 'admin' | 'user' = 'user',
+  type: 'internal' | 'client' = 'internal',
   overrides: Partial<IUserWithRoles> = {}
 ): IUserWithRoles {
   return {
@@ -152,7 +153,7 @@ export function createMockUser(
     tenant: overrides.tenant || '11111111-1111-1111-1111-111111111111',
     username: overrides.username || `mock-${type}`,
     first_name: overrides.first_name || 'Mock',
-    last_name: overrides.last_name || type === 'admin' ? 'Admin' : 'User',
+    last_name: overrides.last_name || type === 'internal' ? 'Internal' : 'Client',
     email: overrides.email || `mock.${type}@example.com`,
     hashed_password: overrides.hashed_password || 'hashed_password_here',
     is_inactive: overrides.is_inactive || false,
@@ -170,11 +171,11 @@ export function setupCommonMocks(options: {
   tenantId?: string;
   userId?: string;
   user?: IUserWithRoles;
-  permissionCheck?: (user: IUserWithRoles, resource: string, action: string) => boolean;
+  permissionCheck?: (user: IUserWithRoles, resource?: string, action?: string) => boolean;
 } = {}) {
   const tenantId = options.tenantId || '11111111-1111-1111-1111-111111111111';
   const userId = options.userId || 'mock-user-id';
-  const user = options.user || createMockUser('user', { user_id: userId, tenant: tenantId });
+  const user = options.user || createMockUser('internal', { user_id: userId, tenant: tenantId });
 
   mockNextHeaders(tenantId);
   mockNextAuth(userId, tenantId);

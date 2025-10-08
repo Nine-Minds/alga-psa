@@ -9,6 +9,7 @@ export interface TenantCreationInput {
     email: string;
   };
   companyName?: string;
+  clientName?: string;
   billingPlan?: string;
   licenseCount?: number; // Number of licenses for the tenant
   checkoutSessionId?: string; // Stripe checkout session ID for status updates
@@ -17,13 +18,13 @@ export interface TenantCreationInput {
 export interface TenantCreationResult {
   tenantId: string;
   adminUserId: string;
-  companyId?: string;
+  clientId?: string;
   temporaryPassword: string;
   emailSent: boolean;
   success: boolean;
   createdAt: ISO8601String;
   // Customer tracking information
-  customerCompanyId?: string;
+  customerClientId?: string;
   customerContactId?: string;
 }
 
@@ -31,12 +32,13 @@ export interface CreateTenantActivityInput {
   tenantName: string;
   email: string;
   companyName?: string;
+  clientName?: string;
   licenseCount?: number; // Number of licenses for the tenant
 }
 
 export interface CreateTenantActivityResult {
   tenantId: string;
-  companyId?: string;
+  clientId?: string;
 }
 
 export interface CreateAdminUserActivityInput {
@@ -44,7 +46,7 @@ export interface CreateAdminUserActivityInput {
   firstName: string;
   lastName: string;
   email: string;
-  companyId?: string;
+  clientId?: string;
 }
 
 export interface CreateAdminUserActivityResult {
@@ -56,7 +58,7 @@ export interface CreateAdminUserActivityResult {
 export interface SetupTenantDataActivityInput {
   tenantId: string;
   adminUserId: string;
-  companyId?: string;
+  clientId?: string;
   billingPlan?: string;
 }
 
@@ -74,6 +76,7 @@ export interface SendWelcomeEmailActivityInput {
     email: string;
   };
   temporaryPassword: string;
+  clientName?: string;
   companyName?: string;
 }
 
@@ -88,7 +91,7 @@ export interface TenantCreationWorkflowState {
   step: 'initializing' | 'creating_tenant' | 'creating_admin_user' | 'creating_customer_tracking' | 'setting_up_data' | 'running_onboarding_seeds' | 'sending_welcome_email' | 'completed' | 'failed';
   tenantId?: string;
   adminUserId?: string;
-  companyId?: string;
+  clientId?: string;
   emailSent?: boolean;
   error?: string;
   progress: number; // 0-100
@@ -111,7 +114,7 @@ export interface CreatePortalUserActivityInput {
   email: string;
   password?: string; // Optional - will generate if not provided
   contactId: string;
-  companyId: string;
+  clientId: string;
   firstName?: string;
   lastName?: string;
   roleId?: string; // Optional specific role ID

@@ -33,8 +33,8 @@ describe('Google Provider Database Save Integration Tests', () => {
     try {
       await testDb('tenants').insert({
         tenant: testTenant,
-        company_name: 'Google Save Test Company',
-        email: 'save-test@company.com',
+        client_name: 'Google Save Test Client',
+        email: 'save-test@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });
@@ -74,13 +74,13 @@ describe('Google Provider Database Save Integration Tests', () => {
       const googleProviderConfig = {
         tenant: testTenant,
         providerType: 'google' as const,
-        providerName: 'Company Gmail Support',
-        mailbox: 'support@company.com',
+        providerName: 'Client Gmail Support',
+        mailbox: 'support@client.com',
         isActive: true,
         vendorConfig: {
           clientId: 'test-client-id.apps.googleusercontent.com',
           clientSecret: 'test-client-secret-value',
-          projectId: 'company-project-id',
+          projectId: 'client-project-id',
           pubSubTopic: 'gmail-notifications',
           pubSubSubscription: 'gmail-webhook-subscription',
           labelFilters: ['INBOX', 'UNREAD'],
@@ -95,7 +95,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       // Verify the result
       expect(result).toBeDefined();
       expect(result.provider_type).toBe('google');
-      expect(result.mailbox).toBe('support@company.com');
+      expect(result.mailbox).toBe('support@client.com');
 
       // Verify in database
       const dbRecord = await testDb('email_provider_configs')
@@ -105,8 +105,8 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(dbRecord).toBeDefined();
       expect(dbRecord.tenant).toBe(testTenant);
       expect(dbRecord.provider_type).toBe('google');
-      expect(dbRecord.name).toBe('Company Gmail Support');
-      expect(dbRecord.mailbox).toBe('support@company.com');
+      expect(dbRecord.name).toBe('Client Gmail Support');
+      expect(dbRecord.mailbox).toBe('support@client.com');
       expect(dbRecord.active).toBe(true);
       expect(dbRecord.connection_status).toBe('disconnected');
 
@@ -118,7 +118,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       expect(savedConfig).toEqual({
         clientId: 'test-client-id.apps.googleusercontent.com',
         clientSecret: 'test-client-secret-value',
-        projectId: 'company-project-id',
+        projectId: 'client-project-id',
         pubSubTopic: 'gmail-notifications',
         pubSubSubscription: 'gmail-webhook-subscription',
         labelFilters: ['INBOX', 'UNREAD'],
@@ -163,7 +163,7 @@ describe('Google Provider Database Save Integration Tests', () => {
       const workspaceConfig = {
         tenant: testTenant,
         providerType: 'google' as const,
-        providerName: 'Company Workspace',
+        providerName: 'Client Workspace',
         mailbox: 'support@customdomain.com',
         isActive: true,
         vendorConfig: {
@@ -248,7 +248,7 @@ describe('Google Provider Database Save Integration Tests', () => {
         tenant: testTenant,
         providerType: 'google' as const,
         providerName: 'Full Config Gmail',
-        mailbox: 'fullconfig@company.com',
+        mailbox: 'fullconfig@client.com',
         isActive: true,
         vendorConfig: {
           clientId: 'full-client-id.apps.googleusercontent.com',

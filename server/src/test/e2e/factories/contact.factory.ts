@@ -7,20 +7,25 @@ import { faker } from '@faker-js/faker';
 
 interface ContactInput {
   tenant: string;
-  company_id?: string;
+  client_id?: string;
   full_name?: string;
   email?: string;
   phone_number?: string;
   role?: string;
   notes?: string;
   is_inactive?: boolean;
+  // Backward compatibility
+  client_id?: string;
 }
 
 export async function contactFactory(db: any, input: ContactInput) {
+  // Support both client_id and client_id (backward compatibility)
+  const clientId = input.client_id || input.client_id || null;
+
   const contact = {
     contact_name_id: faker.string.uuid(),
     tenant: input.tenant,
-    company_id: input.company_id || null,
+    client_id: clientId,
     full_name: input.full_name || faker.person.fullName(),
     email: input.email || faker.internet.email().toLowerCase(),
     phone_number: input.phone_number || faker.phone.number(),
@@ -35,7 +40,7 @@ export async function contactFactory(db: any, input: ContactInput) {
     .insert({
       contact_name_id: contact.contact_name_id,
       tenant: contact.tenant,
-      company_id: contact.company_id,
+      client_id: contact.client_id,
       full_name: contact.full_name,
       email: contact.email,
       phone_number: contact.phone_number,

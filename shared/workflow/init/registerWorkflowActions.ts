@@ -25,7 +25,7 @@ interface QboCredentials {
 }
 
 // --- QBO Customer Specific Types ---
-interface QuickBooksCompanyInfo {
+interface QuickBooksClientInfo {
   Id: string;
   SyncToken: string;
   DisplayName?: string;
@@ -35,7 +35,7 @@ interface QuickBooksCompanyInfo {
   FamilyName?: string;
   Suffix?: string;
   FullyQualifiedName?: string;
-  CompanyName?: string;
+  ClientName?: string;
   PrimaryEmailAddr?: {
     Address?: string;
   };
@@ -61,7 +61,7 @@ interface QuickBooksCompanyInfo {
 
 interface QboCustomerByIdResult {
   success: boolean;
-  customer?: QuickBooksCompanyInfo;
+  customer?: QuickBooksClientInfo;
   message?: string;
   errorDetails?: any;
   qboRawResponse?: any;
@@ -529,59 +529,63 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Placeholder for get_company
+  // Placeholder for get_client
   actionRegistry.registerSimpleAction(
-    'get_company',
-    'Get a company by ID (placeholder)',
+    'get_client',
+    'Get a client by ID (placeholder)',
     [
       { name: 'id', type: 'string', required: true },
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] get_company called for id: ${params.id}, tenant: ${context.tenant}`);
+      logger.info(`[ACTION] get_client called for id: ${params.id}, tenant: ${context.tenant}`);
       try {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
-        const company = await knex('companies')
+        const client = await knex('clients')
           .select('*') // This will fetch address and billing_email if they exist
-          .where({ company_id: params.id, tenant: context.tenant })
+          .where({ client_id: params.id, tenant: context.tenant })
           .first();
 
-        if (!company) {
-          logger.warn(`[ACTION] get_company: Company not found for id: ${params.id}, tenant: ${context.tenant}`);
-          const err = new Error(`Company with id ${params.id} not found for tenant ${context.tenant}.`);
+        if (!client) {
+          logger.warn(`[ACTION] get_client: Client not found for id: ${params.id}, tenant: ${context.tenant}`);
+          const err = new Error(`Client with id ${params.id} not found for tenant ${context.tenant}.`);
           (err as any).status = 404;
           throw err;
         }
 
-        logger.info(`[ACTION] get_company: Successfully fetched company id: ${params.id}`);
-        logger.info(`[ACTION] get_company: Company details from DB: ${JSON.stringify(company)}`);
+        logger.info(`[ACTION] get_client: Successfully fetched client id: ${params.id}`);
+        logger.info(`[ACTION] get_client: Client details from DB: ${JSON.stringify(client)}`);
 
-        return company;
+        // Map client_id to alga_client_id for backward compatibility with workflows
+        return {
+          ...client,
+          alga_client_id: client.client_id
+        };
       } catch (error: any) {
-        logger.error(`[ACTION] get_company: Error fetching company id: ${params.id}, tenant: ${context.tenant}`, error);
+        logger.error(`[ACTION] get_client: Error fetching client id: ${params.id}, tenant: ${context.tenant}`, error);
         throw error; // Re-throw error
       }
     }
   );
 
-  // Get company default location
+  // Get client default location
   actionRegistry.registerSimpleAction(
-    'get_company_default_location',
-    'Get the default location for a company',
+    'get_client_default_location',
+    'Get the default location for a client',
     [
-      { name: 'companyId', type: 'string', required: true },
+      { name: 'clientId', type: 'string', required: true },
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] get_company_default_location called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
+      logger.info(`[ACTION] get_client_default_location called for clientId: ${params.clientId}, tenant: ${context.tenant}`);
       try {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
-        const location = await knex('company_locations')
+        const location = await knex('client_locations')
           .select('*')
           .where({
-            company_id: params.companyId,
+            client_id: params.clientId,
             tenant: context.tenant,
             is_default: true,
             is_active: true
@@ -589,16 +593,16 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           .first();
 
         if (!location) {
-          logger.warn(`[ACTION] get_company_default_location: No default location found for company: ${params.companyId}, tenant: ${context.tenant}`);
+          logger.warn(`[ACTION] get_client_default_location: No default location found for client: ${params.clientId}, tenant: ${context.tenant}`);
           return {
             success: true,
             found: false,
             location: null,
-            message: `No default location found for company ${params.companyId}`
+            message: `No default location found for client ${params.clientId}`
           };
         }
 
-        logger.info(`[ACTION] get_company_default_location: Successfully fetched default location for company: ${params.companyId}`);
+        logger.info(`[ACTION] get_client_default_location: Successfully fetched default location for client: ${params.clientId}`);
 
         return {
           success: true,
@@ -606,7 +610,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           location: location
         };
       } catch (error: any) {
-        logger.error(`[ACTION] get_company_default_location: Error fetching default location for company: ${params.companyId}, tenant: ${context.tenant}`, error);
+        logger.error(`[ACTION] get_client_default_location: Error fetching default location for client: ${params.clientId}, tenant: ${context.tenant}`, error);
         return {
           success: false,
           found: false,
@@ -617,30 +621,30 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Get all company locations
+  // Get all client locations
   actionRegistry.registerSimpleAction(
-    'get_company_locations',
-    'Get all active locations for a company',
+    'get_client_locations',
+    'Get all active locations for a client',
     [
-      { name: 'companyId', type: 'string', required: true },
+      { name: 'clientId', type: 'string', required: true },
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
-      logger.info(`[ACTION] get_company_locations called for companyId: ${params.companyId}, tenant: ${context.tenant}`);
+      logger.info(`[ACTION] get_client_locations called for clientId: ${params.clientId}, tenant: ${context.tenant}`);
       try {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
         const knex = await getAdminConnection();
 
-        const locations = await knex('company_locations')
+        const locations = await knex('client_locations')
           .select('*')
           .where({
-            company_id: params.companyId,
+            client_id: params.clientId,
             tenant: context.tenant,
             is_active: true
           })
           .orderBy('is_default', 'desc')
           .orderBy('location_name', 'asc');
 
-        logger.info(`[ACTION] get_company_locations: Successfully fetched ${locations.length} locations for company: ${params.companyId}`);
+        logger.info(`[ACTION] get_client_locations: Successfully fetched ${locations.length} locations for client: ${params.clientId}`);
 
         return {
           success: true,
@@ -648,7 +652,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           count: locations.length
         };
       } catch (error: any) {
-        logger.error(`[ACTION] get_company_locations: Error fetching locations for company: ${params.companyId}, tenant: ${context.tenant}`, error);
+        logger.error(`[ACTION] get_client_locations: Error fetching locations for client: ${params.clientId}, tenant: ${context.tenant}`, error);
         return {
           success: false,
           locations: [],
@@ -828,7 +832,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           sparse: true, // Important for QBO updates
         };
 
-        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/invoice?operation=update&minorversion=69`;
+        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/invoice?operation=update&minorversion=69`;
         logger.debug(`[ACTION] update_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToUpdatePayload);
 
         const response = await axios.post(apiUrl, invoiceToUpdatePayload, {
@@ -891,7 +895,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         // params.qboInvoiceData should be the complete QBO Invoice object structure for creation
         const invoiceToCreatePayload = { ...params.qboInvoiceData };
 
-        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/invoice?minorversion=69`;
+        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/invoice?minorversion=69`;
         logger.debug(`[ACTION] create_qbo_invoice: Posting to QBO: ${apiUrl}`, invoiceToCreatePayload);
 
         const response = await axios.post(apiUrl, invoiceToCreatePayload, {
@@ -956,7 +960,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
 
         const customerToCreatePayload = { ...params.qboCustomerData };
 
-        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer?minorversion=69`;
+        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer?minorversion=69`;
         logger.debug(`${logPrefix} create_qbo_customer: Posting to QBO: ${apiUrl}`, customerToCreatePayload);
 
         const response = await axios.post(apiUrl, customerToCreatePayload, {
@@ -1030,7 +1034,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           sparse: true,                // Ensure sparse update is true
         };
 
-        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer?operation=update&minorversion=69`;
+        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer?operation=update&minorversion=69`;
         logger.debug(`${logPrefix} update_qbo_customer: Posting to QBO: ${apiUrl}`, JSON.stringify(customerToUpdatePayload));
 
         const response = await axios.post(apiUrl, customerToUpdatePayload, {
@@ -1118,7 +1122,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         }
 
         const query = `SELECT Id, DisplayName, PrimaryEmailAddr, SyncToken FROM Customer WHERE ${queryConditions.join(' OR ')} MAXRESULTS 10`;
-        const queryUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/query?query=${encodeURIComponent(query)}&minorversion=69`;
+        const queryUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/query?query=${encodeURIComponent(query)}&minorversion=69`;
 
         logger.debug(`${logPrefix} get_qbo_customer_by_display_or_email: Querying QBO: ${queryUrl}`);
 
@@ -1181,7 +1185,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           return { success: false, message: 'QBO access token expired. Please reconnect QuickBooks integration.' };
         }
 
-        const apiUrl = `${QBO_BASE_URL}/v3/company/${params.realmId}/customer/${params.qboCustomerId}?minorversion=69`;
+        const apiUrl = `${QBO_BASE_URL}/v3/client/${params.realmId}/customer/${params.qboCustomerId}?minorversion=69`;
         logger.debug(`${logPrefix} Querying QBO: ${apiUrl}`);
 
         const response = await axios.get(apiUrl, {
@@ -1198,7 +1202,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           logger.info(`${logPrefix} Successfully fetched QBO Customer ${qboCustomer.Id}. RealmId: ${params.realmId}`);
           return {
             success: true,
-            customer: qboCustomer as QuickBooksCompanyInfo,
+            customer: qboCustomer as QuickBooksClientInfo,
             qboRawResponse: response.data,
           };
         } else {
@@ -1246,19 +1250,19 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Update Alga company QBO mapping details
+  // Update Alga client QBO mapping details
   actionRegistry.registerSimpleAction(
-    'update_company_qbo_details',
-    'Update Alga company QBO mapping in tenant_external_entity_mappings with QBO customer ID and sync token.',
+    'update_client_qbo_details',
+    'Update Alga client QBO mapping in tenant_external_entity_mappings with QBO customer ID and sync token.',
     [
-      { name: 'companyId', type: 'string', required: true, description: 'The ID of the Alga company to update.' },
+      { name: 'clientId', type: 'string', required: true, description: 'The ID of the Alga client to update.' },
       { name: 'qboCustomerId', type: 'string', required: true, description: 'The QBO customer ID.' },
       { name: 'qboSyncToken', type: 'string', required: true, description: 'The QBO sync token for the customer.' },
       { name: 'realmId', type: 'string', required: true, description: 'The QBO Realm ID.' },
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      logger.info(`${logPrefix} update_company_qbo_details called for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
+      logger.info(`${logPrefix} update_client_qbo_details called for clientId: ${params.clientId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
 
       try {
         const { getAdminConnection } = await import('@alga-psa/shared/db/admin');
@@ -1267,8 +1271,8 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
         const mappingData = {
           tenant: context.tenant,
           integration_type: 'quickbooks_online',
-          alga_entity_type: 'company', // Assuming 'company' is the Alga entity type mapping to QBO Customer
-          alga_entity_id: params.companyId,
+          alga_entity_type: 'client', // Assuming 'client' is the Alga entity type mapping to QBO Customer
+          alga_entity_id: params.clientId,
           external_entity_id: params.qboCustomerId,
           external_realm_id: params.realmId,
           sync_status: 'SYNCED', // Or a more appropriate status
@@ -1293,16 +1297,16 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
           .returning('*');
 
         if (!updatedMapping) {
-          logger.warn(`${logPrefix} update_company_qbo_details: Mapping not created or updated for companyId: ${params.companyId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
+          logger.warn(`${logPrefix} update_client_qbo_details: Mapping not created or updated for clientId: ${params.clientId}, qboCustomerId: ${params.qboCustomerId}, realmId: ${params.realmId}, tenant: ${context.tenant}`);
           // This case might be unlikely with upsert unless there's a fundamental DB issue not caught by try/catch
           return { success: false, updated: false, message: 'Mapping not created or updated.' };
         }
 
-        logger.info(`${logPrefix} update_company_qbo_details: Successfully created/updated mapping for company ${params.companyId} with QBO customer ${params.qboCustomerId}.`);
+        logger.info(`${logPrefix} update_client_qbo_details: Successfully created/updated mapping for client ${params.clientId} with QBO customer ${params.qboCustomerId}.`);
         return { success: true, updated: true, updatedMapping };
 
       } catch (error: any) {
-        logger.error(`${logPrefix} update_company_qbo_details: Error creating/updating mapping for company ${params.companyId}, tenant: ${context.tenant}`, error);
+        logger.error(`${logPrefix} update_client_qbo_details: Error creating/updating mapping for client ${params.clientId}, tenant: ${context.tenant}`, error);
         return { success: false, message: error.message, error };
       }
     }
@@ -1313,14 +1317,14 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     'get_external_entity_mapping',
     'Retrieves an external entity mapping for an Alga entity, system, and realm.',
     [
-      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., company ID, invoice ID).' },
+      { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity (e.g., client ID, invoice ID).' },
       { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., \'quickbooks_online\').' },
       { name: 'externalRealmId', type: 'string', required: true, description: 'The realm ID for the external system (e.g., QBO realmId).' },
-      { name: 'algaEntityType', type: 'string', required: false, description: 'The type of Alga entity (e.g., "invoice", "company"). Defaults to "company" if not specified.' }
+      { name: 'algaEntityType', type: 'string', required: false, description: 'The type of Alga entity (e.g., "invoice", "client"). Defaults to "client" if not specified.' }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       const logPrefix = `[ACTION] [${context.workflowName || 'UnknownWorkflow'}${context.correlationId ? `:${context.correlationId}` : ''} (${context.executionId})]`;
-      const entityType = params.algaEntityType || 'company'; // Default to 'company' for backward compatibility
+      const entityType = params.algaEntityType || 'client'; // Default to 'client' for backward compatibility
 
       logger.info(`${logPrefix} get_external_entity_mapping called for algaEntityType: ${entityType}, algaEntityId: ${params.algaEntityId}, externalSystemName: ${params.externalSystemName}, externalRealmId: ${params.externalRealmId}, tenant: ${context.tenant}`);
 
@@ -1367,7 +1371,7 @@ function registerCommonActions(actionRegistry: ActionRegistry): void {
     'create_or_update_external_entity_mapping',
     'Create or update an external entity mapping for an Alga entity and external system',
     [
-      { name: 'algaEntityType', type: 'string', required: true, description: 'The type of Alga entity (e.g., "invoice", "company").' },
+      { name: 'algaEntityType', type: 'string', required: true, description: 'The type of Alga entity (e.g., "invoice", "client").' },
       { name: 'algaEntityId', type: 'string', required: true, description: 'The ID of the Alga entity.' },
       { name: 'externalSystemName', type: 'string', required: true, description: 'The name of the external system (e.g., "quickbooks_online").' },
       { name: 'externalEntityId', type: 'string', required: true, description: 'The ID of the entity in the external system.' },
@@ -1808,11 +1812,11 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
 
   actionRegistry.registerSimpleAction(
     'create_or_find_contact',
-    'Create or find contact by email and company',
+    'Create or find contact by email and client',
     [
       { name: 'email', type: 'string', required: true },
       { name: 'name', type: 'string', required: false },
-      { name: 'company_id', type: 'string', required: true },
+      { name: 'client_id', type: 'string', required: true },
       { name: 'phone', type: 'string', required: false },
       { name: 'title', type: 'string', required: false }
     ],
@@ -1822,7 +1826,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const result = await createOrFindContact({
           email: params.email,
           name: params.name,
-          company_id: params.company_id,
+          client_id: params.client_id,
           phone: params.phone,
           title: params.title
         }, context.tenant);
@@ -1879,7 +1883,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     [
       { name: 'title', type: 'string', required: true },
       { name: 'description', type: 'string', required: true },
-      { name: 'company_id', type: 'string', required: false },
+      { name: 'client_id', type: 'string', required: false },
       { name: 'contact_id', type: 'string', required: false },
       { name: 'source', type: 'string', required: false },
       { name: 'board_id', type: 'string', required: false },
@@ -1897,7 +1901,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const result = await createTicketFromEmail({
           title: params.title,
           description: params.description,
-          company_id: params.company_id,
+          client_id: params.client_id,
           contact_id: params.contact_id,
           source: params.source,
           board_id: params.board_id,
@@ -2086,33 +2090,33 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     }
   );
 
-  // Email Company Actions
+  // Email Client Actions
   actionRegistry.registerSimpleAction(
-    'create_company_from_email',
-    'Create a company from email data',
+    'create_client_from_email',
+    'Create a client from email data',
     [
-      { name: 'company_name', type: 'string', required: true },
+      { name: 'client_name', type: 'string', required: true },
       { name: 'email', type: 'string', required: false },
       { name: 'source', type: 'string', required: false }
     ],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { createCompanyFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
-        const result = await createCompanyFromEmail({
-          company_name: params.company_name,
+        const { createClientFromEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+        const result = await createClientFromEmail({
+          client_name: params.client_name,
           email: params.email,
           source: params.source
         }, context.tenant);
 
         return {
           success: true,
-          company: result
+          client: result
         };
       } catch (error: any) {
-        logger.error(`[ACTION] create_company_from_email: Error creating company ${params.company_name}`, error);
+        logger.error(`[ACTION] create_client_from_email: Error creating client ${params.client_name}`, error);
         return {
           success: false,
-          company: null,
+          client: null,
           message: error.message
         };
       }
@@ -2120,23 +2124,23 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
   );
 
   actionRegistry.registerSimpleAction(
-    'get_company_by_id_for_email',
-    'Get company by ID for email workflows',
-    [{ name: 'companyId', type: 'string', required: true }],
+    'get_client_by_id_for_email',
+    'Get client by ID for email workflows',
+    [{ name: 'clientId', type: 'string', required: true }],
     async (params: Record<string, any>, context: ActionExecutionContext) => {
       try {
-        const { getCompanyByIdForEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
-        const company = await getCompanyByIdForEmail(params.companyId, context.tenant);
+        const { getClientByIdForEmail } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
+        const client = await getClientByIdForEmail(params.clientId, context.tenant);
 
         return {
-          success: !!company,
-          company: company
+          success: !!client,
+          client: client
         };
       } catch (error: any) {
-        logger.error(`[ACTION] get_company_by_id_for_email: Error getting company ${params.companyId}`, error);
+        logger.error(`[ACTION] get_client_by_id_for_email: Error getting client ${params.clientId}`, error);
         return {
           success: false,
-          company: null,
+          client: null,
           message: error.message
         };
       }
@@ -2331,7 +2335,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
     'Save email-to-client association',
     [
       { name: 'email', type: 'string', required: true },
-      { name: 'company_id', type: 'string', required: true },
+      { name: 'client_id', type: 'string', required: true },
       { name: 'contact_id', type: 'string', required: false },
       { name: 'confidence_score', type: 'number', required: false },
       { name: 'notes', type: 'string', required: false }
@@ -2341,7 +2345,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
         const { saveEmailClientAssociation } = await import('@alga-psa/shared/workflow/actions/emailWorkflowActions');
         const result = await saveEmailClientAssociation({
           email: params.email,
-          company_id: params.company_id,
+          client_id: params.client_id,
           contact_id: params.contact_id,
           confidence_score: params.confidence_score,
           notes: params.notes
@@ -2351,7 +2355,7 @@ function registerEmailWorkflowActions(actionRegistry: ActionRegistry): void {
           success: result.success,
           associationId: result.associationId,
           email: result.email,
-          company_id: result.company_id
+          client_id: result.client_id
         };
       } catch (error: any) {
         logger.error(`[ACTION] save_email_client_association: Error saving association for ${params.email}`, error);

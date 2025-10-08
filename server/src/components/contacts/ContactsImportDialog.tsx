@@ -19,14 +19,14 @@ interface ContactsImportDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onImportComplete: (contacts: IContact[]) => void;
-  companies: { company_id: string; company_name: string; }[];
+  clients: { client_id: string; client_name: string; }[];
 }
 
 const CONTACT_FIELDS = {
   full_name: 'Name *',
   email: 'Email *',
   phone_number: 'Phone Number',
-  company: 'Company',
+  client: 'Client',
   tags: 'Tags',
   role: 'Role',
   notes: 'Notes'
@@ -46,7 +46,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
   isOpen,
   onClose,
   onImportComplete,
-  companies
+  clients
 }) => {
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'results' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
@@ -140,9 +140,9 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
         let contactField: MappableField | null = null;
 
         // Check more specific patterns first
-        if (headerLower === 'company' || headerLower === 'company_name' || headerLower === 'company name') contactField = 'company';
+        if (headerLower === 'client' || headerLower === 'client_name' || headerLower === 'client name') contactField = 'client';
         else if (headerLower === 'full_name' || headerLower === 'full name' || headerLower === 'name') contactField = 'full_name';
-        else if (headerLower.includes('company')) contactField = 'company';
+        else if (headerLower.includes('client')) contactField = 'client';
         else if (headerLower.includes('email')) contactField = 'email';
         else if (headerLower.includes('phone')) contactField = 'phone_number';
         else if (headerLower.includes('tag')) contactField = 'tags';
@@ -260,14 +260,14 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
 
   const transformDataForImport = (data: Array<Record<MappableField, string>>): Array<Partial<IContact> & { tags?: string }> => {
     return data.map((record): Partial<IContact> & { tags?: string } => {
-      // Find company ID from company name
-      const company = companies.find(c => c.company_name === record.company);
+      // Find client ID from client name
+      const client = clients.find(c => c.client_name === record.client);
       
       const contactData: Partial<IContact> & { tags?: string } = {
         full_name: record.full_name,
         email: record.email,
         phone_number: record.phone_number,
-        company_id: company?.company_id || null,
+        client_id: client?.client_id || null,
         role: record.role,
         notes: record.notes,
         is_inactive: false
@@ -327,7 +327,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
           full_name: result.data.full_name || '',
           email: result.data.email || '',
           phone_number: result.data.phone_number || '',
-          company: result.data.company || '',
+          client: result.data.client || '',
           tags: result.data.tags || '',
           role: result.data.role || '',
           notes: result.data.notes || ''
@@ -502,7 +502,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
                 <p className="mt-1 text-xs text-gray-500">
                   <strong>Required:</strong> full_name, email<br />
                   <strong>Contact fields:</strong> phone_number, role, notes, tags<br />
-                  <strong>Company field:</strong> company (matches existing companies by name)<br />
+                  <strong>Client field:</strong> client (matches existing clients by name)<br />
                   <strong>Note:</strong> Tags should be comma-separated values
                 </p>
                 <Input
@@ -771,7 +771,7 @@ const ContactsImportDialog: React.FC<ContactsImportDialogProps> = ({
               full_name: result.data.full_name || '',
               email: result.data.email || '',
               phone_number: result.data.phone_number || '',
-              company: result.data.company || '',
+              client: result.data.client || '',
               tags: result.data.tags || '',
               role: result.data.role || '',
               notes: result.data.notes || ''

@@ -80,7 +80,7 @@ describe('Your API E2E Tests', () => {
 ## Test Data Management
 
 The test suite automatically:
-- Creates a test tenant, company, user, and API key
+- Creates a test tenant, client, user, and API key
 - Cleans up all test data after each test
 - Provides factories for creating test data
 

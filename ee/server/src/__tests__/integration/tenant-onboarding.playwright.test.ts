@@ -67,11 +67,11 @@ test.describe('Tenant Onboarding Integration Tests', () => {
         tenantId: testContext.tenantData.tenant.tenantId,
         tenantName: testContext.tenantData.tenant.tenantName,
         email: testContext.tenantData.tenant.email,
-        companyId: testContext.tenantData.company?.companyId,
+        clientId: testContext.tenantData.client?.clientId,
         adminUserId: testContext.tenantData.adminUser.userId,
       }, {
         tenantName: testContext.tenantData.tenant.tenantName,
-        companyName: testContext.tenantData.company?.companyName,
+        clientName: testContext.tenantData.client?.clientName,
         adminUser: {
           firstName: testContext.tenantData.adminUser.firstName,
           lastName: testContext.tenantData.adminUser.lastName,
@@ -155,8 +155,8 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
       // Navigate forward a few steps
-      await session.onboardingWizard.completeCompanyInfoStep({
-        companyName: 'Navigation Test Company',
+      await session.onboardingWizard.completeClientInfoStep({
+        clientName: 'Navigation Test Client',
       });
       await session.onboardingWizard.verifyStepVisible(2);
 
@@ -164,20 +164,20 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await session.onboardingWizard.clickBack();
       await session.onboardingWizard.verifyStepVisible(1);
 
-      // Verify company name is preserved
-      const companyNameInput = testContext.page.locator('input[name="companyName"]');
-      const value = await companyNameInput.inputValue();
-      expect(value).toBe('Navigation Test Company');
+      // Verify client name is preserved
+      const clientNameInput = testContext.page.locator('input[name="clientName"]');
+      const value = await clientNameInput.inputValue();
+      expect(value).toBe('Navigation Test Client');
     });
   });
 
   test.describe('Individual Onboarding Steps', () => {
-    test('should complete company info step with valid data', async () => {
+    test('should complete client info step with valid data', async () => {
       const session = createOnboardingTestSession(testContext.page, testContext.tenantData);
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
-      await session.onboardingWizard.completeCompanyInfoStep({
-        companyName: 'Test Company Step',
+      await session.onboardingWizard.completeClientInfoStep({
+        clientName: 'Test Client Step',
         industry: 'Technology',
         size: 'Small',
         address: '123 Test Street, Test City, TC 12345',
@@ -190,15 +190,15 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       const session = createOnboardingTestSession(testContext.page, testContext.tenantData);
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
-      // Complete company info first
-      await session.onboardingWizard.completeCompanyInfoStep({
-        companyName: 'Team Test Company',
+      // Complete client info first
+      await session.onboardingWizard.completeClientInfoStep({
+        clientName: 'Team Test Client',
       });
 
       // Complete team members step
       await session.onboardingWizard.completeTeamMembersStep([
-        { name: 'Alice Johnson', email: 'alice@company.com', role: 'Manager' },
-        { name: 'Bob Smith', email: 'bob@company.com', role: 'Developer' },
+        { name: 'Alice Johnson', email: 'alice@client.com', role: 'Manager' },
+        { name: 'Bob Smith', email: 'bob@client.com', role: 'Developer' },
       ]);
 
       await session.onboardingWizard.verifyStepVisible(3);
@@ -209,7 +209,7 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
       // Navigate to client step
-      await session.onboardingWizard.completeCompanyInfoStep({ companyName: 'Client Test' });
+      await session.onboardingWizard.completeClientInfoStep({ clientName: 'Client Test' });
       await session.onboardingWizard.completeTeamMembersStep([]);
 
       // Complete client step
@@ -235,7 +235,7 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
       // Navigate to billing step (skip intermediate steps)
-      await session.onboardingWizard.completeCompanyInfoStep({ companyName: 'Billing Test' });
+      await session.onboardingWizard.completeClientInfoStep({ clientName: 'Billing Test' });
       await session.onboardingWizard.clickSkip(); // Team
       await session.onboardingWizard.clickSkip(); // Client
       await session.onboardingWizard.clickSkip(); // Contact
@@ -280,8 +280,8 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
       // Complete first step
-      await session.onboardingWizard.completeCompanyInfoStep({
-        companyName: 'Network Test Company',
+      await session.onboardingWizard.completeClientInfoStep({
+        clientName: 'Network Test Client',
       });
 
       // Simulate network interruption
@@ -306,8 +306,8 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       const session = createOnboardingTestSession(testContext.page, testContext.tenantData);
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
-      // Fill out company info but don't submit
-      await testContext.page.locator('input[name="companyName"]').fill('Refresh Test Company');
+      // Fill out client info but don't submit
+      await testContext.page.locator('input[name="clientName"]').fill('Refresh Test Client');
       
       // Refresh the page
       await testContext.page.reload();
@@ -427,9 +427,9 @@ test.describe('Tenant Onboarding Integration Tests', () => {
       await verifyOnboardingRedirect(session, TEST_CONFIG.baseUrl);
 
       // Fill form rapidly
-      await testContext.page.locator('input[name="companyName"]').fill('Rapid Test');
-      await testContext.page.locator('input[name="companyName"]').clear();
-      await testContext.page.locator('input[name="companyName"]').fill('Rapid Test Company');
+      await testContext.page.locator('input[name="clientName"]').fill('Rapid Test');
+      await testContext.page.locator('input[name="clientName"]').clear();
+      await testContext.page.locator('input[name="clientName"]').fill('Rapid Test Client');
       
       // Should still work correctly
       await session.onboardingWizard.clickNext();

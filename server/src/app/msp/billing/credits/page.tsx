@@ -116,8 +116,8 @@ const columns: ColumnDefinition<ICreditTracking & { transaction_description?: st
 ];
 
 // Credits list component with loading state
-async function CreditsList({ companyId, includeExpired = false }: { companyId: string, includeExpired?: boolean }) {
-  const response = await listCredits(companyId, includeExpired);
+async function CreditsList({ clientId, includeExpired = false }: { clientId: string, includeExpired?: boolean }) {
+  const response = await listCredits(clientId, includeExpired);
   
   if (!response.success) {
     return (
@@ -178,8 +178,8 @@ function CreditsListSkeleton() {
 }
 
 // Settings component to display credit expiration settings
-async function CreditExpirationSettings({ companyId }: { companyId: string }) {
-  const settings = await getCreditExpirationSettings(companyId);
+async function CreditExpirationSettings({ clientId }: { clientId: string }) {
+  const settings = await getCreditExpirationSettings(clientId);
   
   return (
     <div className="p-4 border rounded-md bg-gray-50 mb-4">
@@ -209,13 +209,13 @@ async function CreditExpirationSettings({ companyId }: { companyId: string }) {
 }
 
 // Main page component
-export default async function CreditsPage({ params }: { params: Promise<{ companyId?: string }> }) {
+export default async function CreditsPage({ params }: { params: Promise<{ clientId?: string }> }) {
   const resolvedParams = await params;
-  // For demo purposes, use a placeholder company ID if none is provided
-  const companyId = resolvedParams.companyId || '00000000-0000-0000-0000-000000000000';
+  // For demo purposes, use a placeholder client ID if none is provided
+  const clientId = resolvedParams.clientId || '00000000-0000-0000-0000-000000000000';
   
   // Get credit expiration settings
-  const settings = await getCreditExpirationSettings(companyId);
+  const settings = await getCreditExpirationSettings(clientId);
   
   // Define tabs for the credits view
   const tabs = [
@@ -223,7 +223,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ compan
       label: "Active Credits",
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>
-          <CreditsList companyId={companyId} includeExpired={false} />
+          <CreditsList clientId={clientId} includeExpired={false} />
         </Suspense>
       )
     },
@@ -231,7 +231,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ compan
       label: "All Credits",
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>
-          <CreditsList companyId={companyId} includeExpired={true} />
+          <CreditsList clientId={clientId} includeExpired={true} />
         </Suspense>
       )
     }
@@ -244,7 +244,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ compan
       content: (
         <Suspense fallback={<CreditsListSkeleton />}>
           {/* This would need a custom endpoint to only fetch expired credits */}
-          <CreditsList companyId={companyId} includeExpired={true} />
+          <CreditsList clientId={clientId} includeExpired={true} />
         </Suspense>
       )
     });
@@ -270,7 +270,7 @@ export default async function CreditsPage({ params }: { params: Promise<{ compan
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreditExpirationSettings companyId={companyId} />
+          <CreditExpirationSettings clientId={clientId} />
           <CustomTabs tabs={tabs} defaultTab="Active Credits" />
         </CardContent>
       </Card>

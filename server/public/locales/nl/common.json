@@ -78,7 +78,7 @@
       "tenantNotFound": "Tenant niet gevonden in sessie. Meld je af en weer aan.",
       "userNotFound": "Gebruiker niet gevonden",
       "contactNotFound": "Gebruiker is niet gekoppeld aan een contact",
-      "companyNotFound": "Contact is niet gekoppeld aan een bedrijf"
+      "clientNotFound": "Contact is niet gekoppeld aan een bedrijf"
     },
     "permissions": {
       "tickets": {
@@ -124,7 +124,7 @@
       "notSet": "Niet ingesteld",
       "notSetWithSource": "Niet ingesteld (gebruikt {{source}}: {{languageName}} - {{locale}})",
       "source": {
-        "company": "bedrijfsstandaard",
+        "client": "bedrijfsstandaard",
         "tenant": "tenantstandaard",
         "system": "systeemstandaard"
       }
@@ -132,11 +132,11 @@
   },
   "yes": "Ja",
   "no": "Nee",
-  "companies": {
+  "clients": {
     "locations": {
       "sectionTitle": "Bedrijfslocaties",
       "manageButton": "Locaties beheren",
-      "dialogTitle": "Locaties beheren - {{company}}",
+      "dialogTitle": "Locaties beheren - {{client}}",
       "managerLabel": "Beheerder bedrijfslocaties",
       "listTitle": "Locaties",
       "buttons": {

@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const ticketFormSchema = z.object({
     title: z.string(),
     board_id: z.string().uuid(),
-    company_id: z.string().uuid().nullable(),
+    client_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
@@ -23,7 +23,7 @@ export const createTicketFromAssetSchema = z.object({
     description: z.string(),
     priority_id: z.string().uuid(),
     asset_id: z.string().uuid(),
-    company_id: z.string().uuid()
+    client_id: z.string().uuid()
 });
 
 export const ticketSchema = z.object({
@@ -33,7 +33,7 @@ export const ticketSchema = z.object({
     title: z.string(),
     url: z.string().nullable(),
     board_id: z.string().uuid(),
-    company_id: z.string().uuid().nullable(),
+    client_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     status_id: z.string().uuid(),
@@ -73,7 +73,7 @@ const baseTicketSchema = z.object({
     ticket_number: z.string(),
     title: z.string(),
     url: z.string().nullable(),
-    company_id: z.string().uuid().nullable(),
+    client_id: z.string().uuid().nullable(),
     location_id: z.string().uuid().nullable().optional(),
     contact_name_id: z.string().uuid().nullable(),
     closed_by: z.string().uuid().nullable(),
@@ -98,7 +98,7 @@ export const ticketListItemSchema = baseTicketSchema.extend({
     priority_color: z.string().optional(),
     board_name: z.string(),
     category_name: z.string(),
-    company_name: z.string(),
+    client_name: z.string(),
     entered_by_name: z.string(),
     assigned_to_name: z.string().nullable(),
     // ITIL-specific fields for list items (for priority calculation)
@@ -112,7 +112,7 @@ export const ticketListFiltersSchema = z.object({
     statusId: z.string().optional(),
     priorityId: z.string().optional(),
     categoryId: z.string().nullish(),
-    companyId: z.string().uuid().nullish(),
+    clientId: z.string().uuid().nullish(),
     contactId: z.string().uuid().nullish(),
     searchQuery: z.string().optional(),
     boardFilterState: z.enum(['active', 'inactive', 'all']),

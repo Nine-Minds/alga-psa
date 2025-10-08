@@ -19,7 +19,7 @@ describe('Roles API E2E Tests', () => {
   beforeAll(async () => {
     // Setup test environment
     env = await setupE2ETestEnvironment({
-      companyName: 'Roles API Test Company',
+      clientName: 'Roles API Test Client',
       userName: 'roles_api_test'
     });
 
@@ -383,8 +383,8 @@ describe('Roles API E2E Tests', () => {
       const otherTenant = uuidv4();
       await env.db('tenants').insert({
         tenant: otherTenant,
-        company_name: 'Other Company',
-        email: 'other@company.com',
+        client_name: 'Other Company',
+        email: 'other@client.com',
         created_at: new Date(),
         updated_at: new Date()
       });

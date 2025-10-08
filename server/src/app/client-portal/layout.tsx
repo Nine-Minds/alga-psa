@@ -1,6 +1,6 @@
 import { getSession } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
-import { getTenantBrandingByDomain, getTenantLocaleByDomain } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
+import { getTenantBrandingByDomain } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
 import { headers } from "next/headers";
 
 export default async function Layout({
@@ -14,10 +14,11 @@ export default async function Layout({
   const headersList = await headers();
   const host = headersList.get('host') || '';
   const branding = await getTenantBrandingByDomain(host);
-  const initialLocale = await getTenantLocaleByDomain(host);
+  // Don't pass initialLocale - let I18nWrapper use getHierarchicalLocaleAction
+  // which checks user preference -> client preference -> tenant preference -> system default
 
   return (
-    <ClientPortalLayoutClient session={session} branding={branding} initialLocale={initialLocale}>
+    <ClientPortalLayoutClient session={session} branding={branding} initialLocale={null}>
       {children}
     </ClientPortalLayoutClient>
   );

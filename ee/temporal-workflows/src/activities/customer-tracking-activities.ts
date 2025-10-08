@@ -6,7 +6,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/shared/db/admin.js';
-import { CompanyModel } from '@alga-psa/shared/models/companyModel.js';
+import { ClientModel } from '@alga-psa/shared/models/clientModel.js';
 import { ContactModel } from '@alga-psa/shared/models/contactModel.js';
 import { TagModel } from '@alga-psa/shared/models/tagModel.js';
 import { Knex } from 'knex';
@@ -20,7 +20,7 @@ async function getManagementTenantIdInternal(knex: Knex): Promise<string> {
   
   // NOTE: tenants is a reference table
   const tenant = await knex('tenants')
-    .where('company_name', MANAGEMENT_TENANT_NAME)
+    .where('client_name', MANAGEMENT_TENANT_NAME)
     .first();
   
   if (!tenant) {
@@ -53,9 +53,9 @@ export async function getManagementTenantId(): Promise<{ tenantId: string }> {
 }
 
 /**
- * Create a customer company in the nineminds tenant
+ * Create a customer client in the nineminds tenant
  */
-export async function createCustomerCompanyActivity(input: {
+export async function createCustomerClientActivity(input: {
   tenantName: string;
   adminUserEmail: string;
 }): Promise<{ customerId: string }> {
@@ -67,17 +67,17 @@ export async function createCustomerCompanyActivity(input: {
     // Get the management tenant ID (will throw if not found)
     const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
-    log.info('Creating customer company in management tenant', {
+    log.info('Creating customer client in management tenant', {
       tenantName: input.tenantName,
       managementTenantId: ninemindsTenant
     });
     
     const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
-      return await CompanyModel.createCompany(
+      return await ClientModel.createClient(
         {
-          company_name: input.tenantName,
+          client_name: input.tenantName,
           client_type: 'company',
-          url: '', // No website for tenant companies initially
+          url: '', // No website for tenant clients initially
           notes: `PSA Customer - Tenant: ${input.tenantName}`,
           properties: {
             tenant_id: input.tenantName,
@@ -86,18 +86,18 @@ export async function createCustomerCompanyActivity(input: {
         },
         ninemindsTenant,
         trx,
-        { skipEmailSuffix: true, skipTaxSettings: true } // Skip email suffix for tenant companies
+        { skipEmailSuffix: true, skipTaxSettings: true } // Skip email suffix for tenant clients
       );
     });
     
-    log.info('Customer company created successfully', {
-      customerId: result.company_id,
+    log.info('Customer client created successfully', {
+      customerId: result.client_id,
       tenantName: input.tenantName
     });
     
-    return { customerId: result.company_id };
+    return { customerId: result.client_id };
   } catch (error) {
-    log.error('Failed to create customer company', {
+    log.error('Failed to create customer client', {
       error: error instanceof Error ? error.message : 'Unknown error',
       tenantName: input.tenantName
     });
@@ -109,7 +109,7 @@ export async function createCustomerCompanyActivity(input: {
  * Create a customer contact in the nineminds tenant
  */
 export async function createCustomerContactActivity(input: {
-  companyId: string;
+  clientId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -123,20 +123,20 @@ export async function createCustomerContactActivity(input: {
     
     log.info('Creating customer contact in nineminds tenant', {
       email: input.email,
-      companyId: input.companyId,
+      clientId: input.clientId,
       managementTenantId: ninemindsTenant
     });
     
-    // Debug: Verify the company exists before creating contact
-    const companyCheck = await adminKnex('companies')
-      .where({ company_id: input.companyId, tenant: ninemindsTenant })
+    // Debug: Verify the client exists before creating contact
+    const clientCheck = await adminKnex('clients')
+      .where({ client_id: input.clientId, tenant: ninemindsTenant })
       .first();
     
-    log.info('Company check result', {
-      companyExists: !!companyCheck,
-      companyId: input.companyId,
+    log.info('Client check result', {
+      clientExists: !!clientCheck,
+      clientId: input.clientId,
       tenant: ninemindsTenant,
-      companyName: companyCheck?.company_name
+      clientName: clientCheck?.client_name
     });
     
     const result = await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
@@ -144,7 +144,7 @@ export async function createCustomerContactActivity(input: {
         {
           full_name: `${input.firstName} ${input.lastName}`,
           email: input.email,
-          company_id: input.companyId,
+          client_id: input.clientId,
           role: 'Admin',
           notes: 'Primary admin for PSA tenant'
         },
@@ -169,10 +169,10 @@ export async function createCustomerContactActivity(input: {
 }
 
 /**
- * Tag a customer company in the nineminds tenant
+ * Tag a customer client in the nineminds tenant
  */
-export async function tagCustomerCompanyActivity(input: {
-  companyId: string;
+export async function tagCustomerClientActivity(input: {
+  clientId: string;
   tagText: string;
 }): Promise<{ tagId: string }> {
   const log = Context.current().log;
@@ -182,8 +182,8 @@ export async function tagCustomerCompanyActivity(input: {
     // Get the management tenant ID (will throw if not found)
     const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
-    log.info('Tagging customer company', {
-      companyId: input.companyId,
+    log.info('Tagging customer client', {
+      clientId: input.clientId,
       tagText: input.tagText
     });
     
@@ -191,8 +191,8 @@ export async function tagCustomerCompanyActivity(input: {
       return await TagModel.createTag(
         {
           tag_text: input.tagText,
-          tagged_id: input.companyId,
-          tagged_type: 'company',
+          tagged_id: input.clientId,
+          tagged_type: 'client',
           created_by: 'system'
         },
         ninemindsTenant,
@@ -200,27 +200,27 @@ export async function tagCustomerCompanyActivity(input: {
       );
     });
     
-    log.info('Customer company tagged successfully', {
+    log.info('Customer client tagged successfully', {
       tagId: result.tag_id,
       mappingId: result.mapping_id,
-      companyId: input.companyId
+      clientId: input.clientId
     });
     
     return { tagId: result.tag_id };
   } catch (error) {
-    log.error('Failed to tag customer company', {
+    log.error('Failed to tag customer client', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      companyId: input.companyId
+      clientId: input.clientId
     });
     throw error;
   }
 }
 
 /**
- * Delete customer company (for rollback purposes)
+ * Delete customer client (for rollback purposes)
  */
-export async function deleteCustomerCompanyActivity(input: {
-  companyId: string;
+export async function deleteCustomerClientActivity(input: {
+  clientId: string;
 }): Promise<void> {
   const log = Context.current().log;
   
@@ -229,27 +229,27 @@ export async function deleteCustomerCompanyActivity(input: {
     // Get the management tenant ID (will throw if not found)
     const ninemindsTenant = await getManagementTenantIdInternal(adminKnex);
     
-    log.info('Deleting customer company for rollback', {
-      companyId: input.companyId
+    log.info('Deleting customer client for rollback', {
+      clientId: input.clientId
     });
     
     await adminKnex.transaction(async (trx: Knex.Transaction<any, any[]>) => {
-      // Delete company (contacts and tags will cascade)
-      await trx('companies')
+      // Delete client (contacts and tags will cascade)
+      await trx('clients')
         .where({
-          company_id: input.companyId,
+          client_id: input.clientId,
           tenant: ninemindsTenant
         })
         .delete();
     });
     
-    log.info('Customer company deleted successfully', {
-      companyId: input.companyId
+    log.info('Customer client deleted successfully', {
+      clientId: input.clientId
     });
   } catch (error) {
-    log.error('Failed to delete customer company', {
+    log.error('Failed to delete customer client', {
       error: error instanceof Error ? error.message : 'Unknown error',
-      companyId: input.companyId
+      clientId: input.clientId
     });
     throw error;
   }

@@ -7,7 +7,7 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
-  setupCompanyTaxConfiguration,
+  setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
@@ -64,7 +64,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
   let context: TestContext;
 
   async function configureDefaultTax() {
-    await setupCompanyTaxConfiguration(context, {
+    await setupClientTaxConfiguration(context, {
       regionCode: 'US-NY',
       regionName: 'New York',
       description: 'NY State Tax',
@@ -84,8 +84,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         'bucket_usage',
         'time_entries',
         'tickets',
-        'company_billing_cycles',
-        'company_billing_plans',
+        'client_billing_cycles',
+        'client_billing_plans',
         'plan_service_configuration',
         'plan_service_fixed_config',
         'service_catalog',
@@ -93,11 +93,11 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         'billing_plans',
         'tax_rates',
         'tax_regions',
-        'company_tax_settings',
-        'company_tax_rates',
+        'client_tax_settings',
+        'client_tax_rates',
         'next_number'
       ],
-      companyName: 'Invoice Number Test Company',
+      clientName: 'Invoice Number Test Client',
       userType: 'internal'
     });
 
@@ -171,16 +171,16 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycles for two consecutive months
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle2 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle2 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
@@ -248,8 +248,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -339,24 +339,24 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycles for three consecutive months
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle2 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle2 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle3 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle3 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
@@ -451,24 +451,24 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create multiple billing cycles to generate multiple invoices
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle2 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle2 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
       period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
     }, 'billing_cycle_id');
 
-    const billingCycle3 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle3 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
@@ -535,8 +535,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -583,8 +583,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -633,8 +633,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -681,8 +681,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -702,8 +702,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       .update({ prefix: 'BILL-' });
 
     // Create a second billing cycle (plan already assigned from earlier)
-    const billingCycle2 = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+    const billingCycle2 = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
@@ -750,8 +750,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     });
 
     // Create billing cycle
-    const billingCycle1 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle1 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
@@ -771,8 +771,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       .update({ prefix: 'IN-' });
 
       // Create a second billing cycle (plan already assigned from earlier)
-      const billingCycle2 = await context.createEntity('company_billing_cycles', {
-        company_id: context.companyId,
+      const billingCycle2 = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
         billing_cycle: 'monthly',
         effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
@@ -792,8 +792,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     .update({ prefix: 'INVOICE-' });
 
     // Create a third billing cycle (plan already assigned from earlier)
-    const billingCycle3 = await context.createEntity('company_billing_cycles', {
-      company_id: context.companyId,
+    const billingCycle3 = await context.createEntity('client_billing_cycles', {
+      client_id: context.clientId,
       billing_cycle: 'monthly',
       effective_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),
       period_start_date: createTestDateISO({ year: 2023, month: 3, day: 1 }),

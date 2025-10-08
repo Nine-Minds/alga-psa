@@ -70,7 +70,7 @@ export function ActivityDetailViewerDrawer({
                 initialTicket={ticketData.ticket}
                 initialComments={ticketData.comments}
                 initialBoard={ticketData.board}
-                initialCompany={ticketData.company}
+                initialClient={ticketData.client}
                 initialContactInfo={ticketData.contactInfo}
                 initialCreatedByUser={ticketData.createdByUser}
                 initialAdditionalAgents={ticketData.additionalAgents}
@@ -79,7 +79,7 @@ export function ActivityDetailViewerDrawer({
                 boardOptions={ticketData.options.board}
                 priorityOptions={ticketData.options.priority}
                 initialCategories={ticketData.categories}
-                initialCompanies={ticketData.companies}
+                initialClients={ticketData.clients}
                 initialLocations={ticketData.locations}
                 initialAgentSchedules={ticketData.agentSchedules}
                 currentUser={currentUser}

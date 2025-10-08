@@ -167,11 +167,11 @@ export class InvoiceZipJobHandler {
       
       const zipFilePath = await this.zipService.generateZipFromFileRecords(fileRecords);
       
-      // Get tenant's default company
-      const { companies } = await getTenantDetails();
-      const defaultCompany = companies.find(c => c.is_default);
-      if (!defaultCompany) {
-        throw new Error('No default company found for tenant');
+      // Get tenant's default client
+      const { clients } = await getTenantDetails();
+      const defaultClient = clients.find(c => c.is_default);
+      if (!defaultClient) {
+        throw new Error('No default client found for tenant');
       }
 
       // Read zip file contents
@@ -185,10 +185,10 @@ export class InvoiceZipJobHandler {
         type: 'application/zip'
       }), fileName);
 
-      // Upload to document system with company association
+      // Upload to document system with client association
       const uploadResult = await uploadDocument(formData, {
         userId: data.requesterId,
-        companyId: defaultCompany.company_id
+        clientId: defaultClient.client_id
       });
 
       if (!uploadResult.success) {

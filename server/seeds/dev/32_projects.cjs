@@ -6,10 +6,10 @@ exports.seed = async function (knex) {
     const [wonderlandProject, emeraldCityProject] = await knex('projects').insert([
         {
             tenant: tenant.tenant,
-            company_id: knex('companies').where({ 
+            client_id: knex('clients').where({ 
                 tenant: tenant.tenant, 
-                company_name: 'Wonderland' 
-            }).select('company_id'),
+                client_name: 'Wonderland' 
+            }).select('client_id'),
             project_name: 'Wonderland Expansion',
             description: 'Expanding Wonderland territories and improving infrastructure',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '2 months'"),
@@ -23,10 +23,10 @@ exports.seed = async function (knex) {
         },
         {
             tenant: tenant.tenant,
-            company_id: knex('companies').where({ 
+            client_id: knex('clients').where({ 
                 tenant: tenant.tenant, 
-                company_name: 'Emerald City' 
-            }).select('company_id'),
+                client_name: 'Emerald City' 
+            }).select('client_id'),
             project_name: 'Emerald City Beautification',
             description: 'Enhancing the beauty and safety of Emerald City',
             start_date: knex.raw("CURRENT_DATE - INTERVAL '1 month'"),
