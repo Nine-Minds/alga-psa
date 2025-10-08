@@ -86,7 +86,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Assert:
       // - The function returns the new mock record.
       // - The new record has minutes_used = 0, overage_minutes = 0, rolled_over_minutes = 0.
-      // - Correct period_start, period_end, plan_id, etc. are used in insert.
+      // - Correct period_start, period_end, contract_line_id, etc. are used in insert.
       expect(true).toBe(false); // Placeholder
     });
 

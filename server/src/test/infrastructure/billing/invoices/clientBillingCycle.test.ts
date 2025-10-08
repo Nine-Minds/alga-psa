@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { createClientBillingCycles } from '../../lib/billing/createBillingCycles';
-import { TestContext } from '../../../test-utils/testContext';
-import { dateHelpers } from '../../../test-utils/dateUtils';
+import { createClientContractLineCycles } from 'server/src/lib/billing/createBillingCycles';
+import { TestContext } from 'server/test-utils/testContext';
+import { dateHelpers } from 'server/test-utils/dateUtils';
 import { Temporal } from '@js-temporal/polyfill';
 import { TextEncoder } from 'util';
 
 // Required for tests
-global.TextEncoder = TextEncoder;
+global.TextEncoder = TextEncoder as any;
 
 describe('Client Billing Cycle Creation', () => {
   const testHelpers = TestContext.createHelpers();
@@ -45,7 +45,7 @@ describe('Client Billing Cycle Creation', () => {
     expect(initialCycles).toHaveLength(0);
 
     // Create billing cycles
-    await createClientBillingCycles(db, client);
+    await createClientContractLineCycles(db, client);
 
     // Verify cycles were created
     const cycles = await db('client_billing_cycles')

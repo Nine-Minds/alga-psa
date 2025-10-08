@@ -24,7 +24,7 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const services = await trx('plan_services')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         tenant
       })
       .select('*');
@@ -41,7 +41,7 @@ export async function getPlanService(planId: string, serviceId: string): Promise
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const service = await trx('plan_services')
       .where({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         tenant
       })
@@ -85,9 +85,9 @@ export async function addServiceToPlan(
   const service = serviceWithType; // Keep using 'service' variable name for compatibility with validation block
 
   // Get plan details
-  const plan = await trx('billing_plans')
+  const plan = await trx('contract_lines')
     .where({
-      plan_id: planId,
+      contract_line_id: planId,
       tenant
     })
     .first();
@@ -97,9 +97,9 @@ export async function addServiceToPlan(
   }
 
   // --- BEGIN SERVER-SIDE VALIDATION ---
-  if (plan.plan_type === 'Hourly' && service.billing_method === 'fixed') {
+  if (plan.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly billing plan.`);
-  } else if (plan.plan_type === 'Usage' && service.billing_method === 'fixed') {
+  } else if (plan.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
     // Prevent adding fixed-price services to Usage-Based plans
     throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based billing plan.`);
   }
@@ -112,7 +112,7 @@ export async function addServiceToPlan(
   // Determine configuration type: Prioritize explicit param, then plan type, then service type
   if (configType) {
     determinedConfigType = configType;
-  } else if (plan.plan_type === 'Bucket') { // Check if the plan itself is a Bucket plan
+  } else if (plan.contract_line_type === 'Bucket') { // Check if the plan itself is a Bucket plan
     determinedConfigType = 'Bucket';
   } else if (serviceWithType?.service_type_billing_method === 'fixed') {
     determinedConfigType = 'Fixed';
@@ -145,7 +145,7 @@ export async function addServiceToPlan(
   // If not, add it to the plan_services table
   if (!existingPlanService) {
     await trx('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       tenant: tenant
     });
@@ -172,7 +172,7 @@ export async function addServiceToPlan(
     // Create new configuration if one doesn't exist
     configId = await planServiceConfigActions.createConfiguration(
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceId,
         configuration_type: configurationType,
         custom_rate: customRate,
@@ -249,7 +249,7 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
   // Remove the service from the plan_services table
   await trx('plan_services')
     .where({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceId,
       tenant
     })

@@ -1,10 +1,10 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
-import { createClientBilling, updateClientBilling, getClientBilling, getOverlappingBillings } from 'server/src/lib/actions/clientBillingAction';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
-import { IClientBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { createClientContractLine, updateClientContractLine, getClientContractLine, getOverlappingBillings } from 'server/src/lib/actions/clientContractLineAction';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
+import { IClientContractLine } from 'server/src/interfaces/billing.interfaces';
 import { parseISO } from 'date-fns';
 
-vi.mock('@/lib/models/clientBilling');
+vi.mock('@/lib/models/clientContractLine');
 vi.mock('@/lib/db/db');
 
 describe('Client Billing Actions', () => {
@@ -12,11 +12,11 @@ describe('Client Billing Actions', () => {
     vi.clearAllMocks();
   });
 
-  describe('createClientBilling', () => {
-    it('should create a new client billing plan when there are no overlaps', async () => {
-      const newBillingPlan: Omit<IClientBillingPlan, 'client_billing_plan_id'> = {
+  describe('createClientContractLine', () => {
+    it('should create a new client contract line when there are no overlaps', async () => {
+      const newContractLine: Omit<IClientContractLine, 'client_contract_line_id'> = {
         client_id: 'client1',
-        plan_id: 'plan1',
+        contract_line_id: 'plan1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00.000Z',
         end_date: '2024-01-01T00:00:00.000Z',
@@ -24,27 +24,27 @@ describe('Client Billing Actions', () => {
         tenant: ''
       };
 
-      const createdBillingPlan: IClientBillingPlan = { ...newBillingPlan, client_billing_plan_id: 'billing1' };
+      const createdContractLine: IClientContractLine = { ...newContractLine, client_contract_line_id: 'billing1' };
 
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (ClientBillingPlan.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdBillingPlan);
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (ClientContractLine.create as ReturnType<typeof vi.fn>).mockResolvedValue(createdContractLine);
 
-      const result = await createClientBilling(newBillingPlan);
+      const result = await createClientContractLine(newContractLine);
 
-      expect(result).toEqual(createdBillingPlan);
-      expect(ClientBillingPlan.checkOverlappingBilling).toHaveBeenCalledWith(
-        newBillingPlan.client_id,
-        newBillingPlan.service_category,
-        parseISO(newBillingPlan.start_date),
-        parseISO(newBillingPlan.end_date!)
+      expect(result).toEqual(createdContractLine);
+      expect(ClientContractLine.checkOverlappingBilling).toHaveBeenCalledWith(
+        newContractLine.client_id,
+        newContractLine.service_category,
+        parseISO(newContractLine.start_date),
+        parseISO(newContractLine.end_date!)
       );
-      expect(ClientBillingPlan.create).toHaveBeenCalledWith(newBillingPlan);
+      expect(ClientContractLine.create).toHaveBeenCalledWith(newContractLine);
     });
 
     it('should throw an error when there are overlapping billing entries', async () => {
-      const newBillingPlan: Omit<IClientBillingPlan, 'client_billing_plan_id'> = {
+      const newContractLine: Omit<IClientContractLine, 'client_contract_line_id'> = {
         client_id: 'client1',
-        plan_id: 'plan1',
+        contract_line_id: 'plan1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -52,39 +52,39 @@ describe('Client Billing Actions', () => {
         tenant: ''
       };
 
-      const overlappingBillingPlan: IClientBillingPlan = {
-        ...newBillingPlan,
-        client_billing_plan_id: 'existing1',
+      const overlappingContractLine: IClientContractLine = {
+        ...newContractLine,
+        client_contract_line_id: 'existing1',
         start_date: '2023-06-01T00:00:00Z',
         end_date: '2024-05-31T00:00:00Z',
       };
 
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([overlappingBillingPlan]);
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([overlappingContractLine]);
 
-      await expect(createClientBilling(newBillingPlan)).rejects.toThrow(
-        'Cannot create billing plan: overlapping billing plan exists for the same client and service category. Conflicting entry: ID existing1, Start Date: 2023-06-01, End Date: 2024-05-31'
+      await expect(createClientContractLine(newContractLine)).rejects.toThrow(
+        'Cannot create contract line: overlapping contract line exists for the same client and service category. Conflicting entry: ID existing1, Start Date: 2023-06-01, End Date: 2024-05-31'
       );
-      expect(ClientBillingPlan.checkOverlappingBilling).toHaveBeenCalledWith(
-        newBillingPlan.client_id,
-        newBillingPlan.service_category,
-        parseISO(newBillingPlan.start_date),
-        parseISO(newBillingPlan.end_date!)
+      expect(ClientContractLine.checkOverlappingBilling).toHaveBeenCalledWith(
+        newContractLine.client_id,
+        newContractLine.service_category,
+        parseISO(newContractLine.start_date),
+        parseISO(newContractLine.end_date!)
       );
-      expect(ClientBillingPlan.create).not.toHaveBeenCalled();
+      expect(ClientContractLine.create).not.toHaveBeenCalled();
     });
   });
 
-  describe('updateClientBilling', () => {
-    it('should update a client billing plan when there are no overlaps', async () => {
-      const billingPlanId = 'billing1';
-      const updateData: Partial<IClientBillingPlan> = {
+  describe('updateClientContractLine', () => {
+    it('should update a client contract line when there are no overlaps', async () => {
+      const contractLineId = 'billing1';
+      const updateData: Partial<IClientContractLine> = {
         end_date: '2024-01-01T00:00:00Z',
       };
 
-      const existingBillingPlan: IClientBillingPlan = {
-        client_billing_plan_id: billingPlanId,
+      const existingContractLine: IClientContractLine = {
+        client_contract_line_id: contractLineId,
         client_id: 'client1',
-        plan_id: 'plan1',
+        contract_line_id: 'plan1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -92,35 +92,35 @@ describe('Client Billing Actions', () => {
         tenant: ''
       };
 
-      const updatedBillingPlan: IClientBillingPlan = { ...existingBillingPlan, ...updateData };
+      const updatedContractLine: IClientContractLine = { ...existingContractLine, ...updateData };
 
-      (ClientBillingPlan.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingBillingPlan);
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([]);
-      (ClientBillingPlan.update as ReturnType<typeof vi.fn>).mockResolvedValue(updatedBillingPlan);
+      (ClientContractLine.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (ClientContractLine.update as ReturnType<typeof vi.fn>).mockResolvedValue(updatedContractLine);
 
-      const result = await updateClientBilling(billingPlanId, updateData);
+      const result = await updateClientContractLine(contractLineId, updateData);
 
-      expect(result).toEqual(updatedBillingPlan);
-      expect(ClientBillingPlan.checkOverlappingBilling).toHaveBeenCalledWith(
-        existingBillingPlan.client_id,
-        existingBillingPlan.service_category,
-        parseISO(existingBillingPlan.start_date),
+      expect(result).toEqual(updatedContractLine);
+      expect(ClientContractLine.checkOverlappingBilling).toHaveBeenCalledWith(
+        existingContractLine.client_id,
+        existingContractLine.service_category,
+        parseISO(existingContractLine.start_date),
         parseISO(updateData.end_date!),
-        billingPlanId
+        contractLineId
       );
-      expect(ClientBillingPlan.update).toHaveBeenCalledWith(billingPlanId, updateData);
+      expect(ClientContractLine.update).toHaveBeenCalledWith(contractLineId, updateData);
     });
 
     it('should throw an error when updating creates an overlap', async () => {
-      const billingPlanId = 'billing1';
-      const updateData: Partial<IClientBillingPlan> = {
+      const contractLineId = 'billing1';
+      const updateData: Partial<IClientContractLine> = {
         end_date: '2024-01-01T00:00:00Z',
       };
 
-      const existingBillingPlan: IClientBillingPlan = {
-        client_billing_plan_id: billingPlanId,
+      const existingContractLine: IClientContractLine = {
+        client_contract_line_id: contractLineId,
         client_id: 'client1',
-        plan_id: 'plan1',
+        contract_line_id: 'plan1',
         service_category: 'category1',
         start_date: '2023-01-01T00:00:00Z',
         end_date: '2024-01-01T00:00:00Z',
@@ -128,31 +128,31 @@ describe('Client Billing Actions', () => {
         tenant: ''
       };
 
-      const overlappingBillingPlan: IClientBillingPlan = {
-        ...existingBillingPlan,
-        client_billing_plan_id: 'existing2',
+      const overlappingContractLine: IClientContractLine = {
+        ...existingContractLine,
+        client_contract_line_id: 'existing2',
         start_date: '2024-01-01T00:00:00Z',
         end_date: '2025-12-31T00:00:00Z',
       };
 
-      (ClientBillingPlan.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingBillingPlan);
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([overlappingBillingPlan]);
+      (ClientContractLine.getById as ReturnType<typeof vi.fn>).mockResolvedValue(existingContractLine);
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue([overlappingContractLine]);
 
-      await expect(updateClientBilling(billingPlanId, updateData)).rejects.toThrow(
-        'Cannot update billing plan: overlapping billing plan exists for the same client and service category. Conflicting entry: ID existing2, Start Date: 2024-01-01, End Date: 2025-12-31'
+      await expect(updateClientContractLine(contractLineId, updateData)).rejects.toThrow(
+        'Cannot update contract line: overlapping contract line exists for the same client and service category. Conflicting entry: ID existing2, Start Date: 2024-01-01, End Date: 2025-12-31'
       );
-      expect(ClientBillingPlan.update).not.toHaveBeenCalled();
+      expect(ClientContractLine.update).not.toHaveBeenCalled();
     });
   });
 
-  describe('getClientBilling', () => {
-    it('should return client billing plans for a client', async () => {
+  describe('getClientContractLine', () => {
+    it('should return client contract lines for a client', async () => {
       const clientId = 'client1';
-      const mockBillingPlans: IClientBillingPlan[] = [
+      const mockContractLines: IClientContractLine[] = [
         {
-          client_billing_plan_id: 'billing1',
+          client_contract_line_id: 'billing1',
           client_id: clientId,
-          plan_id: 'plan1',
+          contract_line_id: 'plan1',
           service_category: 'category1',
           start_date: '2023-01-01T00:00:00Z',
           end_date: '2024-01-01T00:00:00Z',
@@ -160,9 +160,9 @@ describe('Client Billing Actions', () => {
           tenant: ''
         },
         {
-          client_billing_plan_id: 'billing2',
+          client_contract_line_id: 'billing2',
           client_id: clientId,
-          plan_id: 'plan2',
+          contract_line_id: 'plan2',
           service_category: 'category2',
           start_date: '2023-01-01T00:00:00Z',
           end_date: null,
@@ -171,36 +171,36 @@ describe('Client Billing Actions', () => {
         }
       ];
 
-      (ClientBillingPlan.getByClientId as ReturnType<typeof vi.fn>).mockResolvedValue(mockBillingPlans);
+      (ClientContractLine.getByClientId as ReturnType<typeof vi.fn>).mockResolvedValue(mockContractLines);
 
-      const result = await getClientBilling(clientId);
+      const result = await getClientContractLine(clientId);
 
-      expect(result).toEqual(mockBillingPlans);
-      expect(ClientBillingPlan.getByClientId).toHaveBeenCalledWith(clientId);
+      expect(result).toEqual(mockContractLines);
+      expect(ClientContractLine.getByClientId).toHaveBeenCalledWith(clientId);
     });
 
-    it('should throw an error if fetching client billing plans fails', async () => {
+    it('should throw an error if fetching client contract lines fails', async () => {
       const clientId = 'client1';
 
-      (ClientBillingPlan.getByClientId as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
+      (ClientContractLine.getByClientId as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(getClientBilling(clientId)).rejects.toThrow('Failed to fetch client billing plans');
+      await expect(getClientContractLine(clientId)).rejects.toThrow('Failed to fetch client contract lines');
     });
   });
 
   describe('getOverlappingBillings', () => {
-    it('should return overlapping billing plan entries', async () => {
+    it('should return overlapping contract line entries', async () => {
       const clientId = 'client1';
       const serviceCategory = 'category1';
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-12-31');
-      const excludeBillingPlanId = 'billing1';
+      const excludeContractLineId = 'billing1';
 
-      const overlappingBillingPlans: IClientBillingPlan[] = [
+      const overlappingContractLines: IClientContractLine[] = [
         {
-          client_billing_plan_id: 'billing2',
+          client_contract_line_id: 'billing2',
           client_id: clientId,
-          plan_id: 'plan2',
+          contract_line_id: 'plan2',
           service_category: serviceCategory,
           start_date: '2023-01-01T00:00:00Z',
           end_date: '2024-01-01T00:00:00Z',
@@ -209,29 +209,29 @@ describe('Client Billing Actions', () => {
         }
       ];
 
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue(overlappingBillingPlans);
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockResolvedValue(overlappingContractLines);
 
-      const result = await getOverlappingBillings(clientId, serviceCategory, startDate, endDate, excludeBillingPlanId);
+      const result = await getOverlappingBillings(clientId, serviceCategory, startDate, endDate, excludeContractLineId);
 
-      expect(result).toEqual(overlappingBillingPlans);
-      expect(ClientBillingPlan.checkOverlappingBilling).toHaveBeenCalledWith(
+      expect(result).toEqual(overlappingContractLines);
+      expect(ClientContractLine.checkOverlappingBilling).toHaveBeenCalledWith(
         clientId,
         serviceCategory,
         startDate,
         endDate,
-        excludeBillingPlanId
+        excludeContractLineId
       );
     });
 
-    it('should throw an error if checking for overlapping billing plans fails', async () => {
+    it('should throw an error if checking for overlapping contract lines fails', async () => {
       const clientId = 'client1';
       const serviceCategory = 'category1';
       const startDate = new Date('2023-01-01');
       const endDate = new Date('2023-12-31');
 
-      (ClientBillingPlan.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
+      (ClientContractLine.checkOverlappingBilling as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Database error'));
 
-      await expect(getOverlappingBillings(clientId, serviceCategory, startDate, endDate)).rejects.toThrow('Failed to check for overlapping billing plans');
+      await expect(getOverlappingBillings(clientId, serviceCategory, startDate, endDate)).rejects.toThrow('Failed to check for overlapping contract lines');
     });
   });
 });

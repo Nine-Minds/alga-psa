@@ -23,10 +23,10 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'time_entries',
         'tickets',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'tax_rates',
         'client_tax_settings'
@@ -122,13 +122,13 @@ describe('Billing Invoice Subtotal Calculations', () => {
       is_tax_exempt: false
     }, 'client_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Create services
     const serviceA = await context.createEntity('service_catalog', {
@@ -158,19 +158,19 @@ describe('Billing Invoice Subtotal Calculations', () => {
     // Assign services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceC,
         quantity: 1,
         tenant: context.tenantId
@@ -187,10 +187,10 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId
@@ -220,19 +220,19 @@ describe('Billing Invoice Subtotal Calculations', () => {
       is_tax_exempt: false
     }, 'client_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId
@@ -335,13 +335,13 @@ describe('Billing Invoice Subtotal Calculations', () => {
       is_tax_exempt: false
     }, 'client_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Create services with negative rates
     const serviceA = await context.createEntity('service_catalog', {
@@ -363,13 +363,13 @@ describe('Billing Invoice Subtotal Calculations', () => {
     // Assign services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -386,10 +386,10 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       start_date: '2023-01-01',
       is_active: true,
       tenant: context.tenantId

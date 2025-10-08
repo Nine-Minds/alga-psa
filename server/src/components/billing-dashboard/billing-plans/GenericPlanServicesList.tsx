@@ -15,7 +15,7 @@ import {
 // Removed CustomSelect import as it wasn't used
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
-import { IBillingPlan, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
+import { IContractLine, IPlanService, IService, IServiceCategory } from 'server/src/interfaces/billing.interfaces'; // Added IServiceCategory
 import {
   getPlanServicesWithConfigurations
 } from 'server/src/lib/actions/planServiceActions';
@@ -24,12 +24,12 @@ import {
   removeServiceFromPlan as removePlanService
 } from 'server/src/lib/actions/planServiceActions';
 import { getServices } from 'server/src/lib/actions/serviceActions';
-import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction'; // Import action to get plan details
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Import action to get plan details
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import BillingPlanServiceForm from './BillingPlanServiceForm'; // Adjusted path
+import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted path
 import { Badge } from 'server/src/components/ui/Badge';
 import { IPlanServiceConfiguration } from 'server/src/interfaces/planServiceConfiguration.interfaces';
 
@@ -65,7 +65,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<EnhancedPlanService | null>(null);
-  const [planType, setPlanType] = useState<IBillingPlan['plan_type'] | null>(null); // State for plan type
+  const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null); // State for plan type
   // Removed tenant state
 
   const fetchData = useCallback(async () => { // Added useCallback
@@ -77,7 +77,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
     try {
       // Fetch plan details, services, and configurations
       const [planDetails, servicesResponse, servicesWithConfigurations] = await Promise.all([
-        getBillingPlanById(planId), // Fetch the plan details
+        getContractLineById(planId), // Fetch the plan details
         getServices(),
         getPlanServicesWithConfigurations(planId),
       ]);
@@ -90,7 +90,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       if (!planDetails) {
         throw new Error(`Billing plan with ID ${planId} not found.`);
       }
-      setPlanType(planDetails.plan_type); // Store the plan type
+      setPlanType(planDetails.contract_line_type); // Store the plan type
 
       // Enhance services with details and configuration
       const enhancedServices: EnhancedPlanService[] = servicesWithConfigurations.map(configInfo => {
@@ -99,7 +99,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         const fullServiceDetails = allAvailableServices.find(s => s.service_id === configInfo.configuration.service_id);
 
         return {
-          plan_id: planId,
+          contract_line_id: planId,
           service_id: configInfo.configuration.service_id,
           quantity: configInfo.configuration.quantity,
           custom_rate: configInfo.configuration.custom_rate,
@@ -387,7 +387,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
       )}
 
       {editingService && (
-        <BillingPlanServiceForm
+        <ContractLineServiceForm
           planService={editingService}
           services={availableServices} // Pass all available services for context if needed by form
           // Removed serviceCategories prop

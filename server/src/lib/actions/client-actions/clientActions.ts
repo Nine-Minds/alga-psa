@@ -734,14 +734,14 @@ export async function deleteClient(clientId: string): Promise<{
       }
 
       // Check for billing plans
-      const billingPlanCount = await trx('client_billing_plans')
+      const contractLineCount = await trx('client_contract_lines')
         .where({ client_id: clientId, tenant })
-        .count('client_billing_plan_id as count')
+        .count('client_contract_line_id as count')
         .first();
-      console.log('Billing plan count result:', billingPlanCount);
-      if (billingPlanCount && Number(billingPlanCount.count) > 0) {
-        dependencies.push('billing_plan');
-        counts['billing_plan'] = Number(billingPlanCount.count);
+      console.log('Billing plan count result:', contractLineCount);
+      if (contractLineCount && Number(contractLineCount.count) > 0) {
+        dependencies.push('contract_line');
+        counts['contract_line'] = Number(contractLineCount.count);
       }
 
       // Check for bucket usage
@@ -771,7 +771,7 @@ export async function deleteClient(clientId: string): Promise<{
         'location': 'locations',
         'service_usage': 'service usage records',
         'bucket_usage': 'bucket usage records',
-        'billing_plan': 'billing plans'
+        'contract_line': 'billing plans'
       };
 
       return {

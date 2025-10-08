@@ -66,11 +66,11 @@ import {
   UpdateTaxRateRequest,
   
   // Billing schemas
-  createBillingPlanSchema,
-  updateBillingPlanSchema,
-  billingPlanListQuerySchema,
-  CreateBillingPlanRequest,
-  UpdateBillingPlanRequest,
+  createContractLineSchema,
+  updateContractLineSchema,
+  contractLineListQuerySchema,
+  CreateContractLineRequest,
+  UpdateContractLineRequest,
   calculateBillingSchema,
   
   // Reconciliation schemas

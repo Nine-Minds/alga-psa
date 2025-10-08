@@ -1,0 +1,154 @@
+// server/src/lib/actions/contractActions.ts
+'use server'
+
+import Contract from 'server/src/lib/models/contract';
+import { IContract } from 'server/src/interfaces/contract.interfaces';
+import { createTenantKnex } from 'server/src/lib/db';
+import { getSession } from 'server/src/lib/auth/getSession';
+
+export async function getContracts(): Promise<IContract[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await Contract.getAll();
+  } catch (error) {
+    console.error('Error fetching contracts:', error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to fetch contracts: ${error}`);
+  }
+}
+
+export async function getContractById(contractId: string): Promise<IContract | null> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await Contract.getById(contractId);
+  } catch (error) {
+    console.error(`Error fetching contract ${contractId}:`, error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to fetch contract: ${error}`);
+  }
+}
+
+export async function createContract(
+  contractData: Omit<IContract, 'contract_id' | 'tenant' | 'created_at' | 'updated_at'>
+): Promise<IContract> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  try {
+    const { tenant: _, ...safeContractData } = contractData as any;
+    return await Contract.create(safeContractData);
+  } catch (error) {
+    console.error('Error creating contract:', error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to create contract in tenant ${tenant}: ${error}`);
+  }
+}
+
+export async function updateContract(
+  contractId: string,
+  updateData: Partial<IContract>
+): Promise<IContract> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  try {
+    const { tenant: _, ...safeUpdateData } = updateData as any;
+    return await Contract.update(contractId, safeUpdateData);
+  } catch (error) {
+    console.error('Error updating contract:', error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to update contract in tenant ${tenant}: ${error}`);
+  }
+}
+
+export async function deleteContract(contractId: string): Promise<void> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  const { tenant } = await createTenantKnex();
+  if (!tenant) {
+    throw new Error("tenant context not found");
+  }
+
+  try {
+    const isInUse = await Contract.isInUse(contractId);
+    if (isInUse) {
+      throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
+    }
+
+    await Contract.delete(contractId);
+  } catch (error) {
+    console.error('Error deleting contract:', error);
+    if (error instanceof Error) {
+      if (error.message.includes('in use')) {
+        throw new Error(`Cannot delete contract that is currently in use by clients in tenant ${tenant}`);
+      }
+      throw error; // Preserve other specific error messages
+    }
+    throw new Error(`Failed to delete contract in tenant ${tenant}: ${error}`);
+  }
+}
+
+export async function getContractLinesForContract(contractId: string): Promise<any[]> {
+  const session = await getSession();
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized');
+  }
+
+  try {
+    const { tenant } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    return await Contract.getContractLines(contractId);
+  } catch (error) {
+    console.error(`Error fetching contract lines for contract ${contractId}:`, error);
+    if (error instanceof Error) {
+      throw error; // Preserve specific error messages
+    }
+    throw new Error(`Failed to fetch contract lines: ${error}`);
+  }
+}

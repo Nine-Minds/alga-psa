@@ -7,9 +7,8 @@ import { IService } from 'server/src/interfaces';
 
 // Import all the components
 import Overview from './Overview';
-import BillingPlans from './BillingPlans';
-import BillingPlansOverview from './billing-plans/BillingPlansOverview';
-// import BillingPlanConfiguration from './billing-plans/BillingPlanConfiguration'; // No longer used directly here
+import ContractLinesOverview from './billing-plans/ContractLinesOverview';
+// import ContractLineConfiguration from './billing-plans/ContractLineConfiguration'; // No longer used directly here
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor'; // Import the editor component
@@ -19,8 +18,8 @@ import GenerateInvoices from './GenerateInvoices';
 import UsageTracking from './UsageTracking';
 import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
-import PlanBundles from './plan-bundles/PlanBundles';
-import PlanBundleDetail from './plan-bundles/PlanBundleDetail';
+import Contracts from './contracts/Contracts';
+import ContractDetail from './contracts/ContractDetail';
 import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 
@@ -57,8 +56,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     'invoices',
     'invoice-templates',
     'tax-rates',
-    'plans',
-    'plan-bundles',
+    'contract-lines',
+    'contracts',
     'billing-cycles',
     'usage-tracking',
     'credits',
@@ -114,27 +113,27 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         <Tabs.Content value="tax-rates">
           <TaxRates />
         </Tabs.Content>
-        <Tabs.Content value="plans">
+        <Tabs.Content value="contract-lines">
           {searchParams?.get('planId') ? (
             <>
               {/* Use BackNav component */}
               <BackNav>
-                &larr; Back to Plans List {/* Using HTML entity for left arrow */}
+                &larr; Back to Contract Lines List {/* Using HTML entity for left arrow */}
               </BackNav>
               <div className="mt-4"> {/* Add margin top for spacing */}
                 <PlanTypeRouter planId={searchParams.get('planId')!} />
               </div>
             </>
           ) : (
-            <BillingPlansOverview />
+            <ContractLinesOverview />
           )}
         </Tabs.Content>
 
-        <Tabs.Content value="plan-bundles">
-          {searchParams?.has('bundleId') ? (
-            <PlanBundleDetail />
+        <Tabs.Content value="contracts">
+          {searchParams?.has('contractId') ? (
+            <ContractDetail />
           ) : (
-            <PlanBundles />
+            <Contracts />
           )}
         </Tabs.Content>
 

@@ -4,7 +4,7 @@ import { withTransaction } from '@alga-psa/shared/db';
 import { Knex } from 'knex';
 import { NumberingService } from 'server/src/lib/services/numberingService';
 import { BillingEngine } from 'server/src/lib/billing/billingEngine';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { applyCreditToInvoice } from 'server/src/lib/actions/creditActions';
 import { Session } from 'next-auth';
 import {
@@ -18,7 +18,7 @@ import {
   DiscountType,
   PreviewInvoiceResponse
 } from 'server/src/interfaces/invoice.interfaces';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, IClientBillingCycle } from 'server/src/interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, BillingCycleType, IClientContractLineCycle } from 'server/src/interfaces/billing.interfaces';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import Invoice from 'server/src/lib/models/invoice';
 import { parseInvoiceTemplate } from 'server/src/lib/invoice-dsl/templateLanguage';

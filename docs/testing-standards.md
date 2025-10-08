@@ -487,7 +487,7 @@ describe('Invoice Generation Infrastructure Tests', () => {
         'invoice_items',
         'invoices',
         'time_entries',
-        'company_billing_plans'
+        'company_contract_lines'
       ],
       companyName: 'Test Company',
       userType: 'internal'

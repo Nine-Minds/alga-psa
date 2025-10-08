@@ -8,7 +8,7 @@ import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActi
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 
@@ -24,10 +24,10 @@ describe('Credit Application Tests', () => {
         'invoices',
         'transactions',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
@@ -94,17 +94,17 @@ describe('Credit Application Tests', () => {
         is_taxable: true
       }, 'service_id');
 
-      // Create a billing plan
-      const planId = await context.createEntity('billing_plans', {
-        plan_name: 'Test Plan',
+      // Create a contract line
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Test Plan',
         billing_frequency: 'monthly',
         is_custom: false,
-        plan_type: 'Fixed'
-      }, 'plan_id');
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
 
       // Link service to plan
       await context.db('plan_services').insert({
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: service,
         tenant: context.tenantId,
         quantity: 1
@@ -124,10 +124,10 @@ describe('Credit Application Tests', () => {
       }, 'billing_cycle_id');
 
       // Link plan to client
-      await context.db('client_billing_plans').insert({
-        client_billing_plan_id: uuidv4(),
+      await context.db('client_contract_lines').insert({
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate,
         is_active: true
@@ -141,7 +141,7 @@ describe('Credit Application Tests', () => {
       await finalizeInvoice(prepaymentInvoice.invoice_id);
       
       // Step 3: Verify initial credit balance
-      const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const initialCredit = await ClientContractLine.getClientCredit(client_id);
       expect(initialCredit).toBe(prepaymentAmount);
 
       // Log credit balance before generating invoice
@@ -164,7 +164,7 @@ describe('Credit Application Tests', () => {
       });
       
       // Log credit balance after generating invoice
-      const creditAfterGeneration = await ClientBillingPlan.getClientCredit(client_id);
+      const creditAfterGeneration = await ClientContractLine.getClientCredit(client_id);
       console.log('Credit balance after generating invoice:', creditAfterGeneration);
 
       // Step 6: Finalize the manual invoice to apply credit
@@ -190,7 +190,7 @@ describe('Credit Application Tests', () => {
       expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
 
       // Verify credit balance is now zero
-      const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+      const finalCredit = await ClientContractLine.getClientCredit(client_id);
       expect(finalCredit).toBe(0);
 
       // Verify credit application transaction
@@ -252,17 +252,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -282,10 +282,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -299,7 +299,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
@@ -322,7 +322,7 @@ describe('Credit Application Tests', () => {
     });
     
     // Log credit balance after generating invoice
-    const creditAfterGeneration = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterGeneration = await ClientContractLine.getClientCredit(client_id);
     console.log('Credit balance after generating invoice:', creditAfterGeneration);
 
     // Step 5: Finalize the invoice to apply credit
@@ -348,7 +348,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify remaining credit balance
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(expectedRemainingBalance);
 
     // Verify credit application transaction
@@ -418,24 +418,24 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link both services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: service1,
         tenant: context.tenantId,
         quantity: 1
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: service2,
         tenant: context.tenantId,
         quantity: 1
@@ -456,10 +456,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -473,7 +473,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Log credit balance before generating invoice
@@ -519,7 +519,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal); // Invoice should have remaining balance
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -580,17 +580,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Test Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Test Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -610,10 +610,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -627,7 +627,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
 
     // Step 4: Generate an automatic invoice using the billing cycle
@@ -708,7 +708,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal); // $40
     
     // Verify remaining credit balance (should be 0 since all credit was applied)
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
 
     // Verify credit application transaction
@@ -778,24 +778,24 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Credit Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -816,17 +816,17 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
     });
 
     // Step 1: Check initial credit balance (should be 0)
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(0);
 
     // Step 2: Generate invoice with negative total
@@ -865,7 +865,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(invoice.invoice_id);
     
     // Step 4: Verify credit balance has been increased by the absolute value of the negative total
-    const updatedCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const updatedCredit = await ClientContractLine.getClientCredit(client_id);
     expect(updatedCredit).toBe(12500); // $125.00
     
     // Step 5: Verify transaction record
@@ -956,24 +956,24 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Credit Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign services to plan
     await context.db('plan_services').insert([
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceA,
         quantity: 1,
         tenant: context.tenantId
       },
       {
-        plan_id: planId,
+        contract_line_id: planId,
         service_id: serviceB,
         quantity: 1,
         tenant: context.tenantId
@@ -994,10 +994,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -1111,17 +1111,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Credit Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Credit Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Assign services to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: serviceA,
       quantity: 1,
       tenant: context.tenantId
@@ -1141,10 +1141,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -1235,17 +1235,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -1265,10 +1265,10 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -1498,17 +1498,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a single billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a single contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -1554,11 +1554,11 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link the same plan to client for all billing cycles
-    await context.db('client_billing_plans').insert([
+    await context.db('client_contract_lines').insert([
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -1573,7 +1573,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
@@ -1614,7 +1614,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after first invoice
-    const creditAfterInvoice1 = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterInvoice1 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
     console.log('Credit balance after first invoice:', creditAfterInvoice1);
     
@@ -1654,7 +1654,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice2.total_amount)).toBe(expectedRemainingTotal2); // Invoice should be partially paid
     
     // Verify credit balance after second invoice
-    const creditAfterInvoice2 = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterInvoice2 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
     console.log('Credit balance after second invoice:', creditAfterInvoice2);
     
@@ -1693,7 +1693,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
     
     // Verify credit balance is now zero
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
     console.log('Final credit balance:', finalCredit);
     
@@ -1771,17 +1771,17 @@ describe('Credit Application Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a single billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a single contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -1827,11 +1827,11 @@ describe('Credit Application Tests', () => {
     }, 'billing_cycle_id');
 
     // Link the same plan to client for all billing cycles
-    await context.db('client_billing_plans').insert([
+    await context.db('client_contract_lines').insert([
       {
-        client_billing_plan_id: uuidv4(),
+        client_contract_line_id: uuidv4(),
         client_id: client_id,
-        plan_id: planId,
+        contract_line_id: planId,
         tenant: context.tenantId,
         start_date: startDate1,
         is_active: true
@@ -1847,7 +1847,7 @@ describe('Credit Application Tests', () => {
     await finalizeInvoice(prepaymentInvoice.invoice_id);
     
     // Step 3: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(prepaymentAmount);
     console.log('Initial credit balance:', initialCredit);
     
@@ -1888,7 +1888,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice1.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after first invoice
-    const creditAfterInvoice1 = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterInvoice1 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice1).toBe(expectedRemainingCredit1);
     console.log('Credit balance after first invoice:', creditAfterInvoice1);
     
@@ -1927,7 +1927,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice2.total_amount)).toBe(0); // Invoice should be fully paid
     
     // Verify credit balance after second invoice
-    const creditAfterInvoice2 = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterInvoice2 = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterInvoice2).toBe(expectedRemainingCredit2);
     console.log('Credit balance after second invoice:', creditAfterInvoice2);
     
@@ -1966,7 +1966,7 @@ describe('Credit Application Tests', () => {
     expect(parseInt(updatedInvoice3.total_amount)).toBe(expectedRemainingTotal3); // Invoice should be partially paid
     
     // Verify credit balance is now zero
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
     console.log('Final credit balance:', finalCredit);
     

@@ -1,8 +1,8 @@
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { BillingCycleType } from '../src/interfaces/billing.interfaces';
-import { TenantEntity } from '../src/interfaces/index';
-import { IClient, IClientLocation } from '../src/interfaces/client.interfaces';
+import { BillingCycleType } from 'server/src/interfaces/billing.interfaces';
+import { TenantEntity } from 'server/src/interfaces/index';
+import { IClient, IClientLocation } from 'server/src/interfaces/client.interfaces';
 
 /**
  * Creates a new tenant in the database

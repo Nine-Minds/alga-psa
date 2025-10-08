@@ -59,7 +59,7 @@ import {
   PreviewInvoiceResponse
 } from '../../../interfaces/invoice.interfaces';
 
-import { IBillingResult, IBillingCharge, IClientBillingCycle } from '../../../interfaces/billing.interfaces';
+import { IBillingResult, IBillingCharge, IClientContractLineCycle } from '../../../interfaces/billing.interfaces';
 import { IClient } from '../../../interfaces/client.interfaces';
 import { ISO8601String } from '../../../types/types.d';
 
@@ -1339,7 +1339,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       item_id: uuidv4(),
       invoice_id: invoiceId,
       service_id: item.service_id,
-      plan_id: item.plan_id,
+      contract_line_id: item.contract_line_id,
       description: item.description,
       quantity: item.quantity || 1,
       unit_price: item.unit_price,
@@ -1355,8 +1355,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       discount_percentage: item.discount_percentage,
       applies_to_item_id: item.applies_to_item_id,
       applies_to_service_id: item.applies_to_service_id,
-      client_bundle_id: item.client_bundle_id,
-      bundle_name: item.bundle_name,
+      client_contract_id: item.client_contract_id,
+      contract_name: item.contract_name,
       is_bundle_header: item.is_bundle_header || false,
       parent_item_id: item.parent_item_id,
       rate: item.rate,

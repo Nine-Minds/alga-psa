@@ -5,8 +5,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AlertCircle } from 'lucide-react';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
-import { getBillingPlanById } from 'server/src/lib/actions/billingPlanAction';
-import { IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { getContractLineById } from 'server/src/lib/actions/contractLineAction';
+import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
 // Import the specialized components
 import { FixedPlanConfiguration } from './FixedPlanConfiguration';
@@ -19,7 +19,7 @@ interface PlanTypeRouterProps {
 }
 
 export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
-  const [planType, setPlanType] = useState<IBillingPlan['plan_type'] | null>(null);
+  const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,9 +27,9 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
     setLoading(true);
     setError(null);
     try {
-      const plan = await getBillingPlanById(planId);
+      const plan = await getContractLineById(planId);
       if (plan) {
-        setPlanType(plan.plan_type);
+        setPlanType(plan.contract_line_type);
       } else {
         setError(`Plan with ID ${planId} not found.`);
       }

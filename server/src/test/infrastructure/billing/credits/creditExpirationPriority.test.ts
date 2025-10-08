@@ -8,7 +8,7 @@ import { createDefaultTaxSettings } from 'server/src/lib/actions/taxSettingsActi
 import { v4 as uuidv4 } from 'uuid';
 import type { IClient } from '../../interfaces/client.interfaces';
 import { Temporal } from '@js-temporal/polyfill';
-import ClientBillingPlan from 'server/src/lib/models/clientBilling';
+import ClientContractLine from 'server/src/lib/models/clientContractLine';
 import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils';
 import { expiredCreditsHandler } from 'server/src/lib/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
@@ -35,10 +35,10 @@ describe('Credit Expiration Prioritization Tests', () => {
         'transactions',
         'credit_tracking',
         'client_billing_cycles',
-        'client_billing_plans',
+        'client_contract_lines',
         'plan_services',
         'service_catalog',
-        'billing_plans',
+        'contract_lines',
         'bucket_plans',
         'bucket_usage',
         'tax_rates',
@@ -119,17 +119,17 @@ describe('Credit Expiration Prioritization Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -149,10 +149,10 @@ describe('Credit Expiration Prioritization Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -216,7 +216,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .update({ expiration_date: null });
     
     // Step 6: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(creditWithExpirationAmount + creditWithoutExpirationAmount);
     
     // Step 7: Generate an invoice that will use some but not all of the credits
@@ -298,7 +298,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(creditWithoutExpirationTracking.remaining_amount)).toBe(0);
     
     // Step 14: Verify final credit balance
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0); // All credit should be used
   });
 
@@ -359,17 +359,17 @@ describe('Credit Expiration Prioritization Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -403,10 +403,10 @@ describe('Credit Expiration Prioritization Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate1, // Start from the first billing cycle
       is_active: true
@@ -481,7 +481,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(credit1Amount + credit2Amount + credit3Amount);
     
     // Step 5: Generate first invoice
@@ -644,7 +644,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(actualCredit3Remaining).toBeGreaterThanOrEqual(0);
     
     // Step 18: Verify final credit balance
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     
     // Verify final credit balance matches the actual remaining amount
     expect(finalCredit).toBe(actualCredit3Remaining);
@@ -707,17 +707,17 @@ describe('Credit Expiration Prioritization Tests', () => {
       is_taxable: true
     }, 'service_id');
 
-    // Create a billing plan
-    const planId = await context.createEntity('billing_plans', {
-      plan_name: 'Standard Plan',
+    // Create a contract line
+    const planId = await context.createEntity('contract_lines', {
+      contract_line_name: 'Standard Plan',
       billing_frequency: 'monthly',
       is_custom: false,
-      plan_type: 'Fixed'
-    }, 'plan_id');
+      contract_line_type: 'Fixed'
+    }, 'contract_line_id');
 
     // Link service to plan
     await context.db('plan_services').insert({
-      plan_id: planId,
+      contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
       quantity: 1
@@ -737,10 +737,10 @@ describe('Credit Expiration Prioritization Tests', () => {
     }, 'billing_cycle_id');
 
     // Link plan to client
-    await context.db('client_billing_plans').insert({
-      client_billing_plan_id: uuidv4(),
+    await context.db('client_contract_lines').insert({
+      client_contract_line_id: uuidv4(),
       client_id: client_id,
-      plan_id: planId,
+      contract_line_id: planId,
       tenant: context.tenantId,
       start_date: startDate,
       is_active: true
@@ -784,7 +784,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       .first();
     
     // Step 4: Verify initial credit balance
-    const initialCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const initialCredit = await ClientContractLine.getClientCredit(client_id);
     expect(initialCredit).toBe(expiringCreditAmount + activeCreditAmount);
     
     // Step 5: Generate an invoice but don't finalize it yet
@@ -829,7 +829,7 @@ describe('Credit Expiration Prioritization Tests', () => {
       });
     
     // Step 7: Verify credit balance after expiration
-    const creditAfterExpiration = await ClientBillingPlan.getClientCredit(client_id);
+    const creditAfterExpiration = await ClientContractLine.getClientCredit(client_id);
     expect(creditAfterExpiration).toBe(activeCreditAmount);
     
     // Step 8: Now finalize the invoice
@@ -903,7 +903,7 @@ describe('Credit Expiration Prioritization Tests', () => {
     expect(Number(activeCreditTracking.remaining_amount)).toBe(0); // Fully used
     
     // Step 15: Verify final credit balance is zero
-    const finalCredit = await ClientBillingPlan.getClientCredit(client_id);
+    const finalCredit = await ClientContractLine.getClientCredit(client_id);
     expect(finalCredit).toBe(0);
   });
 });

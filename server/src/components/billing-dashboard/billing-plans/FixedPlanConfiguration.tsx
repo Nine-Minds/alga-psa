@@ -6,14 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from 'server/src/components/
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { Button } from 'server/src/components/ui/Button';
-import { BillingPlanDialog } from '../BillingPlanDialog';
+import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import { getServices } from 'server/src/lib/actions/serviceActions';
 import {
-  getBillingPlanById
-} from 'server/src/lib/actions/billingPlanAction';
+  getContractLineById
+} from 'server/src/lib/actions/contractLineAction';
 import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
-import { IService, IBillingPlan } from 'server/src/interfaces/billing.interfaces';
+import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
 import FixedPlanServicesList from '../FixedPlanServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
@@ -25,7 +25,7 @@ export function FixedPlanConfiguration({
   planId,
   className = '',
 }: FixedPlanConfigurationProps) {
-  const [plan, setPlan] = useState<IBillingPlan | null>(null);
+  const [plan, setPlan] = useState<IContractLine | null>(null);
 
   const [services, setServices] = useState<IService[]>([]);
   const [planLoading, setPlanLoading] = useState(true);
@@ -37,8 +37,8 @@ export function FixedPlanConfiguration({
     setError(null);
     try {
       // Fetch the basic plan data
-      const fetchedPlan = await getBillingPlanById(planId);
-      if (fetchedPlan && fetchedPlan.plan_type === 'Fixed') {
+      const fetchedPlan = await getContractLineById(planId);
+      if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
         setPlan(fetchedPlan);
       } else {
         setError('Invalid plan type or plan not found.');
@@ -77,9 +77,9 @@ export function FixedPlanConfiguration({
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.plan_name || '...'} (Fixed)</CardTitle>
+          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Fixed)</CardTitle>
           {plan && (
-            <BillingPlanDialog
+            <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
               triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
