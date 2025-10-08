@@ -33,73 +33,92 @@ const TEST_CONFIG = {
 applyPlaywrightDatabaseEnv();
 process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-nextauth-secret';
 
-async function resetPlaywrightDatabase(config?: Partial<DbTestConfig>): Promise<void> {
-  const defaultConfig: DbTestConfig = {
+let adminDb: Knex | null = null;
+let databasePrepared = false;
+
+async function ensurePlaywrightDatabase(config?: Partial<DbTestConfig>): Promise<void> {
+  if (databasePrepared) {
+    return;
+  }
+
+  const dbConfig: DbTestConfig = {
     host: PLAYWRIGHT_DB_CONFIG.host,
     port: PLAYWRIGHT_DB_CONFIG.port,
     database: PLAYWRIGHT_DB_CONFIG.database,
     user: PLAYWRIGHT_DB_CONFIG.adminUser,
     password: PLAYWRIGHT_DB_CONFIG.adminPassword,
     ssl: PLAYWRIGHT_DB_CONFIG.ssl,
+    ...config,
   };
 
-  const dbConfig = { ...defaultConfig, ...config };
-
-  const adminDb = createKnex({
+  const adminConnection = createKnex({
     client: 'pg',
     connection: {
       host: dbConfig.host,
       port: dbConfig.port,
       user: dbConfig.user,
       password: dbConfig.password,
-      database: 'postgres',
       ssl: dbConfig.ssl,
+      database: 'postgres',
     },
-    pool: {
-      min: 1,
-      max: 2,
-    },
+    pool: { min: 1, max: 2 },
   });
 
-  const safeDbName = dbConfig.database.replace(/"/g, '""');
-
   try {
-    await adminDb.raw(
-      `SELECT pg_terminate_backend(pid)
-       FROM pg_stat_activity
-       WHERE datname = ?
-         AND pid <> pg_backend_pid()
-         AND state <> 'terminated'`,
+    const safeDbName = dbConfig.database.replace(/"/g, '""');
+    const { rows } = await adminConnection.raw(
+      'SELECT 1 FROM pg_database WHERE datname = ?',
       [dbConfig.database]
     );
-    await adminDb.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
-    await adminDb.raw(`CREATE DATABASE "${safeDbName}"`);
-  } finally {
-    await adminDb.destroy().catch(() => undefined);
-  }
 
-  const db = createTestDbConnection(dbConfig);
-  try {
-    await db.migrate.latest({
-      directory: path.resolve(process.cwd(), 'server/migrations'),
-    });
-    try {
-      await db.seed.run({
-        directory: path.resolve(process.cwd(), 'server/seeds/dev'),
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (!/No seed files? found/i.test(message)) {
-        console.warn('Seed run skipped or failed for Playwright setup:', error);
-      }
+    if (!rows?.length) {
+      await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
     }
   } finally {
-    await db.destroy();
+    await adminConnection.destroy().catch(() => undefined);
   }
+
+  if (!adminDb) {
+    adminDb = createKnex({
+      client: 'pg',
+      connection: {
+        host: dbConfig.host,
+        port: dbConfig.port,
+        database: dbConfig.database,
+        user: dbConfig.user,
+        password: dbConfig.password,
+        ssl: dbConfig.ssl,
+      },
+      pool: { min: 0, max: 10, idleTimeoutMillis: 30_000 },
+    });
+  }
+
+  await adminDb.migrate.latest({
+    directory: path.resolve(process.cwd(), 'server/migrations'),
+  });
+
+  try {
+    await adminDb.seed.run({
+      directory: path.resolve(process.cwd(), 'server/seeds/dev'),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!/No seed files? found/i.test(message)) {
+      console.warn('Seed run skipped or failed for Playwright setup:', error);
+    }
+  }
+
+  databasePrepared = true;
 }
 
 test.beforeAll(async () => {
-  await resetPlaywrightDatabase();
+  await ensurePlaywrightDatabase();
+});
+
+test.afterAll(async () => {
+  await adminDb?.destroy().catch(() => undefined);
+  adminDb = null;
+  databasePrepared = false;
 });
 
 function attachFailFastHandlers(page: Page, baseUrl: string) {
