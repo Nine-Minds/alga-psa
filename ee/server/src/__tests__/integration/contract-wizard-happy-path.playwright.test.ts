@@ -64,34 +64,35 @@ async function ensurePlaywrightDatabase(config?: Partial<DbTestConfig>): Promise
     pool: { min: 1, max: 2 },
   });
 
+  const safeDbName = dbConfig.database.replace(/"/g, '""');
+
   try {
-    const safeDbName = dbConfig.database.replace(/"/g, '""');
-    const { rows } = await adminConnection.raw(
-      'SELECT 1 FROM pg_database WHERE datname = ?',
+    await adminConnection.raw(
+      `SELECT pg_terminate_backend(pid)
+       FROM pg_stat_activity
+       WHERE datname = ?
+         AND pid <> pg_backend_pid()
+         AND state <> 'terminated'`,
       [dbConfig.database]
     );
-
-    if (!rows?.length) {
-      await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
-    }
+    await adminConnection.raw(`DROP DATABASE IF EXISTS "${safeDbName}"`);
+    await adminConnection.raw(`CREATE DATABASE "${safeDbName}"`);
   } finally {
     await adminConnection.destroy().catch(() => undefined);
   }
 
-  if (!adminDb) {
-    adminDb = createKnex({
-      client: 'pg',
-      connection: {
-        host: dbConfig.host,
-        port: dbConfig.port,
-        database: dbConfig.database,
-        user: dbConfig.user,
-        password: dbConfig.password,
-        ssl: dbConfig.ssl,
-      },
-      pool: { min: 0, max: 10, idleTimeoutMillis: 30_000 },
-    });
-  }
+  adminDb = createKnex({
+    client: 'pg',
+    connection: {
+      host: dbConfig.host,
+      port: dbConfig.port,
+      database: dbConfig.database,
+      user: dbConfig.user,
+      password: dbConfig.password,
+      ssl: dbConfig.ssl,
+    },
+    pool: { min: 0, max: 10, idleTimeoutMillis: 30_000 },
+  });
 
   await adminDb.migrate.latest({
     directory: path.resolve(process.cwd(), 'server/migrations'),
