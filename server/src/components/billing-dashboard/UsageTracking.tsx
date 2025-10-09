@@ -82,7 +82,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
 
   useEffect(() => {
     if (selectedClient && selectedClient !== 'all_clients') {
-      loadBucketUsageForCompany(selectedClient);
+      loadBucketUsageForClient(selectedClient);
     } else {
       loadAllBucketUsage();
     }
@@ -154,7 +154,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     }
   };
 
-  const loadBucketUsageForCompany = async (clientId: string) => {
+  const loadBucketUsageForClient = async (clientId: string) => {
     try {
       setLoadingBuckets(true);
       const buckets = await getRemainingBucketUnits({ clientId });
