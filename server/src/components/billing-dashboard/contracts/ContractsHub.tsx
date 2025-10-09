@@ -17,17 +17,28 @@ const ContractsHub: React.FC = () => {
   // Get active sub-tab from URL or default to 'active'
   const activeSubTab = (searchParams?.get('subtab') as ContractsSubTab) || 'active';
 
+  // Map URL subtab values to CustomTabs label values
+  const subtabToLabel: Record<ContractsSubTab, string> = {
+    'active': 'Active Contracts',
+    'drafts': 'Drafts'
+  };
+
+  const labelToSubtab: Record<string, ContractsSubTab> = {
+    'Active Contracts': 'active',
+    'Drafts': 'drafts'
+  };
+
   // Trigger for refreshing data across tabs
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [editingDraft, setEditingDraft] = useState<IPlanBundle | null>(null);
   const [showWizard, setShowWizard] = useState(false);
 
   const handleTabChange = (value: string) => {
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    params.set('subtab', value);
-    // Clear any contract-specific params when switching tabs
-    params.delete('contractId');
-    router.push(`/msp/billing?tab=contracts&${params.toString()}`);
+    const params = new URLSearchParams();
+    params.set('tab', 'contracts');
+    // Convert label back to URL format
+    params.set('subtab', labelToSubtab[value] || value.toLowerCase());
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   const handleRefreshData = () => {
@@ -73,7 +84,7 @@ const ContractsHub: React.FC = () => {
             )
           }
         ]}
-        defaultTab={activeSubTab}
+        defaultTab={subtabToLabel[activeSubTab]}
         onTabChange={handleTabChange}
       />
 

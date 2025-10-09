@@ -43,13 +43,24 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
       const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('invoicing-subtab') : null;
       const subtab = urlSubtab || savedSubtab || 'generate';
       params.set('subtab', subtab);
+    } else if (value === 'contracts') {
+      // When switching TO contracts, check for subtab in URL, sessionStorage, or default
+      const urlSubtab = searchParams?.get('subtab');
+      const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('contracts-subtab') : null;
+      const subtab = urlSubtab || savedSubtab || 'active';
+      params.set('subtab', subtab);
     } else {
-      // When switching AWAY from invoicing, save the current subtab to sessionStorage
+      // When switching AWAY from invoicing/contracts, save the current subtab to sessionStorage
+      const currentTab = searchParams?.get('tab');
       const currentSubtab = searchParams?.get('subtab');
       if (currentSubtab && typeof window !== 'undefined') {
-        sessionStorage.setItem('invoicing-subtab', currentSubtab);
+        if (currentTab === 'invoicing') {
+          sessionStorage.setItem('invoicing-subtab', currentSubtab);
+        } else if (currentTab === 'contracts') {
+          sessionStorage.setItem('contracts-subtab', currentSubtab);
+        }
       }
-      // Don't include subtab in URL for non-invoicing tabs
+      // Don't include subtab in URL for tabs that don't use subtabs
     }
 
     router.push(`/msp/billing?${params.toString()}`);
