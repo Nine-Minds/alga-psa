@@ -23,8 +23,12 @@ export default defineConfig({
     },
     logHeapUsage: true,
     testTimeout: 20000,
-    deps: {
-      inline: ['next-auth', '@auth/core', 'next'],
+    coverage: {
+      provider: 'v8',
+      include: [
+        'src/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, '../packages/product-extension-storage-api/**/*.{js,ts,jsx,tsx}'),
+      ],
     },
   },
   resolve: {
@@ -32,6 +36,38 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../shared'),
       'next/server': path.resolve(__dirname, '../node_modules/next/server.js'),
+      '@product/extension-storage-api/ee/record-impl': path.resolve(
+        __dirname,
+        '../packages/product-extension-storage-api/ee/record-impl.ts',
+      ),
+      '@product/extension-storage-api/ee/records-impl': path.resolve(
+        __dirname,
+        '../packages/product-extension-storage-api/ee/records-impl.ts',
+      ),
+      '@product/extension-storage-api/record': path.resolve(
+        __dirname,
+        '../packages/product-extension-storage-api/record.ts',
+      ),
+      '@product/extension-storage-api/records': path.resolve(
+        __dirname,
+        '../packages/product-extension-storage-api/records.ts',
+      ),
     },
+  },
+  server: {
+    deps: {
+      inline: [
+        'next-auth',
+        '@auth/core',
+        'next',
+        /^@product\/extension-storage-api(\/.*)?$/,
+      ],
+    },
+    fs: {
+      allow: [path.resolve(__dirname, '..')],
+    },
+  },
+  ssr: {
+    noExternal: [/^@product\/extension-storage-api(\/.*)?$/],
   },
 });
