@@ -1,7 +1,7 @@
 import { getSession } from "server/src/lib/auth/getSession";
 import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
-import { getTenantBrandingByDomain } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
-import { headers } from "next/headers";
+import { getTenantBrandingByTenantId } from "server/src/lib/actions/tenant-actions/getTenantBrandingByDomain";
+import { getHierarchicalLocaleAction } from "server/src/lib/actions/locale-actions/getHierarchicalLocale";
 
 export default async function Layout({
   children,
@@ -10,15 +10,17 @@ export default async function Layout({
 }>) {
   const session = await getSession();
 
-  // Get branding based on current domain (styles are injected in root layout)
-  const headersList = await headers();
-  const host = headersList.get('host') || '';
-  const branding = await getTenantBrandingByDomain(host);
-  // Don't pass initialLocale - let I18nWrapper use getHierarchicalLocaleAction
-  // which checks user preference -> client preference -> tenant preference -> system default
+  // Get branding from session tenant (no host header needed!)
+  const branding = session?.user?.tenant
+    ? await getTenantBrandingByTenantId(session.user.tenant)
+    : null;
+
+  // Get hierarchical locale on server (user -> client -> tenant -> system)
+  // This eliminates the need for client-side async fetch and loading state
+  const locale = await getHierarchicalLocaleAction();
 
   return (
-    <ClientPortalLayoutClient session={session} branding={branding} initialLocale={null}>
+    <ClientPortalLayoutClient session={session} branding={branding} initialLocale={locale}>
       {children}
     </ClientPortalLayoutClient>
   );

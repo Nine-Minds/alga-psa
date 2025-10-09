@@ -16,18 +16,19 @@ async function globalSetup() {
   process.env.NODE_ENV = process.env.NODE_ENV || 'test';
   process.env.DB_HOST = process.env.DB_HOST || 'pgbouncer';
   process.env.DB_PORT = process.env.DB_PORT || '6432';
-  process.env.DB_NAME = process.env.DB_NAME || 'server';
+  process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
   process.env.DB_USER = process.env.DB_USER || 'postgres';
   process.env.DB_PASSWORD = process.env.DB_PASSWORD || 'postpass123';
+  process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD || 'postpass123';
   process.env.ALGA_AUTH_KEY = process.env.ALGA_AUTH_KEY || '17e412b643525944dc1db02871c1b5dc93972f3c2147b9a9446e104b7495272b';
-  
+
   // Build TEST_DATABASE_URL if not already set
   if (!process.env.TEST_DATABASE_URL) {
-    process.env.TEST_DATABASE_URL = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`;
+    process.env.TEST_DATABASE_URL = `postgresql://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME_SERVER}`;
   }
-  
+
   console.log('✅ Playwright test environment configured');
-  console.log(`   - Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  console.log(`   - Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME_SERVER}`);
   console.log(`   - User: ${process.env.DB_USER}`);
 }
 
