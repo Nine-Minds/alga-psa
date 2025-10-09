@@ -5,10 +5,10 @@ import { Button } from 'server/src/components/ui/Button'
 import { Input } from 'server/src/components/ui/Input'
 import { Label } from 'server/src/components/ui/Label'
 import CustomSelect from 'server/src/components/ui/CustomSelect'
-import { SearchableSelect } from 'server/src/components/ui/SearchableSelect'
+import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect'
 import { Switch } from 'server/src/components/ui/Switch'
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert'
-import { createService, type CreateServiceInput } from 'server/src/lib/actions/serviceActions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions'
 // Import getTaxRates and ITaxRate instead
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from 'server/src/interfaces/tax.interfaces'; // Removed ITaxRegion
@@ -21,6 +21,7 @@ import { useTenant } from 'server/src/components/TenantProvider'
 interface QuickAddServiceProps {
   onServiceAdded: () => void;
   allServiceTypes: { id: string; name: string; billing_method: 'fixed' | 'per_unit' }[]; // Removed is_standard
+  onServiceTypesChange: () => void; // Add callback to refresh service types
 }
 
 // Updated interface to use custom_service_type_id
@@ -56,7 +57,7 @@ const BILLING_METHOD_OPTIONS = [
   { value: 'per_unit', label: 'Per Unit' }
 ];
 
-export function QuickAddService({ onServiceAdded, allServiceTypes }: QuickAddServiceProps) { // Destructure new prop
+export function QuickAddService({ onServiceAdded, allServiceTypes, onServiceTypesChange }: QuickAddServiceProps) { // Destructure new prop
   const [open, setOpen] = useState(false)
   const [triggerButton, setTriggerButton] = useState<HTMLButtonElement | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -280,17 +281,15 @@ console.log('[QuickAddService] Service created successfully');
               />
             </div>
 
-            {/* Updated to Service Type dropdown using allServiceTypes */}
+            {/* Updated to Service Type dropdown using EditableServiceTypeSelect */}
             <div>
-              <Label htmlFor="serviceType" className="block text-sm font-medium text-gray-700 mb-1">Service Type *</Label>
-              <SearchableSelect
-                id="serviceType"
-                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))}
+              <EditableServiceTypeSelect
+                label="Service Type *"
                 value={serviceData.custom_service_type_id}
                 onChange={(value) => {
                   // Find the selected service type to get its billing method
                   const selectedType = allServiceTypes.find(t => t.id === value);
-                  
+
                   // Update service data with the selected type ID and its billing method
                   setServiceData({
                     ...serviceData,
@@ -299,8 +298,20 @@ console.log('[QuickAddService] Service created successfully');
                     billing_method: selectedType?.billing_method || serviceData.billing_method,
                   });
                 }}
+                serviceTypes={allServiceTypes}
+                onCreateType={async (name) => {
+                  await createServiceTypeInline(name);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
+                onUpdateType={async (id, name) => {
+                  await updateServiceTypeInline(id, name);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
+                onDeleteType={async (id) => {
+                  await deleteServiceTypeInline(id);
+                  onServiceTypesChange(); // Refresh the service types list
+                }}
                 placeholder="Select service type..."
-                emptyMessage="No service types found"
                 className={`w-full ${hasAttemptedSubmit && !serviceData.custom_service_type_id ? 'ring-1 ring-red-500' : ''}`}
               />
             </div>
