@@ -5,7 +5,6 @@ import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Di
 import { Button } from 'server/src/components/ui/Button';
 import { Label } from 'server/src/components/ui/Label';
 import { Input } from 'server/src/components/ui/Input';
-import { SwitchWithLabel } from 'server/src/components/ui/SwitchWithLabel';
 import { TextArea } from 'server/src/components/ui/TextArea';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import CustomSelect from 'server/src/components/ui/CustomSelect';
@@ -31,7 +30,6 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
   const [open, setOpen] = useState(false);
   const [contractName, setContractName] = useState(editingContract?.bundle_name || '');
   const [contractDescription, setContractDescription] = useState(editingContract?.bundle_description || '');
-  const [isActive, setIsActive] = useState<boolean>(editingContract?.is_active ?? true);
   const [clientId, setClientId] = useState<string>('');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -67,7 +65,6 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
     if (editingContract) {
       setContractName(editingContract.bundle_name);
       setContractDescription(editingContract.bundle_description || '');
-      setIsActive(editingContract.is_active);
       setOpen(true);
     }
   }, [editingContract]);
@@ -78,7 +75,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, saveAsDraft: boolean = false) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
 
@@ -87,17 +84,21 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
     if (!clientId) {
       errors.push('Client');
     }
-    if (!contractName.trim()) {
-      errors.push('Contract name');
-    }
-    if (!billingFrequency) {
-      errors.push('Billing frequency');
-    }
-    if (!startDate) {
-      errors.push('Start date');
-    }
-    if (poRequired && !poNumber.trim()) {
-      errors.push('PO number (required when PO is enabled)');
+
+    // For drafts, only client is required
+    if (!saveAsDraft) {
+      if (!contractName.trim()) {
+        errors.push('Contract name');
+      }
+      if (!billingFrequency) {
+        errors.push('Billing frequency');
+      }
+      if (!startDate) {
+        errors.push('Start date');
+      }
+      if (poRequired && !poNumber.trim()) {
+        errors.push('PO number (required when PO is enabled)');
+      }
     }
 
     if (errors.length > 0) {
@@ -111,9 +112,9 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
       // TODO: Update to use full contract creation with client assignment
       // For now, we create the bundle and log the additional data
       const bundleData = {
-        bundle_name: contractName,
+        bundle_name: contractName || `Draft Contract - ${new Date().toLocaleDateString()}`,
         bundle_description: contractDescription || undefined,
-        is_active: isActive,
+        is_active: !saveAsDraft, // Drafts are inactive
         tenant: tenant
       };
 
@@ -126,6 +127,7 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
         po_required: poRequired,
         po_number: poRequired ? poNumber : null,
         po_amount: poRequired ? poAmount : null,
+        is_draft: saveAsDraft,
       };
 
       console.log('Contract assignment data (will be saved in future):', contractAssignmentData);
@@ -154,7 +156,6 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
   const resetForm = () => {
     setContractName('');
     setContractDescription('');
-    setIsActive(true);
     setClientId('');
     setBillingFrequency('monthly');
     setStartDate(null);
@@ -182,7 +183,6 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
           if (editingContract) {
             setContractName(editingContract.bundle_name);
             setContractDescription(editingContract.bundle_description || '');
-            setIsActive(editingContract.is_active);
           }
           setOpen(true);
         }}>
@@ -386,12 +386,6 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
               )}
             </div>
 
-            <SwitchWithLabel
-              label="Active"
-              checked={isActive}
-              onCheckedChange={setIsActive}
-            />
-
             <DialogFooter>
               <Button
                 id="cancel-contract-btn"
@@ -400,6 +394,15 @@ export function ContractDialog({ onContractAdded, editingContract, onClose, trig
                 onClick={handleClose}
               >
                 Cancel
+              </Button>
+              <Button
+                id="save-draft-btn"
+                type="button"
+                variant="secondary"
+                onClick={(e) => handleSubmit(e, true)}
+                disabled={!clientId}
+              >
+                Save as Draft
               </Button>
               <Button
                 id="save-contract-btn"

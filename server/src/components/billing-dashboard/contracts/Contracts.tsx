@@ -34,7 +34,12 @@ interface EnrichedContract extends IPlanBundle {
   status?: ContractStatus;
 }
 
-const Contracts: React.FC = () => {
+interface ContractsProps {
+  onRefreshNeeded?: () => void;
+  refreshTrigger?: number;
+}
+
+const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }) => {
   const [contracts, setContracts] = useState<EnrichedContract[]>([]);
   const [filteredContracts, setFilteredContracts] = useState<EnrichedContract[]>([]);
   const [editingContract, setEditingContract] = useState<IPlanBundle | null>(null);
@@ -47,7 +52,7 @@ const Contracts: React.FC = () => {
 
   useEffect(() => {
     fetchContracts();
-  }, []);
+  }, [refreshTrigger]);
 
   useEffect(() => {
     filterContracts();
@@ -70,17 +75,20 @@ const Contracts: React.FC = () => {
       const fetchedContracts = await getPlanBundles();
       const clients = await getAllClients();
 
+      // Filter out draft contracts (is_active = false)
       // For now, we'll use mock data for client assignments
       // In a real implementation, we'd fetch client_plan_bundles
-      const enriched: EnrichedContract[] = fetchedContracts.map((contract) => ({
-        ...contract,
-        client_name: 'Mock Client', // TODO: Get from client_plan_bundles join
-        client_id: undefined,
-        start_date: new Date().toISOString().split('T')[0], // Mock data
-        end_date: null,
-        monthly_value: 0, // TODO: Calculate from billing plans
-        status: getContractStatus(undefined, null, contract.is_active)
-      }));
+      const enriched: EnrichedContract[] = fetchedContracts
+        .filter(contract => contract.is_active) // Only show active contracts
+        .map((contract) => ({
+          ...contract,
+          client_name: 'Mock Client', // TODO: Get from client_plan_bundles join
+          client_id: undefined,
+          start_date: new Date().toISOString().split('T')[0], // Mock data
+          end_date: null,
+          monthly_value: 0, // TODO: Calculate from billing plans
+          status: getContractStatus(undefined, null, contract.is_active)
+        }));
 
       setContracts(enriched);
       setError(null);
@@ -113,6 +121,7 @@ const Contracts: React.FC = () => {
     try {
       await deletePlanBundle(contractId);
       fetchContracts();
+      onRefreshNeeded?.();
     } catch (error) {
       if (error instanceof Error) {
         alert(error.message);
@@ -277,7 +286,10 @@ const Contracts: React.FC = () => {
                 Create with Wizard
               </Button>
               <ContractDialog
-                onContractAdded={fetchContracts}
+                onContractAdded={() => {
+                  fetchContracts();
+                  onRefreshNeeded?.();
+                }}
                 editingContract={editingContract}
                 onClose={() => setEditingContract(null)}
                 triggerButton={
@@ -404,6 +416,7 @@ const Contracts: React.FC = () => {
           console.log('Contract created:', data);
           setShowWizard(false);
           fetchContracts();
+          onRefreshNeeded?.();
         }}
       />
     </>

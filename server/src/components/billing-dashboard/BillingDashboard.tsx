@@ -13,7 +13,7 @@ import InvoiceTemplateEditor from './InvoiceTemplateEditor';
 import BillingCycles from './BillingCycles';
 import TaxRates from './TaxRates';
 import GenerateInvoices from './GenerateInvoices';
-import Contracts from './contracts/Contracts';
+import ContractsHub from './contracts/ContractsHub';
 import ContractDetail from './contracts/ContractDetail';
 import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav';
@@ -100,7 +100,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           {searchParams?.has('contractId') ? (
             <ContractDetail />
           ) : (
-            <Contracts />
+            <ContractsHub />
           )}
         </Tabs.Content>
 

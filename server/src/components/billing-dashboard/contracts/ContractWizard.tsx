@@ -73,6 +73,7 @@ export interface ContractWizardData {
 
   // Internal tracking
   bundle_id?: string; // Set after creation
+  is_draft?: boolean; // Whether this is a draft contract
 }
 
 interface ContractWizardProps {
@@ -242,13 +243,36 @@ export function ContractWizard({
       // TODO: Call backend to create contract
       // For now, just call onComplete with the data
       console.log('Creating contract with data:', wizardData);
-      onComplete?.(wizardData);
+      onComplete?.({ ...wizardData, is_draft: false });
       onOpenChange(false);
     } catch (error) {
       console.error('Error creating contract:', error);
       setErrors(prev => ({
         ...prev,
         [currentStep]: error instanceof Error ? error.message : 'Failed to create contract'
+      }));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    // Minimal validation for drafts - only client is required
+    if (!wizardData.client_id) {
+      setErrors(prev => ({ ...prev, [currentStep]: 'Client is required to save as draft' }));
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('Saving contract as draft:', wizardData);
+      onComplete?.({ ...wizardData, is_draft: true });
+      onOpenChange(false);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      setErrors(prev => ({
+        ...prev,
+        [currentStep]: error instanceof Error ? error.message : 'Failed to save draft'
       }));
     } finally {
       setIsLoading(false);
@@ -317,9 +341,11 @@ export function ContractWizard({
             onNext={handleNext}
             onSkip={handleSkip}
             onFinish={handleFinish}
+            onSaveDraft={handleSaveDraft}
             isNextDisabled={isLoading}
             isSkipDisabled={REQUIRED_STEPS.includes(currentStep)}
             isLoading={isLoading}
+            showSaveDraft={true}
           />
         </div>
       </div>
