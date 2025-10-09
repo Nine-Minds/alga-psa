@@ -12,7 +12,7 @@ import { ContractWizardData } from '../ContractWizard';
 import { IClient } from 'server/src/interfaces';
 import { getAllClients } from 'server/src/lib/actions/client-actions/clientActions';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing';
-import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat } from 'lucide-react';
+import { Calendar, Building2, FileText, FileCheck, HelpCircle, Repeat, Info } from 'lucide-react';
 
 interface ContractBasicsStepProps {
   data: ContractWizardData;
@@ -223,6 +223,13 @@ export function ContractBasicsStep({ data, updateData }: ContractBasicsStepProps
               checked={data.po_required || false}
               onCheckedChange={(checked) => updateData({ po_required: checked })}
             />
+          </div>
+          {/* Coming Soon Notice - Below Toggle */}
+          <div className="flex gap-2 text-xs text-blue-700 bg-blue-50 p-2 rounded border border-blue-100">
+            <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
+            <p>
+              <span className="font-medium">Note:</span> Invoice integration coming soon. You can configure this now and your settings will be saved, but PO enforcement won't be active until a future release.
+            </p>
           </div>
         </div>
 
