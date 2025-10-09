@@ -328,13 +328,19 @@ async function dropLegacyPlanColumns(knex) {
 async function dropLegacyBundleColumns(knex) {
   console.log('Dropping legacy bundle columns...');
 
-  const exists = await knex.schema.hasColumn('company_billing_plans', 'company_bundle_id');
-  if (!exists) {
-    console.log('  company_bundle_id already removed or table dropped');
+  const tableExists = await knex.schema.hasTable('client_billing_plans');
+  if (!tableExists) {
+    console.log('  client_billing_plans table not found, skipping');
     return;
   }
 
-  await dropColumnWithFk(knex, 'company_billing_plans', 'company_bundle_id');
+  const hasColumn = await knex.schema.hasColumn('client_billing_plans', 'client_bundle_id');
+  if (!hasColumn) {
+    console.log('  client_bundle_id already removed');
+    return;
+  }
+
+  await dropColumnWithFk(knex, 'client_billing_plans', 'client_bundle_id');
 }
 
 async function dropLegacyTables(knex) {
@@ -350,11 +356,20 @@ async function dropLegacyTables(knex) {
 
   const tables = [
     'bundle_billing_plans',
-    'company_plan_bundles',
+    'client_plan_bundles',
     'plan_bundles',
-    'company_billing_plans',
+    'client_billing_plans',
     'billing_plan_fixed_config',
     'billing_plans',
+    'plan_services',
+    'plan_service_configuration',
+    'plan_discounts',
+    'plan_service_bucket_config',
+    'plan_service_fixed_config',
+    'plan_service_hourly_config',
+    'plan_service_hourly_configs',
+    'plan_service_rate_tiers',
+    'plan_service_usage_config',
   ];
 
   for (const table of tables) {
@@ -381,7 +396,7 @@ async function dropLegacyTables(knex) {
     }
 
     console.log(`  Dropping ${table}...`);
-    await knex.schema.dropTableIfExists(table);
+    await knex.raw(`DROP TABLE IF EXISTS ${table} CASCADE`);
   }
 }
 
@@ -448,11 +463,20 @@ async function finalVerification(knex) {
     { table: 'contract_lines', shouldExist: true },
     { table: 'client_contract_lines', shouldExist: true },
     { table: 'plan_bundles', shouldExist: false },
-    { table: 'company_plan_bundles', shouldExist: false },
+    { table: 'client_plan_bundles', shouldExist: false },
     { table: 'bundle_billing_plans', shouldExist: false },
     { table: 'billing_plans', shouldExist: false },
     { table: 'billing_plan_fixed_config', shouldExist: false },
-    { table: 'company_billing_plans', shouldExist: false },
+    { table: 'client_billing_plans', shouldExist: false },
+    { table: 'plan_services', shouldExist: false },
+    { table: 'plan_service_configuration', shouldExist: false },
+    { table: 'plan_discounts', shouldExist: false },
+    { table: 'plan_service_bucket_config', shouldExist: false },
+    { table: 'plan_service_fixed_config', shouldExist: false },
+    { table: 'plan_service_hourly_config', shouldExist: false },
+    { table: 'plan_service_hourly_configs', shouldExist: false },
+    { table: 'plan_service_rate_tiers', shouldExist: false },
+    { table: 'plan_service_usage_config', shouldExist: false },
   ];
 
   for (const check of checks) {
