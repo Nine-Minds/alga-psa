@@ -39,12 +39,22 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     const params = new URLSearchParams();
     params.set('tab', tabValue);
 
-    // If we're on a plan detail page and switching tabs, go back to the main billing dashboard
-    if (searchParams?.has('planId')) {
-      router.push(`/msp/billing?${params.toString()}`);
+    if (value === 'invoicing') {
+      // When switching TO invoicing, check for subtab in URL, sessionStorage, or default
+      const urlSubtab = searchParams?.get('subtab');
+      const savedSubtab = typeof window !== 'undefined' ? sessionStorage.getItem('invoicing-subtab') : null;
+      const subtab = urlSubtab || savedSubtab || 'generate';
+      params.set('subtab', subtab);
     } else {
-      router.push(`/msp/billing?${params.toString()}`);
+      // When switching AWAY from invoicing, save the current subtab to sessionStorage
+      const currentSubtab = searchParams?.get('subtab');
+      if (currentSubtab && typeof window !== 'undefined') {
+        sessionStorage.setItem('invoicing-subtab', currentSubtab);
+      }
+      // Don't include subtab in URL for non-invoicing tabs
     }
+
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   // Get current tab from URL or default to overview

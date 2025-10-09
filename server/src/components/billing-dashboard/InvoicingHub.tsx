@@ -21,17 +21,28 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   // Get active sub-tab from URL or default to 'generate'
   const activeSubTab = (searchParams?.get('subtab') as InvoicingSubTab) || 'generate';
 
+  // Map URL subtab values to CustomTabs label values
+  const subtabToLabel: Record<InvoicingSubTab, string> = {
+    'generate': 'Generate',
+    'drafts': 'Drafts',
+    'finalized': 'Finalized'
+  };
+
+  const labelToSubtab: Record<string, InvoicingSubTab> = {
+    'Generate': 'generate',
+    'Drafts': 'drafts',
+    'Finalized': 'finalized'
+  };
+
   // Trigger for refreshing data across tabs
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleTabChange = (value: string) => {
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    params.set('subtab', value);
-    // Clear any invoice-specific params when switching tabs
-    params.delete('invoiceId');
-    params.delete('templateId');
-    params.delete('managingInvoiceId');
-    router.push(`/msp/billing?tab=invoicing&${params.toString()}`);
+    const params = new URLSearchParams();
+    params.set('tab', 'invoicing');
+    // Convert label back to URL format
+    params.set('subtab', labelToSubtab[value] || value.toLowerCase());
+    router.push(`/msp/billing?${params.toString()}`);
   };
 
   const handleRefreshData = () => {
@@ -76,7 +87,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
             )
           }
         ]}
-        defaultTab={activeSubTab}
+        defaultTab={subtabToLabel[activeSubTab]}
         onTabChange={handleTabChange}
       />
     </div>

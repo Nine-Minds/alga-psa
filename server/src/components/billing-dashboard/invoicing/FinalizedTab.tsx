@@ -9,7 +9,7 @@ import { Input } from '../../ui/Input';
 import { Checkbox } from '../../ui/Checkbox';
 import { DataTable } from '../../ui/DataTable';
 import { Badge } from '../../ui/Badge';
-import { MoreVertical, CheckCircle, GripVertical } from 'lucide-react';
+import { MoreVertical, CheckCircle, GripVertical, Download, Mail, RotateCcw, Search, ArrowRight } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +25,7 @@ import { scheduleInvoiceZipAction } from '../../../lib/actions/job-actions/sched
 import { scheduleInvoiceEmailAction } from '../../../lib/actions/job-actions/scheduleInvoiceEmailAction';
 import { toPlainDate } from '../../../lib/utils/dateTimeUtils';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
+import LoadingIndicator from '../../ui/LoadingIndicator';
 
 interface FinalizedTabProps {
   onRefreshNeeded: () => void;
@@ -266,7 +267,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         <div onClick={(e) => e.stopPropagation()}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" aria-label="Invoice actions">
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -279,7 +280,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                     setError('Failed to generate PDF.');
                   }
                 }}
+                className="flex items-center gap-2"
               >
+                <Download className="h-4 w-4" />
                 Download PDF
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -290,7 +293,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                     setError('Failed to send email.');
                   }
                 }}
+                className="flex items-center gap-2"
               >
+                <Mail className="h-4 w-4" />
                 Send Email
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -303,7 +308,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                     setError('Failed to unfinalize invoice.');
                   }
                 }}
+                className="flex items-center gap-2"
               >
+                <RotateCcw className="h-4 w-4" />
                 Unfinalize
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -317,13 +324,17 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-4 flex-1 max-w-md">
-          <Input
-            type="text"
-            placeholder="Search invoices..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1"
-          />
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Input
+              type="text"
+              placeholder="Search invoices..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+              aria-label="Search invoices"
+            />
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -337,13 +348,16 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleBulkDownload}>
+            <DropdownMenuItem onClick={handleBulkDownload} className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
               Download PDFs
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkEmail}>
+            <DropdownMenuItem onClick={handleBulkEmail} className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
               Send Emails
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkUnfinalize}>
+            <DropdownMenuItem onClick={handleBulkUnfinalize} className="flex items-center gap-2">
+              <RotateCcw className="h-4 w-4" />
               Unfinalize Selected
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -356,7 +370,13 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         </div>
       )}
 
-      {filteredInvoices.length === 0 && !isLoading ? (
+      {isLoading ? (
+        <Card>
+          <div className="p-12 flex items-center justify-center">
+            <LoadingIndicator text="Loading invoices..." />
+          </div>
+        </Card>
+      ) : filteredInvoices.length === 0 ? (
         <Card>
           <div className="p-12 text-center">
             <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
@@ -364,8 +384,9 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
             <p className="text-gray-600 mb-4">
               Finalized invoices will appear here once you've approved and finalized your drafts.
             </p>
-            <Button onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')}>
+            <Button onClick={() => router.push('/msp/billing?tab=invoicing&subtab=drafts')} className="flex items-center gap-2">
               View Drafts
+              <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </Card>
