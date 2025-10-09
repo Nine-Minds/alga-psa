@@ -18,7 +18,6 @@ import {
   FileText as FileTextIcon,
   FileMinus,
   Package,
-  Box,
   Layers3,
   Calendar,
   Gauge,
@@ -99,9 +98,9 @@ export const menuItems: MenuItem[] = [
     icon: CreditCard,
     subItems: [
       {
-        name: 'Overview',
-        icon: LayoutDashboard,
-        href: '/msp/billing?tab=overview'
+        name: 'Contracts',
+        icon: FileText,
+        href: '/msp/billing?tab=contracts'
       },
       {
         name: 'Generate Invoices',
@@ -124,14 +123,9 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=tax-rates'
       },
       {
-        name: 'Plans',
+        name: 'Contract Lines',
         icon: Package,
-        href: '/msp/billing?tab=plans'
-      },
-      {
-        name: 'Plan Bundles',
-        icon: Box,
-        href: '/msp/billing?tab=plan-bundles'
+        href: '/msp/billing?tab=contract-lines'
       },
       {
         name: 'Billing Cycles',
@@ -144,14 +138,14 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=usage-tracking'
       },
       {
-        name: 'Credits',
-        icon: CreditCard,
-        href: '/msp/billing?tab=credits'
+        name: 'Reports',
+        icon: BarChart3,
+        href: '/msp/billing?tab=reports'
       },
       {
-        name: 'Reconciliation',
-        icon: CheckCircle,
-        href: '/msp/billing?tab=reconciliation'
+        name: 'Service Catalog',
+        icon: Layers3,
+        href: '/msp/billing?tab=service-catalog'
       }
     ]
   },
