@@ -1,0 +1,158 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+import { StorageServiceError, StorageValidationError } from '@/lib/extensions/storage/v2/errors';
+import { getStorageServiceForInstall } from '@/lib/extensions/storage/v2/factory';
+import type {
+  StorageDeleteRequest,
+  StorageGetRequest,
+  StoragePutRequest,
+} from '@/lib/extensions/storage/v2/types';
+import { isStorageApiEnabled } from '@/lib/extensions/storage/v2/config';
+
+const putSchema = z.object({
+  value: z.any(),
+  metadata: z.record(z.any()).optional(),
+  ttlSeconds: z.number().int().positive().optional(),
+  ifRevision: z.number().int().nonnegative().optional(),
+  schemaVersion: z.number().int().positive().optional(),
+});
+
+const deleteQuerySchema = z.object({
+  ifRevision: z.coerce.number().int().nonnegative().optional(),
+});
+
+function mapError(error: unknown): NextResponse {
+  if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
+    const status = (() => {
+      switch (error.code) {
+        case 'VALIDATION_FAILED':
+        case 'LIMIT_EXCEEDED':
+          return 400;
+        case 'UNAUTHORIZED':
+          return 401;
+        case 'NAMESPACE_DENIED':
+          return 403;
+        case 'NOT_FOUND':
+          return 404;
+        case 'REVISION_MISMATCH':
+          return 409;
+        case 'QUOTA_EXCEEDED':
+        case 'RATE_LIMITED':
+          return 429;
+        default:
+          return 500;
+      }
+    })();
+    return NextResponse.json({ error: error.message, code: error.code, details: error.details ?? null }, { status });
+  }
+
+  if (error instanceof z.ZodError) {
+    return NextResponse.json(
+      { error: 'Validation error', details: error.flatten() },
+      { status: 400 },
+    );
+  }
+
+  console.error('[ext-storage] unexpected error', error);
+  return NextResponse.json({ error: 'Internal error', code: 'INTERNAL_ERROR' }, { status: 500 });
+}
+
+async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
+  if (process.env.NODE_ENV !== 'production') {
+    return 'tenant-dev';
+  }
+  // TODO: integrate real auth/session resolution for tenant context
+  return null;
+}
+
+async function ensureTenantAccess(req: NextRequest, tenantId: string): Promise<void> {
+  const callerTenant = await getTenantIdFromAuth(req);
+  if (!callerTenant) {
+    throw new StorageServiceError('UNAUTHORIZED', 'Authentication required');
+  }
+  if (callerTenant !== tenantId) {
+    throw new StorageServiceError('UNAUTHORIZED', 'Tenant mismatch');
+  }
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { installId: string; namespace: string; key: string } },
+) {
+  try {
+    if (!isStorageApiEnabled()) {
+      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
+    }
+    const ifRevisionHeader = req.headers.get('if-revision-match');
+    const { service, tenantId } = await getStorageServiceForInstall(params.installId);
+    await ensureTenantAccess(req, tenantId);
+
+    const request: StorageGetRequest = {
+      namespace: params.namespace,
+      key: params.key,
+      ifRevision: ifRevisionHeader ? Number(ifRevisionHeader) : undefined,
+    };
+
+    const result = await service.get(request);
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: { installId: string; namespace: string; key: string } },
+) {
+  try {
+    if (!isStorageApiEnabled()) {
+      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
+    }
+    const body = putSchema.parse(await req.json());
+    const { service, tenantId } = await getStorageServiceForInstall(params.installId);
+    await ensureTenantAccess(req, tenantId);
+
+    const request: StoragePutRequest = {
+      namespace: params.namespace,
+      key: params.key,
+      value: body.value,
+      metadata: body.metadata,
+      ttlSeconds: body.ttlSeconds,
+      ifRevision: body.ifRevision,
+      schemaVersion: body.schemaVersion,
+    };
+
+    const result = await service.put(request);
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    return mapError(error);
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { installId: string; namespace: string; key: string } },
+) {
+  try {
+    if (!isStorageApiEnabled()) {
+      return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
+    }
+    const search = deleteQuerySchema.parse(
+      Object.fromEntries(new URL(req.url).searchParams.entries()),
+    );
+    const { service, tenantId } = await getStorageServiceForInstall(params.installId);
+    await ensureTenantAccess(req, tenantId);
+
+    const request: StorageDeleteRequest = {
+      namespace: params.namespace,
+      key: params.key,
+      ifRevision: search.ifRevision,
+    };
+
+    await service.delete(request);
+    return new NextResponse(null, { status: 204 });
+  } catch (error) {
+    return mapError(error);
+  }
+}
+export const dynamic = 'force-dynamic';

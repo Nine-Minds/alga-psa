@@ -6,6 +6,8 @@ pub struct ExecuteContext {
     pub request_id: Option<String>,
     pub tenant_id: String,
     pub extension_id: String,
+    #[serde(default)]
+    pub install_id: Option<String>,
     pub content_hash: String,
     pub version_id: Option<String>,
 }
@@ -47,4 +49,3 @@ pub struct ExecuteResponse {
     #[serde(default)]
     pub error: Option<String>,
 }
-

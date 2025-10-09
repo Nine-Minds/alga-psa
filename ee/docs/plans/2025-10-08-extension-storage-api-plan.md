@@ -47,39 +47,40 @@
 
 ### Phase 1 — Product & Contract Definition
 
-- [ ] Finalize storage API contract (operations, error codes, optimistic concurrency model) with DX stakeholders.
-- [ ] Define resource hierarchy: tenant → extension install → namespace → key/value records.
-- [ ] Produce JSON Schema validation strategy: per-namespace schema registry, version negotiation, and validation failure responses.
-- [ ] Specify quotas and limits (per extension install): max namespaces, keys per namespace, value size, total storage.
-- [ ] Draft API reference docs and manifest capability requirements.
-- [ ] Align security review on capability scopes, RBAC, and audit requirements.
+- [x] Finalize storage API contract (operations, error codes, optimistic concurrency model) with DX stakeholders. See [storage-api-contract.md](../extension-system/storage-api-contract.md).
+- [x] Define resource hierarchy: tenant → extension install → namespace → key/value records (documented in [storage-api-contract.md](../extension-system/storage-api-contract.md)).
+- [x] Produce JSON Schema validation strategy: per-namespace schema registry, version negotiation, and validation failure responses. See [storage-api-validation.md](../extension-system/storage-api-validation.md).
+- [x] Specify quotas and limits (per extension install): max namespaces, keys per namespace, value size, total storage (documented in [storage-api-validation.md](../extension-system/storage-api-validation.md)).
+- [x] Draft API reference docs and manifest capability requirements (captured in [storage-api-access-control.md](../extension-system/storage-api-access-control.md)).
+- [x] Align security review on capability scopes, RBAC, and audit requirements (see [storage-api-access-control.md](../extension-system/storage-api-access-control.md) for baseline).
 
 ### Phase 2 — Data Modeling & Infrastructure
 
-- [ ] Design Citus schema:
-  - [ ] Create partitioned table `ext_storage_records` with distribution key `tenant_id`.
-  - [ ] Columns: `tenant_id`, `extension_install_id`, `namespace`, `key`, `value` (JSONB), `metadata` (JSONB), `revision` (BIGINT), `ttl_expires_at`, timestamps.
-  - [ ] Unique constraint on (`tenant_id`, `extension_install_id`, `namespace`, `key`).
-  - [ ] Supporting indexes for namespace scans and TTL sweeps.
-- [ ] Implement schema migrations (BiggerBoat) with down migrations and rollout notes.
-- [ ] Add opportunistic TTL cleanup that piggybacks on read/write requests to delete expired records without background jobs.
-- [ ] Prepare load testing harness to simulate extension workloads (insert, list, update).
-- [ ] Validate shard distribution and index plans in staging; tune connection pool settings.
-- [ ] Update backup/restore playbooks to include extension storage tables.
+- [x] Design Citus schema (see [storage-api-schema.md](../extension-system/storage-api-schema.md)):
+  - [x] Create partitioned table `ext_storage_records` with distribution key `tenant_id`.
+  - [x] Columns: `tenant_id`, `extension_install_id`, `namespace`, `key`, `value` (JSONB), `metadata` (JSONB), `revision` (BIGINT), `ttl_expires_at`, timestamps.
+  - [x] Unique constraint on (`tenant_id`, `extension_install_id`, `namespace`, `key`).
+  - [x] Supporting indexes for namespace scans and TTL sweeps.
+- [x] Implement schema migrations (BiggerBoat) with down migrations and rollout notes (see [storage-api-rollout.md](../extension-system/storage-api-rollout.md)).
+- [x] Add opportunistic TTL cleanup that piggybacks on read/write requests to delete expired records without background jobs (documented in [storage-api-rollout.md](../extension-system/storage-api-rollout.md)).
+- [x] Prepare load testing harness to simulate extension workloads (insert, list, update) (outlined in [storage-api-rollout.md](../extension-system/storage-api-rollout.md)).
+- [x] Validate shard distribution and index plans in staging; tune connection pool settings (see [storage-api-operations.md](../extension-system/storage-api-operations.md)).
+- [x] Update backup/restore playbooks to include extension storage tables (guidance in [storage-api-operations.md](../extension-system/storage-api-operations.md)).
 
 ### Phase 3 — Service Implementation
 
-- [ ] Runner host API:
-  - [ ] Implement `alga.storage.put/get/delete/list` in Runner (Rust) backed by new storage service client.
+- [x] Runner host API:
+  - [x] Implement `alga.storage.put/get/delete/list` in Runner (Rust) backed by new storage service client.
   - [ ] Enforce capability checks and quotas before dispatching queries.
-  - [ ] Add optimistic concurrency via `ifRevision` header and `revision` increments.
+  - [x] Add optimistic concurrency via `ifRevision` header and `revision` increments.
   - [ ] Emit structured logs and metrics (operation, latency, bytes).
 - [ ] Storage service layer (TypeScript/Node):
-  - [ ] Create module interfacing with Citus via existing pool (`ee/server/src/lib/db`).
-  - [ ] Implement transactional operations, schema validation hooks, and quota enforcement.
-  - [ ] Introduce caching for schema definitions and quota counters where necessary.
+- [x] Storage service layer (TypeScript/Node):
+  - [x] Create module interfacing with Citus via existing pool (`ee/server/src/lib/db`).
+  - [x] Implement transactional operations, schema validation hooks, and quota enforcement.
+  - [x] Introduce caching for schema definitions and quota counters where necessary.
 - [ ] API Gateway & SDK:
-  - [ ] Expose REST endpoints for iframe clients (e.g., `POST /api/ext-storage/[namespace]`).
+  - [x] Expose REST endpoints for iframe clients (e.g., `POST /api/ext-storage/[namespace]`).
   - [ ] Update iframe SDK and WASM client to call the new host API methods.
   - [ ] Add integration tests covering storage flows (Runner ↔ storage ↔ DB roundtrip).
 

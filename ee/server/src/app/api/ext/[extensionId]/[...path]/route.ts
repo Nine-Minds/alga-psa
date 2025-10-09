@@ -48,11 +48,18 @@ async function assertAccess(tenantId: string, extensionId: string, method: Metho
 
 // Resolve tenant install via the Registry V2 facade seam
 // Returns active version_id and content_hash
-async function resolveInstall(tenantId: string, extensionId: string): Promise<{ version_id: string; content_hash: string } | null> {
+async function resolveInstall(
+  tenantId: string,
+  extensionId: string
+): Promise<{ install_id: string; version_id: string; content_hash: string } | null> {
   const facade = getRegistryFacade();
   const install = await facade.getTenantInstall(tenantId, extensionId);
   if (!install) return null;
-  return { version_id: install.version_id, content_hash: install.content_hash };
+  return {
+    install_id: install.install_id,
+    version_id: install.version_id,
+    content_hash: install.content_hash,
+  };
 }
 
 // Load manifest v2 for version_id and match endpoint (method + path)
@@ -98,6 +105,7 @@ async function handle(req: NextRequest, { params }: { params: { extensionId: str
         request_id: requestId,
         tenant_id: tenantId,
         extension_id: extensionId,
+        install_id: install.install_id,
         version_id: install.version_id,
         content_hash: install.content_hash,
       },
