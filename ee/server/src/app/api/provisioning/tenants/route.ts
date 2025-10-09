@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TenantService, TenantProvisioningError } from '../../../../services/provisioning';
 import { CreateTenantSchema } from '../../../../services/provisioning/types/tenant.schema';
 import { ZodError } from 'zod';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from '@/lib/auth-compat';
 import { hasPermission } from '@/lib/auth/rbac';
 import { getCurrentUser } from '@/lib/actions/user-actions/userActions';
 
