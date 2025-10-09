@@ -154,8 +154,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     }
   };
 
-  const loadBucketUsageForCompany = async (client
-    Id: string) => {
+  const loadBucketUsageForCompany = async (clientId: string) => {
     try {
       setLoadingBuckets(true);
       const buckets = await getRemainingBucketUnits({ clientId });
