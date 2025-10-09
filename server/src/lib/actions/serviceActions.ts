@@ -321,3 +321,72 @@ export async function deleteServiceType(id: string): Promise<void> {
       throw new Error('Failed to delete service type');
   }
 }
+
+// --- Inline Service Type Management Actions (for editable dropdown) ---
+
+/**
+ * Create a new service type with just a name (inline creation)
+ * Automatically assigns billing_method as 'per_unit' and generates next order number
+ */
+export async function createServiceTypeInline(name: string): Promise<IServiceType> {
+  try {
+    const { ServiceTypeModel } = await import('../models/serviceType');
+    const { knex: db } = await createTenantKnex();
+
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      // Get the highest order number to calculate next order
+      const maxOrderResult = await trx('service_types')
+        .max('order_number as max_order')
+        .first();
+
+      const nextOrder = (maxOrderResult?.max_order || 0) + 1;
+
+      // Create service type with default billing method and next order
+      const newServiceType = await ServiceTypeModel.create(trx, {
+        name: name.trim(),
+        billing_method: 'per_unit', // Default to per_unit for inline creation
+        description: null,
+        is_active: true,
+        order_number: nextOrder,
+      });
+
+      revalidatePath('/msp/settings/billing');
+      return newServiceType;
+    });
+  } catch (error) {
+    console.error('Error creating service type inline:', error);
+    throw new Error('Failed to create service type');
+  }
+}
+
+/**
+ * Update a service type name (inline editing)
+ */
+export async function updateServiceTypeInline(id: string, name: string): Promise<IServiceType> {
+  try {
+    const { ServiceTypeModel } = await import('../models/serviceType');
+    const { knex: db } = await createTenantKnex();
+
+    const updatedServiceType = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await ServiceTypeModel.update(trx, id, { name: name.trim() });
+    });
+
+    if (!updatedServiceType) {
+      throw new Error(`Service type with id ${id} not found or could not be updated.`);
+    }
+
+    revalidatePath('/msp/settings/billing');
+    return updatedServiceType;
+  } catch (error) {
+    console.error(`Error updating service type ${id}:`, error);
+    throw new Error('Failed to update service type');
+  }
+}
+
+/**
+ * Delete a service type (inline deletion with usage check)
+ */
+export async function deleteServiceTypeInline(id: string): Promise<void> {
+  // This is the same as deleteServiceType but renamed for clarity
+  return deleteServiceType(id);
+}

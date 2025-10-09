@@ -8,7 +8,7 @@ import { UnitOfMeasureInput } from 'server/src/components/ui/UnitOfMeasureInput'
 import { Dialog, DialogContent, DialogFooter } from 'server/src/components/ui/Dialog';
 import { ConfirmationDialog } from 'server/src/components/ui/ConfirmationDialog';
 // Import new action and types
-import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse } from 'server/src/lib/actions/serviceActions';
+import { getServices, updateService, deleteService, getServiceTypesForSelection, PaginatedServicesResponse, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions';
 // Import action to get tax rates
 import { getTaxRates } from 'server/src/lib/actions/taxSettingsActions';
@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from 'server/src/components/ui/Card';
 import { DataTable } from 'server/src/components/ui/DataTable';
 import { ColumnDefinition } from 'server/src/interfaces/dataTable.interfaces';
 import { QuickAddService } from './QuickAddService';
+import { EditableServiceTypeSelect } from 'server/src/components/ui/EditableServiceTypeSelect';
 import { MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
@@ -480,7 +481,11 @@ const ServiceCatalogManager: React.FC = () => {
                   className="w-[200px]"
                 />
               </div>
-              <QuickAddService onServiceAdded={fetchServices} allServiceTypes={allServiceTypes} /> {/* Pass prop */}
+              <QuickAddService
+                onServiceAdded={fetchServices}
+                allServiceTypes={allServiceTypes}
+                onServiceTypesChange={fetchAllServiceTypes}
+              /> {/* Pass prop */}
             </div>
             <DataTable
               // Memoize filteredServices to prevent unnecessary rerenders
@@ -526,18 +531,29 @@ const ServiceCatalogManager: React.FC = () => {
                 onChange={(e) => setEditingService({ ...editingService!, service_name: e.target.value })}
               />
             </div>
-            {/* Updated CustomSelect to use custom_service_type_id */}
+            {/* Updated to use EditableServiceTypeSelect */}
             <div>
-              <label htmlFor="service-type" className="block text-sm font-medium text-gray-700 mb-1">Service Type</label>
-              <CustomSelect
-                id="service-type"
-                options={allServiceTypes.map(type => ({ value: type.id, label: type.name }))} // Use fetched types
+              <EditableServiceTypeSelect
+                label="Service Type"
                 value={editingService?.custom_service_type_id || ''}
-                onValueChange={(value) => {
+                onChange={(value) => {
                   setEditingService({
                     ...editingService!,
                     custom_service_type_id: value
                   });
+                }}
+                serviceTypes={allServiceTypes}
+                onCreateType={async (name) => {
+                  await createServiceTypeInline(name);
+                  fetchAllServiceTypes(); // Refresh the service types list
+                }}
+                onUpdateType={async (id, name) => {
+                  await updateServiceTypeInline(id, name);
+                  fetchAllServiceTypes(); // Refresh the service types list
+                }}
+                onDeleteType={async (id) => {
+                  await deleteServiceTypeInline(id);
+                  fetchAllServiceTypes(); // Refresh the service types list
                 }}
                 placeholder="Select service type..."
               />
