@@ -86,7 +86,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
     } else {
       loadAllBucketUsage();
     }
-  }, [selectedCompany]);
+  }, [selectedClient]);
   
   // Load eligible billing plans when client and service change in the form
   useEffect(() => {
