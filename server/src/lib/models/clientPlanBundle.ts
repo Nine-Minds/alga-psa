@@ -113,7 +113,10 @@ const ClientPlanBundle = {
     clientId: string, 
     bundleId: string, 
     startDate: string,
-    endDate: string | null = null
+    endDate: string | null = null,
+    poNumber?: string | null,
+    poAmount?: number | null,
+    poRequired?: boolean
   ): Promise<IClientPlanBundle> => {
     const { knex: db, tenant } = await createTenantKnex();
     
@@ -188,6 +191,9 @@ const ClientPlanBundle = {
         start_date: startDate,
         end_date: endDate,
         is_active: true,
+        po_number: poNumber || null,
+        po_amount: poAmount || null,
+        po_required: poRequired || false,
         tenant,
         created_at: now,
         updated_at: now

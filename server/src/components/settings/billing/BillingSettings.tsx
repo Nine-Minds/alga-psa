@@ -7,7 +7,6 @@ import ZeroDollarInvoiceSettings from './ZeroDollarInvoiceSettings';
 import CreditExpirationSettings from './CreditExpirationSettings';
 import ServiceTypeSettings from './ServiceTypeSettings';
 import ServiceCategoriesSettings from './ServiceCategoriesSettings';
-import ServiceCatalogManager from './ServiceCatalogManager';
 import { useFeatureFlag } from 'server/src/hooks/useFeatureFlag';
 import { FeaturePlaceholder } from 'server/src/components/FeaturePlaceholder';
 
@@ -19,10 +18,6 @@ const BillingSettings: React.FC = () => {
     {
       label: "Service Types",
       content: <ServiceTypeSettings />,
-    },
-    {
-      label: "Service Catalog",
-      content: <ServiceCatalogManager />,
     },
     {
       label: "Invoice Settings",

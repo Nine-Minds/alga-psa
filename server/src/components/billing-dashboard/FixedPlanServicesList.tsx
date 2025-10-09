@@ -293,13 +293,13 @@ const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, o
               pagination={false} // Assuming pagination isn't needed for typical plan service lists
               onRowClick={handleRowClick} // Add row click handler
             />
-             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this plan.</p>}
+             {planServices.length === 0 && <p className="text-sm text-muted-foreground mt-2">No services currently associated with this contract line.</p>}
           </div>
 
           <div className="mt-6 border-t pt-4">
-            <h4 className="text-md font-medium mb-2">Add Services to Plan</h4>
+            <h4 className="text-md font-medium mb-2">Add Services to Contract Line</h4>
              {servicesAvailableToAdd.length === 0 ? (
-                 <p className="text-sm text-muted-foreground">All available services are already associated with this plan.</p>
+                 <p className="text-sm text-muted-foreground">All available services are already associated with this contract line.</p>
              ) : (
                  <>
                     <div className="mb-3">
