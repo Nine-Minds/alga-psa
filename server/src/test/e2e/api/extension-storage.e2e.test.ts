@@ -1,8 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
 import type { Knex } from 'knex';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import http from 'node:http';
+import { AddressInfo } from 'node:net';
+import { ApiTestClient, assertSuccess, assertError } from '../utils/apiTestHelpers';
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
@@ -16,6 +19,8 @@ import type {
   StorageListRequest,
 } from '../../../../../ee/server/src/lib/extensions/storage/v2/types';
 import { isStorageApiEnabled } from '../../../../../ee/server/src/lib/extensions/storage/v2/config';
+import { ExtensionStorageServiceV2 } from '../../../../../ee/server/src/lib/extensions/storage/v2/service';
+import * as storageFactory from '../../../../../ee/server/src/lib/extensions/storage/v2/factory';
 import baseKnexConfig from '@/lib/db/knexfile';
 
 const namespace = 'settings';
@@ -26,6 +31,12 @@ let registryId: string;
 let versionId: string;
 let originalFlag: string | undefined;
 const testHelpers = TestContext.createHelpers();
+let server: http.Server;
+let baseUrl: string;
+let apiClient: ApiTestClient;
+
+const recordsBasePath = () => `/api/ext-storage/install/${installId}/${namespace}/records`;
+const recordPath = (key: string) => `${recordsBasePath()}/${encodeURIComponent(key)}`;
 
 process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'postgres';
 process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
@@ -62,12 +73,29 @@ describe('Extension Storage API E2E Tests', () => {
     tenantId = ctx.tenantId;
     await ensureExtensionStorageTables();
     await seedExtensionData(tenantId);
+
+    server = http.createServer((req, res) => {
+      handleHttpRequest(req, res).catch((error) => {
+        res.statusCode = 500;
+        res.setHeader('content-type', 'application/json');
+        res.end(JSON.stringify({ error: String(error) }));
+      });
+    });
+    await new Promise<void>((resolve) => {
+      server.listen(0, '127.0.0.1', () => resolve());
+    });
+    const address = server.address() as AddressInfo;
+    baseUrl = `http://127.0.0.1:${address.port}`;
   }, 60000);
 
   afterAll(async () => {
     try {
       await testHelpers.afterAll();
     } finally {
+      if (server) {
+        await new Promise<void>((resolve) => server.close(() => resolve()))
+          .catch(() => undefined);
+      }
       if (originalFlag === undefined) {
         delete process.env.EXT_STORAGE_API_ENABLED;
       } else {
@@ -80,6 +108,12 @@ describe('Extension Storage API E2E Tests', () => {
     ctx = await testHelpers.beforeEach();
     tenantId = ctx.tenantId;
     await seedExtensionData(tenantId);
+    apiClient = new ApiTestClient({
+      baseUrl,
+      headers: {
+        'x-tenant-id': tenantId,
+      },
+    });
   });
 
   afterEach(async () => {
@@ -94,114 +128,135 @@ describe('Extension Storage API E2E Tests', () => {
         metadata: { contentType: 'application/json' },
       };
 
-      const putResponse = await callRecordRoute('PUT', key, { body: payload });
-      expect(putResponse.status).toBe(200);
-      const putData = await readJson(putResponse);
-      expect(putData).toMatchObject({
+      const putResponse = await apiClient.put(recordPath(key), payload);
+      assertSuccess(putResponse, 200);
+      expect(putResponse.data).toMatchObject({
         namespace,
         key,
         revision: 1,
       });
 
-      const getResponse = await callRecordRoute('GET', key);
-      expect(getResponse.status).toBe(200);
-      const getData = await readJson(getResponse);
-      expect(getData.value).toEqual(payload.value);
-      expect(getData.metadata).toEqual(payload.metadata);
+      const getResponse = await apiClient.get(recordPath(key));
+      assertSuccess(getResponse, 200);
+      expect(getResponse.data.value).toEqual(payload.value);
+      expect(getResponse.data.metadata).toEqual(payload.metadata);
     });
 
     it('should list records with optional value and metadata', async () => {
       const keys = ['list-one', 'list-two'];
       for (const key of keys) {
-        await callRecordRoute('PUT', key, {
-          body: {
-            value: { key },
-            metadata: { index: key },
-          },
+        await apiClient.put(recordPath(key), {
+          value: { key },
+          metadata: { index: key },
         });
       }
 
-      const listResponse = await callRecordsRoute('GET', {
-        query: {
-          includeValues: 'true',
-          includeMetadata: 'true',
-          limit: '10',
+      const listResponse = await apiClient.get(recordsBasePath(), {
+        params: {
+          includeValues: true,
+          includeMetadata: true,
+          limit: 10,
         },
       });
 
-      expect(listResponse.status).toBe(200);
-      const listData = await readJson(listResponse);
-      expect(Array.isArray(listData.items)).toBe(true);
-      expect(listData.items.length).toBeGreaterThanOrEqual(2);
-      const returnedKeys = listData.items.map((item: any) => item.key);
+      assertSuccess(listResponse, 200);
+      expect(Array.isArray(listResponse.data.items)).toBe(true);
+      expect(listResponse.data.items.length).toBeGreaterThanOrEqual(2);
+      const returnedKeys = listResponse.data.items.map((item: any) => item.key);
       expect(returnedKeys).toEqual(expect.arrayContaining(keys));
-      const sample = listData.items.find((item: any) => item.key === 'list-one');
+      const sample = listResponse.data.items.find((item: any) => item.key === 'list-one');
       expect(sample.value).toEqual({ key: 'list-one' });
       expect(sample.metadata).toEqual({ index: 'list-one' });
     });
 
     it('should enforce optimistic concurrency', async () => {
       const key = 'revision-check';
-      const initialResponse = await callRecordRoute('PUT', key, {
-        body: { value: { attempt: 1 } },
+      const initialResponse = await apiClient.put(recordPath(key), {
+        value: { attempt: 1 },
       });
-      expect(initialResponse.status).toBe(200);
-      const initialData = await readJson(initialResponse);
-      expect(initialData.revision).toBe(1);
+      assertSuccess(initialResponse, 200);
+      expect(initialResponse.data.revision).toBe(1);
 
-      const updateResponse = await callRecordRoute('PUT', key, {
-        body: { value: { attempt: 2 }, ifRevision: initialData.revision },
+      const updateResponse = await apiClient.put(recordPath(key), {
+        value: { attempt: 2 },
+        ifRevision: initialResponse.data.revision,
       });
-      expect(updateResponse.status).toBe(200);
-      const updateData = await readJson(updateResponse);
-      expect(updateData.revision).toBe(2);
+      assertSuccess(updateResponse, 200);
+      expect(updateResponse.data.revision).toBe(2);
 
-      const staleResponse = await callRecordRoute('PUT', key, {
-        body: { value: { attempt: 3 }, ifRevision: 1 },
+      const staleResponse = await apiClient.put(recordPath(key), {
+        value: { attempt: 3 },
+        ifRevision: 1,
       });
-      expect(staleResponse.status).toBe(409);
-      const staleData = await readJson(staleResponse);
-      expect(staleData?.error?.code).toBe('REVISION_MISMATCH');
+      assertError(staleResponse, 409, 'REVISION_MISMATCH');
     });
 
     it('should delete a record', async () => {
       const key = 'delete-me';
-      await callRecordRoute('PUT', key, { body: { value: { keep: false } } });
+      await apiClient.put(recordPath(key), { value: { keep: false } });
 
-      const deleteResponse = await callRecordRoute('DELETE', key);
-      expect(deleteResponse.status).toBe(204);
+      const deleteResponse = await apiClient.delete(recordPath(key));
+      assertSuccess(deleteResponse, 204);
 
-      const getResponse = await callRecordRoute('GET', key);
-      expect(getResponse.status).toBe(404);
-      const errorBody = await readJson(getResponse);
-      expect(errorBody?.error?.code).toBe('NOT_FOUND');
+      const getResponse = await apiClient.get(recordPath(key));
+      assertError(getResponse, 404, 'NOT_FOUND');
     });
   });
 
   describe('Bulk operations', () => {
     it('should insert multiple records with bulkPut', async () => {
-      const bulkResponse = await callRecordsRoute('POST', {
-        body: {
-          items: [
-            { key: 'bulk-one', value: { id: 1 } },
-            { key: 'bulk-two', value: { id: 2 }, metadata: { kind: 'pair' } },
-          ],
-        },
+      const bulkResponse = await apiClient.post(recordsBasePath(), {
+        items: [
+          { key: 'bulk-one', value: { id: 1 } },
+          { key: 'bulk-two', value: { id: 2 }, metadata: { kind: 'pair' } },
+        ],
       });
 
-      expect(bulkResponse.status).toBe(200);
-      const bulkData = await readJson(bulkResponse);
-      expect(bulkData.items).toHaveLength(2);
+      assertSuccess(bulkResponse, 200);
+      expect(bulkResponse.data.items).toHaveLength(2);
 
-      const getOne = await callRecordRoute('GET', 'bulk-one');
-      expect(getOne.status).toBe(200);
-      const getOneData = await readJson(getOne);
-      expect(getOneData.value).toEqual({ id: 1 });
+      const getOne = await apiClient.get(recordPath('bulk-one'));
+      assertSuccess(getOne, 200);
+      expect(getOne.data.value).toEqual({ id: 1 });
 
-      const getTwo = await callRecordRoute('GET', 'bulk-two');
-      expect(getTwo.status).toBe(200);
-      const getTwoData = await readJson(getTwo);
-      expect(getTwoData.metadata).toEqual({ kind: 'pair' });
+      const getTwo = await apiClient.get(recordPath('bulk-two'));
+      assertSuccess(getTwo, 200);
+      expect(getTwo.data.metadata).toEqual({ kind: 'pair' });
+    });
+
+    it('should enforce total storage quota', async () => {
+      const quota = {
+        maxNamespaces: 32,
+        maxKeysPerNamespace: 5120,
+        maxValueBytes: 512,
+        maxMetadataBytes: 4 * 1024,
+        maxBulkPayloadBytes: 512 * 1024,
+        maxBulkItems: 20,
+        totalBytes: 96,
+      } as const;
+
+      const original = storageFactory.getStorageServiceForInstall;
+      const spy = vi.spyOn(storageFactory, 'getStorageServiceForInstall').mockImplementation(async (installIdArg) => {
+        const context = await original(installIdArg);
+        return {
+          ...context,
+          service: new ExtensionStorageServiceV2(context.knex, context.tenantId, context.installId, quota),
+        };
+      });
+
+      try {
+        const initial = await apiClient.put(recordPath('quota-seed'), {
+          value: { data: 'x'.repeat(40) },
+        });
+        assertSuccess(initial, 200);
+
+        const overLimit = await apiClient.put(recordPath('quota-over'), {
+          value: { data: 'y'.repeat(60) },
+        });
+        assertError(overLimit, 429, 'QUOTA_EXCEEDED');
+      } finally {
+        spy.mockRestore();
+      }
     });
   });
 });
@@ -426,12 +481,6 @@ async function seedExtensionData(tenant: string): Promise<void> {
   await db.destroy();
 }
 
-type RequestOptions = {
-  body?: unknown;
-  query?: Record<string, string | number | boolean>;
-  headers?: Record<string, string>;
-};
-
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
   cursor: z.string().optional(),
@@ -458,21 +507,6 @@ const bulkPutSchema = z.object({
 const deleteQuerySchema = z.object({
   ifRevision: z.coerce.number().int().nonnegative().optional(),
 });
-
-function buildHeaders(hasBody: boolean, overrides?: Record<string, string>): Headers {
-  const headers = new Headers({
-    'x-tenant-id': tenantId,
-  });
-  if (hasBody) {
-    headers.set('content-type', 'application/json');
-  }
-  if (overrides) {
-    for (const [key, value] of Object.entries(overrides)) {
-      headers.set(key, value);
-    }
-  }
-  return headers;
-}
 
 function mapError(error: unknown): NextResponse {
   if (error instanceof StorageServiceError || error instanceof StorageValidationError) {
@@ -552,6 +586,29 @@ async function ensureTenantAccess(req: NextRequest, targetTenantId: string): Pro
   if (callerTenant !== targetTenantId) {
     throw new StorageServiceError('UNAUTHORIZED', 'Tenant mismatch');
   }
+}
+
+function headersFromIncoming(headers: http.IncomingHttpHeaders): Headers {
+  const result = new Headers();
+  for (const [key, value] of Object.entries(headers)) {
+    if (value === undefined) continue;
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        result.append(key, entry);
+      }
+    } else {
+      result.append(key, value);
+    }
+  }
+  return result;
+}
+
+async function readIncomingBody(req: http.IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
 }
 
 async function handleRecordsGet(
@@ -674,6 +731,69 @@ async function handleRecordDelete(
   } catch (error) {
     return mapError(error);
   }
+}
+
+async function handleHttpRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+  if (!req.url || !req.method) {
+    res.statusCode = 400;
+    res.end();
+    return;
+  }
+
+  const host = req.headers.host ?? '127.0.0.1';
+  const url = new URL(req.url, `http://${host}`);
+  const segments = url.pathname.split('/').filter(Boolean);
+
+  if (segments.length < 6 || segments[0] !== 'api' || segments[1] !== 'ext-storage' || segments[2] !== 'install') {
+    res.statusCode = 404;
+    res.end();
+    return;
+  }
+
+  const installIdParam = segments[3];
+  const namespaceParam = segments[4];
+  const action = segments[5];
+  const keyParam = segments.length > 6 ? decodeURIComponent(segments[6]) : undefined;
+
+  const bodyBuffer = await readIncomingBody(req);
+  const headers = headersFromIncoming(req.headers);
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    body: bodyBuffer.length > 0 ? bodyBuffer : undefined,
+  };
+
+  const nextReq = new NextRequest(url.toString(), init);
+  let response: Response;
+
+  if (action === 'records' && !keyParam) {
+    if (req.method === 'GET') {
+      response = await handleRecordsGet(nextReq, { installId: installIdParam, namespace: namespaceParam });
+    } else if (req.method === 'POST') {
+      response = await handleRecordsPost(nextReq, { installId: installIdParam, namespace: namespaceParam });
+    } else {
+      response = NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+    }
+  } else if (action === 'records' && keyParam) {
+    if (req.method === 'GET') {
+      response = await handleRecordGet(nextReq, { installId: installIdParam, namespace: namespaceParam, key: keyParam });
+    } else if (req.method === 'PUT') {
+      response = await handleRecordPut(nextReq, { installId: installIdParam, namespace: namespaceParam, key: keyParam });
+    } else if (req.method === 'DELETE') {
+      response = await handleRecordDelete(nextReq, { installId: installIdParam, namespace: namespaceParam, key: keyParam });
+    } else {
+      response = NextResponse.json({ error: 'Method Not Allowed' }, { status: 405 });
+    }
+  } else {
+    response = NextResponse.json({ error: 'Not Found' }, { status: 404 });
+  }
+
+  res.statusCode = response.status;
+  response.headers.forEach((value, key) => {
+    res.setHeader(key, value);
+  });
+  const arrayBuffer = await response.arrayBuffer();
+  res.end(Buffer.from(arrayBuffer));
 }
 
 async function callRecordRoute(
