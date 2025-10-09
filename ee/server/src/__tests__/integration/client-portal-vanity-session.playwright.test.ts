@@ -2,8 +2,11 @@ import { test, expect } from '@playwright/test';
 import dotenv from 'dotenv';
 
 import { encode } from '@auth/core/jwt';
+import { loadClientPortalTestCredentials } from './helpers/clientPortalTestCredentials';
 
 dotenv.config();
+
+const credentials = loadClientPortalTestCredentials();
 
 function getSessionCookieName(): string {
   return process.env.NODE_ENV === 'production'
@@ -26,14 +29,33 @@ async function seedVanitySessionCookie(page: import('@playwright/test').Page) {
     throw new Error('NEXTAUTH_SECRET must be defined for tests');
   }
 
+  if (!credentials) {
+    throw new Error('Client portal test credentials not configured');
+  }
+
+  // Query the database for the real user (use admin connection to bypass RLS)
+  const { getAdminConnection } = await import('../../../../../shared/db/admin');
+  const knex = await getAdminConnection();
+
+  const user = await knex('users')
+    .where({
+      email: credentials.email,
+      user_type: 'client'
+    })
+    .first();
+
+  if (!user) {
+    throw new Error(`Test user not found: ${credentials.email}`);
+  }
+
   const maxAge = getSessionMaxAge();
   const issuedAt = Math.floor(Date.now() / 1000);
   const payload = {
-    sub: 'vanity-user-1',
-    id: 'vanity-user-1',
-    email: 'client@example.com',
-    tenant: 'tenant-portal-1',
-    user_type: 'client',
+    sub: user.user_id,
+    id: user.user_id,
+    email: user.email,
+    tenant: user.tenant,
+    user_type: user.user_type,
     iat: issuedAt,
     exp: issuedAt + maxAge,
   };
@@ -59,6 +81,8 @@ async function seedVanitySessionCookie(page: import('@playwright/test').Page) {
 }
 
 test.describe('Client portal vanity session continuity', () => {
+  test.skip(!credentials, 'Client portal test credentials not configured. Provide CLIENT_PORTAL_TEST_EMAIL/PASSWORD env vars or a .playwright-client-portal-credentials.json file.');
+
   test.beforeEach(async ({ context }) => {
     await context.clearCookies();
   });

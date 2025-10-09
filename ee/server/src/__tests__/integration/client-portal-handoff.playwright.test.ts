@@ -9,8 +9,11 @@
 import { test, expect } from '@playwright/test';
 import { encode } from '@auth/core/jwt';
 import dotenv from 'dotenv';
+import { loadClientPortalTestCredentials } from './helpers/clientPortalTestCredentials';
 
 dotenv.config();
+
+const credentials = loadClientPortalTestCredentials();
 
 const BASE_URL = 'http://localhost:3000';
 const OTT_TOKEN = 'demo-ott-token';
@@ -22,12 +25,32 @@ async function seedCanonicalSessionCookie(page: import('@playwright/test').Page)
     throw new Error('NEXTAUTH_SECRET must be defined for tests');
   }
 
+  if (!credentials) {
+    throw new Error('Client portal test credentials not configured');
+  }
+
+  // Query the database for the real user (use admin connection to bypass RLS)
+  const { getAdminConnection } = await import('../../../../../shared/db/admin');
+  const knex = await getAdminConnection();
+
+  const user = await knex('users')
+    .where({
+      email: credentials.email,
+      user_type: 'client'
+    })
+    .first();
+
+  if (!user) {
+    throw new Error(`Test user not found: ${credentials.email}`);
+  }
+
   const tokenValue = await encode({
     token: {
-      sub: 'test-user-id',
-      email: 'client@example.com',
-      tenant: 'test-tenant',
-      user_type: 'client',
+      sub: user.user_id,
+      id: user.user_id,
+      email: user.email,
+      tenant: user.tenant,
+      user_type: user.user_type,
     },
     secret,
     maxAge: 60 * 60,
@@ -47,6 +70,8 @@ async function seedCanonicalSessionCookie(page: import('@playwright/test').Page)
 }
 
 test.describe('Client Portal vanity handoff', () => {
+  test.skip(!credentials, 'Client portal test credentials not configured. Provide CLIENT_PORTAL_TEST_EMAIL/PASSWORD env vars or a .playwright-client-portal-credentials.json file.');
+
   test('redirects to return path after successful OTT exchange', async ({ page }) => {
     await seedCanonicalSessionCookie(page);
 

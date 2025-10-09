@@ -71,6 +71,34 @@ const _middleware = auth((request) => {
   // Skip auth pages to prevent redirect loops
   const isAuthPage = pathname.startsWith('/auth/');
 
+  // Redirect vanity domains to canonical for client portal signin (before auth check)
+  if (pathname === '/auth/client-portal/signin') {
+    const canonicalUrlEnv = getCanonicalUrl();
+
+    if (canonicalUrlEnv && requestHostname !== canonicalUrlEnv.hostname) {
+      const canonicalLogin = new URL('/auth/client-portal/signin', canonicalUrlEnv.origin);
+      const hostHeader = request.headers.get('host') || requestHostname;
+
+      // Preserve existing query params (like callbackUrl)
+      request.nextUrl.searchParams.forEach((value, key) => {
+        canonicalLogin.searchParams.set(key, value);
+      });
+
+      // Add portalDomain for branding
+      canonicalLogin.searchParams.set('portalDomain', hostHeader);
+
+      console.log('[middleware] signin vanity redirect', {
+        requestHost: requestHostname,
+        canonicalHost: canonicalUrlEnv.hostname,
+        redirect: canonicalLogin.toString(),
+      });
+
+      const redirectResponse = NextResponse.redirect(canonicalLogin);
+      redirectResponse.headers.set('x-pathname', canonicalLogin.pathname);
+      return redirectResponse;
+    }
+  }
+
   // Protect MSP app routes: validate user type
   if (pathname.startsWith(protectedPrefix)) {
     if (!request.auth) {
