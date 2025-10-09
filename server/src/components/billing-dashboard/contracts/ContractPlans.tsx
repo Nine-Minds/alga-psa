@@ -54,25 +54,25 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
 
   const fetchData = async () => {
     if (!bundle.bundle_id) return;
-
+    
     setIsLoading(true);
     setError(null);
-
+    
     try {
       // Get all billing plans and bundle plans
       const [plans, detailedBundlePlans] = await Promise.all([
         getBillingPlans(),
         getDetailedBundlePlans(bundle.bundle_id)
       ]);
-
+      
       setContractPlans(detailedBundlePlans);
       setAvailablePlans(plans);
-
+      
       // Set default selected plan if available
       const filteredPlans = plans.filter(
         p => !detailedBundlePlans.some(bp => bp.plan_id === p.plan_id)
       );
-
+      
       if (filteredPlans.length > 0) {
         setSelectedPlanToAdd(filteredPlans[0].plan_id || null);
       } else {
@@ -88,7 +88,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
 
   const handleAddPlan = async () => {
     if (!bundle.bundle_id || !selectedPlanToAdd) return;
-
+    
     try {
       const planToAdd = availablePlans.find(p => p.plan_id === selectedPlanToAdd);
       if (planToAdd) {
@@ -99,7 +99,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
           selectedPlanToAdd,
           initialCustomRate // Pass undefined
         );
-
+        
         fetchData(); // Refresh data
       }
     } catch (error) {
@@ -110,7 +110,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
 
   const handleRemovePlan = async (planId: string) => {
     if (!bundle.bundle_id) return;
-
+    
     try {
       await removePlanFromBundle(bundle.bundle_id, planId);
       fetchData(); // Refresh data
@@ -212,14 +212,14 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
     <Card size="2">
       <Box p="4">
         <h3 className="text-lg font-medium mb-4">Service Lines</h3>
-
+        
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-
+        
         {isLoading ? (
           <div className="text-center py-4">Loading plans...</div>
         ) : (
@@ -239,7 +239,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
                 />
               )}
             </div>
-
+            
             <div className="flex space-x-2 mt-4">
               <CustomSelect
                 options={filteredAvailablePlans.map(p => ({
@@ -263,7 +263,7 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
           </>
         )}
       </Box>
-
+      
       {editingPlan && (
         <ContractPlanRateDialog
           plan={editingPlan}

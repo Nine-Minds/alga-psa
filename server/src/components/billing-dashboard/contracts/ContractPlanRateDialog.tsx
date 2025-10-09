@@ -29,12 +29,12 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!useDefaultRate && (customRate < 0 || isNaN(customRate))) {
       setError('Please enter a valid rate (must be a non-negative number)');
       return;
     }
-
+    
     // If using default rate, pass undefined to reset to default (will be saved as NULL)
     // Otherwise pass the custom rate
     onSave(useDefaultRate ? undefined : customRate);
@@ -48,7 +48,7 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
       className="max-w-md"
     >
       <DialogContent>
-
+          
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <Alert variant="destructive">
@@ -56,7 +56,7 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-
+            
             <div className="flex items-center space-x-2 mb-4">
               <SwitchWithLabel
                 label={`Use default rate${plan.default_rate !== undefined ? ` ($${plan.default_rate.toFixed(2)})` : ''}`}
@@ -69,7 +69,7 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
                 }}
               />
             </div>
-
+            
             <div>
               <Label htmlFor="custom-rate" className={useDefaultRate ? 'text-gray-400' : ''}>Custom Rate</Label>
               <div className="relative">
@@ -96,7 +96,7 @@ export function ContractPlanRateDialog({ plan, onClose, onSave }: ContractPlanRa
                 />
               </div>
             </div>
-
+            
             <DialogFooter>
               <Button
                 id="cancel-rate-btn"
