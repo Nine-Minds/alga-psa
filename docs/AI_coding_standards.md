@@ -525,6 +525,109 @@ Dates and times should use the ISO8601String type in the types.d.tsx file. In th
    render: (date: ISO8601String) => toPlainDate(date).toLocaleString()
    ```
 
+## Internationalization (i18n)
+
+The application uses **react-i18next** for internationalization. **All client portal UI must be localized** to support multiple languages for end clients.
+
+**Configuration:**
+- Supported locales: en, fr, es, de, nl (default: en)
+- Namespaces: `common` (shared components), `clientPortal` (client portal specific)
+- Translation files: `server/public/locales/{locale}/{namespace}.json`
+
+**Important**: The client portal is fully internationalized. Any component that displays in the client portal must use translation keys.
+
+### Namespace Usage Guidelines
+
+**Use `clientPortal` namespace for:**
+- Client portal specific pages and features
+- Content that only client users see
+- Example: tickets, billing, projects, dashboard
+
+```tsx
+'use client';
+
+import { useTranslation } from 'server/src/lib/i18n/client';
+
+export function ClientTickets() {
+  const { t } = useTranslation('clientPortal');
+
+  return (
+    <div>
+      <h1>{t('tickets.title')}</h1>
+      <button>{t('tickets.createButton')}</button>
+    </div>
+  );
+}
+```
+
+**Use `common` namespace for:**
+- Shared components used in both MSP portal and client portal
+- Generic UI elements (buttons, forms, dialogs)
+- Reusable features like ClientLocations, DataTable
+- Example: `server/src/components/clients/ClientLocations.tsx` uses `common` because it's displayed in both MSP and client portal
+
+```tsx
+'use client';
+
+import { useTranslation } from 'server/src/lib/i18n/client';
+
+// Shared component that appears in both MSP and client portal
+export function ClientLocations({ clientId }: Props) {
+  const { t } = useTranslation('common'); // Use 'common' for shared components
+
+  return (
+    <div>
+      <h3>{t('clients.locations.listTitle')}</h3>
+      <Button>{t('clients.locations.buttons.add')}</Button>
+    </div>
+  );
+}
+```
+
+### Basic Usage Patterns
+
+**With interpolation:**
+```tsx
+const { t } = useTranslation('clientPortal');
+<p>{t('pagination.showing', { from: 1, to: 10, total: 100 })}</p>
+```
+
+**With fallback values:**
+```tsx
+// Fallback displays if translation key doesn't exist
+<span>{t('tickets.messages.error', 'An error occurred')}</span>
+
+// With both interpolation and fallback
+<p>{t('pagination.showing', 'Showing {{from}} to {{to}} of {{total}} results', { from: 1, to: 10, total: 100 })}</p>
+```
+
+**Formatting utilities:**
+```tsx
+import { useFormatters } from 'server/src/lib/i18n/client';
+
+const { formatDate, formatNumber, formatCurrency } = useFormatters();
+<p>{formatCurrency(99.99, 'USD')}</p>
+```
+
+### Best Practices
+
+1. **Always localize client portal content**: Every user-facing string in the client portal must use translation keys
+2. **Choose the correct namespace**:
+   - `clientPortal` for client-specific content
+   - `common` for shared components between MSP and client portal
+3. **Never hardcode user-facing text**:
+   ```tsx
+   // Bad
+   <button>Save Location</button>
+
+   // Good
+   <button>{t('clients.locations.buttons.save')}</button>
+   ```
+4. **Use hierarchical keys**: `tickets.messages.loadingError` not `ticketsLoadingError`
+5. **Provide fallback values** for error messages and dynamic content
+6. **Use interpolation**, not string concatenation: `{{variable}}` in translation strings
+7. **Test with different locales** to ensure layouts work with longer text (e.g., German translations)
+
 # Testing Standards
 
 All tests should follow the conventions outlined in [docs/testing-standards.md](./testing-standards.md).
