@@ -20,6 +20,7 @@ import BackNav from 'server/src/components/ui/BackNav';
 import UsageTracking from './UsageTracking';
 import ContractReports from './reports/ContractReports';
 import ServiceCatalogManager from 'server/src/components/settings/billing/ServiceCatalogManager';
+import InvoicingHub from './InvoicingHub';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -50,8 +51,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
 
   const tabs = [
     'contracts',
-    'generate-invoices',
-    'invoices',
+    'invoicing',
     'invoice-templates',
     'tax-rates',
     'contract-lines',
@@ -99,12 +99,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <ContractReports />
         </Tabs.Content>
 
-        <Tabs.Content value="generate-invoices">
-          <GenerateInvoices />
-        </Tabs.Content>
-
-        <Tabs.Content value="invoices">
-          <Invoices />
+        <Tabs.Content value="invoicing">
+          <InvoicingHub initialServices={initialServices} />
         </Tabs.Content>
 
         <Tabs.Content value="invoice-templates">
