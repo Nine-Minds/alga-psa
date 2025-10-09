@@ -88,7 +88,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ planI
         : (servicesResponse.services || []);
 
       if (!planDetails) {
-        throw new Error(`Billing plan with ID ${planId} not found.`);
+        throw new Error(`Contract line with ID ${planId} not found.`);
       }
       setPlanType(planDetails.contract_line_type); // Store the plan type
 

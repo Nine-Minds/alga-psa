@@ -158,7 +158,7 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
     fetchClientId();
   }, [entry?.client_id, entry?.work_item_id, clientId]); // Added work_item_id and clientId dependencies
 
-  // Load eligible billing plans and set default tax region when service or client ID changes
+  // Load eligible contract lines and set default tax region when service or client ID changes
   useEffect(() => {
     const loadDataAndSetDefaults = async () => {
       // --- Removed Tax Region / Default Rate Logic ---
@@ -184,12 +184,12 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
         console.log('No client ID available, cannot fetch client details.');
       }
 
-      // 2. Load Eligible Billing Plans (dependent on service and client)
+      // 2. Load Eligible Contract Lines (dependent on service and client)
       if (!entry?.service_id) {
-        console.log('No service ID available, cannot load billing plans');
+        console.log('No service ID available, cannot load contract lines');
         setEligibleContractLines([]);
       } else if (!clientId) {
-        console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
+        console.log('No client ID available, using default contract line logic (no specific lines loaded)');
         setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
@@ -206,22 +206,22 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
           currentEligiblePlans = filteredPlans;
           setEligibleContractLines(currentEligiblePlans);
-          console.log('Eligible billing plans loaded:', currentEligiblePlans);
+          console.log('Eligible contract lines loaded:', currentEligiblePlans);
 
-          // 3. Set Default Billing Plan (only if plans were loaded)
+          // 3. Set Default Contract Line (only if lines were loaded)
           const currentContractLineId = entry?.contract_line_id; // Use entry from closure
           if (!currentContractLineId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
               defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default billing plan (only one eligible):', defaultPlanId);
+              console.log('Setting default contract line (only one eligible):', defaultPlanId);
             } else {
               const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
               if (bucketPlans.length === 1) {
                 defaultPlanId = bucketPlans[0].client_contract_line_id;
-                console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
+                console.log('Setting default contract line (single bucket line):', defaultPlanId);
               } else {
-                console.log('Multiple eligible plans, no single default determined.');
+                console.log('Multiple eligible contract lines, no single default determined.');
               }
             }
 
@@ -235,21 +235,21 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               entry = entryWithUpdatedPlan;
             }
           } else {
-            console.log('Billing plan already set or no eligible plans found, skipping default selection.');
+            console.log('Contract line already set or no eligible lines found, skipping default selection.');
           }
 
         } catch (error) {
-          console.error('Error loading eligible billing plans:', error);
+          console.error('Error loading eligible contract lines:', error);
           setEligibleContractLines([]); // Reset on error
         }
       }
 
-      // 2. Load Eligible Billing Plans (dependent on service and client)
+      // 2. Load Eligible Contract Lines (dependent on service and client)
       if (!entry?.service_id) {
-        console.log('No service ID available, cannot load billing plans');
+        console.log('No service ID available, cannot load contract lines');
         setEligibleContractLines([]);
       } else if (!clientId) {
-        console.log('No client ID available, using default billing plan logic (no specific plans loaded)');
+        console.log('No client ID available, using default contract line logic (no specific lines loaded)');
         setEligibleContractLines([]);
       } else {
         // Fetch and filter plans only if service and client are known
@@ -266,22 +266,22 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
 
           currentEligiblePlans = filteredPlans;
           setEligibleContractLines(currentEligiblePlans);
-          console.log('Eligible billing plans loaded:', currentEligiblePlans);
+          console.log('Eligible contract lines loaded:', currentEligiblePlans);
 
-          // 3. Set Default Billing Plan (only if plans were loaded)
+          // 3. Set Default Contract Line (only if lines were loaded)
           const currentContractLineId = entry?.contract_line_id; // Use entry from closure
           if (!currentContractLineId && currentEligiblePlans.length > 0) {
             let defaultPlanId: string | null = null;
             if (currentEligiblePlans.length === 1) {
               defaultPlanId = currentEligiblePlans[0].client_contract_line_id;
-              console.log('Setting default billing plan (only one eligible):', defaultPlanId);
+              console.log('Setting default contract line (only one eligible):', defaultPlanId);
             } else {
               const bucketPlans = currentEligiblePlans.filter(plan => plan.contract_line_type === 'Bucket');
               if (bucketPlans.length === 1) {
                 defaultPlanId = bucketPlans[0].client_contract_line_id;
-                console.log('Setting default billing plan (single bucket plan):', defaultPlanId);
+                console.log('Setting default contract line (single bucket line):', defaultPlanId);
               } else {
-                console.log('Multiple eligible plans, no single default determined.');
+                console.log('Multiple eligible contract lines, no single default determined.');
               }
             }
 
@@ -295,11 +295,11 @@ const TimeEntryEditForm = memo(function TimeEntryEditForm({
               entry = entryWithUpdatedPlan;
             }
           } else {
-            console.log('Billing plan already set or no eligible plans found, skipping default selection.');
+            console.log('Contract line already set or no eligible lines found, skipping default selection.');
           }
 
         } catch (error) {
-          console.error('Error loading eligible billing plans:', error);
+          console.error('Error loading eligible contract lines:', error);
           setEligibleContractLines([]); // Reset on error
         }
       }
@@ -348,7 +348,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
       return;
     }
 
-    // Billing plan validation removed - billing plan is no longer required
+    // Contract line validation removed - contract line is no longer required
 
     // Clear any existing validation errors
     setValidationErrors({});
@@ -475,7 +475,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
         </div>
 
-        {/* Billing Plan Selector with enhanced guidance */}
+        {/* Contract Line Selector with enhanced guidance */}
         {showContractLineSelector && (
           <div>
             {eligibleContractLines.length > 1 && (
@@ -483,7 +483,7 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 <div className="flex items-center">
                   <Info className="h-5 w-5 text-blue-500 mr-2 flex-shrink-0" />
                   <p className="text-sm text-blue-700">
-                    This service appears in multiple billing plans. You can optionally select which plan to bill against, or leave it blank to use the default.
+                    This service appears in multiple contract lines. You can optionally select which line to bill against, or leave it blank to use the default.
                   </p>
                 </div>
               </div>
@@ -491,17 +491,17 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
 
             <div className="flex items-center space-x-1">
               <label className={`block text-sm font-medium ${eligibleContractLines.length > 1 ? 'text-blue-700' : 'text-gray-700'}`}>
-                Billing Plan <span className="text-gray-400 text-xs">(Optional)</span>
+                Contract Line <span className="text-gray-400 text-xs">(Optional)</span>
               </label>
               <Tooltip content={
                 <p className="max-w-xs">
                   {!clientId
-                    ? "Client information not available. The system will use the default billing plan."
+                    ? "Client information not available. The system will use the default contract line."
                     : eligibleContractLines.length > 1
-                      ? "This service appears in multiple billing plans. You can optionally select which plan to use for this time entry, or leave it blank to use the default billing plan."
+                      ? "This service appears in multiple contract lines. You can optionally select which line to use for this time entry, or leave it blank to use the default contract line."
                       : eligibleContractLines.length === 1
-                        ? `This time entry will be billed under the "${eligibleContractLines[0].contract_line_name}" plan.`
-                        : "No eligible billing plans found for this service."}
+                        ? `This time entry will be billed under the "${eligibleContractLines[0].contract_line_name}" contract line.`
+                        : "No eligible contract lines found for this service."}
                 </p>
               }>
                 <InfoCircledIcon className="h-4 w-4 text-gray-500" />
@@ -523,19 +523,19 @@ const updateBillableDuration = useCallback((updatedEntry: typeof entry, newDurat
                 label: `${plan.contract_line_name} (${plan.contract_line_type})` // Now contract_line_type exists on EligiblePlanUI
               }))}
               placeholder={!clientId
-                ? "Using default billing plan"
+                ? "Using default contract line"
                 : eligibleContractLines.length === 0
-                  ? "No eligible plans"
+                  ? "No eligible contract lines"
                   : eligibleContractLines.length === 1
                     ? `Using ${eligibleContractLines[0].contract_line_name}`
-                      : "Select a billing plan (optional)"}
+                      : "Select a contract line (optional)"}
               />
 
             {eligibleContractLines.length > 1 && (
               <div className="mt-1 text-xs text-gray-600">
                 <span className="flex items-center">
                   <Info className="h-3 w-3 text-blue-500 mr-1" />
-                  If no plan is selected, the system will use the default billing plan
+                  If no contract line is selected, the system will use the default
                 </span>
               </div>
             )}

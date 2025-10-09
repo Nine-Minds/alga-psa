@@ -14,7 +14,7 @@ import { IContractLine, IServiceType } from 'server/src/interfaces/billing.inter
 import { useTenant } from '../TenantProvider';
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { BILLING_FREQUENCY_OPTIONS } from 'server/src/constants/billing'; // Removed PLAN_TYPE_OPTIONS
-import { PlanTypeSelector, PlanType } from './billing-plans/PlanTypeSelector'; // Import PlanTypeSelector again
+import { PlanTypeSelector, PlanType } from './contract-lines/ContractLineTypeSelector'; // Import PlanTypeSelector again
 
 
 interface ContractLineDialogProps {
@@ -83,7 +83,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
   // Simplified validation
   const validateForm = (): string[] => {
     const errors: string[] = [];
-    if (!planName.trim()) errors.push('Plan name');
+    if (!planName.trim()) errors.push('Contract line name');
     if (!billingFrequency) errors.push('Billing frequency');
     if (planType === 'Fixed') {
       if (baseRate === undefined || baseRate === null || isNaN(baseRate)) {
@@ -147,8 +147,8 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
       setOpen(false); // Close the dialog after successful save
       onPlanAdded(savedPlanId); // Pass the ID back
     } catch (error) {
-      console.error('Error saving billing plan:', error);
-      setValidationErrors([`Failed to save billing plan: ${error instanceof Error ? error.message : String(error)}`]);
+      console.error('Error saving contract line:', error);
+      setValidationErrors([`Failed to save contract line: ${error instanceof Error ? error.message : String(error)}`]);
     } finally {
         setIsSaving(false); // Reset saving state
     }
@@ -187,7 +187,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
     <Dialog
       isOpen={open}
       onClose={handleClose}
-      title={editingPlan ? 'Edit Billing Plan Basics' : 'Add New Billing Plan'}
+      title={editingPlan ? 'Edit Contract Line Basics' : 'Add New Contract Line'}
       className="max-w-2xl"
     >
       <DialogContent>
@@ -207,7 +207,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
             {/* Removed Tabs - Only show basic info */}
             <div className="space-y-4">
               <div>
-                <Label htmlFor="plan-name">Plan Name *</Label>
+                <Label htmlFor="plan-name">Contract Line Name *</Label>
                 <Input
                   id="plan-name"
                   type="text"
@@ -216,7 +216,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     setPlanName(e.target.value);
                     clearErrorIfSubmitted();
                   }}
-                  placeholder="Enter plan name"
+                  placeholder="Enter contract line name"
                   required
                   className={hasAttemptedSubmit && !planName.trim() ? 'border-red-500' : ''}
                 />
@@ -318,7 +318,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                 Cancel
               </Button>
               <Button id='save-contract-line-button' type="submit" disabled={isSaving} className={!planName.trim() || !billingFrequency ? 'opacity-50' : ''}>
-                {isSaving ? 'Saving...' : (editingPlan ? 'Update Plan Basics' : 'Save and Configure')}
+                {isSaving ? 'Saving...' : (editingPlan ? 'Update Contract Line Basics' : 'Save and Configure')}
               </Button>
             </DialogFooter>
           </form>

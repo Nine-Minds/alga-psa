@@ -328,7 +328,7 @@ This document outlines the comprehensive implementation plan for creating REST A
   - ✅ `GET /api/v1/invoices/recurring` - Recurring templates
 
 #### Week 9: Billing Configuration ✅
-- [x] **API-018**: Billing Plans API ✅ (19 endpoints complete)
+- [x] **API-018**: Contract Lines API ✅ (19 endpoints complete)
   - ✅ `GET /api/v1/contract-lines` - List contract lines
   - ✅ `POST /api/v1/contract-lines` - Create new contract line
   - ✅ `GET /api/v1/contract-lines/{id}` - Get contract line details
@@ -583,7 +583,7 @@ This document outlines the comprehensive implementation plan for creating REST A
 - **Schedules**: 5 endpoints ✅ (Schemas & Service Complete)
 - **Time Configuration**: 8 endpoints ✅ (Schemas & Service Complete)
 - **Invoices**: 25 endpoints ✅
-- **Billing Plans**: 19 endpoints ✅
+- **Contract Lines**: 19 endpoints ✅
 - **Financial Management**: 23 endpoints ✅
 
 ### Administration & Configuration ✅ COMPLETED (63 endpoints)
@@ -646,7 +646,7 @@ This document outlines the comprehensive implementation plan for creating REST A
 The REST API implementation has achieved **near-complete implementation** with all major functionality accessible through well-designed, secure REST endpoints:
 
 1. ✅ **All Core Business APIs** - Companies, Contacts, Tickets, Projects, Assets, Time Management (100% Complete)
-2. ✅ **All Financial APIs** - Invoices, Billing Plans, Financial Management, Credit Tracking (100% Complete)
+2. ✅ **All Financial APIs** - Invoices, Contract Lines, Financial Management, Credit Tracking (100% Complete)
 3. ✅ **All Administrative APIs** - Users, Teams, Permissions, Roles, Categories, Tags (100% Complete)
 4. ✅ **All Advanced Features** - Workflows, Automation, QuickBooks Integration, Webhooks (100% Complete)
 5. ✅ **Production Quality** - Error handling, validation, security, audit logging (100% Complete)

@@ -473,7 +473,7 @@ export async function generateInvoice(billing_cycle_id: string): Promise<Invoice
   });
 
   if (existingInvoice) {
-    throw new Error('No active billing plans for this period');
+    throw new Error('No active contract lines for this period');
   }
 
   const billingEngine = new BillingEngine();

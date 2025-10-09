@@ -13,10 +13,10 @@ class ClientContractLine {
     ): Promise<IClientContractLine[]> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('Tenant context is required for checking overlapping billing plans');
+            throw new Error('Tenant context is required for checking overlapping contract lines');
         }
         
-        // Check for direct billing plans that overlap
+        // Check for direct contract lines that overlap
         const query = db('client_contract_lines')
             .where({
                 client_id: clientId,
@@ -93,7 +93,7 @@ class ClientContractLine {
                 'clm.custom_rate'
             );
 
-        // Convert contract plans to client billing plan format for consistent return
+        // Convert contract plans to client contract line format for consistent return
         const formattedContractAssociations = contractAssociationResults.map((plan: any) => ({
             client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
             client_id: clientId,
@@ -114,7 +114,7 @@ class ClientContractLine {
     static async create(billingData: Omit<IClientContractLine, 'client_contract_line_id'>): Promise<IClientContractLine> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('Tenant context is required for creating billing plan');
+            throw new Error('Tenant context is required for creating contract line');
         }
 
         try {
@@ -129,12 +129,12 @@ class ClientContractLine {
                 .returning('*');
 
             if (!createdContractLine) {
-                throw new Error('Failed to create billing plan - no record returned');
+                throw new Error('Failed to create contract line - no record returned');
             }
 
             return createdContractLine;
         } catch (error) {
-            console.error('Error creating billing plan:', error);
+            console.error('Error creating contract line:', error);
             throw error;
         }
     }
@@ -142,7 +142,7 @@ class ClientContractLine {
     static async update(contractLineId: string, billingData: Partial<IClientContractLine>): Promise<IClientContractLine> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('Tenant context is required for updating billing plan');
+            throw new Error('Tenant context is required for updating contract line');
         }
 
         try {
@@ -161,12 +161,12 @@ class ClientContractLine {
                 .returning('*');
 
             if (!updatedContractLine) {
-                throw new Error(`Billing plan ${contractLineId} not found or belongs to different tenant`);
+                throw new Error(`Contract Line ${contractLineId} not found or belongs to different tenant`);
             }
 
             return updatedContractLine;
         } catch (error) {
-            console.error(`Error updating billing plan ${contractLineId}:`, error);
+            console.error(`Error updating contract line ${contractLineId}:`, error);
             throw error;
         }
     }
@@ -174,11 +174,11 @@ class ClientContractLine {
     static async getByClientId(clientId: string, includeContractPlans: boolean = true): Promise<IClientContractLine[]> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('Tenant context is required for fetching client billing plans');
+            throw new Error('Tenant context is required for fetching client contract lines');
         }
 
         try {
-            // Get directly assigned billing plans
+            // Get directly assigned contract lines
             const directPlans = await db('client_contract_lines')
                 .join('contract_lines', function() {
                     this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
@@ -196,7 +196,7 @@ class ClientContractLine {
 
             // If we don't need contract plans, return just the direct plans
             if (!includeContractPlans) {
-                console.log(`Retrieved ${directPlans.length} direct billing plans for client ${clientId}`);
+                console.log(`Retrieved ${directPlans.length} direct contract lines for client ${clientId}`);
                 return directPlans;
             }
 
@@ -231,7 +231,7 @@ class ClientContractLine {
                     'c.contract_name'
                 );
 
-            // Convert contract plans to client billing plan format
+            // Convert contract plans to client contract line format
             const formattedContractAssociations = contractPlans.map((plan: any) => ({
                 client_contract_line_id: `contract-${plan.client_contract_id}-${plan.contract_line_id}`,
                 client_id: clientId,
@@ -253,7 +253,7 @@ class ClientContractLine {
             console.log(`Retrieved ${directPlans.length} direct plans and ${formattedContractAssociations.length} contract plans for client ${clientId}`);
             return allPlans;
         } catch (error) {
-            console.error(`Error fetching billing plans for client ${clientId}:`, error);
+            console.error(`Error fetching contract lines for client ${clientId}:`, error);
             throw error;
         }
     }
@@ -261,7 +261,7 @@ class ClientContractLine {
     static async getById(contractLineId: string): Promise<IClientContractLine | null> {
         const { knex: db, tenant } = await createTenantKnex();
         if (!tenant) {
-            throw new Error('Tenant context is required for fetching billing plan');
+            throw new Error('Tenant context is required for fetching contract line');
         }
 
         try {
@@ -273,13 +273,13 @@ class ClientContractLine {
                 .select('*');
 
             if (!contractLine) {
-                console.log(`No billing plan found with ID ${contractLineId} for tenant ${tenant}`);
+                console.log(`No contract line found with ID ${contractLineId} for tenant ${tenant}`);
                 return null;
             }
 
             return contractLine;
         } catch (error) {
-            console.error(`Error fetching billing plan ${contractLineId}:`, error);
+            console.error(`Error fetching contract line ${contractLineId}:`, error);
             throw error;
         }
     }
@@ -353,7 +353,7 @@ class ClientContractLine {
     }
 
     /**
-     * Get all active contracts for a client with their associated plans
+     * Get all active contracts for a client with their associated contract lines
      */
     static async getClientContracts(clientId: string): Promise<any[]> {
         const { knex: db, tenant } = await createTenantKnex();
@@ -379,9 +379,9 @@ class ClientContractLine {
                     'c.description'
                 );
 
-            // For each contract, get its associated plans
-            const contractsWithPlans = await Promise.all(contracts.map(async (contract) => {
-                const plans = await db('contract_line_mappings as clm')
+            // For each contract, get its associated contract lines
+            const contractsWithContractLines = await Promise.all(contracts.map(async (contract) => {
+                const contract_lines = await db('contract_line_mappings as clm')
                     .join('contract_lines as cl', function() {
                         this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
                             .andOn('cl.tenant', '=', 'clm.tenant');
@@ -400,11 +400,11 @@ class ClientContractLine {
 
                 return {
                     ...contract,
-                    plans
+                    contract_lines
                 };
             }));
 
-            return contractsWithPlans;
+            return contractsWithContractLines;
         } catch (error) {
             console.error(`Error fetching contracts for client ${clientId}:`, error);
             throw error;

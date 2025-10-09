@@ -1062,8 +1062,8 @@ export class TimeEntryService extends BaseService<any> {
     // Calculate billing information
     return {
       contract_line_id: timeEntry.contract_line_id,
-      contract_line_name: null, // Would join with billing plans
-      rate: null, // Would calculate from service/billing plan
+      contract_line_name: null, // Would join with contract lines
+      rate: null, // Would calculate from service/contract line
       tax_rate: timeEntry.tax_percentage,
       total_amount: null // Would calculate total
     };

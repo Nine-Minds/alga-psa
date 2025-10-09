@@ -435,7 +435,7 @@ export class ApiFinancialController extends ApiBaseController {
   }
 
   // ============================================================================
-  // BILLING PLAN ENDPOINTS
+  // CONTRACT LINE ENDPOINTS
   // ============================================================================
 
   /**

@@ -230,7 +230,7 @@ export class BillingEngine {
       // Initialize all variables we'll need throughout the function
       let totalCharges: IBillingCharge[] = [];
 
-      // Get billing plans and cycle
+      // Get contract lines and cycle
       const plansResult = await this.getClientContractLinesAndCycle(clientId, billingPeriod);
 
       // Type assertion to include error property
@@ -258,15 +258,15 @@ export class BillingEngine {
           discounts: [],
           adjustments: [],
           finalAmount: 0,
-          error: `No active billing plans found for client ${clientId} in the given period`
+          error: `No active contract lines found for client ${clientId} in the given period`
         };
       }
 
-      console.log(`Found ${clientContractLines.length} active billing plan(s) for client ${clientId}`);
+      console.log(`Found ${clientContractLines.length} active contract line(s) for client ${clientId}`);
       console.log(`Billing cycle: ${cycle}`);
 
       for (const clientContractLine of clientContractLines) {
-        console.log(`Processing billing plan: ${clientContractLine.contract_line_name}`);
+        console.log(`Processing contract line: ${clientContractLine.contract_line_name}`);
         const [
           fixedPriceCharges,
           timeBasedCharges,
@@ -383,7 +383,7 @@ export class BillingEngine {
     const billingCycle = await this.getBillingCycle(clientId, billingPeriod.startDate);
     const tenant = this.tenant; // Capture tenant value here
 
-    // Get directly assigned billing plans
+    // Get directly assigned contract lines
     const directContractLines = await this.knex('client_contract_lines')
       .join('contract_lines', function () {
         this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
@@ -682,7 +682,7 @@ export class BillingEngine {
 
     const tenant = this.tenant; // Capture tenant value for joins
 
-    // Get the billing plan details to determine if this is a fixed fee plan
+    // Get the contract line details to determine if this is a fixed fee plan
     const contractLineDetails = await this.knex('contract_lines')
       .where({
         'contract_line_id': clientContractLine.contract_line_id,
@@ -1024,7 +1024,7 @@ export class BillingEngine {
       throw new Error(`Client ${clientId} not found in tenant ${this.tenant}`);
     }
 
-    // Fetch the billing plan details to get plan-wide settings
+    // Fetch the contract line details to get plan-wide settings
     const plan = await this.knex('contract_lines')
       .where({
         contract_line_id: clientContractLine.contract_line_id,
@@ -1033,7 +1033,7 @@ export class BillingEngine {
       .first();
 
     if (!plan) {
-      throw new Error(`Billing plan ${clientContractLine.contract_line_id} not found for client ${clientId}`);
+      throw new Error(`Contract Line ${clientContractLine.contract_line_id} not found for client ${clientId}`);
     }
 
     const tenant = this.tenant; // Capture tenant value for joins
@@ -1113,9 +1113,9 @@ export class BillingEngine {
       .where('time_entries.end_time', '<', billingPeriod.endDate)
       .where('time_entries.invoiced', false)
       .where(function (this: Knex.QueryBuilder) {
-        // Either the time entry has the specific billing plan ID (use contract_line_id for contract associations)
+        // Either the time entry has the specific contract line ID (use contract_line_id for contract associations)
         this.where('time_entries.contract_line_id', clientContractLine.contract_line_id) // Use contract_line_id here
-          // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
+          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('time_entries.contract_line_id');
           });
@@ -1310,9 +1310,9 @@ export class BillingEngine {
       .where('usage_tracking.usage_date', '>=', billingPeriod.startDate)
       .where('usage_tracking.usage_date', '<', billingPeriod.endDate)
       .where(function (this: Knex.QueryBuilder) {
-        // Either the usage record has the specific billing plan ID (use contract_line_id for contract associations)
+        // Either the usage record has the specific contract line ID (use contract_line_id for contract associations)
         this.where('usage_tracking.contract_line_id', clientContractLine.contract_line_id) // Use contract_line_id here
-          // Or it has no billing plan ID (for backward compatibility) and should be allocated to this plan
+          // Or it has no contract line ID (for backward compatibility) and should be allocated to this plan
           .orWhere(function (this: Knex.QueryBuilder) {
             this.whereNull('usage_tracking.contract_line_id');
           });

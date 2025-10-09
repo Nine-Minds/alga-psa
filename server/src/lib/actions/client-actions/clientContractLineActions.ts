@@ -17,7 +17,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
     .first();
 
   if (!planInfo) {
-    console.warn(`Client billing plan ${clientContractLineId} not found for tenant ${tenant}`);
+    console.warn(`Client contract line ${clientContractLineId} not found for tenant ${tenant}`);
     return null; // No plan assignment found
   }
 
@@ -129,8 +129,8 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
       end_date: billing.end_date ? toISODate(toPlainDate(billing.end_date)) : null
     }));
   } catch (error) {
-    console.error('Error fetching client billing plan:', error);
-    throw new Error('Failed to fetch client billing plan');
+    console.error('Error fetching client contract line:', error);
+    throw new Error('Failed to fetch client contract line');
   }
 }
 
@@ -152,11 +152,11 @@ export async function updateClientContractLine(clientContractLineId: string, upd
     });
 
     if (result === 0) {
-      throw new Error('Billing plan not found or no changes were made');
+      throw new Error('Contract Line not found or no changes were made');
     }
   } catch (error) {
-    console.error('Error updating client billing plan:', error);
-    throw new Error('Failed to update client billing plan');
+    console.error('Error updating client contract line:', error);
+    throw new Error('Failed to update client contract line');
   }
 }
 
@@ -192,7 +192,7 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
         .first();
 
       if (existingBilling) {
-        throw new Error('A billing plan with the same details already exists for this client');
+        throw new Error('A contract line with the same details already exists for this client');
       }
 
       // Only include service_category in insert if it's provided
@@ -212,14 +212,14 @@ export async function addClientContractLine(newBilling: Omit<IClientContractLine
       return await trx('client_contract_lines').insert(insertData);
     });
   } catch (error: any) {
-    console.error('Error adding client billing plan:', error);
+    console.error('Error adding client contract line:', error);
     // Provide more specific error message
     if (error.code === 'ER_NO_SUCH_TABLE') {
       throw new Error('Database table not found');
     } else if (error.code === 'ER_BAD_FIELD_ERROR') {
       throw new Error('Invalid database field');
     } else {
-      throw new Error(error.message || 'Failed to add client billing plan');
+      throw new Error(error.message || 'Failed to add client contract line');
     }
   }
 }
@@ -265,12 +265,12 @@ export async function removeClientContractLine(clientContractLineId: string): Pr
     });
 
     if (result === 0) {
-      throw new Error('Billing plan not found or already inactive');
+      throw new Error('Contract Line not found or already inactive');
     }
   } catch (error: any) {
-    console.error('Error removing client billing plan:', error);
+    console.error('Error removing client contract line:', error);
     // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to remove client billing plan');
+    throw new Error(error.message || 'Failed to remove client contract line');
   }
 }
 
@@ -344,11 +344,11 @@ export async function editClientContractLine(clientContractLineId: string, updat
     });
 
     if (result === 0) {
-      throw new Error('Billing plan not found or no changes were made');
+      throw new Error('Contract Line not found or no changes were made');
     }
   } catch (error: any) {
-    console.error('Error editing client billing plan:', error);
+    console.error('Error editing client contract line:', error);
     // Preserve the original error message if it exists
-    throw new Error(error.message || 'Failed to edit client billing plan');
+    throw new Error(error.message || 'Failed to edit client contract line');
   }
 }

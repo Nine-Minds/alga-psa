@@ -6,7 +6,7 @@ vi.mock('../../lib/utils/planDisambiguation', () => ({
   getEligibleContractLinesForUI: vi.fn()
 }));
 
-describe('Billing Plan Selection Logic', () => {
+describe('Contract Line Selection Logic', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

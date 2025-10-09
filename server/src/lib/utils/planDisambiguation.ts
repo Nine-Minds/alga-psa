@@ -5,10 +5,10 @@ import { createTenantKnex } from '../db';
 import { IClientContractLine } from '../../interfaces/billing.interfaces';
 
 /**
- * Determines the default billing plan for a time entry or usage record
+ * Determines the default contract line for a time entry or usage record
  * @param clientId The client ID
  * @param serviceId The service ID
- * @returns The recommended billing plan ID or null if explicit selection is required
+ * @returns The recommended contract line ID or null if explicit selection is required
  */
 export async function determineDefaultContractLine(
   clientId: string,
@@ -21,7 +21,7 @@ export async function determineDefaultContractLine(
   }
 
   try {
-    // Get all billing plans for the client that include this service
+    // Get all contract lines for the client that include this service
     const eligiblePlans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
     
     // If only one plan exists, use it
@@ -46,18 +46,18 @@ export async function determineDefaultContractLine(
     // If we have multiple plans and no clear default, return null to require explicit selection
     return null;
   } catch (error) {
-    console.error('Error determining default billing plan:', error);
+    console.error('Error determining default contract line:', error);
     return null;
   }
 }
 
 /**
- * Gets all eligible billing plans for a client and service
+ * Gets all eligible contract lines for a client and service
  * @param knex The Knex instance
  * @param tenant The tenant ID
  * @param clientId The client ID
  * @param serviceId The service ID
- * @returns Array of eligible billing plans
+ * @returns Array of eligible contract lines
  */
 export async function getEligibleContractLines(
   knex: Knex,
@@ -78,7 +78,7 @@ export async function getEligibleContractLines(
     return [];
   }
   
-  // Build the query to get eligible billing plans
+  // Build the query to get eligible contract lines
   const query = knex('client_contract_lines')
     .join('contract_lines', function() {
       this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
@@ -135,11 +135,11 @@ export async function getEligibleContractLines(
 }
 
 /**
- * Validates if a billing plan is valid for a given service
+ * Validates if a contract line is valid for a given service
  * @param clientId The client ID
  * @param serviceId The service ID
- * @param contractLineId The billing plan ID to validate
- * @returns True if the billing plan is valid for the service, false otherwise
+ * @param contractLineId The contract line ID to validate
+ * @returns True if the contract line is valid for the service, false otherwise
  */
 export async function validateContractLineForService(
   clientId: string,
@@ -156,16 +156,16 @@ export async function validateContractLineForService(
     const eligiblePlans = await getEligibleContractLines(knex, tenant, clientId, serviceId);
     return eligiblePlans.some(plan => plan.client_contract_line_id === contractLineId);
   } catch (error) {
-    console.error('Error validating billing plan for service:', error);
+    console.error('Error validating contract line for service:', error);
     return false;
   }
 }
 
 /**
- * Allocates unassigned time entries or usage records to the appropriate billing plan
+ * Allocates unassigned time entries or usage records to the appropriate contract line
  * @param clientId The client ID
  * @param serviceId The service ID
- * @param contractLineId The billing plan ID to check against
+ * @param contractLineId The contract line ID to check against
  * @returns True if the unassigned entry should be allocated to this plan, false otherwise
  */
 export async function shouldAllocateUnassignedEntry(
@@ -202,10 +202,10 @@ export async function shouldAllocateUnassignedEntry(
 }
 
 /**
- * Gets eligible billing plans for a client and service - UI friendly version
+ * Gets eligible contract lines for a client and service - UI friendly version
  * @param clientId The client ID
  * @param serviceId The service ID
- * @returns Array of eligible billing plans with simplified structure
+ * @returns Array of eligible contract lines with simplified structure
  */
 export async function getEligibleContractLinesForUI(
   clientId: string,
@@ -234,7 +234,7 @@ export async function getEligibleContractLinesForUI(
       end_date: plan.end_date // Include end_date
     }));
   } catch (error) {
-    console.error('Error getting eligible billing plans for UI:', error);
+    console.error('Error getting eligible contract lines for UI:', error);
     return [];
   }
 }

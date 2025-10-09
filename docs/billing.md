@@ -2,16 +2,16 @@
 
 ## System Purpose
 
-The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, contracts, refunds and adjustments, and approval workflows. The system supports multiple simultaneous billing plans per client, enabling granular and flexible billing arrangements. Contracts provide a way to group related contract lines together for easier management and clearer client invoicing.
+The flexible billing system is designed to support various billing models commonly used by Managed Service Providers (MSPs). It allows for complex billing scenarios, including fixed-price plans, time-based billing, usage-based billing, hybrid models, bucket of minutes/retainer models, discounts and promotions, multi-currency support, tax handling, service bundling, contracts, refunds and adjustments, and approval workflows. The system supports multiple simultaneous contract lines per client, enabling granular and flexible billing arrangements. Contracts provide a way to group related contract lines together for easier management and clearer client invoicing.
 
 ## Manual Invoicing
 
 ### Purpose
-Manual Invoices allow MSPs to create ad-hoc invoices that do not rely on automated billing plans, time entries, or usage records. They are especially useful for:
+Manual Invoices allow MSPs to create ad-hoc invoices that do not rely on automated contract lines, time entries, or usage records. They are especially useful for:
 
 - One-off charges (e.g., custom project fees, expenses, pass-through costs)
 - Correcting or adjusting client charges before finalization
-- Invoicing for services not represented in the main service catalog or billing plans
+- Invoicing for services not represented in the main service catalog or contract lines
 
 ### Key Characteristics
 
@@ -107,13 +107,13 @@ await updateManualInvoice(invoiceId, {
 ## Contracts
 
 ### Purpose
-Contracts allow MSPs to create named collections of billing plans that can be managed as a single entity. They provide a higher-level abstraction over the existing billing plans system, making it easier to manage complex billing arrangements while maintaining flexibility. Contracts are especially useful for:
+Contracts allow MSPs to create named collections of contract lines that can be managed as a single entity. They provide a higher-level abstraction over the existing contract lines system, making it easier to manage complex billing arrangements while maintaining flexibility. Contracts are especially useful for:
 
 - Grouping related services that are commonly sold together
 - Simplifying the assignment of multiple plans to clients
 - Creating standardized service packages with consistent pricing
 - Providing clearer organization on client invoices
-- Managing multiple billing plans as a cohesive unit
+- Managing multiple contract lines as a cohesive unit
 
 ### Key Characteristics
 
@@ -140,7 +140,7 @@ Contracts allow MSPs to create named collections of billing plans that can be ma
 - Creating standardized service packages
 - Simplifying client onboarding with predefined plan collections
 - Organizing related services for clearer client billing
-- Managing multiple billing plans as a single unit
+- Managing multiple contract lines as a single unit
 
 ### Implementation Details
 
@@ -525,7 +525,7 @@ The billing system uses service configurations to determine billing logic. Key t
     - **Key Fields:** `tenant`, `category_id` (UUID, PK), `category_name`, `description`
 
 6.  **`contract_lines`**
-    - **Purpose:** Defines billing plans that can be assigned to clients
+    - **Purpose:** Defines contract lines that can be assigned to clients
     - **Key Fields:** `tenant`, `contract_line_id` (UUID, PK), `contract_line_name`, `billing_frequency`, `is_custom`, `contract_line_type` ('Fixed', 'Hourly', 'Usage', 'Bucket')
 
 7.  **`contract_line_fixed_config`** *(New/Refined)*
@@ -533,7 +533,7 @@ The billing system uses service configurations to determine billing logic. Key t
     - **Key Fields:** `tenant` (UUID, PK), `contract_line_id` (UUID, PK, FK to `contract_lines`), `base_rate` (numeric(16,2)), `enable_proration` (boolean), `billing_cycle_alignment` ('start' | 'end' | 'prorated')
 
 8.  **`company_contract_lines`**
-    - **Purpose:** Associates clients with multiple billing plans and tracks plan history
+    - **Purpose:** Associates clients with multiple contract lines and tracks plan history
     - **Key Fields:** `tenant`, `company_contract_line_id` (UUID, PK), `company_id`, `contract_line_id`, `start_date`, `end_date`, `is_active`, `company_contract_id` (FK to `company_contracts`)
 
 9.  **`time_entries`**
@@ -597,7 +597,7 @@ The billing system uses service configurations to determine billing logic. Key t
     - **Key Fields:** `tenant`, `discount_id` (UUID, PK), `discount_name`, `discount_type` ('percentage' | 'fixed'), `value` (numeric), `start_date`, `end_date`, `is_active`
 
 24. **`plan_discounts`**
-    - **Purpose:** Associates discounts with billing plans or clients
+    - **Purpose:** Associates discounts with contract lines or clients
     - **Key Fields:** `tenant`, `contract_line_id` (FK), `company_id` (FK), `discount_id` (FK)
 
 25. **`tax_rates`**
@@ -653,7 +653,7 @@ The billing system uses service configurations to determine billing logic. Key t
 
 ## Validation Paths for Invoiced Plans
 
-When validating if a company billing plan has been invoiced (to prevent removal or modification), the system must check multiple paths:
+When validating if a company contract line has been invoiced (to prevent removal or modification), the system must check multiple paths:
 
 ### Traditional Path
 For most invoice items, the system looks for invoices with items linked to the plan through:

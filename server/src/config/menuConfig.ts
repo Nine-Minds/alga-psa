@@ -124,7 +124,7 @@ export const menuItems: MenuItem[] = [
         href: '/msp/billing?tab=tax-rates'
       },
       {
-        name: 'Plans',
+        name: 'Contract Lines',
         icon: Package,
         href: '/msp/billing?tab=plans'
       },

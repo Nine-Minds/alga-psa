@@ -1,6 +1,6 @@
 /**
- * Billing Plan API Controller V2
- * Handles HTTP requests for billing plan-related operations
+ * Contract Line API Controller V2
+ * Handles HTTP requests for contract line-related operations
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -91,7 +91,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/contract-lines - List billing plans
+   * GET /api/v2/contract-lines - List contract lines
    */
   list() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -154,7 +154,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/contract-lines/{id} - Get billing plan details
+   * GET /api/v2/contract-lines/{id} - Get contract line details
    */
   getById() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
@@ -173,7 +173,7 @@ export class ApiContractLineController {
       const plan = await this.contractLineService.getByIdWithOptions(params.id, requestContext, serviceOptions);
       
       if (!plan) {
-        return createErrorResponse('Billing plan not found', 404);
+        return createErrorResponse('Contract Line not found', 404);
       }
 
       const response = createApiResponse({
@@ -188,7 +188,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/contract-lines - Create new billing plan
+   * POST /api/v2/contract-lines - Create new contract line
    */
   create() {
     return async (req: NextRequest): Promise<NextResponse> => {
@@ -215,7 +215,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * PUT /api/v2/contract-lines/{id} - Update billing plan
+   * PUT /api/v2/contract-lines/{id} - Update contract line
    */
   update() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
@@ -243,7 +243,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contract-lines/{id} - Delete billing plan
+   * DELETE /api/v2/contract-lines/{id} - Delete contract line
    */
   delete() {
     return async (req: NextRequest, context: { params: Promise<{ id: string }> }): Promise<NextResponse> => {
@@ -543,7 +543,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * POST /api/v2/contracts/{contractId}/plans - Add contract line
+   * POST /api/v2/contracts/{contractId}/contract-lines - Add contract line
    */
   addContractLine() {
     return async (req: NextRequest, context: { params: Promise<{ contractId: string }> }): Promise<NextResponse> => {
@@ -570,7 +570,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * DELETE /api/v2/contracts/{contractId}/plans/{contractLineId} - Remove contract line
+   * DELETE /api/v2/contracts/{contractId}/contract-lines/{contractLineId} - Remove contract line
    */
   removeContractLine() {
     return async (req: NextRequest, context: { params: Promise<{ contractId: string; contractLineId: string }> }): Promise<NextResponse> => {
@@ -584,7 +584,7 @@ export class ApiContractLineController {
   }
 
   /**
-   * GET /api/v2/client-contract-lines - List client billing plan assignments
+   * GET /api/v2/client-contract-lines - List client contract line assignments
    */
   listClientContractLines() {
     return async (req: NextRequest): Promise<NextResponse> => {

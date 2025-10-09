@@ -52,7 +52,7 @@ import {
   UpdatePaymentMethodRequest,
   PaymentMethodResponse,
   
-  // Billing plan types
+  // Contract Line types
   CreateContractLineRequest,
   UpdateContractLineRequest,
   ContractLineResponse,

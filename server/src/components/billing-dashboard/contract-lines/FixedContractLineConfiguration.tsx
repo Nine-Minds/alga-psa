@@ -14,7 +14,7 @@ import {
 } from 'server/src/lib/actions/contractLineAction';
 import { getPlanServices } from 'server/src/lib/actions/planServiceActions';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces';
-import FixedPlanServicesList from '../FixedPlanServicesList'; // Import the actual component
+import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
   planId: string;

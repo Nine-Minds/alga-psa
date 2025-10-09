@@ -34,12 +34,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
   const [showAllServices, setShowAllServices] = useState(false);
   const [allContractLines, setAllContractLines] = useState<IContractLine[]>([]);
 
-  // Fetch services for each client billing plan
+  // Fetch services for each client contract line
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Get all billing plans to get plan details
+        // Get all contract lines to get plan details
         const contractLines = await getContractLines();
         setAllContractLines(contractLines);
         
@@ -51,7 +51,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
           return map;
         }, {} as Record<string, IContractLine>);
         
-        // Get services for each client billing plan
+        // Get services for each client contract line
         const servicesMap: Record<string, IService[]> = {};
         const serviceToPlans: Record<string, string[]> = {};
         
@@ -66,7 +66,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
             
             servicesMap[clientPlan.client_contract_line_id] = fullServices;
             
-            // Track which services appear in which client billing plans
+            // Track which services appear in which client contract lines
             for (const service of fullServices) {
               if (!serviceToPlans[service.service_id]) {
                 serviceToPlans[service.service_id] = [];
@@ -78,7 +78,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         
         setPlanServices(servicesMap);
         
-        // Identify services that appear in multiple client billing plans
+        // Identify services that appear in multiple client contract lines
         const overlaps: Record<string, string[]> = {};
         for (const [serviceId, planIds] of Object.entries(serviceToPlans)) {
           if (planIds.length > 1) {
@@ -103,7 +103,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     }
   }, [clientContractLines, services]);
 
-  // Get all services that are in at least one client billing plan
+  // Get all services that are in at least one client contract line
   const servicesInPlans = React.useMemo(() => {
     const serviceIds = new Set<string>();
     
@@ -129,14 +129,14 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
     }
   }, [servicesInPlans, serviceOverlaps, showAllServices]);
 
-  // Sort client billing plans by start date (newest first) and add contract_line_type
+  // Sort client contract lines by start date (newest first) and add contract_line_type
   const sortedClientPlans = React.useMemo(() => {
     return [...clientContractLines].map(plan => {
-      // Get the billing plan that corresponds to this client billing plan
+      // Get the contract line that corresponds to this client contract line
       const contractLine = allContractLines.find(bp => bp.contract_line_id === plan.contract_line_id);
-      
-      // Create a new object with all properties from the client billing plan
-      // plus the contract_line_type from the billing plan
+
+      // Create a new object with all properties from the client contract line
+      // plus the contract_line_type from the contract line
       return {
         ...plan,
         contract_line_type: contractLine?.contract_line_type,
@@ -164,7 +164,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
           <h3 className="text-lg font-medium">Service Overlap Matrix</h3>
         </div>
         <div className="flex items-center justify-center p-6 bg-gray-50 border border-gray-100 rounded-md">
-          <p className="text-gray-700">No billing plans assigned to this client</p>
+          <p className="text-gray-700">No contract lines assigned to this client</p>
         </div>
       </Card>
     );
@@ -193,8 +193,8 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
         <>
           <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-md">
             <p className="text-sm text-blue-800">
-              <strong>{Object.keys(serviceOverlaps).length} service(s)</strong> appear in multiple billing plans for this client. 
-              This matrix shows which services are included in each plan.
+              <strong>{Object.keys(serviceOverlaps).length} service(s)</strong> appear in multiple contract lines for this client.
+              This matrix shows which services are included in each line.
             </p>
           </div>
           
@@ -289,15 +289,15 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                 <ul className="space-y-1 text-xs">
                   <li className="flex items-center">
                     <CheckCircle className="h-3 w-3 text-green-500 mr-1" />
-                    <span>Service is included in plan (no overlap)</span>
+                    <span>Service is included in contract line (no overlap)</span>
                   </li>
                   <li className="flex items-center">
                     <CheckCircle className="h-3 w-3 text-amber-500 mr-1" />
-                    <span>Service is included in plan (with overlap)</span>
+                    <span>Service is included in contract line (with overlap)</span>
                   </li>
                   <li className="flex items-center">
                     <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                    <span>Service appears in multiple plans</span>
+                    <span>Service appears in multiple contract lines</span>
                   </li>
                 </ul>
               </div>

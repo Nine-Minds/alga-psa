@@ -18,8 +18,8 @@ export const billingOverviewReport: ReportDefinition = {
   metrics: [
     {
       id: 'active_plans_count',
-      name: 'Active Billing Plans',
-      description: 'Count of currently active billing plans',
+      name: 'Active Contract Lines',
+      description: 'Count of currently active contract lines',
       type: 'count',
       query: {
         table: 'contract_lines',
@@ -38,7 +38,7 @@ export const billingOverviewReport: ReportDefinition = {
     {
       id: 'active_clients_count',
       name: 'Active Billing Clients',
-      description: 'Count of clients with active billing plans',
+      description: 'Count of clients with active contract lines',
       type: 'count',
       query: {
         table: 'clients',

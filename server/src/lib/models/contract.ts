@@ -3,7 +3,7 @@ import { createTenantKnex } from 'server/src/lib/db';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * Data access helpers for contracts (formerly plan bundles).
+ * Data access helpers for contracts.
  */
 const Contract = {
   async isInUse(contractId: string): Promise<boolean> {

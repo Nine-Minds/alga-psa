@@ -27,22 +27,22 @@ export async function getContractLines(): Promise<IContractLine[]> {
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read billing plans');
+                throw new Error('Permission denied: Cannot read contract lines');
             }
 
             const plans = await ContractLine.getAll(trx);
             return plans;
         });
     } catch (error) {
-        console.error('Error fetching billing plans:', error);
+        console.error('Error fetching contract lines:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to fetch client billing plans: ${error}`);
+        throw new Error(`Failed to fetch client contract lines: ${error}`);
     }
 }
 
-// New function to get a single billing plan by ID
+// New function to get a single contract line by ID
 export async function getContractLineById(planId: string): Promise<IContractLine | null> {
     let tenant_copy: string = '';
     try {
@@ -59,7 +59,7 @@ export async function getContractLineById(planId: string): Promise<IContractLine
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read billing plans');
+                throw new Error('Permission denied: Cannot read contract lines');
             }
 
             // Assuming the ContractLine model has a method like findById
@@ -69,7 +69,7 @@ export async function getContractLineById(planId: string): Promise<IContractLine
             return plan; // The model method should return the plan with necessary fields
         });
     } catch (error) {
-        console.error(`Error fetching billing plan with ID ${planId}:`, error);
+        console.error(`Error fetching contract line with ID ${planId}:`, error);
         if (error instanceof Error) {
             // Handle specific errors like 'not found' if the model throws them
             if (error.message.includes('not found')) { // Example check
@@ -77,7 +77,7 @@ export async function getContractLineById(planId: string): Promise<IContractLine
             }
             throw error;
         }
-        throw new Error(`Failed to fetch billing plan ${planId} in tenant ${tenant_copy}: ${error}`);
+        throw new Error(`Failed to fetch contract line ${planId} in tenant ${tenant_copy}: ${error}`);
     }
 }
 
@@ -97,7 +97,7 @@ export async function createContractLine(
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'create', trx)) {
-                throw new Error('Permission denied: Cannot create billing plans');
+                throw new Error('Permission denied: Cannot create contract lines');
             }
 
             // Remove tenant field if present in planData to prevent override
@@ -117,11 +117,11 @@ export async function createContractLine(
             return plan;
         });
     } catch (error) {
-        console.error('Error creating billing plan:', error);
+        console.error('Error creating contract line:', error);
         if (error instanceof Error) {
             throw error; // Preserve specific error messages
         }
-        throw new Error(`Failed to create billing plan: ${error}`);
+        throw new Error(`Failed to create contract line: ${error}`);
     }
 }
 
@@ -142,14 +142,14 @@ export async function updateContractLine(
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
-                throw new Error('Permission denied: Cannot update billing plans');
+                throw new Error('Permission denied: Cannot update contract lines');
             }
 
             // Fetch the existing plan to check its type
             const existingPlan = await ContractLine.findById(trx, planId);
             if (!existingPlan) {
                 // Handle case where plan is not found before update attempt
-                throw new Error(`Billing plan with ID ${planId} not found.`);
+                throw new Error(`Contract Line with ID ${planId} not found.`);
             }
 
             // Remove tenant field if present in updateData to prevent override
@@ -180,15 +180,15 @@ export async function updateContractLine(
             return plan;
         });
     } catch (error) {
-        console.error('Error updating billing plan:', error);
+        console.error('Error updating contract line:', error);
         if (error instanceof Error) {
             // Re-throw specific errors like 'not found' if they weren't caught above
             if (error.message.includes('not found')) {
-                 throw new Error(`Billing plan with ID ${planId} not found during update.`);
+                 throw new Error(`Contract Line with ID ${planId} not found during update.`);
             }
             throw error; // Preserve other specific error messages
         }
-        throw new Error(`Failed to update billing plan ${planId}: ${error}`);
+        throw new Error(`Failed to update contract line ${planId}: ${error}`);
     }
 }
 
@@ -206,7 +206,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'delete', trx)) {
-                throw new Error('Permission denied: Cannot delete billing plans');
+                throw new Error('Permission denied: Cannot delete contract lines');
             }
 
             // Check if plan is in use by clients before attempting to delete
@@ -226,7 +226,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
             await ContractLine.delete(trx, planId);
         });
     } catch (error) {
-        console.error('Error deleting billing plan:', error);
+        console.error('Error deleting contract line:', error);
         if (error instanceof Error) {
             // Check for specific PostgreSQL foreign key violation error code (23503)
             // This indicates the plan is likely referenced by another table (e.g., client_contract_lines)
@@ -253,14 +253,14 @@ export async function deleteContractLine(planId: string): Promise<void> {
                      clientNames = clients.map(c => c.client_name);
                  }
 
-                 let errorMessage = "Cannot delete billing plan: It is currently assigned to one or more clients.";
+                 let errorMessage = "Cannot delete contract line: It is currently assigned to one or more clients.";
                  if (clientNames.length > 0) {
                      // Truncate if too many names
                      const displayLimit = 5;
                      const displayNames = clientNames.length > displayLimit
                          ? clientNames.slice(0, displayLimit).join(', ') + ` and ${clientNames.length - displayLimit} more`
                          : clientNames.join(', ');
-                     errorMessage = `Cannot delete billing plan: It is assigned to the following clients: ${displayNames}.`;
+                     errorMessage = `Cannot delete contract line: It is assigned to the following clients: ${displayNames}.`;
                  }
                  throw new Error(errorMessage);
             }
@@ -274,7 +274,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
             throw error;
         }
         // Fallback for non-Error objects
-        throw new Error(`Failed to delete billing plan: ${error}`);
+        throw new Error(`Failed to delete contract line: ${error}`);
     }
 }
 
@@ -304,7 +304,7 @@ export async function getCombinedFixedPlanConfiguration(
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read billing plan configurations');
+                throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
             // --- Fetch Plan-Level Config (Base Rate, Proration, Alignment) ---
@@ -368,7 +368,7 @@ export async function getContractLineFixedConfig(planId: string): Promise<IContr
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'read', trx)) {
-                throw new Error('Permission denied: Cannot read billing plan configurations');
+                throw new Error('Permission denied: Cannot read contract line configurations');
             }
 
             const model = new ContractLineFixedConfig(trx, tenant);
@@ -405,13 +405,13 @@ export async function updateContractLineFixedConfig(
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
-                throw new Error('Permission denied: Cannot update billing plan configurations');
+                throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
             // Fetch the existing plan to check its type
             const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
             if (!existingPlan) {
-                throw new Error(`Billing plan with ID ${planId} not found.`);
+                throw new Error(`Contract Line with ID ${planId} not found.`);
             }
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed plan configuration for non-fixed plan type: ${existingPlan.contract_line_type}`);
@@ -465,13 +465,13 @@ export async function updatePlanServiceFixedConfigRate(
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(currentUser, 'billing', 'update', trx)) {
-                throw new Error('Permission denied: Cannot update billing plan configurations');
+                throw new Error('Permission denied: Cannot update contract line configurations');
             }
 
             // Fetch the existing plan to check its type
             const existingPlan = await ContractLine.findById(trx, planId); // Use ContractLine model directly
             if (!existingPlan) {
-                throw new Error(`Billing plan with ID ${planId} not found.`);
+                throw new Error(`Contract Line with ID ${planId} not found.`);
             }
             if (existingPlan.contract_line_type !== 'Fixed') {
                 throw new Error(`Cannot update fixed service config rate for non-fixed plan type: ${existingPlan.contract_line_type}`);

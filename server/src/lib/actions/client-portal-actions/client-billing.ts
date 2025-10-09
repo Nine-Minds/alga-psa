@@ -59,8 +59,8 @@ export async function getClientContractLine(): Promise<IClientContractLine | nul
 
     return plan || null;
   } catch (error) {
-    console.error('Error fetching client billing plan:', error);
-    throw new Error('Failed to fetch billing plan');
+    console.error('Error fetching client contract line:', error);
+    throw new Error('Failed to fetch contract line');
   }
 }
 

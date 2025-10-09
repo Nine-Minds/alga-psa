@@ -9,8 +9,8 @@ import { getContractLineById } from 'server/src/lib/actions/contractLineAction';
 import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 
 // Import the specialized components
-import { FixedPlanConfiguration } from './FixedPlanConfiguration';
-import { HourlyPlanConfiguration } from './HourlyPlanConfiguration';
+import { FixedPlanConfiguration } from './FixedContractLineConfiguration';
+import { HourlyPlanConfiguration } from './HourlyContractLineConfiguration';
 import { UsagePlanConfiguration } from './UsagePlanConfiguration';
 import { BucketPlanConfiguration } from './BucketPlanConfiguration';
 

@@ -363,7 +363,7 @@ def "main cleanup" [
         # Assets must come after asset details
         "asset_maintenance_schedules" "assets"
         
-        # Billing plans
+        # Contract Lines
         "contract_lines" "payment_methods"
         
         # Interactions must come BEFORE tickets (tickets reference interactions in some cases)

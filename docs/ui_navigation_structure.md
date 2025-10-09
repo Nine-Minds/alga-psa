@@ -302,7 +302,7 @@ CompanyDetails
     │       └── Tickets DataTable
     ├── Billing Tab
     │   └── BillingConfiguration (server/src/components/companies/BillingConfiguration.tsx)
-    │       ├── Billing plans management
+    │       ├── Contract Lines management
     │       ├── Tax settings
     │       └── Payment configuration
     ├── Billing Dashboard Tab

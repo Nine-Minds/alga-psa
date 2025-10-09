@@ -523,7 +523,7 @@ export const clientTaxSettingsSchema = z.object({
 }).merge(baseEntitySchema);
 
 // ============================================================================
-// BILLING PLAN SCHEMAS
+// CONTRACT LINE SCHEMAS
 // ============================================================================
 
 export const contractLineBaseSchema = z.object({
@@ -558,7 +558,7 @@ export const contractLineListQuerySchema = paginationQuerySchema.merge(baseFilte
   service_category: z.string().optional()
 });
 
-// Client billing plan schemas
+// Client contract line schemas
 export const clientContractLineBaseSchema = z.object({
   client_contract_line_id: uuidSchema.optional(),
   client_id: uuidSchema,

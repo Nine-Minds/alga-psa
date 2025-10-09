@@ -7,8 +7,7 @@ import { IService } from 'server/src/interfaces';
 
 // Import all the components
 import Overview from './Overview';
-import ContractLinesOverview from './billing-plans/ContractLinesOverview';
-// import ContractLineConfiguration from './billing-plans/ContractLineConfiguration'; // No longer used directly here
+import ContractLinesOverview from './contract-lines/ContractLinesOverview';
 import Invoices from './Invoices';
 import InvoiceTemplates from './InvoiceTemplates';
 import InvoiceTemplateEditor from './InvoiceTemplateEditor'; // Import the editor component
@@ -20,7 +19,7 @@ import CreditManagement from './CreditManagement';
 import CreditReconciliation from './CreditReconciliation';
 import Contracts from './contracts/Contracts';
 import ContractDetail from './contracts/ContractDetail';
-import { PlanTypeRouter } from './billing-plans/PlanTypeRouter';
+import { PlanTypeRouter } from './contract-lines/ContractLineTypeRouter';
 import BackNav from 'server/src/components/ui/BackNav'; // Import BackNav
 
 interface BillingDashboardProps {

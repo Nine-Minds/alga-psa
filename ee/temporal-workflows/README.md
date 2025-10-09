@@ -8,7 +8,7 @@ The Temporal workflow system provides reliable, scalable, and observable tenant 
 
 - **Tenant Creation**: Automated tenant database setup and configuration
 - **User Management**: Admin user creation with proper role assignment
-- **Data Setup**: Initial configuration of billing plans, statuses, and preferences
+- **Data Setup**: Initial configuration of contract lines, statuses, and preferences
 - **Error Handling**: Comprehensive rollback mechanisms for failed operations
 - **Monitoring**: Health checks and workflow state tracking
 

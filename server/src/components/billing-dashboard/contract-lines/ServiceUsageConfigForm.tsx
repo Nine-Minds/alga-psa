@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/billing-plans/ServiceUsageConfigForm.tsx
+// server/src/components/billing-dashboard/contract-lines/ServiceUsageConfigForm.tsx
 'use client';
 
 import React from 'react';

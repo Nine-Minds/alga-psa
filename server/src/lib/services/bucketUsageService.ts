@@ -57,7 +57,7 @@ interface PeriodInfo {
 
 /**
  * Calculates the billing period start and end dates for a given client, service, and date,
- * based on the active billing plan and its frequency.
+ * based on the active contract line and its frequency.
  *
  * @param trx Knex transaction object.
  * @param tenant The tenant identifier.
@@ -78,7 +78,7 @@ async function calculatePeriod(
 
     console.debug(`[calculatePeriod] Inputs: tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
 
-    // Find the active client billing plan that covers the target date AND
+    // Find the active client contract line that covers the target date AND
     // is associated with a bucket configuration for the given serviceCatalogId.
     const clientPlan = await trx('client_contract_lines as ccl')
         .join('contract_lines as cl', function() {
@@ -112,7 +112,7 @@ async function calculatePeriod(
         .first<{ contract_line_id: string; start_date: ISO8601String; billing_frequency: string } | undefined>();
 
     if (!clientPlan) {
-        console.warn(`[calculatePeriod] No active billing plan with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
+        console.warn(`[calculatePeriod] No active contract line with bucket config found. tenant=${tenant}, clientId=${clientId}, serviceCatalogId=${serviceCatalogId}, date=${date}, targetDateISO=${targetDateISO}`);
         return null;
     }
 
@@ -201,7 +201,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     if (!periodInfo) {
         // If no period info, it means no suitable active plan was found.
-        throw new Error(`Could not determine active billing plan/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
+        throw new Error(`Could not determine active contract line/period for client ${clientId}, service ${serviceCatalogId}, date ${date}`);
     }
 
     const { periodStart, periodEnd, planId, billingFrequency } = periodInfo;

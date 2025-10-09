@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/billing-plans/BucketPlanConfiguration.tsx
+// server/src/components/billing-dashboard/contract-lines/BucketPlanConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,7 +10,7 @@ import { ContractLineDialog } from '../ContractLineDialog';
 import Spinner from 'server/src/components/ui/Spinner';
 import LoadingIndicator from 'server/src/components/ui/LoadingIndicator';
 import { getPlanServicesWithConfigurations } from 'server/src/lib/actions/planServiceActions';
-import GenericPlanServicesList from './GenericPlanServicesList';
+import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IService, IContractLine } from 'server/src/interfaces/billing.interfaces'; // Added IContractLine
 import { getContractLineById } from 'server/src/lib/actions/contractLineAction'; // Added action to get base plan details
 import {

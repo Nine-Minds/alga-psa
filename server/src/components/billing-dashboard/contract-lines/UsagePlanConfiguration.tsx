@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/billing-plans/UsagePlanConfiguration.tsx
+// server/src/components/billing-dashboard/contract-lines/UsagePlanConfiguration.tsx
 'use client'
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -23,7 +23,7 @@ import { ServiceUsageConfigForm, ServiceUsageConfig, ServiceValidationErrors } f
 import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
-import GenericPlanServicesList from './GenericPlanServicesList';
+import GenericPlanServicesList from './GenericContractLineServicesList';
 interface UsagePlanConfigurationProps {
   planId: string;
   className?: string;

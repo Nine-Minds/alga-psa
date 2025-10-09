@@ -150,7 +150,7 @@ interface TenantCreationInput {
     email: string;                 // Admin user email (also used for tenant)
   };
   companyName?: string;            // Optional company name
-  contractLine?: string;            // Optional billing plan (default: 'basic')
+  contractLine?: string;            // Optional contract line (default: 'basic')
 }
 ```
 
