@@ -20,6 +20,7 @@ import BackNav from 'server/src/components/ui/BackNav';
 import UsageTracking from './UsageTracking';
 import ContractReports from './reports/ContractReports';
 import { billingTabDefinitions, BillingTabValue } from './billingTabsConfig';
+import InvoicingHub from './InvoicingHub';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -51,6 +52,7 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const currentTab = billingTabDefinitions.some((tab) => tab.value === requestedTab)
     ? (requestedTab as BillingTabValue)
     : 'contracts';
+  
 
   return (
     <div className="p-4">
@@ -90,12 +92,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <ContractReports />
         </Tabs.Content>
 
-        <Tabs.Content value="generate-invoices">
-          <GenerateInvoices />
-        </Tabs.Content>
-
-        <Tabs.Content value="invoices">
-          <Invoices />
+        <Tabs.Content value="invoicing">
+          <InvoicingHub initialServices={initialServices} />
         </Tabs.Content>
 
         <Tabs.Content value="invoice-templates">

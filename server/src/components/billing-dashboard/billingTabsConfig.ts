@@ -18,8 +18,7 @@ export interface BillingTabDefinition {
 
 export type BillingTabValue =
   | 'contracts'
-  | 'generate-invoices'
-  | 'invoices'
+  | 'invoicing'
   | 'invoice-templates'
   | 'tax-rates'
   | 'contract-lines'
@@ -35,16 +34,10 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     icon: FileText
   },
   {
-    value: 'generate-invoices',
-    label: 'Generate Invoices',
-    href: '/msp/billing?tab=generate-invoices',
+    value: 'invoicing',
+    label: 'Invoicing',
+    href: '/msp/billing?tab=invoicing',
     icon: FilePlus
-  },
-  {
-    value: 'invoices',
-    label: 'Invoices',
-    href: '/msp/billing?tab=invoices',
-    icon: FileText
   },
   {
     value: 'invoice-templates',
