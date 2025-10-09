@@ -45,6 +45,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
       </div>
 
       <CustomTabs
+        key={`invoicing-tabs-${activeSubTab}`}
         tabs={[
           {
             label: 'Generate',
