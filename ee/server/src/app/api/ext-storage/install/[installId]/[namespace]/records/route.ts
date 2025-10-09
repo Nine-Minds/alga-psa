@@ -50,21 +50,48 @@ function mapError(error: unknown): NextResponse {
           return 500;
       }
     })();
-    return NextResponse.json({ error: error.message, code: error.code, details: error.details ?? null }, { status });
+    return NextResponse.json(
+      {
+        error: {
+          code: error.code,
+          message: error.message,
+          details: error.details ?? null,
+        },
+      },
+      { status },
+    );
   }
 
   if (error instanceof z.ZodError) {
     return NextResponse.json(
-      { error: 'Validation error', details: error.flatten() },
+      {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Validation error',
+          details: error.flatten(),
+        },
+      },
       { status: 400 },
     );
   }
 
   console.error('[ext-storage] unexpected error', error);
-  return NextResponse.json({ error: 'Internal error', code: 'INTERNAL_ERROR' }, { status: 500 });
+  return NextResponse.json(
+    {
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'Internal error',
+      },
+    },
+    { status: 500 },
+  );
 }
 
-async function getTenantIdFromAuth(_req: NextRequest): Promise<string | null> {
+async function getTenantIdFromAuth(req: NextRequest): Promise<string | null> {
+  const headerTenant = req.headers.get('x-tenant-id') ?? req.headers.get('x-tenant');
+  if (headerTenant && headerTenant.trim().length > 0) {
+    return headerTenant;
+  }
   if (process.env.NODE_ENV !== 'production') {
     return 'tenant-dev';
   }
