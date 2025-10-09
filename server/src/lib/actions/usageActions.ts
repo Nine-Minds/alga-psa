@@ -17,7 +17,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
   const { knex, tenant } = await createTenantKnex();
 
   return await knex.transaction(async (trx) => {
-    // If no billing plan ID is provided, try to determine the default one
+    // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
     if (!contractLineId && data.service_id && data.client_id) {
       try {
@@ -32,7 +32,7 @@ export async function createUsageRecord(data: ICreateUsageRecord): Promise<IUsag
           contractLineId = defaultPlanId;
         }
       } catch (error) {
-        console.error('Error determining default billing plan:', error);
+        console.error('Error determining default contract line:', error);
         // Potentially rethrow or handle if this is critical
       }
     }
@@ -117,7 +117,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
     }
     const oldQuantity = originalRecord.quantity || 0;
 
-    // 2. Determine the final billing plan ID
+    // 2. Determine the final contract line ID
     let finalContractLineId = data.contract_line_id;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalContractLineId === null || finalContractLineId === undefined) {
@@ -132,7 +132,7 @@ export async function updateUsageRecord(data: IUpdateUsageRecord): Promise<IUsag
           );
           finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
         } catch (error) {
-          console.error('Error determining default billing plan during update:', error);
+          console.error('Error determining default contract line during update:', error);
           finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
         }
       } else {

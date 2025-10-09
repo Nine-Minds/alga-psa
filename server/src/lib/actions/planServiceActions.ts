@@ -98,10 +98,10 @@ export async function addServiceToPlan(
 
   // --- BEGIN SERVER-SIDE VALIDATION ---
   if (plan.contract_line_type === 'Hourly' && service.billing_method === 'fixed') {
-    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly billing plan.`);
+    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to an hourly contract line.`);
   } else if (plan.contract_line_type === 'Usage' && service.billing_method === 'fixed') {
     // Prevent adding fixed-price services to Usage-Based plans
-    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based billing plan.`);
+    throw new Error(`Cannot add a fixed-price service (${service.service_name}) to a usage-based contract line.`);
   }
   // TODO: Add other validation rules as needed (e.g., prevent hourly services on fixed plans?)
   // --- END SERVER-SIDE VALIDATION ---

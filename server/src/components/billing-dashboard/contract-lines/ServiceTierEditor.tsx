@@ -1,4 +1,4 @@
-// server/src/components/billing-dashboard/billing-plans/ServiceTierEditor.tsx
+// server/src/components/billing-dashboard/contract-lines/ServiceTierEditor.tsx
 'use client';
 
 import React from 'react';

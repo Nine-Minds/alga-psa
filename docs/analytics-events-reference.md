@@ -34,7 +34,7 @@ This document provides a comprehensive reference of all analytics events tracked
 | Event Name | Description | Properties |
 |------------|-------------|------------|
 | `invoice_generated` | Invoice created | `invoice_type`, `line_items_count`, `has_tax`, `generation_time_ms` |
-| `contract_line_created` | New billing plan created | `contract_line_type`, `billing_frequency`, `has_custom_rates` |
+| `contract_line_created` | New contract line created | `contract_line_type`, `billing_frequency`, `has_custom_rates` |
 
 ### 5. Performance Metrics
 

@@ -35,23 +35,23 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.plan.name')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.name')}</p>
             <p className="mt-1">{plan.contract_line_name}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.plan.frequency')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.frequency')}</p>
             <p className="mt-1">{t(`billing.frequency.${plan.billing_frequency?.toLowerCase() || 'monthly'}`, { defaultValue: plan.billing_frequency || 'Monthly' })}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.plan.startDate')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.startDate')}</p>
             <p className="mt-1">{formatDate(plan.start_date)}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.plan.endDate')}</p>
-            <p className="mt-1">{plan.end_date ? formatDate(plan.end_date) : t('billing.plan.noEndDate')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.endDate')}</p>
+            <p className="mt-1">{plan.end_date ? formatDate(plan.end_date) : t('billing.contractLine.noEndDate')}</p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-500">{t('billing.plan.status')}</p>
+            <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.status')}</p>
             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-1 ${
               plan.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
@@ -60,13 +60,13 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
           </div>
           {plan.custom_rate !== undefined && (
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.plan.customRate')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.customRate')}</p>
               <p className="mt-1">{formatCurrency(plan.custom_rate)}</p>
             </div>
           )}
           {(plan.service_category_name || plan.service_category) && (
             <div>
-              <p className="text-sm font-medium text-gray-500">{t('billing.plan.serviceCategory')}</p>
+              <p className="text-sm font-medium text-gray-500">{t('billing.contractLine.serviceCategory')}</p>
               <p className="mt-1">{plan.service_category_name || plan.service_category}</p>
             </div>
           )}
@@ -74,9 +74,9 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
 
         <div className="mt-4">
           <p className="text-sm text-gray-500">
-            {t('billing.plan.statusDescription', {
+            {t('billing.contractLine.statusDescription', {
               status: plan.is_active ? t('common.active').toLowerCase() : t('common.inactive').toLowerCase(),
-              expiry: plan.end_date ? t('billing.plan.expiresOn', { date: formatDate(plan.end_date) }) : t('billing.plan.noExpiry')
+              expiry: plan.end_date ? t('billing.contractLine.expiresOn', { date: formatDate(plan.end_date) }) : t('billing.contractLine.noExpiry')
             })}
           </p>
         </div>
@@ -106,7 +106,7 @@ const PlanDetailsDialog: React.FC<PlanDetailsDialogProps> = React.memo(({
     <Dialog 
       isOpen={isOpen} 
       onClose={onClose} 
-      title={t('billing.plan.detailsTitle')} 
+      title={t('billing.contractLine.detailsTitle')} 
       data-automation-id="
       plan-details-dialog"
     >

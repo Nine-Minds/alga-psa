@@ -623,7 +623,7 @@ const Clients: React.FC = () => {
       'location': 'locations',
       'service_usage': 'service usage records',
       'bucket_usage': 'bucket usage records',
-      'contract_line': 'billing plans',
+      'contract_line': 'contract lines',
       'tax_rate': 'tax rates',
       'tax_setting': 'tax settings'
     };

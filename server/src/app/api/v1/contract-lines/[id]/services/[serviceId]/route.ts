@@ -1,5 +1,5 @@
 /**
- * Billing Plan Service API Routes
+ * Contract Line Service API Routes
  * Handles individual contract line service management operations
  */
 

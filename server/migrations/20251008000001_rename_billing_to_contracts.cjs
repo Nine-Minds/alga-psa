@@ -1,5 +1,5 @@
 /**
- * Migration 2 Combined Rename: Plan Bundle/Billing Plan Terminology Flip
+ * Migration 2 Combined Rename: Plan Bundle/Contract Line Terminology Flip
  *
  * This migration creates the new tables, adds dual-write columns, and
  * backfills data so that the application can run with both legacy and new

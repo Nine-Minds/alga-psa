@@ -10,7 +10,7 @@ export async function createClientContractLine(
 ): Promise<IClientContractLine> {
   try {
     if (!billingData.service_category) {
-      throw new Error('Service category is required for billing plans');
+      throw new Error('Service category is required for contract lines');
     }
 
     // Check for overlapping billing entries
@@ -23,7 +23,7 @@ export async function createClientContractLine(
 
     if (overlappingBillings.length > 0) {
       const conflictingBilling = overlappingBillings[0];
-      throw new Error(`Cannot create billing plan: overlapping billing plan exists for client ${billingData.client_id} and service category "${billingData.service_category}". Conflicting entry: ID ${conflictingBilling.client_contract_line_id}, Start Date: ${conflictingBilling.start_date.slice(0, 10)}, End Date: ${conflictingBilling.end_date ? conflictingBilling.end_date.slice(0, 10) : 'Ongoing'}`);
+      throw new Error(`Cannot create contract line: overlapping contract line exists for client ${billingData.client_id} and service category "${billingData.service_category}". Conflicting entry: ID ${conflictingBilling.client_contract_line_id}, Start Date: ${conflictingBilling.start_date.slice(0, 10)}, End Date: ${conflictingBilling.end_date ? conflictingBilling.end_date.slice(0, 10) : 'Ongoing'}`);
     }
 
     // If no overlapping entries, create the new billing
@@ -56,7 +56,7 @@ export async function updateClientContractLine(
 
     if (overlappingBillings.length > 0) {
       const conflictingBilling = overlappingBillings[0];
-      throw new Error(`Cannot update billing plan: overlapping billing plan exists for client ${existingBilling.client_id} and service category "${existingBilling.service_category}". Conflicting entry: ID ${conflictingBilling.client_contract_line_id}, Start Date: ${conflictingBilling.start_date.slice(0, 10)}, End Date: ${conflictingBilling.end_date?.slice(0, 10) || 'Ongoing'}`);
+      throw new Error(`Cannot update contract line: overlapping contract line exists for client ${existingBilling.client_id} and service category "${existingBilling.service_category}". Conflicting entry: ID ${conflictingBilling.client_contract_line_id}, Start Date: ${conflictingBilling.start_date.slice(0, 10)}, End Date: ${conflictingBilling.end_date?.slice(0, 10) || 'Ongoing'}`);
     }
 
     // If no overlapping entries, update the billing
@@ -74,7 +74,7 @@ export async function getClientContractLine(clientId: string): Promise<IClientCo
     return billings;
   } catch (error) {
     console.error('Error fetching client billing:', error);
-    throw new Error('Failed to fetch client billing plans');
+    throw new Error('Failed to fetch client contract lines');
   }
 }
 
@@ -96,6 +96,6 @@ export async function getOverlappingBillings(
     return overlappingBillings;
   } catch (error) {
     console.error('Error checking for overlapping billings:', error);
-    throw new Error('Failed to check for overlapping billing plans');
+    throw new Error('Failed to check for overlapping contract lines');
   }
 }

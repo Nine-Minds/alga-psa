@@ -28,7 +28,7 @@ import { getServices } from 'server/src/lib/actions/serviceActions';
 import { getServiceCategories } from 'server/src/lib/actions/serviceCategoryActions'; // Added import
 import { Alert, AlertDescription } from 'server/src/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { EditPlanServiceQuantityDialog } from './EditPlanServiceQuantityDialog'; // Added dialog import
+import { EditPlanServiceQuantityDialog } from './EditContractLineServiceQuantityDialog'; // Added dialog import
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 // Define billing method options

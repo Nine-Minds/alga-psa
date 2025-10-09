@@ -11,8 +11,8 @@ This document provides a high-level architectural overview of the open-source MS
 * **Billing:** The Billing module handles complex billing scenarios, including fixed-price services, time-based billing, usage-based billing, bucket of hours/retainer plans, discounts, promotions, multi-currency, tax handling, bundling, contracts, refunds, and adjustments. It integrates with other modules like Projects, Time Management, and Documents to produce and store invoices.
 
   * Key Features:
-    - Billing Plans: Assign multiple billing plans to a single client (company).
-    - Contracts: Create named collections of billing plans that can be managed as a single entity.
+    - Contract Lines: Assign multiple contract lines to a single client (company).
+    - Contracts: Create named collections of contract lines that can be managed as a single entity.
     - Automated Invoice Generation: Automatically generate invoices for time- or usage-based charges.
     - Manual Invoicing: Allows ad-hoc or on-demand invoice creation and updates. Useful for one-off or custom charges that do not originate from usage/time entries.
     - Tax Calculation: Supports flexible tax rules via a dedicated TaxService that looks up tax rates from the database.

@@ -78,7 +78,7 @@ exports.up = async function(knex) { // Changed to async function
     if (group.configs.size > 1) {
       inconsistentCount++;
       console.warn(
-        `INCONSISTENCY DETECTED: Billing Plan (tenant: ${group.tenant}, plan_id: ${group.plan_id}) has multiple different (enable_proration, billing_cycle_alignment, base_rate) settings across its services. The first service's setting will be used for migration.`,
+        `INCONSISTENCY DETECTED: Contract Line (tenant: ${group.tenant}, plan_id: ${group.plan_id}) has multiple different (enable_proration, billing_cycle_alignment, base_rate) settings across its services. The first service's setting will be used for migration.`,
       );
     }
   }

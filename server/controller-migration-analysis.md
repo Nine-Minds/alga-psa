@@ -30,8 +30,8 @@ These controllers still extend `BaseController` and do NOT have V2 versions:
    - Routes: `/api/v1/automation/*`
    - Status: Still using old controller
 
-3. **ContractLineController** - Billing plans management
-   - Routes: `/api/v1/billing-plans/*`
+3. **ContractLineController** - Contract Lines management
+   - Routes: `/api/v1/contract-lines/*`
    - Status: Still using old controller
 
 4. **CategoryController** - Category management (tickets/services)

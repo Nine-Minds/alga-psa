@@ -292,9 +292,9 @@ export async function applyContractToClient(clientContractId: string): Promise<v
       throw new Error(`No contract lines found in contract ${clientContract.contract_id}`);
     }
 
-    // Start a transaction to ensure all client billing plans are created
+    // Start a transaction to ensure all client contract lines are created
     await withTransaction(db, async (trx: Knex.Transaction) => {
-      // For each contract line in the contract, create a client billing plan
+      // For each contract line in the contract, create a client contract line
       for (const plan of contractLines) {
         // Check if the client already has this plan
         const existingPlan = await trx('client_contract_lines')
@@ -319,7 +319,7 @@ export async function applyContractToClient(clientContractId: string): Promise<v
               });
           }
         } else {
-          // Create a new client billing plan
+          // Create a new client contract line
           await trx('client_contract_lines').insert({
             client_contract_line_id: trx.raw('gen_random_uuid()'),
             client_id: clientContract.client_id,

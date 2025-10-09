@@ -38,8 +38,8 @@ const ContractLinesOverview: React.FC = () => {
       setContractLines(plans);
       setError(null);
     } catch (error) {
-      console.error('Error fetching billing plans:', error);
-      setError('Failed to fetch billing plans');
+      console.error('Error fetching contract lines:', error);
+      setError('Failed to fetch contract lines');
     }
   };
 
@@ -59,12 +59,12 @@ const ContractLinesOverview: React.FC = () => {
       await deleteContractLine(planId);
       fetchContractLines();
     } catch (error) {
-      console.error('Error deleting billing plan:', error); // Keep console log for debugging
+      console.error('Error deleting contract line:', error); // Keep console log for debugging
       if (error instanceof Error) {
-        // Check for the specific error message for plans assigned to clients
-        if (error.message === "Cannot delete billing plan: It is currently assigned to one or more clients.") {
+        // Check for the specific error message for contract lines assigned to clients
+        if (error.message === "Cannot delete contract line: It is currently assigned to one or more clients.") {
             toast.error(error.message);
-        // Check for the specific error message for plans with associated services (from pre-check)
+        // Check for the specific error message for contract lines with associated services (from pre-check)
         } else if (error.message.includes('associated services')) {
           toast.error(error.message); // Use the exact message from the action
         } else {
@@ -73,14 +73,14 @@ const ContractLinesOverview: React.FC = () => {
         }
       } else {
         // Fallback for non-Error objects
-        toast.error('An unexpected error occurred while deleting the plan.');
+        toast.error('An unexpected error occurred while deleting the contract line.');
       }
     }
   };
 
   const contractLineColumns: ColumnDefinition<IContractLine>[] = [
     {
-      title: 'Plan Name',
+      title: 'Contract Line Name',
       dataIndex: 'contract_line_name',
     },
     {
@@ -89,7 +89,7 @@ const ContractLinesOverview: React.FC = () => {
       render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
     },
     {
-      title: 'Plan Type',
+      title: 'Contract Line Type',
       dataIndex: 'contract_line_type',
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
@@ -154,8 +154,8 @@ const ContractLinesOverview: React.FC = () => {
     <Card size="2">
       <Box p="4">
         <div className="flex justify-between items-center mb-4">
-          <Heading as="h3" size="4">Billing Plans</Heading>
-          <ContractLineDialog 
+          <Heading as="h3" size="4">Contract Lines</Heading>
+          <ContractLineDialog
             onPlanAdded={(newPlanId) => {
               if (newPlanId) {
                 // Navigate directly. PlanTypeRouter will fetch the plan details.
@@ -167,7 +167,7 @@ const ContractLinesOverview: React.FC = () => {
             triggerButton={
               <Button id='add-contract-line-button'>
                 <Plus className="h-4 w-4 mr-2" />
-                Add Plan
+                Add Contract Line
               </Button>
             }
             allServiceTypes={allServiceTypes} // Pass the fetched service types

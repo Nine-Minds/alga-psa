@@ -1,6 +1,6 @@
 /**
- * Billing Plan Service
- * Comprehensive service layer for billing plan operations with validation, business logic, and API integration
+ * Contract Line Service
+ * Comprehensive service layer for contract line operations with validation, business logic, and API integration
  */
 
 import { Knex } from 'knex';
@@ -103,7 +103,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * List billing plans with enhanced filtering and analytics
+   * List contract lines with enhanced filtering and analytics
    */
   async list(
       options: ListOptions, 
@@ -200,7 +200,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Get billing plan by ID with related data
+   * Get contract line by ID with related data
    */
   async getById(id: string, context: ServiceContext): Promise<IContractLine | null> {
       const { knex } = await this.getKnex();
@@ -223,7 +223,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
   
     /**
-     * Get billing plan by ID with related data and options
+     * Get contract line by ID with related data and options
      */
     async getByIdWithOptions(
         id: string, 
@@ -255,7 +255,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Create new billing plan with validation and audit trail
+   * Create new contract line with validation and audit trail
    * Overloads for BaseService compatibility
    */
   async create(data: Partial<IContractLine>, context: ServiceContext): Promise<IContractLine>;
@@ -267,7 +267,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         const planData = this.addCreateAuditFields(data, context);
         planData.contract_line_id = uuidv4();
         
-        // Create the base billing plan record
+        // Create the base contract line record
         const [contractLine] = await trx('contract_lines').insert(planData).returning('*');
         
         // Create default fixed config if plan type is Fixed (handle base_rate if provided)
@@ -286,12 +286,12 @@ export class ContractLineService extends BaseService<IContractLine> {
   
         // Publish event
         await publishEvent({
-          eventType: 'BILLING_PLAN_CREATED',
+          eventType: 'CONTRACT_LINE_CREATED',
           payload: {
             tenantId: context.tenant,
-            planId: contractLine.contract_line_id,
-            planName: data.contract_line_name,
-            planType: data.contract_line_type,
+            contractLineId: contractLine.contract_line_id,
+            contractLineName: data.contract_line_name,
+            contractLineType: data.contract_line_type,
             userId: context.userId,
             timestamp: new Date().toISOString()
           }
@@ -303,7 +303,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Update billing plan with validation
+   * Update contract line with validation
    */
   async update(id: string, data: Partial<IContractLine>, context: ServiceContext): Promise<IContractLine> {
       const { knex } = await this.getKnex();
@@ -343,7 +343,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     }
   
     /**
-     * Update billing plan with enhanced features and response
+     * Update contract line with enhanced features and response
      */
     async updatePlan(
       id: string, 
@@ -393,7 +393,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Delete billing plan with cascade checks
+   * Delete contract line with cascade checks
    */
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
@@ -509,7 +509,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Add service to billing plan
+   * Add service to contract line
    */
   async addServiceToPlan(
       planId: string,
@@ -563,7 +563,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Remove service from billing plan
+   * Remove service from contract line
    */
   async removeServiceFromPlan(
     planId: string,
@@ -629,7 +629,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Get all services in a billing plan
+   * Get all services in a contract line
    */
   async getPlanServices(
     planId: string,
@@ -783,7 +783,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Assign billing plan to client
+   * Assign contract line to client
    */
   async assignPlanToClient(
     data: CreateClientContractLineData,
@@ -817,7 +817,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   }
 
   /**
-   * Unassign billing plan from client
+   * Unassign contract line from client
    */
   async unassignPlanFromClient(
     clientContractLineId: string,
@@ -841,7 +841,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         .update(updateData);
       
       if (result === 0) {
-        throw new Error('Client billing plan assignment not found');
+        throw new Error('Client contract line assignment not found');
       }
     });
   }
@@ -851,7 +851,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Activate or deactivate billing plan
+   * Activate or deactivate contract line
    */
   async setPlanActivation(
     planId: string,
@@ -905,7 +905,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Copy existing billing plan
+   * Copy existing contract line
    */
   async copyPlan(
     data: CopyContractLineData,
@@ -1125,7 +1125,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   // ============================================================================
 
   /**
-   * Bulk create billing plans
+   * Bulk create contract lines
    */
   async bulkCreateContractLines(
       data: BulkCreateContractLinesData,
@@ -1156,7 +1156,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Bulk update billing plans
+   * Bulk update contract lines
    */
   async bulkUpdateContractLines(
       data: BulkUpdateContractLinesData,
@@ -1178,7 +1178,7 @@ export class ContractLineService extends BaseService<IContractLine> {
 
 
   /**
-   * Bulk delete billing plans
+   * Bulk delete contract lines
    */
   async bulkDeleteContractLines(
       data: BulkDeleteContractLinesData,
@@ -1368,7 +1368,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Apply base filters
     query = this.applyFilters(query, filters);
     
-    // Apply specific billing plan filters
+    // Apply specific contract line filters
     if (filters.has_services !== undefined) {
       if (filters.has_services) {
         query = query.whereExists(function() {
@@ -1469,7 +1469,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       .first();
     
     if (!plan) {
-      throw new Error('Billing plan not found');
+      throw new Error('Contract Line not found');
     }
     
     return plan;

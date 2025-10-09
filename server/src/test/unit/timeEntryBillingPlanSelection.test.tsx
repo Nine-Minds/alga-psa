@@ -12,7 +12,7 @@ vi.mock('../../lib/utils/planDisambiguation', () => ({
   getEligibleContractLinesForUI: vi.fn()
 }));
 
-describe('TimeEntryEditForm with Billing Plan Selection', () => {
+describe('TimeEntryEditForm with Contract Line Selection', () => {
   const mockEntry = {
     client_id: 'test-client-id', // Add client ID to the mock entry
     entry_id: 'test-entry-id',
@@ -96,10 +96,10 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
 
     // The contract line selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
+    const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
@@ -142,10 +142,10 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
 
     // The contract line selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
     
     // The dropdown should be disabled
-    const selectElement = screen.getByLabelText('Billing Plan (Optional)');
+    const selectElement = screen.getByLabelText('Contract Line (Optional)');
     expect(selectElement).toBeDisabled();
     
     // There should be explanatory text
@@ -203,7 +203,7 @@ describe('TimeEntryEditForm with Billing Plan Selection', () => {
     });
 
     // The contract line selector should be visible
-    expect(screen.getByText('Billing Plan')).toBeInTheDocument();
+    expect(screen.getByText('Contract Line')).toBeInTheDocument();
 
     // The entry should be updated with the bucket plan ID (default selection)
     expect(mockOnUpdateEntry).toHaveBeenCalledWith(0, {

@@ -287,7 +287,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
 
     let resultingEntry: ITimeEntry | null = null;
 
-    // If no billing plan ID is provided, try to determine the default one
+    // If no contract line ID is provided, try to determine the default one
     if (!contract_line_id && service_id) {
       try {
         const defaultPlanId = await determineDefaultContractLine(
@@ -322,7 +322,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
           cleanedEntry.contract_line_id = defaultPlanId;
         }
       } catch (error) {
-        console.error('Error determining default billing plan:', error);
+        console.error('Error determining default contract line:', error);
       }
     }
 
@@ -586,7 +586,7 @@ export async function saveTimeEntry(timeEntry: Omit<ITimeEntry, 'tenant'>): Prom
              console.log(`Time entry ${resultingEntry.entry_id} service/plan is not a Bucket type or plan not found.`);
           }
         } else {
-           console.log(`Could not determine client ID or billing plan for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
+           console.log(`Could not determine client ID or contract line for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
         }
       } else {
          console.log(`Time entry ${resultingEntry?.entry_id} is not billable or missing service ID, skipping bucket update.`);

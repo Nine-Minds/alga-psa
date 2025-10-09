@@ -25,7 +25,7 @@ For example, the `calculateBilling` method orchestrates the entire billing calcu
 
 ```typescript
 calculateBilling(billingPeriod: DateRange, companyId: string): Promise<IBillingCharge[]> {
-  // Fetch company billing plan
+  // Fetch company contract line
   // Calculate fixed price charges
   // Calculate time-based charges
   // Calculate usage-based charges
@@ -62,7 +62,7 @@ calculateTimeBasedCharges(billingPeriod: DateRange, timeEntries: ITimeEntry[], r
 }
 ```
 
-Administrators can manage billing cycles through the company billing plan settings. Changes to billing cycles will affect future billing calculations and invoice generation.
+Administrators can manage billing cycles through the company contract line settings. Changes to billing cycles will affect future billing calculations and invoice generation.
 
 ## Impact on Invoice Generation
 

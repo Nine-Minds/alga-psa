@@ -118,7 +118,7 @@ export default function BillingOverview() {
     let isMounted = true;
     const loadBillingData = async () => {
       try {
-        // Load billing plan and usage data for all users
+        // Load contract line and usage data for all users
         const [plan, usageData] = await Promise.all([
           getClientContractLine(),
           getCurrentUsage()

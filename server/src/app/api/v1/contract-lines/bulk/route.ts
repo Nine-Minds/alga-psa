@@ -1,5 +1,5 @@
 /**
- * Billing Plans Bulk Operations API Route
+ * Contract Lines Bulk Operations API Route
  * POST /api/v1/contract-lines/bulk - Bulk operations on contract lines
  */
 

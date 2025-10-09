@@ -6,7 +6,7 @@ import { IContractLine } from 'server/src/interfaces/billing.interfaces';
 vi.mock('@/lib/models/contractLine');
 vi.mock('@/lib/db/db');
 
-describe('Billing Plan Actions', () => {
+describe('Contract Line Actions', () => {
   afterEach(() => {
     vi.clearAllMocks();
   });

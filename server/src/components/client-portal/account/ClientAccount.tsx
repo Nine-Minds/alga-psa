@@ -119,7 +119,7 @@ export default function ClientAccount() {
         </CardContent>
       </Card>
 
-      {/* Billing Plan */}
+      {/* Contract Line */}
       <Card id="contract-line-card" className="bg-white">
         <CardHeader>
           <CardTitle>{t('billing.currentPlan')}</CardTitle>

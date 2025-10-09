@@ -1,5 +1,5 @@
 /**
- * Client Billing Plans API Routes
+ * Client Contract Lines API Routes
  * GET /api/v1/client-contract-lines - List client contract lines
  * POST /api/v1/client-contract-lines - Assign plan to client
  *

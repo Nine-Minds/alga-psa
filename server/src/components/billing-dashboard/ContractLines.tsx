@@ -84,8 +84,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       setContractLines(plans);
       setError(null);
     } catch (error) {
-      console.error('Error fetching billing plans:', error);
-      setError('Failed to fetch billing plans');
+      console.error('Error fetching contract lines:', error);
+      setError('Failed to fetch contract lines');
     }
   };
 
@@ -154,7 +154,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
 
   const contractLineColumns: ColumnDefinition<IContractLine>[] = [
     {
-      title: 'Plan Name',
+      title: 'Contract Line Name',
       dataIndex: 'contract_line_name',
     },
     {
@@ -163,7 +163,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       render: (value) => BILLING_FREQUENCY_DISPLAY[value] || value,
     },
     {
-      title: 'Plan Type',
+      title: 'Contract Line Type',
       dataIndex: 'contract_line_type',
       render: (value) => PLAN_TYPE_DISPLAY[value] || value,
     },
@@ -206,14 +206,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 try {
                   await deleteContractLine(record.contract_line_id!);
                   fetchContractLines();
-                  toast.success('Billing plan deleted successfully');
+                  toast.success('Contract line deleted successfully');
                 } catch (error) {
                   if (error instanceof Error) {
                     // Display user-friendly error message using toast
-                    // Check for the specific error message for plans assigned to clients
-                    if (error.message === "Cannot delete billing plan: It is currently assigned to one or more clients.") {
+                    // Check for the specific error message for contract lines assigned to clients
+                    if (error.message === "Cannot delete contract line: It is currently assigned to one or more clients.") {
                         toast.error(error.message);
-                    // Check for the specific error message for plans with associated services (from pre-check)
+                    // Check for the specific error message for contract lines with associated services (from pre-check)
                     } else if (error.message.includes('associated services')) {
                       toast.error(error.message); // Use the exact message from the action
                     } else {
@@ -221,7 +221,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                       toast.error(error.message);
                     }
                   } else {
-                    toast.error('Failed to delete plan');
+                    toast.error('Failed to delete contract line');
                   }
                 }
               }}
@@ -338,14 +338,14 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card size="2">
           <Box p="4">
-            <Heading as="h3" size="4" mb="4">Billing Plans</Heading>
+            <Heading as="h3" size="4" mb="4">Contract Lines</Heading>
             <div className="mb-4">
               <ContractLineDialog
                 onPlanAdded={(newPlanId) => {
                   fetchContractLines().then(async () => {
                     if (newPlanId) {
                       setSelectedPlan(newPlanId);
-                      
+
                       // Fetch the newly created plan and navigate to its configuration page
                       try {
                         const newPlan = await getContractLineById(newPlanId);
@@ -365,7 +365,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 triggerButton={
                   <Button id='add-contract-line-button'>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Plan
+                    Add Contract Line
                   </Button>
                 }
               />
@@ -417,7 +417,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                 </div>
               </>
             ) : (
-              <p>Select a plan to manage its services</p>
+              <p>Select a contract line to manage its services</p>
             )}
           </Box>
         </Card>

@@ -1,6 +1,6 @@
 /**
- * Billing Plans API Schemas
- * Comprehensive validation schemas for billing plan-related API endpoints
+ * Contract Lines API Schemas
+ * Comprehensive validation schemas for contract line-related API endpoints
  */
 
 import { z } from 'zod';
@@ -27,10 +27,10 @@ export const billingCycleAlignmentSchema = z.enum(['start', 'end', 'prorated']);
 export const billingMethodSchema = z.enum(['fixed', 'per_unit']);
 
 // ============================================================================
-// CORE BILLING PLAN SCHEMAS
+// CORE CONTRACT LINE SCHEMAS
 // ============================================================================
 
-// Base billing plan schema (without refinements)
+// Base contract line schema (without refinements)
 const baseContractLineSchema = z.object({
   contract_line_name: z.string().min(1, 'Plan name is required').max(255),
   billing_frequency: billingFrequencySchema,
@@ -55,7 +55,7 @@ const baseContractLineSchema = z.object({
   features: z.array(z.string()).optional()
 });
 
-// Create billing plan schema
+// Create contract line schema
 export const createContractLineSchema = baseContractLineSchema.refine(data => {
   // Validation: If overtime is enabled, rate and threshold must be provided
   if (data.enable_overtime && (!data.overtime_rate || !data.overtime_threshold)) {
@@ -70,10 +70,10 @@ export const createContractLineSchema = baseContractLineSchema.refine(data => {
   message: "When overtime or after-hours features are enabled, all related fields must be provided"
 });
 
-// Update billing plan schema
+// Update contract line schema
 export const updateContractLineSchema = createUpdateSchema(baseContractLineSchema);
 
-// Billing plan response schema
+// Contract Line response schema
 export const contractLineResponseSchema = z.object({
   contract_line_id: uuidSchema,
   contract_line_name: z.string(),
@@ -102,7 +102,7 @@ export const contractLineResponseSchema = z.object({
 });
 
 // ============================================================================
-// BILLING PLAN CONFIGURATION SCHEMAS
+// CONTRACT LINE CONFIGURATION SCHEMAS
 // ============================================================================
 
 // Fixed plan configuration
@@ -371,10 +371,10 @@ export const updateContractAssociationSchema = z.object({
 });
 
 // ============================================================================
-// COMPANY BILLING PLAN ASSIGNMENT SCHEMAS
+// COMPANY CONTRACT LINE ASSIGNMENT SCHEMAS
 // ============================================================================
 
-// Client billing plan assignment
+// Client contract line assignment
 export const createClientContractLineSchema = z.object({
   client_id: uuidSchema,
   contract_line_id: uuidSchema,
@@ -483,7 +483,7 @@ export const usageMetricsResponseSchema = z.object({
 // SEARCH AND FILTERING SCHEMAS
 // ============================================================================
 
-// Billing plan filters
+// Contract Line filters
 export const contractLineFilterSchema = baseFilterSchema.extend({
   contract_line_name: z.string().optional(),
   contract_line_type: planTypeSchema.optional(),
@@ -507,7 +507,7 @@ export const contractFilterSchema = baseFilterSchema.extend({
   clients_count_max: numberTransform.optional()
 });
 
-// Client billing plan filters
+// Client contract line filters
 export const clientContractLineFilterSchema = baseFilterSchema.extend({
   client_id: uuidSchema.optional(),
   contract_line_id: uuidSchema.optional(),

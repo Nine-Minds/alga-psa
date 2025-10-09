@@ -9,7 +9,7 @@ const ContractLine = {
     const tenant = await getCurrentTenantId();
     
     if (!tenant) {
-      throw new Error('Tenant context is required for checking billing plan usage');
+      throw new Error('Tenant context is required for checking contract line usage');
     }
 
     try {
@@ -20,10 +20,10 @@ const ContractLine = {
         })
         .count('client_contract_line_id as count')
         .first() as { count: string };
-      
+
       return parseInt(result?.count || '0', 10) > 0;
     } catch (error) {
-      console.error(`Error checking billing plan ${planId} usage:`, error);
+      console.error(`Error checking contract line ${planId} usage:`, error);
       throw error;
     }
   },
@@ -32,7 +32,7 @@ const ContractLine = {
     const tenant = await getCurrentTenantId();
     
     if (!tenant) {
-      throw new Error('Tenant context is required for checking billing plan services');
+      throw new Error('Tenant context is required for checking contract line services');
     }
 
     try {
@@ -43,25 +43,25 @@ const ContractLine = {
         })
         .count('service_id as count')
         .first() as { count: string };
-      
+
       return parseInt(result?.count || '0', 10) > 0;
     } catch (error) {
-      console.error(`Error checking billing plan ${planId} services:`, error);
+      console.error(`Error checking contract line ${planId} services:`, error);
       throw error;
     }
   },
 
   delete: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<void> => {
     const tenant = await getCurrentTenantId();
-    
+
     if (!tenant) {
-      throw new Error('Tenant context is required for deleting billing plan');
+      throw new Error('Tenant context is required for deleting contract line');
     }
 
     try {
       const isUsed = await ContractLine.isInUse(knexOrTrx, planId);
       if (isUsed) {
-        throw new Error('Cannot delete plan that is in use by clients');
+        throw new Error('Cannot delete contract line that is in use by clients');
       }
 
       const deletedCount = await knexOrTrx('contract_lines')
@@ -72,19 +72,19 @@ const ContractLine = {
         .delete();
 
       if (deletedCount === 0) {
-        throw new Error(`Billing plan ${planId} not found or belongs to different tenant`);
+        throw new Error(`Contract line ${planId} not found or belongs to different tenant`);
       }
     } catch (error) {
-      console.error(`Error deleting billing plan ${planId}:`, error);
+      console.error(`Error deleting contract line ${planId}:`, error);
       throw error;
     }
   },
 
   getAll: async (knexOrTrx: Knex | Knex.Transaction): Promise<IContractLine[]> => {
     const tenant = await getCurrentTenantId();
-    
+
     if (!tenant) {
-      throw new Error('Tenant context is required for fetching billing plans');
+      throw new Error('Tenant context is required for fetching contract lines');
     }
 
     try {
@@ -92,10 +92,10 @@ const ContractLine = {
         .where({ tenant })
         .select('*');
 
-      console.log(`Retrieved ${plans.length} billing plans for tenant ${tenant}`);
+      console.log(`Retrieved ${plans.length} contract lines for tenant ${tenant}`);
       return plans;
     } catch (error) {
-      console.error('Error fetching billing plans:', error);
+      console.error('Error fetching contract lines:', error);
       throw error;
     }
   },
@@ -116,9 +116,9 @@ const ContractLine = {
 
   update: async (knexOrTrx: Knex | Knex.Transaction, planId: string, updateData: Partial<IContractLine>): Promise<IContractLine> => {
     const tenant = await getCurrentTenantId();
-    
+
     if (!tenant) {
-      throw new Error('Tenant context is required for updating billing plan');
+      throw new Error('Tenant context is required for updating contract line');
     }
 
     try {
@@ -134,12 +134,12 @@ const ContractLine = {
         .returning('*');
 
       if (!updatedPlan) {
-        throw new Error(`Billing plan ${planId} not found or belongs to different tenant`);
+        throw new Error(`Contract line ${planId} not found or belongs to different tenant`);
       }
 
       return updatedPlan;
     } catch (error) {
-      console.error(`Error updating billing plan ${planId}:`, error);
+      console.error(`Error updating contract line ${planId}:`, error);
       throw error;
     }
   },
@@ -147,7 +147,7 @@ const ContractLine = {
   findById: async (knexOrTrx: Knex | Knex.Transaction, planId: string): Promise<IContractLine | null> => {
     const tenant = await getCurrentTenantId();
     if (!tenant) {
-      throw new Error('Tenant context is required for fetching a billing plan');
+      throw new Error('Tenant context is required for fetching a contract line');
     }
 
     try {
@@ -160,14 +160,14 @@ const ContractLine = {
         .first(); // Use .first() to get a single object or undefined
 
       if (!plan) {
-        console.warn(`Billing plan ${planId} not found for tenant ${tenant}`);
+        console.warn(`Contract line ${planId} not found for tenant ${tenant}`);
         return null;
       }
 
-      console.log(`Retrieved billing plan ${planId} for tenant ${tenant}`);
+      console.log(`Retrieved contract line ${planId} for tenant ${tenant}`);
       return plan;
     } catch (error) {
-      console.error(`Error fetching billing plan ${planId}:`, error);
+      console.error(`Error fetching contract line ${planId}:`, error);
       throw error;
     }
   },

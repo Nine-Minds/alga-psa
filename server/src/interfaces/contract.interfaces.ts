@@ -3,7 +3,7 @@ import { ISO8601String } from '../types/types.d';
 
 /**
  * Interface for a Contract
- * Represents a collection of contract lines (formerly billing plans) assignable to clients.
+ * Represents a collection of contract lines (formerly contract lines) assignable to clients.
  */
 export interface IContract extends TenantEntity {
   contract_id: string;

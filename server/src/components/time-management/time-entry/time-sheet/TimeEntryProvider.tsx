@@ -20,7 +20,7 @@ interface ITimeEntryWithNew extends Omit<ITimeEntry, 'tenant'> {
   isNew?: boolean;
   isDirty?: boolean;
   tempId?: string;
-  client_id?: string; // Added for billing plan selection
+  client_id?: string; // Added for contract line selection
   tax_rate_id?: string | null; // ID of the applied tax rate
   tax_percentage?: number | null; // Percentage of the applied tax rate
 }
