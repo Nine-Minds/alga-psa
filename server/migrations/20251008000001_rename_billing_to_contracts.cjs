@@ -1,5 +1,5 @@
 /**
- * Migration 2 Combined Rename: Plan Bundle/Contract Line Terminology Flip
+ * Migration 2 Combined Rename: Plan Bundle/Billing Plan Terminology Flip
  *
  * This migration creates the new tables, adds dual-write columns, and
  * backfills data so that the application can run with both legacy and new
@@ -24,6 +24,7 @@ exports.up = async function up(knex) {
   try {
     await migrateContracts(knex, state);
     await migrateContractLines(knex, state);
+    await migrateServiceTables(knex, state);
     await verifyContracts(knex);
     await verifyContractLines(knex);
 
@@ -72,18 +73,31 @@ exports.down = async function down(knex) {
     });
   }
 
-  // Drop created tables (reverse order)
+  // Drop created tables (reverse order with CASCADE for dependencies)
   const tables = [
+    'contract_line_service_usage_config',
+    'contract_line_service_rate_tiers',
+    'contract_line_service_hourly_configs',
+    'contract_line_service_hourly_config',
+    'contract_line_service_fixed_config',
+    'contract_line_service_bucket_config',
+    'contract_line_discounts',
+    'contract_line_service_configuration',
+    'contract_line_services',
     'client_contract_lines',
     'contract_line_fixed_config',
-    'contract_lines',
     'contract_line_mappings',
+    'contract_lines',
     'client_contracts',
     'contracts',
   ];
 
   for (const table of tables) {
-    await knex.schema.dropTableIfExists(table);
+    const exists = await knex.schema.hasTable(table);
+    if (exists) {
+      await knex.raw(`DROP TABLE IF EXISTS ${table} CASCADE`);
+      console.log(`  Dropped ${table}`);
+    }
   }
 
   console.log('✓ Rollback completed');
@@ -171,6 +185,12 @@ async function createContractsTable(knex, state) {
 async function backfillContracts(knex) {
   console.log('Backfilling contracts from plan_bundles...');
 
+  const planBundlesExists = await knex.schema.hasTable('plan_bundles');
+  if (!planBundlesExists) {
+    console.log('  ⚠ plan_bundles table not found, skipping backfill');
+    return;
+  }
+
   await knex.raw(`
       INSERT INTO contracts (
         tenant,
@@ -245,6 +265,12 @@ async function createClientContracts(knex, state) {
 
   console.log('Backfilling client_contracts from client_plan_bundles...');
 
+  const clientPlanBundlesExists = await knex.schema.hasTable('client_plan_bundles');
+  if (!clientPlanBundlesExists) {
+    console.log('  ⚠ client_plan_bundles table not found, skipping backfill');
+    return;
+  }
+
   await knex.raw(`
     INSERT INTO client_contracts (
       tenant, client_contract_id, client_id, contract_id,
@@ -290,6 +316,12 @@ async function createContractLineMappings(knex, state) {
 
   console.log('Backfilling contract_line_mappings from bundle_billing_plans...');
 
+  const bundleBillingPlansExists = await knex.schema.hasTable('bundle_billing_plans');
+  if (!bundleBillingPlansExists) {
+    console.log('  ⚠ bundle_billing_plans table not found, skipping backfill');
+    return;
+  }
+
   await knex.raw(`
     INSERT INTO contract_line_mappings (
       tenant,
@@ -332,6 +364,12 @@ async function addContractIdColumns(knex, state) {
 
 async function backfillContractIds(knex) {
   console.log('Backfilling client_billing_plans.client_contract_id from client_bundle_id...');
+
+  const tableExists = await knex.schema.hasTable('client_billing_plans');
+  if (!tableExists) {
+    console.log('  ⚠ client_billing_plans table not found, skipping backfill');
+    return;
+  }
 
   await knex.raw(`
     UPDATE client_billing_plans
@@ -382,6 +420,12 @@ async function createContractLinesTable(knex, state) {
 
 async function backfillContractLines(knex) {
   console.log('Backfilling contract_lines from billing_plans...');
+
+  const billingPlansExists = await knex.schema.hasTable('billing_plans');
+  if (!billingPlansExists) {
+    console.log('  ⚠ billing_plans table not found, skipping backfill');
+    return;
+  }
 
   await knex.raw(`
     INSERT INTO contract_lines (
@@ -503,6 +547,12 @@ async function createClientContractLines(knex, state) {
 
   console.log('Backfilling client_contract_lines from client_billing_plans...');
 
+  const clientBillingPlansExists = await knex.schema.hasTable('client_billing_plans');
+  if (!clientBillingPlansExists) {
+    console.log('  ⚠ client_billing_plans table not found, skipping backfill');
+    return;
+  }
+
   await knex.raw(`
     INSERT INTO client_contract_lines (
       tenant, client_contract_line_id, client_id, contract_line_id,
@@ -606,6 +656,15 @@ async function backfillContractLineIds(knex) {
 async function verifyContracts(knex) {
   console.log('Verifying contracts data parity...');
 
+  const planBundlesExists = await knex.schema.hasTable('plan_bundles');
+  const clientPlanBundlesExists = await knex.schema.hasTable('client_plan_bundles');
+  const bundleBillingPlansExists = await knex.schema.hasTable('bundle_billing_plans');
+
+  if (!planBundlesExists || !clientPlanBundlesExists || !bundleBillingPlansExists) {
+    console.log('  ⚠ Legacy tables not found, skipping verification (likely already cleaned up)');
+    return;
+  }
+
   const [{ count: planBundles }] = await knex('plan_bundles').count('* as count');
   const [{ count: contracts }] = await knex('contracts').count('* as count');
   if (planBundles !== contracts) {
@@ -630,6 +689,14 @@ async function verifyContracts(knex) {
 async function verifyContractLines(knex) {
   console.log('Verifying contract line data parity...');
 
+  const billingPlansExists = await knex.schema.hasTable('billing_plans');
+  const clientBillingPlansExists = await knex.schema.hasTable('client_billing_plans');
+
+  if (!billingPlansExists || !clientBillingPlansExists) {
+    console.log('  ⚠ Legacy tables not found, skipping verification (likely already cleaned up)');
+    return;
+  }
+
   const [{ count: billingPlans }] = await knex('billing_plans').count('* as count');
   const [{ count: contractLines }] = await knex('contract_lines').count('* as count');
   if (billingPlans !== contractLines) {
@@ -644,50 +711,500 @@ async function verifyContractLines(knex) {
 
   const timeEntriesExists = await knex.schema.hasTable('time_entries');
   if (timeEntriesExists) {
-    const result = await knex.raw(`
-      SELECT
-        COUNT(*) FILTER (WHERE billing_plan_id IS NOT NULL) AS legacy_rows,
-        COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
-      FROM time_entries
-    `);
+    const hasBillingPlanId = await knex.schema.hasColumn('time_entries', 'billing_plan_id');
+    const hasContractLineId = await knex.schema.hasColumn('time_entries', 'contract_line_id');
 
-    const stats = result.rows[0];
-    if (stats.legacy_rows !== stats.contract_line_rows) {
-      throw new Error(`CRITICAL: time_entries backfill incomplete! billing_plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+    if (hasBillingPlanId && hasContractLineId) {
+      const result = await knex.raw(`
+        SELECT
+          COUNT(*) FILTER (WHERE billing_plan_id IS NOT NULL) AS legacy_rows,
+          COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
+        FROM time_entries
+      `);
+
+      const stats = result.rows[0];
+      if (stats.legacy_rows !== stats.contract_line_rows) {
+        throw new Error(`CRITICAL: time_entries backfill incomplete! billing_plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+      }
     }
   }
 
   const usageTrackingExists = await knex.schema.hasTable('usage_tracking');
   if (usageTrackingExists) {
-    const result = await knex.raw(`
-      SELECT
-        COUNT(*) FILTER (WHERE billing_plan_id IS NOT NULL) AS legacy_rows,
-        COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
-      FROM usage_tracking
-    `);
+    const hasBillingPlanId = await knex.schema.hasColumn('usage_tracking', 'billing_plan_id');
+    const hasContractLineId = await knex.schema.hasColumn('usage_tracking', 'contract_line_id');
 
-    const stats = result.rows[0];
-    if (stats.legacy_rows !== stats.contract_line_rows) {
-      throw new Error(`usage_tracking backfill incomplete! billing_plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+    if (hasBillingPlanId && hasContractLineId) {
+      const result = await knex.raw(`
+        SELECT
+          COUNT(*) FILTER (WHERE billing_plan_id IS NOT NULL) AS legacy_rows,
+          COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
+        FROM usage_tracking
+      `);
+
+      const stats = result.rows[0];
+      if (stats.legacy_rows !== stats.contract_line_rows) {
+        throw new Error(`usage_tracking backfill incomplete! billing_plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+      }
     }
   }
 
   const planServiceConfigExists = await knex.schema.hasTable('plan_service_configuration');
   if (planServiceConfigExists) {
-    const result = await knex.raw(`
-      SELECT
-        COUNT(*) FILTER (WHERE plan_id IS NOT NULL) AS legacy_rows,
-        COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
-      FROM plan_service_configuration
-    `);
+    const hasPlanId = await knex.schema.hasColumn('plan_service_configuration', 'plan_id');
+    const hasContractLineId = await knex.schema.hasColumn('plan_service_configuration', 'contract_line_id');
 
-    const stats = result.rows[0];
-    if (stats.legacy_rows !== stats.contract_line_rows) {
-      throw new Error(`plan_service_configuration backfill incomplete! plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+    if (hasPlanId && hasContractLineId) {
+      const result = await knex.raw(`
+        SELECT
+          COUNT(*) FILTER (WHERE plan_id IS NOT NULL) AS legacy_rows,
+          COUNT(*) FILTER (WHERE contract_line_id IS NOT NULL) AS contract_line_rows
+        FROM plan_service_configuration
+      `);
+
+      const stats = result.rows[0];
+      if (stats.legacy_rows !== stats.contract_line_rows) {
+        throw new Error(`plan_service_configuration backfill incomplete! plan_id=${stats.legacy_rows}, contract_line_id=${stats.contract_line_rows}`);
+      }
     }
   }
 
   console.log('  ✓ Verified contract line backfills');
+}
+
+async function migrateServiceTables(knex, state) {
+  console.log('--- Service tables workstream (plan_* → contract_line_*) ---');
+
+  await createContractLineServices(knex, state);
+  await createContractLineServiceConfiguration(knex, state);
+  await createContractLineDiscounts(knex, state);
+  await createContractLineServiceBucketConfig(knex, state);
+  await createContractLineServiceFixedConfig(knex, state);
+  await createContractLineServiceHourlyConfig(knex, state);
+  await createContractLineServiceHourlyConfigs(knex, state);
+  await createContractLineServiceRateTiers(knex, state);
+  await createContractLineServiceUsageConfig(knex, state);
+}
+
+async function createContractLineServices(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_services');
+  if (exists) {
+    console.log('contract_line_services table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_services table...');
+  state.createdTables.push('contract_line_services');
+
+  await knex.schema.createTable('contract_line_services', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('service_id').notNullable();
+    table.integer('quantity');
+    table.bigInteger('custom_rate');
+    table.uuid('contract_line_id').notNullable();
+
+    table.primary(['tenant', 'service_id', 'contract_line_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_services', 'contract_line_services_tenant_fkey');
+
+  const planServicesExists = await knex.schema.hasTable('plan_services');
+  if (!planServicesExists) {
+    console.log('  ⚠ plan_services table not found, skipping backfill');
+    return;
+  }
+
+  // Check if plan_services has contract_line_id (from migration) or plan_id (legacy)
+  const hasContractLineId = await knex.schema.hasColumn('plan_services', 'contract_line_id');
+  const hasPlanId = await knex.schema.hasColumn('plan_services', 'plan_id');
+
+  if (!hasContractLineId && !hasPlanId) {
+    console.log('  ⚠ plan_services has neither contract_line_id nor plan_id, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_services from plan_services...');
+
+  const sourceColumn = hasContractLineId ? 'contract_line_id' : 'plan_id';
+  await knex.raw(`
+    INSERT INTO contract_line_services (tenant, service_id, quantity, custom_rate, contract_line_id)
+    SELECT tenant, service_id, quantity, custom_rate, ${sourceColumn}
+    FROM plan_services
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_services').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_services`);
+}
+
+async function createContractLineServiceConfiguration(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_configuration');
+  if (exists) {
+    console.log('contract_line_service_configuration table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_configuration table...');
+  state.createdTables.push('contract_line_service_configuration');
+
+  await knex.schema.createTable('contract_line_service_configuration', (table) => {
+    table.uuid('config_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+    table.uuid('service_id').notNullable();
+    table.string('configuration_type', 50).notNullable();
+    table.decimal('custom_rate', 10, 2);
+    table.integer('quantity');
+    table.uuid('tenant').notNullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+    table.uuid('contract_line_id').notNullable();
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_configuration', 'contract_line_service_configuration_tenant_fkey');
+
+  const planServiceConfigurationExists = await knex.schema.hasTable('plan_service_configuration');
+  if (!planServiceConfigurationExists) {
+    console.log('  ⚠ plan_service_configuration table not found, skipping backfill');
+    return;
+  }
+
+  // Check if plan_service_configuration has contract_line_id (from migration) or plan_id (legacy)
+  const hasContractLineId = await knex.schema.hasColumn('plan_service_configuration', 'contract_line_id');
+  const hasPlanId = await knex.schema.hasColumn('plan_service_configuration', 'plan_id');
+
+  if (!hasContractLineId && !hasPlanId) {
+    console.log('  ⚠ plan_service_configuration has neither contract_line_id nor plan_id, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_configuration from plan_service_configuration...');
+
+  const sourceColumn = hasContractLineId ? 'contract_line_id' : 'plan_id';
+  await knex.raw(`
+    INSERT INTO contract_line_service_configuration
+      (config_id, service_id, configuration_type, custom_rate, quantity, tenant, created_at, updated_at, contract_line_id)
+    SELECT config_id, service_id, configuration_type, custom_rate, quantity, tenant, created_at, updated_at, ${sourceColumn}
+    FROM plan_service_configuration
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_configuration').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_configuration`);
+}
+
+async function createContractLineDiscounts(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_discounts');
+  if (exists) {
+    console.log('contract_line_discounts table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_discounts table...');
+  state.createdTables.push('contract_line_discounts');
+
+  await knex.schema.createTable('contract_line_discounts', (table) => {
+    table.uuid('discount_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.uuid('client_id');
+    table.uuid('contract_line_id').notNullable();
+
+    table.primary(['tenant', 'discount_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_discounts', 'contract_line_discounts_tenant_fkey');
+
+  const planDiscountsExists = await knex.schema.hasTable('plan_discounts');
+  if (!planDiscountsExists) {
+    console.log('  ⚠ plan_discounts table not found, skipping backfill');
+    return;
+  }
+
+  // Check if plan_discounts has contract_line_id (from migration) or plan_id (legacy)
+  const hasContractLineId = await knex.schema.hasColumn('plan_discounts', 'contract_line_id');
+  const hasPlanId = await knex.schema.hasColumn('plan_discounts', 'plan_id');
+
+  if (!hasContractLineId && !hasPlanId) {
+    console.log('  ⚠ plan_discounts has neither contract_line_id nor plan_id, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_discounts from plan_discounts...');
+
+  const sourceColumn = hasContractLineId ? 'contract_line_id' : 'plan_id';
+  await knex.raw(`
+    INSERT INTO contract_line_discounts (discount_id, tenant, client_id, contract_line_id)
+    SELECT discount_id, tenant, client_id, ${sourceColumn}
+    FROM plan_discounts
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_discounts').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_discounts`);
+}
+
+async function createContractLineServiceBucketConfig(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_bucket_config');
+  if (exists) {
+    console.log('contract_line_service_bucket_config table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_bucket_config table...');
+  state.createdTables.push('contract_line_service_bucket_config');
+
+  await knex.schema.createTable('contract_line_service_bucket_config', (table) => {
+    table.uuid('config_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.integer('total_minutes').notNullable();
+    table.string('billing_period').notNullable().defaultTo('monthly');
+    table.decimal('overage_rate', 10, 2).notNullable().defaultTo(0);
+    table.boolean('allow_rollover').notNullable().defaultTo(false);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_bucket_config', 'contract_line_service_bucket_config_tenant_fkey');
+
+  const planServiceBucketConfigExists = await knex.schema.hasTable('plan_service_bucket_config');
+  if (!planServiceBucketConfigExists) {
+    console.log('  ⚠ plan_service_bucket_config table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_bucket_config from plan_service_bucket_config...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_bucket_config
+      (config_id, tenant, total_minutes, billing_period, overage_rate, allow_rollover, created_at, updated_at)
+    SELECT config_id, tenant, total_minutes, billing_period, overage_rate, allow_rollover, created_at, updated_at
+    FROM plan_service_bucket_config
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_bucket_config').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_bucket_config`);
+}
+
+async function createContractLineServiceFixedConfig(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_fixed_config');
+  if (exists) {
+    console.log('contract_line_service_fixed_config table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_fixed_config table...');
+  state.createdTables.push('contract_line_service_fixed_config');
+
+  await knex.schema.createTable('contract_line_service_fixed_config', (table) => {
+    table.uuid('config_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+    table.decimal('base_rate', 10, 2);
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_fixed_config', 'contract_line_service_fixed_config_tenant_fkey');
+
+  const planServiceFixedConfigExists = await knex.schema.hasTable('plan_service_fixed_config');
+  if (!planServiceFixedConfigExists) {
+    console.log('  ⚠ plan_service_fixed_config table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_fixed_config from plan_service_fixed_config...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_fixed_config (config_id, tenant, created_at, updated_at, base_rate)
+    SELECT config_id, tenant, created_at, updated_at, base_rate
+    FROM plan_service_fixed_config
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_fixed_config').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_fixed_config`);
+}
+
+async function createContractLineServiceHourlyConfig(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_hourly_config');
+  if (exists) {
+    console.log('contract_line_service_hourly_config table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_hourly_config table...');
+  state.createdTables.push('contract_line_service_hourly_config');
+
+  await knex.schema.createTable('contract_line_service_hourly_config', (table) => {
+    table.uuid('config_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.integer('minimum_billable_time').notNullable().defaultTo(15);
+    table.integer('round_up_to_nearest').notNullable().defaultTo(15);
+    table.boolean('enable_overtime').notNullable().defaultTo(false);
+    table.decimal('overtime_rate', 10, 2);
+    table.integer('overtime_threshold');
+    table.boolean('enable_after_hours_rate').notNullable().defaultTo(false);
+    table.decimal('after_hours_multiplier', 10, 2);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_hourly_config', 'contract_line_service_hourly_config_tenant_fkey');
+
+  const planServiceHourlyConfigExists = await knex.schema.hasTable('plan_service_hourly_config');
+  if (!planServiceHourlyConfigExists) {
+    console.log('  ⚠ plan_service_hourly_config table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_hourly_config from plan_service_hourly_config...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_hourly_config
+      (config_id, tenant, minimum_billable_time, round_up_to_nearest, enable_overtime, overtime_rate,
+       overtime_threshold, enable_after_hours_rate, after_hours_multiplier, created_at, updated_at)
+    SELECT config_id, tenant, minimum_billable_time, round_up_to_nearest, enable_overtime, overtime_rate,
+       overtime_threshold, enable_after_hours_rate, after_hours_multiplier, created_at, updated_at
+    FROM plan_service_hourly_config
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_hourly_config').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_hourly_config`);
+}
+
+async function createContractLineServiceHourlyConfigs(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_hourly_configs');
+  if (exists) {
+    console.log('contract_line_service_hourly_configs table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_hourly_configs table...');
+  state.createdTables.push('contract_line_service_hourly_configs');
+
+  await knex.schema.createTable('contract_line_service_hourly_configs', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('config_id').notNullable();
+    table.decimal('hourly_rate', 10, 2).notNullable();
+    table.integer('minimum_billable_time').notNullable();
+    table.integer('round_up_to_nearest').notNullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_hourly_configs', 'contract_line_service_hourly_configs_tenant_fkey');
+
+  const planServiceHourlyConfigsExists = await knex.schema.hasTable('plan_service_hourly_configs');
+  if (!planServiceHourlyConfigsExists) {
+    console.log('  ⚠ plan_service_hourly_configs table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_hourly_configs from plan_service_hourly_configs...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_hourly_configs
+      (tenant, config_id, hourly_rate, minimum_billable_time, round_up_to_nearest, created_at, updated_at)
+    SELECT tenant, config_id, hourly_rate, minimum_billable_time, round_up_to_nearest, created_at, updated_at
+    FROM plan_service_hourly_configs
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_hourly_configs').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_hourly_configs`);
+}
+
+async function createContractLineServiceRateTiers(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_rate_tiers');
+  if (exists) {
+    console.log('contract_line_service_rate_tiers table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_rate_tiers table...');
+  state.createdTables.push('contract_line_service_rate_tiers');
+
+  await knex.schema.createTable('contract_line_service_rate_tiers', (table) => {
+    table.uuid('tier_id').defaultTo(knex.raw('gen_random_uuid()')).notNullable();
+    table.uuid('config_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.integer('min_quantity').notNullable();
+    table.integer('max_quantity');
+    table.decimal('rate', 10, 2).notNullable();
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+
+    table.primary(['tenant', 'tier_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_rate_tiers', 'contract_line_service_rate_tiers_tenant_fkey');
+
+  const planServiceRateTiersExists = await knex.schema.hasTable('plan_service_rate_tiers');
+  if (!planServiceRateTiersExists) {
+    console.log('  ⚠ plan_service_rate_tiers table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_rate_tiers from plan_service_rate_tiers...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_rate_tiers
+      (tier_id, config_id, tenant, min_quantity, max_quantity, rate, created_at, updated_at)
+    SELECT tier_id, config_id, tenant, min_quantity, max_quantity, rate, created_at, updated_at
+    FROM plan_service_rate_tiers
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_rate_tiers').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_rate_tiers`);
+}
+
+async function createContractLineServiceUsageConfig(knex, state) {
+  const exists = await knex.schema.hasTable('contract_line_service_usage_config');
+  if (exists) {
+    console.log('contract_line_service_usage_config table already exists, skipping');
+    return;
+  }
+
+  console.log('Creating contract_line_service_usage_config table...');
+  state.createdTables.push('contract_line_service_usage_config');
+
+  await knex.schema.createTable('contract_line_service_usage_config', (table) => {
+    table.uuid('config_id').notNullable();
+    table.uuid('tenant').notNullable();
+    table.string('unit_of_measure').notNullable().defaultTo('Unit');
+    table.boolean('enable_tiered_pricing').notNullable().defaultTo(false);
+    table.integer('minimum_usage').notNullable().defaultTo(0);
+    table.timestamp('created_at').defaultTo(knex.fn.now()).notNullable();
+    table.timestamp('updated_at').defaultTo(knex.fn.now()).notNullable();
+    table.decimal('base_rate', 10, 2);
+
+    table.primary(['tenant', 'config_id']);
+  });
+
+  await addTenantForeignKey(knex, 'contract_line_service_usage_config', 'contract_line_service_usage_config_tenant_fkey');
+
+  const planServiceUsageConfigExists = await knex.schema.hasTable('plan_service_usage_config');
+  if (!planServiceUsageConfigExists) {
+    console.log('  ⚠ plan_service_usage_config table not found, skipping backfill');
+    return;
+  }
+
+  console.log('Backfilling contract_line_service_usage_config from plan_service_usage_config...');
+  await knex.raw(`
+    INSERT INTO contract_line_service_usage_config
+      (config_id, tenant, unit_of_measure, enable_tiered_pricing, minimum_usage, created_at, updated_at, base_rate)
+    SELECT config_id, tenant, unit_of_measure, enable_tiered_pricing, minimum_usage, created_at, updated_at, base_rate
+    FROM plan_service_usage_config
+    ON CONFLICT DO NOTHING
+  `);
+
+  const [{ count }] = await knex('contract_line_service_usage_config').count('* as count');
+  console.log(`  ✓ Backfilled ${count} contract_line_service_usage_config`);
 }
 
 async function addTenantForeignKey(knex, tableName, constraintName) {
