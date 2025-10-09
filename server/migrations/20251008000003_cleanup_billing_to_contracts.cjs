@@ -14,8 +14,6 @@ exports.up = async function up(knex) {
   console.log('WARNING: This will drop legacy billing tables/columns. Ensure dual-write period is complete.');
   console.log('='.repeat(80));
 
-  await renameContractColumns(knex);
-  await renameContractLineColumns(knex);
   await addContractForeignKeys(knex);
   await addContractLineForeignKeys(knex);
   await makeContractLineIdNotNull(knex);
@@ -36,67 +34,8 @@ exports.down = async function down(knex) {
   console.log('Restoring dropped tables/columns automatically is not supported.');
   console.log('='.repeat(80));
 
-  const contractLinesExists = await knex.schema.hasTable('contract_lines');
-  if (contractLinesExists) {
-    const hasContractLineName = await knex.schema.hasColumn('contract_lines', 'contract_line_name');
-    const hasPlanName = await knex.schema.hasColumn('contract_lines', 'plan_name');
-
-    if (hasContractLineName && !hasPlanName) {
-      console.log('Renaming contract_line_name back to plan_name (best effort)...');
-      await knex.schema.table('contract_lines', (table) => {
-        table.renameColumn('contract_line_name', 'plan_name');
-      });
-    }
-  }
-
   console.log('⚠ Legacy tables were dropped and are not recreated automatically.');
 };
-
-async function renameContractColumns(knex) {
-  console.log('Renaming contracts columns to final terminology...');
-
-  const hasBundleName = await knex.schema.hasColumn('contracts', 'bundle_name');
-  const hasContractName = await knex.schema.hasColumn('contracts', 'contract_name');
-
-  if (hasBundleName && !hasContractName) {
-    console.log('  Renaming bundle_name → contract_name');
-    await knex.schema.alterTable('contracts', (table) => {
-      table.renameColumn('bundle_name', 'contract_name');
-    });
-  }
-
-  const hasBundleDescription = await knex.schema.hasColumn('contracts', 'bundle_description');
-  const hasContractDescription = await knex.schema.hasColumn('contracts', 'contract_description');
-
-  if (hasBundleDescription && !hasContractDescription) {
-    console.log('  Renaming bundle_description → contract_description');
-    await knex.schema.alterTable('contracts', (table) => {
-      table.renameColumn('bundle_description', 'contract_description');
-    });
-  }
-}
-
-async function renameContractLineColumns(knex) {
-  console.log('Renaming contract line columns to final terminology...');
-
-  const exists = await knex.schema.hasTable('contract_lines');
-  if (!exists) {
-    console.log('  contract_lines table not found, skipping');
-    return;
-  }
-
-  const hasPlanName = await knex.schema.hasColumn('contract_lines', 'plan_name');
-  const hasContractLineName = await knex.schema.hasColumn('contract_lines', 'contract_line_name');
-
-  if (hasPlanName && !hasContractLineName) {
-    console.log('  Renaming plan_name → contract_line_name');
-    await knex.schema.table('contract_lines', (table) => {
-      table.renameColumn('plan_name', 'contract_line_name');
-    });
-  } else if (hasContractLineName) {
-    console.log('  contract_line_name already present');
-  }
-}
 
 async function addContractForeignKeys(knex) {
   console.log('Adding permanent foreign keys for contracts tables...');
