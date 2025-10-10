@@ -83,6 +83,15 @@ const getDisplayText = (columnDef: ColumnDefinition<any> | undefined, cellValue:
 const caseInsensitiveSort: SortingFn<any> = (rowA, rowB, columnId) => {
   const a = rowA.getValue(columnId);
   const b = rowB.getValue(columnId);
+
+  // Try to parse as dates - if both are valid dates, compare as timestamps
+  const aDate = a ? new Date(a) : null;
+  const bDate = b ? new Date(b) : null;
+
+  if (aDate && !isNaN(aDate.getTime()) && bDate && !isNaN(bDate.getTime())) {
+    return aDate.getTime() - bDate.getTime();
+  }
+
   return String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
 };
 
