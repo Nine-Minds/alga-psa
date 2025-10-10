@@ -23,6 +23,7 @@ import {
   Building2,
   ClipboardList,
   UserCheck,
+  Sparkles,
 } from 'lucide-react';
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => {
@@ -128,7 +129,7 @@ const WelcomeDashboard = () => {
       {/* Quick Start Section */}
       <div className="mb-8">
         <h2 className="text-xl font-semibold mb-4" style={{ color: 'rgb(var(--color-text-900))' }}>Quick Start Guide</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <QuickStartCard
             icon={Building2}
             step="1"
@@ -149,6 +150,13 @@ const WelcomeDashboard = () => {
             title="Invite Team Members"
             description="Bring in your team and assign roles to start collaborating."
             href="/msp/settings?tab=users"
+          />
+          <QuickStartCard
+            icon={Sparkles}
+            step="4"
+            title="Launch Setup Wizard"
+            description="Configure everything in one place with our guided setup wizard."
+            href="/msp/onboarding"
           />
         </div>
       </div>
