@@ -4,6 +4,9 @@ import { StorageServiceError, StorageValidationError } from '../../../ee/server/
 import { getStorageServiceForInstall } from '../../../ee/server/src/lib/extensions/storage/v2/factory';
 import type { StorageBulkPutRequest, StorageListRequest } from '../../../ee/server/src/lib/extensions/storage/v2/types';
 import { isStorageApiEnabled } from '../../../ee/server/src/lib/extensions/storage/v2/config';
+import { getCurrentUser } from '../../../server/src/lib/actions/user-actions/userActions';
+import { hasPermission } from '../../../server/src/lib/auth/rbac';
+import type { Knex } from 'knex';
 
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).optional(),
@@ -108,14 +111,29 @@ async function ensureTenantAccess(req: NextRequest, tenantId: string): Promise<v
   }
 }
 
+async function ensureExtensionPermission(requiredAction: 'read' | 'write', tenantId: string, knex: Knex): Promise<void> {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.tenant) {
+    throw new StorageServiceError('UNAUTHORIZED', 'Authentication required');
+  }
+  if (currentUser.tenant !== tenantId) {
+    throw new StorageServiceError('UNAUTHORIZED', 'Tenant mismatch');
+  }
+  const allowed = await hasPermission(currentUser, 'extension', requiredAction, knex);
+  if (!allowed) {
+    throw new StorageServiceError('UNAUTHORIZED', 'Extension access denied');
+  }
+}
+
 export async function GET(req: NextRequest, { params }: { params: { installId: string; namespace: string } }) {
   try {
     if (!isStorageApiEnabled()) {
       return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
     }
     const search = listQuerySchema.parse(Object.fromEntries(new URL(req.url).searchParams.entries()));
-    const { service, tenantId } = await getStorageServiceForInstall(params.installId);
+    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
+    await ensureExtensionPermission('read', tenantId, knex);
 
     const request: StorageListRequest = {
       namespace: params.namespace,
@@ -139,8 +157,9 @@ export async function POST(req: NextRequest, { params }: { params: { installId: 
       return NextResponse.json({ error: 'Storage API disabled' }, { status: 404 });
     }
     const body = bulkPutSchema.parse(await req.json());
-    const { service, tenantId } = await getStorageServiceForInstall(params.installId);
+    const { service, tenantId, knex } = await getStorageServiceForInstall(params.installId);
     await ensureTenantAccess(req, tenantId);
+    await ensureExtensionPermission('write', tenantId, knex);
 
     const request: StorageBulkPutRequest = {
       namespace: params.namespace,

@@ -39,14 +39,15 @@ export async function ensureExtensionStorageTables(): Promise<void> {
     const currentDatabase = rows?.[0]?.name as string | undefined;
     const safeDbName = (currentDatabase ?? 'sebastian_test').replace(/"/g, '""');
 
+    const appUserPassword = process.env.DB_PASSWORD_SERVER ?? 'test_password';
     await db.raw(`
       DO $$
       BEGIN
-        IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
-          CREATE ROLE app_user WITH LOGIN PASSWORD 'test_password';
-        ELSE
-          ALTER ROLE app_user WITH LOGIN PASSWORD 'test_password';
-        END IF;
+      IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
+        CREATE ROLE app_user WITH LOGIN PASSWORD '${appUserPassword}';
+      ELSE
+        ALTER ROLE app_user WITH LOGIN PASSWORD '${appUserPassword}';
+      END IF;
       END
       $$;
     `);

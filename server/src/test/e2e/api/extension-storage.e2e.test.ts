@@ -35,8 +35,8 @@ if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
 }
 
 process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
-process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
-process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'test_password';
+process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
+process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'postpass123';
 process.env.DB_HOST = process.env.DB_HOST || '127.0.0.1';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';

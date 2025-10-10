@@ -151,3 +151,4 @@ server/coverage
 .nyc_output
 coverage-nyc/
 server/coverage
+packages/product-extension-storage-api/coverage

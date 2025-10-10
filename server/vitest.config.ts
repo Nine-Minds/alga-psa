@@ -24,18 +24,21 @@ export default defineConfig({
     logHeapUsage: true,
     testTimeout: 20000,
     coverage: {
+      enabled: true,
       provider: 'v8',
       include: [
         'src/**/*.{js,ts,jsx,tsx}',
         path.resolve(__dirname, '../packages/product-extension-storage-api/**/*.{js,ts,jsx,tsx}'),
       ],
+      reportsDirectory: path.resolve(__dirname, './coverage'),
+      reporter: ['text', 'html', 'lcov'],
     },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@shared': path.resolve(__dirname, '../shared'),
-      'next/server': path.resolve(__dirname, '../node_modules/next/server.js'),
+      'next/server': path.resolve(__dirname, './src/test/stubs/next-server.ts'),
       '@product/extension-storage-api/ee/record-impl': path.resolve(
         __dirname,
         '../packages/product-extension-storage-api/ee/record-impl.ts',

@@ -14,6 +14,8 @@ import { GET as getRecord, PUT as putRecord, DELETE as deleteRecord } from '@pro
 import { GET as listRecords, POST as bulkPutRecords } from '@product/extension-storage-api/ee/records-impl';
 import { ExtensionStorageServiceV2 } from '../../../../../ee/server/src/lib/extensions/storage/v2/service';
 import * as storageFactory from '../../../../../ee/server/src/lib/extensions/storage/v2/factory';
+import * as userActions from 'server/src/lib/actions/user-actions/userActions';
+import * as rbac from 'server/src/lib/auth/rbac';
 
 if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
   (globalThis as any).AsyncLocalStorage = AsyncLocalStorage;
@@ -37,6 +39,8 @@ describe('Extension Storage Route Handlers', () => {
   let originalEdition: string | undefined;
   let originalPublicEdition: string | undefined;
   let originalFlag: string | undefined;
+  let getCurrentUserSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let hasPermissionSpy: ReturnType<typeof vi.spyOn> | null = null;
 
   beforeAll(async () => {
     originalFlag = process.env.EXT_STORAGE_API_ENABLED;
@@ -81,7 +85,23 @@ describe('Extension Storage Route Handlers', () => {
 
   afterEach(async () => {
     await testHelpers.afterEach();
+    getCurrentUserSpy?.mockRestore();
+    hasPermissionSpy?.mockRestore();
+    getCurrentUserSpy = null;
+    hasPermissionSpy = null;
   });
+
+  function mockAuth(permissionGranted = true, userTenant?: string) {
+    getCurrentUserSpy?.mockRestore();
+    hasPermissionSpy?.mockRestore();
+    getCurrentUserSpy = vi.spyOn(userActions, 'getCurrentUser').mockImplementation(async () => ({
+      user_id: 'user-1',
+      tenant: userTenant ?? tenantId,
+      user_type: 'internal',
+      roles: [],
+    }) as any);
+    hasPermissionSpy = vi.spyOn(rbac, 'hasPermission').mockResolvedValue(permissionGranted);
+  }
 
   function buildRecordsUrl(query?: Record<string, string | number | boolean>): string {
     const url = new URL(`/api/ext-storage/install/${installId}/${namespace}/records`, origin);
@@ -97,8 +117,16 @@ describe('Extension Storage Route Handlers', () => {
     return `${origin}/api/ext-storage/install/${installId}/${namespace}/records/${encodeURIComponent(key)}`;
   }
 
-  function jsonRequest(method: string, url: string, body?: unknown): NextRequest {
-    const headers = new Headers({ 'x-tenant-id': tenantId });
+  function jsonRequest(
+    method: string,
+    url: string,
+    body?: unknown,
+    options?: { tenantHeader?: string | null; headers?: Record<string, string> },
+  ): NextRequest {
+    const headers = new Headers(options?.headers ?? {});
+    if (options?.tenantHeader !== null) {
+      headers.set('x-tenant-id', options?.tenantHeader ?? tenantId);
+    }
     let payload: BodyInit | undefined;
     if (body !== undefined) {
       headers.set('content-type', 'application/json');
@@ -114,6 +142,8 @@ describe('Extension Storage Route Handlers', () => {
   }
 
   it('should create and retrieve a record via PUT/GET', async () => {
+    mockAuth();
+
     const key = 'preferences';
     const payload = {
       value: { theme: 'dark', notifications: true },
@@ -137,6 +167,8 @@ describe('Extension Storage Route Handlers', () => {
   });
 
   it('should list records with optional value and metadata', async () => {
+    mockAuth();
+
     await putRecord(jsonRequest('PUT', buildRecordUrl('list-one'), { value: { id: 1 }, metadata: { marker: 'one' } }), {
       params: { installId, namespace, key: 'list-one' },
     });
@@ -158,6 +190,8 @@ describe('Extension Storage Route Handlers', () => {
   });
 
   it('should enforce optimistic concurrency', async () => {
+    mockAuth();
+
     const key = 'revision-check';
 
     const initial = await putRecord(jsonRequest('PUT', buildRecordUrl(key), { value: { step: 1 } }), {
@@ -183,6 +217,8 @@ describe('Extension Storage Route Handlers', () => {
   });
 
   it('should delete a record', async () => {
+    mockAuth();
+
     const key = 'delete-me';
     await putRecord(jsonRequest('PUT', buildRecordUrl(key), { value: { active: true } }), {
       params: { installId, namespace, key },
@@ -204,6 +240,8 @@ describe('Extension Storage Route Handlers', () => {
   });
 
   it('should insert multiple records with bulkPut', async () => {
+    mockAuth();
+
     const bulkResponse = await bulkPutRecords(
       jsonRequest('POST', buildRecordsUrl(), {
         items: [
@@ -233,6 +271,8 @@ describe('Extension Storage Route Handlers', () => {
   });
 
   it('should enforce total storage quota', async () => {
+    mockAuth();
+
     const quota = {
       maxNamespaces: 32,
       maxKeysPerNamespace: 5120,
@@ -269,5 +309,39 @@ describe('Extension Storage Route Handlers', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('should reject requests without tenant credentials', async () => {
+    mockAuth();
+
+    const response = await listRecords(jsonRequest('GET', buildRecordsUrl(), undefined, { tenantHeader: null }), {
+      params: { installId, namespace },
+    });
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('should reject requests for a different tenant', async () => {
+    mockAuth();
+
+    const response = await getRecord(jsonRequest('GET', buildRecordUrl('any-key'), undefined, { tenantHeader: 'other-tenant' }), {
+      params: { installId, namespace, key: 'any-key' },
+    });
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('should reject when user lacks extension permission', async () => {
+    mockAuth(false);
+
+    const response = await listRecords(jsonRequest('GET', buildRecordsUrl(), undefined, { tenantHeader: tenantId }), {
+      params: { installId, namespace },
+    });
+    expect(hasPermissionSpy).toHaveBeenCalled();
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
   });
 });

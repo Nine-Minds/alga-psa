@@ -13,14 +13,16 @@ import { GET as getRecord, PUT as putRecord, DELETE as deleteRecord } from '../r
 import { GET as listRecords, POST as bulkPutRecords } from '../records';
 import { ExtensionStorageServiceV2 } from '../../../ee/server/src/lib/extensions/storage/v2/service';
 import * as storageFactory from '../../../ee/server/src/lib/extensions/storage/v2/factory';
+import * as userActions from 'server/src/lib/actions/user-actions/userActions';
+import * as rbac from 'server/src/lib/auth/rbac';
 
 if (typeof (globalThis as any).AsyncLocalStorage === 'undefined') {
   (globalThis as any).AsyncLocalStorage = AsyncLocalStorage;
 }
 
 process.env.DB_USER_SERVER = process.env.DB_USER_SERVER || 'app_user';
-process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'test_password';
-process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'test_password';
+process.env.DB_PASSWORD_SERVER = process.env.DB_PASSWORD_SERVER || 'postpass123';
+process.env.DB_PASSWORD_ADMIN = process.env.DB_PASSWORD_ADMIN || 'postpass123';
 process.env.DB_HOST = process.env.DB_HOST || '127.0.0.1';
 process.env.DB_PORT = process.env.DB_PORT || '5432';
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'sebastian_test';
@@ -36,6 +38,8 @@ describe('product-extension-storage-api handlers', () => {
   let originalEdition: string | undefined;
   let originalPublicEdition: string | undefined;
   let originalFlag: string | undefined;
+  let getCurrentUserSpy: ReturnType<typeof vi.spyOn> | null = null;
+  let hasPermissionSpy: ReturnType<typeof vi.spyOn> | null = null;
 
   beforeAll(async () => {
     originalFlag = process.env.EXT_STORAGE_API_ENABLED;
@@ -80,6 +84,10 @@ describe('product-extension-storage-api handlers', () => {
 
   afterEach(async () => {
     await testHelpers.afterEach();
+    getCurrentUserSpy?.mockRestore();
+    hasPermissionSpy?.mockRestore();
+    getCurrentUserSpy = null;
+    hasPermissionSpy = null;
   });
 
   function buildRecordsUrl(query?: Record<string, string | number | boolean>): string {
@@ -96,8 +104,16 @@ describe('product-extension-storage-api handlers', () => {
     return `${origin}/api/ext-storage/install/${installId}/${namespace}/records/${encodeURIComponent(key)}`;
   }
 
-  function jsonRequest(method: string, url: string, body?: unknown): NextRequest {
-    const headers = new Headers({ 'x-tenant-id': tenantId });
+  function jsonRequest(
+    method: string,
+    url: string,
+    body?: unknown,
+    options?: { tenantHeader?: string | null; headers?: Record<string, string> },
+  ): NextRequest {
+    const headers = new Headers(options?.headers ?? {});
+    if (options?.tenantHeader !== null) {
+      headers.set('x-tenant-id', options?.tenantHeader ?? tenantId);
+    }
     let payload: BodyInit | undefined;
     if (body !== undefined) {
       headers.set('content-type', 'application/json');
@@ -111,7 +127,20 @@ describe('product-extension-storage-api handlers', () => {
     return (await response.clone().json()) as T;
   }
 
+  function mockAuth(permissionGranted = true, userTenant?: string) {
+    getCurrentUserSpy?.mockRestore();
+    hasPermissionSpy?.mockRestore();
+    getCurrentUserSpy = vi.spyOn(userActions, 'getCurrentUser').mockImplementation(async () => ({
+      user_id: 'user-1',
+      tenant: userTenant ?? tenantId,
+      user_type: 'internal',
+      roles: [],
+    }) as any);
+    hasPermissionSpy = vi.spyOn(rbac, 'hasPermission').mockResolvedValue(permissionGranted);
+  }
+
   it('creates and retrieves a record', async () => {
+    mockAuth();
     const key = 'preferences';
     const payload = { value: { theme: 'dark' }, metadata: { contentType: 'application/json' } };
 
@@ -132,6 +161,7 @@ describe('product-extension-storage-api handlers', () => {
   });
 
   it('lists records with payloads', async () => {
+    mockAuth();
     await putRecord(jsonRequest('PUT', buildRecordUrl('list-one'), { value: { id: 1 }, metadata: { label: 'one' } }), {
       params: { installId, namespace, key: 'list-one' },
     });
@@ -153,6 +183,7 @@ describe('product-extension-storage-api handlers', () => {
   });
 
   it('enforces optimistic concurrency', async () => {
+    mockAuth();
     const key = 'revision-check';
 
     const initial = await putRecord(jsonRequest('PUT', buildRecordUrl(key), { value: { v: 1 } }), {
@@ -177,6 +208,7 @@ describe('product-extension-storage-api handlers', () => {
   });
 
   it('deletes a record', async () => {
+    mockAuth();
     const key = 'delete-me';
     await putRecord(jsonRequest('PUT', buildRecordUrl(key), { value: { active: true } }), {
       params: { installId, namespace, key },
@@ -197,6 +229,7 @@ describe('product-extension-storage-api handlers', () => {
   });
 
   it('bulk inserts records', async () => {
+    mockAuth();
     const response = await bulkPutRecords(
       jsonRequest('POST', buildRecordsUrl(), {
         items: [
@@ -212,6 +245,7 @@ describe('product-extension-storage-api handlers', () => {
   });
 
   it('enforces quota limits', async () => {
+    mockAuth();
     const quota = {
       maxNamespaces: 32,
       maxKeysPerNamespace: 5120,
@@ -248,5 +282,34 @@ describe('product-extension-storage-api handlers', () => {
     } finally {
       spy.mockRestore();
     }
+  });
+
+  it('rejects requests without tenant credentials', async () => {
+    mockAuth();
+    const response = await listRecords(jsonRequest('GET', buildRecordsUrl(), undefined, { tenantHeader: null }), {
+      params: { installId, namespace },
+    });
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+
+  it('rejects requests for a different tenant', async () => {
+    mockAuth();
+    const response = await getRecord(jsonRequest('GET', buildRecordUrl('any-key'), undefined, { tenantHeader: 'other-tenant' }), {
+      params: { installId, namespace, key: 'any-key' },
+    });
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
+  });
+  it('rejects requests when user lacks extension permission', async () => {
+    mockAuth(false);
+    const response = await listRecords(jsonRequest('GET', buildRecordsUrl(), undefined, { tenantHeader: tenantId }), {
+      params: { installId, namespace },
+    });
+    expect(response.status).toBe(401);
+    const body: any = await readJson(response);
+    expect(body.error.code).toBe('UNAUTHORIZED');
   });
 });

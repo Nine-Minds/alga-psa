@@ -43,6 +43,10 @@ exports.seed = async function(knex) {
         { resource: 'document', action: 'read', msp: true, client: false, description: 'View documents' },
         { resource: 'document', action: 'update', msp: true, client: false, description: 'Update documents' },
         { resource: 'document', action: 'delete', msp: true, client: false, description: 'Delete documents' },
+
+        // Extension permissions
+        { resource: 'extension', action: 'read', msp: true, client: false, description: 'Read extension APIs and storage' },
+        { resource: 'extension', action: 'write', msp: true, client: false, description: 'Write extension APIs and storage' },
         
         // Invoice permissions
         { resource: 'invoice', action: 'create', msp: true, client: false, description: 'Create invoices' },
