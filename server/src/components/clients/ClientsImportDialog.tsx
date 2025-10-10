@@ -265,41 +265,50 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
     }
 
     if (fullCSVData) {
-      // Process ALL rows from fullCSVData, not just preview rows
-      const results = fullCSVData.map((row): ICSVValidationResult => {
-        const mappedData: Record<string, any> = {};
-        columnMappings.forEach((mapping, index) => {
-          if (mapping.clientField) {
-            mappedData[mapping.clientField] = row[index];
-          }
+      setIsProcessing(true);
+      setErrors([]);
+
+      try {
+        // Process ALL rows from fullCSVData, not just preview rows
+        const results = fullCSVData.map((row): ICSVValidationResult => {
+          const mappedData: Record<string, any> = {};
+          columnMappings.forEach((mapping, index) => {
+            if (mapping.clientField) {
+              mappedData[mapping.clientField] = row[index];
+            }
+          });
+
+          return validateClientData(mappedData);
         });
 
-        return validateClientData(mappedData);
-      });
+        // Check for existing clients
+        const clientNames = results
+          .filter(result => result.isValid && result.data.client_name)
+          .map((result): string => result.data.client_name);
 
-      // Check for existing clients
-      const clientNames = results
-        .filter(result => result.isValid && result.data.client_name)
-        .map((result): string => result.data.client_name);
+        const existingClients = await checkExistingClients(clientNames);
+        const existingClientNames = new Set(existingClients.map((c): string => c.client_name.toLowerCase()));
 
-      const existingClients = await checkExistingClients(clientNames);
-      const existingClientNames = new Set(existingClients.map((c): string => c.client_name.toLowerCase()));
+        // Mark existing clients in validation results
+        const updatedResults = results.map((result): ICSVValidationResult => ({
+          ...result,
+          isExisting: result.data.client_name ? existingClientNames.has(result.data.client_name.toLowerCase()) : false
+        }));
 
-      // Mark existing clients in validation results
-      const updatedResults = results.map((result): ICSVValidationResult => ({
-        ...result,
-        isExisting: result.data.client_name ? existingClientNames.has(result.data.client_name.toLowerCase()) : false
-      }));
+        const existingCount = updatedResults.filter(result => result.isExisting).length;
 
-      const existingCount = updatedResults.filter(result => result.isExisting).length;
+        if (existingCount > 0) {
+          setExistingClientsCount(existingCount);
+          setShowUpdateConfirmation(true);
+        }
 
-      if (existingCount > 0) {
-        setExistingClientsCount(existingCount);
-        setShowUpdateConfirmation(true);
+        setValidationResults(updatedResults);
+        setStep('preview');
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+      } finally {
+        setIsProcessing(false);
       }
-
-      setValidationResults(updatedResults);
-      setStep('preview');
     }
   }, [fullCSVData, columnMappings, validateClientData, validateMappings]);
 
@@ -470,10 +479,20 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                 <p>* Required fields must be mapped for import to proceed</p>
                 <p className="mt-1">Note: is_inactive should be 'true' or 'false' (case-insensitive)</p>
               </div>
+              {fullCSVData && fullCSVData.length > 100 && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    <AlertTriangle className="inline h-4 w-4 mr-1" />
+                    You are importing {fullCSVData.length} records. Processing may take a moment.
+                  </p>
+                </div>
+              )}
               <div className="mt-4">
                 <DialogFooter>
-                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                  <Button id="mapping-preview-btn" onClick={handlePreview}>Preview</Button>
+                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>Back</Button>
+                  <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+                    {isProcessing ? 'Processing...' : 'Preview'}
+                  </Button>
                 </DialogFooter>
               </div>
             </div>
