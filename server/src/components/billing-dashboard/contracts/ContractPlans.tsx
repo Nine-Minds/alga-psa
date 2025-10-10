@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Card, Box } from '@radix-ui/themes';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Plus, MoreVertical, Settings } from 'lucide-react';
 import {
@@ -209,38 +209,40 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
   );
 
   return (
-    <Card size="2">
-      <Box p="4">
-        <h3 className="text-lg font-medium mb-4">Service Lines</h3>
-        
-        {error && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        
-        {isLoading ? (
-          <div className="text-center py-4">Loading plans...</div>
-        ) : (
-          <>
-            <div className="mb-4">
-              {contractPlans.length === 0 ? (
-                <div className="text-center py-4 text-gray-500">
-                  No service lines have been added to this contract yet.
-                </div>
-              ) : (
-                <DataTable
-                  data={contractPlans}
-                  columns={serviceLineColumns}
-                  pagination={false}
-                  onRowClick={handleEditPlan}
-                  rowClassName={() => 'cursor-pointer'}
-                />
-              )}
-            </div>
-            
-            <div className="flex space-x-2 mt-4">
+    <Card>
+      <CardHeader>
+        <h3 className="text-lg font-semibold">Service Lines</h3>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {isLoading ? (
+            <div className="text-center py-4">Loading plans...</div>
+          ) : (
+            <>
+              <div>
+                {contractPlans.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    No service lines have been added to this contract yet.
+                  </div>
+                ) : (
+                  <DataTable
+                    data={contractPlans}
+                    columns={serviceLineColumns}
+                    pagination={false}
+                    onRowClick={handleEditPlan}
+                    rowClassName={() => 'cursor-pointer'}
+                  />
+                )}
+              </div>
+
+              <div className="flex space-x-2">
               <CustomSelect
                 options={filteredAvailablePlans.map(p => ({
                   value: p.plan_id!,
@@ -259,11 +261,12 @@ const ContractPlans: React.FC<ContractPlansProps> = ({ bundle }) => {
                 <Plus className="h-4 w-4 mr-2" />
                 Add Service Line
               </Button>
-            </div>
-          </>
-        )}
-      </Box>
-      
+              </div>
+            </>
+          )}
+        </div>
+      </CardContent>
+
       {editingPlan && (
         <ContractPlanRateDialog
           plan={editingPlan}

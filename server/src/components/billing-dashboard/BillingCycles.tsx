@@ -267,18 +267,17 @@ const BillingCycles: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <Card>
+      <CardHeader>
         <div className="flex items-center gap-2">
-          <h2 className="text-2xl font-bold">Billing Cycles</h2>
+          <h3 className="text-lg font-semibold">Billing Cycles</h3>
           <Tooltip content="Configure billing cycles for clients and create new billing periods.">
             <Info className="h-4 w-4 text-gray-500" />
           </Tooltip>
         </div>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-col gap-4">
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
@@ -292,8 +291,6 @@ const BillingCycles: React.FC = () => {
               className="pl-10"
             />
           </div>
-        </CardHeader>
-        <CardContent>
           {error && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -316,9 +313,9 @@ const BillingCycles: React.FC = () => {
               onSortChange={handleSortChange}
             />
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

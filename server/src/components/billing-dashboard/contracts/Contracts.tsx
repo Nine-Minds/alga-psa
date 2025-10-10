@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Box, Card, Heading } from '@radix-ui/themes';
+import { Card, CardHeader, CardContent } from 'server/src/components/ui/Card';
 import { Button } from 'server/src/components/ui/Button';
 import { Input } from 'server/src/components/ui/Input';
 import { Badge } from 'server/src/components/ui/Badge';
@@ -288,10 +288,10 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
 
   return (
     <>
-      <Card size="2">
-        <Box p="4">
-          <div className="flex justify-between items-center mb-4">
-            <Heading as="h3" size="4">Contracts</Heading>
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">Contracts</h3>
             <div className="flex gap-2">
               <Button
                 id='wizard-contract-button'
@@ -317,9 +317,11 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
               />
             </div>
           </div>
-
-          {/* Search and Filter */}
-          <div className="flex gap-3 mb-4">
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {/* Search and Filter */}
+            <div className="flex gap-3">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -358,77 +360,80 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
-
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-              {error}
             </div>
-          )}
 
-          {/* Show Quick Start Guide when no contracts exist */}
-          {contracts.length === 0 && showQuickStart && (
-            <div className="mb-6">
-              <QuickStartGuide
-                onDismiss={() => setShowQuickStart(false)}
-                onCreateContract={() => setShowWizard(true)}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                {error}
+              </div>
+            )}
+
+            {/* Show Quick Start Guide when no contracts exist */}
+            {contracts.length === 0 && showQuickStart && (
+              <div className="mb-6">
+                <QuickStartGuide
+                  onDismiss={() => setShowQuickStart(false)}
+                  onCreateContract={() => setShowWizard(true)}
+                />
+              </div>
+            )}
+
+            {/* Empty State when filtered results are empty but contracts exist */}
+            {contracts.length > 0 && filteredContracts.length === 0 && (
+              <div className="text-center py-12">
+                <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                  <Search className="h-12 w-12" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts found</h3>
+                <p className="text-gray-600 mb-4">
+                  Try adjusting your search or filter criteria
+                </p>
+                <Button
+                  id="clear-filters-button"
+                  variant="outline"
+                  onClick={() => {
+                    setSearchTerm('');
+                    setStatusFilter('all');
+                  }}
+                >
+                  Clear Filters
+                </Button>
+              </div>
+            )}
+
+            {/* Empty State when no contracts exist */}
+            {contracts.length === 0 && (
+              <div className="text-center py-12">
+                <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                  <Plus className="h-12 w-12" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Get started by creating your first client contract
+                </p>
+                <Button
+                  id="create-first-contract-button"
+                  onClick={() => setShowWizard(true)}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600"
+                >
+                  <Wand2 className="h-4 w-4 mr-2" />
+                  Create Your First Contract
+                </Button>
+              </div>
+            )}
+
+            {/* Show data table only when there are filtered results */}
+            {filteredContracts.length > 0 && (
+              <DataTable
+                data={filteredContracts.filter(contract => contract.bundle_id !== undefined)}
+                columns={contractColumns}
+                pagination={true}
+                onRowClick={handleContractClick}
+                rowClassName={() => "cursor-pointer"}
               />
-            </div>
-          )}
-
-          {/* Empty State when filtered results are empty but contracts exist */}
-          {contracts.length > 0 && filteredContracts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
-                <Search className="h-12 w-12" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts found</h3>
-              <p className="text-gray-600 mb-4">
-                Try adjusting your search or filter criteria
-              </p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setStatusFilter('all');
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
-          )}
-
-          {/* Empty State when no contracts exist */}
-          {contracts.length === 0 && (
-            <div className="text-center py-12">
-              <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
-                <Plus className="h-12 w-12" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No contracts yet</h3>
-              <p className="text-gray-600 mb-4">
-                Get started by creating your first client contract
-              </p>
-              <Button
-                onClick={() => setShowWizard(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600"
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                Create Your First Contract
-              </Button>
-            </div>
-          )}
-
-          {/* Show data table only when there are filtered results */}
-          {filteredContracts.length > 0 && (
-            <DataTable
-              data={filteredContracts.filter(contract => contract.bundle_id !== undefined)}
-              columns={contractColumns}
-              pagination={true}
-              onRowClick={handleContractClick}
-              rowClassName={() => "cursor-pointer"}
-            />
-          )}
-        </Box>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
       <ContractWizard
