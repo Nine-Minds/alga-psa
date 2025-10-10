@@ -87,6 +87,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
+  const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
   const [columnMappings, setColumnMappings] = useState<ICSVColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ICSVValidationResult[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -105,6 +106,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setStep('upload');
       setFile(null);
       setPreviewData(null);
+      setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
       setErrors([]);
@@ -197,9 +199,12 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       }
 
       const headers = rows[0];
+      const dataRows = rows.slice(1); // All data rows (excluding header)
+
+      setFullCSVData(dataRows); // Store all rows for import
       setPreviewData({
         headers,
-        rows: rows.slice(1, 6) // First 5 rows for preview
+        rows: dataRows.slice(0, 5) // First 5 rows for preview only
       });
 
       // Auto-map columns based on header names
@@ -259,43 +264,53 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       return;
     }
 
-    if (previewData) {
-      const results = previewData.rows.map((row): ICSVValidationResult => {
-        const mappedData: Record<string, any> = {};
-        columnMappings.forEach((mapping, index) => {
-          if (mapping.clientField) {
-            mappedData[mapping.clientField] = row[index];
-          }
+    if (fullCSVData) {
+      setIsProcessing(true);
+      setErrors([]);
+
+      try {
+        // Process ALL rows from fullCSVData, not just preview rows
+        const results = fullCSVData.map((row): ICSVValidationResult => {
+          const mappedData: Record<string, any> = {};
+          columnMappings.forEach((mapping, index) => {
+            if (mapping.clientField) {
+              mappedData[mapping.clientField] = row[index];
+            }
+          });
+
+          return validateClientData(mappedData);
         });
 
-        return validateClientData(mappedData);
-      });
+        // Check for existing clients
+        const clientNames = results
+          .filter(result => result.isValid && result.data.client_name)
+          .map((result): string => result.data.client_name);
 
-      // Check for existing clients
-      const clientNames = results
-        .filter(result => result.isValid && result.data.client_name)
-        .map((result): string => result.data.client_name);
+        const existingClients = await checkExistingClients(clientNames);
+        const existingClientNames = new Set(existingClients.map((c): string => c.client_name.toLowerCase()));
 
-      const existingClients = await checkExistingClients(clientNames);
-      const existingClientNames = new Set(existingClients.map((c): string => c.client_name.toLowerCase()));
+        // Mark existing clients in validation results
+        const updatedResults = results.map((result): ICSVValidationResult => ({
+          ...result,
+          isExisting: result.data.client_name ? existingClientNames.has(result.data.client_name.toLowerCase()) : false
+        }));
 
-      // Mark existing clients in validation results
-      const updatedResults = results.map((result): ICSVValidationResult => ({
-        ...result,
-        isExisting: result.data.client_name ? existingClientNames.has(result.data.client_name.toLowerCase()) : false
-      }));
+        const existingCount = updatedResults.filter(result => result.isExisting).length;
 
-      const existingCount = updatedResults.filter(result => result.isExisting).length;
+        if (existingCount > 0) {
+          setExistingClientsCount(existingCount);
+          setShowUpdateConfirmation(true);
+        }
 
-      if (existingCount > 0) {
-        setExistingClientsCount(existingCount);
-        setShowUpdateConfirmation(true);
+        setValidationResults(updatedResults);
+        setStep('preview');
+      } catch (error) {
+        setErrors([error instanceof Error ? error.message : 'Error processing CSV data']);
+      } finally {
+        setIsProcessing(false);
       }
-
-      setValidationResults(updatedResults);
-      setStep('preview');
     }
-  }, [previewData, columnMappings, validateClientData, validateMappings]);
+  }, [fullCSVData, columnMappings, validateClientData, validateMappings]);
 
   const handleImport = useCallback(async () => {
     if (isProcessing) return;
@@ -321,6 +336,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setStep('upload');
       setFile(null);
       setPreviewData(null);
+      setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
       setErrors([]);
@@ -463,10 +479,20 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
                 <p>* Required fields must be mapped for import to proceed</p>
                 <p className="mt-1">Note: is_inactive should be 'true' or 'false' (case-insensitive)</p>
               </div>
+              {fullCSVData && fullCSVData.length > 100 && (
+                <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                  <p className="text-sm text-yellow-800">
+                    <AlertTriangle className="inline h-4 w-4 mr-1" />
+                    You are importing {fullCSVData.length} records. Processing may take a moment.
+                  </p>
+                </div>
+              )}
               <div className="mt-4">
                 <DialogFooter>
-                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')}>Back</Button>
-                  <Button id="mapping-preview-btn" onClick={handlePreview}>Preview</Button>
+                  <Button id="mapping-back-btn" variant="outline" onClick={() => setStep('upload')} disabled={isProcessing}>Back</Button>
+                  <Button id="mapping-preview-btn" onClick={handlePreview} disabled={isProcessing}>
+                    {isProcessing ? 'Processing...' : 'Preview'}
+                  </Button>
                 </DialogFooter>
               </div>
             </div>
@@ -475,6 +501,13 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           {step === 'preview' && validationResults.length > 0 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Total records:</strong> {validationResults.length} |
+                  <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
+                  <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
+                </p>
+              </div>
               <div className="mb-6 space-y-4">
                 <div className="flex items-center justify-between py-3">
                   <div>
