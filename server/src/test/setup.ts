@@ -37,3 +37,16 @@ vi.mock('../types/ui-reflection/UIStateContext', () => ({
   UIStateProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 
+// Mock storage provider to avoid importing Node fs in jsdom context
+vi.mock('../lib/storage/StorageProviderFactory', () => ({
+  __esModule: true,
+  StorageProviderFactory: {
+    createProvider: vi.fn(async () => ({
+      putObject: vi.fn(),
+      getObjectStream: vi.fn(),
+      deleteObject: vi.fn(),
+      exists: vi.fn(),
+    })),
+  },
+  generateStoragePath: vi.fn(() => 'mock/path/file.txt'),
+}));
