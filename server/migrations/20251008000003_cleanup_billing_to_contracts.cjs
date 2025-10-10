@@ -345,14 +345,7 @@ async function dropLegacyBundleColumns(knex) {
 
 async function dropLegacyTables(knex) {
   console.log('Dropping legacy plan/billing tables...');
-
-  const citusEnabled = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1 FROM pg_extension WHERE extname = 'citus'
-    ) AS enabled
-  `);
-
-  const isCitus = citusEnabled.rows[0].enabled;
+  console.log('Note: Tables should already be undistributed from step 2 migration');
 
   const tables = [
     'bundle_billing_plans',
@@ -376,23 +369,6 @@ async function dropLegacyTables(knex) {
     const exists = await knex.schema.hasTable(table);
     if (!exists) {
       continue;
-    }
-
-    if (isCitus) {
-      try {
-        const distributed = await knex.raw(`
-          SELECT EXISTS (
-            SELECT 1 FROM pg_dist_partition WHERE logicalrelid = '${table}'::regclass
-          ) AS distributed
-        `);
-
-        if (distributed.rows[0].distributed) {
-          console.log(`  Undistributing ${table} before drop...`);
-          await knex.raw(`SELECT undistribute_table('${table}', cascade_via_foreign_keys=>true)`);
-        }
-      } catch (error) {
-        console.log(`  ⚠ Could not undistribute ${table}: ${error.message}`);
-      }
     }
 
     console.log(`  Dropping ${table}...`);
