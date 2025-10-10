@@ -529,7 +529,7 @@ export class ContractLineService extends BaseService<IContractLine> {
         }
         
         // Check if service already exists in plan
-        const existingConfig = await trx('plan_service_configuration')
+        const existingConfig = await trx('contract_line_service_configuration')
           .where('contract_line_id', planId)
           .where('service_id', data.service_id)
           .where('tenant', context.tenant)
@@ -574,7 +574,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     
     return withTransaction(knex, async (trx) => {
       // Get configuration to delete
-      const config = await trx('plan_service_configuration')
+      const config = await trx('contract_line_service_configuration')
         .where('contract_line_id', planId)
         .where('service_id', serviceId)
         .where('tenant', context.tenant)
@@ -603,7 +603,7 @@ export class ContractLineService extends BaseService<IContractLine> {
       
       return withTransaction(knex, async (trx) => {
         // Get existing configuration
-        const config = await trx('plan_service_configuration')
+        const config = await trx('contract_line_service_configuration')
           .where('contract_line_id', planId)
           .where('service_id', serviceId)
           .where('tenant', context.tenant)
@@ -637,7 +637,7 @@ export class ContractLineService extends BaseService<IContractLine> {
   ): Promise<Array<any>> {
     const { knex } = await this.getKnex();
     
-    const services = await knex('plan_service_configuration as psc')
+    const services = await knex('contract_line_service_configuration as psc')
       .join('services as s', function() {
         this.on('psc.service_id', '=', 's.service_id')
             .andOn('psc.tenant', '=', 's.tenant');
@@ -1229,7 +1229,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     };
     
     // Get service usage stats
-    const serviceStats = await knex('plan_service_configuration as psc')
+    const serviceStats = await knex('contract_line_service_configuration as psc')
       .join('services as s', 'psc.service_id', 's.service_id')
       .where('psc.contract_line_id', planId)
       .where('psc.tenant', context.tenant)
@@ -1351,7 +1351,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     // Add service count if requested
     if (options.includeServices) {
       query = query
-        .leftJoin('plan_service_configuration as psc', function() {
+        .leftJoin('contract_line_service_configuration as psc', function() {
           this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
               .andOn('cl.tenant', '=', 'psc.tenant');
         })
@@ -1373,14 +1373,14 @@ export class ContractLineService extends BaseService<IContractLine> {
       if (filters.has_services) {
         query = query.whereExists(function() {
           this.select(1)
-              .from('plan_service_configuration as psc')
+              .from('contract_line_service_configuration as psc')
               .whereRaw('psc.contract_line_id = cl.contract_line_id')
               .whereRaw('psc.tenant = cl.tenant');
         });
       } else {
         query = query.whereNotExists(function() {
           this.select(1)
-              .from('plan_service_configuration as psc')
+              .from('contract_line_service_configuration as psc')
               .whereRaw('psc.contract_line_id = cl.contract_line_id')
               .whereRaw('psc.tenant = cl.tenant');
         });
@@ -1524,7 +1524,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get all service configurations for the plan
-    const configs = await trx('plan_service_configuration')
+    const configs = await trx('contract_line_service_configuration')
       .where('contract_line_id', planId)
       .where('tenant', context.tenant)
       .select('config_id');
@@ -1674,7 +1674,7 @@ export class ContractLineService extends BaseService<IContractLine> {
     trx: Knex.Transaction
   ): Promise<void> {
     // Get source plan services
-    const sourceServices = await trx('plan_service_configuration')
+    const sourceServices = await trx('contract_line_service_configuration')
       .where('contract_line_id', sourcePlanId)
       .where('tenant', context.tenant);
     

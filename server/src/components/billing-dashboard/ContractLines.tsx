@@ -351,7 +351,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                         const newPlan = await getContractLineById(newPlanId);
                         if (newPlan) {
                           // Navigate to the appropriate configuration page based on plan type
-                          router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
+                          router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);
                         }
                       } catch (error) {
                         console.error('Error fetching new plan for configuration:', error);

@@ -333,19 +333,19 @@ export async function getCurrentUsage(): Promise<{
       // Get all services associated with the client's plan
       const services = await trx('service_catalog')
         .select('service_catalog.*')
-        .join('plan_services', function() {
-          this.on('service_catalog.service_id', '=', 'plan_services.service_id')
-            .andOn('service_catalog.tenant', '=', 'plan_services.tenant')
+        .join('contract_line_services', function() {
+          this.on('service_catalog.service_id', '=', 'contract_line_services.service_id')
+            .andOn('service_catalog.tenant', '=', 'contract_line_services.tenant')
         })
         .join('client_contract_lines', function() {
-          this.on('plan_services.contract_line_id', '=', 'client_contract_lines.contract_line_id')
-            .andOn('plan_services.tenant', '=', 'client_contract_lines.tenant')
+          this.on('contract_line_services.contract_line_id', '=', 'client_contract_lines.contract_line_id')
+            .andOn('contract_line_services.tenant', '=', 'client_contract_lines.tenant')
         })
         .where({
           'client_contract_lines.client_id': session.user.clientId,
           'client_contract_lines.is_active': true,
           'service_catalog.tenant': session.user.tenant,
-          'plan_services.tenant': session.user.tenant,
+          'contract_line_services.tenant': session.user.tenant,
           'client_contract_lines.tenant': session.user.tenant
         });
 

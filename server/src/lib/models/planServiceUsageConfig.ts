@@ -31,7 +31,7 @@ export default class PlanServiceUsageConfig {
   async getByConfigId(configId: string): Promise<IPlanServiceUsageConfig | null> {
     const tenant = await this.getTenant();
     
-    const config = await this.knex('plan_service_usage_config')
+    const config = await this.knex('contract_line_service_usage_config')
       .where({
         config_id: configId,
         tenant
@@ -49,7 +49,7 @@ export default class PlanServiceUsageConfig {
     
     const now = new Date();
     
-    await this.knex('plan_service_usage_config').insert({
+    await this.knex('contract_line_service_usage_config').insert({
       config_id: data.config_id,
       unit_of_measure: data.unit_of_measure,
       enable_tiered_pricing: data.enable_tiered_pricing,
@@ -84,7 +84,7 @@ export default class PlanServiceUsageConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_usage_config')
+    const result = await this.knex('contract_line_service_usage_config')
       .where({
         config_id: configId,
         tenant
@@ -100,7 +100,7 @@ export default class PlanServiceUsageConfig {
   async delete(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('plan_service_usage_config')
+    const result = await this.knex('contract_line_service_usage_config')
       .where({
         config_id: configId,
         tenant
@@ -116,7 +116,7 @@ export default class PlanServiceUsageConfig {
   async getRateTiers(configId: string): Promise<IPlanServiceRateTier[]> {
     const tenant = await this.getTenant();
     
-    const tiers = await this.knex('plan_service_rate_tiers')
+    const tiers = await this.knex('contract_line_service_rate_tiers')
       .where({
         config_id: configId,
         tenant
@@ -136,7 +136,7 @@ export default class PlanServiceUsageConfig {
     const tierId = uuidv4();
     const now = new Date();
     
-    await this.knex('plan_service_rate_tiers').insert({
+    await this.knex('contract_line_service_rate_tiers').insert({
       tier_id: tierId,
       config_id: data.config_id,
       min_quantity: data.min_quantity,
@@ -171,7 +171,7 @@ export default class PlanServiceUsageConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_rate_tiers')
+    const result = await this.knex('contract_line_service_rate_tiers')
       .where({
         tier_id: tierId,
         tenant
@@ -187,7 +187,7 @@ export default class PlanServiceUsageConfig {
   async deleteRateTier(tierId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('plan_service_rate_tiers')
+    const result = await this.knex('contract_line_service_rate_tiers')
       .where({
         tier_id: tierId,
         tenant
@@ -203,7 +203,7 @@ export default class PlanServiceUsageConfig {
   async deleteRateTiersByConfigId(configId: string): Promise<boolean> {
     const tenant = await this.getTenant();
     
-    const result = await this.knex('plan_service_rate_tiers')
+    const result = await this.knex('contract_line_service_rate_tiers')
       .where({
         config_id: configId,
         tenant

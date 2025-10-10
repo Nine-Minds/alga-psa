@@ -420,7 +420,7 @@ export class BillingEngine {
           .andOn('c.tenant', '=', 'cc.tenant');
       })
       // Contract-level overrides do not require service-level joins for rate determination
-      .leftJoin('plan_service_configuration as psc', function () {
+      .leftJoin('contract_line_service_configuration as psc', function () {
         this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
           .andOn('psc.tenant', '=', 'cl.tenant');
       })
@@ -726,21 +726,21 @@ export class BillingEngine {
       }
     }
     // --- End Fetch Plan-Level Fixed Config ---
-    // Use the new plan_service_configuration tables
-    const planServices = await this.knex('plan_service_configuration') // Start from plan_service_configuration
+    // Use the new contract_line_service_configuration tables
+    const planServices = await this.knex('contract_line_service_configuration') // Start from contract_line_service_configuration
       // Removed join to client_contract_lines
-      .join('plan_service_fixed_config', function () {
-        this.on('plan_service_configuration.config_id', '=', 'plan_service_fixed_config.config_id')
-          .andOn('plan_service_fixed_config.tenant', '=', 'plan_service_configuration.tenant');
+      .join('contract_line_service_fixed_config', function () {
+        this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_fixed_config.config_id')
+          .andOn('contract_line_service_fixed_config.tenant', '=', 'contract_line_service_configuration.tenant');
       })
       .join('service_catalog', function () {
-        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
-          .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant'); // Ensure tenant match on service_catalog
+        this.on('contract_line_service_configuration.service_id', '=', 'service_catalog.service_id')
+          .andOn('service_catalog.tenant', '=', 'contract_line_service_configuration.tenant'); // Ensure tenant match on service_catalog
       })
       .where({
-        'plan_service_configuration.contract_line_id': clientContractLine.contract_line_id, // Use contract_line_id directly
-        'plan_service_configuration.tenant': this.tenant, // Ensure tenant match on plan_service_configuration
-        'plan_service_configuration.configuration_type': 'Fixed'
+        'contract_line_service_configuration.contract_line_id': clientContractLine.contract_line_id, // Use contract_line_id directly
+        'contract_line_service_configuration.tenant': this.tenant, // Ensure tenant match on contract_line_service_configuration
+        'contract_line_service_configuration.configuration_type': 'Fixed'
       })
       .select(
         // Explicitly select needed columns to avoid name collisions
@@ -749,10 +749,10 @@ export class BillingEngine {
         'service_catalog.service_name',
         'service_catalog.default_rate',
         'service_catalog.tax_rate_id', // Fetch the new ID
-        'plan_service_configuration.quantity',
-        'plan_service_configuration.custom_rate', // This is plan-level custom rate
-        'plan_service_configuration.config_id',
-        'plan_service_fixed_config.base_rate' // This is the fixed plan rate
+        'contract_line_service_configuration.quantity',
+        'contract_line_service_configuration.custom_rate', // This is plan-level custom rate
+        'contract_line_service_configuration.config_id',
+        'contract_line_service_fixed_config.base_rate' // This is the fixed plan rate
       );
 
     if (planServices.length === 0) {
@@ -1039,17 +1039,17 @@ export class BillingEngine {
     const tenant = this.tenant; // Capture tenant value for joins
 
     // First get the hourly configurations for this plan
-    const hourlyConfigs = await this.knex('plan_service_configuration')
-      .join('plan_service_hourly_config', function () {
-        this.on('plan_service_configuration.config_id', '=', 'plan_service_hourly_config.config_id')
-          .andOn('plan_service_hourly_config.tenant', '=', 'plan_service_configuration.tenant');
+    const hourlyConfigs = await this.knex('contract_line_service_configuration')
+      .join('contract_line_service_hourly_config', function () {
+        this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_hourly_config.config_id')
+          .andOn('contract_line_service_hourly_config.tenant', '=', 'contract_line_service_configuration.tenant');
       })
       .where({
-        'plan_service_configuration.contract_line_id': clientContractLine.contract_line_id,
-        'plan_service_configuration.configuration_type': 'Hourly',
-        'plan_service_configuration.tenant': tenant
+        'contract_line_service_configuration.contract_line_id': clientContractLine.contract_line_id,
+        'contract_line_service_configuration.configuration_type': 'Hourly',
+        'contract_line_service_configuration.tenant': tenant
       })
-      .select('plan_service_configuration.*', 'plan_service_hourly_config.*');
+      .select('contract_line_service_configuration.*', 'contract_line_service_hourly_config.*');
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<string, {
@@ -1260,17 +1260,17 @@ export class BillingEngine {
     const tenant = this.tenant; // Capture tenant value for joins
 
     // First get the usage configurations for this plan
-    const usageConfigs = await this.knex('plan_service_configuration')
-      .join('plan_service_usage_config', function () {
-        this.on('plan_service_configuration.config_id', '=', 'plan_service_usage_config.config_id')
-          .andOn('plan_service_usage_config.tenant', '=', 'plan_service_configuration.tenant');
+    const usageConfigs = await this.knex('contract_line_service_configuration')
+      .join('contract_line_service_usage_config', function () {
+        this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_usage_config.config_id')
+          .andOn('contract_line_service_usage_config.tenant', '=', 'contract_line_service_configuration.tenant');
       })
       .where({
-        'plan_service_configuration.contract_line_id': clientContractLine.contract_line_id,
-        'plan_service_configuration.configuration_type': 'Usage',
-        'plan_service_configuration.tenant': tenant
+        'contract_line_service_configuration.contract_line_id': clientContractLine.contract_line_id,
+        'contract_line_service_configuration.configuration_type': 'Usage',
+        'contract_line_service_configuration.tenant': tenant
       })
-      .select('plan_service_configuration.*', 'plan_service_usage_config.*');
+      .select('contract_line_service_configuration.*', 'contract_line_service_usage_config.*');
 
     // Create a map of service IDs to their usage configurations and rate tiers
     const serviceConfigMap = new Map<string, {
@@ -1282,7 +1282,7 @@ export class BillingEngine {
       // Get rate tiers if tiered pricing is enabled
       let rateTiers: IPlanServiceRateTier[] = [];
       if (config.enable_tiered_pricing) {
-        rateTiers = await this.knex('plan_service_rate_tiers')
+        rateTiers = await this.knex('contract_line_service_rate_tiers')
           .where({
             config_id: config.config_id,
             tenant
@@ -1570,23 +1570,23 @@ export class BillingEngine {
     }
 
     // Get bucket configurations for this plan
-    const bucketConfigs = await this.knex('plan_service_configuration')
-      .join('plan_service_bucket_config', function () {
-        this.on('plan_service_configuration.config_id', '=', 'plan_service_bucket_config.config_id')
-          .andOn('plan_service_bucket_config.tenant', '=', 'plan_service_configuration.tenant');
+    const bucketConfigs = await this.knex('contract_line_service_configuration')
+      .join('contract_line_service_bucket_config', function () {
+        this.on('contract_line_service_configuration.config_id', '=', 'contract_line_service_bucket_config.config_id')
+          .andOn('contract_line_service_bucket_config.tenant', '=', 'contract_line_service_configuration.tenant');
       })
       .join('service_catalog', function () {
-        this.on('plan_service_configuration.service_id', '=', 'service_catalog.service_id')
-          .andOn('service_catalog.tenant', '=', 'plan_service_configuration.tenant');
+        this.on('contract_line_service_configuration.service_id', '=', 'service_catalog.service_id')
+          .andOn('service_catalog.tenant', '=', 'contract_line_service_configuration.tenant');
       })
       .where({
-        'plan_service_configuration.contract_line_id': contractLine.contract_line_id,
-        'plan_service_configuration.configuration_type': 'Bucket',
-        'plan_service_configuration.tenant': client.tenant
+        'contract_line_service_configuration.contract_line_id': contractLine.contract_line_id,
+        'contract_line_service_configuration.configuration_type': 'Bucket',
+        'contract_line_service_configuration.tenant': client.tenant
       })
       .select(
-        'plan_service_configuration.*',
-        'plan_service_bucket_config.*',
+        'contract_line_service_configuration.*',
+        'contract_line_service_bucket_config.*',
         'service_catalog.service_name',
         'service_catalog.tax_rate_id' // Fetch the new ID
       );
@@ -1830,14 +1830,14 @@ export class BillingEngine {
 
     const { startDate, endDate } = billingPeriod;
     const discounts = await this.knex('discounts')
-      .join('plan_discounts', function () {
-        this.on('discounts.discount_id', '=', 'plan_discounts.discount_id')
-          .andOn('plan_discounts.tenant', '=', 'discounts.tenant');
+      .join('contract_line_discounts', function () {
+        this.on('discounts.discount_id', '=', 'contract_line_discounts.discount_id')
+          .andOn('contract_line_discounts.tenant', '=', 'discounts.tenant');
       })
       .join('client_contract_lines', function (this: Knex.JoinClause) {
-        this.on('client_contract_lines.contract_line_id', '=', 'plan_discounts.contract_line_id')
-          .andOn('client_contract_lines.client_id', '=', 'plan_discounts.client_id')
-          .andOn('client_contract_lines.tenant', '=', 'plan_discounts.tenant');
+        this.on('client_contract_lines.contract_line_id', '=', 'contract_line_discounts.contract_line_id')
+          .andOn('client_contract_lines.client_id', '=', 'contract_line_discounts.client_id')
+          .andOn('client_contract_lines.tenant', '=', 'contract_line_discounts.tenant');
       })
       .where({
         'client_contract_lines.client_id': clientId,

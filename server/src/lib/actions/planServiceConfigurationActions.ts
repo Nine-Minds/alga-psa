@@ -303,7 +303,7 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
   }
 
   try {
-    const usageConfig = await trx<IPlanServiceUsageConfig>('plan_service_usage_config')
+    const usageConfig = await trx<IPlanServiceUsageConfig>('contract_line_service_usage_config')
       .where({ config_id: baseConfig.config_id, tenant: tenant! })
       .first();
 
@@ -315,7 +315,7 @@ export async function getPlanServiceConfiguration(planId: string, serviceId: str
 
     let tiers: IPlanServiceRateTier[] = [];
     if (usageConfig.enable_tiered_pricing) {
-      tiers = await trx<IPlanServiceRateTier>('plan_service_rate_tiers')
+      tiers = await trx<IPlanServiceRateTier>('contract_line_service_rate_tiers')
         .where({ config_id: baseConfig.config_id, tenant: tenant! })
         .orderBy('min_quantity', 'asc');
     }
@@ -444,14 +444,14 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
     const updatedConfig = await trx.transaction(async (trxInner: Knex.Transaction) => {
       const trxConfigService = new PlanServiceConfigurationService(trxInner, tenant!); // Use transaction knex
 
-      // 1. Upsert plan_service_configuration
+      // 1. Upsert contract_line_service_configuration
       let baseConfig = await trxConfigService.getConfigurationForService(planId, serviceId);
       let configId: string;
 
       if (baseConfig) {
         // Update if exists (though only type is relevant here, maybe updated_at)
         configId = baseConfig.config_id;
-        await trxInner('plan_service_configuration')
+        await trxInner('contract_line_service_configuration')
           .where({ config_id: configId, tenant: tenant! })
           // Ensure type is 'Usage' on update as well
           .update({ configuration_type: 'Usage', updated_at: new Date() });
@@ -464,13 +464,13 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
           tenant: tenant!,
           custom_rate: undefined, // Use undefined instead of null
         };
-        const insertedIds = await trxInner('plan_service_configuration')
+        const insertedIds = await trxInner('contract_line_service_configuration')
           .insert(newBaseConfig)
           .returning('config_id');
         configId = insertedIds[0].config_id;
       }
 
-      // 2. Upsert plan_service_usage_config
+      // 2. Upsert contract_line_service_usage_config
       const usageConfigPayload = {
         ...usageConfigInput,
         config_id: configId,
@@ -481,7 +481,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
       };
 
       // Use explicit insert/update with conflict handling for upsert
-      await trxInner('plan_service_usage_config')
+      await trxInner('contract_line_service_usage_config')
         .insert(usageConfigPayload)
         .onConflict(['config_id', 'tenant']) // Assumes this unique constraint exists
         .merge() // Update existing row on conflict
@@ -490,7 +490,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
 
       // 3. Handle Tiers
       // Always delete existing tiers first for simplicity in upsert
-      await trxInner('plan_service_rate_tiers')
+      await trxInner('contract_line_service_rate_tiers')
         .where({ config_id: configId, tenant: tenant! })
         .del();
 
@@ -505,18 +505,18 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
           max_quantity: tier.max_quantity !== undefined && tier.max_quantity !== null ? Number(tier.max_quantity) : null,
           rate: Number(tier.rate),
         }));
-        await trxInner('plan_service_rate_tiers').insert(tiersToInsert);
+        await trxInner('contract_line_service_rate_tiers').insert(tiersToInsert);
       }
 
       // Fetch the final combined configuration to return
       // Re-use the logic from getPlanServiceConfiguration but with the transaction trx
-      const finalBaseConfig = await trxInner<IPlanServiceConfiguration>('plan_service_configuration')
+      const finalBaseConfig = await trxInner<IPlanServiceConfiguration>('contract_line_service_configuration')
         .where({ config_id: configId, tenant: tenant! })
         .first();
 
       if (!finalBaseConfig) throw new Error("Failed to retrieve base config after upsert"); // Should not happen
 
-      const finalUsageConfig = await trxInner<IPlanServiceUsageConfig>('plan_service_usage_config')
+      const finalUsageConfig = await trxInner<IPlanServiceUsageConfig>('contract_line_service_usage_config')
         .where({ config_id: configId, tenant: tenant! })
         .first();
 
@@ -524,7 +524,7 @@ export async function upsertPlanServiceConfiguration(input: IUpsertPlanServiceUs
 
       let finalTiers: IPlanServiceRateTier[] = [];
       if (finalUsageConfig.enable_tiered_pricing) {
-        finalTiers = await trxInner<IPlanServiceRateTier>('plan_service_rate_tiers')
+        finalTiers = await trxInner<IPlanServiceRateTier>('contract_line_service_rate_tiers')
           .where({ config_id: configId, tenant: tenant! })
           .orderBy('min_quantity', 'asc');
       }
@@ -644,7 +644,7 @@ type UpsertPlanServiceHourlyConfigurationInput = z.infer<typeof UpsertPlanServic
 
 /**
  * Upserts the hourly configuration (hourly_rate, minimum_billable_time, round_up_to_nearest)
- * for a specific service within a plan. Creates the base plan_service_configuration
+ * for a specific service within a plan. Creates the base contract_line_service_configuration
  * record with type 'Hourly' if it doesn't exist.
  * Returns the config_id of the upserted configuration.
  */

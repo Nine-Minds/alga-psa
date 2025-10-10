@@ -428,8 +428,8 @@ async function persistFixedInvoiceItems(
 
   // Fetch plan details (name and fixed config base rate) for all consolidated items first
   const clientPlanIds = Array.from(fixedPlanDetailsMap.keys());
-  // Map: clientContractLineId -> { contract_line_name: string, plan_base_rate: number | null }
-  const planInfoMap = new Map<string, { contract_line_name: string; plan_base_rate: number | null }>();
+  // Map: clientContractLineId -> { contract_line_name: string, contract_line_base_rate: number | null }
+  const planInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
 
   // Filter out virtual contract-association IDs that start with "contract-" as they're not real UUIDs in the database
   const validDbPlanIds = clientPlanIds.filter(id => !id.startsWith('contract-'));
@@ -439,7 +439,7 @@ async function persistFixedInvoiceItems(
   for (const linkedPlanId of contractLinkedPlanIds) {
     planInfoMap.set(linkedPlanId, {
       contract_line_name: 'Contract Plan',
-      plan_base_rate: null
+      contract_line_base_rate: null
     });
   }
 
@@ -459,14 +459,14 @@ async function persistFixedInvoiceItems(
       .select(
         'ccl.client_contract_line_id',
         'cl.contract_line_name',
-        'clfc.base_rate as plan_base_rate' // Select base_rate from the fixed config table
+        'clfc.base_rate as contract_line_base_rate' // Select base_rate from the fixed config table
        );
 
     for (const detail of planDetails) {
       planInfoMap.set(detail.client_contract_line_id, {
         contract_line_name: detail.contract_line_name,
         // Parse the base_rate fetched from contract_line_fixed_config
-        plan_base_rate: detail.plan_base_rate ? parseFloat(detail.plan_base_rate) : null
+        contract_line_base_rate: detail.contract_line_base_rate ? parseFloat(detail.contract_line_base_rate) : null
       });
     }
   }
@@ -485,8 +485,8 @@ async function persistFixedInvoiceItems(
     planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
     // Use the plan-level base_rate fetched from contract_line_fixed_config if available.
     // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
-    planEntry.consolidatedItem.unit_price = planInfo.plan_base_rate !== null
-        ? Math.round(planInfo.plan_base_rate * 100) // Use plan base rate in cents
+    planEntry.consolidatedItem.unit_price = planInfo.contract_line_base_rate !== null
+        ? Math.round(planInfo.contract_line_base_rate * 100) // Use plan base rate in cents
         : planEntry.consolidatedItem.unit_price; // Fallback to initially set price (from first service)
 
     const consolidatedItemId = uuidv4();

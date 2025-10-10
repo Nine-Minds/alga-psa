@@ -337,12 +337,12 @@ def "main cleanup" [
         # Billing details
         "credit_allocations" "credit_reconciliation_reports" "credit_tracking"
         "usage_tracking" "bucket_usage" "transactions"
-        "client_contracts" "plan_service_rate_tiers" "plan_service_bucket_config"
-        "plan_service_hourly_config" "plan_service_hourly_configs" "plan_service_usage_config"
-        "plan_service_fixed_config" "plan_service_configuration" "contract_line_fixed_config"
-        "service_rate_tiers" "plan_discounts" "discounts"
+        "client_contracts" "contract_line_service_rate_tiers" "contract_line_service_bucket_config"
+        "contract_line_service_hourly_config" "contract_line_service_hourly_configs" "contract_line_service_usage_config"
+        "contract_line_service_fixed_config" "contract_line_service_configuration" "contract_line_fixed_config"
+        "service_rate_tiers" "contract_line_discounts" "discounts"
         "client_contract_lines" "client_billing_cycles" "client_billing_settings"
-        "plan_services" "contract_line_mappings" "contracts"
+        "contract_line_services" "contract_line_mappings" "contracts"
         
         # Client details (must come before clients)
         "client_tax_rates" "client_tax_settings"

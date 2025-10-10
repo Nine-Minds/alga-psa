@@ -38,8 +38,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
     const params = new URLSearchParams();
     params.set('tab', value);
 
-    // If we're on a plan detail page and switching tabs, go back to the main billing dashboard
-    if (searchParams?.has('planId')) {
+    // If we're on a contract line detail page and switching tabs, go back to the main billing dashboard
+    if (searchParams?.has('contractLineId')) {
       router.push(`/msp/billing?${params.toString()}`);
     } else {
       router.push(`/msp/billing?${params.toString()}`);
@@ -113,14 +113,14 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <TaxRates />
         </Tabs.Content>
         <Tabs.Content value="contract-lines">
-          {searchParams?.get('planId') ? (
+          {searchParams?.get('contractLineId') ? (
             <>
               {/* Use BackNav component */}
               <BackNav>
                 &larr; Back to Contract Lines List {/* Using HTML entity for left arrow */}
               </BackNav>
               <div className="mt-4"> {/* Add margin top for spacing */}
-                <PlanTypeRouter planId={searchParams.get('planId')!} />
+                <PlanTypeRouter contractLineId={searchParams.get('contractLineId')!} />
               </div>
             </>
           ) : (

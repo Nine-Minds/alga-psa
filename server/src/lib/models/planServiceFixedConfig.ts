@@ -31,7 +31,7 @@ export default class PlanServiceFixedConfig {
   async getByConfigId(configId: string): Promise<IPlanServiceFixedConfig | null> {
     await this.initKnex();
     
-    const config = await this.knex('plan_service_fixed_config')
+    const config = await this.knex('contract_line_service_fixed_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -49,7 +49,7 @@ export default class PlanServiceFixedConfig {
     
     const now = new Date();
     
-    await this.knex('plan_service_fixed_config').insert({
+    await this.knex('contract_line_service_fixed_config').insert({
       config_id: data.config_id,
       base_rate: data.base_rate,
       // enable_proration: data.enable_proration, // Removed: Moved to contract_line_fixed_config
@@ -83,7 +83,7 @@ export default class PlanServiceFixedConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_fixed_config')
+    const result = await this.knex('contract_line_service_fixed_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -99,7 +99,7 @@ export default class PlanServiceFixedConfig {
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    const result = await this.knex('plan_service_fixed_config')
+    const result = await this.knex('contract_line_service_fixed_config')
       .where({
         config_id: configId,
         tenant: this.tenant

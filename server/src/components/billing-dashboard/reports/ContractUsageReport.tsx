@@ -22,7 +22,7 @@ interface ContractUsageRecord {
   contract_name: string;
   start_date: string;
   end_date: string | null;
-  plan_count: number;
+  contract_line_count: number;
   total_billed: number;
   is_active: boolean;
 }
@@ -72,7 +72,7 @@ const ContractUsageReport: React.FC = () => {
     
     try {
       // Get all clients that have this contract assigned
-      const clientContracts: Array<{ client_id: string; client_name: string; contract_id: string; contract_name: string; start_date: string; end_date: string | null; plan_count: number; total_billed: number; is_active: boolean }> = [];
+      const clientContracts: ContractUsageRecord[] = [];
       
       for (const client of clients) {
         const clientContractAssignments = await getClientContracts(client.client_id);
@@ -89,7 +89,7 @@ const ContractUsageReport: React.FC = () => {
               contract_name: detailedContract.contract_name,
               start_date: matchingContract.start_date,
               end_date: matchingContract.end_date,
-              plan_count: detailedContract.plans ? detailedContract.plans.length : 0,
+              contract_line_count: detailedContract.contract_line_count || 0,
               total_billed: detailedContract.total_billed || 0,
               is_active: matchingContract.is_active
             });
@@ -133,8 +133,8 @@ const ContractUsageReport: React.FC = () => {
       render: (value) => value ? new Date(value).toLocaleDateString() : 'Ongoing',
     },
     {
-      title: 'Plans',
-      dataIndex: 'plan_count',
+      title: 'Contract Lines',
+      dataIndex: 'contract_line_count',
     },
     {
       title: 'Total Billed',

@@ -45,8 +45,8 @@ interface ClientContractAssignmentProps {
 interface DetailedClientContract extends IClientContract {
   contract_name: string;
   description?: string;
-  plan_count: number; // Keep for potential other uses or backward compatibility
-  contract_line_names?: string[]; // Added field for plan names
+  contract_line_count: number;
+  contract_line_names?: string[];
 }
 
 const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ clientId }) => {
@@ -90,8 +90,8 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
               ...contract,
               contract_name: detailedContract.contract_name,
               description: detailedContract.description,
-              plan_count: detailedContract.plan_count || 0, // Use the count from the backend
-              contract_line_names: detailedContract.contract_line_names || [] // Use the names from the backend
+              contract_line_count: detailedContract.contract_line_count || 0,
+              contract_line_names: detailedContract.contract_line_names || []
             });
           }
         }
@@ -246,13 +246,12 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
     },
     {
       title: 'Contract Lines',
-      dataIndex: 'contract_line_names', // Change dataIndex to contract_line_names
-      render: (planNames: string[] | undefined) => {
-        if (!planNames || planNames.length === 0) {
-          return '0'; // Or 'No plans'
+      dataIndex: 'contract_line_names',
+      render: (contractLineNames: string[] | undefined) => {
+        if (!contractLineNames || contractLineNames.length === 0) {
+          return '0';
         }
-        // Simple comma-separated list for now. Consider a tooltip/popover for better UX if many plans.
-        return planNames.join(', ');
+        return contractLineNames.join(', ');
       },
     },
     {
@@ -371,7 +370,7 @@ const ClientContractAssignment: React.FC<ClientContractAssignmentProps> = ({ cli
           }
           initialStartDate={editingContract.start_date}
           initialEndDate={editingContract.end_date}
-          planNames={editingContract.contract_line_names} // Pass plan names now that dialog is updated
+          contractLineNames={editingContract.contract_line_names}
         />
       )}
 

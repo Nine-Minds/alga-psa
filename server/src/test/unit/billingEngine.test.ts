@@ -351,9 +351,9 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
       vi.spyOn(billingEngine as any, 'applyProrationToPlan').mockImplementation((charges) => charges);
 
-      // Mock the knex query for plan_services
+      // Mock the knex query for contract_line_services
       (billingEngine as any).knex = vi.fn().mockImplementation((tableName: string) => {
-        if (tableName === 'plan_services') {
+        if (tableName === 'contract_line_services') {
           return {
             join: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),
@@ -565,9 +565,9 @@ describe('BillingEngine', () => {
       vi.spyOn(billingEngine as any, 'calculateTimeBasedCharges').mockResolvedValue([]);
       vi.spyOn(billingEngine as any, 'calculateUsageBasedCharges').mockResolvedValue([]);
 
-      // Mock the knex query for plan_services
+      // Mock the knex query for contract_line_services
       (billingEngine as any).knex.mockImplementation((tableName: string) => {
-        if (tableName === 'plan_services') {
+        if (tableName === 'contract_line_services') {
           return {
             join: vi.fn().mockReturnThis(),
             where: vi.fn().mockReturnThis(),

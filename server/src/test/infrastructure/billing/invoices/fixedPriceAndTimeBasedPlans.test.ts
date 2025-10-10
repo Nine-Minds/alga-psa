@@ -28,7 +28,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         'tickets',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -118,7 +118,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         unit_of_measure: 'unit'
       }, 'service_id');
 
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         { contract_line_id: planId, service_id: service1Id, quantity: 1, tenant: context.tenantId },
         { contract_line_id: planId, service_id: service2Id, quantity: 1, tenant: context.tenantId }
       ]);
@@ -191,7 +191,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         unit_of_measure: 'unit'
       }, 'service_id');
 
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId,
         service_id: serviceId,
         quantity: 1,
@@ -247,7 +247,7 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         unit_of_measure: 'hour'
       }, 'service_id');
 
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId,
         service_id: serviceId,
         custom_rate: 5000,

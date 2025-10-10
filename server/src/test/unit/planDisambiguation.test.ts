@@ -53,7 +53,7 @@ describe('Plan Disambiguation Logic', () => {
         'client_contract_lines.client_id': mockClientId,
         'client_contract_lines.is_active': true,
         'client_contract_lines.tenant': mockTenant,
-        'plan_services.service_id': mockServiceId,
+        'contract_line_services.service_id': mockServiceId,
       });
     });
   });

@@ -36,7 +36,7 @@ describe('Credit Expiration Integration Tests', () => {
         'credit_tracking',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -143,7 +143,7 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'contract_line_id');
 
     // Assign service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: negativeService,
       quantity: 1,
@@ -295,7 +295,7 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,

@@ -81,7 +81,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Mock DB calls:
       // - calculatePeriod returns a valid period
       // - trx('bucket_usage').where(...).first() returns undefined (for current period)
-      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = false
+      // - trx('contract_line_service_bucket_config').where(...).first() returns config with allow_rollover = false
       // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
       // Assert:
       // - The function returns the new mock record.
@@ -95,7 +95,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Mock DB calls:
       // - calculatePeriod returns a valid period
       // - trx('bucket_usage').where(...).first() returns undefined (for current period)
-      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true, total_minutes = 6000
+      // - trx('contract_line_service_bucket_config').where(...).first() returns config with allow_rollover = true, total_minutes = 6000
       // - trx('bucket_usage').where(...) for *previous* period returns a record with minutes_used = 4800
       // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
       // Assert:
@@ -109,7 +109,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Mock DB calls:
       // - calculatePeriod returns a valid period
       // - trx('bucket_usage').where(...).first() returns undefined (for current period)
-      // - trx('plan_service_bucket_config').where(...).first() returns config with allow_rollover = true
+      // - trx('contract_line_service_bucket_config').where(...).first() returns config with allow_rollover = true
       // - trx('bucket_usage').where(...) for *previous* period returns undefined
       // - trx('bucket_usage').insert(...).returning('*') returns the new mock record
       // Assert:
@@ -132,7 +132,7 @@ describe('BucketUsageService Unit Tests', () => {
       // Mock DB calls:
       // - calculatePeriod returns a valid period
       // - trx('bucket_usage').where(...).first() returns undefined
-      // - trx('plan_service_bucket_config').where(...).first() returns undefined
+      // - trx('contract_line_service_bucket_config').where(...).first() returns undefined
       // Assert:
       // - The function throws an appropriate error.
       expect(true).toBe(false); // Placeholder

@@ -24,7 +24,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
         'tickets',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -156,7 +156,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'service_id');
 
     // Assign services to plan
-    await context.db('plan_services').insert([
+    await context.db('contract_line_services').insert([
       {
         contract_line_id: planId,
         service_id: serviceA,
@@ -361,7 +361,7 @@ describe('Billing Invoice Subtotal Calculations', () => {
     }, 'service_id');
 
     // Assign services to plan
-    await context.db('plan_services').insert([
+    await context.db('contract_line_services').insert([
       {
         contract_line_id: planId,
         service_id: serviceA,

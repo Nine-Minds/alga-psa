@@ -84,15 +84,15 @@ export async function getEligibleContractLines(
       this.on('client_contract_lines.contract_line_id', '=', 'contract_lines.contract_line_id')
           .andOn('contract_lines.tenant', '=', 'client_contract_lines.tenant');
     })
-    .join('plan_services', function() {
-      this.on('contract_lines.contract_line_id', '=', 'plan_services.contract_line_id')
-          .andOn('plan_services.tenant', '=', 'contract_lines.tenant');
+    .join('contract_line_services', function() {
+      this.on('contract_lines.contract_line_id', '=', 'contract_line_services.contract_line_id')
+          .andOn('contract_line_services.tenant', '=', 'contract_lines.tenant');
     })
     .where({
       'client_contract_lines.client_id': clientId,
       'client_contract_lines.is_active': true,
       'client_contract_lines.tenant': tenant,
-      'plan_services.service_id': serviceId
+      'contract_line_services.service_id': serviceId
     })
     .where(function(this: Knex.QueryBuilder) {
       this.whereNull('client_contract_lines.end_date')

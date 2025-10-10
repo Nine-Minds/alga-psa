@@ -218,10 +218,13 @@ const ContractLineMapping = {
 
     try {
       const mappings = await db('contract_line_mappings as clm')
-        .join('contract_lines as cl', 'clm.contract_line_id', 'cl.contract_line_id')
-        .where({ 
+        .join('contract_lines as cl', function() {
+          this.on('clm.contract_line_id', '=', 'cl.contract_line_id')
+              .andOn('clm.tenant', '=', 'cl.tenant');
+        })
+        .where({
           'clm.contract_id': contractId,
-          'clm.tenant': tenant 
+          'clm.tenant': tenant
         })
         .select(
           'clm.*',

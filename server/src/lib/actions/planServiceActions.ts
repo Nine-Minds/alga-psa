@@ -22,7 +22,7 @@ import { Knex } from 'knex';
 export async function getPlanServices(planId: string): Promise<IPlanService[]> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const services = await trx('plan_services')
+    const services = await trx('contract_line_services')
       .where({
         contract_line_id: planId,
         tenant
@@ -39,7 +39,7 @@ export async function getPlanServices(planId: string): Promise<IPlanService[]> {
 export async function getPlanService(planId: string, serviceId: string): Promise<IPlanService | null> {
   const { knex: db, tenant } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const service = await trx('plan_services')
+    const service = await trx('contract_line_services')
       .where({
         contract_line_id: planId,
         service_id: serviceId,
@@ -142,9 +142,9 @@ export async function addServiceToPlan(
   // Check if the service is already in the plan
   const existingPlanService = await getPlanService(planId, serviceId);
   
-  // If not, add it to the plan_services table
+  // If not, add it to the contract_line_services table
   if (!existingPlanService) {
-    await trx('plan_services').insert({
+    await trx('contract_line_services').insert({
       contract_line_id: planId,
       service_id: serviceId,
       tenant: tenant
@@ -246,8 +246,8 @@ export async function removeServiceFromPlan(planId: string, serviceId: string): 
     await planServiceConfigActions.deleteConfiguration(config.config_id);
   }
 
-  // Remove the service from the plan_services table
-  await trx('plan_services')
+  // Remove the service from the contract_line_services table
+  await trx('contract_line_services')
     .where({
       contract_line_id: planId,
       service_id: serviceId,

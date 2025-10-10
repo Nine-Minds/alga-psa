@@ -85,12 +85,12 @@ async function calculatePeriod(
             this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
                 .andOn('ccl.tenant', '=', 'cl.tenant');
         })
-        .join('plan_service_configuration as psc', function() {
+        .join('contract_line_service_configuration as psc', function() {
             this.on('cl.contract_line_id', '=', 'psc.contract_line_id')
                 .andOn('cl.tenant', '=', 'psc.tenant')
                 .andOnVal('psc.service_id', '=', serviceCatalogId);
         })
-        .join('plan_service_bucket_config as psbc', function() {
+        .join('contract_line_service_bucket_config as psbc', function() {
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant');
         })
@@ -226,8 +226,8 @@ export async function findOrCreateCurrentBucketUsageRecord(
 
     // 3. Create New Record - Fetch Bucket Configuration
 
-    // First, get the plan_service_configuration to find the config_id
-    const planServiceConfig = await trx('plan_service_configuration')
+    // First, get the contract_line_service_configuration to find the config_id
+    const planServiceConfig = await trx('contract_line_service_configuration')
         .where({
             tenant: tenant,
             contract_line_id: planId,
@@ -239,7 +239,7 @@ export async function findOrCreateCurrentBucketUsageRecord(
         throw new Error(`Plan service configuration not found for plan ${planId}, service ${serviceCatalogId} in tenant ${tenant}. Cannot create usage record.`);
     }
 
-    const bucketConfig = await trx('plan_service_bucket_config')
+    const bucketConfig = await trx('contract_line_service_bucket_config')
         .where({
             tenant: tenant,
             config_id: planServiceConfig.config_id,
@@ -367,12 +367,12 @@ export async function updateBucketUsageMinutes(
     }
 
     const currentUsage = await trx('bucket_usage as bu')
-        .join('plan_service_configuration as psc', function() {
+        .join('contract_line_service_configuration as psc', function() {
             this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
                 .andOn('bu.service_catalog_id', '=', 'psc.service_id')
                 .andOn('bu.tenant', '=', 'psc.tenant');
         })
-        .join('plan_service_bucket_config as psbc', function() {
+        .join('contract_line_service_bucket_config as psbc', function() {
             this.on('psc.config_id', '=', 'psbc.config_id')
                 .andOn('psc.tenant', '=', 'psbc.tenant')
                 .andOn('bu.tenant', '=', 'psbc.tenant')
@@ -437,12 +437,12 @@ export async function reconcileBucketUsageRecord(
 
    // 2. Fetch Bucket Usage Record and Config
    const usageRecord = await trx('bucket_usage as bu')
-       .join('plan_service_configuration as psc', function() {
+       .join('contract_line_service_configuration as psc', function() {
            this.on('bu.contract_line_id', '=', 'psc.contract_line_id')
                .andOn('bu.service_catalog_id', '=', 'psc.service_id')
                .andOn('bu.tenant', '=', 'psc.tenant')
        })
-       .join('plan_service_bucket_config as psbc', function() {
+       .join('contract_line_service_bucket_config as psbc', function() {
            this.on('psc.config_id', '=', 'psbc.config_id')
                .andOn('psc.tenant', '=', 'psbc.tenant')
                .andOn('bu.tenant', '=', 'psbc.tenant')

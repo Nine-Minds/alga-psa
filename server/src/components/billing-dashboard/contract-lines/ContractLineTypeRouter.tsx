@@ -15,10 +15,10 @@ import { UsagePlanConfiguration } from './UsagePlanConfiguration';
 import { BucketPlanConfiguration } from './BucketPlanConfiguration';
 
 interface PlanTypeRouterProps {
-  planId: string;
+  contractLineId: string;
 }
 
-export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
+export function PlanTypeRouter({ contractLineId }: PlanTypeRouterProps) {
   const [planType, setPlanType] = useState<IContractLine['contract_line_type'] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,26 +27,26 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
     setLoading(true);
     setError(null);
     try {
-      const plan = await getContractLineById(planId);
+      const plan = await getContractLineById(contractLineId);
       if (plan) {
         setPlanType(plan.contract_line_type);
       } else {
-        setError(`Plan with ID ${planId} not found.`);
+        setError(`Contract line with ID ${contractLineId} not found.`);
       }
     } catch (err) {
-      console.error(`Error fetching plan type for ID ${planId}:`, err);
-      setError('Failed to load plan details.');
+      console.error(`Error fetching contract line type for ID ${contractLineId}:`, err);
+      setError('Failed to load contract line details.');
     } finally {
       setLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchPlanType();
   }, [fetchPlanType]);
 
   if (loading) {
-    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Plan..." /></div>;
+    return <div className="flex justify-center items-center p-8"><LoadingIndicator spinnerProps={{ size: "sm" }} text="Loading Contract Line..." /></div>;
   }
 
   if (error) {
@@ -60,18 +60,18 @@ export function PlanTypeRouter({ planId }: PlanTypeRouterProps) {
 
   switch (planType) {
     case 'Fixed':
-      return <FixedPlanConfiguration planId={planId} />;
+      return <FixedPlanConfiguration contractLineId={contractLineId} />;
     case 'Hourly':
-      return <HourlyPlanConfiguration planId={planId} />;
+      return <HourlyPlanConfiguration contractLineId={contractLineId} />;
     case 'Usage':
-      return <UsagePlanConfiguration planId={planId} />;
+      return <UsagePlanConfiguration contractLineId={contractLineId} />;
     case 'Bucket':
-      return <BucketPlanConfiguration planId={planId} />;
+      return <BucketPlanConfiguration contractLineId={contractLineId} />;
     default:
       return (
         <Alert variant="destructive" className="m-4">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>Unknown or unsupported plan type: {planType}</AlertDescription>
+          <AlertDescription>Unknown or unsupported contract line type: {planType}</AlertDescription>
         </Alert>
       );
   }
