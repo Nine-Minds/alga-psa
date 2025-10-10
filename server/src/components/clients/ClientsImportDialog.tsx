@@ -87,6 +87,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
   const [step, setStep] = useState<'upload' | 'mapping' | 'preview' | 'importing' | 'complete'>('upload');
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<ICSVPreviewData | null>(null);
+  const [fullCSVData, setFullCSVData] = useState<string[][] | null>(null);
   const [columnMappings, setColumnMappings] = useState<ICSVColumnMapping[]>([]);
   const [validationResults, setValidationResults] = useState<ICSVValidationResult[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
@@ -105,6 +106,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setStep('upload');
       setFile(null);
       setPreviewData(null);
+      setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
       setErrors([]);
@@ -197,9 +199,12 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       }
 
       const headers = rows[0];
+      const dataRows = rows.slice(1); // All data rows (excluding header)
+
+      setFullCSVData(dataRows); // Store all rows for import
       setPreviewData({
         headers,
-        rows: rows.slice(1, 6) // First 5 rows for preview
+        rows: dataRows.slice(0, 5) // First 5 rows for preview only
       });
 
       // Auto-map columns based on header names
@@ -259,8 +264,9 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       return;
     }
 
-    if (previewData) {
-      const results = previewData.rows.map((row): ICSVValidationResult => {
+    if (fullCSVData) {
+      // Process ALL rows from fullCSVData, not just preview rows
+      const results = fullCSVData.map((row): ICSVValidationResult => {
         const mappedData: Record<string, any> = {};
         columnMappings.forEach((mapping, index) => {
           if (mapping.clientField) {
@@ -295,7 +301,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setValidationResults(updatedResults);
       setStep('preview');
     }
-  }, [previewData, columnMappings, validateClientData, validateMappings]);
+  }, [fullCSVData, columnMappings, validateClientData, validateMappings]);
 
   const handleImport = useCallback(async () => {
     if (isProcessing) return;
@@ -321,6 +327,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
       setStep('upload');
       setFile(null);
       setPreviewData(null);
+      setFullCSVData(null);
       setColumnMappings([]);
       setValidationResults([]);
       setErrors([]);
@@ -475,6 +482,13 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
           {step === 'preview' && validationResults.length > 0 && (
             <div>
               <h3 className="text-lg font-medium mb-4">Preview Import</h3>
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-800">
+                  <strong>Total records:</strong> {validationResults.length} |
+                  <strong className="ml-2">Valid:</strong> {validationResults.filter(r => r.isValid).length} |
+                  <strong className="ml-2">Invalid:</strong> {validationResults.filter(r => !r.isValid).length}
+                </p>
+              </div>
               <div className="mb-6 space-y-4">
                 <div className="flex items-center justify-between py-3">
                   <div>
