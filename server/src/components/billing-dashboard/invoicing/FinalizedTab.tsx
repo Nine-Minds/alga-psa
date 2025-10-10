@@ -403,6 +403,7 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
                 rowClassName={(record) =>
                   selectedInvoiceId === record.invoice_id ? "bg-blue-50" : "cursor-pointer hover:bg-gray-50"
                 }
+                initialSorting={[{ id: 'invoice_date', desc: true }]}
               />
             </div>
           </Panel>
