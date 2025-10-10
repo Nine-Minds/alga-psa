@@ -227,12 +227,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
               <TableBody>
                 {displayedServices.map(service => {
                   const isOverlapping = !!serviceOverlaps[service.service_id];
-                  const planCount = isOverlapping 
-                    ? serviceOverlaps[service.service_id].length 
+                  const contractLineCount = isOverlapping
+                    ? serviceOverlaps[service.service_id].length
                     : 1;
-                  
+
                   return (
-                    <TableRow 
+                    <TableRow
                       key={service.service_id}
                       className={isOverlapping ? "bg-amber-50" : ""}
                     >
@@ -240,7 +240,7 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                         <div className="flex items-center">
                           <span>{service.service_name}</span>
                           {isOverlapping && (
-                            <Tooltip content="This service appears in multiple plans">
+                            <Tooltip content="This service appears in multiple contract lines">
                               <AlertTriangle className="h-4 w-4 ml-2 text-amber-500" />
                             </Tooltip>
                           )}
@@ -249,11 +249,11 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                           {service.service_type_name || 'Unknown Type'} • {service.unit_of_measure}
                         </div>
                       </TableCell>
-                      
+
                       {sortedClientPlans.map(plan => {
                         const planServicesList = planServices[plan.client_contract_line_id] || [];
                         const isInPlan = planServicesList.some(s => s.service_id === service.service_id);
-                        
+
                         return (
                           <TableCell key={`${service.service_id}-${plan.client_contract_line_id}`} className="text-center">
                             {isInPlan ? (
@@ -266,12 +266,12 @@ const ClientServiceOverlapMatrix: React.FC<ClientServiceOverlapMatrixProps> = ({
                           </TableCell>
                         );
                       })}
-                      
+
                       <TableCell className="text-center">
                         <Badge className={`${
-                          planCount > 1 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
+                          contractLineCount > 1 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'
                         }`}>
-                          {planCount}
+                          {contractLineCount}
                         </Badge>
                       </TableCell>
                     </TableRow>
