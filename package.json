@@ -82,6 +82,7 @@
     "axios": "^1.7.4",
     "bcryptjs": "^2.4.3",
     "class-variance-authority": "^0.7.0",
+    "clean": "^4.0.2",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.4",
     "cross-spawn": "^7.0.3",
@@ -155,6 +156,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.17.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/user-event": "^14.6.1",
     "@types/dompurify": "^3.0.5",
@@ -176,7 +178,6 @@
     "@types/tinycolor2": "^1.4.6",
     "@types/turndown": "^5.0.5",
     "@types/uuid": "^10.0.0",
-    "@eslint/js": "^9.17.0",
     "@typescript-eslint/eslint-plugin": "^8.8.0",
     "@typescript-eslint/parser": "^8.8.0",
     "eslint": "^8.57.0",
