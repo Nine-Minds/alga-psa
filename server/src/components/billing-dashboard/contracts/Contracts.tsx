@@ -23,7 +23,7 @@ import { ContractDialog } from './ContractDialog';
 import { ContractWizard } from './ContractWizard';
 import { QuickStartGuide } from './QuickStartGuide';
 
-type ContractStatus = 'active' | 'upcoming' | 'expired';
+type ContractStatus = 'active' | 'upcoming' | 'expired' | 'draft' | 'terminated';
 
 interface EnrichedContract extends IPlanBundle {
   client_name?: string;
@@ -32,6 +32,7 @@ interface EnrichedContract extends IPlanBundle {
   end_date?: string | null;
   monthly_value?: number;
   status?: ContractStatus;
+  is_terminated?: boolean;
 }
 
 interface ContractsProps {
@@ -58,8 +59,12 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
     filterContracts();
   }, [contracts, searchTerm, statusFilter]);
 
-  const getContractStatus = (startDate?: string, endDate?: string | null, isActive?: boolean): ContractStatus => {
-    if (!isActive) return 'expired';
+  const getContractStatus = (startDate?: string, endDate?: string | null, isActive?: boolean, isTerminated?: boolean): ContractStatus => {
+    // Check if it's terminated first
+    if (isTerminated) return 'terminated';
+
+    // Check if it's a draft
+    if (!isActive) return 'draft';
 
     const now = new Date();
     const start = startDate ? new Date(startDate) : null;
@@ -75,20 +80,29 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
       const fetchedContracts = await getPlanBundles();
       const clients = await getAllClients();
 
-      // Filter out draft contracts (is_active = false)
+      // Show all contracts (including drafts and terminated)
       // For now, we'll use mock data for client assignments
       // In a real implementation, we'd fetch client_plan_bundles
       const enriched: EnrichedContract[] = fetchedContracts
-        .filter(contract => contract.is_active) // Only show active contracts
-        .map((contract) => ({
-          ...contract,
-          client_name: 'Mock Client', // TODO: Get from client_plan_bundles join
-          client_id: undefined,
-          start_date: new Date().toISOString().split('T')[0], // Mock data
-          end_date: null,
-          monthly_value: 0, // TODO: Calculate from billing plans
-          status: getContractStatus(undefined, null, contract.is_active)
-        }));
+        .map((contract) => {
+          const isTerminated = false; // TODO: Get from client_plan_bundles or contract metadata
+          return {
+            ...contract,
+            client_name: 'Mock Client', // TODO: Get from client_plan_bundles join
+            client_id: undefined,
+            start_date: new Date().toISOString().split('T')[0], // Mock data
+            end_date: null,
+            monthly_value: 0, // TODO: Calculate from billing plans
+            is_terminated: isTerminated,
+            status: getContractStatus(undefined, null, contract.is_active, isTerminated)
+          };
+        })
+        // Sort by most recent start date first
+        .sort((a, b) => {
+          const dateA = a.start_date ? new Date(a.start_date).getTime() : 0;
+          const dateB = b.start_date ? new Date(b.start_date).getTime() : 0;
+          return dateB - dateA; // Descending order (most recent first)
+        });
 
       setContracts(enriched);
       setError(null);
@@ -135,7 +149,9 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
     const variants = {
       active: { variant: 'default' as const, className: 'bg-green-100 text-green-800 border-green-200' },
       upcoming: { variant: 'default' as const, className: 'bg-blue-100 text-blue-800 border-blue-200' },
-      expired: { variant: 'default' as const, className: 'bg-gray-100 text-gray-800 border-gray-200' }
+      expired: { variant: 'default' as const, className: 'bg-gray-100 text-gray-800 border-gray-200' },
+      draft: { variant: 'default' as const, className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
+      terminated: { variant: 'default' as const, className: 'bg-orange-100 text-orange-800 border-orange-200' }
     };
 
     const config = status ? variants[status] : variants.expired;
@@ -330,6 +346,12 @@ const Contracts: React.FC<ContractsProps> = ({ onRefreshNeeded, refreshTrigger }
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('upcoming')}>
                   Upcoming Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('draft')}>
+                  Drafts Only
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter('terminated')}>
+                  Terminated Only
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter('expired')}>
                   Expired Only
