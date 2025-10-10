@@ -596,7 +596,7 @@ The billing system uses service configurations to determine billing logic. Key t
     - **Purpose:** Defines discounts and promotions
     - **Key Fields:** `tenant`, `discount_id` (UUID, PK), `discount_name`, `discount_type` ('percentage' | 'fixed'), `value` (numeric), `start_date`, `end_date`, `is_active`
 
-24. **`plan_discounts`**
+24. **`contract_line_discounts`**
     - **Purpose:** Associates discounts with contract lines or clients
     - **Key Fields:** `tenant`, `contract_line_id` (FK), `company_id` (FK), `discount_id` (FK)
 
@@ -901,7 +901,7 @@ Ensures integrity of credit balances by detecting and reporting discrepancies.
         - Time-based (`time_entries`, `plan_service_hourly_config`, `user_type_rates`)
         - Usage-based (`usage_tracking`, `plan_service_usage_config`, `plan_service_rate_tiers`)
         - Bucket plans (`bucket_usage`, `plan_service_bucket_config`)
-        - Discounts (`discounts`, `plan_discounts`)
+        - Discounts (`discounts`, `contract_line_discounts`)
         - Contracts (`company_contracts`, `contract_line_mappings`)
         - Tax calculations (`TaxService`, `tax_rates`, `company_tax_rates`)
         - Multi-currency (`currencies`)
@@ -998,7 +998,7 @@ erDiagram
     contract_lines ||--o{ company_contract_lines : assigned_to
     contract_lines ||--o{ plan_service_configuration : has_config_for
     contract_lines ||--o{ contract_line_mappings : part_of
-    contract_lines ||--o{ plan_discounts : has
+    contract_lines ||--o{ contract_line_discounts : has
     contract_lines ||--o{ contract_line_fixed_config : has_fixed_config
 
     invoices ||--o{ invoice_items : contains
@@ -1019,7 +1019,7 @@ erDiagram
 
     plan_service_bucket_config ||--o{ bucket_usage : tracks_usage_against
 
-    plan_discounts }o--|| discounts : applies
+    contract_line_discounts }o--|| discounts : applies
 
     currencies ||--o{ invoices : denominates
     currencies ||--o{ invoice_items : denominates
@@ -1066,7 +1066,7 @@ invoice_item_details { UUID item_detail_id PK, UUID item_id FK, UUID service_id 
 invoice_item_fixed_details { UUID item_detail_id PK,FK, integer base_rate, integer fmv, numeric proportion, integer allocated_amount }
 bucket_usage { UUID usage_id PK, UUID tenant FK, UUID config_id FK, UUID company_id FK, decimal hours_used, decimal overage_hours, decimal rolled_over_hours }
 discounts { UUID discount_id PK, UUID tenant FK }
-plan_discounts { UUID contract_line_id FK, UUID company_id FK, UUID discount_id FK }
+contract_line_discounts { UUID contract_line_id FK, UUID company_id FK, UUID discount_id FK }
 tax_rates { UUID tax_rate_id PK, UUID tenant FK, string region_code, numeric tax_percentage }
 company_tax_rates { UUID company_tax_rate_id PK, UUID company_id FK, UUID tax_rate_id FK, boolean is_default }
 currencies { string currency_code PK }
