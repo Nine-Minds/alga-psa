@@ -44,7 +44,10 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   const [roundUpToNearest, setRoundUpToNearest] = useState<number | undefined>(undefined);
 
   // Bucket plan state
+  const [bucketType, setBucketType] = useState<'hours' | 'usage' | undefined>(undefined);
   const [bucketHours, setBucketHours] = useState<number | undefined>(undefined);
+  const [bucketUsageUnits, setBucketUsageUnits] = useState<number | undefined>(undefined);
+  const [bucketUnitOfMeasure, setBucketUnitOfMeasure] = useState<string | undefined>(undefined);
   const [bucketMonthlyFee, setBucketMonthlyFee] = useState<number | undefined>(undefined);
   const [bucketMonthlyFeeInput, setBucketMonthlyFeeInput] = useState<string>('');
   const [bucketOverageRate, setBucketOverageRate] = useState<number | undefined>(undefined);
@@ -151,7 +154,12 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
         }
       });
     } else if (planType === 'Bucket') {
-      if (!bucketHours) errors.push('Bucket Hours are required');
+      if (!bucketType) errors.push('Bucket type is required');
+      if (bucketType === 'hours' && !bucketHours) errors.push('Bucket hours are required for hours-based buckets');
+      if (bucketType === 'usage') {
+        if (!bucketUsageUnits) errors.push('Bucket usage units are required for usage-based buckets');
+        if (!bucketUnitOfMeasure) errors.push('Unit of measure is required for usage-based buckets');
+      }
       if (!bucketMonthlyFee) errors.push('Monthly Fee is required for Bucket plans');
       if (!bucketOverageRate) errors.push('Overage Rate is required for Bucket plans');
       // Services are optional for bucket plans
@@ -343,8 +351,27 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
   };
 
   const calculateEffectiveRate = () => {
-    if (!bucketHours || !bucketMonthlyFee) return 0;
-    return bucketMonthlyFee / bucketHours;
+    if (!bucketMonthlyFee) return 0;
+
+    if (bucketType === 'hours' && bucketHours) {
+      return bucketMonthlyFee / bucketHours;
+    } else if (bucketType === 'usage' && bucketUsageUnits) {
+      return bucketMonthlyFee / bucketUsageUnits;
+    }
+
+    return 0;
+  };
+
+  const getBucketQuantity = () => {
+    if (bucketType === 'hours') return bucketHours;
+    if (bucketType === 'usage') return bucketUsageUnits;
+    return 0;
+  };
+
+  const getBucketUnitLabel = () => {
+    if (bucketType === 'hours') return 'hour';
+    if (bucketType === 'usage') return bucketUnitOfMeasure || 'unit';
+    return 'unit';
   };
 
   const renderTypeSelector = () => (
@@ -391,8 +418,8 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
         <div className="flex items-start gap-3">
           <Droplet className="h-8 w-8 text-purple-600 flex-shrink-0 mt-1" />
           <div className="flex-1">
-            <h3 className="font-semibold text-gray-900 mb-1">Bucket Hours</h3>
-            <p className="text-sm text-gray-600">Set up a pre-paid hours pool with overage billing (block hours).</p>
+            <h3 className="font-semibold text-gray-900 mb-1">Bucket Services</h3>
+            <p className="text-sm text-gray-600">Set up a pre-paid pool of hours or usage units with overage billing.</p>
           </div>
         </div>
       </button>
@@ -824,12 +851,12 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
       <div className="space-y-6">
         <div className="p-4 bg-amber-50 border border-amber-200 rounded-md space-y-2">
           <p className="text-sm text-amber-800">
-            <strong>How Bucket Hours Work:</strong>
+            <strong>How Bucket Services Work:</strong>
           </p>
           <ul className="text-sm text-amber-800 list-disc list-inside space-y-1 ml-2">
-            <li>Client pays a fixed monthly fee for a certain number of hours</li>
-            <li>Hours are "filled into the bucket" as time is tracked</li>
-            <li>Once the bucket is full, additional hours are billed at the overage rate</li>
+            <li>Client pays a fixed monthly fee for a certain number of hours or usage units</li>
+            <li>Usage is "filled into the bucket" as time is tracked or units are consumed</li>
+            <li>Once the bucket is full, additional usage is billed at the overage rate</li>
             <li>Great for clients who want predictable monthly costs with flexibility</li>
           </ul>
           <div className="mt-3 p-3 bg-amber-100 rounded text-xs text-amber-900">
@@ -838,28 +865,108 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           </div>
         </div>
 
+        {/* Bucket Type Selector */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="bucket-hours" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Hours Per Period (Month) *
-            </Label>
-            <Tooltip content="The number of hours included in the monthly fee. Once these hours are used, any additional time is billed at the overage rate.">
-              <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
-            </Tooltip>
-          </div>
-          <Input
-            id="bucket-hours"
-            type="number"
-            value={bucketHours || ''}
-            onChange={(e) => setBucketHours(parseInt(e.target.value) || undefined)}
-            placeholder="40"
-            min="1"
-            step="1"
-            className="w-32"
+          <Label htmlFor="bucket-type" className="flex items-center gap-2">
+            <Droplet className="h-4 w-4" />
+            Bucket Type *
+          </Label>
+          <CustomSelect
+            value={bucketType || ''}
+            onValueChange={(value: string) => {
+              setBucketType(value as 'hours' | 'usage');
+              // Clear opposite type fields when switching
+              if (value === 'hours') {
+                setBucketUsageUnits(undefined);
+                setBucketUnitOfMeasure(undefined);
+              } else {
+                setBucketHours(undefined);
+              }
+            }}
+            options={[
+              { value: 'hours', label: 'Time-based (Hours)' },
+              { value: 'usage', label: 'Usage-based (Units)' }
+            ]}
+            placeholder="Select bucket type"
+            className="w-64"
           />
-          <p className="text-xs text-gray-500">How many hours are included in the monthly bucket?</p>
+          <p className="text-xs text-gray-500">
+            Choose whether this bucket tracks hours or usage units
+          </p>
         </div>
+
+        {/* Hours Per Period - Only show if hours type selected */}
+        {bucketType === 'hours' && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="bucket-hours" className="flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Hours Per Period (Month) *
+              </Label>
+              <Tooltip content="The number of hours included in the monthly fee. Once these hours are used, any additional time is billed at the overage rate.">
+                <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+              </Tooltip>
+            </div>
+            <Input
+              id="bucket-hours"
+              type="number"
+              value={bucketHours || ''}
+              onChange={(e) => setBucketHours(parseInt(e.target.value) || undefined)}
+              placeholder="40"
+              min="1"
+              step="1"
+              className="w-32"
+            />
+            <p className="text-xs text-gray-500">How many hours are included in the monthly bucket?</p>
+          </div>
+        )}
+
+        {/* Usage Units - Only show if usage type selected */}
+        {bucketType === 'usage' && (
+          <>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="bucket-usage-units" className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Usage Units Per Period (Month) *
+                </Label>
+                <Tooltip content="The number of usage units included in the monthly fee. Once these units are used, any additional usage is billed at the overage rate.">
+                  <HelpCircle className="h-4 w-4 text-gray-400 cursor-help" />
+                </Tooltip>
+              </div>
+              <Input
+                id="bucket-usage-units"
+                type="number"
+                value={bucketUsageUnits || ''}
+                onChange={(e) => setBucketUsageUnits(parseInt(e.target.value) || undefined)}
+                placeholder="1000"
+                min="1"
+                step="1"
+                className="w-32"
+              />
+              <p className="text-xs text-gray-500">
+                How many usage units are included in the monthly bucket?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="bucket-unit-of-measure" className="flex items-center gap-2">
+                Unit of Measure *
+              </Label>
+              <Input
+                id="bucket-unit-of-measure"
+                type="text"
+                value={bucketUnitOfMeasure || ''}
+                onChange={(e) => setBucketUnitOfMeasure(e.target.value || undefined)}
+                placeholder="e.g., API calls, GB, transactions"
+                className="w-64"
+              />
+              <p className="text-xs text-gray-500">
+                What unit are you measuring? (e.g., API calls, gigabytes, transactions)
+              </p>
+            </div>
+          </>
+        )}
 
         <div className="space-y-2">
           <Label htmlFor="bucket-monthly-fee" className="flex items-center gap-2">
@@ -898,11 +1005,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
           <p className="text-xs text-gray-500">Fixed monthly price for the bucket hours</p>
         </div>
 
-        {bucketHours && bucketMonthlyFee && (
+        {getBucketQuantity() && bucketMonthlyFee && bucketType && (
           <div className="p-3 bg-green-50 border border-green-200 rounded-md">
             <p className="text-sm text-green-800">
-              <strong>Effective Rate:</strong> {formatCurrency(Math.round(effectiveRate))}/hour
-              <span className="text-xs ml-2">({formatCurrency(bucketMonthlyFee)} ÷ {bucketHours} hours)</span>
+              <strong>Effective Rate:</strong> {formatCurrency(Math.round(effectiveRate))}/{getBucketUnitLabel()}
+              <span className="text-xs ml-2">
+                ({formatCurrency(bucketMonthlyFee)} ÷ {getBucketQuantity()} {getBucketUnitLabel()}s)
+              </span>
             </p>
           </div>
         )}
@@ -910,7 +1019,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
         <div className="space-y-2">
           <Label htmlFor="bucket-overage-rate" className="flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            Overage Rate (per hour) *
+            Overage Rate {bucketType ? `(per ${getBucketUnitLabel()})` : ''} *
           </Label>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
@@ -941,7 +1050,13 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
               className="pl-7 w-48"
             />
           </div>
-          <p className="text-xs text-gray-500">Hourly rate for hours exceeding the bucket</p>
+          <p className="text-xs text-gray-500">
+            {bucketType === 'hours'
+              ? 'Hourly rate for hours exceeding the bucket'
+              : bucketType === 'usage'
+              ? `Rate per ${getBucketUnitLabel()} for usage exceeding the bucket`
+              : 'Rate for usage exceeding the bucket'}
+          </p>
         </div>
 
         {/* Services Included in Bucket */}
@@ -951,7 +1066,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             Services Included in Bucket
           </Label>
           <p className="text-xs text-gray-600 -mt-2">
-            Select which services count toward bucket hour usage
+            Select which services count toward bucket usage (hours or units)
           </p>
 
           {bucketServices.map((service, index) => (
@@ -987,7 +1102,7 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
             variant="outline"
             onClick={handleAddBucketService}
             className="w-full"
-            disabled={!bucketHours || !bucketMonthlyFee || !bucketOverageRate}
+            disabled={!bucketType || !getBucketQuantity() || !bucketMonthlyFee || !bucketOverageRate}
           >
             <Plus className="h-4 w-4 mr-2" />
             Add Service to Bucket
@@ -995,14 +1110,15 @@ export function BillingPlanDialog({ onPlanAdded, editingPlan, onClose, triggerBu
         </div>
 
         {/* Summary */}
-        {bucketHours && bucketMonthlyFee && bucketOverageRate && (
+        {bucketType && getBucketQuantity() && bucketMonthlyFee && bucketOverageRate && (
           <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
-            <h4 className="text-sm font-semibold text-blue-900 mb-2">Bucket Hours Summary</h4>
+            <h4 className="text-sm font-semibold text-blue-900 mb-2">Bucket Services Summary</h4>
             <div className="text-sm text-blue-800 space-y-1">
-              <p><strong>Hours/Month:</strong> {bucketHours} hours</p>
+              <p><strong>Type:</strong> {bucketType === 'hours' ? 'Time-based (Hours)' : `Usage-based (${bucketUnitOfMeasure || 'Units'})`}</p>
+              <p><strong>Quantity/Month:</strong> {getBucketQuantity()} {getBucketUnitLabel()}s</p>
               <p><strong>Monthly Fee:</strong> {formatCurrency(bucketMonthlyFee)}</p>
-              <p><strong>Effective Rate:</strong> {formatCurrency(Math.round(effectiveRate))}/hour</p>
-              <p><strong>Overage Rate:</strong> {formatCurrency(bucketOverageRate)}/hour</p>
+              <p><strong>Effective Rate:</strong> {formatCurrency(Math.round(effectiveRate))}/{getBucketUnitLabel()}</p>
+              <p><strong>Overage Rate:</strong> {formatCurrency(bucketOverageRate)}/{getBucketUnitLabel()}</p>
               <p><strong>Services:</strong> {bucketServices.length}</p>
             </div>
           </div>

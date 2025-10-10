@@ -15,8 +15,8 @@ const STEPS = [
   'Contract Basics',
   'Fixed Fee Services',
   'Hourly Services',
-  'Bucket Hours',
   'Usage-Based Services',
+  'Bucket Services',
   'Review & Create'
 ];
 
@@ -54,21 +54,24 @@ export interface ContractWizardData {
   minimum_billable_time?: number;
   round_up_to_nearest?: number;
 
-  // Step 4: Bucket Hours
-  bucket_hours?: number;
-  bucket_monthly_fee?: number;
-  bucket_overage_rate?: number;
-  bucket_services: Array<{
-    service_id: string;
-    service_name?: string;
-  }>;
-
-  // Step 5: Usage-Based Services
+  // Step 4: Usage-Based Services
   usage_services?: Array<{
     service_id: string;
     service_name?: string;
     unit_rate?: number;
     unit_of_measure?: string;
+  }>;
+
+  // Step 5: Bucket Services
+  bucket_type?: 'hours' | 'usage';
+  bucket_hours?: number;
+  bucket_usage_units?: number;
+  bucket_unit_of_measure?: string;
+  bucket_monthly_fee?: number;
+  bucket_overage_rate?: number;
+  bucket_services: Array<{
+    service_id: string;
+    service_name?: string;
   }>;
 
   // Internal tracking
@@ -107,7 +110,10 @@ export function ContractWizard({
     hourly_services: [],
     minimum_billable_time: undefined,
     round_up_to_nearest: undefined,
+    bucket_type: undefined,
     bucket_hours: undefined,
+    bucket_usage_units: undefined,
+    bucket_unit_of_measure: undefined,
     bucket_monthly_fee: undefined,
     bucket_overage_rate: undefined,
     bucket_services: [],
@@ -160,13 +166,31 @@ export function ContractWizard({
         // Optional step
         return true;
 
-      case 3: // Bucket Hours
+      case 3: // Usage-Based Services
+        // Optional step
+        return true;
+
+      case 4: // Bucket Services
         // Optional step - validate only if user has filled any bucket field
-        const hasBucketData = wizardData.bucket_hours || wizardData.bucket_monthly_fee || wizardData.bucket_overage_rate;
+        const hasBucketData = wizardData.bucket_type || wizardData.bucket_monthly_fee || wizardData.bucket_overage_rate;
         if (hasBucketData) {
-          if (!wizardData.bucket_hours) {
-            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket hours are required' }));
+          if (!wizardData.bucket_type) {
+            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket type is required' }));
             return false;
+          }
+          if (wizardData.bucket_type === 'hours' && !wizardData.bucket_hours) {
+            setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket hours are required for hours-based buckets' }));
+            return false;
+          }
+          if (wizardData.bucket_type === 'usage') {
+            if (!wizardData.bucket_usage_units) {
+              setErrors(prev => ({ ...prev, [stepIndex]: 'Bucket usage units are required for usage-based buckets' }));
+              return false;
+            }
+            if (!wizardData.bucket_unit_of_measure) {
+              setErrors(prev => ({ ...prev, [stepIndex]: 'Unit of measure is required for usage-based buckets' }));
+              return false;
+            }
           }
           if (!wizardData.bucket_monthly_fee) {
             setErrors(prev => ({ ...prev, [stepIndex]: 'Monthly fee is required' }));
@@ -177,10 +201,6 @@ export function ContractWizard({
             return false;
           }
         }
-        return true;
-
-      case 4: // Usage-Based Services
-        // Optional step
         return true;
 
       case 5: // Review
@@ -288,9 +308,9 @@ export function ContractWizard({
       case 2:
         return <HourlyServicesStep data={wizardData} updateData={updateData} />;
       case 3:
-        return <BucketHoursStep data={wizardData} updateData={updateData} />;
-      case 4:
         return <UsageBasedServicesStep data={wizardData} updateData={updateData} />;
+      case 4:
+        return <BucketHoursStep data={wizardData} updateData={updateData} />;
       case 5:
         return <ReviewContractStep data={wizardData} />;
       default:

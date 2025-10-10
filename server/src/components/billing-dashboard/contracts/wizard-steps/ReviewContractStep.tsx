@@ -66,7 +66,12 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
 
   const hasFixedServices = data.fixed_services.length > 0;
   const hasHourlyServices = data.hourly_services.length > 0;
-  const hasBucketHours = !!(data.bucket_hours && data.bucket_monthly_fee && data.bucket_overage_rate);
+  const hasBucketServices = !!(
+    data.bucket_type &&
+    ((data.bucket_type === 'hours' && data.bucket_hours) || (data.bucket_type === 'usage' && data.bucket_usage_units)) &&
+    data.bucket_monthly_fee &&
+    data.bucket_overage_rate
+  );
   const hasUsageServices = !!(data.usage_services && data.usage_services.length > 0);
 
   return (
@@ -239,19 +244,27 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
         </Card>
       )}
 
-      {/* Bucket Hours */}
-      {hasBucketHours && (
+      {/* Bucket Services */}
+      {hasBucketServices && (
         <Card className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Droplet className="h-5 w-5 text-blue-600" />
-              <h4 className="font-semibold">Bucket Hours</h4>
+              <h4 className="font-semibold">Bucket Services</h4>
             </div>
             <Badge variant="default" className="bg-blue-100 text-blue-800">
-              {data.bucket_hours} hrs/month
+              {data.bucket_type === 'hours'
+                ? `${data.bucket_hours} hours/month`
+                : `${data.bucket_usage_units} ${data.bucket_unit_of_measure || 'units'}/month`}
             </Badge>
           </div>
           <div className="space-y-2 text-sm">
+            <div className="mb-2">
+              <p className="text-gray-600 text-xs">Type</p>
+              <p className="font-medium">
+                {data.bucket_type === 'hours' ? 'Time-based (Hours)' : `Usage-based (${data.bucket_unit_of_measure || 'Units'})`}
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-gray-600">Monthly Fee</p>
@@ -259,12 +272,14 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
               </div>
               <div>
                 <p className="text-gray-600">Overage Rate</p>
-                <p className="font-medium text-lg">{formatCurrency(data.bucket_overage_rate)}/hr</p>
+                <p className="font-medium text-lg">
+                  {formatCurrency(data.bucket_overage_rate)}/{data.bucket_type === 'hours' ? 'hour' : data.bucket_unit_of_measure || 'unit'}
+                </p>
               </div>
             </div>
             <div className="pt-2 border-t">
               <p className="text-gray-600 mb-1">
-                <strong>Effective Rate:</strong> {formatCurrency(Math.round((data.bucket_monthly_fee || 0) / (data.bucket_hours || 1)))}/hour
+                <strong>Effective Rate:</strong> {formatCurrency(Math.round((data.bucket_monthly_fee || 0) / (data.bucket_type === 'hours' ? (data.bucket_hours || 1) : (data.bucket_usage_units || 1))))}/{data.bucket_type === 'hours' ? 'hour' : data.bucket_unit_of_measure || 'unit'}
               </p>
             </div>
             {data.bucket_services.length > 0 && (
