@@ -68,65 +68,6 @@ export function EmailProviderList({
     }
   };
 
-  const getStatusIcon = (status: EmailProvider['status']) => {
-    switch (status) {
-      case 'connected':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'disconnected':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />;
-      case 'configuring':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const getStatusBadge = (status: EmailProvider['status'], isActive: boolean) => {
-    if (!isActive) {
-      return <Badge variant="secondary">Disabled</Badge>;
-    }
-
-    switch (status) {
-      case 'connected':
-        return <Badge variant="default" className="bg-green-100 text-green-800">Connected</Badge>;
-      case 'disconnected':
-        return <Badge variant="secondary">Disconnected</Badge>;
-      case 'error':
-        return <Badge variant="error">Error</Badge>;
-      case 'configuring':
-        return <Badge variant="secondary">Configuring</Badge>;
-      default:
-        return <Badge variant="secondary">Unknown</Badge>;
-    }
-  };
-
-  const getProviderIcon = (providerType: string) => {
-    switch (providerType) {
-      case 'microsoft':
-        return '🟦'; // Microsoft blue square
-      case 'google':
-        return '🟩'; // Google green square
-      default:
-        return '📧';
-    }
-  };
-
-  const formatLastSync = (lastSyncAt?: string) => {
-    if (!lastSyncAt) return 'Never';
-    
-    const date = new Date(lastSyncAt);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / (1000 * 60));
-    
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
-    return `${Math.floor(diffMins / 1440)}d ago`;
-  };
-
   if (providers.length === 0) {
     return <EmptyProviderPlaceholder onAddClick={onAddClick} />;
   }
