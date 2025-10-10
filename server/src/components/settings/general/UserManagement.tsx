@@ -445,20 +445,31 @@ const fetchContacts = async (): Promise<void> => {
       <CardContent>
         {/* License Usage Banner for MSP Portal */}
         {portalType === 'msp' && licenseUsage && (
-          <div 
+          <div
             id="msp-licence-usage-banner"
             className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Info size={16} className="text-blue-600" />
               <span className="text-sm text-blue-900">
-                MSP users: {licenseUsage.used}
-                {licenseUsage.limit !== null ? ` of ${licenseUsage.limit} licenses used` : ' (No limit)'}
+                {licenseUsage.limit !== null ? (
+                  <>
+                    MSP licenses: {licenseUsage.used} of {licenseUsage.limit} used
+                    {licenseUsage.remaining === 0 && (
+                      <> - To add a new user you must purchase additional licenses</>
+                    )}
+                  </>
+                ) : (
+                  <>MSP users: {licenseUsage.used} (No limit)</>
+                )}
               </span>
             </div>
             {licenseUsage.limit !== null && licenseUsage.remaining === 0 && (
-              <span className="text-sm text-blue-700">
-                To add a new user you must purchase additional licenses
-              </span>
+              <a
+                href="/msp/licenses/purchase"
+                className="text-sm text-blue-700 hover:text-blue-900 font-medium underline"
+              >
+                Purchase Licenses
+              </a>
             )}
           </div>
         )}
@@ -500,12 +511,24 @@ const fetchContacts = async (): Promise<void> => {
             )}
           </div>
           {!showNewUserForm && (
-            <Button
-              id={`create-new-${portalType}-user-btn`}
-              onClick={() => setShowNewUserForm(true)}
-            >
-              Create New {portalType === 'msp' ? 'User' : 'Client User'}
-            </Button>
+            <>
+              {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0 ? (
+                <Button
+                  id="add-license-btn"
+                  onClick={() => window.location.href = '/msp/licenses/purchase'}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  Add License
+                </Button>
+              ) : (
+                <Button
+                  id={`create-new-${portalType}-user-btn`}
+                  onClick={() => setShowNewUserForm(true)}
+                >
+                  Create New {portalType === 'msp' ? 'User' : 'Client User'}
+                </Button>
+              )}
+            </>
           )}
         </div>
         {showNewUserForm && (
