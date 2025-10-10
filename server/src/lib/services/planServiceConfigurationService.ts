@@ -359,7 +359,7 @@ export class PlanServiceConfigurationService {
           await fixedConfigModel.delete(configId);
           break;
         case 'Hourly':
-          // Explicitly delete from plan_service_hourly_configs first
+          // Explicitly delete from contract_line_service_hourly_configs first
           await hourlyConfigModel.delete(configId);
           break;
         case 'Usage':

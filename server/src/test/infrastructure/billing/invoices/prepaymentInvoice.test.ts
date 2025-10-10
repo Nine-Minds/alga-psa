@@ -78,7 +78,7 @@ async function createTestPlan(serviceId: string, overrides = {}) {
   };
 
   await context.db('contract_lines').insert({ ...defaultPlan, ...overrides });
-  await context.db('plan_services').insert({
+  await context.db('contract_line_services').insert({
     contract_line_id: planId,
     service_id: serviceId,
     tenant: context.tenantId,

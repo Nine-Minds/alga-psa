@@ -479,7 +479,7 @@ export async function getActiveServices(): Promise<Service[]> {
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -488,12 +488,12 @@ export async function getActiveServices(): Promise<Service[]> {
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
       // Removed old join to bucket_plans
-      .leftJoin('plan_service_configurations as psc', function(this: Knex.JoinClause) { // Added join for configurations
+      .leftJoin('contract_line_service_configuration as psc', function(this: Knex.JoinClause) { // Added join for configurations
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .leftJoin('plan_service_bucket_configs as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
+      .leftJoin('contract_line_service_bucket_config as psbc', function(this: Knex.JoinClause) { // Added join for bucket specifics
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })
@@ -522,7 +522,7 @@ export async function getActiveServices(): Promise<Service[]> {
         'cl.contract_line_type',
         'cl.is_custom',
         'cl.billing_frequency',
-        'cl.description as plan_description',
+        'cl.description as contract_line_description',
         // 'bucket.total_hours', // Removed old bucket field
         // 'bucket.overage_rate', // Removed old bucket field
         // 'bucket.billing_period as bucket_period', // Removed old bucket field
@@ -687,7 +687,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -704,7 +704,7 @@ export async function getServiceUpgrades(serviceId: string): Promise<ServicePlan
   // Get available plans for this service
   const plans = await withTransaction(knex, async (trx: Knex.Transaction) => {
     return await trx('contract_lines as cl')
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -748,7 +748,7 @@ export async function upgradeService(serviceId: string, planId: string): Promise
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Get current service plan
     const currentPlan = await trx('client_contract_lines as ccl')
-      .join('plan_services as ps', function(this: Knex.JoinClause) {
+      .join('contract_line_services as ps', function(this: Knex.JoinClause) {
         this.on('ccl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('ccl.tenant', '=', 'ps.tenant');
       })

@@ -36,7 +36,7 @@ describe('Credit Creation and Dates Tests', () => {
         'credit_tracking',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',

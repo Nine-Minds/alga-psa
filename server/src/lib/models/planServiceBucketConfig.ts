@@ -31,7 +31,7 @@ export default class PlanServiceBucketConfig {
   async getByConfigId(configId: string): Promise<IPlanServiceBucketConfig | null> {
     await this.initKnex();
     
-    const config = await this.knex('plan_service_bucket_config')
+    const config = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -49,7 +49,7 @@ export default class PlanServiceBucketConfig {
     
     const now = new Date();
     
-    await this.knex('plan_service_bucket_config').insert({
+    await this.knex('contract_line_service_bucket_config').insert({
       config_id: data.config_id,
       total_minutes: data.total_minutes,
       billing_period: data.billing_period,
@@ -84,7 +84,7 @@ export default class PlanServiceBucketConfig {
       delete updateData.tenant;
     }
     
-    const result = await this.knex('plan_service_bucket_config')
+    const result = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant
@@ -100,7 +100,7 @@ export default class PlanServiceBucketConfig {
   async delete(configId: string): Promise<boolean> {
     await this.initKnex();
     
-    const result = await this.knex('plan_service_bucket_config')
+    const result = await this.knex('contract_line_service_bucket_config')
       .where({
         config_id: configId,
         tenant: this.tenant

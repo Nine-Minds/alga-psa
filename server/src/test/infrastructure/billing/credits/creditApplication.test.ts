@@ -25,7 +25,7 @@ describe('Credit Application Tests', () => {
         'transactions',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -103,7 +103,7 @@ describe('Credit Application Tests', () => {
       }, 'contract_line_id');
 
       // Link service to plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId,
         service_id: service,
         tenant: context.tenantId,
@@ -261,7 +261,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
@@ -427,7 +427,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link both services to plan
-    await context.db('plan_services').insert([
+    await context.db('contract_line_services').insert([
       {
         contract_line_id: planId,
         service_id: service1,
@@ -589,7 +589,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
@@ -787,7 +787,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Assign services to plan
-    await context.db('plan_services').insert([
+    await context.db('contract_line_services').insert([
       {
         contract_line_id: planId,
         service_id: serviceA,
@@ -965,7 +965,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Assign services to plan
-    await context.db('plan_services').insert([
+    await context.db('contract_line_services').insert([
       {
         contract_line_id: planId,
         service_id: serviceA,
@@ -1120,7 +1120,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Assign services to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: serviceA,
       quantity: 1,
@@ -1244,7 +1244,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
@@ -1507,7 +1507,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,
@@ -1780,7 +1780,7 @@ describe('Credit Application Tests', () => {
     }, 'contract_line_id');
 
     // Link service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       tenant: context.tenantId,

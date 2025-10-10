@@ -24,7 +24,7 @@ describe('Negative Invoice Credit Tests', () => {
         'transactions',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -111,7 +111,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 6. Assign services to plan
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         {
           contract_line_id: planId,
           service_id: serviceA,
@@ -269,7 +269,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 6. Assign services to plan
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         {
           contract_line_id: planId,
           service_id: serviceA,
@@ -438,7 +438,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 6. Assign negative services to plan
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         {
           contract_line_id: planId1,
           service_id: negativeServiceA,
@@ -537,7 +537,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 16. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId2,
         service_id: positiveService,
         quantity: 1,
@@ -666,7 +666,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 6. Assign negative service to plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId1,
         service_id: negativeService,
         quantity: 1,
@@ -736,7 +736,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 15. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId2,
         service_id: expensiveService,
         quantity: 1,
@@ -869,7 +869,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 6. Assign negative service to plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId1,
         service_id: largeNegativeService,
         quantity: 1,
@@ -939,7 +939,7 @@ describe('Negative Invoice Credit Tests', () => {
       }, 'contract_line_id');
 
       // 15. Assign positive service to second plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId2,
         service_id: smallService,
         quantity: 1,

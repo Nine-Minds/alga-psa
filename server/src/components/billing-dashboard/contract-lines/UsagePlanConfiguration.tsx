@@ -25,7 +25,7 @@ import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericContractLineServicesList';
 interface UsagePlanConfigurationProps {
-  planId: string;
+  contractLineId: string;
   className?: string;
 }
 
@@ -55,7 +55,7 @@ type FetchedServiceConfig = IPlanServiceConfiguration & IPlanServiceUsageConfig 
 };
 
 export function UsagePlanConfiguration({
-  planId,
+  contractLineId,
   className = '',
 }: UsagePlanConfigurationProps) {
   // State for the base plan details
@@ -85,7 +85,7 @@ export function UsagePlanConfiguration({
     setPlanServices([]); // Reset services on fetch
     try {
       // 0. Fetch base plan details first
-      const fetchedPlan = await getContractLineById(planId);
+      const fetchedPlan = await getContractLineById(contractLineId);
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
@@ -94,7 +94,7 @@ export function UsagePlanConfiguration({
       setPlan(fetchedPlan); // Store base plan details
 
       // 1. Fetch the list of services associated with the plan
-      const servicesList = await getPlanServicesWithConfigurations(planId);
+      const servicesList = await getPlanServicesWithConfigurations(contractLineId);
       setPlanServices(servicesList);
 
       if (servicesList.length === 0) {
@@ -104,7 +104,7 @@ export function UsagePlanConfiguration({
       // 2. Fetch configuration for each service concurrently
       const configPromises = servicesList.map(service =>
         // Use service.configuration.service_id as it's guaranteed by PlanServiceWithConfig type
-        getPlanServiceConfiguration(planId, service.configuration.service_id)
+        getPlanServiceConfiguration(contractLineId, service.configuration.service_id)
           .then(config => ({ serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null })) // Cast result
           .catch(err => {
             console.error(`Error fetching config for service ${service.configuration.service_id}:`, err);
@@ -158,7 +158,7 @@ export function UsagePlanConfiguration({
     } finally {
       setLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchPlanData();
@@ -346,7 +346,7 @@ export function UsagePlanConfiguration({
           }));
 
         const payload = {
-          planId: planId,
+          contractLineId: contractLineId,
           serviceId: serviceId,
           // tenantId is handled by the backend action
           base_rate: config.enable_tiered_pricing ? undefined : config.base_rate,
@@ -419,7 +419,7 @@ export function UsagePlanConfiguration({
                   <CardContent>
                       <p className="text-muted-foreground mb-4">No services are currently associated with this usage plan. Add services below to configure their pricing.</p>
                       {/* Keep the GenericPlanServicesList to allow adding services */}
-                      <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} />
+                      <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} />
                   </CardContent>
               </Card>
           </div>
@@ -521,7 +521,7 @@ export function UsagePlanConfiguration({
                <CardTitle>Manage Plan Services</CardTitle>
            </CardHeader>
            <CardContent>
-               <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+               <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
            </CardContent>
        </Card>
     </div>

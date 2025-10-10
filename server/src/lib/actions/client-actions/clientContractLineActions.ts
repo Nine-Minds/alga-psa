@@ -24,16 +24,16 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
   const { client_id, contract_line_id } = planInfo;
 
   // We need to check two types of invoices:
-  // 1. Invoices with items linked to this plan through plan_services (traditional path)
-  // 2. Invoices with items linked to this plan through invoice_item_details and plan_service_configuration (fixed fee path)
+  // 1. Invoices with items linked to this plan through contract_line_services (traditional path)
+  // 2. Invoices with items linked to this plan through invoice_item_details and contract_line_service_configuration (fixed fee path)
 
-  // Query 1: Check for invoices linked through plan_services (traditional path)
+  // Query 1: Check for invoices linked through contract_line_services (traditional path)
   const traditionalPathQuery = db('invoices as i')
     .join('invoice_items as ii', function(this: Knex.JoinClause) {
       this.on('i.invoice_id', '=', 'ii.invoice_id')
           .andOn('i.tenant', '=', 'ii.tenant');
     })
-    .join('plan_services as ps', function(this: Knex.JoinClause) {
+    .join('contract_line_services as ps', function(this: Knex.JoinClause) {
       this.on('ii.service_id', '=', 'ps.service_id')
           .andOn('ii.tenant', '=', 'ps.tenant');
     })
@@ -46,7 +46,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
     .select('i.billing_period_end', 'i.invoice_date')
     .first();
 
-  // Query 2: Check for invoices linked through invoice_item_details and plan_service_configuration (fixed fee path)
+  // Query 2: Check for invoices linked through invoice_item_details and contract_line_service_configuration (fixed fee path)
   const fixedFeePathQuery = db('invoices as i')
     .join('invoice_items as ii', function(this: Knex.JoinClause) {
       this.on('i.invoice_id', '=', 'ii.invoice_id')
@@ -56,7 +56,7 @@ async function getLatestInvoicedEndDate(db: any, tenant: string, clientContractL
       this.on('ii.item_id', '=', 'iid.item_id')
           .andOn('ii.tenant', '=', 'iid.tenant');
     })
-    .join('plan_service_configuration as psc', function(this: Knex.JoinClause) {
+    .join('contract_line_service_configuration as psc', function(this: Knex.JoinClause) {
       this.on('iid.config_id', '=', 'psc.config_id')
           .andOn('iid.tenant', '=', 'psc.tenant');
     })

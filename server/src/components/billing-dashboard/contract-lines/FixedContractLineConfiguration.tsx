@@ -17,12 +17,12 @@ import { IService, IContractLine } from 'server/src/interfaces/billing.interface
 import FixedPlanServicesList from '../FixedContractLineServicesList'; // Import the actual component
 
 interface FixedPlanConfigurationProps {
-  planId: string;
+  contractLineId: string;
   className?: string;
 }
 
 export function FixedPlanConfiguration({
-  planId,
+  contractLineId,
   className = '',
 }: FixedPlanConfigurationProps) {
   const [plan, setPlan] = useState<IContractLine | null>(null);
@@ -36,20 +36,20 @@ export function FixedPlanConfiguration({
     setPlanLoading(true);
     setError(null);
     try {
-      // Fetch the basic plan data
-      const fetchedPlan = await getContractLineById(planId);
+      // Fetch the basic contract line data
+      const fetchedPlan = await getContractLineById(contractLineId);
       if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
         setPlan(fetchedPlan);
       } else {
-        setError('Invalid plan type or plan not found.');
+        setError('Invalid contract line type or contract line not found.');
       }
     } catch (err) {
-      console.error('Error fetching plan data:', err);
-      setError('Failed to load plan configuration. Please try again.');
+      console.error('Error fetching contract line data:', err);
+      setError('Failed to load contract line configuration. Please try again.');
     } finally {
       setPlanLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchPlanData();
@@ -70,26 +70,26 @@ export function FixedPlanConfiguration({
   }
 
   if (!plan) {
-      return <div className="p-4">Plan not found or invalid type.</div>; // Should not happen if error handling is correct
+      return <div className="p-4">Contract line not found or invalid type.</div>; // Should not happen if error handling is correct
   }
 
   return (
     <div className={`space-y-6 ${className}`}>
       <Card>
         <CardHeader className="flex items-center justify-between">
-          <CardTitle>Edit Plan: {plan?.contract_line_name || '...'} (Fixed)</CardTitle>
+          <CardTitle>Edit Contract Line: {plan?.contract_line_name || '...'} (Fixed)</CardTitle>
           {plan && (
             <ContractLineDialog
               editingPlan={plan}
               onPlanAdded={() => fetchPlanData()}
-              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Plan Basics</Button>}
+              triggerButton={<Button id="edit-plan-basics-button" variant="outline" size="sm">Edit Contract Line Basics</Button>}
               allServiceTypes={[]}
             />
           )}
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Base rate and proration settings are configured in the plan basics above. Use the "Edit Plan Basics" button to modify these settings.
+            Base rate and proration settings are configured in the contract line basics above. Use the "Edit Contract Line Basics" button to modify these settings.
           </p>
         </CardContent>
       </Card>
@@ -101,7 +101,7 @@ export function FixedPlanConfiguration({
           </CardHeader>
           <CardContent>
               <FixedPlanServicesList
-                  planId={planId}
+                  planId={contractLineId}
                   onServiceAdded={() => {
                       // Refresh the plan data when a service is added
                       fetchPlanData();

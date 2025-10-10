@@ -15,17 +15,17 @@ interface ClientContractDialogProps {
   isOpen?: boolean;
   initialStartDate?: string;
   initialEndDate?: string | null;
-  planNames?: string[]; // Added optional prop for plan names
+  contractLineNames?: string[];
 }
 
-export function ClientContractDialog({ 
-  onContractAssigned, 
-  onClose, 
-  triggerButton, 
+export function ClientContractDialog({
+  onContractAssigned,
+  onClose,
+  triggerButton,
   isOpen = false,
   initialStartDate,
   initialEndDate,
-  planNames // Destructure the new prop
+  contractLineNames
 }: ClientContractDialogProps) {
   const [open, setOpen] = useState(isOpen);
   // Safely initialize startDate: check if initialStartDate is a non-empty string
@@ -95,13 +95,13 @@ export function ClientContractDialog({
       >
         <DialogContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Display Plan Names if provided (likely in edit mode) - Moved inside form */}
-            {planNames && planNames.length > 0 && (
+            {/* Display Contract Line Names if provided (likely in edit mode) */}
+            {contractLineNames && contractLineNames.length > 0 && (
               <div className="mb-4 border-b pb-4">
                 <h4 className="font-semibold mb-2 text-sm text-gray-700">Included Contract Lines:</h4>
                 <ul className="list-disc list-inside space-y-1 text-sm text-gray-600">
-                  {planNames.map((planName: string, index: number) => ( // Added explicit types
-                    <li key={index}>{planName}</li>
+                  {contractLineNames.map((contractLineName: string, index: number) => (
+                    <li key={index}>{contractLineName}</li>
                   ))}
                 </ul>
               </div>

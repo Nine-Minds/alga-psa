@@ -43,7 +43,7 @@ type PlanServiceWithDetails = {
 };
 
 interface BucketPlanConfigurationProps {
-  planId: string;
+  contractLineId: string;
   className?: string;
 }
 
@@ -54,7 +54,7 @@ const DEFAULT_BUCKET_CONFIG: Partial<IPlanServiceBucketConfig> = {
 };
 
 export function BucketPlanConfiguration({
-  planId,
+  contractLineId,
   className = '',
 }: BucketPlanConfigurationProps) {
   const [plan, setPlan] = useState<IContractLine | null>(null); // State for base plan details
@@ -73,7 +73,7 @@ export function BucketPlanConfiguration({
     setPlan(null); // Reset plan on fetch
     try {
       // 0. Fetch base plan details first
-      const fetchedPlan = await getContractLineById(planId);
+      const fetchedPlan = await getContractLineById(contractLineId);
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Bucket') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
@@ -82,7 +82,7 @@ export function BucketPlanConfiguration({
       setPlan(fetchedPlan); // Store base plan details
 
       // 1. Fetch services associated with the plan
-      const fetchedPlanServices = await getPlanServicesWithConfigurations(planId);
+      const fetchedPlanServices = await getPlanServicesWithConfigurations(contractLineId);
       setPlanServices(fetchedPlanServices); // Use all fetched services
 
       const initialConfigs: ServiceConfigsState = {};
@@ -131,7 +131,7 @@ export function BucketPlanConfiguration({
     } finally {
       setLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   useEffect(() => {
     fetchAndInitializeConfigs();
@@ -228,7 +228,7 @@ export function BucketPlanConfiguration({
     // Proceed with saving using upsertPlanServiceBucketConfigurationAction
     const savePromises = changedServices.map(({ serviceId, config }) => // Removed configId from destructuring
       upsertPlanServiceBucketConfigurationAction({ // CALL CORRECT ACTION
-        planId, // Pass planId
+        contractLineId, // Pass contractLineId
         serviceId, // Pass serviceId
         ...config // Spread the bucket config fields
       })
@@ -358,7 +358,7 @@ export function BucketPlanConfiguration({
         </CardHeader>
         <CardContent>
           <GenericPlanServicesList
-            planId={planId}
+            contractLineId={contractLineId}
             onServicesChanged={handleServicesChanged}
             disableEditing={true}
           />

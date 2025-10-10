@@ -384,7 +384,7 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ccl.contract_line_id', '=', 'cl.contract_line_id')
             .andOn('ccl.tenant', '=', 'cl.tenant');
       })
-      .join<IPlanService>('plan_services as ps', function() {
+      .join<IPlanService>('contract_line_services as ps', function() {
         this.on('cl.contract_line_id', '=', 'ps.contract_line_id')
             .andOn('cl.tenant', '=', 'ps.tenant');
       })
@@ -392,12 +392,12 @@ export async function getClientBucketUsage(): Promise<ClientBucketUsageResult[]>
         this.on('ps.service_id', '=', 'sc.service_id')
             .andOn('ps.tenant', '=', 'sc.tenant');
       })
-      .join<IPlanServiceConfiguration>('plan_service_configuration as psc', function() { 
+      .join<IPlanServiceConfiguration>('contract_line_service_configuration as psc', function() { 
         this.on('ps.contract_line_id', '=', 'psc.contract_line_id')
             .andOn('ps.service_id', '=', 'psc.service_id')
             .andOn('ps.tenant', '=', 'psc.tenant');
       })
-      .join<IPlanServiceBucketConfig>('plan_service_bucket_config as psbc', function() {
+      .join<IPlanServiceBucketConfig>('contract_line_service_bucket_config as psbc', function() {
         this.on('psc.config_id', '=', 'psbc.config_id')
             .andOn('psc.tenant', '=', 'psbc.tenant');
       })

@@ -16,7 +16,7 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   enable_proration?: boolean;
   billing_cycle_alignment?: string;
   // New fields for detailed allocation tracking (V1)
-  config_id?: string; // UUID from plan_service_configuration
+  config_id?: string; // UUID from contract_line_service_configuration
   base_rate?: number; // The plan's base rate (NUMERIC)
   fmv?: number; // Calculated FMV for allocation (INTEGER cents)
   proportion?: number; // Calculated proportion (NUMERIC)

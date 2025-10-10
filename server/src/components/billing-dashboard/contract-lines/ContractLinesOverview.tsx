@@ -120,7 +120,7 @@ const ContractLinesOverview: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 if (record.contract_line_id) {
-                  router.push(`/msp/billing?tab=plans&planId=${record.contract_line_id}`);
+                  router.push(`/msp/billing?tab=contract-lines&contractLineId=${record.contract_line_id}`);
                 }
               }}
             >
@@ -146,7 +146,7 @@ const ContractLinesOverview: React.FC = () => {
 
   const handleContractLineClick = (plan: IContractLine) => {
     if (plan.contract_line_id) {
-      router.push(`/msp/billing?tab=plans&planId=${plan.contract_line_id}`);
+      router.push(`/msp/billing?tab=contract-lines&contractLineId=${plan.contract_line_id}`);
     }
   };
 
@@ -159,7 +159,7 @@ const ContractLinesOverview: React.FC = () => {
             onPlanAdded={(newPlanId) => {
               if (newPlanId) {
                 // Navigate directly. PlanTypeRouter will fetch the plan details.
-                router.push(`/msp/billing?tab=plans&planId=${newPlanId}`);
+                router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);
               }
             }}
             editingPlan={editingPlan}

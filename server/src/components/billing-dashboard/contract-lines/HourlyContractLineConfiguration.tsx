@@ -95,12 +95,12 @@ type HourlyPlanData = IContractLine & {
 // --- Component ---
 
 interface HourlyPlanConfigurationProps {
-  planId: string;
+  contractLineId: string;
   className?: string;
 }
 
 export function HourlyPlanConfiguration({
-  planId,
+  contractLineId,
   className = '',
 }: HourlyPlanConfigurationProps) {
   // Plan-wide state
@@ -144,7 +144,7 @@ export function HourlyPlanConfiguration({
     setPlanValidationErrors({});
     try {
       // Fetch base plan details
-      const fetchedPlan = await getContractLineById(planId) as HourlyPlanData;
+      const fetchedPlan = await getContractLineById(contractLineId) as HourlyPlanData;
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Hourly') {
         setError('Invalid plan type or plan not found.');
         setLoading(false);
@@ -172,7 +172,7 @@ export function HourlyPlanConfiguration({
       // Removed setting plan-wide userTypeRates state: setUserTypeRates(initialData.user_type_rates!);
 
       // Fetch services and their configurations using the correct action
-      const servicesWithConfigsResult = await getPlanServicesWithConfigurations(planId);
+      const servicesWithConfigsResult = await getPlanServicesWithConfigurations(contractLineId);
 
       // Process results, mapping to IPlanServiceWithHourlyConfig
       const processedConfigs: IPlanServiceWithHourlyConfig[] = servicesWithConfigsResult.map((item) => {
@@ -233,7 +233,7 @@ export function HourlyPlanConfiguration({
     } finally {
       setLoading(false);
     }
-  }, [planId]);
+  }, [contractLineId]);
 
   // Callback to refresh data when services are added/removed
   const handleServicesChanged = useCallback(() => {
@@ -326,7 +326,7 @@ export function HourlyPlanConfiguration({
                 const initialConfig = initialServiceConfigs.find(ic => ic.config_id === config.config_id);
                 if (!isEqual(config.hourly_config, initialConfig?.hourly_config)) {
                     const upsertHourlyInput = {
-                        planId: planId,
+                        contractLineId: contractLineId,
                         serviceId: config.service_id,
                         hourly_rate: config.hourly_config.hourly_rate ?? 0, // Default to 0 instead of null
                         minimum_billable_time: config.hourly_config.minimum_billable_time ?? null,
@@ -409,7 +409,7 @@ export function HourlyPlanConfiguration({
         // }
 
         if (planChanged) {
-            await updateContractLine(planId, planUpdatePayload);
+            await updateContractLine(contractLineId, planUpdatePayload);
             // Update initial plan data after successful save
             setInitialPlanData(prev => ({ ...prev, ...planUpdatePayload }));
         }
@@ -657,7 +657,7 @@ export function HourlyPlanConfiguration({
                     <CardTitle>Manage Plan Services</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <GenericPlanServicesList planId={planId} onServicesChanged={handleServicesChanged} disableEditing={true} />
+                    <GenericPlanServicesList contractLineId={contractLineId} onServicesChanged={handleServicesChanged} disableEditing={true} />
                 </CardContent>
             </Card>
         </div>

@@ -36,7 +36,7 @@ const ContractLine = {
     }
 
     try {
-      const result = await knexOrTrx('plan_services')
+      const result = await knexOrTrx('contract_line_services')
         .where({
           contract_line_id: planId,
           tenant

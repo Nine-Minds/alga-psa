@@ -25,7 +25,7 @@ describe('Billing Invoice Tax Calculations', () => {
         'tickets',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -98,7 +98,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'contract_line_id');
 
       // Assign service to plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId,
         service_id: service,
         quantity: 1,
@@ -135,7 +135,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'service_id');
 
       // Add discount service to plan
-      await context.db('plan_services').insert({
+      await context.db('contract_line_services').insert({
         contract_line_id: planId,
         service_id: discountService,
         quantity: 1,
@@ -243,7 +243,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'contract_line_id');
 
       // Assign services to plan
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         {
           contract_line_id: planId,
           service_id: serviceNY,
@@ -526,7 +526,7 @@ describe('Billing Invoice Tax Calculations', () => {
       }, 'contract_line_id');
 
       // Assign services to plan
-      await context.db('plan_services').insert([
+      await context.db('contract_line_services').insert([
         {
           contract_line_id: mixedTaxPlanId,
           service_id: taxableService,
@@ -644,7 +644,7 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'contract_line_id');
 
     // Assign service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       quantity: 1,
@@ -740,7 +740,7 @@ describe('Billing Invoice Tax Calculations', () => {
     }, 'contract_line_id');
 
     // Assign service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: service,
       quantity: 1,

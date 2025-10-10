@@ -34,7 +34,7 @@ describe('Credit Reconciliation Tests', () => {
         'credit_allocations',
         'client_billing_cycles',
         'client_contract_lines',
-        'plan_services',
+        'contract_line_services',
         'service_catalog',
         'contract_lines',
         'bucket_plans',
@@ -149,7 +149,7 @@ describe('Credit Reconciliation Tests', () => {
     }, 'contract_line_id');
 
     // 9. Assign service to plan
-    await context.db('plan_services').insert({
+    await context.db('contract_line_services').insert({
       contract_line_id: planId,
       service_id: serviceId,
       quantity: 1,

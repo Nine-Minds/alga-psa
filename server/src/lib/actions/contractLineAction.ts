@@ -280,7 +280,7 @@ export async function deleteContractLine(planId: string): Promise<void> {
 
 /**
  * Gets the combined fixed plan configuration (plan-level and service-level)
- * Fetches proration/alignment from contract_line_fixed_config and base_rate from plan_service_fixed_config.
+ * Fetches proration/alignment from contract_line_fixed_config and base_rate from contract_line_service_fixed_config.
  */
 export async function getCombinedFixedPlanConfiguration(
     planId: string,
@@ -312,7 +312,7 @@ export async function getCombinedFixedPlanConfiguration(
             const planConfig = await getContractLineFixedConfig(planId);
 
             // Default values if plan-level config doesn't exist
-            const plan_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
+            const contract_line_base_rate = planConfig?.base_rate ?? null; // Get base_rate from plan config
             const enable_proration = planConfig?.enable_proration ?? false;
             const billing_cycle_alignment = planConfig?.billing_cycle_alignment ?? 'start';
 
@@ -324,7 +324,7 @@ export async function getCombinedFixedPlanConfiguration(
             const config_id: string | undefined = serviceBaseConfig?.config_id;
 
             // Base rate now comes from planConfig fetched above
-            const base_rate = plan_base_rate;
+            const base_rate = contract_line_base_rate;
 
             // --- Combine Results ---
             // Return null only if BOTH plan and service config are missing? Or just if service config is missing?
@@ -444,7 +444,7 @@ export async function updateContractLineFixedConfig(
 
 /**
  * Updates only the base_rate for a specific service within a fixed plan.
- * Interacts with plan_service_fixed_config.
+ * Interacts with contract_line_service_fixed_config.
  * Renamed from updateFixedPlanConfiguration.
  */
 export async function updatePlanServiceFixedConfigRate(
