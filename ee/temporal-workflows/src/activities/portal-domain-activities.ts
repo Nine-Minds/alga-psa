@@ -677,13 +677,10 @@ export async function checkPortalDomainDeploymentStatus(args: { portalDomainId: 
         manifest.gatewayName,
         config.gatewayNamespace,
       );
-    const virtualServiceExists = await kubectlResourceExists(
-      'virtualservice',
-      manifest.virtualServiceName,
-      config.virtualServiceNamespace,
-    );
 
-      if (gatewayExists && virtualServiceExists) {
+      // VirtualService routing is handled by the main alga-psa-vs, not portal-specific VSs
+      // So we only need to check if the Gateway exists
+      if (gatewayExists) {
         nextStatus = 'active';
         nextMessage = 'Your domain is live and protected by HTTPS.';
       } else {
@@ -1037,10 +1034,10 @@ export async function runCommand(
 export function renderManifestYaml(
   manifest: RenderedPortalDomainResources,
 ): string {
+  // Only render Certificate and Gateway - VirtualService routing is handled by the main alga-psa-vs
   const documents = [
     manifest.certificate,
     manifest.gateway,
-    manifest.virtualService,
   ];
   return documents
     .map((doc, index) => {
@@ -1135,7 +1132,6 @@ export function renderPortalDomainResources(
   const secretName = truncateName(`portal-domain-${domainSlug}`, 63);
   const gatewayName = truncateName(`portal-domain-gw-${domainSlug}`, 63);
   const virtualServiceName = truncateName(`portal-domain-vs-${domainSlug}`, 63);
-  const httpServerName = truncateName(`http-${domainSlug}`, 63);
   const httpsServerName = truncateName(`https-${domainSlug}`, 63);
 
   const labels = buildBaseLabels(record, normalizedDomain);
@@ -1201,11 +1197,20 @@ export function renderPortalDomainResources(
     );
   }
 
+  // Preserve the original Host header by setting it explicitly after routing
+  // This prevents Istio from rewriting the Host header to match the destination service name
   const primaryDestination = {
     destination: {
       host: serviceHost,
       port: {
         number: config.servicePort,
+      },
+    },
+    headers: {
+      request: {
+        set: {
+          ":authority": normalizedDomain,
+        },
       },
     },
   };
