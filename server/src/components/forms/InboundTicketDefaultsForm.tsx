@@ -158,8 +158,23 @@ export function InboundTicketDefaultsForm({
       return;
     }
 
-    if (!formData.board_id || !formData.status_id || !formData.priority_id) {
-      setError('Board, status, and priority are required');
+    if (!formData.board_id) {
+      setError('Board is required');
+      return;
+    }
+
+    if (!formData.status_id) {
+      setError('Status is required');
+      return;
+    }
+
+    if (!formData.priority_id) {
+      setError('Priority is required');
+      return;
+    }
+
+    if (!formData.company_id) {
+      setError('Company is required');
       return;
     }
 
